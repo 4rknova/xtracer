@@ -1,0 +1,21 @@
+.TH XTRACER 1 "December 2010" UNIX "User Manuals"
+.SH NAME 
+xtracer \- generate raytraced images
+.SH SYNOPSIS
+.B xtracer [
+.I option
+]... 
+.B file
+.SH DESCRIPTION
+renders scenes as described in the given file with raytracing.
+.SH OPTIONS
+.IP -interactive
+Render the generated images in an sdl window
+.IP "-depth %i"
+Define the maximum recursion depth
+.IP "-buffer %ix%i"
+Define the output buffer resolution
+.SH AUTHOR
+."BR bar (1)
+Written by Nikos Papadopoulos <nikpapas at gmail dot com>
+"
