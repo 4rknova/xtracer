@@ -1,0 +1,42 @@
+# paths
+# - target
+spath = src
+opath = $(bpath)/obj
+# - sources
+ccsrc = $(wildcard $(spath)/*.cpp) $(wildcard $(spath)/*.c) $(wildcard $(spath)/*.cc)
+ 
+# binarys
+obj = $(notdir $(ccsrc:.cpp=.o))
+bin = $(bpath)/$(pkgname)
+
+CC = gcc
+CXX = g++
+CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
+CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
+LDFLAGS = -lnmath #`sdl-config --libs`
+
+$(bin): $(obj)
+	$(CXX) $(LDFLAGS) $(obj) -o $@
+
+$(obj): $(ccsrc)
+	$(CXX) $(CXXFLAGS) $(ccsrc) -o $@
+
+%.o: %.c
+	$(CC) $(CCFLAGS) -o $@ $<
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+.PHONY: all
+all: $(bin)
+
+.PHONY: clean
+clean:
+	rm -rf $(obj)
+
+.PHONY: clean-all
+clean-all: clean
+	rm -f Makefile

@@ -29,6 +29,7 @@
 #define XTRACER_CAMERA_HPP_INCLUDED
 
 #include <nmath/vector.h>
+#include <nmath/ray.h>
 #include <nmath/precision.h>
 
 #include "fb.hpp"

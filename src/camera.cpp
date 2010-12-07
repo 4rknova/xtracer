@@ -33,11 +33,11 @@
 #define XTRACER_DEFAULT_FOV M_PI/4
 
 XTCamera::XTCamera(XTFramebuffer &fb)
-	: m_p_position(Vector3(0,0,0)), m_p_target(Vector3(0,0,0)), m_p_fov(XTRACER_DEFAULT_FOV), m_p_fb(fb)
+	: m_p_position(Vector3(0,0,0)), m_p_target(Vector3(0,0,0)), m_p_fov(XTRACER_DEFAULT_FOV), m_p_fb(&fb)
 {}
 
-XTCamera::XTCamera(Vector3 &position, Vector3 &target)
-	:  m_p_position(position), m_p_target(target), m_p_fov(fov), m_p_fb(fb)
+XTCamera::XTCamera(Vector3 &position, Vector3 &target, real_t fov, XTFramebuffer &fb)
+:  m_p_position(position), m_p_target(target), m_p_fov(fov), m_p_fb(&fb)
 {}
 
 Vector3 XTCamera::get_position()
@@ -81,4 +81,6 @@ Ray XTCamera::get_primary_ray(int x, int y, XT_PROJECTION_T prjtype)
 		case XT_PROJECTION_ORTHOGRAPHIC:
 			break;
 	}
+
+	return primary_ray;
 }

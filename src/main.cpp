@@ -25,6 +25,10 @@
 
 */
 
+#include <stdio.h>
+#include <string.h>
+#include "err.h"
+
 /* Default values for the screen buffer dimensions */
 #define DEFAULT_SCREEN_WIDTH	640
 #define DEFAULT_SCREEN_HEIGHT	480
@@ -42,7 +46,8 @@
 struct envsetup_t
 {
 	envsetup_t() 
-		: is_interactive(false), depth(0), width(DEFAULT_SCREEN_WIDTH), height(DEFAULT_SCREEN_HEIGHT) {}
+		: is_interactive(false), width(DEFAULT_SCREEN_WIDTH), height(DEFAULT_SCREEN_HEIGHT), depth(0)
+	{}
 
 	bool is_interactive;	/* Defines whether the rendered images will be displayed in an interactive window or dumped in image files */
 
@@ -73,7 +78,7 @@ int main(int argc, char **argv)
 			int depth = 0;
 			if (!argv[i] || sscanf(argv[i], "%d", &depth) < 1) 
             {
-                fprintf(stderr, "\nInvalid -depth value. Should be %i");
+                fprintf(stderr, "\nInvalid -depth value. Should be %%i");
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 			envsetup.depth = depth;
@@ -86,7 +91,7 @@ int main(int argc, char **argv)
 			int height = 0;
             if (!argv[i] || sscanf(argv[i], "%dx%d", &width, &height) < 2)
 			{
-                fprintf(stderr, "\nInvalid -size value. Should be %ix%i";
+                fprintf(stderr, "\nInvalid -size value. Should be %%ix%%i");
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 			envsetup.width = width;
