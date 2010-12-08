@@ -3,32 +3,29 @@
 spath = src
 opath = $(bpath)/obj
 # - sources
-ccsrc = $(wildcard $(spath)/*.cpp) $(wildcard $(spath)/*.c) $(wildcard $(spath)/*.cc)
+ccsrc = $(wildcard $(spath)/*.c*)
  
 # binarys
-obj = $(notdir $(ccsrc:.cpp=.o))
+obj = $(ccsrc:.cpp=.o)
 bin = $(bpath)/$(pkgname)
 
 CC = gcc
 CXX = g++
 CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
 CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
-LDFLAGS = -lnmath #`sdl-config --libs`
+LDFLAGS = -lnmath `sdl-config --libs`
 
 $(bin): $(obj)
-	$(CXX) $(LDFLAGS) $(obj) -o $@
-
-$(obj): $(ccsrc)
-	$(CXX) $(CXXFLAGS) $(ccsrc) -o $@
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(obj) -o $@
 
 %.o: %.c
-	$(CC) $(CCFLAGS) -o $@ $<
+	$(CC) -c $(CCFLAGS) -o $@ $<
 
 %.o: %.cc
-	$(CXX) $(CXXFLAGS) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 .PHONY: all
 all: $(bin)

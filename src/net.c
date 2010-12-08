@@ -47,7 +47,7 @@ int producer (int port, const char *proto)
 	struct sockaddr_in cad;	/* structure to hold client's address */
 	int sd1, sd2;			/* socket descriptors */
 	socklen_t alen;			/* address length */
-	char buf[1000];			/* data buffer */	
+	char buf[1000];			/* data buffer */
 
 	long lRecvd, lEchoed;	/* for statistics */
 	int iRecvdp, iEchoedp; 	/* for statistics */

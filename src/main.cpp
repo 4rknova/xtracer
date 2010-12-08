@@ -32,6 +32,9 @@
 /* Default values for the screen buffer dimensions */
 #define DEFAULT_SCREEN_WIDTH	640
 #define DEFAULT_SCREEN_HEIGHT	480
+/* Default values for the raytracer environment */
+#define DEFAULT_RECURSION_DEPTH	5
+
 
 /*
 	Environmental options
@@ -60,17 +63,47 @@ struct envsetup_t
 /*
 	MAIN
 */
+
 int main(int argc, char **argv)
 {
-	int i=0;
+	int iIsMaster = 0;	/* flag to setup the program to run as a master node */
+	int iIsSlave = 0;	/* flag to setup the program to run as a slave node */
 
 	/* Parse the cli arguments */
-    for (i=1; i<argc; i++)
+    for (int i=1; i<argc; i++)
 	{
-        if (strcmp(argv[i], "-interactive") == 0)
+		/* Output version information and exit */
+		if((!strcmp(argv[i], "-version")) || (!strcmp(argv[i], "-v")))
+		{
+			printf("Xtracer v0.0\nby Papadopoulos Nikos 2010\nusage: %s [option]... scene_file\n", argv[0]);
+			return XTRACER_STATUS_OK;
+		}
+		/* Start as a master node */
+		else if (!strcmp(argv[i], "-master"))
+		{
+			if (iIsSlave)
+			{
+				fprintf(stderr, "Cannot use -master with -slave.\n");
+				return XTRACER_STATUS_INVALID_CLI_ARGCOMBN;
+			}
+			iIsMaster = 1;
+		}
+		/* Start as a slave node */
+		else if (!strcmp(argv[i], "-slave"))
+		{
+			if (iIsMaster)
+			{
+				fprintf(stderr, "Cannot use -slave with -master.\n");
+				return XTRACER_STATUS_INVALID_CLI_ARGCOMBN;
+			}
+			iIsSlave = 1;
+		}
+		/* Render in a sdl window */
+        else if (!strcmp(argv[i], "-interactive"))
 		{
             envsetup.is_interactive=true;
         }
+		/* Setup the maximum recursion depth */
 		else if (strcmp(argv[i], "-depth") == 0)
 		{
 			i++;
@@ -78,12 +111,13 @@ int main(int argc, char **argv)
 			int depth = 0;
 			if (!argv[i] || sscanf(argv[i], "%d", &depth) < 1) 
             {
-                fprintf(stderr, "\nInvalid -depth value. Should be %%i");
+                fprintf(stderr, "Invalid -depth value. Should be %%i\n");
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 			envsetup.depth = depth;
 		}
-        else if (strcmp(argv[i], "-buffer") == 0)
+		/* Setup the resolution */
+        else if (!strcmp(argv[i], "-buffer"))
 		{
             i++;
 
@@ -91,12 +125,13 @@ int main(int argc, char **argv)
 			int height = 0;
             if (!argv[i] || sscanf(argv[i], "%dx%d", &width, &height) < 2)
 			{
-                fprintf(stderr, "\nInvalid -size value. Should be %%ix%%i");
+                fprintf(stderr, "Invalid -size value. Should be %%ix%%i\n");
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 			envsetup.width = width;
 			envsetup.height = height;
         }
+		/* Load the scene file */
         else
 		{
 			/*
@@ -105,5 +140,16 @@ int main(int argc, char **argv)
         }
     }
 
+
+	/* Start up in the specified mode */
+	if (iIsSlave)
+	{
+		printf("Starting as a slave node\n");
+	}
+	else if (iIsMaster)
+	{
+		printf("Startimg as a mster node\n");
+	}
+	
 	return XTRACER_STATUS_OK;
 }

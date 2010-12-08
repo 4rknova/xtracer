@@ -40,12 +40,6 @@ for arg; do
 	esac
 done
 
-echo "bpath = $BPATH" >> Makefile
-
-if [ ! -d "$BPATH" ]; then
-    mkdir $BPATH
-fi
-
 echo "optimize for speed: $OPTSPD"
 echo "include debugging symbols: $DEBUGS"
 
@@ -53,6 +47,12 @@ echo "creating makefile..."
 echo "#" > Makefile
 echo "# auto generated makefile for $SWPKG v$VERSION" >> Makefile
 echo "#" >> Makefile
+
+echo "bpath = $BPATH" >> Makefile
+
+if [ ! -d "$BPATH" ]; then
+    mkdir $BPATH
+fi
 
 if [ "$DBGSPD" = 'yes' ]; then
 	echo 'dbg = -g' >> Makefile
