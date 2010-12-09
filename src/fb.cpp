@@ -61,3 +61,4 @@ uint32_t XTFramebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value
 	*target =  value;
 	return value;
 }
+

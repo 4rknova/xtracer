@@ -3,20 +3,25 @@
 spath = src
 opath = $(bpath)/obj
 # - sources
-ccsrc = $(wildcard $(spath)/*.c*)
- 
+ccsrc = $(wildcard $(spath)/*.c)
+ccsrcc = $(wildcard $(spath)/*.cc)
+ccsrcpp = $(wildcard $(spath)/*.cpp)
+
 # binarys
-obj = $(ccsrc:.cpp=.o)
+objc = $(ccsrc:.c=.o)
+objcc = $(ccsrcc:.cc=.o)
+objcpp = $(ccsrcpp:.cpp=.o)
+
 bin = $(bpath)/$(pkgname)
 
 CC = gcc
 CXX = g++
 CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
 CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
-LDFLAGS = -lnmath `sdl-config --libs`
+LDFLAGS = -lnparse -lnmath `sdl-config --libs`
 
-$(bin): $(obj)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(obj) -o $@
+$(bin): $(objc) $(objcc) $(objcpp)
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@
 
 %.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
@@ -32,8 +37,8 @@ all: $(bin)
 
 .PHONY: clean
 clean:
-	rm -rf $(obj)
+	rm -rf $(objc) $(objcc) $(objcpp)
 
 .PHONY: clean-all
 clean-all: clean
-	rm -f Makefile
+	rm -f Makefile $(bin)

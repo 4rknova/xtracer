@@ -84,3 +84,4 @@ Ray XTCamera::get_primary_ray(int x, int y, XT_PROJECTION_T prjtype)
 
 	return primary_ray;
 }
+

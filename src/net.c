@@ -37,6 +37,7 @@ extern "C" {
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "err.h"
 
@@ -64,7 +65,7 @@ int producer (int port, const char *proto)
 	/* Check for illegal port value */
 	if(port > 0)
 	{
-		sad.sin_port = htons((u_short)port);
+/*		sad.sin_port = htons((u_short)port);*/
 	}
 	else
 	{
@@ -206,3 +207,4 @@ int producer (int port, const char *proto)
 #ifdef __cplusplus
 }   /* extern "C" */
 #endif /* __cplusplus */
+

@@ -29,12 +29,13 @@
 #include <string.h>
 #include "err.h"
 
-/* Default values for the screen buffer dimensions */
-#define DEFAULT_SCREEN_WIDTH	640
-#define DEFAULT_SCREEN_HEIGHT	480
-/* Default values for the raytracer environment */
-#define DEFAULT_RECURSION_DEPTH	5
+#include <nparse/cfgparser.hpp>
 
+/* Default values for the screen buffer dimensions */
+#define XTRACER_DEFAULT_SCREEN_WIDTH	640
+#define XTRACER_DEFAULT_SCREEN_HEIGHT	480
+/* Default values for the raytracer environment */
+#define XTRACER_DEFAULT_RECURSION_DEPTH	5
 
 /*
 	Environmental options
@@ -46,28 +47,18 @@
 		-depth	%i			The maximum recursion depth given as an integer %i
 		-buffer %ix%i		The screen buffer dimmensions given as an integer pair formatted as %ix%i
 */
-struct envsetup_t
-{
-	envsetup_t() 
-		: is_interactive(false), width(DEFAULT_SCREEN_WIDTH), height(DEFAULT_SCREEN_HEIGHT), depth(0)
-	{}
-
-	bool is_interactive;	/* Defines whether the rendered images will be displayed in an interactive window or dumped in image files */
-
-	int width;				/* The screen buffer width */
-	int height;				/* The screen buffer height */
-
-	int depth;				/* The maximum recursion depth. 0 denotes unlimited depth */
-} envsetup;
-
-/*
-	MAIN
-*/
 
 int main(int argc, char **argv)
 {
-	int iIsMaster = 0;	/* flag to setup the program to run as a master node */
-	int iIsSlave = 0;	/* flag to setup the program to run as a slave node */
+
+	int iIsInteractive = 0;		/* flag to setup the program output */
+
+	int iIsMaster = 0;			/* flag to setup the program to run as a master node */
+	int iIsSlave = 0;			/* flag to setup the program to run as a slave node */
+
+	unsigned int width = XTRACER_DEFAULT_SCREEN_WIDTH;		/* output buffer width */
+	unsigned int height = XTRACER_DEFAULT_SCREEN_HEIGHT;	/* output buffer height */
+	unsigned int rdepth = XTRACER_DEFAULT_RECURSION_DEPTH;	/* maximum recursion depth */
 
 	/* Parse the cli arguments */
     for (int i=1; i<argc; i++)
@@ -101,7 +92,7 @@ int main(int argc, char **argv)
 		/* Render in a sdl window */
         else if (!strcmp(argv[i], "-interactive"))
 		{
-            envsetup.is_interactive=true;
+            iIsInteractive=1;
         }
 		/* Setup the maximum recursion depth */
 		else if (strcmp(argv[i], "-depth") == 0)
@@ -137,9 +128,17 @@ int main(int argc, char **argv)
 			/*
 				Scene file is loaded. Any orphan argument is treated as the expected scene file path.
 			*/
-        }
+			printf("Loading scene file: %s\n", argv[i]);
+			NCFGParser scene(argv[i]);
+			if(!scene.parse())
+			{
+				fprintf(stderr, "Failed to parse the file..\n");
+				return XTRACER_STATUS_INVALID_SCENE_FILE;
+			}
+			printf("Dumping cfg file\n");
+			scene.dump("rest");
+		}
     }
-
 
 	/* Start up in the specified mode */
 	if (iIsSlave)
@@ -148,8 +147,9 @@ int main(int argc, char **argv)
 	}
 	else if (iIsMaster)
 	{
-		printf("Startimg as a mster node\n");
+		printf("Starting as a master node\n");
 	}
 	
 	return XTRACER_STATUS_OK;
 }
+
