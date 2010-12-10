@@ -6,4 +6,5 @@ A basic raytracer written in c++
 
 Dependencies
 ------------
-- libnmathy
+- libnmath
+- libnparse
