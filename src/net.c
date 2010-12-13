@@ -34,6 +34,8 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,167 +43,209 @@ extern "C" {
 
 #include "err.h"
 
-int producer (int port, const char *proto)
+#include <pthread.h>
+
+/*
+	GLOBAL VARIABLES
+*/
+pthread_t g_net_thread;    				/* Thread id */
+int g_net_mode = XTRACER_NET_LOCAL;		/* Net mode */
+int g_net_status = XTRACER_STATUS_OK;	/* Used to track errors */
+int g_net_hang_up = 0;					/* Flag used to terminate connections */
+
+void net_set_mode(int mode)
 {
-	struct protoent *ptrp;	/* pointer to a protocol table entry */
-	struct sockaddr_in sad;	/* structure to hold server's address */
-	struct sockaddr_in cad;	/* structure to hold client's address */
-	int sd1, sd2;			/* socket descriptors */
-	socklen_t alen;			/* address length */
-	char buf[1000];			/* data buffer */
+	g_net_mode = mode;
+}
 
-	long lRecvd, lEchoed;	/* for statistics */
-	int iRecvdp, iEchoedp; 	/* for statistics */
-	iRecvdp = 0;
-	iEchoedp = 0;
-	int visits = 0;         /* Active connections count */
+int net_get_status()
+{
+	return g_net_status;
+}
 
-	
-	/* Setup the server socketaddr infrastructure */
-	memset((char*)&sad, 0, sizeof(sad)); 	/* clear the socketaddr structure */
-	sad.sin_family = AF_INET;				/* set the family to internet */
-	sad.sin_addr.s_addr = INADDR_ANY;		/* set the local IP address */
-	
-	/* Check for illegal port value */
-	if(port > 0)
+void net_init(int port, const char *host)
+{
+
+	if (g_net_mode != XTRACER_NET_LOCAL)
 	{
-/*		sad.sin_port = htons((u_short)port);*/
-	}
-	else
-	{
-		fprintf(stderr, "Bad port number %i\n", port);
-		return  XTRACER_STATUS_NET_INVALID_PORT;
-	}
+		struct netdata_t data;
+		data.port = port;
 
-	printf("Listening on port: %d..\n", port);
+		/* Zero the data strings */
 
-	/* Determine which protocol to use */
-	int bIsTCP = !strcmp(proto, "tcp");
-	int bIsUDP = !strcmp(proto, "udp");
+		memset(&data.host, 0, 1000);
 
-	if(!bIsTCP && !bIsUDP)
-	{
-		fprintf(stderr, "Invalid protocol specified %s.\n", proto);
-		return  XTRACER_STATUS_NET_INVALID_PROTO;
-	}
-
-	printf("Using %s protocol..\n", proto);
-
-	/* Map protocol name to protocol number */
-	if(((int)(ptrp = getprotobyname(XT_PROTO_SRV_STRN))) == 0)
-	{
-		fprintf(stderr, "Cannot map protocol to protocol number\n");
-		return XTRACER_STATUS_NET_FAILURE_PROTOMAP;
-	}
-
-	/* 
-		Create a socket, depending on the protocol we are using.
-	
-		TCP: spcl_stream
-		UDP: datagram
-	*/
-
-	if (bIsTCP)
-	{
-		sd1 = socket(PF_INET, SOCK_STREAM, ptrp->p_proto);		/* TCP */
-	}
-	else
-	{
-		sd1 = socket(AF_INET, SOCK_DGRAM, ptrp->p_proto);		/* UDP */
-	}
-	
-	/* Check for errors */
-	if (sd1 < 0)
-	{
-		fprintf(stderr, "Socket creation failed\n");
-		return XTRACER_STATUS_NET_FAILURE_SOCKET_C;
-	}
-	
-	/* Bind a local access to the socket and detect errors. */
-	if(bind(sd1, (struct sockaddr *)&sad, sizeof(sad)) < 0)
-	{
-	 	fprintf(stderr, "Cannot bind socket\n");
-		return XTRACER_STATUS_NET_FAILURE_BIND;
-	}
-
-	/* Specify size of the request queue. Only call the listen function for tcp server */
-	if(bIsTCP && listen(sd1, XT_PROTO_SRV_QUSZ) < 0)
-	{
-		fprintf(stderr, "Cannot listen\n");
-		return XTRACER_STATUS_NET_FAILURE_LISTEN;
-	}
-
-	/* Server loop */
-	int n; /* Temporary variable */
-
-	while (bIsTCP)	/* TCP */
-	{
-		alen = sizeof(cad);
-		if((sd2 = accept(sd1, (struct sockaddr *)&cad, &alen)) < 0)
+		int hostln = strlen(host);
+		if(hostln < 1000)
+		{   
+			memcpy(&data.host, host, hostln);
+		}   
+		else
 		{
-			fprintf(stderr, "Failed to accept\n");
-			return XTRACER_STATUS_NET_FAILURE_ACCEPT;
+			fprintf(stderr, "Invalid host\n");
 		}
-		iRecvdp = 0;
-		iEchoedp = 0;
-		visits++;
-		printf("VISITS: %d RECVD: %d ECHOED: %d \n", visits, iRecvdp, iEchoedp);
+
+		printf("Initiating networking [udp %s:%i]..\n", data.host, data.port);
+
+		switch(g_net_mode)
+		{       
+			case XTRACER_NET_MASTER:
+				printf("Starting up master node...\n");
+				pthread_create(&g_net_thread, 0, (void *)net_master, &data);
+				break;
+			case XTRACER_NET_SLAVE:
+				printf("Starting slave node...\n");
+				pthread_create(&g_net_thread, 0, (void *)net_slave, &data);
+		}
+	} 
+}
+
+void net_deinit()
+{
+	printf("Shutting down networking..\n");
+	g_net_hang_up = 1;
+	if(g_net_mode != XTRACER_NET_LOCAL)
+	{
+		pthread_join(g_net_thread, NULL);
+	}
+}
+
+#define XT_NET_BUFFER_SZ 1000
+
+void *net_master(struct netdata_t *data)
+{
+	/* Message buffer */
+	char buffer[XT_NET_BUFFER_SZ];
+	int bufferSz = XT_NET_BUFFER_SZ;
+
+	int socketId = socket(AF_INET, SOCK_DGRAM, 0) ;
+
+	int x = fcntl(socketId, F_GETFL, 0);						/* Get socket flags */
+	fcntl(socketId, F_SETFL, x | MSG_DONTWAIT | O_NONBLOCK);	/* Add non-blocking flag */
+    
+	struct sockaddr_in serverAddr, clientAddr;
+	struct sockaddr *serverAddrCast = (struct sockaddr *) &serverAddr;
+	struct sockaddr *clientAddrCast = (struct sockaddr *) &clientAddr;
+	
+	memset(&serverAddr, 0, sizeof(struct sockaddr_in));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(data->port);
+	serverAddr.sin_addr.s_addr = INADDR_ANY;
+
+	/* Associate process with port */
+	bind(socketId, serverAddrCast, sizeof(struct sockaddr));
+
+
+	while (!g_net_hang_up)
+	{
+		char response[XT_NET_BUFFER_SZ];
+
+		/* Reset the buffers */
+		memset(buffer, 0, XT_NET_BUFFER_SZ);
+		memset(response, 0, XT_NET_BUFFER_SZ);
+
+
+		/* Receive */
+		unsigned int size = sizeof(clientAddr);
+		int mlen = recvfrom(socketId, buffer, bufferSz, 0, clientAddrCast, &size);
+
+		if(mlen > 0) printf("Net [Master <- %s] %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr),  mlen, buffer);
 		
-		/* receive data from client */		
-		n = recv(sd2, buf, sizeof(buf), 0);
-		lRecvd=(long)n;
-		lEchoed=0l;
-
-		while(n > 0)
+		if(!strcmp(buffer, "JOIN"))
 		{
-			if(!strcmp(buf, "join"))
-			{
-				lEchoed += (long)send(sd2, "wlcm", n, 0);
-			}
-			else if(!strcmp(buf, "done"))
-			{
-				lEchoed += (long)send(sd2, "chill", n, 0);
-			}
-
-			iRecvdp++;
-			iEchoedp++;
-			printf("Client says: %s", buf);
-			n = recv(sd2, buf, sizeof(buf), 0); /* Check if there is more */
-			lRecvd+=(long)n;
+			char *msg="WLCM";
+			memcpy(response, msg, strlen(msg));
+			printf("[%s] requested to join\n", (char *)inet_ntoa(clientAddr.sin_addr));
+			/* put client in workers list as idle */
 		}
+		else if(!strcmp(buffer, "done"))
+		{
 
-		/* Output statistics */
-		printf("Stats\n");
-		printf("received: %08ld bits / %08d packets\n", lRecvd, iRecvdp);
-		printf("  echoed: %08ld bits / %08d packets\n", lEchoed, iEchoedp);
-
-		shutdown(sd2, 2);
+		}
+		
+		int outl = strlen(response);
+		if(outl)
+		{
+			printf("Net [Master -> %s] %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr),  outl, response);
+			sendto(socketId, response, bufferSz, 0, clientAddrCast, size);
+		}
 	}
+	
+	printf("Closing connection..");
 
-	while(!bIsTCP)
+	pthread_exit(0);
+	g_net_status = XTRACER_STATUS_OK;
+}
+
+void *net_slave(struct netdata_t *data)
+{
+	/* Message buffer */
+	char buffer[XT_NET_BUFFER_SZ];
+	int bufferSz = XT_NET_BUFFER_SZ;
+
+	int socketId = socket(AF_INET, SOCK_DGRAM, 0) ;
+
+	int x = fcntl(socketId, F_GETFL, 0);                        /* Get socket flags */
+	fcntl(socketId, F_SETFL, x | MSG_DONTWAIT | O_NONBLOCK);    /* Add non-blocking flag */
+ 
+	struct sockaddr_in serverAddr, clientAddr;
+	struct sockaddr *serverAddrCast = (struct sockaddr *) &serverAddr;
+	struct sockaddr *clientAddrCast = (struct sockaddr *) &clientAddr;
+	
+	memset(&serverAddr, 0, sizeof(struct sockaddr_in));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(data->port);
+	struct hostent *hp = gethostbyname(data->host);
+
+	struct in_addr  **pptr;
+	pptr = (struct in_addr **)hp->h_addr_list;
+
+	while( *pptr != NULL )
 	{
-		alen = sizeof(cad);
+		printf("Resolved host name: %s -> %s\n", data->host, inet_ntoa(**(pptr++)));
+	}
+    
+	memcpy ((char *) &serverAddr.sin_addr, (char *)hp->h_addr, hp->h_length);
 
-		n = recvfrom(sd1, buf, sizeof(buf), 0, (struct sockaddr*)&cad, &alen);
+	unsigned int size = sizeof(serverAddr);
 
-		while(n > 0)
+	int iIsIdle = 1;
+
+	while (!g_net_hang_up)
+	{
+		char response[XT_NET_BUFFER_SZ];
+		
+		/* Reset the buffers */
+		memset(buffer, 0, XT_NET_BUFFER_SZ);
+		memset(response, 0, XT_NET_BUFFER_SZ);
+
+		/* Receive */
+		int mlen = recvfrom(socketId, buffer, bufferSz, 0, serverAddrCast, &size);
+		if(mlen > 0) printf("Net [Slave <- %s] %i: %s\n", (char *)inet_ntoa(serverAddr.sin_addr),  mlen, buffer);
+		
+		if(iIsIdle)
 		{
-			/* Check if there is more */
-			printf("Client says: %s", buf);
-			n = recvfrom(sd1, buf, sizeof(buf), 0, (struct sockaddr*)&cad, &alen);			
-
-			/* Output statistics */
-			printf("Stats\n");
-			printf("received: %08d bits / 1 packets\n", n);
-			printf("  echoed: %08d bits / 1 packets\n", n);
+			char *msg="JOIN";
+			memcpy(response, msg, strlen(msg));
+			iIsIdle = 0;
+		}
+		
+		int outl = strlen(response);
+		if(outl)
+		{
+			printf("Net [Slave -> %s] %i: %s\n", (char *)inet_ntoa(serverAddr.sin_addr),  outl, response);
+			int res = sendto(socketId, response, outl, 0, serverAddrCast, size);
+			
+			if(res == -1)
+			{
+				fprintf(stderr, "Message was not send");
+			}
 		}
 	}
 
-	/* Clean up */
-	/* We can't close the main listening socket for udp connection until the very end. */
-	if(!bIsTCP) shutdown(sd1, 2);
 
-	return XTRACER_STATUS_OK;
+	pthread_exit(0);
+	g_net_status = XTRACER_STATUS_OK;
 }
 
 #ifdef __cplusplus

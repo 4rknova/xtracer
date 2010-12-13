@@ -57,12 +57,34 @@ extern "C" {
 #endif  /* __cplusplus */
 
 /* Supervisor */
-#define XT_PROTO_SRV_STRN	"tcp"	/* Default protocol to use */
-#define XT_PROTO_SRV_PORT	68555	/* Default protocol port */
+#define XT_PROTO_SRV_PORT	6555	/* Default protocol port */
 #define XT_PROTO_SRV_QUSZ	10		/* Default size of the request queue */
 
-int producer(int port, const char *proto);
-int consumer(const char *host, int port, const char *proto);
+enum XT_MODE_NET
+{
+	XTRACER_NET_LOCAL,      /* Start as stand alone, no networking */
+	XTRACER_NET_MASTER,     /* Start as master node */
+	XTRACER_NET_SLAVE       /* Start as slave node */
+};
+
+struct netdata_t
+{
+	int port;
+	const char host[1000];
+};
+
+/* Set the networking mode */
+void net_set_mode(int mode);
+/* Retrieve last status */
+int net_get_status();
+/* Initiatiate networking */
+void net_init(int port, const char *host);
+/* DeInit networking */
+void net_deinit();
+/* Master node function */
+void *net_master(struct netdata_t *data);
+/* Slave node function */
+void *net_slave(struct netdata_t *data);	
 
 #ifdef __cplusplus
 }   /* extern "C" */
