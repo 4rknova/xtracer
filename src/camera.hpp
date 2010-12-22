@@ -32,37 +32,34 @@
 #include <nmath/ray.h>
 #include <nmath/precision.h>
 
-#include "fb.hpp"
-
 enum XT_PROJECTION_T
 {
 	XT_PROJECTION_PERSPECTIVE,
 	XT_PROJECTION_ORTHOGRAPHIC
 };
 
+#define XT_DEFAULT_PROJECTION XT_PROJECTION_PERSPECTIVE
+
 class XTCamera
 {
 	public:
-		XTCamera(XTFramebuffer &fb);
-		XTCamera(Vector3 &position, Vector3 &target, real_t fov, XTFramebuffer &fb);
+		XTCamera();
+		XTCamera(Vector3 &position, Vector3 &angle, real_t fovx);
 
 		Vector3 get_position();
-		Vector3 get_target();
+		Vector3 get_angle();
 		real_t get_fov();
 
 		Vector3 set_position(Vector3 &position);
-		Vector3 set_target(Vector3 &target);
+		Vector3 set_angle(Vector3 &angle);
 		real_t set_fov(real_t fov);
 
-		Ray get_primary_ray(int x, int y, XT_PROJECTION_T prjtype = XT_PROJECTION_PERSPECTIVE);
+		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height, XT_PROJECTION_T prjtype = XT_DEFAULT_PROJECTION);
 
 	private:
-
 		Vector3 m_p_position;
-		Vector3 m_p_target;
-		real_t m_p_fov;
-
-		XTFramebuffer *m_p_fb;
+		Vector3 m_p_angle;
+		real_t m_p_fov_x; /* Field of view x */
 };
 
 #endif /* XTRACER_CAMERA_HPP_INCLUDED */

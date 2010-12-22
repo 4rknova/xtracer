@@ -41,13 +41,14 @@ extern "C" {
 #include <string.h>
 #include <stdint.h>
 
-#include "err.h"
-
 #include <pthread.h>
+
+#include "err.h"
 
 /*
 	GLOBAL VARIABLES
 */
+
 pthread_t g_net_thread;    				/* Thread id */
 int g_net_mode = XTRACER_NET_LOCAL;		/* Net mode */
 int g_net_status = XTRACER_STATUS_OK;	/* Used to track errors */
@@ -65,7 +66,6 @@ int net_get_status()
 
 void net_init(int port, const char *host)
 {
-
 	if (g_net_mode != XTRACER_NET_LOCAL)
 	{
 		struct netdata_t data;
@@ -94,7 +94,7 @@ void net_init(int port, const char *host)
 				pthread_create(&g_net_thread, 0, (void *)net_master, &data);
 				break;
 			case XTRACER_NET_SLAVE:
-				printf("Starting slave node...\n");
+				printf("Starting up slave node...\n");
 				pthread_create(&g_net_thread, 0, (void *)net_slave, &data);
 		}
 	} 
@@ -116,10 +116,19 @@ void *net_master(struct netdata_t *data)
 {
 	/* Message buffer */
 	char buffer[XT_NET_BUFFER_SZ];
-	int bufferSz = XT_NET_BUFFER_SZ;
 
+	/* Create socket */
 	int socketId = socket(AF_INET, SOCK_DGRAM, 0) ;
 
+	/* Check for errors */
+	if(socketId == -1)
+	{
+		fprintf(stderr, "Failed to create socket\n");
+		g_net_status = XTRACER_STATUS_NET_FAILURE_SOCKET_C;
+		return NULL;
+	}
+
+	/* Make the socket non-blocking */
 	int x = fcntl(socketId, F_GETFL, 0);						/* Get socket flags */
 	fcntl(socketId, F_SETFL, x | MSG_DONTWAIT | O_NONBLOCK);	/* Add non-blocking flag */
     
@@ -135,7 +144,6 @@ void *net_master(struct netdata_t *data)
 	/* Associate process with port */
 	bind(socketId, serverAddrCast, sizeof(struct sockaddr));
 
-
 	while (!g_net_hang_up)
 	{
 		char response[XT_NET_BUFFER_SZ];
@@ -147,9 +155,9 @@ void *net_master(struct netdata_t *data)
 
 		/* Receive */
 		unsigned int size = sizeof(clientAddr);
-		int mlen = recvfrom(socketId, buffer, bufferSz, 0, clientAddrCast, &size);
+		int mlen = recvfrom(socketId, buffer, XT_NET_BUFFER_SZ, 0, clientAddrCast, &size);
 
-		if(mlen > 0) printf("Net [Master <- %s] %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr),  mlen, buffer);
+		if(mlen > 0) printf("<- %s %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr),  mlen, buffer);
 		
 		if(!strcmp(buffer, "JOIN"))
 		{
@@ -163,16 +171,17 @@ void *net_master(struct netdata_t *data)
 
 		}
 		
+		/* Print the response if any, and reply */
 		int outl = strlen(response);
 		if(outl)
 		{
-			printf("Net [Master -> %s] %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr),  outl, response);
-			sendto(socketId, response, bufferSz, 0, clientAddrCast, size);
+			printf("-> %s %i: %s\n", (char *)inet_ntoa(clientAddr.sin_addr), outl, response);
+			sendto(socketId, response, XT_NET_BUFFER_SZ, 0, clientAddrCast, size);
 		}
 	}
 	
-	printf("Closing connection..");
-
+	/* Terminate */
+	printf("Closing connection..\n");
 	pthread_exit(0);
 	g_net_status = XTRACER_STATUS_OK;
 }
@@ -181,32 +190,46 @@ void *net_slave(struct netdata_t *data)
 {
 	/* Message buffer */
 	char buffer[XT_NET_BUFFER_SZ];
-	int bufferSz = XT_NET_BUFFER_SZ;
-
+	
+	/* Create socket */
 	int socketId = socket(AF_INET, SOCK_DGRAM, 0) ;
 
+	/* Check for errors */
+	if(socketId == -1)
+	{
+		fprintf(stderr, "Failed to create socket\n");
+		g_net_status = XTRACER_STATUS_NET_FAILURE_SOCKET_C;
+		return NULL;
+	}
+
+	/* Make the socket non-blocking */
 	int x = fcntl(socketId, F_GETFL, 0);                        /* Get socket flags */
 	fcntl(socketId, F_SETFL, x | MSG_DONTWAIT | O_NONBLOCK);    /* Add non-blocking flag */
- 
-	struct sockaddr_in serverAddr, clientAddr;
+
+	/* Server address */
+	struct sockaddr_in serverAddr;
 	struct sockaddr *serverAddrCast = (struct sockaddr *) &serverAddr;
-	struct sockaddr *clientAddrCast = (struct sockaddr *) &clientAddr;
 	
+	/* Zero the server address and then set it up */
 	memset(&serverAddr, 0, sizeof(struct sockaddr_in));
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(data->port);
+
+	/* Resolved server address */
 	struct hostent *hp = gethostbyname(data->host);
+	struct in_addr **host = (struct in_addr **)hp->h_addr_list;
+	serverAddr.sin_addr = **host;
 
-	struct in_addr  **pptr;
-	pptr = (struct in_addr **)hp->h_addr_list;
-
-	while( *pptr != NULL )
+	/* Print the resolved addresses */
 	{
-		printf("Resolved host name: %s -> %s\n", data->host, inet_ntoa(**(pptr++)));
+		struct in_addr  **pptr;
+		pptr = (struct in_addr **)hp->h_addr_list;
+		while( *pptr != NULL )
+		{
+			printf("Resolved master node's hostname: %s = %s\n", data->host, inet_ntoa(**(pptr++)));  
+		}
 	}
-    
-	memcpy ((char *) &serverAddr.sin_addr, (char *)hp->h_addr, hp->h_length);
-
+	
 	unsigned int size = sizeof(serverAddr);
 
 	int iIsIdle = 1;
@@ -220,8 +243,8 @@ void *net_slave(struct netdata_t *data)
 		memset(response, 0, XT_NET_BUFFER_SZ);
 
 		/* Receive */
-		int mlen = recvfrom(socketId, buffer, bufferSz, 0, serverAddrCast, &size);
-		if(mlen > 0) printf("Net [Slave <- %s] %i: %s\n", (char *)inet_ntoa(serverAddr.sin_addr),  mlen, buffer);
+		int mlen = recvfrom(socketId, buffer, XT_NET_BUFFER_SZ, 0, serverAddrCast, &size);
+		if(mlen > 0) printf("<- %s %i: %s\n", inet_ntoa(serverAddr.sin_addr),  mlen, buffer);
 		
 		if(iIsIdle)
 		{
@@ -233,7 +256,7 @@ void *net_slave(struct netdata_t *data)
 		int outl = strlen(response);
 		if(outl)
 		{
-			printf("Net [Slave -> %s] %i: %s\n", (char *)inet_ntoa(serverAddr.sin_addr),  outl, response);
+			printf("-> %s %i: %s\n", (char *)inet_ntoa(serverAddr.sin_addr),  outl, response);
 			int res = sendto(socketId, response, outl, 0, serverAddrCast, size);
 			
 			if(res == -1)

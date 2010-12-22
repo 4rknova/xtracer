@@ -25,66 +25,16 @@
 
 */
 
-/*
-	Environmental options
-
-	The command line accepts the following options
- 
-	OPTION              DESCRIPTION
-
-	RENDERING MODES
-
-	-interactive        The images will be rendered in an sdl window.
-
-	-mode				Available modes:
-						local	- Stand alone renderer without networking
-						master	- Master node accepts incoming connections and coordinates rendering
-						slave %s- Slave node connects to a master node and accepts rendering tasks.
-						A master host must be provided.
-
-	-drv				Available drivers
-						sdl		- Render to SDL window
-						img %s	- Render to image file
-						asc		- Render to ascii ( outputs to console )
-
-	-depth  %i          The maximum recursion depth given as an integer %i
-
-	-buffer %ix%i       The screen buffer dimmensions given as an integer pair formatted as %ix%i
-
-	-version, -v, -ver	Outputs version info and exits
-
-	-port				This is only used in master or slave mode and is ignored in all other modes. 
-						If it's not provided then default value is used.
-*/
-
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <list>
 
-#include "err.h"
-#include "net.h"
-
 #include <nparse/cfgparser.hpp>
 
-/* Default values for the screen buffer dimensions */
-#define XTRACER_DEFAULT_SCREEN_WIDTH	640
-#define XTRACER_DEFAULT_SCREEN_HEIGHT	480
-/* Default values for the raytracer environment */
-#define XTRACER_DEFAULT_RECURSION_DEPTH	5
-
-/* Default net mode */
-#define XTRACER_DEFAULT_MODE_NET XTRACER_NET_LOCAL
-
-enum XTRACER_MODE_RND
-{
-	XTRACER_RND_SDL,		/* Render to SDL window */
-	XTRACER_RND_IMAGE,		/* Render to image file */
-	XTRACER_RND_ASCII		/* Render to ASCII text file */
-};
-
-/* Default render mode */
-#define XTRACER_DEFAULT_MODE_RND XTRACER_RND_SDL
+#include "xtracer.h"
+#include "err.h"
+#include "net.h"
 
 int main(int argc, char **argv)
 {
@@ -102,7 +52,7 @@ int main(int argc, char **argv)
 
 	/* output filepath for drivers that need it */
 	std::string filepath;
-	int port = XT_PROTO_SRV_PORT;
+	int port = XT_NET_PROT_PORT;
 	std::string host;
 
 	/* Parse the cli arguments */
@@ -110,17 +60,14 @@ int main(int argc, char **argv)
 	/*
 		VERSION
 	*/
-	if(argc < 2) return XTRACER_STATUS_OK;
 
-	int i = 1;
-	if((!strcmp(argv[i], "-version")) || (!strcmp(argv[i], "-v")) || (!strcmp(argv[i], "-ver")))
+	if( argc == 2 && ((!strcmp(argv[1], "-version")) || (!strcmp(argv[1], "-v")) || (!strcmp(argv[1], "-ver"))))
 	{
-		i++;
 		printf("Xtracer v0.0\nby Papadopoulos Nikos 2010\nusage: %s [option]... scene_file ...\n", argv[0]);
 		return XTRACER_STATUS_OK;
 	}
     
-	for (; i<argc; i++)
+	for (int i = 1; i<argc; i++)
 	{
 		/*
 			NET MODES
@@ -334,7 +281,7 @@ int main(int argc, char **argv)
 
 	if (!fscenes.empty())
 	{
-		printf("Creating the scene queue [%i items]..\n", fscenes.size());
+		printf("Creating the scene queue [%i items]..\n", (int)fscenes.size());
 
 		for(std::list<std::string>::iterator it = fscenes.begin(); it != fscenes.end(); it++)
 		{   
@@ -361,7 +308,7 @@ int main(int argc, char **argv)
 
 	if (!scenes.empty())
 	{
-		printf("Cleaning up the scene queue [%i]..\n", scenes.size());
+		printf("Cleaning up the scene queue [%i]..\n", (int)scenes.size());
 		for(std::list<NCFGParser *>::iterator it = scenes.begin(); it != scenes.end(); it++)
 		{
 			printf("Releasing scene -> %s\n", (*it)->get_source().c_str());

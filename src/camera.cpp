@@ -28,16 +28,19 @@
 #include "camera.hpp"
 
 #include <nmath/defs.h>
+#include <nmath/precision.h>
 #include <nmath/ray.h>
+#include <nmath/vector.h>
+#include <nmath/matrix.h>
 
 #define XTRACER_DEFAULT_FOV M_PI/4
 
-XTCamera::XTCamera(XTFramebuffer &fb)
-	: m_p_position(Vector3(0,0,0)), m_p_target(Vector3(0,0,0)), m_p_fov(XTRACER_DEFAULT_FOV), m_p_fb(&fb)
+XTCamera::XTCamera()
+	: m_p_position(Vector3(0,0,0)), m_p_angle(Vector3(0,0,0)), m_p_fov_x(XTRACER_DEFAULT_FOV)
 {}
 
-XTCamera::XTCamera(Vector3 &position, Vector3 &target, real_t fov, XTFramebuffer &fb)
-:  m_p_position(position), m_p_target(target), m_p_fov(fov), m_p_fb(&fb)
+XTCamera::XTCamera(Vector3 &position, Vector3 &angle, real_t fovx)
+:  m_p_position(position), m_p_angle(angle), m_p_fov_x(fovx)
 {}
 
 Vector3 XTCamera::get_position()
@@ -45,14 +48,14 @@ Vector3 XTCamera::get_position()
 	return m_p_position;
 }
 
-Vector3 XTCamera::get_target()
+Vector3 XTCamera::get_angle()
 {
-	return m_p_target;
+	return m_p_angle;
 }
 
 real_t XTCamera::get_fov()
 {
-	return m_p_fov;
+	return m_p_fov_x;
 }
 
 Vector3 XTCamera::set_position(Vector3 &position)
@@ -60,27 +63,51 @@ Vector3 XTCamera::set_position(Vector3 &position)
 	return m_p_position = position;
 }
 
-Vector3 XTCamera::set_target(Vector3 &target)
+Vector3 XTCamera::set_angle(Vector3 &angle)
 {
-	return m_p_target = target;
+	return m_p_angle = angle;
 }
 
 real_t XTCamera::set_fov(real_t fov)
 {
-	return m_p_fov = fov;
+	return m_p_fov_x = fov;
 }
 
-Ray XTCamera::get_primary_ray(int x, int y, XT_PROJECTION_T prjtype)
+Ray XTCamera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height, XT_PROJECTION_T prjtype)
 {
 	Ray primary_ray;
 
 	switch(prjtype)
 	{
 		case XT_PROJECTION_PERSPECTIVE:
+			{
+				real_t theta = m_p_fov_x / 2;
+				real_t cx = ((2 * x) / width) - 1;
+				real_t cy = (((2 * y) / height) - 1) * (height / width);
+				real_t cz = 1 / tan(theta);
+				primary_ray.direction = Vector3(cx, cy, cz);
+			}
 			break;
 		case XT_PROJECTION_ORTHOGRAPHIC:
+			{
+				real_t cx = ((2 * x) / width) - 1;
+				real_t cy = (((2 * y) / height) - 1) * (height / width);
+				
+				primary_ray.origin = Vector3(cx, cy ,0);
+				primary_ray.direction = Vector3(cx, cy, -1);
+			}
 			break;
 	}
+
+	Matrix4x4 tmat;
+
+	/* Prepare the transformation matrix */
+	tmat.rotate(Vector3(m_p_angle.x, m_p_angle.y, m_p_angle.z));
+	tmat.translate(Vector3(m_p_position.x, m_p_position.y, m_p_position.z));
+
+	/* Transform the ray */
+	primary_ray.origin = Vector3(tmat * Vector4(primary_ray.origin));
+	primary_ray.direction = Vector3(tmat * Vector4(primary_ray.direction));
 
 	return primary_ray;
 }
