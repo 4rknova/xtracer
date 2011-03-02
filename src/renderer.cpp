@@ -76,9 +76,27 @@ xt_status_t xtrender(const char* scenefile)
 	/* Load the scene file and parse it. */
 	printf("Analyzing scene..\n");
 	NCFGParser scene(scenefile);
-	scene.parse();
+	int status = scene.parse();
 
-//	scene->group("camera")
+	if(status)
+	{
+		fprintf(stderr, "Error: Failed to load scene file.\n");
+		return XTRACER_STATUS_INVALID_SCENE_FILE;
+	}
+
+	std::string l;
+
+	printf("  Scene name: %s\n", scene.get("name"));
+	printf("  Scene info: %s\n", scene.get("description"));
+
+	scene.group("camera")->list_groups(l);
+	printf("     Cameras: %i [%s]\n", scene.group("camera")->count_groups(), l.c_str());
+	scene.group("material")->list_groups(l);
+	printf("   Materials: %i [%s]\n", scene.group("material")->count_groups(), l.c_str());
+	scene.group("light")->list_groups(l);
+	printf("      Lights: %i [%s]\n", scene.group("light")->count_groups(), l.c_str());
+	scene.group("object")->list_groups(l);
+	printf("     Objects: %i [%s]\n", scene.group("object")->count_groups(), l.c_str());
 
 	printf("Rendering frame..\n");
 	return XTRACER_STATUS_OK;

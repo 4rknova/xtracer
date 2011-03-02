@@ -284,12 +284,13 @@ int main(int argc, char **argv)
 	net_set_mode(xt_mode_net);
 	net_init(port, host.c_str());
 
-	while(!fscenes.empty())
-	{	
-		printf("Processing: %s..\nBuffer size: %ix%i, Recursion depth: %i\n", 
-			fscenes.front().c_str(), 
+	printf("Buffer size: %ix%i, Recursion depth: %i\n", 
 			xtrenderer_get_width(),  xtrenderer_get_height(),
 			xtrenderer_get_rdepth());
+
+	while(!fscenes.empty())
+	{	
+		printf("Processing: %s..\n", fscenes.front().c_str());
 
 		xtrender(fscenes.front().c_str());
 

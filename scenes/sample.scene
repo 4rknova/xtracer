@@ -1,7 +1,7 @@
 # Xtracer example scene
 
-name = "Sample scene"
-description = "Xtracer sample scene"
+name = Sample scene
+description = This is a sample scene. It is used to describe the specification.
 	
 # group camera contains all the cameras
 camera = {
@@ -47,7 +47,7 @@ camera = {
 # group material contains all the materials
 material = {
 	mat1 = {
-		src = "mat/mat1"
+		src = mat/mat1
 
 		# Any other options here will modify those loaded from src file
 	}
@@ -80,14 +80,14 @@ object = {
 		geometry = mesh
 
 		# The filename
-		file = "mesh/human.3ds"
+		file = mesh/human.3ds
 
 	}
 }
 
 # group light contains all the lights
 light = {
-	lamb = {
+	lamp = {
 		position = {
 			x = 0
 			y = 0
