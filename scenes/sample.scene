@@ -1,0 +1,97 @@
+# Xtracer example scene
+
+name = "Sample scene"
+description = "Xtracer sample scene"
+	
+# group camera contains all the cameras
+camera = {
+	cam1 = {
+		# Mode
+		mode = perspective
+		# Field of view
+		fov = 45
+		# Camera's position
+		position = {
+			x = 0
+			y = 0
+			z = 0
+		}
+		# Camera's angle
+		angle = {
+			x = 0
+			y = 0
+			z = 0
+		}
+	}
+		
+	cam2 = {
+		# Mode
+		mode = perspective
+		# Field of view
+		fov = 45
+		# Camera's position
+		position = {
+			x = 0
+			y = 0
+			z = 0
+		}
+		# Camera's angle
+		angle = {
+			x = 0
+			y = 0
+			z = 0
+		}
+	}
+}
+
+# group material contains all the materials
+material = {
+	mat1 = {
+		src = "mat/mat1"
+
+		# Any other options here will modify those loaded from src file
+	}
+
+	mat2 = {
+		property1 = 0
+	}
+
+}
+
+# group object contains all the geometry
+object = {
+	ball = {
+		# The object's geometry 
+		geometry = sphere
+
+		# The sphere's position
+		position ={
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		# The sphere's radius
+		radius = 1
+	}
+
+	human = {
+		# The object's geometry
+		geometry = mesh
+
+		# The filename
+		file = "mesh/human.3ds"
+
+	}
+}
+
+# group light contains all the lights
+light = {
+	lamb = {
+		position = {
+			x = 0
+			y = 0
+			z = 0
+		}
+	}
+}
