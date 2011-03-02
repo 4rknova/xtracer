@@ -44,22 +44,25 @@ class XTCamera
 {
 	public:
 		XTCamera();
-		XTCamera(Vector3 &position, Vector3 &angle, real_t fovx);
+		XTCamera(Vector3 &position, Vector3 &angle, real_t fovx, XT_PROJECTION_T prjt = XT_DEFAULT_PROJECTION);
 
 		Vector3 get_position();
 		Vector3 get_angle();
 		real_t get_fov();
+		XT_PROJECTION_T get_prjtype();
 
 		Vector3 set_position(Vector3 &position);
 		Vector3 set_angle(Vector3 &angle);
 		real_t set_fov(real_t fov);
+		XT_PROJECTION_T get_prjtype(XT_PROJECTION_T prjt);
 
-		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height, XT_PROJECTION_T prjtype = XT_DEFAULT_PROJECTION);
+		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 
 	private:
 		Vector3 m_p_position;
 		Vector3 m_p_angle;
-		real_t m_p_fov_x; /* Field of view x */
+		real_t m_p_fov_x; 					/* Field of view x */
+		XT_PROJECTION_T m_p_prjt;			/* Projection type */
 };
 
 #endif /* XTRACER_CAMERA_HPP_INCLUDED */

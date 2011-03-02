@@ -36,11 +36,11 @@
 #define XTRACER_DEFAULT_FOV M_PI/4
 
 XTCamera::XTCamera()
-	: m_p_position(Vector3(0,0,0)), m_p_angle(Vector3(0,0,0)), m_p_fov_x(XTRACER_DEFAULT_FOV)
+	: m_p_position(Vector3(0,0,0)), m_p_angle(Vector3(0,0,0)), m_p_fov_x(XTRACER_DEFAULT_FOV), m_p_prjt(XT_DEFAULT_PROJECTION)
 {}
 
-XTCamera::XTCamera(Vector3 &position, Vector3 &angle, real_t fovx)
-:  m_p_position(position), m_p_angle(angle), m_p_fov_x(fovx)
+XTCamera::XTCamera(Vector3 &position, Vector3 &angle, real_t fovx, XT_PROJECTION_T prjt)
+:  m_p_position(position), m_p_angle(angle), m_p_fov_x(fovx), m_p_prjt(prjt)
 {}
 
 Vector3 XTCamera::get_position()
@@ -58,6 +58,11 @@ real_t XTCamera::get_fov()
 	return m_p_fov_x;
 }
 
+XT_PROJECTION_T XTCamera::get_prjtype()
+{
+	return m_p_prjt;
+}
+
 Vector3 XTCamera::set_position(Vector3 &position)
 {
 	return m_p_position = position;
@@ -73,11 +78,16 @@ real_t XTCamera::set_fov(real_t fov)
 	return m_p_fov_x = fov;
 }
 
-Ray XTCamera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height, XT_PROJECTION_T prjtype)
+XT_PROJECTION_T XTCamera::get_prjtype(XT_PROJECTION_T prjt)
+{
+	return m_p_prjt = prjt;
+}
+
+Ray XTCamera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
 	Ray primary_ray;
 
-	switch(prjtype)
+	switch(m_p_prjt)
 	{
 		case XT_PROJECTION_PERSPECTIVE:
 			{

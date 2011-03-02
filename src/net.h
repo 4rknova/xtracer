@@ -118,7 +118,7 @@ extern "C" {
 /*
 	NODE MODES
 */
-enum XT_MODE_NET
+enum xt_mode_net_t
 {
 	XTRACER_NET_LOCAL,      /* Start as stand alone, no networking */
 	XTRACER_NET_MASTER,     /* Start as master node */
@@ -137,18 +137,12 @@ struct netdata_t
 	const char host[1000];
 };
 
-/* Set the networking mode */
-void net_set_mode(int mode);
-/* Retrieve last status */
-int net_get_status();
-/* Initiatiate networking */
-void net_init(int port, const char *host);
-/* DeInit networking */
-void net_deinit();
-/* Master node worker */
-void *net_master(struct netdata_t *data);
-/* Slave node worker */
-void *net_slave(struct netdata_t *data);	
+void net_set_mode(int mode);				/* Set the networking mode */
+int net_get_status();						/* Retrieve last status */
+void net_init(int port, const char *host);	/* Initiate networking */
+void net_deinit();							/* Deinit networking */
+void *net_master(struct netdata_t *data);	/* Master node worker */
+void *net_slave(struct netdata_t *data);	/* Slave node worker */
 
 #ifdef __cplusplus
 }   /* extern "C" */

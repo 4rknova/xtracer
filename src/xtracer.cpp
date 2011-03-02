@@ -30,17 +30,18 @@
 #include <string>
 #include <list>
 
-#include <nparse/cfgparser.hpp>
+#include <SDL/SDL.h>
 
 #include "xtracer.h"
+#include "renderer.hpp" 
 #include "err.h"
 #include "net.h"
 
 int main(int argc, char **argv)
 {
 	/* setup flags */
-	unsigned int xt_mode_rnd = XTRACER_DEFAULT_MODE_NET;	/* flag to setup the rendering mode */
-	unsigned int xt_mode_net = XTRACER_DEFAULT_MODE_RND;	/* flag to setup the program to run as a master node */
+	unsigned int xt_mode_rnd = XTRACER_DEFAULT_MODE_RND;	/* flag to setup the rendering mode */
+	unsigned int xt_mode_net = XTRACER_DEFAULT_MODE_NET;	/* flag to setup the program to run as a master node */
 
 	/* environment */
 	unsigned int width = XTRACER_DEFAULT_SCREEN_WIDTH;		/* output buffer width */
@@ -259,7 +260,7 @@ int main(int argc, char **argv)
 
 	if (fscenes.empty() && (xt_mode_net != XTRACER_NET_SLAVE))
 	{
-		fprintf(stderr, "No scenes were provided.\nNothing to do..\n");
+		fprintf(stderr, "No scenes were provided.\n");
 		return XTRACER_STATUS_MISSING_SCENE_FILE;	
 	}
 	else if(xt_mode_net == XTRACER_NET_SLAVE)
@@ -268,35 +269,17 @@ int main(int argc, char **argv)
 		fscenes.clear();
 	}
 	
-	/*  Flag to indicate when processing is done */
-	int done = 0;
-	
 	/* Startup networking if required */
 	net_set_mode(xt_mode_net);
 	net_init(port, host.c_str());
 
-	printf("Initiating rendering..\n");
-	
-	std::list<NCFGParser *> scenes;
-
-	if (!fscenes.empty())
-	{
-		printf("Creating the scene queue [%i items]..\n", (int)fscenes.size());
-
-		for(std::list<std::string>::iterator it = fscenes.begin(); it != fscenes.end(); it++)
-		{   
-			printf("Queueing scene -> %s\n", (*it).c_str());
-			NCFGParser *scene = new NCFGParser((*it).c_str());
-			scenes.push_back(scene);
-		}
-	}
-	
-	while(!done)
+	while(!fscenes.empty())
 	{	
-		sleep(934);
-		//while(1);
+		XTFramebuffer fb(width, height);
+		printf("Processing: %s..\nBuffer size: %ix%i\n", fscenes.front().c_str(), fb.get_width(), fb.get_height());
+		xt_render(fscenes.front().c_str(), fb);
 		/* Scene processing done */
-		done++;
+		fscenes.pop_front();
 	}
 	
 	/*
@@ -305,17 +288,5 @@ int main(int argc, char **argv)
 	/* Terminate networking */
 	net_deinit();
 	
-
-	if (!scenes.empty())
-	{
-		printf("Cleaning up the scene queue [%i]..\n", (int)scenes.size());
-		for(std::list<NCFGParser *>::iterator it = scenes.begin(); it != scenes.end(); it++)
-		{
-			printf("Releasing scene -> %s\n", (*it)->get_source().c_str());
-			delete *it;
-		}
-	}
-
 	return XTRACER_STATUS_OK;
 }
-

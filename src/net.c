@@ -49,17 +49,17 @@ extern "C" {
 	GLOBAL VARIABLES
 */
 
-pthread_t g_net_thread;    				/* Thread id */
-int g_net_mode = XTRACER_NET_LOCAL;		/* Net mode */
-int g_net_status = XTRACER_STATUS_OK;	/* Used to track errors */
-int g_net_hang_up = 0;					/* Flag used to terminate connections */
+pthread_t g_net_thread;    						/* Thread id */
+int g_net_mode = XTRACER_DEFAULT_MODE_NET;		/* Net mode */
+int g_net_status = XTRACER_STATUS_OK;			/* Used to track errors */
+int g_net_hang_up = 0;							/* Flag used to terminate connections */
 
 void net_set_mode(int mode)
 {
 	g_net_mode = mode;
 }
 
-int net_get_status()
+xt_status_t get_get_status()
 {
 	return g_net_status;
 }
@@ -102,10 +102,10 @@ void net_init(int port, const char *host)
 
 void net_deinit()
 {
-	printf("Shutting down networking..\n");
-	g_net_hang_up = 1;
 	if(g_net_mode != XTRACER_NET_LOCAL)
 	{
+		printf("Shutting down networking..\n");
+		g_net_hang_up = 1;
 		pthread_join(g_net_thread, NULL);
 	}
 }

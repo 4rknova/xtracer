@@ -18,10 +18,10 @@ CC = gcc
 CXX = g++
 CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
 CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
-LDFLAGS = -lnparse -lnmath `sdl-config --libs`
+LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`  
 
 $(bin): $(objc) $(objcc) $(objcpp)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@
+	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
