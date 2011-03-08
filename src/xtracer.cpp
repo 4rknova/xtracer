@@ -30,14 +30,16 @@
 #include <string>
 #include <list>
 
-#include "xtracer.h"
 #include "renderer.hpp" 
-#include "out.hpp"
+
+#include "xtracer.h"
+#include "out.h"
 #include "err.h"
 #include "net.h"
 
 int main(int argc, char **argv)
 {
+	/* Initiate subsystems */
 	out_init();				/* Initiate the output environment */
 	xtrenderer_init(); 		/* Initiate the renderer environment */
 
@@ -148,7 +150,7 @@ int main(int argc, char **argv)
 			}
 			else if (!strcmp(argv[i], "img"))
 			{
-				out_set_drv(XTRACER_DRV_IMAGE);
+				out_set_drv(XTRACER_DRV_IMG);
 
 				i++;
 
@@ -176,7 +178,7 @@ int main(int argc, char **argv)
 			}
 			else if (!strcmp(argv[i], "asc"))
 			{	
-				out_set_drv(XTRACER_DRV_ASCII);
+				out_set_drv(XTRACER_DRV_ASC);
 			}
 			else
 			{
@@ -280,6 +282,9 @@ int main(int argc, char **argv)
 		fscenes.clear();
 	}
 	
+	/* Startup the output driver */
+	out_drv_init(640,480,24);
+	
 	/* Startup networking if required */
 	net_set_mode(xt_mode_net);
 	net_init(port, host.c_str());
@@ -301,6 +306,8 @@ int main(int argc, char **argv)
 		CLEAN UP
 	*/
 	/* Terminate networking */
+	// out_deinit();
+	// xt_renderer_deinit();
 	net_deinit();
 	
 	return XTRACER_STATUS_OK;

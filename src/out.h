@@ -28,7 +28,9 @@
 #ifndef XTRACER_OUTPUT_HPP_INCLUDED
 #define XTRACER_OUTPUT_HPP_INCLUDED
 
-#include "fb.hpp"
+#ifdef __cplusplus
+	extern "C" {
+#endif  /* __cplusplus */
 
 enum XTRACER_MODE_SYN
 {
@@ -42,9 +44,10 @@ enum XTRACER_MODE_SYN
 
 enum XTRACER_MODE_DRV
 {
-	XTRACER_DRV_SDL,        /* Output to SDL window */
-	XTRACER_DRV_IMAGE,      /* Output to image file */
-	XTRACER_DRV_ASCII       /* Output to stdout in ASCII */
+	XTRACER_DRV_DUM,		/* Dummy driver */
+	XTRACER_DRV_SDL,       	/* Output to SDL window */
+	XTRACER_DRV_IMG,      	/* Output to image file */
+	XTRACER_DRV_ASC       	/* Output to stdout in ASCII */
 };  
 
 /* Default output mode */
@@ -53,15 +56,25 @@ enum XTRACER_MODE_DRV
 /* Output environment */
 struct Xtracer_out_env_t
 {
-	XTRACER_MODE_SYN syn;
+	enum XTRACER_MODE_SYN syn;
 	unsigned int syn_intv;
-	XTRACER_MODE_DRV drv;
+	enum XTRACER_MODE_DRV drv;
+	int (*out_drv_init)(unsigned int, unsigned int, unsigned int); 
+	int (*out_drv_deinit)(); 
+	int (*out_drv_set)(unsigned int, unsigned int, unsigned int); 
 };
 
-void out_init();						/* Initiate the output environment */
-void out_set_syn(XTRACER_MODE_SYN m);	/* Set sync mode */
-void out_set_syn_intv(unsigned int v);	/* Set async interval */
-void out_set_drv(XTRACER_MODE_DRV d);	/* Set driver */
+void out_init();							/* Initiate the output environment */
+void out_set_syn(enum XTRACER_MODE_SYN m);	/* Set sync mode */
+void out_set_syn_intv(unsigned int v);		/* Set async interval */
+void out_set_drv(enum XTRACER_MODE_DRV d);	/* Set driver */
 
+int out_drv_init(unsigned int width, unsigned int height, unsigned int bpp);
+int out_drv_deinit();
+int out_drv_set(unsigned int x, unsigned int y, unsigned int color);
+
+#ifdef __cplusplus
+	}   /* extern "C" */
+#endif /* __cplusplus */
 
 #endif /* XTRACER_OUTPUT_HPP_INCLUDED */

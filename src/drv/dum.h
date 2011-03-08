@@ -2,8 +2,8 @@
 
 	This file is part of xtracer.
 
-	out.cpp
-	Output drivers
+	dum.h
+	Dummy driver
 
 	Copyright (C) 2010, 2011
 	Papadopoulos Nikolaos
@@ -25,32 +25,20 @@
 
 */
 
-#include <cstdio>
+#ifndef XTRACER_DRV_DUM_H_INCLUDED
+#define XTRACER_DRV_DUM_H_INCLUDED
 
-#include "out.hpp"
+#ifdef __cplusplus
+	extern "C" {
+#endif  /* __cplusplus */
 
-#include "err.h"
+int out_drv_dum_init();
+int out_drv_dum_deinit();
 
-Xtracer_out_env_t xtracer_out_env;
+int out_drv_dum_set(unsigned int x, unsigned int y, unsigned int color);
 
-void out_init()
-{
-	xtracer_out_env.syn = XTRACER_DEFAULT_MODE_SYN;
-	xtracer_out_env.syn_intv = XTRACER_DEFAULT_ASYN_INTV;
-	xtracer_out_env.drv = XTRACER_DEFAULT_MODE_DRV;
-}
+#ifdef __cplusplus
+	}   /* extern "C" */
+#endif /* __cplusplus */
 
-void out_set_syn(enum XTRACER_MODE_SYN m)
-{
-	xtracer_out_env.syn = m;
-}
-
-void out_set_syn_intv(unsigned int v)
-{
-	xtracer_out_env.syn_intv = v;
-}
-
-void out_set_drv(XTRACER_MODE_DRV d)
-{
-	xtracer_out_env.drv = d;
-}
+#endif /* XTRACER_DRV_DUM_H_INCLUDED */

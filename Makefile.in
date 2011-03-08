@@ -3,9 +3,9 @@
 spath = src
 opath = $(bpath)/obj
 # - sources
-ccsrc = $(wildcard $(spath)/*.c)
-ccsrcc = $(wildcard $(spath)/*.cc)
-ccsrcpp = $(wildcard $(spath)/*.cpp)
+ccsrc = $(wildcard $(spath)/*.c) $(wildcard $(spath)/drv/*.c)
+ccsrcc = $(wildcard $(spath)/*.cc) $(wildcard $(spath)/drv/*.cc)
+ccsrcpp = $(wildcard $(spath)/*.cpp) $(wildcard $(spath)/drv/*.cpp)
 
 # binarys
 objc = $(ccsrc:.c=.o)
