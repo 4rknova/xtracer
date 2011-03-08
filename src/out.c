@@ -57,6 +57,12 @@ void out_set_syn_intv(unsigned int v)
 
 void out_set_drv(enum XTRACER_MODE_DRV d)
 {
+	/* Deinit previous driver */
+	if(xtracer_out_env.out_drv_deinit)
+	{
+		out_drv_deinit();
+	}
+
 	xtracer_out_env.drv = d;
 
 	switch (d)
@@ -80,7 +86,7 @@ void out_set_drv(enum XTRACER_MODE_DRV d)
 
 int out_drv_init(unsigned int width, unsigned int height, unsigned int bpp)
 {
-	return (*xtracer_out_env.out_drv_init)(width, height, bbp);
+	return (*xtracer_out_env.out_drv_init)(width, height, bpp);
 }
 
 

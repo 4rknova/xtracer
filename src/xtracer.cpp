@@ -37,6 +37,8 @@
 #include "err.h"
 #include "net.h"
 
+#include "pixel.h"
+
 int main(int argc, char **argv)
 {
 	/* Initiate subsystems */
@@ -306,7 +308,7 @@ int main(int argc, char **argv)
 		CLEAN UP
 	*/
 	/* Terminate networking */
-	// out_deinit();
+	out_drv_deinit();
 	// xt_renderer_deinit();
 	net_deinit();
 	

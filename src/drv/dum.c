@@ -2,8 +2,8 @@
 
 	This file is part of xtracer.
 
-	sdl.c
-	SDL driver
+	dum.h
+	Dummy driver
 
 	Copyright (C) 2010, 2011
 	Papadopoulos Nikolaos
@@ -25,51 +25,30 @@
 
 */
 
-#include "sdl.h"
-
-#include <stdio.h>
-#include <SDL/SDL.h>
+#ifndef XTRACER_DRV_DUM_H_INCLUDED
+#define XTRACER_DRV_DUM_H_INCLUDED
 
 #ifdef __cplusplus
 	extern "C" {
 #endif  /* __cplusplus */
 
-SDL_Surface* sdl_screen = NULL;
-
-int out_drv_sdl_init(unsigned int width, unsigned int height, unsigned int bpp)
+int out_drv_dum_init()
 {
-	printf("Creating the sdl window..\n");
-
-	if( SDL_Init( SDL_INIT_EVERYTHING ) == -1 )
-		return 1;
-	
-	/* Set up the screen */
-	printf("Setting up the window environment..\n");
-	sdl_screen = SDL_SetVideoMode( width, height, bpp, SDL_SWSURFACE );
-	if(!sdl_screen)
-		return 1;
-	/* Set the window caption */
-	SDL_WM_SetCaption( "Xtracer", NULL );
 	return 0;
 }
 
-int out_drv_sdl_deinit()
+int out_drv_dum_deinit()
 {
-	/* Deinit */
-	SDL_Quit(); /* This will release sdl_screen as well */
 	return 0;
 }
 
-int out_drv_sdl_set(unsigned int x, unsigned int y, unsigned int color)
+int out_drv_dum_set(unsigned int x, unsigned int y, unsigned int color)
 {
-	/* Update the screen */
-	if( SDL_Flip(sdl_screen) == -1 )
-	{
-		return 1;
-	}
 	return 0;
 }
 
 #ifdef __cplusplus
 	}   /* extern "C" */
 #endif /* __cplusplus */
+
+#endif /* XTRACER_DRV_DUM_H_INCLUDED */

@@ -71,8 +71,6 @@ unsigned int xtrenderer_get_rdepth()
 
 xt_status_t xtrender(const char* scenefile)
 {
-	XTFramebuffer fb(xtracer_renderer_env.width, xtracer_renderer_env.height);
-
 	/* Load the scene file and parse it. */
 	printf("Analyzing scene..\n");
 	NCFGParser scene(scenefile);
@@ -99,5 +97,12 @@ xt_status_t xtrender(const char* scenefile)
 	printf("     Objects: %i [%s]\n", scene.group("object")->count_groups(), l.c_str());
 
 	printf("Rendering frame..\n");
+
+	XTFramebuffer fb(xtracer_renderer_env.width, xtracer_renderer_env.height);
+
+
+
+
+
 	return XTRACER_STATUS_OK;
 }
