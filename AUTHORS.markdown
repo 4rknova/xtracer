@@ -1,14 +1,16 @@
 xtracer authors
 ===============
 
+The following people contributed to this project.
+
 Development
 -----------
-* Papadopoulos Nikos - nikpapas@gmail.com
+* Papadopoulos Nikos - [email](nikpapas@gmail.com)
 
 Platform testing
 ----------------
-* Freebsd
-  -	Kokkalhs Nikos 
+* FreeBSD
+  -	Kokkalhs Nikos
 
 * OSX
   -	Ntzoufras Kwstas
