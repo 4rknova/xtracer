@@ -38,12 +38,12 @@ XTFramebuffer::~XTFramebuffer()
 	delete [] m_p_pixels;
 }
 
-unsigned int XTFramebuffer:: get_width()
+unsigned int XTFramebuffer::width()
 {
 	return  m_p_width;
 }
 
-unsigned int XTFramebuffer:: get_height()
+unsigned int XTFramebuffer::height()
 {
 	return  m_p_height;
 }

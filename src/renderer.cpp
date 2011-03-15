@@ -69,6 +69,8 @@ unsigned int xtrenderer_get_rdepth()
 	return xtracer_renderer_env.rdepth;
 }
 
+#include <stdint.h>
+
 xt_status_t xtrender(const char* scenefile)
 {
 	/* Load the scene file and parse it. */
@@ -100,6 +102,18 @@ xt_status_t xtrender(const char* scenefile)
 
 	XTFramebuffer fb(xtracer_renderer_env.width, xtracer_renderer_env.height);
 
+
+	/* Rendering loop */
+	for (int y = 0; y < fb.height(); y++)
+	{
+		for (int x = 0; x < fb.width(); x++)
+		{
+			uint32_t final_color = 0;
+			// compute first ray
+			// For each object, determine first intersection
+			// Check if in shadow
+		}
+	}
 
 
 

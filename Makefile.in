@@ -2,10 +2,13 @@
 # - target
 spath = src
 opath = $(bpath)/obj
+tpath = doc
+
 # - sources
 ccsrc = $(wildcard $(spath)/*.c) $(wildcard $(spath)/drv/*.c)
 ccsrcc = $(wildcard $(spath)/*.cc) $(wildcard $(spath)/drv/*.cc)
 ccsrcpp = $(wildcard $(spath)/*.cpp) $(wildcard $(spath)/drv/*.cpp)
+doctex = $(wildcard $(tpath)/*.tex)
 
 # binarys
 objc = $(ccsrc:.c=.o)
@@ -13,12 +16,19 @@ objcc = $(ccsrcc:.cc=.o)
 objcpp = $(ccsrcpp:.cpp=.o)
 
 bin = $(bpath)/$(pkgname)
+doc = $(bpath)/$(pkgname).pdf
 
+PDFVIEWER = xpdf 
+TEX = xelatex
+RM = rm
 CC = gcc
 CXX = g++
-CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
-CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)
-LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`  
+CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)  -I/usr/local/include/
+CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath) -I/usr/local/include/
+LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`
+
+$(doc): $(doctex)
+	$(TEX) $(doctex) 
 
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
@@ -33,11 +43,18 @@ $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 .PHONY: all
-all: $(bin)
+all: $(bin) $(doc)
+
+.PHONY: doc
+doc: $(doc)
+
+.PHONY: bin 
+bin: $(bin)
 
 .PHONY: clean
 clean:
-	rm -rf $(objc) $(objcc) $(objcpp)
+	$(RM) -rf $(objc) $(objcc) $(objcpp)
+	$(RM) -rf $(basename $(doc)).{aux,log,out,toc}
 
 .PHONY: clean-all
 clean-all: clean

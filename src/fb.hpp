@@ -36,8 +36,8 @@ class XTFramebuffer
 		XTFramebuffer(unsigned int x, unsigned int y);
 		~XTFramebuffer();
 
-		unsigned int get_width();
-		unsigned int get_height();
+		unsigned int width();
+		unsigned int height();
 
 		/* Pixels are being accessed starting with (0,0). In case of out of bounds exceptions, the last pixel is affected */
 		uint32_t get_pixel(unsigned int x, unsigned int y);	
