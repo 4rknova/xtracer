@@ -5,7 +5,9 @@ The following people contributed to this project.
 
 Development
 -----------
-* Papadopoulos Nikos - [email](nikpapas@gmail.com)
+* Papadopoulos Nikos 
+
+**email**: nikpapas@gmail.com
 
 Platform testing
 ----------------
