@@ -8,7 +8,7 @@ Development
 Platform testing
 ----------------
 * Freebsd
-	Kokkalhs Nikos 
+  -	Kokkalhs Nikos 
 
 * OSX
-	Ntzoufras Kwstas
+  -	Ntzoufras Kwstas
