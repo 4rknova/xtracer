@@ -31,31 +31,22 @@
 #include "err.h"
 #include "fb.hpp"
 
-/* Default values for the screen buffer dimensions */
-#define XTRACER_DEFAULT_SCREEN_WIDTH    640
-#define XTRACER_DEFAULT_SCREEN_HEIGHT   480
-
 /* Default values for the raytracer environment */
-#define XTRACER_DEFAULT_RECURSION_DEPTH 5
+#define XT_DEFAULT_RECUR_DEPTH 5
 
-/* Output environment */
-struct Xtracer_renderer_env_t
+class Renderer
 {
-	unsigned int width;		/* Output buffer width */
-	unsigned int height;	/* Output buffer height */
-	unsigned int rdepth;	/* Maximum recursion depth */
+	public:
+		Renderer(Framebuffer *fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
+
+		unsigned int recursion_depth();
+		unsigned int set_recursion_depth(unsigned int depth);
+
+		xt_status_t render(const char* scenefile);
+
+	private:
+		Framebuffer *m_p_fb;
+		unsigned int m_p_depth;
 };
-
-void xtrenderer_init();									/* Initiate the renderer */
-
-void xtrenderer_set_width(unsigned int v);				/* Set framebuffer width */
-void xtrenderer_set_height(unsigned int v);				/* Set framebuffer height */
-void xtrenderer_set_rdepth(unsigned int v);				/* Set the recursion depth */
-
-unsigned int xtrenderer_get_width();					/* Get framebuffer width */
-unsigned int xtrenderer_get_height();					/* Get framebuffer height */
-unsigned int xtrenderer_get_rdepth();					/* Get framebuffer rdepth */
-
-xt_status_t xtrender(const char* scenefile);			/* Render the scene */
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

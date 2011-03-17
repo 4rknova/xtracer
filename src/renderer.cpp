@@ -30,49 +30,30 @@
 
 #include "renderer.hpp"
 
-Xtracer_renderer_env_t xtracer_renderer_env;
+Renderer::Renderer(Framebuffer *fb, unsigned int depth):
+	m_p_fb(fb), m_p_depth(depth)
+{}
 
-void xtrenderer_init()
+unsigned int Renderer::recursion_depth()
 {
-	xtracer_renderer_env.width = XTRACER_DEFAULT_SCREEN_WIDTH;
-	xtracer_renderer_env.height = XTRACER_DEFAULT_SCREEN_HEIGHT;
-	xtracer_renderer_env.rdepth = XTRACER_DEFAULT_RECURSION_DEPTH;
+	return m_p_depth;
 }
 
-void xtrenderer_set_width(unsigned int v)
+unsigned int Renderer::set_recursion_depth(unsigned int depth)
 {
-	xtracer_renderer_env.width = v;
-}
-
-void xtrenderer_set_height(unsigned int v)
-{
-	xtracer_renderer_env.height = v;
-}
-
-void xtrenderer_set_rdepth(unsigned int v)
-{
-	xtracer_renderer_env.rdepth = v;
-}
-
-unsigned int xtrenderer_get_width()
-{
-	return xtracer_renderer_env.width;
-}
-
-unsigned int xtrenderer_get_height()
-{
-	return xtracer_renderer_env.height;
-}
-
-unsigned int xtrenderer_get_rdepth()
-{
-	return xtracer_renderer_env.rdepth;
+	return m_p_depth = depth;
 }
 
 #include <stdint.h>
 
-xt_status_t xtrender(const char* scenefile)
+xt_status_t Renderer::render(const char* scenefile)
 {
+	if(m_p_fb == NULL)
+	{
+		fprintf(stderr, "Error: Invalid framebuffer (NULL).\n");
+		return XTRACER_STATUS_INVALID_FB;
+	}
+
 	/* Load the scene file and parse it. */
 	printf("Analyzing scene..\n");
 	NCFGParser scene(scenefile);
@@ -100,23 +81,17 @@ xt_status_t xtrender(const char* scenefile)
 
 	printf("Rendering frame..\n");
 
-	XTFramebuffer fb(xtracer_renderer_env.width, xtracer_renderer_env.height);
-
-
 	/* Rendering loop */
-	for (int y = 0; y < fb.height(); y++)
+	for (unsigned int y = 0; y < m_p_fb->height(); y++)
 	{
-		for (int x = 0; x < fb.width(); x++)
+		for (unsigned int x = 0; x < m_p_fb->width(); x++)
 		{
-			uint32_t final_color = 0;
+		//	uint32_t final_color = 0;
 			// compute first ray
 			// For each object, determine first intersection
 			// Check if in shadow
 		}
 	}
-
-
-
 
 	return XTRACER_STATUS_OK;
 }

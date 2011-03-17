@@ -23,16 +23,17 @@ TEX = xelatex
 RM = rm
 CC = gcc
 CXX = g++
-CCFLAGS = -std=c89 -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)  -I/usr/local/include/
-CXXFLAGS = -ansi -pedantic -Wall -Wno-strict-aliasing $(opt) $(dbg) -I$(spath) -I/usr/local/include/
+COFLAGS= -D'XT_VERSION="$(shell cat VERSION)"'
+CCFLAGS = -std=c89 -Wall -g -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)  -I/usr/local/include/ $(COFLAGS)
+CXXFLAGS = -ansi -pedantic -Wall -g -Wno-strict-aliasing $(opt) $(dbg) -I$(spath) -I/usr/local/include/ $(COFLAGS)
 LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`
-
-$(doc): $(doctex)
-	$(TEX) $(doctex) 
 
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
 
+$(doc): $(doctex)
+	$(TEX) $(doctex)
+	
 %.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
 

@@ -39,55 +39,81 @@
 
 #include "pixel.h"
 
-int main(int argc, char **argv)
+/* This class */
+class Setupenvvar
 {
-	/* Initiate subsystems */
-	out_init();				/* Initiate the output environment */
-	xtrenderer_init(); 		/* Initiate the renderer environment */
+	public:
+		Setupenvvar():
+			width(0), height(0),								/* Framebuffer */
+			net(XTRACER_NET_LOCAL), port(XT_NET_PROT_PORT),		/* Network */
+			drv(XTRACER_DEFAULT_MODE_DRV), 
+			syn(XTRACER_DEFAULT_MODE_SYN), 
+			intv(XTRACER_DEFAULT_ASYN_INTV),					/* Out drivers */
+			depth(XT_DEFAULT_RECUR_DEPTH)						/* Renderer */
+		{}
 
-	/* setup flags */
-	unsigned int xt_mode_net = XTRACER_DEFAULT_MODE_NET;	/* flag to setup the program to run as a master node */
+		/* Framebuffer */
+		unsigned int width;
+		unsigned int height;
 
-	/* list of scenes to render */
-	std::list<std::string> fscenes;
+		/* Network */
+		xt_mode_net_t net;
+		std::string host;
+		unsigned int port;
 
-	/* output filepath for drivers that need it */
-	std::string filepath;
-	int port = XT_NET_PROT_PORT;
-	std::string host;
+		/* Out drivers */
+		XTRACER_MODE_DRV drv;
+		XTRACER_MODE_SYN syn;
+		unsigned int intv;
+		std::string filepath;
 
-	/* Parse the cli arguments */
-	
-	/* Version */
-	if( argc == 2 && ((!strcmp(argv[1], "-version")) || (!strcmp(argv[1], "-v")) || (!strcmp(argv[1], "-ver"))))
+		/* Renderer */
+		unsigned int depth;
+		std::list<std::string> fscenes;
+};
+
+/* Instance of the above class, used in cli argument parsing */
+Setupenvvar envvar;
+
+xt_status_t parsearg(int argc, char **argv)
+{
+	/* 
+		Version 
+	*/
+	if( argc == 2 && ((!strcmp(argv[1], "-version")) || (!strcmp(argv[1], "-ver"))))
 	{
-		printf("Xtracer v0.2 © 2010-2011 Papadopoulos Nikos\nusage:	%s [option]... scene_file ...\nCheck the man page for a complete list of options.\n", argv[0]);
+		printf("Xtracer v0.2 © 2010-2011 Papadopoulos Nikos\nUsage:	%s [option]... scene_file ...\nCheck the man page for a complete list of options.\n", argv[0]);
 		return XTRACER_STATUS_OK;
 	}
     
-	for (int i = 1; i<argc; i++)
+	for (int i = 1; i < argc; i++)
 	{
-		/* Net modes */
-		if (!strcmp(argv[i], "-mode"))
+		/*
+			Net mode
+		*/
+		if (!strcmp(argv[i], "-net"))
 		{
 			i++;
 			if (!argv[i])
 			{
-				fprintf(stderr, "No mode was provided. Available modes: local, master, slave.\n");
+				fprintf(stderr, "No net mode was provided.\nAvailable modes: local, master, slave.\n");
 				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
+			/* Local */
 			if (!strcmp(argv[i], "local"))
 			{
-				xt_mode_net = XTRACER_NET_LOCAL;
+				envvar.net = XTRACER_NET_LOCAL;
 			}
+			/* Master */
 			else if (!strcmp(argv[i], "master"))
 			{
-				xt_mode_net = XTRACER_NET_MASTER;
+				envvar.net = XTRACER_NET_MASTER;
 			}
+			/* Slave */
 			else if (!strcmp(argv[i], "slave"))
 			{
-				xt_mode_net = XTRACER_NET_SLAVE;
+				envvar.net = XTRACER_NET_SLAVE;
 
 				i++;			
 				if (!argv[i])
@@ -109,17 +135,23 @@ int main(int argc, char **argv)
 					fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
 					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 				}
-				host = d;
+
+				envvar.host = d;
 			}
+			/* Invalid mode */
 			else
 			{
 				fprintf(stderr, "Invalid mode %s.\n", argv[i]);
 				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 			}
-		}		
+		}
+		/*
+			Port
+		*/
 		else if (!strcmp(argv[i], "-port"))
 		{
 			i++;
+
 			if (!argv[i])
 			{
 				fprintf(stderr, "No %s value was provided.\n", argv[i-1]);
@@ -133,26 +165,32 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
-			port = d;
+
+			envvar.port = d;
 		}
 
-		/* Render modes */
+		/* 
+			Render modes 
+		*/
         else if (!strcmp(argv[i], "-drv"))
 		{
 			i++;			
 			if (!argv[i])
 			{
-				fprintf(stderr, "No driver was provided. Available drivers: sdl, img, asc.\n");
+				fprintf(stderr, "No driver was provided.\nAvailable drivers: sdl, img, asc.\n");
 				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
+			/* SDL */
 			if (!strcmp(argv[i], "sdl"))
 			{
-				out_set_drv(XTRACER_DRV_SDL);
+				envvar.drv = XTRACER_DRV_SDL;
 			}
+
+			/* Image */
 			else if (!strcmp(argv[i], "img"))
 			{
-				out_set_drv(XTRACER_DRV_IMG);
+				envvar.drv = XTRACER_DRV_IMG;
 
 				i++;
 
@@ -176,11 +214,13 @@ int main(int argc, char **argv)
 					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 				}
 
-				filepath = d;
+				envvar.filepath = d;
 			}
+			
+			/* ASCII */
 			else if (!strcmp(argv[i], "asc"))
 			{	
-				out_set_drv(XTRACER_DRV_ASC);
+				envvar.drv = XTRACER_DRV_ASC;
 			}
 			else
 			{
@@ -189,15 +229,23 @@ int main(int argc, char **argv)
 			}
 		}
 
-		/* Synchronization */
+		/* 
+			Output Synchronization 
+		*/
+		/* Asynchronous */
 		else if (strcmp(argv[i], "-async") == 0)
 		{
-			out_set_syn(XTRACER_SYN_ASYN);
+			envvar.syn = XTRACER_SYN_ASYN;
 		}
+		/* Synchronous */
 		else if (strcmp(argv[i], "-sync") == 0)
 		{
-			out_set_syn(XTRACER_SYN_SYNC);
+			envvar.syn = XTRACER_SYN_SYNC;
 		}
+
+		/*
+			Output Synchronization interval
+		*/
 		else if (strcmp(argv[i], "-syncintv") == 0)
 		{
 			i++;
@@ -216,10 +264,12 @@ int main(int argc, char **argv)
 				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 			}
 			
-			out_set_syn_intv(d);
+			envvar.intv = d;
 		}
 		
-		/* Renderer environment  */
+		/* 
+			Renderer depth
+		*/
 		else if (strcmp(argv[i], "-depth") == 0)
 		{
 			i++;
@@ -236,8 +286,12 @@ int main(int argc, char **argv)
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 
-			xtrenderer_set_rdepth(d);
+			envvar.depth = d;
 		}
+
+		/*
+			Framebuffer resolution
+		*/
         else if (!strcmp(argv[i], "-res"))
 		{
             i++;
@@ -248,68 +302,103 @@ int main(int argc, char **argv)
 				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 			}
 			
-			int w = 0;
-			int h = 0;
+			int w = 0, h = 0;
+
             if ((argv[i][0] == '-') || sscanf(argv[i], "%dx%d", &w, &h) < 2)
 			{
                 fprintf(stderr, "Invalid %s value. Should be %%ix%%i.\n", argv[i-1]);
                 return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
             }
 
-			xtrenderer_set_width(w);
-			xtrenderer_set_height(h);
+			envvar.width = w;
+			envvar.height = h;
         }
+
+		/*
+			Invalid option
+		*/
 		else if (argv[i][0] == '-')
 		{
 			fprintf(stderr, "Invalid option '%s'.\n", argv[i]);
 			return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
 		}
 		
-		/* Scene files */
+		/* 
+			Scene files 
+		*/
         else
 		{
 			/* Any orphan argument is treated as a scene file path. */
-			fscenes.push_back(argv[i]);				
+			envvar.fscenes.push_back(argv[i]);				
 		}
     }
+	return XTRACER_STATUS_OK;
+}
 
-	if (fscenes.empty() && (xt_mode_net != XTRACER_NET_SLAVE))
+
+
+int main(int argc, char **argv)
+{
+	/* Parse the argument list */
+	{
+		xt_status_t status = parsearg(argc, argv);
+		if(status != XTRACER_STATUS_OK)
+		{
+			return status;
+		}
+	}
+	
+	printf("▄ ▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄\n");
+	printf("▀▄▀  █  █▄▀ █▄█ █   █▄▄ █▄▀\n");
+	printf("█ █  █  █ █ █ █ █▄▄ █▄▄ █ █\n"); 
+	printf("v%s\n\n", XT_VERSION);
+		
+	/* Process the scene list */
+	if ( envvar.fscenes.empty() && (envvar.net != XTRACER_NET_SLAVE))
 	{
 		fprintf(stderr, "No scenes were provided.\n");
 		return XTRACER_STATUS_MISSING_SCENE_FILE;	
 	}
-	else if(xt_mode_net == XTRACER_NET_SLAVE)
+	else if(envvar.net == XTRACER_NET_SLAVE)
 	{
 		fprintf(stderr, "Slave mode was chosen. The provided scene files will be ignored.\n");
-		fscenes.clear();
+		envvar.fscenes.clear();
 	}
-	
+
 	/* Startup the output driver */
-	out_drv_init(640,480,24);
+//	out_drv_init(640,480,24);
 	
 	/* Startup networking if required */
-	net_set_mode(xt_mode_net);
-	net_init(port, host.c_str());
+	net_set_mode(envvar.net);
+	net_init(envvar.port, envvar.host.c_str());
 
-	printf("Buffer size: %ix%i, Recursion depth: %i\n", 
-			xtrenderer_get_width(),  xtrenderer_get_height(),
-			xtrenderer_get_rdepth());
+	/* Start up the framebuffer */
+	printf("Initiating the framebuffer..\n");
+	Framebuffer fb(envvar.width, envvar.height);
+	printf("Buffer size: %ix%i\n", fb.width(),  fb.height());
 
-	while(!fscenes.empty())
+	/* Start up the renderer */
+	printf("Initiating the renderer..\n");
+	Renderer renderer(&fb, envvar.depth);
+	printf("Recursion depth: %i\n", renderer.recursion_depth());
+	
+	unsigned int count = 1;
+	unsigned int total = envvar.fscenes.size();
+	while(!envvar.fscenes.empty())
 	{	
-		printf("Processing: %s..\n", fscenes.front().c_str());
+		printf("Processing %i / %i: %s..\n", count++, total, envvar.fscenes.front().c_str());
 
-		xtrender(fscenes.front().c_str());
+		renderer.render(envvar.fscenes.front().c_str());
 
-		fscenes.pop_front();
+		printf("Done..\n");
+		envvar.fscenes.pop_front();
 	}
 	
 	/*
 		CLEAN UP
 	*/
 	/* Terminate networking */
-	out_drv_deinit();
-	// xt_renderer_deinit();
+//	out_drv_deinit();
 	net_deinit();
 	
 	return XTRACER_STATUS_OK;

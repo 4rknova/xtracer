@@ -30,11 +30,14 @@
 
 #include <stdint.h>
 
-class XTFramebuffer
+#define XT_DEFAULT_FB_WIDTH	640
+#define XT_DEFAULT_FB_HEIGHT 480
+
+class Framebuffer
 {
 	public:
-		XTFramebuffer(unsigned int x, unsigned int y);
-		~XTFramebuffer();
+		Framebuffer(unsigned int width, unsigned int height);
+		~Framebuffer();
 
 		unsigned int width();
 		unsigned int height();

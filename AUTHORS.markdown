@@ -6,10 +6,10 @@ The following people contributed to this project.
 Development
 -----------
 
-Papadopoulos Nikos <nikpapas@gmail.com>
+* Papadopoulos Nikos [<nikpapas@gmail.com>]
 
-Platform testing
-----------------
+Testing
+-------
 
-* FreeBSD: Kokkalhs Nikos
-* OSX: Ntzoufras Kwstas
+* Kokkalhs Nikos (FreeBSD)
+* Ntzoufras Kwstas (OSX)

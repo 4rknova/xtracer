@@ -27,34 +27,34 @@
 
 #include "fb.hpp"
 
-XTFramebuffer::XTFramebuffer(unsigned int x, unsigned int y)
-	: m_p_width(x > 0 ? x : 1), m_p_height(y > 0 ? y : 1)
-{
-	m_p_pixels = new uint32_t[x * y];
-}
+Framebuffer::Framebuffer(unsigned int width, unsigned int height): 
+	m_p_width(width > 0 ? width : XT_DEFAULT_FB_WIDTH), 
+	m_p_height(height > 0 ? height : XT_DEFAULT_FB_HEIGHT), 
+	m_p_pixels(new uint32_t[width * height])
+{}
 
-XTFramebuffer::~XTFramebuffer()
+Framebuffer::~Framebuffer()
 {
 	delete [] m_p_pixels;
 }
 
-unsigned int XTFramebuffer::width()
+unsigned int Framebuffer::width()
 {
 	return  m_p_width;
 }
 
-unsigned int XTFramebuffer::height()
+unsigned int Framebuffer::height()
 {
 	return  m_p_height;
 }
 
-uint32_t XTFramebuffer::get_pixel(unsigned int x, unsigned int y)
+uint32_t Framebuffer::get_pixel(unsigned int x, unsigned int y)
 {
 	unsigned int n = y * m_p_width + x;
 	return (x < m_p_width) ? ((y < m_p_height) ? m_p_pixels[n] : m_p_pixels[m_p_width * m_p_height - 1])  : m_p_pixels[m_p_width * m_p_height - 1];
 }
 
-uint32_t XTFramebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value)
+uint32_t Framebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value)
 {
 	unsigned int n = y * m_p_width + x;
 	uint32_t *target =(x < m_p_width) ? ((y < m_p_height) ? &m_p_pixels[n] : &m_p_pixels[m_p_width * m_p_height - 1])  : &m_p_pixels[m_p_width * m_p_height - 1];

@@ -28,41 +28,37 @@
 #ifndef XTRACER_CAMERA_HPP_INCLUDED
 #define XTRACER_CAMERA_HPP_INCLUDED
 
+#include <nmath/defs.h>
+#include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nmath/ray.h>
-#include <nmath/precision.h>
 
-enum XT_PROJECTION_T
-{
-	XT_PROJECTION_PERSPECTIVE,
-	XT_PROJECTION_ORTHOGRAPHIC
-};
+#define XT_CAM_DEFAULT_FOV M_PI/4
 
-#define XT_DEFAULT_PROJECTION XT_PROJECTION_PERSPECTIVE
-
-class XTCamera
+/* Pinhole camera */
+class Camera
 {
 	public:
-		XTCamera();
-		XTCamera(Vector3 &position, Vector3 &angle, real_t fovx, XT_PROJECTION_T prjt = XT_DEFAULT_PROJECTION);
+		Camera();
+		Camera(Vector3 &position, Vector3 &target, Vector3 &up, real_t fovx=XT_CAM_DEFAULT_FOV);
 
-		Vector3 get_position();
-		Vector3 get_angle();
-		real_t get_fov();
-		XT_PROJECTION_T get_prjtype();
+		Vector3 position();
+		Vector3 target();
+		Vector3 up();
+		real_t fov();
 
 		Vector3 set_position(Vector3 &position);
-		Vector3 set_angle(Vector3 &angle);
+		Vector3 set_target(Vector3 &target);
+		Vector3 set_up(Vector3 &up);
 		real_t set_fov(real_t fov);
-		XT_PROJECTION_T get_prjtype(XT_PROJECTION_T prjt);
 
 		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 
 	private:
 		Vector3 m_p_position;
-		Vector3 m_p_angle;
-		real_t m_p_fov_x; 					/* Field of view x */
-		XT_PROJECTION_T m_p_prjt;			/* Projection type */
+		Vector3 m_p_target;
+		Vector3 m_p_up;
+		real_t m_p_fov;
 };
 
 #endif /* XTRACER_CAMERA_HPP_INCLUDED */
