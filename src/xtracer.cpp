@@ -46,9 +46,9 @@ class Setupenvvar
 		Setupenvvar():
 			width(0), height(0),								/* Framebuffer */
 			net(XTRACER_NET_LOCAL), port(XT_NET_PROT_PORT),		/* Network */
-			drv(XTRACER_DEFAULT_MODE_DRV), 
-			syn(XTRACER_DEFAULT_MODE_SYN), 
-			intv(XTRACER_DEFAULT_ASYN_INTV),					/* Out drivers */
+			drv(XT_DEFAULT_DRV), 
+			syn(XT_DEFAULT_DRV_SYN), 
+			intv(XT_DEFAULT_DRV_INTV),					/* Out drivers */
 			depth(XT_DEFAULT_RECUR_DEPTH)						/* Renderer */
 		{}
 
