@@ -30,17 +30,21 @@
 
 #include <stdint.h>
 
-#define XT_DEFAULT_FB_WIDTH	640
-#define XT_DEFAULT_FB_HEIGHT 480
+#define XT_DEFAULT_FB_WIDTH		640
+#define XT_DEFAULT_FB_HEIGHT 	480
+#define XT_DEFAULT_FB_BPP 		24
 
 class Framebuffer
 {
 	public:
-		Framebuffer(unsigned int width, unsigned int height);
+		Framebuffer(unsigned int width = XT_DEFAULT_FB_WIDTH, 
+					unsigned int height = XT_DEFAULT_FB_HEIGHT, 
+					unsigned int bpp = XT_DEFAULT_FB_BPP);
 		~Framebuffer();
 
 		unsigned int width();
 		unsigned int height();
+		unsigned int bpp();
 
 		/* Pixels are being accessed starting with (0,0). In case of out of bounds exceptions, the last pixel is affected */
 		uint32_t get_pixel(unsigned int x, unsigned int y);	
@@ -49,6 +53,7 @@ class Framebuffer
 	private:
 		const unsigned int m_p_width;
 		const unsigned int m_p_height;
+		const unsigned int m_p_bpp;
 
 		uint32_t *m_p_pixels;
 };

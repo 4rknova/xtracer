@@ -33,9 +33,14 @@
 #include "renderer.hpp" 
 
 #include "xtracer.h"
-#include "out.h"
+
 #include "err.h"
+
 #include "net.h"
+
+/* Output drivers */
+#include "drv.hpp"
+#include "drv/sdl.hpp"
 
 #include "pixel.h"
 
@@ -62,13 +67,14 @@ class Setupenvvar
 		unsigned int port;
 
 		/* Out drivers */
-		XTRACER_MODE_DRV drv;
-		XTRACER_MODE_SYN syn;
+		XT_DRV drv;
+		XT_DRV_SYN syn;
 		unsigned int intv;
 		std::string filepath;
 
 		/* Renderer */
 		unsigned int depth;
+		std::string camera;
 		std::list<std::string> fscenes;
 };
 
@@ -83,7 +89,7 @@ xt_status_t parsearg(int argc, char **argv)
 	if( argc == 2 && ((!strcmp(argv[1], "-version")) || (!strcmp(argv[1], "-ver"))))
 	{
 		printf("Xtracer v0.2 © 2010-2011 Papadopoulos Nikos\nUsage:	%s [option]... scene_file ...\nCheck the man page for a complete list of options.\n", argv[0]);
-		return XTRACER_STATUS_OK;
+		return XT_STATUS_OK;
 	}
     
 	for (int i = 1; i < argc; i++)
@@ -97,7 +103,7 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No net mode was provided.\nAvailable modes: local, master, slave.\n");
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
 			/* Local */
@@ -119,7 +125,7 @@ xt_status_t parsearg(int argc, char **argv)
 				if (!argv[i])
 				{
 					fprintf(stderr, "No host was provided.\n");
-					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+					return XT_STATUS_INVALID_CLI_ARGUMENT;
 				}
 
 				char d[1000];
@@ -127,13 +133,13 @@ xt_status_t parsearg(int argc, char **argv)
 				if(strlen(argv[i]) > 999)
 				{
 					fprintf(stderr, "%s value too long.", argv[i-1]);
-					return XTRACER_STATUS_INVALID_CLI_ARGLENGH;
+					return XT_STATUS_INVALID_CLI_ARGLENGH;
 				}
 	
 				if ((argv[i][0] == '-') || sscanf(argv[i], "%s", &d[0]) < 1)
 				{
 					fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+					return XT_STATUS_INVALID_CLI_ARGUMENT;
 				}
 
 				envvar.host = d;
@@ -142,7 +148,7 @@ xt_status_t parsearg(int argc, char **argv)
 			else
 			{
 				fprintf(stderr, "Invalid mode %s.\n", argv[i]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 		}
 		/*
@@ -155,7 +161,7 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No %s value was provided.\n", argv[i-1]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
 			int d = 0;
@@ -163,7 +169,7 @@ xt_status_t parsearg(int argc, char **argv)
 			if ((argv[i][1] == '-') || sscanf(argv[i], "%d", &d) < 1) 
             {
                 fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-                return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+                return XT_STATUS_INVALID_CLI_ARGUMENT;
             }
 
 			envvar.port = d;
@@ -178,26 +184,26 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No driver was provided.\nAvailable drivers: sdl, img, asc.\n");
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
 			/* SDL */
 			if (!strcmp(argv[i], "sdl"))
 			{
-				envvar.drv = XTRACER_DRV_SDL;
+				envvar.drv = XT_DRV_SDL;
 			}
 
 			/* Image */
 			else if (!strcmp(argv[i], "img"))
 			{
-				envvar.drv = XTRACER_DRV_IMG;
+				envvar.drv = XT_DRV_IMG;
 
 				i++;
 
 				if (!argv[i])
 				{
 					fprintf(stderr, "No %s value was provided.\n", argv[i-1]);
-					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+					return XT_STATUS_INVALID_CLI_ARGUMENT;
 				}
 
 				char d[1000];
@@ -205,13 +211,13 @@ xt_status_t parsearg(int argc, char **argv)
 				if(strlen(argv[i]) > 999)
 				{
 					fprintf(stderr, "%s value too long.", argv[i-1]);
-					return XTRACER_STATUS_INVALID_CLI_ARGLENGH;
+					return XT_STATUS_INVALID_CLI_ARGLENGH;
 				}
 		
 				if ((argv[i][0] == '-') || sscanf(argv[i], "%s", &d[0]) < 1)
 				{
 					fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-					return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+					return XT_STATUS_INVALID_CLI_ARGUMENT;
 				}
 
 				envvar.filepath = d;
@@ -220,12 +226,12 @@ xt_status_t parsearg(int argc, char **argv)
 			/* ASCII */
 			else if (!strcmp(argv[i], "asc"))
 			{	
-				envvar.drv = XTRACER_DRV_ASC;
+				envvar.drv = XT_DRV_ASC;
 			}
 			else
 			{
 				fprintf(stderr, "Invalid driver %s.\n", argv[i]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 		}
 
@@ -235,12 +241,12 @@ xt_status_t parsearg(int argc, char **argv)
 		/* Asynchronous */
 		else if (strcmp(argv[i], "-async") == 0)
 		{
-			envvar.syn = XTRACER_SYN_ASYN;
+			envvar.syn = XT_DRV_SYN_ASYN;
 		}
 		/* Synchronous */
 		else if (strcmp(argv[i], "-sync") == 0)
 		{
-			envvar.syn = XTRACER_SYN_SYNC;
+			envvar.syn = XT_DRV_SYN_SYNC;
 		}
 
 		/*
@@ -253,7 +259,7 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No %s value was provided.\n", argv[i-1]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
 			 int d = 0;
@@ -261,7 +267,7 @@ xt_status_t parsearg(int argc, char **argv)
 			 if ((argv[i][1] == '-') || sscanf(argv[i], "%d", &d) < 1)
 			 {
 				fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 			
 			envvar.intv = d;
@@ -277,13 +283,13 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No value was provided for %s.\n", argv[i-1]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 
 			if ((argv[i][0] == '-') || sscanf(argv[i], "%d", &d) < 1) 
             {
                 fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-                return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+                return XT_STATUS_INVALID_CLI_ARGUMENT;
             }
 
 			envvar.depth = d;
@@ -299,7 +305,7 @@ xt_status_t parsearg(int argc, char **argv)
 			if (!argv[i])
 			{
 				fprintf(stderr, "No value was provided for %s.\n", argv[i-1]);
-				return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
 			}
 			
 			int w = 0, h = 0;
@@ -307,12 +313,41 @@ xt_status_t parsearg(int argc, char **argv)
             if ((argv[i][0] == '-') || sscanf(argv[i], "%dx%d", &w, &h) < 2)
 			{
                 fprintf(stderr, "Invalid %s value. Should be %%ix%%i.\n", argv[i-1]);
-                return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+                return XT_STATUS_INVALID_CLI_ARGUMENT;
             }
 
 			envvar.width = w;
 			envvar.height = h;
         }
+
+		/* 
+			Camera 
+		*/
+		else if(!strcmp(argv[i], "-cam"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				fprintf(stderr, "No value was provided for %s.\n", argv[i-1]);
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
+			}
+
+			char d[1000];
+			if(strlen(argv[i]) > 999)
+			{
+				fprintf(stderr, "%s value too long.", argv[i-1]);
+				return XT_STATUS_INVALID_CLI_ARGLENGH;
+			}
+
+			if ((argv[i][0] == '-') || sscanf(argv[i], "%s", &d[0]) < 1)
+			{
+				fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
+				return XT_STATUS_INVALID_CLI_ARGUMENT;
+			}
+
+			envvar.camera = d;
+		}
 
 		/*
 			Invalid option
@@ -320,7 +355,7 @@ xt_status_t parsearg(int argc, char **argv)
 		else if (argv[i][0] == '-')
 		{
 			fprintf(stderr, "Invalid option '%s'.\n", argv[i]);
-			return XTRACER_STATUS_INVALID_CLI_ARGUMENT;
+			return XT_STATUS_INVALID_CLI_ARGUMENT;
 		}
 		
 		/* 
@@ -332,7 +367,7 @@ xt_status_t parsearg(int argc, char **argv)
 			envvar.fscenes.push_back(argv[i]);				
 		}
     }
-	return XTRACER_STATUS_OK;
+	return XT_STATUS_OK;
 }
 
 
@@ -342,7 +377,7 @@ int main(int argc, char **argv)
 	/* Parse the argument list */
 	{
 		xt_status_t status = parsearg(argc, argv);
-		if(status != XTRACER_STATUS_OK)
+		if(status != XT_STATUS_OK)
 		{
 			return status;
 		}
@@ -357,7 +392,7 @@ int main(int argc, char **argv)
 	if ( envvar.fscenes.empty() && (envvar.net != XTRACER_NET_SLAVE))
 	{
 		fprintf(stderr, "No scenes were provided.\n");
-		return XTRACER_STATUS_MISSING_SCENE_FILE;	
+		return XT_STATUS_MISSING_SCENE_FILE;	
 	}
 	else if(envvar.net == XTRACER_NET_SLAVE)
 	{
@@ -365,9 +400,6 @@ int main(int argc, char **argv)
 		envvar.fscenes.clear();
 	}
 
-	/* Startup the output driver */
-//	out_drv_init(640,480,24);
-	
 	/* Startup networking if required */
 	net_set_mode(envvar.net);
 	net_init(envvar.port, envvar.host.c_str());
@@ -377,9 +409,27 @@ int main(int argc, char **argv)
 	Framebuffer fb(envvar.width, envvar.height);
 	printf("Buffer size: %ix%i\n", fb.width(),  fb.height());
 
+	/* 
+		Start up the output driver
+		NOTE: This will be allocated dynamically. Don't forget to clean up later on.
+	*/
+	printf("Initiating the output driver..\n");
+	Driver *drv = NULL;
+	switch (envvar.drv)
+	{
+		case XT_DRV_SDL:
+			drv = new DrvSDL(fb);
+			break;
+		case XT_DRV_DUM:	/**/
+		default:
+			drv = new Driver(fb);
+
+	}
+	drv->init();
+
 	/* Start up the renderer */
 	printf("Initiating the renderer..\n");
-	Renderer renderer(&fb, envvar.depth);
+	Renderer renderer(fb, envvar.depth);
 	printf("Recursion depth: %i\n", renderer.recursion_depth());
 	
 	unsigned int count = 1;
@@ -388,7 +438,7 @@ int main(int argc, char **argv)
 	{	
 		printf("Processing %i / %i: %s..\n", count++, total, envvar.fscenes.front().c_str());
 
-		renderer.render(envvar.fscenes.front().c_str());
+		renderer.render(envvar.fscenes.front().c_str(), envvar.camera.c_str());
 
 		printf("Done..\n");
 		envvar.fscenes.pop_front();
@@ -398,8 +448,13 @@ int main(int argc, char **argv)
 		CLEAN UP
 	*/
 	/* Terminate networking */
-//	out_drv_deinit();
 	net_deinit();
+
+	/* Terminate the output driver */
+	drv->deinit();
+	delete drv;
+
+	/* All the other systems, will shut down automatically */
 	
-	return XTRACER_STATUS_OK;
+	return XT_STATUS_OK;
 }

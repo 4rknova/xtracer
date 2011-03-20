@@ -34,14 +34,16 @@
 	extern "C" {
 #endif  /* __cplusplus */
 
+typedef uint32_t pixel32_t;
+
 /* Pack a rgba tuple to uint32  */
-uint32_t rgba_to_uint32(unsigned int red, unsigned int green, unsigned int blue, unsigned int alpha);
+pixel32_t gba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
 
 /* Get component from packed rgba */
-unsigned int get_rgba_r(uint32_t color);
-unsigned int get_rgba_g(uint32_t color);
-unsigned int get_rgba_b(uint32_t color);
-unsigned int get_rgba_a(uint32_t color);
+unsigned int get_pixel32_r(pixel32_t color);
+unsigned int get_pixel32_g(pixel32_t color);
+unsigned int get_pixel32_b(pixel32_t color);
+unsigned int get_pixel32_a(pixel32_t color);
 
 #ifdef __cplusplus
 	}   /* extern "C" */

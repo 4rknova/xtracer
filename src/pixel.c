@@ -31,9 +31,9 @@
 	extern "C" {
 #endif  /* __cplusplus */
 
-uint32_t rgba_to_uint32(unsigned int red, unsigned int green, unsigned int blue, unsigned int alpha)
+pixel32_t pixel32_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
 {
-	uint32_t res = 0;
+	pixel32_t res = 0;
 
 	res = (res + red) << 8;
 	res = (res + green) << 8;
@@ -43,22 +43,22 @@ uint32_t rgba_to_uint32(unsigned int red, unsigned int green, unsigned int blue,
 	return res;
 }
 
-unsigned int get_rgba_r(uint32_t color)
+unsigned int get_pixel32_r(pixel32_t color)
 {
 	return (color & 0xFF000000) >> 24;
 }
 
-unsigned int get_rgba_g(uint32_t color)
+unsigned int get_pixel32_g(pixel32_t color)
 {
 	return (color & 0x00FF0000) >> 16;
 }
 
-unsigned int get_rgba_b(uint32_t color)
+unsigned int get_pixel32_b(pixel32_t color)
 {
 	return (color & 0x0000FF00) >> 8;
 }
 
-unsigned int get_rgba_a(uint32_t color)
+unsigned int get_pixel32_a(pixel32_t color)
 {
 	return color & 0x000000FF;
 }

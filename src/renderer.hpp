@@ -28,6 +28,8 @@
 #ifndef XTRACER_RENDERER_HPP_INCLUDED
 #define XTRACER_RENDERER_HPP_INCLUDED
 
+#include <string>
+
 #include "err.h"
 #include "fb.hpp"
 
@@ -37,12 +39,12 @@
 class Renderer
 {
 	public:
-		Renderer(Framebuffer *fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
+		Renderer(Framebuffer &fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
 
 		unsigned int recursion_depth();
 		unsigned int set_recursion_depth(unsigned int depth);
 
-		xt_status_t render(const char* scenefile);
+		xt_status_t render(const char* scenefile, const char *camera);
 
 	private:
 		Framebuffer *m_p_fb;
