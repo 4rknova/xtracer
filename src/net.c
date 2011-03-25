@@ -50,8 +50,8 @@ extern "C" {
 */
 
 pthread_t g_net_thread;    						/* Thread id */
-int g_net_mode = XTRACER_DEFAULT_MODE_NET;		/* Net mode */
-int g_net_status = XTRACER_STATUS_OK;			/* Used to track errors */
+int g_net_mode = XT_DEFAULT_MODE_NET;		/* Net mode */
+int g_net_status = XT_STATUS_OK;			/* Used to track errors */
 int g_net_hang_up = 0;							/* Flag used to terminate connections */
 
 void net_set_mode(int mode)
@@ -66,7 +66,7 @@ xt_status_t get_get_status()
 
 void net_init(int port, const char *host)
 {
-	if (g_net_mode != XTRACER_NET_LOCAL)
+	if (g_net_mode != XT_NET_LOCAL)
 	{
 		struct netdata_t data;
 		data.port = port;
@@ -89,11 +89,11 @@ void net_init(int port, const char *host)
 
 		switch(g_net_mode)
 		{       
-			case XTRACER_NET_MASTER:
+			case XT_NET_MASTER:
 				printf("Starting up master node...\n");
 				pthread_create(&g_net_thread, 0, (void *)net_master, &data);
 				break;
-			case XTRACER_NET_SLAVE:
+			case XT_NET_SLAVE:
 				printf("Starting up slave node...\n");
 				pthread_create(&g_net_thread, 0, (void *)net_slave, &data);
 		}
@@ -102,7 +102,7 @@ void net_init(int port, const char *host)
 
 void net_deinit()
 {
-	if(g_net_mode != XTRACER_NET_LOCAL)
+	if(g_net_mode != XT_NET_LOCAL)
 	{
 		printf("Shutting down networking..\n");
 		g_net_hang_up = 1;
@@ -124,7 +124,7 @@ void *net_master(struct netdata_t *data)
 	if(socketId == -1)
 	{
 		fprintf(stderr, "Failed to create socket\n");
-		g_net_status = XTRACER_STATUS_NET_FAILURE_SOCKET_C;
+		g_net_status = XT_STATUS_NET_FAILURE_SOCKET_C;
 		return NULL;
 	}
 
@@ -183,7 +183,7 @@ void *net_master(struct netdata_t *data)
 	/* Terminate */
 	printf("Closing connection..\n");
 	pthread_exit(0);
-	g_net_status = XTRACER_STATUS_OK;
+	g_net_status = XT_STATUS_OK;
 }
 
 void *net_slave(struct netdata_t *data)
@@ -198,7 +198,7 @@ void *net_slave(struct netdata_t *data)
 	if(socketId == -1)
 	{
 		fprintf(stderr, "Failed to create socket\n");
-		g_net_status = XTRACER_STATUS_NET_FAILURE_SOCKET_C;
+		g_net_status = XT_STATUS_NET_FAILURE_SOCKET_C;
 		return NULL;
 	}
 
@@ -268,7 +268,7 @@ void *net_slave(struct netdata_t *data)
 
 
 	pthread_exit(0);
-	g_net_status = XTRACER_STATUS_OK;
+	g_net_status = XT_STATUS_OK;
 }
 
 #ifdef __cplusplus

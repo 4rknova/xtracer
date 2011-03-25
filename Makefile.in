@@ -23,9 +23,9 @@ TEX = xelatex
 RM = rm
 CC = gcc
 CXX = g++
-COFLAGS= -D'XT_VERSION="$(shell cat VERSION)"'
-CCFLAGS = -std=c89 -Wall -g -Wno-strict-aliasing $(opt) $(dbg) -I$(spath)  -I/usr/local/include/ $(COFLAGS)
-CXXFLAGS = -ansi -pedantic -Wall -g -Wno-strict-aliasing $(opt) $(dbg) -I$(spath) -I/usr/local/include/ $(COFLAGS)
+COFLAGS= $(opt) $(dbg) -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
+CCFLAGS = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
+CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing -I$(spath) $(COFLAGS)
 LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`
 
 $(bin): $(objc) $(objcc) $(objcpp)

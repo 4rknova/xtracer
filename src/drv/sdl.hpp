@@ -29,22 +29,17 @@
 #define XTRACER_DRV_SDL_HPP_INCLUDED
 
 #include "../drv.hpp"
-
 #include <SDL/SDL.h>
 
 class DrvSDL: public Driver
 {
 	public:
-		DrvSDL(	Framebuffer &fb, 
-				XT_DRV_INTV intv = XT_DEFAULT_DRV_INTV, 
-				XT_DRV_SYN sync = XT_DEFAULT_DRV_SYN);
-
+		DrvSDL(Framebuffer &fb);
 		~DrvSDL();
 
 		xt_status_t init();
 		xt_status_t deinit();
 		xt_status_t update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
-		xt_status_t update();
 		xt_status_t flip();
 
 	private:

@@ -32,6 +32,7 @@
 
 #include "err.h"
 #include "fb.hpp"
+#include "scene.hpp"
 
 /* Default values for the raytracer environment */
 #define XT_DEFAULT_RECUR_DEPTH 5
@@ -39,14 +40,15 @@
 class Renderer
 {
 	public:
-		Renderer(Framebuffer &fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
+		Renderer(const char *filepath, Framebuffer &fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
 
 		unsigned int recursion_depth();
 		unsigned int set_recursion_depth(unsigned int depth);
 
-		xt_status_t render(const char* scenefile, const char *camera);
+		xt_status_t render(const char *camera);
 
 	private:
+		Scene m_p_scene;
 		Framebuffer *m_p_fb;
 		unsigned int m_p_depth;
 };

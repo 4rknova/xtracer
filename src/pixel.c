@@ -26,19 +26,15 @@
 */
 
 #include "pixel.h"
+#include "byteorder.h"
 
 #ifdef __cplusplus
 	extern "C" {
 #endif  /* __cplusplus */
 
-pixel32_t pixel32_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
+pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
 {
-	pixel32_t res = 0;
-
-	res = (res + red) << 8;
-	res = (res + green) << 8;
-	res = (res + blue) << 8;
-	res = res + alpha;
+	pixel32_t res = ((uint32_t)red << 24) + ((uint32_t)green << 16) + ((uint32_t)blue << 8) + (uint32_t)alpha;
 
 	return res;
 }

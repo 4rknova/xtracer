@@ -27,32 +27,12 @@
 
 #include "drv.hpp"
 
-Driver::Driver(Framebuffer &fb, XT_DRV_INTV intv, XT_DRV_SYN sync):
-	m_p_sync(sync), m_p_interval(intv), m_p_fb(&fb)
+Driver::Driver(Framebuffer &fb):
+	m_p_fb(&fb)
 {}
 
 Driver::~Driver()
 {}
-
-XT_DRV_SYN Driver::sync()
-{
-	return m_p_sync;
-}
-
-XT_DRV_INTV Driver::interval()
-{
-	return m_p_interval;
-}
-
-XT_DRV_SYN Driver::set_sync(XT_DRV_SYN v)
-{
-	return m_p_sync = v;
-}
-
-XT_DRV_INTV Driver::set_interval(XT_DRV_INTV v)
-{
-	return m_p_interval = v;
-}
 
 xt_status_t Driver::init()
 {
@@ -71,7 +51,7 @@ xt_status_t Driver::update(unsigned int x0, unsigned int y0, unsigned int x1, un
 
 xt_status_t Driver::update()
 {
-	return XT_STATUS_OK;
+	return update(0, 0, m_p_fb->width(), m_p_fb->height());
 }
 
 xt_status_t Driver::flip()

@@ -120,13 +120,13 @@ extern "C" {
 */
 enum xt_mode_net_t
 {
-	XTRACER_NET_LOCAL,      /* Start as stand alone, no networking */
-	XTRACER_NET_MASTER,     /* Start as master node */
-	XTRACER_NET_SLAVE       /* Start as slave node */
+	XT_NET_LOCAL,      /* Start as stand alone, no networking */
+	XT_NET_MASTER,     /* Start as master node */
+	XT_NET_SLAVE       /* Start as slave node */
 };
 
 /* Default net mode */
-#define XTRACER_DEFAULT_MODE_NET XTRACER_NET_LOCAL
+#define XT_DEFAULT_MODE_NET XT_NET_LOCAL
 
 /*
 	Internal structure, used in network thread startup

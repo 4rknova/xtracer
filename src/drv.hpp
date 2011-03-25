@@ -31,12 +31,6 @@
 #include "err.h"
 #include "fb.hpp"
 
-enum XT_DRV_SYN
-{
-	XT_DRV_SYN_SYNC,
-	XT_DRV_SYN_ASYN
-};
-
 enum XT_DRV
 {
 	XT_DRV_DUM,		/* Dummy driver */
@@ -45,36 +39,23 @@ enum XT_DRV
 	XT_DRV_ASC     	/* Output to stdout in ASCII */
 };
 
-#define XT_DRV_INTV unsigned int
-
-/* Default sync mode */
-#define XT_DEFAULT_DRV_SYN	XT_DRV_SYN_SYNC
-#define XT_DEFAULT_DRV_INTV	5
 /* Default output mode */
 #define XT_DEFAULT_DRV XT_DRV_SDL
 
 class Driver
 {
 	public:
-		Driver(Framebuffer &fb, XT_DRV_INTV intv = XT_DEFAULT_DRV_INTV, XT_DRV_SYN sync = XT_DEFAULT_DRV_SYN);
+		Driver(Framebuffer &fb);
 		~Driver();
-
-		XT_DRV_SYN sync();
-		XT_DRV_INTV interval();
-		
-		XT_DRV_SYN set_sync(XT_DRV_SYN v);
-		XT_DRV_INTV set_interval(XT_DRV_INTV v);
 
 		virtual xt_status_t init();
 		virtual xt_status_t deinit();
 
 		virtual xt_status_t update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
-		virtual xt_status_t update();
+		xt_status_t update();
 		virtual xt_status_t flip();
 		  
 	protected:
-		XT_DRV_SYN m_p_sync;
-		XT_DRV_INTV m_p_interval;
 		Framebuffer *m_p_fb;
 };
 

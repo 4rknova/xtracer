@@ -30,31 +30,23 @@
 #include <string>
 #include <list>
 
-#include "renderer.hpp" 
 
 #include "xtracer.h"
 
 #include "err.h"
-
 #include "net.h"
-
-/* Output drivers */
 #include "drv.hpp"
 #include "drv/sdl.hpp"
+#include "renderer.hpp" 
 
-#include "pixel.h"
-
-/* This class */
 class Setupenvvar
 {
 	public:
 		Setupenvvar():
-			width(0), height(0),								/* Framebuffer */
-			net(XTRACER_NET_LOCAL), port(XT_NET_PROT_PORT),		/* Network */
+			width(0), height(0),						/* Framebuffer */
+			net(XT_NET_LOCAL), port(XT_NET_PROT_PORT),	/* Network */
 			drv(XT_DEFAULT_DRV), 
-			syn(XT_DEFAULT_DRV_SYN), 
-			intv(XT_DEFAULT_DRV_INTV),					/* Out drivers */
-			depth(XT_DEFAULT_RECUR_DEPTH)						/* Renderer */
+			depth(XT_DEFAULT_RECUR_DEPTH)				/* Renderer */
 		{}
 
 		/* Framebuffer */
@@ -68,8 +60,6 @@ class Setupenvvar
 
 		/* Out drivers */
 		XT_DRV drv;
-		XT_DRV_SYN syn;
-		unsigned int intv;
 		std::string filepath;
 
 		/* Renderer */
@@ -109,17 +99,17 @@ xt_status_t parsearg(int argc, char **argv)
 			/* Local */
 			if (!strcmp(argv[i], "local"))
 			{
-				envvar.net = XTRACER_NET_LOCAL;
+				envvar.net = XT_NET_LOCAL;
 			}
 			/* Master */
 			else if (!strcmp(argv[i], "master"))
 			{
-				envvar.net = XTRACER_NET_MASTER;
+				envvar.net = XT_NET_MASTER;
 			}
 			/* Slave */
 			else if (!strcmp(argv[i], "slave"))
 			{
-				envvar.net = XTRACER_NET_SLAVE;
+				envvar.net = XT_NET_SLAVE;
 
 				i++;			
 				if (!argv[i])
@@ -236,44 +226,6 @@ xt_status_t parsearg(int argc, char **argv)
 		}
 
 		/* 
-			Output Synchronization 
-		*/
-		/* Asynchronous */
-		else if (strcmp(argv[i], "-async") == 0)
-		{
-			envvar.syn = XT_DRV_SYN_ASYN;
-		}
-		/* Synchronous */
-		else if (strcmp(argv[i], "-sync") == 0)
-		{
-			envvar.syn = XT_DRV_SYN_SYNC;
-		}
-
-		/*
-			Output Synchronization interval
-		*/
-		else if (strcmp(argv[i], "-syncintv") == 0)
-		{
-			i++;
-
-			if (!argv[i])
-			{
-				fprintf(stderr, "No %s value was provided.\n", argv[i-1]);
-				return XT_STATUS_INVALID_CLI_ARGUMENT;
-			}
-
-			 int d = 0;
-			 
-			 if ((argv[i][1] == '-') || sscanf(argv[i], "%d", &d) < 1)
-			 {
-				fprintf(stderr, "Invalid %s value.\n", argv[i-1]);
-				return XT_STATUS_INVALID_CLI_ARGUMENT;
-			}
-			
-			envvar.intv = d;
-		}
-		
-		/* 
 			Renderer depth
 		*/
 		else if (strcmp(argv[i], "-depth") == 0)
@@ -389,12 +341,12 @@ int main(int argc, char **argv)
 	printf("v%s\n\n", XT_VERSION);
 		
 	/* Process the scene list */
-	if ( envvar.fscenes.empty() && (envvar.net != XTRACER_NET_SLAVE))
+	if ( envvar.fscenes.empty() && (envvar.net != XT_NET_SLAVE))
 	{
 		fprintf(stderr, "No scenes were provided.\n");
 		return XT_STATUS_MISSING_SCENE_FILE;	
 	}
-	else if(envvar.net == XTRACER_NET_SLAVE)
+	else if(envvar.net == XT_NET_SLAVE)
 	{
 		fprintf(stderr, "Slave mode was chosen. The provided scene files will be ignored.\n");
 		envvar.fscenes.clear();
@@ -420,34 +372,39 @@ int main(int argc, char **argv)
 		case XT_DRV_SDL:
 			drv = new DrvSDL(fb);
 			break;
-		case XT_DRV_DUM:	/**/
+		case XT_DRV_DUM:	/* DUMMY DRIVER */
 		default:
 			drv = new Driver(fb);
 
 	}
 	drv->init();
 
-	/* Start up the renderer */
-	printf("Initiating the renderer..\n");
-	Renderer renderer(fb, envvar.depth);
-	printf("Recursion depth: %i\n", renderer.recursion_depth());
-	
+	/* Asynchronous output update */
+	/* HANDLE HERE */
+
 	unsigned int count = 1;
 	unsigned int total = envvar.fscenes.size();
 	while(!envvar.fscenes.empty())
 	{	
 		printf("Processing %i / %i: %s..\n", count++, total, envvar.fscenes.front().c_str());
+		
+		/* Start up the renderer */
+		Renderer renderer(envvar.fscenes.front().c_str(), fb, envvar.depth);
 
-		renderer.render(envvar.fscenes.front().c_str(), envvar.camera.c_str());
+		printf("Recursion depth: %i\n", renderer.recursion_depth());
 
-		printf("Done..\n");
+		renderer.render(envvar.camera.c_str());
+
 		envvar.fscenes.pop_front();
+		
+		drv->update();
 	}
 	
 	/*
 		CLEAN UP
 	*/
 	/* Terminate networking */
+	printf("Shutting down..\n");
 	net_deinit();
 
 	/* Terminate the output driver */

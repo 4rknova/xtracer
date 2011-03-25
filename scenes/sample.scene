@@ -1,13 +1,13 @@
 # Xtracer example scene
-
 name = Sample scene
 description = This is a sample scene. It is used to describe the specification.
 	
 # group camera contains all the cameras
 camera = {
+	# The default camera to use
+	default = cam1
+
 	cam1 = {
-		# Mode
-		mode = perspective
 		# Field of view
 		fov = 45
 		# Camera's position
@@ -16,46 +16,20 @@ camera = {
 			y = 0
 			z = 0
 		}
-		# Camera's angle
-		angle = {
+		# Camera's focus direction
+		target = {
 			x = 0
 			y = 0
-			z = 0
+			z = 1
 		}
-	}
-		
-	cam2 = {
-		# Mode
-		mode = perspective
-		# Field of view
-		fov = 45
-		# Camera's position
-		position = {
+
+		up = {
 			x = 0
-			y = 0
+			y = 1
 			z = 0
 		}
-		# Camera's angle
-		angle = {
-			x = 0
-			y = 0
-			z = 0
-		}
+
 	}
-}
-
-# group material contains all the materials
-material = {
-	mat1 = {
-		src = mat/mat1
-
-		# Any other options here will modify those loaded from src file
-	}
-
-	mat2 = {
-		property1 = 0
-	}
-
 }
 
 # group object contains all the geometry
@@ -68,20 +42,11 @@ object = {
 		position ={
 			x = 0
 			y = 0
-			z = 0
+			z = 10
 		}
 
 		# The sphere's radius
 		radius = 1
-	}
-
-	human = {
-		# The object's geometry
-		geometry = mesh
-
-		# The filename
-		file = mesh/human.3ds
-
 	}
 }
 

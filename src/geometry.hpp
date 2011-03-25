@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-   	pixel.h
-    Pack and extract color components
+    geometry.hpp
+    Geometry class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,28 +25,32 @@
 
 */
 
-#ifndef XTRACER_PIXEL_H_INCLUDED
-#define XTRACER_PIXEL_H_INCLUDED
+#ifndef XTRACER_GEOMETRY_HPP_INCLUDED
+#define XTRACER_GEOMETRY_HPP_INCLUDED
 
-#include <stdint.h>
+enum GEOMETRY_TYPE
+{
+	GEOMETRY_TYPE_SPHERE,	/* Sphere */
+	GEOMETRY_TYPE_PLANE,	/* Plane */
+	GEOMETRY_TYPE_TRIANGLE	/* Triangle */
+};
 
-#ifdef __cplusplus
-	extern "C" {
-#endif  /* __cplusplus */
+#include <nmath/ray.h>
 
-typedef uint32_t pixel32_t;
+class Geometry 
+{
+	public:
+		Geometry(GEOMETRY_TYPE type);
+		~Geometry();
 
-/* Pack a rgba tuple to uint32  */
-pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
+		GEOMETRY_TYPE type();	/* Returns the geometry type */
+		void *get();			/* Return a pointer to the structure */
 
-/* Get component from packed rgba */
-unsigned int get_pixel32_r(pixel32_t color);
-unsigned int get_pixel32_g(pixel32_t color);
-unsigned int get_pixel32_b(pixel32_t color);
-unsigned int get_pixel32_a(pixel32_t color);
+		real_t collision(Ray &ray);		/* Returns collision with ray */
 
-#ifdef __cplusplus
-	}   /* extern "C" */
-#endif /* __cplusplus */
+	private:
+		const GEOMETRY_TYPE m_p_type;	/* Denotes the geometry type */
+		void *m_p_geometry;				/* Pointer to the actual structure */
+};
 
-#endif /* XTRACER_PIXEL_H_INCLUDED  */
+#endif /* XTRACER_GEOMETRY_HPP_INCLUDED */

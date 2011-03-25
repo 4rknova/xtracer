@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-   	pixel.h
-    Pack and extract color components
+    Scene.hpp
+    Scene class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,28 +25,41 @@
 
 */
 
-#ifndef XTRACER_PIXEL_H_INCLUDED
-#define XTRACER_PIXEL_H_INCLUDED
+#ifndef XTRACER_SCENE_HPP_INCLUDED
+#define XTRACER_SCENE_HPP_INCLUDED
 
-#include <stdint.h>
+#include <list>
 
-#ifdef __cplusplus
-	extern "C" {
-#endif  /* __cplusplus */
+#include <nparse/cfgparser.hpp>
 
-typedef uint32_t pixel32_t;
+#include "err.h"
+#include "light.hpp"
+#include "camera.hpp"
+#include "geometry.hpp"
 
-/* Pack a rgba tuple to uint32  */
-pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
+class Scene
+{
+	friend class Renderer;
+	protected:
+		Scene(const char *filepath);
+		~Scene();
 
-/* Get component from packed rgba */
-unsigned int get_pixel32_r(pixel32_t color);
-unsigned int get_pixel32_g(pixel32_t color);
-unsigned int get_pixel32_b(pixel32_t color);
-unsigned int get_pixel32_a(pixel32_t color);
+		xt_status_t init();
+		xt_status_t analyze();
 
-#ifdef __cplusplus
-	}   /* extern "C" */
-#endif /* __cplusplus */
+		xt_status_t set_camera(const char *name);
+		xt_status_t add_light(NCFGParser *p);
+		xt_status_t add_geometry(NCFGParser *p);
+		xt_status_t add_material(NCFGParser *p);
 
-#endif /* XTRACER_PIXEL_H_INCLUDED  */
+		Camera camera;
+
+		std::list<Light *> light;
+		std::list<Geometry *> geometry;
+//		std::list<Material *> material;
+
+		NCFGParser data;
+		std::string source;
+};
+
+#endif /* XTRACER_SCENE_HPP_INCLUDED */

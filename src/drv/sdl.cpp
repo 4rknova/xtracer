@@ -25,13 +25,13 @@
 
 */
 
-#include "sdl.hpp"  
-
 #include <stdio.h>
-#include <SDL/SDL.h>
 
-DrvSDL::DrvSDL( Framebuffer &fb, XT_DRV_INTV intv, XT_DRV_SYN sync):
-	Driver(fb, intv, sync), m_p_screen(NULL)
+#include "sdl.hpp"
+#include "pixel.h"
+
+DrvSDL::DrvSDL( Framebuffer &fb):
+	Driver(fb), m_p_screen(NULL)
 {}
 
 DrvSDL::~DrvSDL()
@@ -41,7 +41,7 @@ xt_status_t DrvSDL::init()
 {
 	printf("Creating the sdl window..\n");
 
-	if( SDL_Init( SDL_INIT_EVERYTHING ) == -1 )
+	if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
 		return 1;
 	
 	/* Set up the screen */
@@ -57,22 +57,69 @@ xt_status_t DrvSDL::init()
 xt_status_t DrvSDL::deinit()
 {
 	/* Deinit */
-	SDL_Quit(); /* This will release m_p_screen as well */
+	SDL_Quit(); /* This will release m_p_window as well */
 	return 0;
 }
 
 xt_status_t DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
 {
 	/* Copy the pixel window here */
+	/* If the surface must be locked */
+	if(SDL_MUSTLOCK(m_p_screen))
+	{
+		/* Lock the surface */
+		SDL_LockSurface(m_p_screen);
+	}
+
+	/* Check for "out of bounds" and inverse mapping errors */
+	if ((x0 > m_p_fb->width()) 
+		|| (x1 > m_p_fb->width()) 
+		|| (y0 > m_p_fb->height()) 
+		|| (y1 > m_p_fb->height())
+		|| (x0 > x1)
+		|| (y0 > y1))
+		return XT_STATUS_FB_OUTOFBOUNDS;
+
+	/* Convert the pixels to 32 bit */
+	pixel32_t *pixels = (pixel32_t *)m_p_screen->pixels;
+
+	/* Set the pixels */
+	for(unsigned int y = y0; y < y1; y++)
+	{
+		for(unsigned int x = x0; x < x1; x++)
+		{
+			pixel32_t pixel = m_p_fb->get_pixel(x, y);
+			pixels[(y * m_p_screen->w) + x] = SDL_MapRGB( m_p_screen->format, get_pixel32_r(pixel), get_pixel32_g(pixel), get_pixel32_b(pixel));
+
+		}
+	}
+
+	/* Unlock surface */
+	if(SDL_MUSTLOCK(m_p_screen))
+	{
+		SDL_UnlockSurface(m_p_screen);
+	}
+
+	flip();
+
+	/* Block */
+	SDL_Event event;
+	/* Clear the event queue */
+	while (SDL_PollEvent(&event));
+	unsigned int done = 0;
+
+	while(SDL_PollEvent(&event) || !done)
+	{
+		switch (event.type)
+		{
+			case SDL_KEYDOWN:
+				done = 1;
+				break;
+		}
+	}
+
 	return XT_STATUS_OK;
 }
-
-xt_status_t DrvSDL::update()
-{
-	/* Update the whole buffer */
-	return update(0, 0, m_p_fb->width(), m_p_fb->height());
-}
-
 
 xt_status_t DrvSDL::flip()
 {

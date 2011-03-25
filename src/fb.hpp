@@ -32,7 +32,7 @@
 
 #define XT_DEFAULT_FB_WIDTH		640
 #define XT_DEFAULT_FB_HEIGHT 	480
-#define XT_DEFAULT_FB_BPP 		24
+#define XT_DEFAULT_FB_BPP 		32
 
 class Framebuffer
 {
