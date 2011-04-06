@@ -30,12 +30,15 @@
 
 #include <list>
 
+#include <nmath/ray.h>
 #include <nparse/cfgparser.hpp>
 
 #include "err.h"
+
+#include "pixel.h"
+#include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"
-#include "camera.hpp"
 #include "geometry.hpp"
 #include "spscheme.hpp"
 
@@ -55,11 +58,31 @@ class Scene
 		xt_status_t add_material(NCFGParser *p);
 
 		/*
+			Trace a ray
+			This function will pass the arguments to the 
+			space partitioning scheme
+		*/
+		pixel32_t trace(Ray *ray, Geometry *obj);
+
+		/*
+			The space partitioning scheme
+			This implementation supports the extension
+			of the current system to support many different
+			partition schemes by class inheritance
+		*/
+		SPScheme *space;
+
+		/*
 			Pointer to a camera class
 			This is not static so that the camera class can be
 			later on extended to provide multiple models
 		*/
 		Camera *camera;
+		
+		/*
+			The scene's source file path						
+		*/
+		std::string source;
 
 		/*
 			Lists of the scene entities		
@@ -73,19 +96,7 @@ class Scene
 		*/
 		NCFGParser data;
 
-		/*
-			The scene's source file path						
-		*/
-		std::string source;
-
-
-		/*
-			The space partitioning scheme
-			This implementation supports the extension
-			of the current system to support many different
-			partition schemes by class inheritance
-		*/
-		SPScheme *space;
+		unsigned int rdepth;
 
 	private:
 		xt_status_t cleanup();

@@ -48,8 +48,6 @@ class Renderer
 
 		xt_status_t render(const char *camera);
 
-		xt_status_t trace(Ray &ray);
-
 	private:
 		Scene m_p_scene;
 		Framebuffer *m_p_fb;

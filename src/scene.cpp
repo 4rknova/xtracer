@@ -26,6 +26,8 @@
 */
 
 #include <iostream>
+#include <iomanip>
+
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nparse/parseutils.hpp>
@@ -41,7 +43,7 @@ Scene::Scene(const char *filepath)
 	usage of this class. Normally it's not needed and we could just
 	set the pointer to NULL.
 */
-	: space(new SPScheme()), camera(new Camera()), data(filepath), source(filepath)
+	: space(new SPScheme()), camera(new Camera()), source(filepath), data(filepath), rdepth(1)
 {}
 
 Scene::~Scene()
@@ -51,13 +53,14 @@ Scene::~Scene()
 
 xt_status_t Scene::cleanup()
 {
+	std::cout << "Cleaning up..\n";
+
 	/*
 		Release the lights
 	*/
 	if(!light.empty())
 	{
-		std::cout << "Cleaning up..\n";
-		std::cout << " Lights..\n";
+		std::cout << "Releasing the lights..\n";
 		for(std::list<Light *>::iterator it = light.begin(); it != light.end(); it++)
 		{
 			delete *it;
@@ -69,34 +72,35 @@ xt_status_t Scene::cleanup()
 	*/
 	if(!material.empty())
 	{
-		std::cout << " Materials..\n";
+		std::cout << "Releasing the materials..\n";
 		for(std::list<Material *>::iterator it = material.begin(); it != material.end(); it++)
 		{
 			delete *it;
 		}
-	}
+	} 
 
 	/*
 		Release the geometry
 	*/
 	if(!geometry.empty())
 	{
-		std::cout << " Geometry..\n";		
+		std::cout << "Releasing the geometry..\n";
 		for(std::list<Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
 		{
 			delete *it;
 		}
-	}
+	} 
 
 	/*
 		Release the camera
 	*/
-	std::cout << " Camera..\n";
+	std::cout << "Releasing the camera..\n";
 	delete camera;
 
 	/*
 		Release the spscheme
 	*/
+	std::cout << "\rReleasing the space partitioning scheme..\n";
 	delete space;
 }
 
@@ -156,22 +160,22 @@ xt_status_t Scene::analyze()
 	data.group(XT_CFGPROTO_NODE_CAMERA)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups();
 	if (c)
-		std::cout << "Cameras: " << c << " [ " << l << " ]\n";
+		std::cout << "Listing cameras  : " << " [" << std::setw(4) << c << " ] " << l << "\n";
 
 	data.group(XT_CFGPROTO_NODE_MATERIAL)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups();
 	if (c)
-		std::cout << "Materials: " << c << " [ " << l << " ]\n";
+		std::cout << "Listing materials: " << " [" << std::setw(4) << c << " ] " << l << "\n";
 
 	data.group(XT_CFGPROTO_NODE_LIGHT)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
 	if (c)
-		std::cout << "Lights: " << c << " [ " << l << " ]\n";
+		std::cout << "Listing lights   : " << " [" << std::setw(4) << c << " ] " << l << "\n";
 
 	data.group(XT_CFGPROTO_NODE_GEOMETRY)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
 	if (c)
-		std::cout << "Objects: " << c << " [ " <<  l << " ]\n";
+		std::cout << "Listing objects  : " << " [" << std::setw(4) << c << " ] " << l << "\n";;
 
 	return XT_STATUS_OK;
 }
@@ -295,4 +299,9 @@ xt_status_t Scene::add_geometry(NCFGParser *p)
 xt_status_t Scene::add_material(NCFGParser *p)
 {
 	return XT_STATUS_OK;
+}
+
+pixel32_t Scene::trace(Ray *ray, Geometry *obj)
+{
+	return space->trace(ray, obj);
 }

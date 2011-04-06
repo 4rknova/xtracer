@@ -38,15 +38,13 @@ Renderer::Renderer(const char *filepath, Framebuffer &fb, unsigned int depth):
 
 unsigned int Renderer::recursion_depth()
 {
-	return m_p_depth;
+	return m_p_scene.rdepth;
 }
 
 unsigned int Renderer::set_recursion_depth(unsigned int depth)
 {
-	return m_p_depth = depth;
+	return m_p_scene.rdepth = depth;
 }
-
-#include <stdint.h>
 
 xt_status_t Renderer::render(const char *camera)
 {
@@ -56,12 +54,9 @@ xt_status_t Renderer::render(const char *camera)
 		return XT_STATUS_FB_INVALID;
 	}
 
-	xt_status_t status = XT_STATUS_OK;
-	
 	/* Initiate the scene */
-	status = m_p_scene.init();
-
-	if(status != XT_STATUS_OK)
+	xt_status_t status = XT_STATUS_OK;
+	if((status = m_p_scene.init()) != XT_STATUS_OK)
 	{
 		return status;
 	}
@@ -78,32 +73,17 @@ xt_status_t Renderer::render(const char *camera)
 	{
 		for (unsigned int w = 0; w < m_p_fb->width(); w++)
 		{
-			if (!m_p_scene.camera)
-				break;
-
+			/* Create a primary ray */
 			Ray primary = m_p_scene.camera->get_primary_ray(w, h, m_p_fb->width(), m_p_fb->height());
-if((primary.direction.z >.9999)){
-//			printf("origin: %3.3f %3.3f %3.3f direction: %3.3f %3.3f %3.3f len:%f \n", primary.origin.x, primary.origin.y, primary.origin.z, primary.direction.x, primary.direction.y, primary.direction.z, primary.direction.length());
-//getchar();
-}
-			real_t depth=0;
 
+			/* Trace the generated ray through the scene */
+			Geometry *g = NULL;
+			pixel32_t color = m_p_scene.trace(&primary, g);
 
-			for (std::list<Geometry *>::iterator it = m_p_scene.geometry.begin(); it != m_p_scene.geometry.end(); it++)
-			{
-				real_t pdepth = (*it)->collision(primary) * 20;
+			/* Set the final colot in the buffer */
+			m_p_fb->set_pixel(w, h, color);
 
-				if (pdepth < NM_INFINITY)
-				{
-					depth = (((float)pdepth)/255.0f) > 254 ? 255 : pdepth;
-				}
-			}
-
-			uint32_t final_color = rgba_to_pixel32(0, 0, (char)depth, 255);
-
-
-			m_p_fb->set_pixel(w, h, final_color);
-
+			/* Report the progress */
 			if (total_pixels > 1)
 			{
 				printf("\rProgress: %06.2f%% of %i pixels.", 
@@ -113,6 +93,7 @@ if((primary.direction.z >.9999)){
 			std::cout << std::flush;
 		}
 	}
-	printf("\nDone\n");
+
+	std::cout << "\n";
 	return XT_STATUS_OK;
 }
