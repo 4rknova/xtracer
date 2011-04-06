@@ -52,6 +52,11 @@ doc: $(doc)
 .PHONY: bin 
 bin: $(bin)
 
+.PHONY: test
+test: $(bin)
+	clear
+	./bin/xtracer ./scenes/* -res 200x200
+
 .PHONY: clean
 clean:
 	$(RM) -rf $(objc) $(objcc) $(objcpp)

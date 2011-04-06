@@ -79,6 +79,8 @@ real_t Camera::set_fov(real_t fov)
 	return m_p_fov = fov;
 }
 
+#include <iostream>
+
 Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
 	Ray pray;		/* Primary ray */
@@ -86,10 +88,15 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 	/* Set the primary ray's origin at the camera's position. */
 	pray.origin = m_p_position;
 
+	/* Take the aspect ratio into consideration */
+	real_t ratio = (real_t)width / (real_t)height;
+
 	/* Construct the ray's direction vector. */
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
-	pray.direction.y = (1.0 - ((2.0 * (real_t)y) / (real_t)height)) * ((real_t)height / (real_t)width);
+	pray.direction.y = (1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
 	pray.direction.z = 1 / tan(m_p_fov / 2.0);
+
+	pray.direction.normalize();
 
 	/* Transform the camera target vector to world coordinates and normalize it. */
 	Vector3 camdir = m_p_target - m_p_position;
@@ -115,7 +122,7 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 
 	rz = camdir;
 	rx = cross(m_p_up, rz);
-	ry = cross(x, -rz);
+	ry = cross(rx, rz);
 
 	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 
 					rx.y, ry.y, rz.y, 0,

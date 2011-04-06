@@ -1,6 +1,6 @@
 # Xtracer example scene
-name = Sample scene
-description = This is a sample scene. It is used to describe the specification.
+name = sample scene
+description = This <name> is used to describe the specification.
 	
 # group camera contains all the cameras
 camera = {
@@ -10,23 +10,24 @@ camera = {
 	cam1 = {
 		# Field of view
 		fov = 45
+
 		# Camera's position
 		position = {
-			x = 0
-			y = 0
+			x = 0 
+			y = 10
 			z = 0
 		}
 		# Camera's focus direction
 		target = {
 			x = 0
 			y = 0
-			z = 1
+			z = 20
 		}
 
 		up = {
 			x = 0
 			y = 1
-			z = 0
+			z = 1 
 		}
 
 	}
@@ -34,7 +35,7 @@ camera = {
 
 # group object contains all the geometry
 object = {
-	ball = {
+	ball1 = {
 		# The object's geometry 
 		geometry = sphere
 
@@ -42,11 +43,23 @@ object = {
 		position ={
 			x = 0
 			y = 0
-			z = 10
+			z = 80
 		}
 
 		# The sphere's radius
-		radius = 1
+		radius = 20
+	}
+
+	ball2 = {
+		geometry = sphere
+
+		position = {
+			x = 0
+			y = 0
+			z = 20
+		}
+
+		radius = 2
 	}
 }
 

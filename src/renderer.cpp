@@ -78,27 +78,37 @@ xt_status_t Renderer::render(const char *camera)
 	{
 		for (unsigned int w = 0; w < m_p_fb->width(); w++)
 		{
+			if (!m_p_scene.camera)
+				break;
 
-			Ray primary = m_p_scene.camera.get_primary_ray(w, h, m_p_fb->width(), m_p_fb->height());
-
+			Ray primary = m_p_scene.camera->get_primary_ray(w, h, m_p_fb->width(), m_p_fb->height());
+if((primary.direction.z >.9999)){
+//			printf("origin: %3.3f %3.3f %3.3f direction: %3.3f %3.3f %3.3f len:%f \n", primary.origin.x, primary.origin.y, primary.origin.z, primary.direction.x, primary.direction.y, primary.direction.z, primary.direction.length());
+//getchar();
+}
 			real_t depth=0;
 
 
 			for (std::list<Geometry *>::iterator it = m_p_scene.geometry.begin(); it != m_p_scene.geometry.end(); it++)
 			{
-				depth = (*it)->collision(primary);
+				real_t pdepth = (*it)->collision(primary) * 20;
 
-	//			printf("%f ",depth);
+				if (pdepth < NM_INFINITY)
+				{
+					depth = (((float)pdepth)/255.0f) > 254 ? 255 : pdepth;
+				}
 			}
 
-			uint32_t final_color = rgba_to_pixel32(0, 0, depth, 255);
+			uint32_t final_color = rgba_to_pixel32(0, 0, (char)depth, 255);
+
+
 			m_p_fb->set_pixel(w, h, final_color);
 
 			if (total_pixels > 1)
 			{
-//				printf("\rProgress: %06.2f%% of %i pixels.", 
-//					((h * m_p_fb->width() + w)/(total_pixels - 1))*100, 
-//					(int)total_pixels);
+				printf("\rProgress: %06.2f%% of %i pixels.", 
+					((h * m_p_fb->width() + w)/(total_pixels - 1))*100, 
+					(int)total_pixels);
 			}
 			std::cout << std::flush;
 		}

@@ -2,7 +2,7 @@
 
     This file is part of xtracer.
 
-    Scene.cpp
+    scene.cpp
     Scene class
 
     Copyright (C) 2010, 2011
@@ -25,6 +25,7 @@
 
 */
 
+#include <iostream>
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nparse/parseutils.hpp>
@@ -34,49 +35,80 @@
 #include "cfgproto.h"
 
 Scene::Scene(const char *filepath)
-	: data(filepath), source(filepath)
+/* 
+	The creation of the camera here serves as a precaution measure
+	to avoid segmentation faults that would be caused by irregular 
+	usage of this class. Normally it's not needed and we could just
+	set the pointer to NULL.
+*/
+	: space(new SPScheme()), camera(new Camera()), data(filepath), source(filepath)
 {}
 
 Scene::~Scene()
 {
+	cleanup();
+}
+
+xt_status_t Scene::cleanup()
+{
+	/*
+		Release the lights
+	*/
 	if(!light.empty())
 	{
-		printf("Cleaning up..\n");
-		printf("-> Lights..\n");
+		std::cout << "Cleaning up..\n";
+		std::cout << " Lights..\n";
 		for(std::list<Light *>::iterator it = light.begin(); it != light.end(); it++)
 		{
 			delete *it;
 		}
 	}
-/*
+
+	/*
+		Release the materials
+	*/
 	if(!material.empty())
 	{
-		printf("-> Materials..\n");
-		for(std::list<Light *>::iterator it = material.begin(); it != material.end(); it++)
+		std::cout << " Materials..\n";
+		for(std::list<Material *>::iterator it = material.begin(); it != material.end(); it++)
 		{
 			delete *it;
 		}
 	}
-*/
+
+	/*
+		Release the geometry
+	*/
 	if(!geometry.empty())
 	{
-		printf("-> Geometry..\n");
+		std::cout << " Geometry..\n";		
 		for(std::list<Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
 		{
 			delete *it;
 		}
 	}
+
+	/*
+		Release the camera
+	*/
+	std::cout << " Camera..\n";
+	delete camera;
+
+	/*
+		Release the spscheme
+	*/
+	delete space;
 }
 
 xt_status_t Scene::init()
 {
-	printf ("Initiating the renderer\n");
+	std::cout << "Initiating the scene..\n";		
 
-	/* Load the data.file and parse it */
+	/* Load the scene file and parse it */
 	int status = data.parse();
 	if(status)
 	{
-		fprintf(stderr, "Error: Failed to load data.file.\n");
+		std::cerr << "Error: Failed to load the scene file.\n";
 		return XT_STATUS_INVALID_SCENE_FILE;
 	}
 
@@ -88,7 +120,7 @@ xt_status_t Scene::init()
 	count = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
 	if (count)
 	{
-		printf("Creating the light sources..\n");
+		std::cout << "Creating the light sources..\n";
 		for (unsigned int i = 1; i<= count; i++)
 		{
 			NCFGParser *lnode = data.group(XT_CFGPROTO_NODE_LIGHT)->group(i);
@@ -100,7 +132,7 @@ xt_status_t Scene::init()
 	count = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
 	if (count)
 	{
-		printf("Building the geometry..\n");
+		std::cout << "Building the geometry..\n";
 		for (unsigned int i = 1; i<= count; i++)
 		{
 			NCFGParser *lnode = data.group(XT_CFGPROTO_NODE_GEOMETRY)->group(i);
@@ -113,21 +145,33 @@ xt_status_t Scene::init()
 
 xt_status_t Scene::analyze()
 {
-	printf("Analyzing data..\n");
+	std::cout << "Analyzing data..\n";
 	/* Print statistics */
-	printf("-> Scene name: %s\n", data.get(XT_CFGPROTO_PROP_NAME));
-	printf("-> Scene info: %s\n", data.get(XT_CFGPROTO_PROP_DESCRIPTION));
+	std::cout << "Scene name: " << data.get(XT_CFGPROTO_PROP_NAME) << "\n";
+	std::cout << "Scene info: " << data.get(XT_CFGPROTO_PROP_DESCRIPTION) << "\n";
 
 	std::string l;
+	int c = 0;
 	   
 	data.group(XT_CFGPROTO_NODE_CAMERA)->list_groups(l);
-	printf("-> Cameras: %i [%s]\n", data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups(), l.c_str());
+	c = data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups();
+	if (c)
+		std::cout << "Cameras: " << c << " [ " << l << " ]\n";
+
 	data.group(XT_CFGPROTO_NODE_MATERIAL)->list_groups(l);
-	printf("-> Materials: %i [%s]\n", data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups(), l.c_str());
+	c = data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups();
+	if (c)
+		std::cout << "Materials: " << c << " [ " << l << " ]\n";
+
 	data.group(XT_CFGPROTO_NODE_LIGHT)->list_groups(l);
-	printf("-> Lights: %i [%s]\n", data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups(), l.c_str());
+	c = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
+	if (c)
+		std::cout << "Lights: " << c << " [ " << l << " ]\n";
+
 	data.group(XT_CFGPROTO_NODE_GEOMETRY)->list_groups(l);
-	printf("-> Objects: %i [%s]\n", data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups(), l.c_str());
+	c = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
+	if (c)
+		std::cout << "Objects: " << c << " [ " <<  l << " ]\n";
 
 	return XT_STATUS_OK;
 }
@@ -137,7 +181,7 @@ xt_status_t Scene::set_camera(const char *name)
 	/* Check if there are no cameras */
 	if(data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups() < 1)
 	{
-		printf("No cameras were specified. Nothing to render..\n");
+		std::cout << "No cameras were specified. Nothing to render..\n";
 		return XT_STATUS_NO_CAMERA;
 	}
 
@@ -150,7 +194,7 @@ xt_status_t Scene::set_camera(const char *name)
 		dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->get(XT_CFGPROTO_PROP_DEFAULT);
 		if (dcam.empty())
 		{
-			printf("No primary camera was specified..\n");
+			std::cout << "No primary camera was specified..\n";
 			dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->group(1)->node();
 		}   
 	}
@@ -158,11 +202,11 @@ xt_status_t Scene::set_camera(const char *name)
 	/* Check if camera exists */
 	if(!data.group(XT_CFGPROTO_NODE_CAMERA)->query_group(dcam.c_str()))
 	{
-		printf("Camera [ %s ] is invalid..\n", dcam.c_str());
+		std::cout << "Invalid camera: " << dcam << "\n";
 		dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->group(1)->node();
 	}   
 
-	printf("Using camera: %s\n", dcam.c_str());
+	std::cout << "Using camera: " << dcam << "\n";
 
 	/* Create the camera */
 	std::string f = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FOV);
@@ -185,19 +229,21 @@ xt_status_t Scene::set_camera(const char *name)
 
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
 
-	printf("-> FOV: %f\n", fov);
-	printf("-> Position: %f %f %f\n", pos.x, pos.y, pos.z);
-	printf("-> Target: %f %f %f\n", targ.x, targ.y, targ.z);
-	printf("-> Up: %f %f %f\n", up.x, up.y, up.z);
+	std::cout << "     FOV: " << fov  << "\n";
+	std::cout << "Position: " << pos  << "\n";
+	std::cout << "  Target: " << targ << "\n";
+	std::cout << "      Up: " << up   << "\n";
 
-	camera = Camera(pos, targ, up, fov);
+	delete camera;
+
+	camera = new Camera(pos, targ, up, fov);
 
 	return XT_STATUS_OK;
 }
 
 xt_status_t Scene::add_light(NCFGParser *p)
 {
-	printf("-> Adding: %s\n", p->node().c_str());
+	std::cout << "Adding: " << p->node() << "\n";
 	std::string x = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_X);
 	std::string y = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_Y);
 	std::string z = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_Z);
@@ -213,9 +259,10 @@ xt_status_t Scene::add_light(NCFGParser *p)
 
 xt_status_t Scene::add_geometry(NCFGParser *p)
 {
-	printf("-> Adding: %s\n", p->node().c_str());
+	std::cout << "Adding: " << p->node() << "\n";
 	std::string type = p->get(XT_CFGPROTO_PROP_GEOMETRY);
-	std::string stat;
+
+	std::cout << "  Type: " << type << "\n";
 
 	if (!type.compare(XT_CFGPROTO_VAL_SPHERE))
 	{
@@ -228,22 +275,19 @@ xt_status_t Scene::add_geometry(NCFGParser *p)
 		z = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
 
 		((Sphere *)(tsphere->get()))->origin = Vector3(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
-		printf("--> Origin: %f, %f, %f\n", ((Sphere *)(tsphere->get()))->origin.x, ((Sphere *)(tsphere->get()))->origin.y, ((Sphere *)(tsphere->get()))->origin.z);
+		std::cout << "Origin: " << ((Sphere *)(tsphere->get()))->origin << "\n";
 
 
 		std::string radius = p->get(XT_CFGPROTO_PROP_RADIUS);
 		((Sphere *)(tsphere->get()))->radius = nstring_to_double(radius);
-		printf("--> Radius: %f\n", ((Sphere *)(tsphere->get()))->radius);
+		std::cout << "Radius: " << ((Sphere *)(tsphere->get()))->radius << "\n";
 
 		geometry.push_back(tsphere);
 	}
 	else
 	{
-		stat = "[ Unsupported ]";
+		std::cerr << "Warning: Unsupported type. Skipping...\n";
 	}
-
-
-	printf("--> Type: %s %s\n", type.c_str(), stat.c_str());
 
 	return XT_STATUS_OK;
 }

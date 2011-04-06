@@ -2,7 +2,7 @@
 
     This file is part of xtracer.
 
-    Scene.hpp
+    scene.hpp
     Scene class
 
     Copyright (C) 2010, 2011
@@ -34,8 +34,10 @@
 
 #include "err.h"
 #include "light.hpp"
+#include "material.hpp"
 #include "camera.hpp"
 #include "geometry.hpp"
+#include "spscheme.hpp"
 
 class Scene
 {
@@ -52,14 +54,41 @@ class Scene
 		xt_status_t add_geometry(NCFGParser *p);
 		xt_status_t add_material(NCFGParser *p);
 
-		Camera camera;
+		/*
+			Pointer to a camera class
+			This is not static so that the camera class can be
+			later on extended to provide multiple models
+		*/
+		Camera *camera;
 
+		/*
+			Lists of the scene entities		
+		*/
 		std::list<Light *> light;
 		std::list<Geometry *> geometry;
-//		std::list<Material *> material;
+		std::list<Material *> material;
 
+		/*
+			The parsed tree root node
+		*/
 		NCFGParser data;
+
+		/*
+			The scene's source file path						
+		*/
 		std::string source;
+
+
+		/*
+			The space partitioning scheme
+			This implementation supports the extension
+			of the current system to support many different
+			partition schemes by class inheritance
+		*/
+		SPScheme *space;
+
+	private:
+		xt_status_t cleanup();
 };
 
 #endif /* XTRACER_SCENE_HPP_INCLUDED */

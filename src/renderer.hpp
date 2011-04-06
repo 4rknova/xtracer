@@ -29,6 +29,7 @@
 #define XTRACER_RENDERER_HPP_INCLUDED
 
 #include <string>
+#include <nmath/ray.h>
 
 #include "err.h"
 #include "fb.hpp"
@@ -46,6 +47,8 @@ class Renderer
 		unsigned int set_recursion_depth(unsigned int depth);
 
 		xt_status_t render(const char *camera);
+
+		xt_status_t trace(Ray &ray);
 
 	private:
 		Scene m_p_scene;

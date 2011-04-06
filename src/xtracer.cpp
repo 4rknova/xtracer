@@ -34,7 +34,9 @@
 #include "xtracer.h"
 
 #include "err.h"
+
 #include "net.h"
+
 #include "drv.hpp"
 #include "drv/sdl.hpp"
 #include "renderer.hpp" 
@@ -44,7 +46,9 @@ class Setupenvvar
 	public:
 		Setupenvvar():
 			width(0), height(0),						/* Framebuffer */
+
 			net(XT_NET_LOCAL), port(XT_NET_PROT_PORT),	/* Network */
+
 			drv(XT_DEFAULT_DRV), 
 			depth(XT_DEFAULT_RECUR_DEPTH)				/* Renderer */
 		{}
@@ -322,7 +326,7 @@ xt_status_t parsearg(int argc, char **argv)
 	return XT_STATUS_OK;
 }
 
-
+#include <nmath/mutil.h>
 
 int main(int argc, char **argv)
 {
@@ -341,7 +345,7 @@ int main(int argc, char **argv)
 	printf("v%s\n\n", XT_VERSION);
 		
 	/* Process the scene list */
-	if ( envvar.fscenes.empty() && (envvar.net != XT_NET_SLAVE))
+	if (envvar.fscenes.empty() && (envvar.net != XT_NET_SLAVE))
 	{
 		fprintf(stderr, "No scenes were provided.\n");
 		return XT_STATUS_MISSING_SCENE_FILE;	
@@ -359,7 +363,11 @@ int main(int argc, char **argv)
 	/* Start up the framebuffer */
 	printf("Initiating the framebuffer..\n");
 	Framebuffer fb(envvar.width, envvar.height);
-	printf("Buffer size: %ix%i\n", fb.width(),  fb.height());
+	printf("Resolution: %ix%i\n", fb.width(),  fb.height());
+
+	/* Calculate the aspect ratio in an attractive format */
+	int cd = gcd(fb.width(),fb.height());
+	printf("Aspect ratio: %i:%i\n", fb.width() / cd, fb.height() / cd);
 
 	/* 
 		Start up the output driver
@@ -378,9 +386,6 @@ int main(int argc, char **argv)
 
 	}
 	drv->init();
-
-	/* Asynchronous output update */
-	/* HANDLE HERE */
 
 	unsigned int count = 1;
 	unsigned int total = envvar.fscenes.size();
@@ -403,8 +408,10 @@ int main(int argc, char **argv)
 	/*
 		CLEAN UP
 	*/
-	/* Terminate networking */
+
 	printf("Shutting down..\n");
+
+	/* Terminate networking */
 	net_deinit();
 
 	/* Terminate the output driver */
