@@ -1,7 +1,14 @@
 # Xtracer example scene
 name = sample scene
 description = This <name> is used to describe the specification.
-	
+
+# The background color
+bgcolor = {
+	r = 34
+	g = 56
+	b = 155
+}
+
 # group camera contains all the cameras
 camera = {
 	# The default camera to use
@@ -71,5 +78,11 @@ light = {
 			y = 0
 			z = 0
 		}
+	}
+}
+
+# group material contains all the materials
+material = {
+	lx1 = {
 	}
 }

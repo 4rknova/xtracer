@@ -27,6 +27,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 
 #include "renderer.hpp"
 
@@ -46,7 +47,7 @@ unsigned int Renderer::set_recursion_depth(unsigned int depth)
 	return m_p_scene.rdepth = depth;
 }
 
-xt_status_t Renderer::render(const char *camera)
+pixel32_t Renderer::render(const char *camera)
 {
 	if(m_p_fb == NULL)
 	{
@@ -68,7 +69,8 @@ xt_status_t Renderer::render(const char *camera)
 	printf("Rendering frame..\n");
 
 	/* Rendering loop */
-	float total_pixels =  m_p_fb->height() *  m_p_fb->width();
+	unsigned int pixel_count =  m_p_fb->height() *  m_p_fb->width();
+
 	for (unsigned int h = 0; h < m_p_fb->height(); h++)
 	{
 		for (unsigned int w = 0; w < m_p_fb->width(); w++)
@@ -76,19 +78,18 @@ xt_status_t Renderer::render(const char *camera)
 			/* Create a primary ray */
 			Ray primary = m_p_scene.camera->get_primary_ray(w, h, m_p_fb->width(), m_p_fb->height());
 
-			/* Trace the generated ray through the scene */
-			Geometry *g = NULL;
-			pixel32_t color = m_p_scene.trace(&primary, g);
-
-			/* Set the final colot in the buffer */
-			m_p_fb->set_pixel(w, h, color);
-
+			/* Set the final color in the buffer */
+			m_p_fb->set_pixel(w, h, m_p_scene.trace(primary));
 			/* Report the progress */
-			if (total_pixels > 1)
+			if (pixel_count > 1)
 			{
-				printf("\rProgress: %06.2f%% of %i pixels.", 
-					((h * m_p_fb->width() + w)/(total_pixels - 1))*100, 
-					(int)total_pixels);
+				std::cout 
+					<< "\rProgress: " 
+					<< std::setw(7) << std::setprecision(3) 
+					<< ((h * m_p_fb->width() + w) / (float)(pixel_count - 1)) * 100
+					<< " of " 
+					<< pixel_count 
+					<< " pixels";
 			}
 			std::cout << std::flush;
 		}

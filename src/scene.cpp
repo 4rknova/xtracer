@@ -37,21 +37,28 @@
 #include "cfgproto.h"
 
 Scene::Scene(const char *filepath)
-/* 
-	The creation of the camera here serves as a precaution measure
-	to avoid segmentation faults that would be caused by irregular 
-	usage of this class. Normally it's not needed and we could just
-	set the pointer to NULL.
-*/
-	: space(new SPScheme()), camera(new Camera()), source(filepath), data(filepath), rdepth(1)
-{}
+	/* 
+		The creation of the camera here serves as a precaution measure
+		to avoid segmentation faults that would be caused by irregular 
+		usage of this class. Normally it's not needed and we could just
+		set the pointer to NULL.
+	*/
+	: space(new SPScheme()), camera(new Camera()), 
+	source(filepath), data(filepath), 
+	rdepth(1),
+	/* 
+		RGB -> RGBA value
+	*/
+	background_color((XT_DEFAULT_BG_COLOR_RGB << 8) + 255)
+{
+}
 
 Scene::~Scene()
 {
 	cleanup();
 }
 
-xt_status_t Scene::cleanup()
+void Scene::cleanup()
 {
 	std::cout << "Cleaning up..\n";
 
@@ -118,9 +125,19 @@ xt_status_t Scene::init()
 
 	analyze();
 
+	std::cout << "Generating the scene..\n";
+
 	/* Start populating the lists */
 	unsigned int count = 0;
-	/* Light sources */
+
+	/*
+		BACKGROUND COLOR
+	*/
+	set_bgcolor();
+
+	/* 
+		Light sources 
+	*/
 	count = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
 	if (count)
 	{
@@ -132,7 +149,9 @@ xt_status_t Scene::init()
 		}
 	}
 
-	/* Geometry */
+	/* 
+		Geometry 
+	*/
 	count = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
 	if (count)
 	{
@@ -144,38 +163,74 @@ xt_status_t Scene::init()
 		}
 	}
 
+	/*
+		Initiate the space partitioning scheme here
+	*/
+
+	space->build(geometry);
+
 	return XT_STATUS_OK;
 }
 
 xt_status_t Scene::analyze()
 {
-	std::cout << "Analyzing data..\n";
+	std::cout << "Analyzing scene data..\n";
 	/* Print statistics */
 	std::cout << "Scene name: " << data.get(XT_CFGPROTO_PROP_NAME) << "\n";
 	std::cout << "Scene info: " << data.get(XT_CFGPROTO_PROP_DESCRIPTION) << "\n";
 
 	std::string l;
 	int c = 0;
-	   
-	data.group(XT_CFGPROTO_NODE_CAMERA)->list_groups(l);
+
+	background_color = 255; /* Alpha channel */
+
 	c = data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups();
 	if (c)
-		std::cout << "Listing cameras  : " << " [" << std::setw(4) << c << " ] " << l << "\n";
+	{
+		data.group(XT_CFGPROTO_NODE_CAMERA)->list_groups(l);
+		std::cout << "Listing cameras  :" << " [" << std::setw(4) << c << " ] " << l << "\n";
+	}
 
-	data.group(XT_CFGPROTO_NODE_MATERIAL)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups();
 	if (c)
-		std::cout << "Listing materials: " << " [" << std::setw(4) << c << " ] " << l << "\n";
+	{
+		data.group(XT_CFGPROTO_NODE_MATERIAL)->list_groups(l);
+		std::cout << "Listing materials:" << " [" << std::setw(4) << c << " ] " << l << "\n";
+	}
 
-	data.group(XT_CFGPROTO_NODE_LIGHT)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
 	if (c)
-		std::cout << "Listing lights   : " << " [" << std::setw(4) << c << " ] " << l << "\n";
+	{
+		data.group(XT_CFGPROTO_NODE_LIGHT)->list_groups(l);
+		std::cout << "Listing lights   :" << " [" << std::setw(4) << c << " ] " << l << "\n";
+	}
 
-	data.group(XT_CFGPROTO_NODE_GEOMETRY)->list_groups(l);
 	c = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
 	if (c)
-		std::cout << "Listing objects  : " << " [" << std::setw(4) << c << " ] " << l << "\n";;
+	{
+		data.group(XT_CFGPROTO_NODE_GEOMETRY)->list_groups(l);
+		std::cout << "Listing objects  :" << " [" << std::setw(4) << c << " ] " << l << "\n";
+	}
+
+	return XT_STATUS_OK;
+}
+
+xt_status_t Scene::set_bgcolor()
+{
+	unsigned int r = 0, g = 0, b = 0, a = 255;
+	std::string v;
+	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_R);
+	r = nstring_to_int(v);
+	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_G);
+	g = nstring_to_int(v);
+	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_B);
+	b = nstring_to_int(v);
+
+	background_color = rgba_to_pixel32(r,g,b,a);
+
+	std::cout 
+		<< "Background color: 0x" << std::hex << std::setfill('0') 
+		<< std::setw(8) << background_color << "\n";
 
 	return XT_STATUS_OK;
 }
@@ -301,7 +356,21 @@ xt_status_t Scene::add_material(NCFGParser *p)
 	return XT_STATUS_OK;
 }
 
-pixel32_t Scene::trace(Ray *ray, Geometry *obj)
+pixel32_t Scene::trace(Ray &ray)
 {
-	return space->trace(ray, obj);
+	pixel32_t color = background_color;
+
+	unsigned int rec = rdepth;
+	float dist = NM_INFINITY;
+
+	while (rec--)
+	{
+		Geometry *obj = NULL;
+		dist = space->trace(ray, obj);
+
+		if (dist < NM_INFINITY)
+			color = 0;
+ 	}
+
+	return color;
 }

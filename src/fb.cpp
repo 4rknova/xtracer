@@ -31,7 +31,7 @@ Framebuffer::Framebuffer(unsigned int width, unsigned int height, unsigned int b
 	m_p_width(width > 0 ? width : XT_DEFAULT_FB_WIDTH), 
 	m_p_height(height > 0 ? height : XT_DEFAULT_FB_HEIGHT),
 	m_p_bpp(bpp > 0 ? bpp : XT_DEFAULT_FB_BPP),
-	m_p_pixels(new uint32_t[width * height])
+	m_p_pixels(new uint32_t[m_p_width * m_p_height])
 {}
 
 Framebuffer::~Framebuffer()

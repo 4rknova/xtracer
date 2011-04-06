@@ -55,7 +55,7 @@ bin: $(bin)
 .PHONY: test
 test: $(bin)
 	clear
-	./bin/xtracer ./scenes/* -res 200x200
+	time ./bin/xtracer ./scenes/* -res 640x360
 
 .PHONY: clean
 clean:

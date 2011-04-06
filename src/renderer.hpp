@@ -31,7 +31,7 @@
 #include <string>
 #include <nmath/ray.h>
 
-#include "err.h"
+#include "pixel.h"
 #include "fb.hpp"
 #include "scene.hpp"
 
@@ -46,7 +46,7 @@ class Renderer
 		unsigned int recursion_depth();
 		unsigned int set_recursion_depth(unsigned int depth);
 
-		xt_status_t render(const char *camera);
+		pixel32_t render(const char *camera);
 
 	private:
 		Scene m_p_scene;

@@ -338,19 +338,21 @@ int main(int argc, char **argv)
 			return status;
 		}
 	}
+
+	/* Check for empty scene list */
+	if (envvar.fscenes.empty() && (envvar.net != XT_NET_SLAVE))
+	{
+		fprintf(stderr, "No scenes were provided.\n");
+		return XT_STATUS_MISSING_SCENE_FILE;	
+	}
 	
 	printf("▄ ▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄\n");
 	printf("▀▄▀  █  █▄▀ █▄█ █   █▄▄ █▄▀\n");
 	printf("█ █  █  █ █ █ █ █▄▄ █▄▄ █ █\n"); 
 	printf("v%s\n\n", XT_VERSION);
 		
-	/* Process the scene list */
-	if (envvar.fscenes.empty() && (envvar.net != XT_NET_SLAVE))
-	{
-		fprintf(stderr, "No scenes were provided.\n");
-		return XT_STATUS_MISSING_SCENE_FILE;	
-	}
-	else if(envvar.net == XT_NET_SLAVE)
+
+	if(envvar.net == XT_NET_SLAVE && !envvar.fscenes.empty())
 	{
 		fprintf(stderr, "Slave mode was chosen. The provided scene files will be ignored.\n");
 		envvar.fscenes.clear();

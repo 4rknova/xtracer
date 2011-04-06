@@ -31,10 +31,16 @@
 #define XT_CFGPROTO_PROP_NAME			"name"
 #define XT_CFGPROTO_PROP_DESCRIPTION	"description"
 
+#define XT_CFGPROTO_NODE_BGCOLOR		"bgcolor"
 #define XT_CFGPROTO_NODE_CAMERA         "camera"
 #define XT_CFGPROTO_NODE_LIGHT          "light"
 #define XT_CFGPROTO_NODE_MATERIAL       "material"
 #define XT_CFGPROTO_NODE_GEOMETRY       "object"
+
+#define XT_CFGPROTO_PROP_COLOR_R		"r"
+#define XT_CFGPROTO_PROP_COLOR_G		"g"
+#define XT_CFGPROTO_PROP_COLOR_B		"b"
+#define XT_CFGPROTO_PROP_COLOR_A		"a"
 
 #define XT_CFGPROTO_PROP_DEFAULT        "default"
 

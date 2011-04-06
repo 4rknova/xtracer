@@ -41,8 +41,11 @@ class SPScheme
 		SPScheme();
 		~SPScheme();
 
-		xt_status_t build(std::list<Geometry *> *g);
-		real_t trace(Ray *ray, Geometry *obj);
+		xt_status_t build(std::list<Geometry *> &g);
+		real_t trace(Ray &ray, Geometry *obj);
+
+	private:
+		std::list<Geometry *> *m_p_geometry;
 };
 
 #endif /* XTRACER_SPSCHEME_HPP_INCLUDED */

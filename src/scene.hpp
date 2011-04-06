@@ -42,6 +42,8 @@
 #include "geometry.hpp"
 #include "spscheme.hpp"
 
+#define XT_DEFAULT_BG_COLOR_RGB 0x00FF00
+
 class Scene
 {
 	friend class Renderer;
@@ -52,6 +54,8 @@ class Scene
 		xt_status_t init();
 		xt_status_t analyze();
 
+		xt_status_t set_bgcolor();
+
 		xt_status_t set_camera(const char *name);
 		xt_status_t add_light(NCFGParser *p);
 		xt_status_t add_geometry(NCFGParser *p);
@@ -60,9 +64,10 @@ class Scene
 		/*
 			Trace a ray
 			This function will pass the arguments to the 
-			space partitioning scheme
+			space partitioning scheme before calculating
+			an intermediate color
 		*/
-		pixel32_t trace(Ray *ray, Geometry *obj);
+		pixel32_t trace(Ray &ray);
 
 		/*
 			The space partitioning scheme
@@ -97,9 +102,10 @@ class Scene
 		NCFGParser data;
 
 		unsigned int rdepth;
+		pixel32_t background_color;
 
 	private:
-		xt_status_t cleanup();
+		void cleanup();
 };
 
 #endif /* XTRACER_SCENE_HPP_INCLUDED */

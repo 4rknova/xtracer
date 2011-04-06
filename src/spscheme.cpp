@@ -33,25 +33,28 @@ SPScheme::SPScheme()
 SPScheme::~SPScheme()
 {}
 
-xt_status_t SPScheme::build(std::list<Geometry *> *g)
-{
+xt_status_t SPScheme::build(std::list<Geometry *> &g)
+{  
+	m_p_geometry = &g;
 	return XT_STATUS_OK;
 }
 
-real_t SPScheme::trace(Ray *ray, Geometry *obj)
+real_t SPScheme::trace(Ray &ray, Geometry *obj)
 {
-
 	std::list<Geometry *>::iterator it;
 
-	for (it = m_p_scene.geometry.begin(); it != m_p_scene.geometry.end(); it++)
+	real_t distance = NM_INFINITY;
+
+	for (it = m_p_geometry->begin(); it != m_p_geometry->end(); it++)
 	{
-		(*it)->collision(primary);
-		if (pdepth < NM_INFINITY)
+		Geometry *geom = (*it);
+		real_t d = geom->collision(ray);
+		if (d < distance)
 		{
-			// Test jere
-		}
-	}
-
-
+			distance = d;
+			obj = (*it);
+ 		}
+ 	}
+ 
+	return distance;
 }
-
