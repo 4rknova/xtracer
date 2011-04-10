@@ -400,11 +400,12 @@ int main(int argc, char **argv)
 
 		printf("Recursion depth: %i\n", renderer.recursion_depth());
 
+
+
 		renderer.render(envvar.camera.c_str());
+		drv->update();
 
 		envvar.fscenes.pop_front();
-		
-		drv->update();
 	}
 	
 	/*
@@ -413,12 +414,12 @@ int main(int argc, char **argv)
 
 	printf("Shutting down..\n");
 
-	/* Terminate networking */
-	net_deinit();
-
 	/* Terminate the output driver */
 	drv->deinit();
 	delete drv;
+	
+	/* Terminate networking */
+	net_deinit();
 
 	/* All the other systems, will shut down automatically */
 	

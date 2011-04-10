@@ -35,21 +35,28 @@ enum GEOMETRY_TYPE
 	GEOMETRY_TYPE_TRIANGLE	/* Triangle */
 };
 
+#include <string>
+#include <nmath/vector.h>
 #include <nmath/ray.h>
 
 class Geometry 
 {
 	public:
-		Geometry(GEOMETRY_TYPE type);
+		Geometry(GEOMETRY_TYPE t);
 		~Geometry();
 
-		GEOMETRY_TYPE type();	/* Returns the geometry type */
-		void *get();			/* Return a pointer to the structure */
+		void *get();					/* Return a pointer to the structure */
 
-		real_t collision(Ray &ray);		/* Returns collision with ray */
+		real_t collision(const Ray &ray);		/* Returns collision with ray */
+
+		Vector3 normal_at(Ray &ray, real_t scale);
+										/* Returns the normal at the point of collision  */
+
+		const GEOMETRY_TYPE type;		/* The geometry's type */
+
+		std::string material;			/* The associated material */
 
 	private:
-		const GEOMETRY_TYPE m_p_type;	/* Denotes the geometry type */
 		void *m_p_geometry;				/* Pointer to the actual structure */
 };
 

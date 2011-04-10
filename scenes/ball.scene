@@ -4,9 +4,9 @@ description = This <name> is used to describe the specification.
 
 # The background color
 bgcolor = {
-	r = 34
-	g = 56
-	b = 155
+	r = .1
+	g = .1
+	b = .1
 }
 
 # group camera contains all the cameras
@@ -21,68 +21,75 @@ camera = {
 		# Camera's position
 		position = {
 			x = 0 
-			y = 10
+			y = 0
 			z = 0
 		}
 		# Camera's focus direction
 		target = {
 			x = 0
 			y = 0
-			z = 20
+			z = 51 
 		}
 
 		up = {
 			x = 0
-			y = 1
-			z = 1 
+			y = -1
+			z = 0
 		}
 
 	}
 }
 
 # group object contains all the geometry
-object = {
-	ball1 = {
+geometry = {
+	# object node
+	ball = {
 		# The object's geometry 
-		geometry = sphere
+		type = sphere
 
 		# The sphere's position
 		position ={
 			x = 0
 			y = 0
-			z = 80
+			z = 50
 		}
 
 		# The sphere's radius
-		radius = 20
-	}
+		radius = 5
 
-	ball2 = {
-		geometry = sphere
-
-		position = {
-			x = 0
-			y = 0
-			z = 20
-		}
-
-		radius = 2
+		# The geometry's material
+		material = mat1
 	}
 }
 
 # group light contains all the lights
 light = {
-	lamp = {
+	sat = {
 		position = {
-			x = 0
+			x = -100
 			y = 0
-			z = 0
+			z = 100
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
 }
 
 # group material contains all the materials
 material = {
-	lx1 = {
+	mat1 = {
+		type = lambert
+		
+		diffuse = {
+			r = 0.6
+			g = 0.3
+			b = 0.55
+		}
+
+		reflectance = 0.5;
 	}
 }

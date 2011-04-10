@@ -35,7 +35,10 @@
 
 Renderer::Renderer(const char *filepath, Framebuffer &fb, unsigned int depth):
 	m_p_scene(filepath), m_p_fb(&fb), m_p_depth(depth)
-{}
+{
+	/* Initiate the scene */
+	m_p_scene.init();
+}
 
 unsigned int Renderer::recursion_depth()
 {
@@ -55,18 +58,14 @@ pixel32_t Renderer::render(const char *camera)
 		return XT_STATUS_FB_INVALID;
 	}
 
-	/* Initiate the scene */
 	xt_status_t status = XT_STATUS_OK;
-	if((status = m_p_scene.init()) != XT_STATUS_OK)
-	{
-		return status;
-	}
 
 	/* Set up the camera */
-	m_p_scene.set_camera(camera);
+	if((status = m_p_scene.set_camera(camera)) != XT_STATUS_OK)
+		return status;
 
 	/* Render */
-	printf("Rendering frame..\n");
+//	printf("Rendering frame..\n");
 
 	/* Rendering loop */
 	unsigned int pixel_count =  m_p_fb->height() *  m_p_fb->width();
@@ -83,18 +82,29 @@ pixel32_t Renderer::render(const char *camera)
 			/* Report the progress */
 			if (pixel_count > 1)
 			{
+				std::cout.setf(::std::ios::fixed);
+/*
 				std::cout 
 					<< "\rProgress: " 
-					<< std::setw(7) << std::setprecision(3) 
+					<< std::setprecision(2) << std::setw(6)
 					<< ((h * m_p_fb->width() + w) / (float)(pixel_count - 1)) * 100
-					<< " of " 
-					<< pixel_count 
-					<< " pixels";
-			}
+					<< '%';
+*/			}
 			std::cout << std::flush;
 		}
 	}
 
-	std::cout << "\n";
+
+(*m_p_scene.light.begin()).second->position.x+=10;
+ std::map<std::string, Light *>::iterator it;
+ for (it=m_p_scene.light.begin(); it != m_p_scene.light.end(); it++)
+ {     
+printf("New light [%s] position: %f %f %f, color: %f %f %f\n",
+	(*it).first.c_str(),
+	(*it).second->position.x, (*it).second->position.y, (*it).second->position.z,
+	(*it).second->intensity.x, (*it).second->intensity.y, (*it).second->intensity.z	);
+}	
+
+//	std::cout << "\nRendered " << pixel_count << " pixels.\n";
 	return XT_STATUS_OK;
 }

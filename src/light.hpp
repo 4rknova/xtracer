@@ -28,22 +28,15 @@
 #ifndef XTRACER_LIGHT_HPP_INCLUDED
 #define XTRACER_LIGHT_HPP_INCLUDED
 
-#include <nmath/defs.h>
-#include <nmath/precision.h>
 #include <nmath/vector.h>
 
 class Light 
 {
 	public:
 		Light();
-		Light(Vector3 &position);
 
-		Vector3 position();
-
-		Vector3 set_position(Vector3 &position);
-
-	private:
-		Vector3 m_p_position;
+		Vector3 position;
+		Vector3 intensity;
 };
 
 #endif /* XTRACER_LIGHT_HPP_INCLUDED */

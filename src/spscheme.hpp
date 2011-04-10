@@ -28,11 +28,21 @@
 #ifndef XTRACER_SPSCHEME_HPP_INCLUDED
 #define XTRACER_SPSCHEME_HPP_INCLUDED
 
-#include <list>
+#include <map>
 #include <nmath/ray.h>
 
 #include "err.h"
 #include "geometry.hpp"
+
+class SPCRes
+{
+	friend class SPScheme;
+	friend class Scene;
+	protected:
+		SPCRes();
+		Geometry *geometry;
+		real_t distance;
+};
 
 class SPScheme
 {
@@ -41,11 +51,11 @@ class SPScheme
 		SPScheme();
 		~SPScheme();
 
-		xt_status_t build(std::list<Geometry *> &g);
-		real_t trace(Ray &ray, Geometry *obj);
+		xt_status_t build(std::map<std::string, Geometry *> &g);
+		SPCRes test(const Ray &ray);
 
 	private:
-		std::list<Geometry *> *m_p_geometry;
+		std::map<std::string, Geometry *> *m_p_geometry;
 };
 
 #endif /* XTRACER_SPSCHEME_HPP_INCLUDED */

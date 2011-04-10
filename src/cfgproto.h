@@ -31,33 +31,59 @@
 #define XT_CFGPROTO_PROP_NAME			"name"
 #define XT_CFGPROTO_PROP_DESCRIPTION	"description"
 
-#define XT_CFGPROTO_NODE_BGCOLOR		"bgcolor"
+/*
+	NODES
+*/
+
 #define XT_CFGPROTO_NODE_CAMERA         "camera"
 #define XT_CFGPROTO_NODE_LIGHT          "light"
 #define XT_CFGPROTO_NODE_MATERIAL       "material"
-#define XT_CFGPROTO_NODE_GEOMETRY       "object"
+#define XT_CFGPROTO_NODE_GEOMETRY       "geometry"
+
+/*
+	COMPOSITE PROPERTIES
+*/
+
+#define XT_CFGPROTO_PROP_COORD_POSITION "position"
+#define XT_CFGPROTO_PROP_COORD_TARGET   "target"
+#define XT_CFGPROTO_PROP_COORD_UP       "up"
+
+#define XT_CFGPROTO_PROP_INTENSITY		"intensity"
+
+#define XT_CFGPROTO_PROP_BGCOLOR		"bgcolor"
+
+#define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
+
+/*
+	PROPERTIES
+*/
+
+#define XT_CFGPROTO_PROP_DEFAULT        "default"
+
+#define XT_CFGPROTO_PROP_TYPE			"type"
+
+#define XT_CFGPROTO_PROP_RADIUS			"radius"
+
+#define XT_CFGPROTO_PROP_FOV            "fov"
+
+#define XT_CFGPROTO_PROP_REFLECTANCE	"reflectance"
+
+#define XT_CFGPROTO_PROP_MATERIAL       "material"
+
+#define XT_CFGPROTO_PROP_COORD_X        "x"
+#define XT_CFGPROTO_PROP_COORD_Y        "y"
+#define XT_CFGPROTO_PROP_COORD_Z        "z"
 
 #define XT_CFGPROTO_PROP_COLOR_R		"r"
 #define XT_CFGPROTO_PROP_COLOR_G		"g"
 #define XT_CFGPROTO_PROP_COLOR_B		"b"
 #define XT_CFGPROTO_PROP_COLOR_A		"a"
 
-#define XT_CFGPROTO_PROP_DEFAULT        "default"
+/*
+	CONSTANT VALUES
+*/
 
-#define XT_CFGPROTO_PROP_GEOMETRY       "geometry"
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
-
-#define XT_CFGPROTO_PROP_FOV            "fov"
-
-#define XT_CFGPROTO_PROP_RADIUS			"radius"
-
-#define XT_CFGPROTO_PROP_COORD_POSITION "position"
-#define XT_CFGPROTO_PROP_COORD_TARGET   "target"
-#define XT_CFGPROTO_PROP_COORD_UP       "up"
-
-#define XT_CFGPROTO_PROP_COORD_X        "x"
-#define XT_CFGPROTO_PROP_COORD_Y        "y"
-#define XT_CFGPROTO_PROP_COORD_Z        "z"
-
+#define XT_CFGPROTO_VAL_LAMBERT			"lambert"
 
 #endif /* XTRACER_CFGPROTO_HPP_INCLUDED  */

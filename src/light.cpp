@@ -27,22 +27,6 @@
 
 #include "light.hpp"
 
-#include <nmath/precision.h>
-
 Light::Light()
-	: m_p_position(Vector3(0,0,0))
+	: position(Vector3(0, 0, 0)), intensity(Vector3(0, 0, 0))
 {}
-
-Light::Light(Vector3 &position)
-	: m_p_position(position)
-{}
-
-Vector3 Light::position()
-{
-	return m_p_position;
-}
-
-Vector3 Light::set_position(Vector3 &position)
-{
-	return m_p_position = position;
-}

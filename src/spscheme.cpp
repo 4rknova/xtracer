@@ -27,34 +27,41 @@
 
 #include "spscheme.hpp"
 
+SPCRes::SPCRes()
+	: geometry(NULL), distance(NM_INFINITY)
+{}
+
 SPScheme::SPScheme()
 {}
 
 SPScheme::~SPScheme()
 {}
 
-xt_status_t SPScheme::build(std::list<Geometry *> &g)
+xt_status_t SPScheme::build(std::map<std::string, Geometry *> &g)
 {  
 	m_p_geometry = &g;
 	return XT_STATUS_OK;
 }
 
-real_t SPScheme::trace(Ray &ray, Geometry *obj)
+#include <iostream>
+SPCRes SPScheme::test(const Ray &ray)
 {
-	std::list<Geometry *>::iterator it;
-
-	real_t distance = NM_INFINITY;
+	SPCRes res;
+	std::map<std::string, Geometry *>::iterator it;
 
 	for (it = m_p_geometry->begin(); it != m_p_geometry->end(); it++)
 	{
-		Geometry *geom = (*it);
-		real_t d = geom->collision(ray);
-		if (d < distance)
+		/* Check ray colision */
+		real_t d = (*it).second->collision(ray);
+	
+//		if (d< NM_INFINITY)std::cout << ray.origin << "-->" << ray.direction << "dist: " << (float)d << "\n";
+	
+		if (d < res.distance)
 		{
-			distance = d;
-			obj = (*it);
+			res.distance = d;
+			res.geometry = (*it).second;
  		}
  	}
- 
-	return distance;
+
+	return res;
 }

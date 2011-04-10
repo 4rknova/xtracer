@@ -28,12 +28,23 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
+enum MATERIAL_TYPE
+{
+	MATERIAL_TYPE_LAMBERT	/* Lambertian model */
+};
+
 class Material 
 {
 	public:
-		Material();
+		Material(MATERIAL_TYPE t);
+		~Material();
+
+		void *get();				/* Return a pointer to the structure */
+
+		const MATERIAL_TYPE type;	/* The material's type */
 
 	private:
+		void *m_p_material;			/* Pointer to the actual structure */
 };
 
 #endif /* XTRACER_MATERIAL_HPP_INCLUDED */

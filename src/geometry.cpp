@@ -27,12 +27,13 @@
 
 #include "geometry.hpp"
 
+#include <nmath/vector.h>
 #include <nmath/sphere.h>
 
-Geometry::Geometry(GEOMETRY_TYPE type)
-	: m_p_type(type)
+Geometry::Geometry(GEOMETRY_TYPE t)
+	: type(t), m_p_geometry(NULL)
 {
-	switch ((int)m_p_type)
+	switch ((int)type)
 	{
 		case GEOMETRY_TYPE_SPHERE:
 			m_p_geometry = new Sphere;
@@ -45,7 +46,7 @@ Geometry::Geometry(GEOMETRY_TYPE type)
 
 Geometry::~Geometry()
 {
-	switch ((int)m_p_type)
+	switch ((int)type)
 	{
 		case GEOMETRY_TYPE_SPHERE:
 			delete (Sphere *) m_p_geometry;
@@ -53,11 +54,6 @@ Geometry::~Geometry()
 		default:
 			return;
 	}
-}
-
-GEOMETRY_TYPE Geometry::type()
-{
-	return m_p_type;
 }
 
 void *Geometry::get()
@@ -68,13 +64,13 @@ void *Geometry::get()
 #include <nmath/precision.h>
 #include <nmath/intersection.h>
 
-real_t Geometry::collision(Ray &ray)
+real_t Geometry::collision(const Ray &ray)
 {
 
 	Ray r = ray;
 	Sphere s;
 
-	switch ((int)m_p_type)
+	switch ((int)type)
 	{
 		case GEOMETRY_TYPE_SPHERE:
 			s = Sphere(((Sphere*)m_p_geometry)->origin, ((Sphere*)m_p_geometry)->radius);
@@ -82,4 +78,19 @@ real_t Geometry::collision(Ray &ray)
 	    default:
 			return NM_INFINITY;
 	}
+}
+
+Vector3 Geometry::normal_at(Ray &ray, real_t scale)
+{
+	Vector3 normal;
+
+	switch ((int)type)
+	{
+		case GEOMETRY_TYPE_SPHERE:
+			Vector3 dir(ray.direction - ray.origin);
+
+			break;
+	}
+
+	return normal;
 }

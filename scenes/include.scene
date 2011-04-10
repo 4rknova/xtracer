@@ -1,0 +1,6 @@
+#	This sample scene just demonstrates the
+#	inclusion modifier.
+#	:>
+
+#%include triball.scene
+%include ball.scene

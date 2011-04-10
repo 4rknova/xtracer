@@ -27,5 +27,36 @@
 
 #include "material.hpp"
 
-Material::Material()
-{}
+#include "matlambert.hpp"
+
+Material::Material(MATERIAL_TYPE t)
+	: type(t), m_p_material(NULL)
+{
+	switch ((int)type)
+	{
+		case MATERIAL_TYPE_LAMBERT:
+			m_p_material = new MatLambert();
+
+		default:
+			return;
+	}
+}
+
+Material::~Material()
+{
+	switch ((int)type)
+	{
+		case MATERIAL_TYPE_LAMBERT:
+			delete (MatLambert *) m_p_material;
+
+		default:
+			return;
+	}
+}
+
+void *Material::get()
+{
+	return m_p_material;
+}
+
+

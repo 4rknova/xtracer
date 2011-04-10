@@ -57,6 +57,21 @@ xt_status_t DrvSDL::init()
 xt_status_t DrvSDL::deinit()
 {
 	/* Deinit */
+	/* Block the window from closing */
+	SDL_Event event;
+	int done = 0;
+
+	while(SDL_PollEvent(&event) || !done)
+	{
+		switch (event.type)
+		{
+			case SDL_KEYDOWN:
+			//	if (event.key.keysym.sym == SDLK_ESCAPE)
+					done = 1;
+				break;
+		}
+	}
+
 	SDL_Quit(); /* This will release m_p_window as well */
 	return 0;
 }
@@ -102,21 +117,9 @@ xt_status_t DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, un
 
 	flip();
 
-	/* Block */
 	SDL_Event event;
-	/* Clear the event queue */
-	while (SDL_PollEvent(&event));
-	unsigned int done = 0;
-
-	while(SDL_PollEvent(&event) || !done)
-	{
-		switch (event.type)
-		{
-			case SDL_KEYDOWN:
-				done = 1;
-				break;
-		}
-	}
+	/* Empty the event queue */
+	while(SDL_PollEvent(&event));
 
 	return XT_STATUS_OK;
 }

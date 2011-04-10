@@ -29,7 +29,6 @@
 #include <iomanip>
 
 #include <nmath/vector.h>
-#include <nmath/ray.h>
 #include <nparse/parseutils.hpp>
 
 #include "scene.hpp"
@@ -49,9 +48,8 @@ Scene::Scene(const char *filepath)
 	/* 
 		RGB -> RGBA value
 	*/
-	background_color((XT_DEFAULT_BG_COLOR_RGB << 8) + 255)
-{
-}
+	background_color(0)
+{}
 
 Scene::~Scene()
 {
@@ -68,9 +66,9 @@ void Scene::cleanup()
 	if(!light.empty())
 	{
 		std::cout << "Releasing the lights..\n";
-		for(std::list<Light *>::iterator it = light.begin(); it != light.end(); it++)
+		for(std::map<std::string, Light *>::iterator it = light.begin(); it != light.end(); it++)
 		{
-			delete *it;
+			delete (*it).second;
 		}
 	}
 
@@ -80,9 +78,9 @@ void Scene::cleanup()
 	if(!material.empty())
 	{
 		std::cout << "Releasing the materials..\n";
-		for(std::list<Material *>::iterator it = material.begin(); it != material.end(); it++)
+		for(std::map<std::string, Material *>::iterator it = material.begin(); it != material.end(); it++)
 		{
-			delete *it;
+			delete (*it).second;
 		}
 	} 
 
@@ -92,9 +90,9 @@ void Scene::cleanup()
 	if(!geometry.empty())
 	{
 		std::cout << "Releasing the geometry..\n";
-		for(std::list<Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
+		for(std::map<std::string, Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
 		{
-			delete *it;
+			delete (*it).second;
 		}
 	} 
 
@@ -124,7 +122,6 @@ xt_status_t Scene::init()
 	}
 
 	analyze();
-
 	std::cout << "Generating the scene..\n";
 
 	/* Start populating the lists */
@@ -149,6 +146,20 @@ xt_status_t Scene::init()
 		}
 	}
 
+	/*
+		Materials
+	*/
+	count = data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups();
+	if(count)
+	{
+		std::cout << "Creating the materials..\n";
+		for (unsigned int i = 1; i <= count; i++)
+		{
+			NCFGParser *lnode = data.group(XT_CFGPROTO_NODE_MATERIAL)->group(i);
+			add_material(lnode);
+		}
+	}
+	
 	/* 
 		Geometry 
 	*/
@@ -176,8 +187,13 @@ xt_status_t Scene::analyze()
 {
 	std::cout << "Analyzing scene data..\n";
 	/* Print statistics */
-	std::cout << "Scene name: " << data.get(XT_CFGPROTO_PROP_NAME) << "\n";
-	std::cout << "Scene info: " << data.get(XT_CFGPROTO_PROP_DESCRIPTION) << "\n";
+	std::string name = data.get(XT_CFGPROTO_PROP_NAME);
+	std::string info = data.get(XT_CFGPROTO_PROP_DESCRIPTION);
+
+	if(!name.empty())
+		std::cout << "Scene name: " << data.get(XT_CFGPROTO_PROP_NAME) << "\n";
+	if(!info.empty())
+		std::cout << "Scene info: " << data.get(XT_CFGPROTO_PROP_DESCRIPTION) << "\n";
 
 	std::string l;
 	int c = 0;
@@ -217,20 +233,21 @@ xt_status_t Scene::analyze()
 
 xt_status_t Scene::set_bgcolor()
 {
-	unsigned int r = 0, g = 0, b = 0, a = 255;
+	float r = 0, g = 0, b = 0, a = 255;
 	std::string v;
-	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_R);
-	r = nstring_to_int(v);
-	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_G);
-	g = nstring_to_int(v);
-	v = data.group(XT_CFGPROTO_NODE_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_B);
-	b = nstring_to_int(v);
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_R);
+	r = nstring_to_double(v) * 255;
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_G);
+	g = nstring_to_double(v) * 255;
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_B);
+	b = nstring_to_double(v) * 255;
 
-	background_color = rgba_to_pixel32(r,g,b,a);
+	background_color = rgba_to_pixel32((int)r, (int)g, (int)b, a);
 
 	std::cout 
 		<< "Background color: 0x" << std::hex << std::setfill('0') 
-		<< std::setw(8) << background_color << "\n";
+		<< std::setw(8) << background_color 
+		<< std::dec << "\n";
 
 	return XT_STATUS_OK;
 }
@@ -287,12 +304,12 @@ xt_status_t Scene::set_camera(const char *name)
 	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_COORD_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
 
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
-
-	std::cout << "     FOV: " << fov  << "\n";
-	std::cout << "Position: " << pos  << "\n";
-	std::cout << "  Target: " << targ << "\n";
-	std::cout << "      Up: " << up   << "\n";
-
+/*
+	std::cout << "FOV: " << fov << "\n";
+	std::cout << "Position: " << pos << "\n";
+	std::cout << "Target: " << targ << "\n";
+	std::cout << "Up: " << up << "\n";
+*/
 	delete camera;
 
 	camera = new Camera(pos, targ, up, fov);
@@ -303,13 +320,36 @@ xt_status_t Scene::set_camera(const char *name)
 xt_status_t Scene::add_light(NCFGParser *p)
 {
 	std::cout << "Adding: " << p->node() << "\n";
-	std::string x = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_X);
-	std::string y = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_Y);
-	std::string z = p->group(XT_CFGPROTO_PROP_COORD_TARGET)->get(XT_CFGPROTO_PROP_COORD_Z);
+	/* Retrieve the properties */
+	/* Position */
+	std::string posx = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
+	std::string posy = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
+	std::string posz = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
 
-	Vector3 position(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
-	Light *tlight = new Light(position);
-	light.push_back(tlight);
+	/* Intensity */
+	std::string colr = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_R);
+	std::string colg = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_G);
+	std::string colb = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+	/* Create the light */
+	Light *tlight = new Light();
+
+	tlight->position = 
+		Vector3(nstring_to_double(posx), 
+				nstring_to_double(posy), 
+				nstring_to_double(posz));
+	tlight->intensity = 
+		Vector3(nstring_to_double(colr), 
+				nstring_to_double(colg), 
+				nstring_to_double(colb));
+
+//	std::cout << tlight->position.z << "\n\n\n"; getchar();
+/*
+	std::cout << "Position: " << tlight->position << "\n";
+	std::cout << "Intensity: " << tlight->intensity << "\n";
+*/
+	/* Add to the lights list */
+	light[p->node()] = tlight;
 
 	return XT_STATUS_OK;
 }
@@ -318,59 +358,135 @@ xt_status_t Scene::add_light(NCFGParser *p)
 
 xt_status_t Scene::add_geometry(NCFGParser *p)
 {
-	std::cout << "Adding: " << p->node() << "\n";
-	std::string type = p->get(XT_CFGPROTO_PROP_GEOMETRY);
+	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
-	std::cout << "  Type: " << type << "\n";
+	std::cout << "Adding " << type << ": " << p->node() << "\n";
+
+	Geometry *tobj = NULL;
 
 	if (!type.compare(XT_CFGPROTO_VAL_SPHERE))
-	{
-		Geometry *tsphere = new Geometry(GEOMETRY_TYPE_SPHERE);
+ 	{
+		tobj = new Geometry(GEOMETRY_TYPE_SPHERE);
 
-		std::string x,y,z;
+		std::string x, y, z, r;
 
 		x = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
 		y = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
 		z = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
+		r = p->get(XT_CFGPROTO_PROP_RADIUS);
 
-		((Sphere *)(tsphere->get()))->origin = Vector3(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
-		std::cout << "Origin: " << ((Sphere *)(tsphere->get()))->origin << "\n";
+		((Sphere *)(tobj->get()))->origin = Vector3(
+			nstring_to_double(x), 
+			nstring_to_double(y), 
+			nstring_to_double(z));
 
-
-		std::string radius = p->get(XT_CFGPROTO_PROP_RADIUS);
-		((Sphere *)(tsphere->get()))->radius = nstring_to_double(radius);
-		std::cout << "Radius: " << ((Sphere *)(tsphere->get()))->radius << "\n";
-
-		geometry.push_back(tsphere);
+		((Sphere *)(tobj->get()))->radius = nstring_to_double(r);
+/*
+		std::cout << "Origin: " << ((Sphere *)(tobj->get()))->origin << "\n";
+		std::cout << "Radius: " << ((Sphere *)(tobj->get()))->radius << "\n";
+*/
+		geometry[p->node()] = tobj;
 	}
 	else
 	{
-		std::cerr << "Warning: Unsupported type. Skipping...\n";
+		std::cout << "Warning: Unsupported type. Skipping...\n";
+	}
+
+	/* Set the material */
+	if(tobj)
+	{
+		tobj->material = std::string(p->get(XT_CFGPROTO_PROP_MATERIAL));
 	}
 
 	return XT_STATUS_OK;
-}
+} 
+
+#include "matlambert.hpp"
 
 xt_status_t Scene::add_material(NCFGParser *p)
 {
+	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
+	
+	std::cout << "Adding " << type << " material: " << p->node() << "\n";
+
+	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
+	{
+		std::string colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
+		std::string colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
+		std::string colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
+		
+		Material *tmat = new Material(MATERIAL_TYPE_LAMBERT);
+	
+		((MatLambert *)(tmat->get()))->diffuse = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		((MatLambert *)(tmat->get()))->reflectance = nstring_to_double(refl);
+
+		material[p->node()] = tmat;
+	}
+	else
+	{
+		std::cout << "Warning: Unsupported model. Skipping...\n";
+	}
+
 	return XT_STATUS_OK;
 }
 
 pixel32_t Scene::trace(Ray &ray)
 {
+	/* Set the final color to the back ground color */
 	pixel32_t color = background_color;
 
-	unsigned int rec = rdepth;
-	float dist = NM_INFINITY;
+	SPCRes res = space->test(ray);
 
-	while (rec--)
+	if ((res.distance > 0) && (res.distance < NM_INFINITY))
 	{
-		Geometry *obj = NULL;
-		dist = space->trace(ray, obj);
-
-		if (dist < NM_INFINITY)
-			color = 0;
- 	}
+//		std::cout << "HIT: The view ray is orig at " << ray.origin << "->" << ray.direction << " dist " << res.distance << "\n";
+//		std::cout << "Intersection at " << ray.origin + (ray.direction * res.distance) << "\n";
+		color = shade(ray, res);
+	}
 
 	return color;
+} 
+
+#define ERROR_MARGIN 0.1
+
+pixel32_t Scene::shade(Ray &ray, SPCRes &col)
+{
+	pixel32_t res = background_color;
+
+//	res = (((255-((int)(254 * (col.distance -100)/30))) << 8)) + 255;
+
+	// Check if the point is in shadow
+	std::map<std::string, Light*>::iterator it;
+	for(it = light.begin(); it != light.end(); it++)
+	{
+		// Construct the new ray
+		Vector3 sro = ray.origin + (ray.direction * (col.distance - ERROR_MARGIN));
+		Vector3 srd = (*it).second->position - sro;
+		srd.normalize();
+		Ray shadow_ray(sro, srd);
+
+		// Test the ray
+		SPCRes tres = space->test(shadow_ray);
+
+//		std::cout
+//		<< " -> new ray start: " << sro << "\n"
+//		<< "The light is at: " <<  (*it).second->position << "\n"
+//		<< " -> new ray end: " << srd << "\n";
+//		getchar();
+		
+		if ((tres.distance < 0) || (tres.distance == NM_INFINITY))
+		{
+			// Lambert
+			res = 0xFFFF;
+			std::cout << "IN SHADOW dist:" << tres.distance << "\n";
+		}
+	}
+
+	return res;
 }

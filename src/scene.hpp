@@ -28,7 +28,7 @@
 #ifndef XTRACER_SCENE_HPP_INCLUDED
 #define XTRACER_SCENE_HPP_INCLUDED
 
-#include <list>
+#include <map>
 
 #include <nmath/ray.h>
 #include <nparse/cfgparser.hpp>
@@ -41,8 +41,6 @@
 #include "material.hpp"
 #include "geometry.hpp"
 #include "spscheme.hpp"
-
-#define XT_DEFAULT_BG_COLOR_RGB 0x00FF00
 
 class Scene
 {
@@ -70,6 +68,11 @@ class Scene
 		pixel32_t trace(Ray &ray);
 
 		/*
+			Shade
+		*/
+		pixel32_t shade(Ray &ray, SPCRes &col);
+
+		/*
 			The space partitioning scheme
 			This implementation supports the extension
 			of the current system to support many different
@@ -92,9 +95,9 @@ class Scene
 		/*
 			Lists of the scene entities		
 		*/
-		std::list<Light *> light;
-		std::list<Geometry *> geometry;
-		std::list<Material *> material;
+		std::map<std::string, Light *> light;
+		std::map<std::string, Material *> material;
+		std::map<std::string, Geometry *> geometry;
 
 		/*
 			The parsed tree root node
