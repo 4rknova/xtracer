@@ -2,7 +2,7 @@
 
 	This file is part of xtracer.
 
-	sdl.hpp
+	drv_sdl.hpp
 	SDL driver
 
 	Copyright (C) 2010, 2011
@@ -28,7 +28,7 @@
 #ifndef XTRACER_DRV_SDL_HPP_INCLUDED
 #define XTRACER_DRV_SDL_HPP_INCLUDED
 
-#include "../drv.hpp"
+#include "drv.hpp"
 #include <SDL/SDL.h>
 
 class DrvSDL: public Driver
@@ -37,10 +37,10 @@ class DrvSDL: public Driver
 		DrvSDL(Framebuffer &fb);
 		~DrvSDL();
 
-		xt_status_t init();
-		xt_status_t deinit();
-		xt_status_t update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
-		xt_status_t flip();
+		unsigned int init();
+		unsigned int deinit();
+		unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
+		unsigned int flip();
 
 	private:
 		SDL_Surface* m_p_screen;

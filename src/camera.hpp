@@ -40,25 +40,14 @@ class Camera
 {
 	public:
 		Camera();
-		Camera(Vector3 &position, Vector3 &target, Vector3 &up, real_t fovx=XT_CAM_DEFAULT_FOV);
-
-		Vector3 position();
-		Vector3 target();
-		Vector3 up();
-		real_t fov();
-
-		Vector3 set_position(Vector3 &position);
-		Vector3 set_target(Vector3 &target);
-		Vector3 set_up(Vector3 &up);
-		real_t set_fov(real_t fov);
+		Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx=XT_CAM_DEFAULT_FOV);
 
 		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 
-	private:
-		Vector3 m_p_position;
-		Vector3 m_p_target;
-		Vector3 m_p_up;
-		real_t m_p_fov;
+		Vector3 position;
+		Vector3 target;
+		Vector3 up;
+		real_t fov;
 };
 
 #endif /* XTRACER_CAMERA_HPP_INCLUDED */

@@ -27,10 +27,9 @@
 
 #include "fb.hpp"
 
-Framebuffer::Framebuffer(unsigned int width, unsigned int height, unsigned int bpp): 
-	m_p_width(width > 0 ? width : XT_DEFAULT_FB_WIDTH), 
-	m_p_height(height > 0 ? height : XT_DEFAULT_FB_HEIGHT),
-	m_p_bpp(bpp > 0 ? bpp : XT_DEFAULT_FB_BPP),
+Framebuffer::Framebuffer(unsigned int width, unsigned int height): 
+	m_p_width(width > 0 ? width : 1), 
+	m_p_height(height > 0 ? height : 1),
 	m_p_pixels(new uint32_t[m_p_width * m_p_height])
 {}
 
@@ -49,11 +48,6 @@ unsigned int Framebuffer::height()
 	return  m_p_height;
 }
 
-unsigned int Framebuffer::bpp()
-{
-	return  m_p_bpp;
-}
-
 uint32_t Framebuffer::get_pixel(unsigned int x, unsigned int y)
 {
 	unsigned int n = y * m_p_width + x;
@@ -67,4 +61,3 @@ uint32_t Framebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value)
 	*target =  value;
 	return value;
 }
-

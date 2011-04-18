@@ -119,7 +119,7 @@ camera = {
 		}
 	}
 }
-bgcolor = {
+ambient = {
 	b = 0
 	g = 0
 	r = 0

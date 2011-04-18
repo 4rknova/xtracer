@@ -5,9 +5,9 @@ opath = $(bpath)/obj
 tpath = doc
 
 # - sources
-ccsrc = $(wildcard $(spath)/*.c) $(wildcard $(spath)/drv/*.c)
-ccsrcc = $(wildcard $(spath)/*.cc) $(wildcard $(spath)/drv/*.cc)
-ccsrcpp = $(wildcard $(spath)/*.cpp) $(wildcard $(spath)/drv/*.cpp)
+ccsrc = $(wildcard $(spath)/*.c)
+ccsrcc = $(wildcard $(spath)/*.cc)
+ccsrcpp = $(wildcard $(spath)/*.cpp)
 doctex = $(wildcard $(tpath)/*.tex)
 
 # binarys
@@ -55,7 +55,7 @@ bin: $(bin)
 .PHONY: test
 test: $(bin)
 	clear
-	time ./bin/xtracer ./scenes/inc* -res 320x180
+	./bin/xtracer ./scenes/inc* -res 320x180
 
 .PHONY: clean
 clean:

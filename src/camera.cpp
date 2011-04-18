@@ -32,61 +32,19 @@
 
 
 Camera::Camera()
-	: m_p_position(Vector3(0,0,0)), m_p_target(Vector3(0,0,1)), m_p_up(Vector3(0,1,0)), m_p_fov(XT_CAM_DEFAULT_FOV)
+	: position(Vector3(0,0,0)), target(Vector3(0,0,1)), up(Vector3(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3 &position, Vector3 &target, Vector3 &up, real_t fovx)
-:  m_p_position(position), m_p_target(target), m_p_up(up.normalized()), m_p_fov(fovx)
+Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx)
+:  position(pos), target(trg), up(upv.normalized()), fov(fovx)
 {}
-
-Vector3 Camera::position()
-{
-	return m_p_position;
-}
-
-Vector3 Camera::target()
-{
-	return m_p_target;
-}
-
-Vector3 Camera::up()
-{
-	return m_p_up;
-}
-
-real_t Camera::fov()
-{
-	return m_p_fov;
-}
-
-Vector3 Camera::set_position(Vector3 &position)
-{
-	return m_p_position = position;
-}
-
-Vector3 Camera::set_target(Vector3 &target)
-{
-	return m_p_target = target;
-}
-
-Vector3 Camera::set_up(Vector3 &up)
-{
-	return m_p_up = up.normalized();
-}
-
-real_t Camera::set_fov(real_t fov)
-{
-	return m_p_fov = fov;
-}
-
-#include <iostream>
 
 Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
 	Ray pray;		/* Primary ray */
 
 	/* Set the primary ray's origin at the camera's position. */
-	pray.origin = m_p_position;
+	pray.origin = position;
 
 	/* Take the aspect ratio into consideration */
 	real_t ratio = (real_t)width / (real_t)height;
@@ -94,12 +52,12 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 	/* Construct the ray's direction vector. */
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
 	pray.direction.y = (1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
-	pray.direction.z = 1 / tan(m_p_fov / 2.0);
+	pray.direction.z = 1 / tan(fov / 2.0);
 
 	pray.direction.normalize();
 
 	/* Transform the camera target vector to world coordinates and normalize it. */
-	Vector3 camdir = m_p_target - m_p_position;
+	Vector3 camdir = target - position;
 	camdir.normalize();
 
 	/*
@@ -121,7 +79,7 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 	Vector3 rx,ry,rz;
 
 	rz = camdir;
-	rx = cross(m_p_up, rz);
+	rx = cross(up, rz);
 	ry = cross(rx, rz);
 
 	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 

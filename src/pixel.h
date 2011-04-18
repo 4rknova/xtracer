@@ -27,19 +27,17 @@
 
 #ifndef XTRACER_PIXEL_H_INCLUDED
 #define XTRACER_PIXEL_H_INCLUDED
-
-#include <stdint.h>
-
+ 
 #ifdef __cplusplus
 	extern "C" {
 #endif  /* __cplusplus */
 
+#include <stdint.h>
+
 typedef uint32_t pixel32_t;
 
-/* Pack a rgba tuple to uint32  */
 pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
 
-/* Get component from packed rgba */
 unsigned int get_pixel32_r(pixel32_t color);
 unsigned int get_pixel32_g(pixel32_t color);
 unsigned int get_pixel32_b(pixel32_t color);
@@ -49,4 +47,4 @@ unsigned int get_pixel32_a(pixel32_t color);
 	}   /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* XTRACER_PIXEL_H_INCLUDED  */
+#endif /* XTRACER_PIXEL_H_INCLUDED */

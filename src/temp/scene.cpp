@@ -32,15 +32,23 @@
 #include <nparse/parseutils.hpp>
 
 #include "scene.hpp"
-#include "proto.h"
+
+#include "cfgproto.h"
 
 Scene::Scene(const char *filepath)
-	: data(filepath)
-/*
-	space(new SPScheme()), camera(new Camera()), 
-	source(filepath), 
+	/* 
+		The creation of the camera here serves as a precaution measure
+		to avoid segmentation faults that would be caused by irregular 
+		usage of this class. Normally it's not needed and we could just
+		set the pointer to NULL.
+	*/
+	: space(new SPScheme()), camera(new Camera()), 
+	source(filepath), data(filepath), 
 	rdepth(1),
-*/
+	/* 
+		RGB -> RGBA value
+	*/
+	background_color(0)
 {}
 
 Scene::~Scene()
@@ -50,60 +58,83 @@ Scene::~Scene()
 
 void Scene::cleanup()
 {
-/*
 	std::cout << "Cleaning up..\n";
 
-	// Release the lights
+	/*
+		Release the lights
+	*/
 	if(!light.empty())
 	{
 		std::cout << "Releasing the lights..\n";
 		for(std::map<std::string, Light *>::iterator it = light.begin(); it != light.end(); it++)
+		{
 			delete (*it).second;
+		}
 	}
 
-	// Release the materials
+	/*
+		Release the materials
+	*/
 	if(!material.empty())
 	{
 		std::cout << "Releasing the materials..\n";
 		for(std::map<std::string, Material *>::iterator it = material.begin(); it != material.end(); it++)
+		{
 			delete (*it).second;
+		}
 	} 
 
-	// Release the geometry
+	/*
+		Release the geometry
+	*/
 	if(!geometry.empty())
 	{
 		std::cout << "Releasing the geometry..\n";
 		for(std::map<std::string, Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
+		{
 			delete (*it).second;
+		}
 	} 
 
-	// Release the camera
+	/*
+		Release the camera
+	*/
 	std::cout << "Releasing the camera..\n";
 	delete camera;
-*/
+
+	/*
+		Release the spscheme
+	*/
+	std::cout << "\rReleasing the space partitioning scheme..\n";
+	delete space;
 }
 
-unsigned int Scene::init()
+xt_status_t Scene::init()
 {
 	std::cout << "Initiating the scene..\n";		
 
-	// Load the scene file and parse it
+	/* Load the scene file and parse it */
 	int status = data.parse();
 	if(status)
 	{
 		std::cerr << "Error: Failed to load the scene file.\n";
-		return 1;
+		return XT_STATUS_INVALID_SCENE_FILE;
 	}
 
+	analyze();
 	std::cout << "Generating the scene..\n";
 
-	// Start populating the lists
+	/* Start populating the lists */
 	unsigned int count = 0;
 
-	// Set the ambient color
-	set_ambient();
+	/*
+		BACKGROUND COLOR
+	*/
+	set_bgcolor();
 
-	// Populate the light sources
+	/* 
+		Light sources 
+	*/
 	count = data.group(XT_CFGPROTO_NODE_LIGHT)->count_groups();
 	if (count)
 	{
@@ -115,7 +146,9 @@ unsigned int Scene::init()
 		}
 	}
 
-	// Populate the materials
+	/*
+		Materials
+	*/
 	count = data.group(XT_CFGPROTO_NODE_MATERIAL)->count_groups();
 	if(count)
 	{
@@ -127,7 +160,9 @@ unsigned int Scene::init()
 		}
 	}
 	
-	// Populate the geometry
+	/* 
+		Geometry 
+	*/
 	count = data.group(XT_CFGPROTO_NODE_GEOMETRY)->count_groups();
 	if (count)
 	{
@@ -139,10 +174,16 @@ unsigned int Scene::init()
 		}
 	}
 
-	return 0;
+	/*
+		Initiate the space partitioning scheme here
+	*/
+
+	space->build(geometry);
+
+	return XT_STATUS_OK;
 }
 
-unsigned int Scene::analyze()
+xt_status_t Scene::analyze()
 {
 	std::cout << "Analyzing scene data..\n";
 	/* Print statistics */
@@ -156,6 +197,8 @@ unsigned int Scene::analyze()
 
 	std::string l;
 	int c = 0;
+
+	background_color = 255; /* Alpha channel */
 
 	c = data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups();
 	if (c)
@@ -185,19 +228,18 @@ unsigned int Scene::analyze()
 		std::cout << "Listing objects  :" << " [" << std::setw(4) << c << " ] " << l << "\n";
 	}
 
-	return 0;
+	return XT_STATUS_OK;
 }
 
-unsigned int Scene::set_ambient()
+xt_status_t Scene::set_bgcolor()
 {
-/*
 	float r = 0, g = 0, b = 0, a = 255;
 	std::string v;
-	v = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_R);
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_R);
 	r = nstring_to_double(v) * 255;
-	v = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_G);
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_G);
 	g = nstring_to_double(v) * 255;
-	v = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_B);
+	v = data.group(XT_CFGPROTO_PROP_BGCOLOR)->get(XT_CFGPROTO_PROP_COLOR_B);
 	b = nstring_to_double(v) * 255;
 
 	background_color = rgba_to_pixel32((int)r, (int)g, (int)b, a);
@@ -206,25 +248,25 @@ unsigned int Scene::set_ambient()
 		<< "Background color: 0x" << std::hex << std::setfill('0') 
 		<< std::setw(8) << background_color 
 		<< std::dec << "\n";
-*/
-	return 0;
+
+	return XT_STATUS_OK;
 }
 
-unsigned int Scene::set_camera(const char *name)
+xt_status_t Scene::set_camera(const char *name)
 {
-/*
-	// Check if there are no cameras
+	/* Check if there are no cameras */
 	if(data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups() < 1)
 	{
 		std::cout << "No cameras were specified. Nothing to render..\n";
-		return 1;
+		return XT_STATUS_NO_CAMERA;
 	}
 
-	// Get the default camera
+	/* Get the default camera */
 	std::string dcam = name;
 
 	if (dcam.empty())
 	{
+		/* Get the default camera */
 		dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->get(XT_CFGPROTO_PROP_DEFAULT);
 		if (dcam.empty())
 		{
@@ -233,7 +275,7 @@ unsigned int Scene::set_camera(const char *name)
 		}   
 	}
 
-	// Check if camera exists
+	/* Check if camera exists */
 	if(!data.group(XT_CFGPROTO_NODE_CAMERA)->query_group(dcam.c_str()))
 	{
 		std::cout << "Invalid camera: " << dcam << "\n";
@@ -242,7 +284,7 @@ unsigned int Scene::set_camera(const char *name)
 
 	std::cout << "Using camera: " << dcam << "\n";
 
-	// Create the camera
+	/* Create the camera */
 	std::string f = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FOV);
 	real_t fov = nstring_to_double(f);
 	std::string x = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
@@ -262,30 +304,34 @@ unsigned int Scene::set_camera(const char *name)
 	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_COORD_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
 
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
-	
+/*
+	std::cout << "FOV: " << fov << "\n";
+	std::cout << "Position: " << pos << "\n";
+	std::cout << "Target: " << targ << "\n";
+	std::cout << "Up: " << up << "\n";
+*/
 	delete camera;
 
 	camera = new Camera(pos, targ, up, fov);
-*/
-	return 0;
+
+	return XT_STATUS_OK;
 }
 
-unsigned int Scene::add_light(NCFGParser *p)
+xt_status_t Scene::add_light(NCFGParser *p)
 {
-/*
 	std::cout << "Adding: " << p->node() << "\n";
-	// Retrieve the properties
-	// Position
+	/* Retrieve the properties */
+	/* Position */
 	std::string posx = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
 	std::string posy = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
 	std::string posz = p->group(XT_CFGPROTO_PROP_COORD_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
 
-	// Intensity
+	/* Intensity */
 	std::string colr = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_R);
 	std::string colg = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_G);
 	std::string colb = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_B);
 
-	// Create the light
+	/* Create the light */
 	Light *tlight = new Light();
 
 	tlight->position = 
@@ -297,16 +343,21 @@ unsigned int Scene::add_light(NCFGParser *p)
 				nstring_to_double(colg), 
 				nstring_to_double(colb));
 
-	light[p->node()] = tlight;
+//	std::cout << tlight->position.z << "\n\n\n"; getchar();
+/*
+	std::cout << "Position: " << tlight->position << "\n";
+	std::cout << "Intensity: " << tlight->intensity << "\n";
 */
-	return 0;
+	/* Add to the lights list */
+	light[p->node()] = tlight;
+
+	return XT_STATUS_OK;
 }
 
 #include <nmath/sphere.h>
 
-unsigned int Scene::add_geometry(NCFGParser *p)
+xt_status_t Scene::add_geometry(NCFGParser *p)
 {
-/*
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
 	std::cout << "Adding " << type << ": " << p->node() << "\n";
@@ -330,6 +381,10 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 			nstring_to_double(z));
 
 		((Sphere *)(tobj->get()))->radius = nstring_to_double(r);
+/*
+		std::cout << "Origin: " << ((Sphere *)(tobj->get()))->origin << "\n";
+		std::cout << "Radius: " << ((Sphere *)(tobj->get()))->radius << "\n";
+*/
 		geometry[p->node()] = tobj;
 	}
 	else
@@ -337,18 +392,19 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 		std::cout << "Warning: Unsupported type. Skipping...\n";
 	}
 
-	// Set the material
+	/* Set the material */
 	if(tobj)
 	{
 		tobj->material = std::string(p->get(XT_CFGPROTO_PROP_MATERIAL));
 	}
-*/
-	return 0;
+
+	return XT_STATUS_OK;
 } 
 
-unsigned int Scene::add_material(NCFGParser *p)
+#include "matlambert.hpp"
+
+xt_status_t Scene::add_material(NCFGParser *p)
 {
-/*
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 	
 	std::cout << "Adding " << type << " material: " << p->node() << "\n";
@@ -376,6 +432,6 @@ unsigned int Scene::add_material(NCFGParser *p)
 	{
 		std::cout << "Warning: Unsupported model. Skipping...\n";
 	}
-*/
-	return 0;
+
+	return XT_STATUS_OK;
 }

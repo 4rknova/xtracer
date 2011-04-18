@@ -29,57 +29,59 @@
 #define XTRACER_SCENE_HPP_INCLUDED
 
 #include <map>
-#include <nmath/vector.h>
 #include <nparse/cfgparser.hpp>
 
 #include "pixel.h"
-
-/*
 #include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"
 #include "geometry.hpp"
-*/
 
 class Scene
 {
-	public:
+	friend class Renderer;
+	protected:
 		Scene(const char *filepath);
 		~Scene();
 
-		unsigned int init();
-		unsigned int analyze();
+		xt_status_t init();
+		xt_status_t analyze();
 
-		unsigned int set_ambient();
-		unsigned int set_camera(const char *name);
+		xt_status_t set_bgcolor();
 
-		unsigned int add_light(NCFGParser *p);
-		unsigned int add_geometry(NCFGParser *p);
-		unsigned int add_material(NCFGParser *p);
+		xt_status_t set_camera(const char *name);
+		xt_status_t add_light(NCFGParser *p);
+		xt_status_t add_geometry(NCFGParser *p);
+		xt_status_t add_material(NCFGParser *p);
 
-		// The camera
+		/*
+			Pointer to a camera class
+			This is not static so that the camera class can be
+			later on extended to provide multiple models
+		*/
 		Camera *camera;
+		
+		/*
+			The scene's source file path						
+		*/
+		std::string source;
 
-		// Lists of the scene entities		
-/*
+		/*
+			Lists of the scene entities		
+		*/
 		std::map<std::string, Light *> light;
 		std::map<std::string, Material *> material;
 		std::map<std::string, Geometry *> geometry;
-*/
-		// Recursion depth
-		unsigned int rdepth;
 
-		// Background color
-		Vector3 ambient;
-
-	private:
-		// The scene's source filepath and filename
-		std::string source;
-
-		// The parser data tree
+		/*
+			The parsed tree root node
+		*/
 		NCFGParser data;
 
-		// This will cleanup all the allocated memory
+		unsigned int rdepth;
+		pixel32_t background_color;
+
+	private:
 		void cleanup();
 };
 

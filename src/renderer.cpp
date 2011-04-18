@@ -1,110 +1,96 @@
 /*
 
-	This file is part of xtracer.
+    This file is part of xtracer.
 
-	renderer.cpp
-	Renderer
+    renderer.cpp
+    Renderer class
 
-	Copyright (C) 2010, 2011
-	Papadopoulos Nikolaos
+    Copyright (C) 2010, 2011
+    Papadopoulos Nikolaos
 
-	This library is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 3 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 3 of the License, or (at your option) any later version.
 
-	This library is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-	Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-	You should have received a copy of the GNU Lesser General
-	Public License along with this library; if not, write to the
-	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-	Boston, MA 02110-1301 USA
+    You should have received a copy of the GNU Lesser General
+    Public License along with this library; if not, write to the
+    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+    Boston, MA 02110-1301 USA
 
 */
 
-#include <cstdio>
-#include <iostream>
 #include <iomanip>
-
+#include <iostream>
 #include "renderer.hpp"
 
-#include "pixel.h"
+Renderer::Renderer(Framebuffer &fb, Scene &scene)
+	: m_fb(&fb), m_scene(&scene)
+{}
 
-Renderer::Renderer(const char *filepath, Framebuffer &fb, unsigned int depth):
-	m_p_scene(filepath), m_p_fb(&fb), m_p_depth(depth)
+// report the progress
+void rprog(float progress)
 {
-	/* Initiate the scene */
-	m_p_scene.init();
-}
+	static const unsigned int length = 25;
 
-unsigned int Renderer::recursion_depth()
-{
-	return m_p_scene.rdepth;
-}
-
-unsigned int Renderer::set_recursion_depth(unsigned int depth)
-{
-	return m_p_scene.rdepth = depth;
-}
-
-pixel32_t Renderer::render(const char *camera)
-{
-	if(m_p_fb == NULL)
+	std::cout
+		<< "\rProgress [ ";
+	for (int i=0; i<length; i+=1)
 	{
-		fprintf(stderr, "Error: Invalid framebuffer (NULL).\n");
-		return XT_STATUS_FB_INVALID;
+		float p = progress * length / 100;
+		if (i < p) 
+			std::cout << '=';
+		else if (i - p < 1)
+			std::cout << '>';
+		else
+			std::cout << ' ';
 	}
 
-	xt_status_t status = XT_STATUS_OK;
+	std::cout
+		<< " "
+		<< std::setw(6) << std::setprecision(2)
+		<< progress		 
+		<< "% ]"
+		<< std::flush;
+}
 
-	/* Set up the camera */
-	if((status = m_p_scene.set_camera(camera)) != XT_STATUS_OK)
-		return status;
+unsigned int Renderer::render()
+{
+	std::cout << "Rendering..\n";
 
-	/* Render */
-//	printf("Rendering frame..\n");
+	// precalculate some constants
+	const unsigned int w = m_fb->width();
+	const unsigned int h = m_fb->height();
+	const unsigned int pixel_count = (w * h) - 1;
+	float progress = 0;
 
-	/* Rendering loop */
-	unsigned int pixel_count =  m_p_fb->height() *  m_p_fb->width();
+	// setup the output
+	std::cout.setf(std::ios::fixed, std::ios::floatfield);
+	std::cout.setf(std::ios::showpoint);
 
-	for (unsigned int h = 0; h < m_p_fb->height(); h++)
+	for (unsigned int y = 0; y < h; y++) 
 	{
-		for (unsigned int w = 0; w < m_p_fb->width(); w++)
+		for (unsigned int x = 0; x < w; x++) 
 		{
-			/* Create a primary ray */
-			Ray primary = m_p_scene.camera->get_primary_ray(w, h, m_p_fb->width(), m_p_fb->height());
+			// render
 
-			/* Set the final color in the buffer */
-			m_p_fb->set_pixel(w, h, m_p_scene.trace(primary));
-			/* Report the progress */
-			if (pixel_count > 1)
-			{
-				std::cout.setf(::std::ios::fixed);
-/*
-				std::cout 
-					<< "\rProgress: " 
-					<< std::setprecision(2) << std::setw(6)
-					<< ((h * m_p_fb->width() + w) / (float)(pixel_count - 1)) * 100
-					<< '%';
-*/			}
-			std::cout << std::flush;
+			// calculate progress
+			progress = (y * w + x) / (float)(pixel_count) * 100;
 		}
+		rprog(progress);
 	}
 
+	std::cout << '\n';
+	return 0;
+}
 
-(*m_p_scene.light.begin()).second->position.x+=10;
- std::map<std::string, Light *>::iterator it;
- for (it=m_p_scene.light.begin(); it != m_p_scene.light.end(); it++)
- {     
-printf("New light [%s] position: %f %f %f, color: %f %f %f\n",
-	(*it).first.c_str(),
-	(*it).second->position.x, (*it).second->position.y, (*it).second->position.z,
-	(*it).second->intensity.x, (*it).second->intensity.y, (*it).second->intensity.z	);
-}	
+pixel32_t Renderer::trace(const Ray &ray, int depth)
+{
 
-//	std::cout << "\nRendered " << pixel_count << " pixels.\n";
-	return XT_STATUS_OK;
+
 }

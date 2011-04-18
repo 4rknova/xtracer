@@ -25,9 +25,7 @@
 
 */
 
-#include <stdio.h>
-
-#include "sdl.hpp"
+#include "drv_sdl.hpp"
 #include "pixel.h"
 
 DrvSDL::DrvSDL( Framebuffer &fb):
@@ -37,27 +35,26 @@ DrvSDL::DrvSDL( Framebuffer &fb):
 DrvSDL::~DrvSDL()
 {}
 
-xt_status_t DrvSDL::init()
+unsigned int DrvSDL::init()
 {
-	printf("Creating the sdl window..\n");
-
 	if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
 		return 1;
 	
-	/* Set up the screen */
-	printf("Setting up the window environment..\n");
-	m_p_screen = SDL_SetVideoMode( m_p_fb->width(), m_p_fb->height(), m_p_fb->bpp(), SDL_SWSURFACE);
+	// setup the window
+	m_p_screen = SDL_SetVideoMode( m_p_fb->width(), m_p_fb->height(), 32, SDL_SWSURFACE);
+
 	if(!m_p_screen)
 		return 1;
-	/* Set the window caption */
-	SDL_WM_SetCaption( "Xtracer", NULL );
+
+	// setup the window caption
+	SDL_WM_SetCaption( "xtracer output", NULL);
 	return 0;
 }
 
-xt_status_t DrvSDL::deinit()
+unsigned int DrvSDL::deinit()
 {
-	/* Deinit */
-	/* Block the window from closing */
+	// block the window from closing
+	// until escape is pressed
 	SDL_Event event;
 	int done = 0;
 
@@ -66,70 +63,74 @@ xt_status_t DrvSDL::deinit()
 		switch (event.type)
 		{
 			case SDL_KEYDOWN:
-			//	if (event.key.keysym.sym == SDLK_ESCAPE)
+				if (event.key.keysym.sym == SDLK_ESCAPE)
 					done = 1;
 				break;
 		}
 	}
 
-	SDL_Quit(); /* This will release m_p_window as well */
+	SDL_Quit(); // This will release m_p_window as well
 	return 0;
 }
 
-xt_status_t DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
+unsigned int DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
 {
-	/* Copy the pixel window here */
-	/* If the surface must be locked */
+	// check if the surface must be locked
 	if(SDL_MUSTLOCK(m_p_screen))
 	{
-		/* Lock the surface */
 		SDL_LockSurface(m_p_screen);
 	}
 
-	/* Check for "out of bounds" and inverse mapping errors */
+	// check for "out of bounds" and inverse mapping errors
 	if ((x0 > m_p_fb->width()) 
 		|| (x1 > m_p_fb->width()) 
 		|| (y0 > m_p_fb->height()) 
 		|| (y1 > m_p_fb->height())
 		|| (x0 > x1)
 		|| (y0 > y1))
-		return XT_STATUS_FB_OUTOFBOUNDS;
+		return 1;
 
-	/* Convert the pixels to 32 bit */
+	// convert the pixels to 32 bit
 	pixel32_t *pixels = (pixel32_t *)m_p_screen->pixels;
 
-	/* Set the pixels */
+	// set the pixels
 	for(unsigned int y = y0; y < y1; y++)
 	{
 		for(unsigned int x = x0; x < x1; x++)
 		{
 			pixel32_t pixel = m_p_fb->get_pixel(x, y);
-			pixels[(y * m_p_screen->w) + x] = SDL_MapRGB( m_p_screen->format, get_pixel32_r(pixel), get_pixel32_g(pixel), get_pixel32_b(pixel));
-
+			
+			pixels[(y * m_p_screen->w) + x] = 
+				SDL_MapRGB( 
+						m_p_screen->format, 
+						get_pixel32_r(pixel), 
+						get_pixel32_g(pixel), 
+						get_pixel32_b(pixel));
 		}
 	}
 
-	/* Unlock surface */
+	// check if the surface must be unlocked
 	if(SDL_MUSTLOCK(m_p_screen))
 	{
 		SDL_UnlockSurface(m_p_screen);
 	}
 
+	// flip the buffer
 	flip();
 
+	// empty the event queue
 	SDL_Event event;
-	/* Empty the event queue */
 	while(SDL_PollEvent(&event));
 
-	return XT_STATUS_OK;
+	return 0;
 }
 
-xt_status_t DrvSDL::flip()
+unsigned int DrvSDL::flip()
 {
-	/* Update the screen */
-	if( SDL_Flip(m_p_screen) == -1 )
+	// update the screen
+	if (SDL_Flip(m_p_screen) == -1)
 	{
-		return XT_STATUS_OUTDRV_FLIP_FAIL;
+		return 1;
 	}
-	return XT_STATUS_OK;
+	return 0;
 }

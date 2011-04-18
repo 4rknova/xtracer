@@ -3,7 +3,7 @@ name = sample scene
 description = This <name> is used to describe the specification.
 
 # The background color
-bgcolor = {
+ambient = {
 	r = 0
 	g = 0
 	b = 0
@@ -22,18 +22,18 @@ camera = {
 		position = {
 			x = 0 
 			y = 0
-			z = 0
+			z = 60
 		}
 		# Camera's focus direction
 		target = {
 			x = 0
 			y = 0
-			z = 1
+			z = -10
 		}
 
 		up = {
 			x = 0
-			y = 1
+			y = -1
 			z = 0
 		}
 
@@ -49,13 +49,13 @@ geometry = {
 
 		# The sphere's position
 		position ={
-			x = -93
-			y = 83
-			z = 900
+			x = 0
+			y = 10
+			z = 0
 		}
 
 		# The sphere's radius
-		radius = 150
+		radius = 8
 
 		# The geometry's material
 		material = mat3
@@ -65,12 +65,12 @@ geometry = {
 		type = sphere
 
 		position = {
-			x = 93
-			y = 83
-			z = 1000
+			x = 10 
+			y = -10
+			z = 0
 		}
 
-		radius = 150
+		radius = 8
 
 		material = mat2
 	}
@@ -78,12 +78,12 @@ geometry = {
 	s3 = {
 		type = sphere
 		position = {
-			x = 0 
-			y = -83
-			z = 800
+			x = -10 
+			y = -10
+			z = 0
 		}
 
-		radius = 150
+		radius = 8
 
 		material = mat1
 	}
@@ -93,9 +93,9 @@ geometry = {
 light = {
 	light1 = {
 		position = {
-			x = 120
-			y = -220
-			z = 510 
+			x = 0
+			y = -600
+			z = 0 
 		}
 
 		intensity = {

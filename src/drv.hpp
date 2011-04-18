@@ -28,15 +28,12 @@
 #ifndef XTRACER_OUTPUT_HPP_INCLUDED
 #define XTRACER_OUTPUT_HPP_INCLUDED
 
-#include "err.h"
 #include "fb.hpp"
 
 enum XT_DRV
 {
 	XT_DRV_DUM,		/* Dummy driver */
-	XT_DRV_SDL,   	/* Output to SDL window */
-	XT_DRV_IMG,    	/* Output to image file */
-	XT_DRV_ASC     	/* Output to stdout in ASCII */
+	XT_DRV_SDL   	/* Output to SDL window */
 };
 
 /* Default output mode */
@@ -48,12 +45,12 @@ class Driver
 		Driver(Framebuffer &fb);
 		~Driver();
 
-		virtual xt_status_t init();
-		virtual xt_status_t deinit();
+		virtual unsigned int init();
+		virtual unsigned int deinit();
 
-		virtual xt_status_t update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
-		xt_status_t update();
-		virtual xt_status_t flip();
+		unsigned int update();
+		virtual unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
+		virtual unsigned int flip();
 		  
 	protected:
 		Framebuffer *m_p_fb;

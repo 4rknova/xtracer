@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    spscheme.hpp
-    Space partitioning scheme
+	setup.hpp
+	Xtracer default setup values
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,37 +25,13 @@
 
 */
 
-#ifndef XTRACER_SPSCHEME_HPP_INCLUDED
-#define XTRACER_SPSCHEME_HPP_INCLUDED
+#ifndef XTRACER_SETUP_H_INCLUDED
+#define XTRACER_SETUP_H_INCLUDED
 
-#include <map>
-#include <nmath/ray.h>
+#include "drv.hpp"
 
-#include "err.h"
-#include "geometry.hpp"
+#define XT_SETUP_DEFAULT_WIDTH		640
+#define XT_SETUP_DEFAULT_HEIGHT		480
+#define XT_SETUP_DEFAULT_DRV		XT_DRV_SDL
 
-class SPCRes
-{
-	friend class SPScheme;
-	friend class Scene;
-	protected:
-		SPCRes();
-		Geometry *geometry;
-		real_t distance;
-};
-
-class SPScheme
-{
-	friend class Scene;
-	protected:
-		SPScheme();
-		~SPScheme();
-
-		xt_status_t build(std::map<std::string, Geometry *> &g);
-		SPCRes test(const Ray &ray);
-
-	private:
-		std::map<std::string, Geometry *> *m_p_geometry;
-};
-
-#endif /* XTRACER_SPSCHEME_HPP_INCLUDED */
+#endif /* XTRACER_SETUP_H_INCLUDED */

@@ -26,7 +26,6 @@
 */
 
 #include "pixel.h"
-#include "byteorder.h"
 
 #ifdef __cplusplus
 	extern "C" {
@@ -34,9 +33,7 @@
 
 pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
 {
-	pixel32_t res = ((uint32_t)red << 24) + ((uint32_t)green << 16) + ((uint32_t)blue << 8) + (uint32_t)alpha;
-
-	return res;
+	return (pixel32_t)(((uint32_t)red << 24) + ((uint32_t)green << 16) + ((uint32_t)blue << 8) + (uint32_t)alpha);
 }
 
 unsigned int get_pixel32_r(pixel32_t color)

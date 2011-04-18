@@ -2,8 +2,8 @@
 
 	This file is part of xtracer.
 
-	drv.cpp
-	Output drivers
+	renderer.hpp
+	Renderer
 
 	Copyright (C) 2010, 2011
 	Papadopoulos Nikolaos
@@ -25,36 +25,33 @@
 
 */
 
-#include "drv.hpp"
+#ifndef XTRACER_RENDERER_HPP_INCLUDED
+#define XTRACER_RENDERER_HPP_INCLUDED
 
-Driver::Driver(Framebuffer &fb):
-	m_p_fb(&fb)
-{}
+#include <string>
+#include <nmath/ray.h>
 
-Driver::~Driver()
-{}
+#include "pixel.h"
+#include "fb.hpp"
+#include "scene.hpp"
 
-unsigned int Driver::init()
+/* Default values for the raytracer environment */
+#define XT_DEFAULT_RECUR_DEPTH 5
+
+class Renderer
 {
-	return 0;
-}
+	public:
+		Renderer(const char *filepath, Framebuffer &fb, unsigned int depth = XT_DEFAULT_RECUR_DEPTH);
 
-unsigned int Driver::deinit()
-{
-	return 0;
-}
+		unsigned int recursion_depth();
+		unsigned int set_recursion_depth(unsigned int depth);
 
-unsigned int Driver::update()
-{
-	return update(0, 0, m_p_fb->width(), m_p_fb->height());
-}
+		pixel32_t render(const char *camera);
 
-unsigned int Driver::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
-{
-	return 0;
-}
+	private:
+		Scene m_p_scene;
+		Framebuffer *m_p_fb;
+		unsigned int m_p_depth;
+};
 
-unsigned int Driver::flip()
-{
-	return 0;
-}
+#endif /* XTRACER_RENDERER_HPP_INCLUDED */

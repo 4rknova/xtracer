@@ -3,10 +3,10 @@ name = sample scene
 description = This <name> is used to describe the specification.
 
 # The background color
-bgcolor = {
-	r = .1
-	g = .1
-	b = .1
+ambient = {
+	r = .031
+	g = .031
+	b = .031
 }
 
 # group camera contains all the cameras
@@ -22,13 +22,13 @@ camera = {
 		position = {
 			x = 0 
 			y = 0
-			z = 0
+			z = 50
 		}
 		# Camera's focus direction
 		target = {
 			x = 0
 			y = 0
-			z = 51 
+			z = 0 
 		}
 
 		up = {
@@ -51,7 +51,7 @@ geometry = {
 		position ={
 			x = 0
 			y = 0
-			z = 50
+			z = 0
 		}
 
 		# The sphere's radius
@@ -66,9 +66,9 @@ geometry = {
 light = {
 	sat = {
 		position = {
-			x = -100
-			y = 0
-			z = 100
+			x = 0
+			y = 100 
+			z = 80
 		}
 
 		intensity = {

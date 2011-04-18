@@ -2,7 +2,7 @@
 
     This file is part of xtracer.
 
-    cfgproto.h
+    proto.h
     Configuration protocol definitions
 
     Copyright (C) 2010, 2011
@@ -50,7 +50,7 @@
 
 #define XT_CFGPROTO_PROP_INTENSITY		"intensity"
 
-#define XT_CFGPROTO_PROP_BGCOLOR		"bgcolor"
+#define XT_CFGPROTO_PROP_AMBIENT		"ambient"
 
 #define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
 
