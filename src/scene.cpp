@@ -35,11 +35,13 @@
 #include "proto.h"
 
 Scene::Scene(const char *filepath)
-	: data(filepath)
+	: 
+		camera(new Camera()),
+		source(filepath),
+		data(filepath)
 /*
-	space(new SPScheme()), camera(new Camera()), 
-	source(filepath), 
-	rdepth(1),
+	space(new SPScheme()), 
+	rdepth(1)
 */
 {}
 
@@ -76,11 +78,11 @@ void Scene::cleanup()
 		for(std::map<std::string, Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
 			delete (*it).second;
 	} 
-
+*/
 	// Release the camera
 	std::cout << "Releasing the camera..\n";
 	delete camera;
-*/
+
 }
 
 unsigned int Scene::init()

@@ -29,10 +29,13 @@
 #define XTRACER_SCENE_HPP_INCLUDED
 
 #include <map>
+
+#include <nmath/intinfo.h>
 #include <nmath/vector.h>
 #include <nparse/cfgparser.hpp>
 
 #include "pixel.h"
+#include "camera.hpp"
 
 /*
 #include "camera.hpp"
@@ -57,6 +60,8 @@ class Scene
 		unsigned int add_geometry(NCFGParser *p);
 		unsigned int add_material(NCFGParser *p);
 
+		bool intersection(const Ray &ray, IntInfo *info){return false;};
+
 		// The camera
 		Camera *camera;
 
@@ -66,16 +71,16 @@ class Scene
 		std::map<std::string, Material *> material;
 		std::map<std::string, Geometry *> geometry;
 */
-		// Recursion depth
-		unsigned int rdepth;
-
 		// Background color
 		Vector3 ambient;
 
-	private:
 		// The scene's source filepath and filename
-		std::string source;
+		const std::string source;
 
+		// The frame
+
+
+	private:
 		// The parser data tree
 		NCFGParser data;
 

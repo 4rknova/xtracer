@@ -82,8 +82,13 @@ unsigned int parsearg(int argc, char **argv)
 				std::cerr << "No value was provided for " << argv[i-1] << "\n";
 				return 1;
 			}
+			// ppm driver
+			if (!strcmp(argv[i], "ppm"))
+			{
+				driver = XT_DRV_PPM;
+			}
 			// sdl driver
-			if (!strcmp(argv[i], "sdl"))
+			else if (!strcmp(argv[i], "sdl"))
 			{
 				driver = XT_DRV_SDL;
 			}
@@ -118,9 +123,14 @@ unsigned int parsearg(int argc, char **argv)
 }
 
 #include <nmath/mutil.h>
+
+// framebuffer
 #include "fb.hpp"
+
+// drivers
 #include "drv.hpp"
 #include "drv_sdl.hpp"
+#include "drv_ppm.hpp"
 
 #include "renderer.hpp"
 #include "scene.hpp"
@@ -141,9 +151,8 @@ int main(int argc, char **argv)
 			std::cout
 				<< "Usage: " << argv[0] << " [option]... scene_file...\n"
 				<< "For a complete list of the available options, refer to the man pages.\n";
+			return 0;
 		}
-
-		return 1;
 	}
     
 	// parse the argument list
@@ -174,19 +183,24 @@ int main(int argc, char **argv)
 		case XT_DRV_SDL:
 			drv = new DrvSDL(fb);
 			break;
+		case XT_DRV_PPM:
+			drv = new DrvPPM(fb);
+			break;
 		case XT_DRV_DUM:	/* DUMMY DRIVER */
 		default:
 			drv = new Driver(fb);
 	}
-
-	drv->init();
 
 	// start processing
 	unsigned int scene_index = 1;
 	unsigned int scene_total = fscenes.size();
 	while(!fscenes.empty())
 	{
+		// get the front scene path
 		std::string source  = fscenes.front();
+
+		// pop the front scene
+		fscenes.pop_front();
 
 		std::cout
 			<< "Processing [ " << scene_index++ << "/" << scene_total << " ]: " 
@@ -194,18 +208,16 @@ int main(int argc, char **argv)
 
 		// create and initialize the scene
 		Scene scene(source.c_str());
-		scene.init();
+
+		// initiate the scene and detect errors
+		if (scene.init())
+			continue;
+
 		scene.analyze();
 
 		// render
-		Renderer renderer(fb, scene);
+		Renderer renderer(fb, scene, drv);
 		renderer.render();
-		
-		// update the output
-		drv->update();
-
-		// pop the processed scene
-		fscenes.pop_front();
 	}
 	
 	// clean up

@@ -29,7 +29,7 @@
 #include "pixel.h"
 
 DrvSDL::DrvSDL( Framebuffer &fb):
-	Driver(fb), m_p_screen(NULL)
+	Driver(fb), m_screen(NULL)
 {}
 
 DrvSDL::~DrvSDL()
@@ -41,9 +41,9 @@ unsigned int DrvSDL::init()
 		return 1;
 	
 	// setup the window
-	m_p_screen = SDL_SetVideoMode( m_p_fb->width(), m_p_fb->height(), 32, SDL_SWSURFACE);
+	m_screen = SDL_SetVideoMode( m_fb->width(), m_fb->height(), 32, SDL_SWSURFACE);
 
-	if(!m_p_screen)
+	if(!m_screen)
 		return 1;
 
 	// setup the window caption
@@ -53,6 +53,9 @@ unsigned int DrvSDL::init()
 
 unsigned int DrvSDL::deinit()
 {
+	if(!m_screen)
+		return 1;
+
 	// block the window from closing
 	// until escape is pressed
 	SDL_Event event;
@@ -69,40 +72,40 @@ unsigned int DrvSDL::deinit()
 		}
 	}
 
-	SDL_Quit(); // This will release m_p_window as well
+	SDL_Quit(); // This will release m_window as well
 	return 0;
 }
 
 unsigned int DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
 {
 	// check if the surface must be locked
-	if(SDL_MUSTLOCK(m_p_screen))
+	if(SDL_MUSTLOCK(m_screen))
 	{
-		SDL_LockSurface(m_p_screen);
+		SDL_LockSurface(m_screen);
 	}
 
 	// check for "out of bounds" and inverse mapping errors
-	if ((x0 > m_p_fb->width()) 
-		|| (x1 > m_p_fb->width()) 
-		|| (y0 > m_p_fb->height()) 
-		|| (y1 > m_p_fb->height())
+	if ((x0 > m_fb->width()) 
+		|| (x1 > m_fb->width()) 
+		|| (y0 > m_fb->height()) 
+		|| (y1 > m_fb->height())
 		|| (x0 > x1)
 		|| (y0 > y1))
 		return 1;
 
 	// convert the pixels to 32 bit
-	pixel32_t *pixels = (pixel32_t *)m_p_screen->pixels;
+	pixel32_t *pixels = (pixel32_t *)m_screen->pixels;
 
 	// set the pixels
 	for(unsigned int y = y0; y < y1; y++)
 	{
 		for(unsigned int x = x0; x < x1; x++)
 		{
-			pixel32_t pixel = m_p_fb->get_pixel(x, y);
+			pixel32_t pixel = m_fb->get_pixel(x, y);
 			
-			pixels[(y * m_p_screen->w) + x] = 
+			pixels[(y * m_screen->w) + x] = 
 				SDL_MapRGB( 
-						m_p_screen->format, 
+						m_screen->format, 
 						get_pixel32_r(pixel), 
 						get_pixel32_g(pixel), 
 						get_pixel32_b(pixel));
@@ -110,9 +113,9 @@ unsigned int DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, u
 	}
 
 	// check if the surface must be unlocked
-	if(SDL_MUSTLOCK(m_p_screen))
+	if(SDL_MUSTLOCK(m_screen))
 	{
-		SDL_UnlockSurface(m_p_screen);
+		SDL_UnlockSurface(m_screen);
 	}
 
 	// flip the buffer
@@ -128,7 +131,7 @@ unsigned int DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, u
 unsigned int DrvSDL::flip()
 {
 	// update the screen
-	if (SDL_Flip(m_p_screen) == -1)
+	if (SDL_Flip(m_screen) == -1)
 	{
 		return 1;
 	}

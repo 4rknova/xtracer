@@ -43,7 +43,7 @@ class DrvSDL: public Driver
 		unsigned int flip();
 
 	private:
-		SDL_Surface* m_p_screen;
+		SDL_Surface* m_screen;
 };
 
 #endif /* XTRACER_DRV_SDL_HPP_INCLUDED */

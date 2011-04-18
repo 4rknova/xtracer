@@ -2,8 +2,8 @@
 
 	This file is part of xtracer.
 
-	drv.hpp
-	Output drivers
+	drv_ppm.hpp
+	PPM driver
 
 	Copyright (C) 2010, 2011
 	Papadopoulos Nikolaos
@@ -25,36 +25,21 @@
 
 */
 
-#ifndef XTRACER_OUTPUT_HPP_INCLUDED
-#define XTRACER_OUTPUT_HPP_INCLUDED
+#ifndef XTRACER_DRV_PPM_HPP_INCLUDED
+#define XTRACER_DRV_PPM_HPP_INCLUDED
 
-#include "fb.hpp"
+#include "drv.hpp"
 
-enum XT_DRV
-{
-	XT_DRV_DUM,		/* Dummy driver */
-	XT_DRV_SDL,   	/* Output to SDL window */
-	XT_DRV_PPM		/* Output to PPM image file */
-};
-
-/* Default output mode */
-#define XT_DEFAULT_DRV XT_DRV_SDL
-
-class Driver
+class DrvPPM: public Driver
 {
 	public:
-		Driver(Framebuffer &fb);
-		~Driver();
+		DrvPPM(Framebuffer &fb);
+		~DrvPPM();
 
-		virtual unsigned int init();
-		virtual unsigned int deinit();
-
-		unsigned int update();
-		virtual unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
-		  
-	protected:
-		virtual unsigned int flip();
-		Framebuffer *m_fb;
+		unsigned int init();
+		unsigned int deinit();
+		unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
+		unsigned int flip();
 };
 
-#endif /* XTRACER_OUTPUT_HPP_INCLUDED */
+#endif /* XTRACER_DRV_PPM_HPP_INCLUDED */

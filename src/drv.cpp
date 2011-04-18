@@ -28,7 +28,7 @@
 #include "drv.hpp"
 
 Driver::Driver(Framebuffer &fb):
-	m_p_fb(&fb)
+	m_fb(&fb)
 {}
 
 Driver::~Driver()
@@ -46,7 +46,7 @@ unsigned int Driver::deinit()
 
 unsigned int Driver::update()
 {
-	return update(0, 0, m_p_fb->width(), m_p_fb->height());
+	return update(0, 0, m_fb->width(), m_fb->height());
 }
 
 unsigned int Driver::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)

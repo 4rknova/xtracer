@@ -28,31 +28,42 @@
 #ifndef XTRACER_RENDERER_HPP_INCLUDED
 #define XTRACER_RENDERER_HPP_INCLUDED
 
+#include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nmath/intinfo.h>
 
 #include "fb.hpp"
 #include "scene.hpp"
+#include "drv.hpp"
 
 #include "pixel.h"
+
+#define XT_SETUP_DEFAULT_RDEPTH 100
 
 class Renderer
 {
 	public:
-		Renderer(Framebuffer &fb, Scene &scene);
+		Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int depth = XT_SETUP_DEFAULT_RDEPTH );
 
 		// renders the scene
 		unsigned int render();
 
 	protected:
-		pixel32_t trace(const Ray &ray, int depth);
-		pixel32_t shade(const Ray &ray, int depth, IntInfo *info);
+		// renders the current frame
+		unsigned int render_frame();
+		Vector3 trace(const Ray &ray, unsigned int depth);
+		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo *info);
 
 	private:
 		// pointer to the framebuffer
 		Framebuffer *m_fb;
 		// pointer to the scene
 		Scene *m_scene;
+		// pointer to the output driver
+		Driver *m_drv;
+
+		// recursion depth limit
+		unsigned int max_depth;
 };
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

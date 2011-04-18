@@ -28,36 +28,45 @@
 #include "fb.hpp"
 
 Framebuffer::Framebuffer(unsigned int width, unsigned int height): 
-	m_p_width(width > 0 ? width : 1), 
-	m_p_height(height > 0 ? height : 1),
-	m_p_pixels(new uint32_t[m_p_width * m_p_height])
+	m_tag(FB_DEFAULT_TAG),
+	m_width(width > 0 ? width : 1), 
+	m_height(height > 0 ? height : 1),
+	m_pixels(new uint32_t[m_width * m_height])
 {}
 
 Framebuffer::~Framebuffer()
 {
-	delete [] m_p_pixels;
+	delete [] m_pixels;
 }
 
 unsigned int Framebuffer::width()
 {
-	return  m_p_width;
+	return  m_width;
 }
 
 unsigned int Framebuffer::height()
 {
-	return  m_p_height;
+	return  m_height;
+}
+
+std::string &Framebuffer::tag(const char *tag)
+{
+	if (tag)
+		m_tag = tag;
+
+	return m_tag;
 }
 
 uint32_t Framebuffer::get_pixel(unsigned int x, unsigned int y)
 {
-	unsigned int n = y * m_p_width + x;
-	return (x < m_p_width) ? ((y < m_p_height) ? m_p_pixels[n] : m_p_pixels[m_p_width * m_p_height - 1])  : m_p_pixels[m_p_width * m_p_height - 1];
+	unsigned int n = y * m_width + x;
+	return (x < m_width) ? ((y < m_height) ? m_pixels[n] : m_pixels[m_width * m_height - 1])  : m_pixels[m_width * m_height - 1];
 }
 
 uint32_t Framebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value)
 {
-	unsigned int n = y * m_p_width + x;
-	uint32_t *target =(x < m_p_width) ? ((y < m_p_height) ? &m_p_pixels[n] : &m_p_pixels[m_p_width * m_p_height - 1])  : &m_p_pixels[m_p_width * m_p_height - 1];
+	unsigned int n = y * m_width + x;
+	uint32_t *target =(x < m_width) ? ((y < m_height) ? &m_pixels[n] : &m_pixels[m_width * m_height - 1])  : &m_pixels[m_width * m_height - 1];
 	*target =  value;
 	return value;
 }

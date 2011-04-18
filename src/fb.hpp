@@ -29,6 +29,9 @@
 #define XTRACER_FB_HPP_INCLUDED
 
 #include <stdint.h>
+#include <string>
+
+#define FB_DEFAULT_TAG "framebuffer"
 
 class Framebuffer
 {
@@ -38,16 +41,20 @@ class Framebuffer
 
 		unsigned int width();
 		unsigned int height();
+		std::string &tag(const char *tag=NULL);
+
 
 		/* Pixels are being accessed starting with (0,0). In case of out of bounds exceptions, the last pixel is affected */
 		uint32_t get_pixel(unsigned int x, unsigned int y);	
 		uint32_t set_pixel(unsigned int x, unsigned int y, uint32_t value);	/* The pixel value is returned for chaining */
 
 	private:
-		const unsigned int m_p_width;
-		const unsigned int m_p_height;
+		std::string m_tag;
 
-		uint32_t *m_p_pixels;
+		const unsigned int m_width;
+		const unsigned int m_height;
+
+		uint32_t *m_pixels;
 };
 
 #endif /* XTRACER_FB_HPP_INCLUDED */
