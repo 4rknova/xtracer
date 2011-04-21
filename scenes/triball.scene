@@ -4,9 +4,9 @@ description = This <name> is used to describe the specification.
 
 # The background color
 ambient = {
-	r = 0
-	g = 0
-	b = 0
+	r = 0.31
+	g = 0.31
+	b = 0.31
 }
 
 # group camera contains all the cameras

@@ -44,9 +44,11 @@
 	COMPOSITE PROPERTIES
 */
 
-#define XT_CFGPROTO_PROP_COORD_POSITION "position"
-#define XT_CFGPROTO_PROP_COORD_TARGET   "target"
-#define XT_CFGPROTO_PROP_COORD_UP       "up"
+#define XT_CFGPROTO_PROP_POSITION 		"position"
+#define XT_CFGPROTO_PROP_TARGET   		"target"
+#define XT_CFGPROTO_PROP_UP       		"up"
+
+#define XT_CFGPROTO_PROP_NORMAL			"normal"
 
 #define XT_CFGPROTO_PROP_INTENSITY		"intensity"
 
@@ -63,6 +65,8 @@
 #define XT_CFGPROTO_PROP_TYPE			"type"
 
 #define XT_CFGPROTO_PROP_RADIUS			"radius"
+
+#define XT_CFGPROTO_PROP_DISTANCE		"distance"
 
 #define XT_CFGPROTO_PROP_FOV            "fov"
 
@@ -84,6 +88,7 @@
 */
 
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
+#define XT_CFGPROTO_VAL_PLANE			"plane"
 #define XT_CFGPROTO_VAL_LAMBERT			"lambert"
 
 #endif /* XTRACER_CFGPROTO_HPP_INCLUDED  */

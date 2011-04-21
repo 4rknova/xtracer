@@ -32,17 +32,13 @@
 
 #include <nmath/intinfo.h>
 #include <nmath/vector.h>
+#include <nmath/geometry.h>
 #include <nparse/cfgparser.hpp>
 
-#include "pixel.h"
-#include "camera.hpp"
-
-/*
 #include "camera.hpp"
 #include "light.hpp"
-#include "material.hpp"
-#include "geometry.hpp"
-*/
+//#include "material.hpp"
+#include "object.hpp"
 
 class Scene
 {
@@ -57,7 +53,7 @@ class Scene
 		unsigned int set_camera(const char *name);
 
 		unsigned int add_light(NCFGParser *p);
-		unsigned int add_geometry(NCFGParser *p);
+		unsigned int add_object(NCFGParser *p);
 		unsigned int add_material(NCFGParser *p);
 
 		bool intersection(const Ray &ray, IntInfo *info){return false;};
@@ -65,20 +61,16 @@ class Scene
 		// The camera
 		Camera *camera;
 
-		// Lists of the scene entities		
-/*
+		// Maps of the scene entities		
 		std::map<std::string, Light *> light;
-		std::map<std::string, Material *> material;
-		std::map<std::string, Geometry *> geometry;
-*/
+//		std::map<std::string, Material *> material;
+		std::map<std::string, Object *> object;
+
 		// Background color
 		Vector3 ambient;
 
 		// The scene's source filepath and filename
 		const std::string source;
-
-		// The frame
-
 
 	private:
 		// The parser data tree

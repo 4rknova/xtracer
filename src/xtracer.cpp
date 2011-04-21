@@ -43,6 +43,9 @@ XT_DRV driver = XT_SETUP_DEFAULT_DRV;
 int width = XT_SETUP_DEFAULT_WIDTH;
 int height = XT_SETUP_DEFAULT_HEIGHT;
 
+// verbosity
+unsigned int verbose = 0;
+
 unsigned int parsearg(int argc, char **argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -104,6 +107,11 @@ unsigned int parsearg(int argc, char **argv)
 					<< "Please consult the man pages for the available drivers.";
 				return 1;
 			}
+		}
+		// verbosity
+		else if (!strcmp(argv[i], "-v"))
+		{
+			verbose++;
 		}
 		// invalid option
 		else if (argv[i][0] == '-')
@@ -203,6 +211,7 @@ int main(int argc, char **argv)
 		fscenes.pop_front();
 
 		std::cout
+			<< "\n"
 			<< "Processing [ " << scene_index++ << "/" << scene_total << " ]: " 
 			<< source << "\n";
 
@@ -213,7 +222,8 @@ int main(int argc, char **argv)
 		if (scene.init())
 			continue;
 
-		scene.analyze();
+		if (verbose)
+			scene.analyze();
 
 		// render
 		Renderer renderer(fb, scene, drv);
@@ -221,7 +231,9 @@ int main(int argc, char **argv)
 	}
 	
 	// clean up
-	std::cout << "Shutting down..\n";
+	std::cout 
+		<< "\n"
+		<< "Shutting down..\n";
 
 	// terminate the output driver
 	drv->deinit();

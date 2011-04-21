@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    light.hpp
-    Light class
+    object.cpp
+    Object class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,18 +25,40 @@
 
 */
 
-#ifndef XTRACER_LIGHT_HPP_INCLUDED
-#define XTRACER_LIGHT_HPP_INCLUDED
+#include "object.hpp"
 
-#include <nmath/vector.h>
-
-class Light 
+Object::Object(GEOMETRY_TYPE t)
+	: type(t)
 {
-	public:
-		Light();
+	init();
+}
 
-		Vector3 position;
-		Vector3 intensity;
-};
+Object::~Object()
+{
+	deinit();
+}
 
-#endif /* XTRACER_LIGHT_HPP_INCLUDED */
+#include <nmath/sphere.h>
+#include <nmath/plane.h>
+
+int Object::init()
+{
+	switch ((int)type)
+	{
+		case GEOMETRY_SPHERE:
+			geometry = new Sphere;
+			break;
+		case GEOMETRY_PLANE:
+			geometry = new Plane;
+			break;
+		default: // This will never happen, I am just paranoid.
+			return 1;
+	}
+
+	return 0;
+}
+
+void Object::deinit()
+{
+	delete geometry;
+}

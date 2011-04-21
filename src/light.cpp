@@ -27,6 +27,10 @@
 
 #include "light.hpp"
 
+Light::Light(const Vector3 &pos, const Vector3 &ints)
+	: position(pos), intensity(ints)
+{}
+
 Light::Light()
 	: position(Vector3(0, 0, 0)), intensity(Vector3(0, 0, 0))
 {}

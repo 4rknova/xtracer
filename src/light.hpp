@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    geometry.hpp
-    Geometry class
+    light.hpp
+    Light class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,39 +25,19 @@
 
 */
 
-#ifndef XTRACER_GEOMETRY_HPP_INCLUDED
-#define XTRACER_GEOMETRY_HPP_INCLUDED
+#ifndef XTRACER_LIGHT_HPP_INCLUDED
+#define XTRACER_LIGHT_HPP_INCLUDED
 
-enum GEOMETRY_TYPE
-{
-	GEOMETRY_TYPE_SPHERE,	/* Sphere */
-	GEOMETRY_TYPE_PLANE,	/* Plane */
-	GEOMETRY_TYPE_TRIANGLE	/* Triangle */
-};
-
-#include <string>
 #include <nmath/vector.h>
-#include <nmath/ray.h>
 
-class Geometry 
+class Light 
 {
 	public:
-		Geometry(GEOMETRY_TYPE t);
-		~Geometry();
+		Light(const Vector3 &pos, const Vector3 &ints);
+		Light();
 
-		void *get();					/* Return a pointer to the structure */
-
-		real_t collision(const Ray &ray);		/* Returns collision with ray */
-
-		Vector3 normal_at(Ray &ray, real_t scale);
-										/* Returns the normal at the point of collision  */
-
-		const GEOMETRY_TYPE type;		/* The geometry's type */
-
-		std::string material;			/* The associated material */
-
-	private:
-		void *m_p_geometry;				/* Pointer to the actual structure */
+		Vector3 position;
+		Vector3 intensity;
 };
 
-#endif /* XTRACER_GEOMETRY_HPP_INCLUDED */
+#endif /* XTRACER_LIGHT_HPP_INCLUDED */

@@ -25,7 +25,7 @@
 
 */
 
-#include "drv_ppm.hpp"
+#include "drvppm.hpp"
 #include "pixel.h"
 
 DrvPPM::DrvPPM( Framebuffer &fb):

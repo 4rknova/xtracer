@@ -25,7 +25,7 @@
 
 */
 
-#include "drv_sdl.hpp"
+#include "drvsdl.hpp"
 #include "pixel.h"
 
 DrvSDL::DrvSDL( Framebuffer &fb):
