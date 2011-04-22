@@ -137,8 +137,8 @@ unsigned int parsearg(int argc, char **argv)
 
 // drivers
 #include "drv.hpp"
-#include "drv_sdl.hpp"
-#include "drv_ppm.hpp"
+#include "drvsdl.hpp"
+#include "drvppm.hpp"
 
 #include "renderer.hpp"
 #include "scene.hpp"

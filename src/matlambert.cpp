@@ -28,14 +28,14 @@
 #include "matlambert.hpp"
 
 MatLambert::MatLambert(const Vector3 &ints)
-	: intensity(ints)
+	: diffuse(ints)
 {}
 
 MatLambert::MatLambert()
-	: intensity(Vector3(0, 0, 0))
+	: diffuse(Vector3(0, 0, 0))
 {}
 
 Vector3 MatLambert::shade()
 {
-	return intensity;
+	return diffuse;
 }

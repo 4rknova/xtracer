@@ -29,32 +29,18 @@
 #define XTRACER_OBJECT_HPP_INCLUDED
 
 #include <string>
-#include <nmath/geometry.h>
-
-enum GEOMETRY_TYPE
-{
-	GEOMETRY_SPHERE,
-	GEOMETRY_PLANE
-};
 
 class Object 
 {
 	public:
-		Object(GEOMETRY_TYPE t);
+		Object();
 		~Object();
 
-		// The geometry's type
-		const GEOMETRY_TYPE type;
-
-		// A pointer to the geometry object
-		Geometry *geometry;
+		// The geometry's name
+		std::string geometry;
 
 		// The material's name
 		std::string material;
-
-	private:
-		int init();
-		void deinit();
 };
 
 #endif /* XTRACER_OBJECT_HPP_INCLUDED */

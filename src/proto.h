@@ -39,6 +39,7 @@
 #define XT_CFGPROTO_NODE_LIGHT          "light"
 #define XT_CFGPROTO_NODE_MATERIAL       "material"
 #define XT_CFGPROTO_NODE_GEOMETRY       "geometry"
+#define XT_CFGPROTO_NODE_OBJECT			"object"
 
 /*
 	COMPOSITE PROPERTIES
@@ -72,6 +73,7 @@
 
 #define XT_CFGPROTO_PROP_REFLECTANCE	"reflectance"
 
+#define XT_CFGPROTO_PROP_GEOMETRY		"geometry"
 #define XT_CFGPROTO_PROP_MATERIAL       "material"
 
 #define XT_CFGPROTO_PROP_COORD_X        "x"

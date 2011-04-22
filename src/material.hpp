@@ -33,10 +33,10 @@
 class Material 
 {
 	public:
-		virtual ~Material(){}
+		virtual ~Material();
 
 		// shade
-		virtual Vector3 shade() = 0;
+		virtual Vector3 shade();
 
 		Vector3 reflectance;
 };

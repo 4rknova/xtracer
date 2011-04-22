@@ -37,7 +37,7 @@
 
 #include "camera.hpp"
 #include "light.hpp"
-//#include "material.hpp"
+#include "material.hpp"
 #include "object.hpp"
 
 class Scene
@@ -46,24 +46,27 @@ class Scene
 		Scene(const char *filepath);
 		~Scene();
 
-		unsigned int init();
-		unsigned int analyze();
+		unsigned int init();		// Initiates the scene
+		unsigned int analyze();		// Outputs a tree representation of the scene
 
 		unsigned int set_ambient();
 		unsigned int set_camera(const char *name);
 
 		unsigned int add_light(NCFGParser *p);
-		unsigned int add_object(NCFGParser *p);
 		unsigned int add_material(NCFGParser *p);
+		unsigned int add_geometry(NCFGParser *p);
+		
+		unsigned int add_object(NCFGParser *p);
 
-		bool intersection(const Ray &ray, IntInfo *info){return false;};
+		bool intersection(const Ray &ray, IntInfo *info);
 
 		// The camera
 		Camera *camera;
 
 		// Maps of the scene entities		
 		std::map<std::string, Light *> light;
-//		std::map<std::string, Material *> material;
+		std::map<std::string, Material *> material;
+		std::map<std::string, Geometry *> geometry;
 		std::map<std::string, Object *> object;
 
 		// Background color

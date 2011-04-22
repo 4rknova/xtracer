@@ -39,7 +39,7 @@ class MatLambert: public Material
 		// shade
 		Vector3 shade();
 
-		Vector3 intensity;
+		Vector3 diffuse;
 };
 
 #endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */

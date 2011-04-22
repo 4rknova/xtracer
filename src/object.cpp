@@ -27,38 +27,8 @@
 
 #include "object.hpp"
 
-Object::Object(GEOMETRY_TYPE t)
-	: type(t)
-{
-	init();
-}
+Object::Object()
+{}
 
 Object::~Object()
-{
-	deinit();
-}
-
-#include <nmath/sphere.h>
-#include <nmath/plane.h>
-
-int Object::init()
-{
-	switch ((int)type)
-	{
-		case GEOMETRY_SPHERE:
-			geometry = new Sphere;
-			break;
-		case GEOMETRY_PLANE:
-			geometry = new Plane;
-			break;
-		default: // This will never happen, I am just paranoid.
-			return 1;
-	}
-
-	return 0;
-}
-
-void Object::deinit()
-{
-	delete geometry;
-}
+{}
