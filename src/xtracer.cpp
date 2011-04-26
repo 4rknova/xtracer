@@ -227,6 +227,7 @@ int main(int argc, char **argv)
 
 		// render
 		Renderer renderer(fb, scene, drv);
+		renderer.verbosity(verbose);
 		renderer.render();
 	}
 	

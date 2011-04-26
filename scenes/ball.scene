@@ -4,9 +4,9 @@ name = Simple ball
 description = Just a plain ball.
 
 ambient = {
-	r = .031
-	g = .031
-	b = .031
+	r = .21
+	g = .21
+	b = .21
 }
 
 camera = {
@@ -25,7 +25,7 @@ camera = {
 		target = {
 			x = 0
 			y = 0
-			z = 1 
+			z = 130 
 		}
 
 		up = {
@@ -42,13 +42,13 @@ geometry = {
 
 		type = sphere
 
-		position ={
+		position = {
 			x = 0
 			y = 0
-			z = 150
+			z = 130
 		}
 
-		radius = 5
+		radius = 25
 	}
 }
 
@@ -57,14 +57,14 @@ light = {
 	sat = {
 
 		position = {
-			x = 0
-			y = 0 
+			x = 110
+			y = 66 
 			z = 0
 		}
 
 		intensity = {
-			r = 1
-			g = 1
+			r = 0
+			g = 0
 			b = 1
 		}
 	}
@@ -77,8 +77,8 @@ material = {
 		type = lambert
 		
 		diffuse = {
-			r = 0.6
-			g = 0.3
+			r = 0
+			g = 0
 			b = 0.55
 		}
 

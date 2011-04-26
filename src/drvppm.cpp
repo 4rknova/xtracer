@@ -51,6 +51,15 @@ unsigned int DrvPPM::deinit()
 
 unsigned int DrvPPM::update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1)
 {
+	// check for "out of bounds" and inverse mapping errors
+	if ((x0 > m_fb->width()) 
+		|| (x1 > m_fb->width())
+		|| (y0 > m_fb->height())
+		|| (y1 > m_fb->height())
+		|| (x0 > x1)
+		|| (y0 > y1))
+		return 1;
+
 	FILE *fp;
 
 	std::string fname = m_fb->tag();
@@ -80,10 +89,9 @@ unsigned int DrvPPM::update(unsigned int x0, unsigned int y0, unsigned int x1, u
 		- A single whitespace character (usually a newline).
 	*/
 	fprintf(fp, "P6\n%d %d\n255\n", width, height);
-
-	for(unsigned int x = x0; x < x1; x++)
+	for(unsigned int y = y0; y < y1; y++)
 	{
-		for(unsigned int y = y0; y < y1; y++)
+		for(unsigned int x = x0; x < x1; x++)
 		{
 			uint32_t pixel = m_fb->get_pixel(x, y);
 

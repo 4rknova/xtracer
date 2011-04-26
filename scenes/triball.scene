@@ -1,0 +1,167 @@
+# Xtracer simple ball scene
+
+name = Triball
+description = Three balls and a floor. Yeap, they're touching.
+
+ambient = {
+	r = .11
+	g = .11
+	b = .11
+}
+
+camera = {
+
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 0 
+			y = 0
+			z = 0
+		}
+		
+		target = {
+			x = 0
+			y = 0
+			z = 130 
+		}
+
+		up = {
+			x = 0
+			y = 1
+			z = 0
+		}
+	}
+}
+
+geometry = {
+
+	ball1 = {
+		type = sphere
+		position = {
+			x = 0
+			y = 20
+			z = 230
+		}
+		radius = 25
+	}
+	ball2 = {
+		type = sphere
+		position = {
+			x = -20
+			y = -20
+			z = 230
+		}
+		radius = 25
+	}
+	ball3 = {
+		type = sphere
+		position = {
+			x = 20
+			y = -20
+			z = 230
+		}
+		radius = 25
+	}
+
+	wall = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 60
+	}
+}
+
+light = {
+
+	color = {
+		position = {
+			x = 0
+			y = 9
+			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 0.3
+			b = 0.5
+		}
+	}
+
+	white = {
+
+		position = {
+			x = 110
+			y = 66 
+			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	floor = {
+		type = lambert
+		diffuse = {
+			r = 0.8
+			g = 0.8
+			b = 0.8
+		}
+	}
+
+	mat1 = {
+		type = lambert
+		diffuse = {
+			r = 0.55
+			g = 0
+			b = 0
+		}
+		reflectance = 0.5;
+	}
+	mat2 = {
+		type = lambert
+		diffuse = {
+			r = 0
+			g = 0.55
+			b = 0
+		}
+		reflectance = 0.5;
+	}
+	mat3 = {
+		type = lambert
+		diffuse = {
+			r = 0
+			g = 0
+			b = 0.55
+		}
+		reflectance = 0.5;
+	}
+}
+
+object = {
+
+	ball = {
+		geometry = ball1
+		material = mat1
+	}
+	ball2 = {
+		geometry = ball2
+		material = mat2
+	}
+	ball3 = {
+		geometry = ball3
+		material = mat3
+	}
+	floor = {
+		geometry = wall
+		material = floor
+	}
+}

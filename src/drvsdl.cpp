@@ -47,7 +47,12 @@ unsigned int DrvSDL::init()
 		return 1;
 
 	// setup the window caption
-	SDL_WM_SetCaption( "xtracer output", NULL);
+	std::string caption = "Xtracer v";
+	caption.append(XT_VERSION);
+	caption.append(" - ");
+	caption.append(m_fb->tag());
+
+	SDL_WM_SetCaption(caption.c_str(), NULL);
 	return 0;
 }
 

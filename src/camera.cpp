@@ -38,7 +38,7 @@ Camera::Camera()
 Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx)
 :  position(pos), target(trg), up(upv.normalized()), fov(fovx)
 {}
-
+#include <iostream>
 Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
 	Ray pray;		/* Primary ray */
@@ -56,7 +56,7 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 
 	pray.direction.normalize();
 
-	/* Transform the camera target vector to world coordinates and normalize it. */
+	/* Calculate the camera direction vector and normalize it. */
 	Vector3 camdir = target - position;
 	camdir.normalize();
 
@@ -89,6 +89,7 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 
 	/* Transform the direction vector */
 	pray.direction.transform(tmat);
+	pray.direction.normalize();
 
 	return pray;
 }

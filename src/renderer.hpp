@@ -47,12 +47,14 @@ class Renderer
 
 		// renders the scene
 		unsigned int render();
+		// set / get verbosity level ( v < 0 returns status without changing it)
+		unsigned int verbosity(int v);
 
 	protected:
 		// renders the current frame
 		unsigned int render_frame();
 		Vector3 trace(const Ray &ray, unsigned int depth);
-		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo *info);
+		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj);
 
 	private:
 		// pointer to the framebuffer
@@ -64,6 +66,9 @@ class Renderer
 
 		// recursion depth limit
 		unsigned int max_depth;
+
+		// verbosity
+		unsigned int m_verbosity;
 };
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

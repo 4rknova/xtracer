@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    matlambert.cpp
-    Matlambert class
+    material.cpp
+    Material class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,19 +25,11 @@
 
 */
 
-#include <nmath/lambert.h>
+#include "material.hpp"
 
-#include "matlambert.hpp"
-
-MatLambert::MatLambert(const Vector3 &ints)
-	: Material(ints)
+Material::Material(Vector3 dif)
+	: diffuse(dif)
 {}
 
-MatLambert::MatLambert()
-	: Material(Vector3(0, 0, 0))
+Material::~Material()
 {}
-
-Vector3 MatLambert::shade(Light *light, IntInfo &info)
-{
-	return lambert(light->position, &info, diffuse, light->intensity);
-}

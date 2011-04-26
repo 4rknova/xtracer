@@ -204,7 +204,16 @@ unsigned int Scene::analyze()
 						<< pad << (i == c ? " " : "|")
 						<< pad << "type: "
 						<<  data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_TYPE);
-
+				else if (!node.compare(XT_CFGPROTO_NODE_OBJECT))
+					std::cout
+						<< "\n"	<< pad << (n ? "|" : " ")
+						<< pad << (i == c ? " " : "|")
+						<< pad << "geometry: "
+						<< data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_GEOMETRY)
+						<< "\n"	<< pad << (n ? "|" : " ")
+						<< pad << (i == c ? " " : "|")
+						<< pad << "material: "
+						<< data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_MATERIAL);
 				// TODO: Here list each item's properties
 				
 				std::cout << "\n";
@@ -390,6 +399,7 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 		return 1;
 	}
 
+	geo->calc_bbox();
 	geometry[p->node()] = geo;
 	return 0;
 }
@@ -402,6 +412,8 @@ unsigned int Scene::add_material(NCFGParser *p)
 
 	std::cout << "Adding material: " << p->node() << " [ " << type << " ]\n";
 
+	std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
+
 	Material *mat = NULL;
 
 	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
@@ -411,15 +423,11 @@ unsigned int Scene::add_material(NCFGParser *p)
 		std::string colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
 		std::string colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
 		std::string colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
 		
 		((MatLambert *)mat)->diffuse = 
 			Vector3(nstring_to_double(colr), 
 					nstring_to_double(colg), 
 					nstring_to_double(colb));
-
-		((MatLambert *)mat)->reflectance = nstring_to_double(refl);
 	}
 	else
 	{
@@ -427,6 +435,7 @@ unsigned int Scene::add_material(NCFGParser *p)
 		return 1;
 	}
 
+	mat->reflectance = nstring_to_double(refl);
 	material[p->node()] = mat;
 
 	return 0;
@@ -464,33 +473,33 @@ unsigned int Scene::add_object(NCFGParser *p)
 		delete tobj;
 		return 1;
 	}
-
 	object[p->node()] = tobj;
 
 	return 0;
 }
 
-bool Scene::intersection(const Ray &ray, IntInfo *info)
+bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 {
-	IntInfo tinf;
-	
+	IntInfo test, res;
+
 	std::map<std::string, Object *>::iterator it;
 	for (it = object.begin(); it != object.end(); it++)
 	{
-		if((geometry[(*it).second->geometry.c_str()])->intersection(ray, &tinf))
+		// test all the objects and find the closest intersection
+		if((geometry[(*it).second->geometry.c_str()])->intersection(ray, &test))
 		{
-			if(tinf.t < info->t)
-			{
-				memcpy(info, &tinf, sizeof(tinf));
-			}
-		}
-	}
-			std::cout << "HIT @" << tinf.t << "\n";
 
-	if (info->t == NM_INFINITY)
-	{
-		std::cout << "miss ";
-		return false;
+			if(res.t > test.t)
+			{
+				// set the object name
+				obj = (*it).first;
+
+				// copy intinfo
+				memcpy(&res, &test, sizeof(res));
+			}
+		}	
 	}
-	return true;
+
+	memcpy(&info, &res, sizeof(info));
+	return info.t != NM_INFINITY ? true : false;
 }

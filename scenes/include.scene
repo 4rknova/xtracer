@@ -2,4 +2,4 @@
 #	inclusion modifier.
 #	:>
 
-%include ball.scene
+%include triball.scene

@@ -28,6 +28,7 @@
 #ifndef XTRACER_SCENE_HPP_INCLUDED
 #define XTRACER_SCENE_HPP_INCLUDED
 
+#include <string>
 #include <map>
 
 #include <nmath/intinfo.h>
@@ -58,7 +59,7 @@ class Scene
 		
 		unsigned int add_object(NCFGParser *p);
 
-		bool intersection(const Ray &ray, IntInfo *info);
+		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
 
 		// The camera
 		Camera *camera;

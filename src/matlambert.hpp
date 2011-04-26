@@ -29,6 +29,7 @@
 #define XTRACER_MAT_LAMBERT_HPP_INCLUDED
 
 #include "material.hpp"
+#include "light.hpp"
 
 class MatLambert: public Material
 {
@@ -37,9 +38,7 @@ class MatLambert: public Material
 		MatLambert();
 
 		// shade
-		Vector3 shade();
-
-		Vector3 diffuse;
+		Vector3 shade(Light *light, IntInfo &info);
 };
 
 #endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */

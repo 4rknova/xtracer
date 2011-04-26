@@ -29,15 +29,20 @@
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
 #include <nmath/vector.h>
+#include <nmath/intinfo.h>
+
+#include "light.hpp"
 
 class Material 
 {
 	public:
+		Material(Vector3 dif);
 		virtual ~Material();
 
 		// shade
-		virtual Vector3 shade();
+		virtual Vector3 shade(Light *light, IntInfo &info) = 0;
 
+		Vector3 diffuse;
 		Vector3 reflectance;
 };
 
