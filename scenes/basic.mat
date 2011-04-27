@@ -1,0 +1,48 @@
+# Xtracer simple materials
+#	To use these materials just include this file 
+#	in your scene's material section
+#	with: %include basic.mat
+
+# plain red matte
+lambert_matte_red = {
+	type = lambert
+	diffuse = {
+		r = 1
+		g = 0
+		b = 0
+	}
+	reflectance = 0.5;
+}
+
+# plain green matte
+lambert_matte_green = {
+	type = lambert
+	diffuse = {
+		r = 0
+		g = 1
+		b = 0
+	}
+	reflectance = 0.5;
+}
+
+# plain blue matte
+lambert_matte_blue = {
+	type = lambert
+	diffuse = {
+		r = 0
+		g = 0
+		b = 1
+	}
+	reflectance = 0.5;
+}
+	
+# plain silver matte
+lambert_matte_silver = {
+	type = lambert
+	diffuse = {
+		r = 0.5
+		g = 0.5
+		b = 0.5
+	}
+	reflectance = 0.5;
+}

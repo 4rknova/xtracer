@@ -43,6 +43,9 @@ XT_DRV driver = XT_SETUP_DEFAULT_DRV;
 int width = XT_SETUP_DEFAULT_WIDTH;
 int height = XT_SETUP_DEFAULT_HEIGHT;
 
+// the camera
+std::string camera;
+
 // verbosity
 unsigned int verbose = 0;
 
@@ -108,6 +111,20 @@ unsigned int parsearg(int argc, char **argv)
 				return 1;
 			}
 		}
+		// camera
+		else if (!strcmp(argv[i], "-cam"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			camera = argv[i];
+		}
+			// ppm driver
 		// verbosity
 		else if (!strcmp(argv[i], "-v"))
 		{
@@ -224,6 +241,10 @@ int main(int argc, char **argv)
 
 		if (verbose)
 			scene.analyze();
+
+		// set the camera
+		scene.set_camera(camera.c_str());
+	
 
 		// render
 		Renderer renderer(fb, scene, drv);

@@ -405,6 +405,7 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 }
 
 #include "matlambert.hpp"
+#include "matphong.hpp"
 
 unsigned int Scene::add_material(NCFGParser *p)
 {
@@ -416,22 +417,57 @@ unsigned int Scene::add_material(NCFGParser *p)
 
 	Material *mat = NULL;
 
+	std::string colr, colg, colb;
+
 	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
 	{
 		mat = new MatLambert();
 
-		std::string colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
-		std::string colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
-		std::string colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
+		// diffuse intensity
+		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
 		
 		((MatLambert *)mat)->diffuse = 
 			Vector3(nstring_to_double(colr), 
 					nstring_to_double(colg), 
 					nstring_to_double(colb));
 	}
+	else if (!type.compare(XT_CFGPROTO_VAL_PHONG))
+	{
+		mat = new MatPhong();
+
+		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		// diffuse intensity
+		((MatPhong *)mat)->diffuse = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		// specular intensity
+		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		// diffuse constant
+		((MatPhong *)mat)->specular = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		// specular constant
+		((MatPhong *)mat)->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
+		// diffuse constant
+		((MatPhong *)mat)->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
+		// specular exponential
+		((MatPhong *)mat)->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
+	}
 	else
 	{
-		std::cout << "Warning: Unsupported model. Skipping...\n";
+		std::cout << "Warning: Unsupported material. Skipping...\n";
 		return 1;
 	}
 
@@ -500,6 +536,8 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 		}	
 	}
 
+	// copy result to info
 	memcpy(&info, &res, sizeof(info));
+
 	return info.t != NM_INFINITY ? true : false;
 }

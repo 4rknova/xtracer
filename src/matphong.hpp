@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    matlambert.hpp
-    MatLambert class
+    mathphong.hpp
+    MatPhong class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,23 +25,28 @@
 
 */
 
-#ifndef XTRACER_MAT_LAMBERT_HPP_INCLUDED
-#define XTRACER_MAT_LAMBERT_HPP_INCLUDED
+#ifndef XTRACER_MAT_PHONG_HPP_INCLUDED
+#define XTRACER_MAT_PHONG_HPP_INCLUDED
 
+#include <nmath/precision.h>
 #include <nmath/vector.h>
 
 #include "material.hpp"
 #include "light.hpp"
 
-class MatLambert: public Material
+class MatPhong: public Material
 {
 	public:
-		MatLambert();
+		MatPhong();
 
 		// shade
 		Vector3 shade(Light *light, IntInfo &info, const Vector3 &ambient);
 
+		Vector3 specular; 	// specular intensity
 		Vector3 diffuse;	// diffuse intensity
+		real_t kspec;		// specular constant
+		real_t kdiff;		// diffuse constant
+		real_t ksexp;		// specular exponential
 };
 
-#endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */
+#endif /* XTRACER_MAT_PHONG_HPP_INCLUDED */

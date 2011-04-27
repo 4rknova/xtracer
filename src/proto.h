@@ -48,14 +48,18 @@
 #define XT_CFGPROTO_PROP_POSITION 		"position"
 #define XT_CFGPROTO_PROP_TARGET   		"target"
 #define XT_CFGPROTO_PROP_UP       		"up"
-
 #define XT_CFGPROTO_PROP_NORMAL			"normal"
 
 #define XT_CFGPROTO_PROP_INTENSITY		"intensity"
 
 #define XT_CFGPROTO_PROP_AMBIENT		"ambient"
-
+#define XT_CFGPROTO_PROP_SPECULAR		"specular"
 #define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
+
+
+#define XT_CFGPROTO_PROP_KDIFF			"kdiff"
+#define XT_CFGPROTO_PROP_KSPEC			"kspec"
+#define XT_CFGPROTO_PROP_KSEXP			"ksexp"
 
 /*
 	PROPERTIES
@@ -91,6 +95,8 @@
 
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
 #define XT_CFGPROTO_VAL_PLANE			"plane"
+
 #define XT_CFGPROTO_VAL_LAMBERT			"lambert"
+#define XT_CFGPROTO_VAL_PHONG			"phong"
 
 #endif /* XTRACER_CFGPROTO_HPP_INCLUDED  */

@@ -51,7 +51,7 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 
 	/* Construct the ray's direction vector. */
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
-	pray.direction.y = (1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
+	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
 	pray.direction.z = 1 / tan(fov / 2.0);
 
 	pray.direction.normalize();

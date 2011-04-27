@@ -27,8 +27,8 @@
 
 #include "material.hpp"
 
-Material::Material(Vector3 dif)
-	: diffuse(dif)
+Material::Material()
+	: reflectance(0)
 {}
 
 Material::~Material()

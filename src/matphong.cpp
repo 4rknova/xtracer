@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    matlambert.hpp
-    MatLambert class
+    matphong.cpp
+    Matphong class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,23 +25,14 @@
 
 */
 
-#ifndef XTRACER_MAT_LAMBERT_HPP_INCLUDED
-#define XTRACER_MAT_LAMBERT_HPP_INCLUDED
+#include <nmath/phong.h>
 
-#include <nmath/vector.h>
+#include "matphong.hpp"
 
-#include "material.hpp"
-#include "light.hpp"
+MatPhong::MatPhong()
+{}
 
-class MatLambert: public Material
+Vector3 MatPhong::shade(Light *light, IntInfo &info, const Vector3 &ambient)
 {
-	public:
-		MatLambert();
-
-		// shade
-		Vector3 shade(Light *light, IntInfo &info, const Vector3 &ambient);
-
-		Vector3 diffuse;	// diffuse intensity
-};
-
-#endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */
+	return phong(light->position, &info, light->intensity, kspec, kdiff, ksexp, diffuse, specular);
+}

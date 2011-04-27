@@ -29,15 +29,10 @@
 
 #include "matlambert.hpp"
 
-MatLambert::MatLambert(const Vector3 &ints)
-	: Material(ints)
-{}
-
 MatLambert::MatLambert()
-	: Material(Vector3(0, 0, 0))
 {}
 
-Vector3 MatLambert::shade(Light *light, IntInfo &info)
+Vector3 MatLambert::shade(Light *light, IntInfo &info, const Vector3 &ambient)
 {
-	return lambert(light->position, &info, diffuse, light->intensity);
+	return (diffuse * ambient) + lambert(light->position, &info, light->intensity, diffuse);
 }

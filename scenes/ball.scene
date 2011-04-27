@@ -19,18 +19,18 @@ camera = {
 		position = {
 			x = 0 
 			y = 0
-			z = -10
+			z = -100
 		}
 		
 		target = {
 			x = 0
 			y = 0
-			z = 130 
+			z = 0 
 		}
 
 		up = {
 			x = 0
-			y = -1
+			y = 1
 			z = 0
 		}
 	}
@@ -38,7 +38,7 @@ camera = {
 
 geometry = {
 
-	ball = {
+	sphere = {
 
 		type = sphere
 
@@ -48,7 +48,7 @@ geometry = {
 			z = 130
 		}
 
-		radius = 25
+		radius = 75
 	}
 }
 
@@ -63,23 +63,23 @@ light = {
 		}
 
 		intensity = {
-			r = 0
-			g = 0
-			b = 1
+			r = 0.43
+			g = 0.63
+			b = 0.51
 		}
 	}
 }
 
 material = {
 
-	mat1 = {
+	plastic = {
 
 		type = lambert
 		
 		diffuse = {
-			r = 0
-			g = 0
-			b = 0.55
+			r = 0.6
+			g = 0.6
+			b = 0.6
 		}
 
 		reflectance = 0.5;
@@ -88,9 +88,9 @@ material = {
 
 object = {
 
-	ball = {
+	sphere = {
 
-		geometry = ball
-		material = mat1
+		geometry = sphere
+		material = plastic
 	}
 }

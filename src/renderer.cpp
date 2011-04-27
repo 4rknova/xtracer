@@ -152,22 +152,32 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	if (!depth)
 		return color;
 
-
-	// calculate shadows
-	Vector3 n = info.normal;
-	Vector3 p = info.point;
-	Vector3 v = (ray.origin - p).normalized();
-
 	std::map<std::string, Light *>::iterator it;
 	Material *mat = m_scene->material[m_scene->object[obj]->material];
 
-	color = mat->diffuse * m_scene->ambient;
 	for (it = m_scene->light.begin(); it != m_scene->light.end(); it++)
 	{
 		Light *light = (*it).second;
 
-		// shade
-		color += mat->shade(light, info);
+		// calculate shadows
+		Vector3 n = info.normal;
+		Vector3 p = info.point;
+		Vector3 v = light->position - p;
+
+		Ray sray;
+		sray.origin = p;
+		sray.direction = v.normalized();
+		real_t distance = v.length();
+
+		// if the point is not in shadow for this light
+		std::string obj;
+		IntInfo res;
+		bool test = m_scene->intersection(sray, res, obj);
+		if (!test || res.t < EPSILON || res.t > distance) 
+		{
+			// shade
+			color += mat->shade(light, info, m_scene->ambient);
+		}
 	}
 
 	return color;
