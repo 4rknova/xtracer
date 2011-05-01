@@ -56,9 +56,10 @@ bin: $(bin)
 test: $(bin)
 	clear
 
-	./bin/xtracer ./scenes/inc* -res 320x180 -v
-#	./bin/xtracer ./scenes/inc* -res 640x360 -v
-#	./bin/xtracer ./scenes/inc* -res 1280x720 -v
+#	./bin/xtracer ./scenes/room* -res 320x180 -v
+#	./bin/xtracer ./scenes/room* -res 512x512 -v
+	./bin/xtracer ./scenes/room* -res 640x360 -v
+#	./bin/xtracer ./scenes/room* -res 1280x720 -v
 
 .PHONY: clean
 clean:

@@ -32,7 +32,7 @@
 MatLambert::MatLambert()
 {}
 
-Vector3 MatLambert::shade(Light *light, IntInfo &info, const Vector3 &ambient)
+Vector3 MatLambert::shade(Light *light, IntInfo &info)
 {
-	return (diffuse * ambient) + lambert(light->position, &info, light->intensity, diffuse);
+	return lambert(light->position, &info, light->intensity, diffuse);
 }

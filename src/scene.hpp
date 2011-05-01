@@ -59,7 +59,7 @@ class Scene
 		
 		unsigned int add_object(NCFGParser *p);
 
-		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
+		bool intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights=false);
 
 		// The camera
 		Camera *camera;
@@ -70,8 +70,10 @@ class Scene
 		std::map<std::string, Geometry *> geometry;
 		std::map<std::string, Object *> object;
 
-		// Background color
-		Vector3 ambient;
+		// Ambient
+		Vector3 ambient;	// intensity
+		real_t k_ambient;	// ratio
+
 
 		// The scene's source filepath and filename
 		const std::string source;

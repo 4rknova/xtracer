@@ -28,8 +28,9 @@
 #ifndef XTRACER_FB_HPP_INCLUDED
 #define XTRACER_FB_HPP_INCLUDED
 
-#include <stdint.h>
 #include <string>
+#include <nmath/precision.h>
+#include <nmath/vector.h>
 
 #define FB_DEFAULT_TAG "framebuffer"
 
@@ -43,10 +44,12 @@ class Framebuffer
 		unsigned int height();
 		std::string &tag(const char *tag=NULL);
 
+		// Apply gamma
+		void apply_gamma(real_t v);
 
-		/* Pixels are being accessed starting with (0,0). In case of out of bounds exceptions, the last pixel is affected */
-		uint32_t get_pixel(unsigned int x, unsigned int y);	
-		uint32_t set_pixel(unsigned int x, unsigned int y, uint32_t value);	/* The pixel value is returned for chaining */
+		// Pixels are being accessed starting with (0,0). 
+		// In case of out of bounds exceptions, the last pixel is affected.
+		Vector3 *pixel(unsigned int x, unsigned int y);	
 
 	private:
 		std::string m_tag;
@@ -54,7 +57,7 @@ class Framebuffer
 		const unsigned int m_width;
 		const unsigned int m_height;
 
-		uint32_t *m_pixels;
+		Vector3 *m_pixels;
 };
 
 #endif /* XTRACER_FB_HPP_INCLUDED */

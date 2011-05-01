@@ -36,12 +36,13 @@
 
 typedef uint32_t pixel32_t;
 
-pixel32_t rgba_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
+pixel32_t rgba_c_to_pixel32(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
+pixel32_t rgba_f_to_pixel32(double red, double green, double blue, double alpha);
 
-unsigned int get_pixel32_r(pixel32_t color);
-unsigned int get_pixel32_g(pixel32_t color);
-unsigned int get_pixel32_b(pixel32_t color);
-unsigned int get_pixel32_a(pixel32_t color);
+unsigned char get_pixel32_r(pixel32_t color);
+unsigned char get_pixel32_g(pixel32_t color);
+unsigned char get_pixel32_b(pixel32_t color);
+unsigned char get_pixel32_a(pixel32_t color);
 
 #ifdef __cplusplus
 	}   /* extern "C" */

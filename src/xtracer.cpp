@@ -49,6 +49,12 @@ std::string camera;
 // verbosity
 unsigned int verbose = 0;
 
+// gamma correction
+double gamma_correction = XT_SETUP_DEFAULT_GAMMA;
+
+// other flags
+bool flag_render_light_positions = false;
+
 unsigned int parsearg(int argc, char **argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -66,7 +72,7 @@ unsigned int parsearg(int argc, char **argv)
 			
             if (sscanf(argv[i], "%dx%d", &width, &height) < 2)
 			{
-                std::cerr << "Invalid " << argv[i-1] << " value. Should be %%ix%%i.\n";
+                std::cerr << "Invalid " << argv[i-1] << " value. Should be %ix%i.\n";
                 return 1;
             }
 
@@ -111,6 +117,24 @@ unsigned int parsearg(int argc, char **argv)
 				return 1;
 			}
 		}
+		// gamma
+		else if (!strcmp(argv[i], "-gamma"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+            if (sscanf(argv[i], "%lf", &gamma_correction) < 1)
+			{
+                std::cerr << "Invalid " << argv[i-1] << " value. Should be a %lf.\n";
+				
+                return 1;
+            }
+		}
 		// camera
 		else if (!strcmp(argv[i], "-cam"))
 		{
@@ -124,7 +148,10 @@ unsigned int parsearg(int argc, char **argv)
 
 			camera = argv[i];
 		}
-			// ppm driver
+		else if (!strcmp(argv[i], "-lightpos"))
+		{
+			flag_render_light_positions = true;
+		}
 		// verbosity
 		else if (!strcmp(argv[i], "-v"))
 		{
@@ -245,10 +272,11 @@ int main(int argc, char **argv)
 		// set the camera
 		scene.set_camera(camera.c_str());
 	
-
 		// render
 		Renderer renderer(fb, scene, drv);
 		renderer.verbosity(verbose);
+		renderer.light_geometry(flag_render_light_positions);
+		renderer.gamma_correction(gamma_correction);
 		renderer.render();
 	}
 	

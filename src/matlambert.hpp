@@ -39,7 +39,7 @@ class MatLambert: public Material
 		MatLambert();
 
 		// shade
-		Vector3 shade(Light *light, IntInfo &info, const Vector3 &ambient);
+		Vector3 shade(Light *light, IntInfo &info);
 
 		Vector3 diffuse;	// diffuse intensity
 };

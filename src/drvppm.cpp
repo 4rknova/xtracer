@@ -93,15 +93,13 @@ unsigned int DrvPPM::update(unsigned int x0, unsigned int y0, unsigned int x1, u
 	{
 		for(unsigned int x = x0; x < x1; x++)
 		{
-			uint32_t pixel = m_fb->get_pixel(x, y);
+			Vector3 pixel = *(m_fb->pixel(x, y));
 
-			int r = get_pixel32_r(pixel);
-			int g = get_pixel32_g(pixel);
-			int b = get_pixel32_b(pixel);
+			pixel32_t p = rgba_f_to_pixel32(pixel.x, pixel.y, pixel.z, 1.0);
 
-			fputc(r, fp);
-			fputc(g, fp);
-			fputc(b, fp);
+			fputc(get_pixel32_r(p), fp);
+			fputc(get_pixel32_g(p), fp);
+			fputc(get_pixel32_b(p), fp);
 		}
 	}
 

@@ -106,14 +106,16 @@ unsigned int DrvSDL::update(unsigned int x0, unsigned int y0, unsigned int x1, u
 	{
 		for(unsigned int x = x0; x < x1; x++)
 		{
-			pixel32_t pixel = m_fb->get_pixel(x, y);
+			Vector3 pixel = *(m_fb->pixel(x, y));
+
+			pixel32_t p = rgba_f_to_pixel32(pixel.x, pixel.y, pixel.z, 1.0);
 			
 			pixels[(y * m_screen->w) + x] = 
 				SDL_MapRGB( 
 						m_screen->format, 
-						get_pixel32_r(pixel), 
-						get_pixel32_g(pixel), 
-						get_pixel32_b(pixel));
+						get_pixel32_r(p), 
+						get_pixel32_g(p), 
+						get_pixel32_b(p));
 		}
 	}
 

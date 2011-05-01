@@ -39,6 +39,7 @@
 Scene::Scene(const char *filepath)
 	: 
 		camera(new Camera()),
+		k_ambient(0.1),
 		source(filepath),
 		data(filepath)
 {}
@@ -228,13 +229,15 @@ unsigned int Scene::analyze()
 
 unsigned int Scene::set_ambient()
 {
-	std::string r, g, b;
+	std::string r, g, b, k;
 	r = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_R);
 	g = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_G);
 	b = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_B);
 
-	ambient = Vector3(nstring_to_double(r), nstring_to_double(g), nstring_to_double(b));
+	k = data.get(XT_CFGPROTO_PROP_KAMBN);
 
+	ambient = Vector3(nstring_to_double(r), nstring_to_double(g), nstring_to_double(b));
+	k_ambient = nstring_to_double(k);
 	return 0;
 }
 
@@ -341,6 +344,7 @@ unsigned int Scene::add_light(NCFGParser *p)
 
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
+#include <nmath/triangle.h>
 
 unsigned int Scene::add_geometry(NCFGParser *p)
 {
@@ -392,14 +396,53 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 		// set the distance
 		((Plane *)geo)->distance = nstring_to_double(d);
 	}
+	// triangle
+	else if (!type.compare(XT_CFGPROTO_VAL_TRIANGLE))
+	{
+		geo = new Triangle();
+
+		std::string x, y, z, d;
+
+		unsigned int c = p->group(XT_CFGPROTO_PROP_VECDATA)->count_groups();
+
+		if (c != 3)
+		{
+			std::cout 
+				<< "Error: Geometry " << p->node()  
+				<< " provided " << c << " vertices for a triangle.\n";
+
+			delete geo;
+			return 1;
+		}
+
+		for (unsigned int i = 1; i < c+1; i++)
+		{
+			x = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_X);
+			y = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Y);
+			z = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Z);
+
+			((Triangle *)geo)->v[i-1].position = 
+					Vector3(nstring_to_double(x),
+							nstring_to_double(y),
+							nstring_to_double(z));
+		}
+	}
 	// unknown
 	else
 	{
-		std::cout << "Warning: Unknown type: " << type <<". Ingoring..\n";
+		std::cout << "Warning: Unsupported type";
+
+		if (!type.empty())
+		{
+			std::cout << ": " << type ;
+		}
+
+		std::cout << ". Ingoring..\n";
+
 		return 1;
 	}
 
-	geo->calc_bbox();
+	geo->calc_aabb();
 	geometry[p->node()] = geo;
 	return 0;
 }
@@ -514,7 +557,7 @@ unsigned int Scene::add_object(NCFGParser *p)
 	return 0;
 }
 
-bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
+bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights)
 {
 	IntInfo test, res;
 
@@ -533,7 +576,28 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 				// copy intinfo
 				memcpy(&res, &test, sizeof(res));
 			}
-		}	
+		}
+	}
+
+	// check for light intersections
+	if (lights)
+	{
+		std::map<std::string, Light *>::iterator itl;
+		for (itl = light.begin(); itl != light.end(); itl++)
+		{
+			Sphere light;
+			light.origin = (*itl).second->position;
+			light.radius = 20;
+			light.calc_aabb();
+
+			if (light.intersection(ray, &test))
+			{
+				if(res.t > test.t)
+				{
+					obj.clear();	
+				}
+			}
+		}
 	}
 
 	// copy result to info
@@ -541,3 +605,5 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 
 	return info.t != NM_INFINITY ? true : false;
 }
+
+

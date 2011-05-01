@@ -32,7 +32,7 @@
 MatPhong::MatPhong()
 {}
 
-Vector3 MatPhong::shade(Light *light, IntInfo &info, const Vector3 &ambient)
+Vector3 MatPhong::shade(Light *light, IntInfo &info)
 {
 	return phong(light->position, &info, light->intensity, kspec, kdiff, ksexp, diffuse, specular);
 }

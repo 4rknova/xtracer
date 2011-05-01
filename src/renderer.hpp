@@ -28,6 +28,7 @@
 #ifndef XTRACER_RENDERER_HPP_INCLUDED
 #define XTRACER_RENDERER_HPP_INCLUDED
 
+#include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nmath/intinfo.h>
@@ -35,8 +36,6 @@
 #include "fb.hpp"
 #include "scene.hpp"
 #include "drv.hpp"
-
-#include "pixel.h"
 
 #define XT_SETUP_DEFAULT_RDEPTH 100
 
@@ -49,6 +48,12 @@ class Renderer
 		unsigned int render();
 		// set / get verbosity level ( v < 0 returns status without changing it)
 		unsigned int verbosity(int v);
+
+		// set / get the light geometry flag
+		bool light_geometry(int v);
+
+		// set / get the gamma correction
+		real_t gamma_correction(real_t v);
 
 	protected:
 		// renders the current frame
@@ -69,6 +74,12 @@ class Renderer
 
 		// verbosity
 		unsigned int m_verbosity;
+
+		// gamma correction
+		real_t m_gamma;
+
+		// flags
+		bool m_f_light_geometry; // if true, light sources will be treated as spheres
 };
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

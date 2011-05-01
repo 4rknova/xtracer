@@ -31,7 +31,7 @@ Framebuffer::Framebuffer(unsigned int width, unsigned int height):
 	m_tag(FB_DEFAULT_TAG),
 	m_width(width > 0 ? width : 1), 
 	m_height(height > 0 ? height : 1),
-	m_pixels(new uint32_t[m_width * m_height])
+	m_pixels(new Vector3[m_width * m_height])
 {}
 
 Framebuffer::~Framebuffer()
@@ -57,16 +57,23 @@ std::string &Framebuffer::tag(const char *tag)
 	return m_tag;
 }
 
-uint32_t Framebuffer::get_pixel(unsigned int x, unsigned int y)
+Vector3 *Framebuffer::pixel(unsigned int x, unsigned int y)
 {
 	unsigned int n = y * m_width + x;
-	return (x < m_width) ? ((y < m_height) ? m_pixels[n] : m_pixels[m_width * m_height - 1])  : m_pixels[m_width * m_height - 1];
+	return (x < m_width) ? ((y < m_height) ? &m_pixels[n] : &m_pixels[m_width * m_height - 1])  : &m_pixels[m_width * m_height - 1];
 }
 
-uint32_t Framebuffer::set_pixel(unsigned int x, unsigned int y, uint32_t value)
+#include <nmath/gamma.h>
+
+void Framebuffer::apply_gamma(real_t v)
 {
-	unsigned int n = y * m_width + x;
-	uint32_t *target =(x < m_width) ? ((y < m_height) ? &m_pixels[n] : &m_pixels[m_width * m_height - 1])  : &m_pixels[m_width * m_height - 1];
-	*target =  value;
-	return value;
+	for (unsigned int y = 0; y < m_height; y++)
+	{
+		for (unsigned int x = 0; x < m_width; x++)
+		{
+			Vector3 *p = pixel(x, y);
+			*p = gamma(*p, v);
+		}
+	}
 }
+

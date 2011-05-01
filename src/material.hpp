@@ -40,7 +40,7 @@ class Material
 		virtual ~Material();
 
 		// shade
-		virtual Vector3 shade(Light *light, IntInfo &info, const Vector3 &ambient) = 0;
+		virtual Vector3 shade(Light *light, IntInfo &info) = 0;
 
 		Vector3 reflectance;
 };

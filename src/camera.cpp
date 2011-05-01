@@ -41,7 +41,8 @@ Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx)
 #include <iostream>
 Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
-	Ray pray;		/* Primary ray */
+	/* Primary ray */
+	Ray pray;
 
 	/* Set the primary ray's origin at the camera's position. */
 	pray.origin = position;
@@ -80,7 +81,9 @@ Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, 
 
 	rz = camdir;
 	rx = cross(up, rz);
+	rx.normalize();
 	ry = cross(rx, rz);
+	ry.normalize();
 
 	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 
 					rx.y, ry.y, rz.y, 0,

@@ -9,7 +9,6 @@ About
 
 Dependencies
 ------------
-	* pthreads
-	* libsdl
-	* [libnmath](https://github.com/4rknova/libnmath)
-	* [libnparse](https://github.com/4rknova/libnparse)
+	libsdl
+	[libnmath](https://github.com/4rknova/libnmath)
+	[libnparse](https://github.com/4rknova/libnparse)

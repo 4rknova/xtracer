@@ -30,7 +30,13 @@
 #include "renderer.hpp"
 
 Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int depthlim)
-	: m_fb(&fb), m_scene(&scene), m_drv(drv), max_depth(depthlim), m_verbosity(0)
+	: m_fb(&fb), 
+	m_scene(&scene), 
+	m_drv(drv), 
+	max_depth(depthlim), 
+	m_verbosity(0), 
+	m_gamma(1),
+	m_f_light_geometry(false)
 {}
 
 // report the progress
@@ -63,18 +69,26 @@ void rprog(float progress)
 #include <nmath/sphere.h>
 unsigned int Renderer::render()
 {
-	// initiate the output driver
-	m_drv->init();
-
 	// get the source file name
 	std::string path, file;
 	nstring_path_comp(m_scene->source, path, file);
+
 	// tag the framebuffer
 	m_fb->tag(file.c_str());
-	
+
+	// initiate the output driver
+	m_drv->init();
+
 	// render the frame
 	if (render_frame())
 		return 1;
+
+	// apply gamma correction
+	if (m_gamma != 1.0)
+	{
+		std::cout << "Applying gamma correction: " << m_gamma << "\n";
+		m_fb->apply_gamma(m_gamma);
+	}
 
 	// update the output
 	m_drv->update();
@@ -89,7 +103,6 @@ unsigned int Renderer::render_frame()
 	// precalculate some constants
 	const unsigned int w = m_fb->width();
 	const unsigned int h = m_fb->height();
-	const unsigned int pixel_count = (w * h) - 1;
 	float progress = 0;
 
 	// setup the output
@@ -103,25 +116,14 @@ unsigned int Renderer::render_frame()
 			// generate primary ray and trace it
 			Ray ray = m_scene->camera->get_primary_ray(x, y, w, h);
 			Vector3 color = trace(ray, max_depth);
-
-			// correct the color
-			color.x = color.x > 1.0 ? 1.0 : color.x;
-			color.y = color.y > 1.0 ? 1.0 : color.y;
-			color.z = color.z > 1.0 ? 1.0 : color.z;
-
-			// convert to pixel and update the framebuffer
-			color *= 255;
-			pixel32_t pixel = rgba_to_pixel32(
-				(char)color.x, 
-				(char)color.y, 
-				(char)color.z, 
-				255);
-
-			m_fb->set_pixel(x, y, pixel);
-			progress = (y * w + x) / (float)(pixel_count) * 100;
+			
+			*(m_fb->pixel(x, y)) += color;
 		}
 
 		// calculate progress
+		progress = y / (float)(h-1) * 100;
+
+		// report progress
 		rprog(progress);
 	}
 
@@ -136,7 +138,7 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth)
 
 	// Check for ray intersection
 	std::string obj; // this will hold the object name
-	if (m_scene->intersection(ray, info, obj))
+	if (m_scene->intersection(ray, info, obj, m_f_light_geometry))
 	{
 		return shade(ray, depth, info, obj);
 	}
@@ -144,16 +146,27 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth)
 	return Vector3(0, 0, 0);
 }
 
+#include "matlambert.hpp"
+
 Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj)
 {
-	Vector3 color = Vector3(0, 0, 0);
-	
+	Vector3 color;
+		
+	// check if the intersection geometry is a light
+	if (obj.empty())
+	{
+		return Vector3(1, 1, 0);
+	}
+
 	// check if the depth limit was reached
 	if (!depth)
 		return color;
 
 	std::map<std::string, Light *>::iterator it;
 	Material *mat = m_scene->material[m_scene->object[obj]->material];
+	
+	// ambient
+	color = m_scene->ambient * m_scene->k_ambient * ((MatLambert*)mat)->diffuse;
 
 	for (it = m_scene->light.begin(); it != m_scene->light.end(); it++)
 	{
@@ -176,7 +189,7 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 		if (!test || res.t < EPSILON || res.t > distance) 
 		{
 			// shade
-			color += mat->shade(light, info, m_scene->ambient);
+			color += mat->shade(light, info);
 		}
 	}
 
@@ -188,4 +201,18 @@ unsigned int Renderer::verbosity(int v)
 	if(v < 0)
 		return m_verbosity;
 	return m_verbosity = v;
+}
+
+bool Renderer::light_geometry(int v)
+{
+	if (v < 0)
+		return m_f_light_geometry;
+	return m_f_light_geometry = (v == 0 ? false : true);
+}
+
+real_t Renderer::gamma_correction(real_t v)
+{
+	if (v < 0)
+		return m_gamma;
+	return m_gamma = v;
 }

@@ -34,4 +34,6 @@
 #define XT_SETUP_DEFAULT_HEIGHT		480
 #define XT_SETUP_DEFAULT_DRV		XT_DRV_SDL
 
+#define XT_SETUP_DEFAULT_GAMMA		1 			// No gamma correction by default
+
 #endif /* XTRACER_SETUP_H_INCLUDED */

@@ -56,10 +56,10 @@
 #define XT_CFGPROTO_PROP_SPECULAR		"specular"
 #define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
 
-
-#define XT_CFGPROTO_PROP_KDIFF			"kdiff"
-#define XT_CFGPROTO_PROP_KSPEC			"kspec"
-#define XT_CFGPROTO_PROP_KSEXP			"ksexp"
+#define XT_CFGPROTO_PROP_KAMBN			"k_ambient"
+#define XT_CFGPROTO_PROP_KDIFF			"k_diffuse"
+#define XT_CFGPROTO_PROP_KSPEC			"k_specular"
+#define XT_CFGPROTO_PROP_KSEXP			"k_spec_exp"
 
 /*
 	PROPERTIES
@@ -80,6 +80,8 @@
 #define XT_CFGPROTO_PROP_GEOMETRY		"geometry"
 #define XT_CFGPROTO_PROP_MATERIAL       "material"
 
+#define XT_CFGPROTO_PROP_VECDATA		"vecdata"
+
 #define XT_CFGPROTO_PROP_COORD_X        "x"
 #define XT_CFGPROTO_PROP_COORD_Y        "y"
 #define XT_CFGPROTO_PROP_COORD_Z        "z"
@@ -95,6 +97,7 @@
 
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
 #define XT_CFGPROTO_VAL_PLANE			"plane"
+#define XT_CFGPROTO_VAL_TRIANGLE		"triangle"
 
 #define XT_CFGPROTO_VAL_LAMBERT			"lambert"
 #define XT_CFGPROTO_VAL_PHONG			"phong"
