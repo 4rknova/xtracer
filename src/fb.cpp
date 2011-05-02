@@ -65,15 +65,23 @@ Vector3 *Framebuffer::pixel(unsigned int x, unsigned int y)
 
 #include <nmath/gamma.h>
 
+void Framebuffer::clear(Vector3 v)
+{
+	for (unsigned int y = 0; y < m_height; y++)
+		for (unsigned int x = 0; x < m_width; x++)
+		{
+			Vector3 *p = pixel(x, y);
+			*p = v;
+		}
+}
+
 void Framebuffer::apply_gamma(real_t v)
 {
 	for (unsigned int y = 0; y < m_height; y++)
-	{
 		for (unsigned int x = 0; x < m_width; x++)
 		{
 			Vector3 *p = pixel(x, y);
 			*p = gamma(*p, v);
 		}
-	}
 }
 

@@ -40,7 +40,7 @@ class MatPhong: public Material
 		MatPhong();
 
 		// shade
-		Vector3 shade(Light *light, IntInfo &info);
+		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
 
 		Vector3 specular; 	// specular intensity
 		Vector3 diffuse;	// diffuse intensity

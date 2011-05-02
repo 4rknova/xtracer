@@ -35,5 +35,6 @@
 #define XT_SETUP_DEFAULT_DRV		XT_DRV_SDL
 
 #define XT_SETUP_DEFAULT_GAMMA		1 			// No gamma correction by default
+#define XT_SETUP_DEFAULT_MAXRDEPTH	10			// Maximum recursion depth
 
 #endif /* XTRACER_SETUP_H_INCLUDED */

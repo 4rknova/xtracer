@@ -52,6 +52,9 @@ unsigned int verbose = 0;
 // gamma correction
 double gamma_correction = XT_SETUP_DEFAULT_GAMMA;
 
+// maximum recursion depth
+int max_rdepth = XT_SETUP_DEFAULT_MAXRDEPTH;
+
 // other flags
 bool flag_render_light_positions = false;
 
@@ -84,6 +87,31 @@ unsigned int parsearg(int argc, char **argv)
 				return 1;
 			}
         }
+		// maximum recursion depth
+		else if (!strcmp(argv[i], "-depth"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			if (sscanf(argv[i], "%d", &max_rdepth) < 1)
+			{
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be %ix%i.\n";
+				return 1;
+			}
+
+			if (max_rdepth <= 0)
+			{
+				std::cerr
+					<< "Invalid " << argv[i-1] << " value. "
+					<< "You provided a negative number.\n";
+				return 1;
+			}
+		}
 		// output driver
 		else if (!strcmp(argv[i], "-drv"))
 		{
@@ -273,7 +301,7 @@ int main(int argc, char **argv)
 		scene.set_camera(camera.c_str());
 	
 		// render
-		Renderer renderer(fb, scene, drv);
+		Renderer renderer(fb, scene, drv, max_rdepth);
 		renderer.verbosity(verbose);
 		renderer.light_geometry(flag_render_light_positions);
 		renderer.gamma_correction(gamma_correction);

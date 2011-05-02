@@ -59,7 +59,7 @@
 #define XT_CFGPROTO_PROP_KAMBN			"k_ambient"
 #define XT_CFGPROTO_PROP_KDIFF			"k_diffuse"
 #define XT_CFGPROTO_PROP_KSPEC			"k_specular"
-#define XT_CFGPROTO_PROP_KSEXP			"k_spec_exp"
+#define XT_CFGPROTO_PROP_KSEXP			"k_specexp"
 
 /*
 	PROPERTIES

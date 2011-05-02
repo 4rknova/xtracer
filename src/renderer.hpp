@@ -37,7 +37,7 @@
 #include "scene.hpp"
 #include "drv.hpp"
 
-#define XT_SETUP_DEFAULT_RDEPTH 100
+#define XT_SETUP_DEFAULT_RDEPTH 2 
 
 class Renderer
 {
@@ -55,6 +55,9 @@ class Renderer
 		// set / get the gamma correction
 		real_t gamma_correction(real_t v);
 
+		// set / get the maximum recursion depth
+		unsigned int max_recursion_depth(unsigned int v);
+
 	protected:
 		// renders the current frame
 		unsigned int render_frame();
@@ -70,7 +73,7 @@ class Renderer
 		Driver *m_drv;
 
 		// recursion depth limit
-		unsigned int max_depth;
+		unsigned int max_rdepth;
 
 		// verbosity
 		unsigned int m_verbosity;

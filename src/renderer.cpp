@@ -33,7 +33,7 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	: m_fb(&fb), 
 	m_scene(&scene), 
 	m_drv(drv), 
-	max_depth(depthlim), 
+	max_rdepth(depthlim), 
 	m_verbosity(0), 
 	m_gamma(1),
 	m_f_light_geometry(false)
@@ -115,7 +115,7 @@ unsigned int Renderer::render_frame()
 		{
 			// generate primary ray and trace it
 			Ray ray = m_scene->camera->get_primary_ray(x, y, w, h);
-			Vector3 color = trace(ray, max_depth);
+			Vector3 color = trace(ray, max_rdepth);
 			
 			*(m_fb->pixel(x, y)) += color;
 		}
@@ -166,15 +166,15 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	Material *mat = m_scene->material[m_scene->object[obj]->material];
 	
 	// ambient
-	color = m_scene->ambient * m_scene->k_ambient * ((MatLambert*)mat)->diffuse;
+	color = m_scene->ambient * m_scene->k_ambient * mat->diffuse;
+		
+	// calculate shadows
+	Vector3 n = info.normal;
+	Vector3 p = info.point;
 
 	for (it = m_scene->light.begin(); it != m_scene->light.end(); it++)
 	{
 		Light *light = (*it).second;
-
-		// calculate shadows
-		Vector3 n = info.normal;
-		Vector3 p = info.point;
 		Vector3 v = light->position - p;
 
 		Ray sray;
@@ -189,8 +189,17 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 		if (!test || res.t < EPSILON || res.t > distance) 
 		{
 			// shade
-			color += mat->shade(light, info);
+			color += mat->shade(m_scene->camera, light, info);
 		}
+	}
+
+	// reflection
+	if( mat->reflectance > 0.0)
+	{
+		Ray reflray;
+		reflray.origin = p;
+		reflray.direction = (ray.direction).reflected(n);
+		color += mat->reflectance * trace(reflray, depth-1);
 	}
 
 	return color;
@@ -215,4 +224,9 @@ real_t Renderer::gamma_correction(real_t v)
 	if (v < 0)
 		return m_gamma;
 	return m_gamma = v;
+}
+
+unsigned int Renderer::max_recursion_depth(unsigned int v)
+{
+	return max_rdepth = v;
 }

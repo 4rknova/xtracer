@@ -93,9 +93,10 @@ void Scene::cleanup()
 
 unsigned int Scene::init()
 {
-	std::cout << "Initiating the scene..\n";		
+	std::cout << "Initiating the scene..\n";
 
 	// Load the scene file and parse it
+	std::cout << "Parsing.. \n";
 	int status = data.parse();
 	if(status)
 	{
@@ -104,10 +105,10 @@ unsigned int Scene::init()
 	}
 
 	// Start populating the lists
+	std::cout << "Setting up the scene environment..\n";
 	unsigned int count = 0;
 
 	set_ambient();			// Set the scene ambient color
-	set_camera(NULL);		// Set the camera
 
 	std::list<std::string> sections;
 	sections.push_back(XT_CFGPROTO_NODE_LIGHT);
@@ -117,12 +118,14 @@ unsigned int Scene::init()
 
 	std::list<std::string>::iterator it;
 
+	std::cout << "Creating scene entities..\n";
 	for (it = sections.begin(); it != sections.end(); it++)
 	{
 		// Populate the groups
 		count = data.group((*it).c_str())->count_groups();
 		if (count)
 		{
+			std::cout << "-> section: " << (*it).c_str() << "\n";
 			for (unsigned int i = 1; i<= count; i++)
 			{
 				NCFGParser *lnode = data.group((*it).c_str())->group(i);
@@ -312,8 +315,6 @@ unsigned int Scene::set_camera(const char *name)
 
 unsigned int Scene::add_light(NCFGParser *p)
 {
-	std::cout << "Adding light: " << p->node() << "\n";
-
 	// extract the light properties
 	// position
 	std::string posx = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
@@ -349,8 +350,6 @@ unsigned int Scene::add_light(NCFGParser *p)
 unsigned int Scene::add_geometry(NCFGParser *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
-
-	std::cout << "Adding geometry: " << p->node() << " [ " << type << " ]\n";
 
 	Geometry *geo = NULL;
 
@@ -430,7 +429,7 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 	// unknown
 	else
 	{
-		std::cout << "Warning: Unsupported type";
+		std::cout << "Warning: Unsupported type " << p->node() << " [ " << type << " ]";
 
 		if (!type.empty())
 		{
@@ -454,10 +453,6 @@ unsigned int Scene::add_material(NCFGParser *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
-	std::cout << "Adding material: " << p->node() << " [ " << type << " ]\n";
-
-	std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
-
 	Material *mat = NULL;
 
 	std::string colr, colg, colb;
@@ -479,6 +474,9 @@ unsigned int Scene::add_material(NCFGParser *p)
 	else if (!type.compare(XT_CFGPROTO_VAL_PHONG))
 	{
 		mat = new MatPhong();
+
+		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
+		mat->reflectance = nstring_to_double(refl);
 
 		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
 		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
@@ -510,11 +508,10 @@ unsigned int Scene::add_material(NCFGParser *p)
 	}
 	else
 	{
-		std::cout << "Warning: Unsupported material. Skipping...\n";
+		std::cout << "Warning: Unsupported material " << p->node() << ". Skipping...\n";
 		return 1;
 	}
 
-	mat->reflectance = nstring_to_double(refl);
 	material[p->node()] = mat;
 
 	return 0;
@@ -522,8 +519,6 @@ unsigned int Scene::add_material(NCFGParser *p)
 
 unsigned int Scene::add_object(NCFGParser *p)
 {
-	std::cout << "Adding object: " << p->node() << "\n";
-	
 	std::string comp;
 	Object *tobj = new Object;
 
@@ -535,7 +530,9 @@ unsigned int Scene::add_object(NCFGParser *p)
 	}
 	else
 	{
-		std::cerr << "Warning: geometry " << comp << " does not exist. Skipping.\n";
+		std::cerr 
+			<< "Warning: At object: " << p->node() 
+			<<  " geometry " << comp << " does not exist. Skipping.\n";
 		delete tobj;
 		return 1;
 	}
@@ -548,7 +545,9 @@ unsigned int Scene::add_object(NCFGParser *p)
 	}
 	else
 	{
-		std::cerr << "Warning: material " << comp << " does not exist. Skipping.\n";
+		std::cerr
+			<< "Warning: At object: " << p->node() 
+			<<  " material " << comp << " does not exist. Skipping.\n";
 		delete tobj;
 		return 1;
 	}

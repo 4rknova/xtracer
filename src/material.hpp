@@ -31,6 +31,7 @@
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
 
+#include "camera.hpp"
 #include "light.hpp"
 
 class Material 
@@ -40,9 +41,10 @@ class Material
 		virtual ~Material();
 
 		// shade
-		virtual Vector3 shade(Light *light, IntInfo &info) = 0;
-
-		Vector3 reflectance;
+		virtual Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info) = 0;
+		
+		Vector3 diffuse;    	// diffuse intensity
+		real_t reflectance;
 };
 
 #endif /* XTRACER_MATERIAL_HPP_INCLUDED */

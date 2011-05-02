@@ -39,9 +39,7 @@ class MatLambert: public Material
 		MatLambert();
 
 		// shade
-		Vector3 shade(Light *light, IntInfo &info);
-
-		Vector3 diffuse;	// diffuse intensity
+		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
 };
 
 #endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */

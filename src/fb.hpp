@@ -44,8 +44,8 @@ class Framebuffer
 		unsigned int height();
 		std::string &tag(const char *tag=NULL);
 
-		// Apply gamma
-		void apply_gamma(real_t v);
+		void clear(Vector3 v = Vector3(0, 0, 0));	// Clear to color v
+		void apply_gamma(real_t v); 				// Apply gamma correction
 
 		// Pixels are being accessed starting with (0,0). 
 		// In case of out of bounds exceptions, the last pixel is affected.
