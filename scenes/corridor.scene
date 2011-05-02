@@ -1,0 +1,185 @@
+# Xtracer corridor scene
+
+name = corridor 
+description = An infinite corridor
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = front 
+
+	front = {
+		fov = 45
+
+		position = {
+			z = -900
+		}
+		
+		up = {
+			y = 1
+		}
+	}
+
+	back = {
+		fov = 45
+
+		position = {
+			x = -200
+			z = 1000
+		}
+
+		up = {
+			x = 0.25
+			y = 1
+		}
+	}
+	
+	low = {
+		fov = 45
+
+		position = {
+			x = -299
+			y = -349
+			z = -1199
+		}
+
+		up = {
+			z = -1.33
+			y = 1
+		}
+	}
+
+	far = {
+		fov = 45
+		position = {
+			x = 450
+			z = -2800
+		}
+		
+		up = {
+			x = 1
+			y = 1
+		}
+	}
+}
+
+geometry = {
+
+	ball1 = {
+		type = sphere
+		position = {
+			x = 100 
+			y = -30
+			z = -30
+		}
+		radius = 175
+	}
+
+	plane1 = {
+		type = plane
+		normal = {
+			y = -1
+		}
+		distance = 400
+	}
+
+	plane2 = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 400
+	}
+
+	plane4 = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
+	}
+
+	plane5 = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = 500
+	}
+}
+
+light = {
+
+	l0 = {
+		position = {
+			x = 120
+			y = 49
+			z = -255
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	l1 = {
+		position = {
+			x = -360
+			y = 280
+			z = 200
+		}
+
+		intensity = {
+			r = .7
+			g = .7
+			b = .7
+		}
+	}
+
+}
+
+object = {
+
+	ball = {
+		geometry = ball1
+		material = ball 
+	}
+	plane1 = {
+		geometry = plane1
+		material = lambert_matte_silver
+	}
+	plane2 = {
+		geometry = plane2
+		material = lambert_matte_silver
+	}
+	plane4 = {
+		geometry = plane4
+		material = lambert_matte_silver
+	}
+	plane5 = {
+		geometry = plane5
+		material = lambert_matte_silver
+	}
+}
+
+material = {
+	%include basic.mat
+
+	ball = {
+		type = lambert
+
+		diffuse = {
+			r = 0.2
+			g = 0.54
+			b = 0.93
+		}
+	}
+}

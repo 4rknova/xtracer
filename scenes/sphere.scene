@@ -1,0 +1,81 @@
+# Xtracer simple sphere scene
+
+name = Simple sphere
+description = Just a plain sphere
+
+k_ambient = 0.1
+
+ambient = {
+	r = .21
+	g = .21
+	b = .21
+}
+
+camera = {
+
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			z = -100
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+
+	sphere = {
+		type = sphere
+		position = {
+			z = 130
+		}
+		radius = 75
+	}
+}
+
+light = {
+
+	sat = {
+
+		position = {
+			x = 110
+			y = 66 
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+
+	plastic = {
+
+		type = lambert
+		
+		diffuse = {
+			r = 0.6
+			g = 0.6
+			b = 0.6
+		}
+
+		reflectance = 0.5;
+	}
+}
+
+object = {
+	sphere = {
+
+		geometry = sphere
+		material = plastic
+	}
+}

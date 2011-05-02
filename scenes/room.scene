@@ -1,0 +1,229 @@
+# Xtracer simple scene
+
+name = Triball
+description = Three balls in a room
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = front 
+
+	front = {
+		fov = 45
+
+		position = {
+			z = -1550
+		}
+		
+		up = {
+			y = 1
+		}
+	}
+
+	up = {
+		fov = 45
+
+		position = {
+			y = 400
+			z = -1500
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	side = {
+		fov = 45
+
+		position = {
+			x = 300
+			y = 380
+			z = -1500
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+
+	ball1 = {
+		type = sphere
+		position = {
+			x = 80 
+			y = -315
+			z = 0
+		}
+		radius = 85
+	}
+	ball2 = {
+		type = sphere
+		position = {
+			x = 350
+			y = -330
+			z = 350
+		}
+		radius = 77
+	}
+	ball3 = {
+		type = sphere
+		position = {
+			x = -200
+			y = -205
+			z = 180
+		}
+		radius = 155
+	}
+#up
+	plane1 = {
+		type = plane
+		normal = {
+			y = -1
+		}
+		distance = 400
+	}
+#down
+	plane2 = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 400
+	}
+#back
+	plane3 = {
+		type = plane
+		normal = {
+			z = 1
+		}
+		distance = 500
+	}
+#left
+	plane4 = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
+	}
+#right
+	plane5 = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = 500
+	}
+
+	triangle = {
+		type = triangle
+		vecdata = {
+			
+			v1 = {
+				x = -500
+				y = -360
+				z = -400
+			}
+
+			v0 = {
+				x = 200
+				y = -360
+				z = 500
+			}
+			
+			v2 = {
+				x = -500 
+				y = -360
+				z = 500
+			}
+		}
+	}
+	
+
+}
+
+light = {
+
+	l0 = {
+		position = {
+			x = 0
+			y = 300
+			z = 200
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	l1 = {
+		position = {
+			x = 0
+			y = -300
+			z = -200
+		}
+
+		intensity = {
+			r = .5
+			g = .5
+			b = .5
+		}
+	}
+
+}
+
+object = {
+
+	ball = {
+		geometry = ball1
+		material = phong_red
+	}
+	ball2 = {
+		geometry = ball2
+		material = phong_green
+	}
+	ball3 = {
+		geometry = ball3
+		material = phong_blue
+	}
+	plane1 = {
+		geometry = plane1
+		material = lambert_silver
+	}
+	plane2 = {
+		geometry = plane2
+		material = lambert_silver
+	}
+	plane3 = {
+		geometry = plane3
+		material = lambert_silver
+	}
+	plane4 = {
+		geometry = plane4
+		material = lambert_silver
+	}
+	plane5 = {
+		geometry = plane5
+		material = lambert_silver
+	}
+
+	triangle = {
+		geometry = triangle
+		material = phong_silver
+	}
+}
+
+material = {
+	%include basic.mat
+}

@@ -1,0 +1,189 @@
+# Cornell box
+# http://www.cs.uiowa.edu/~cwyman/classes/spring07-22C251/code/cornellBoxScene.txt
+#
+# This scene defines the standard "Cornell Box" with a few caveats.
+# These caveats will be raised during the developments of the raytracer.
+#
+# Caveats:
+#
+# 	- 	The light color is defined in arbitrary RGB units rather than
+# 		the physically measured spectrum described on the Cornell Box page.
+#		(http://www.graphics.cornell.edu/online/box/data.html)
+#
+# 	-	The light is defined as a point instead of a quad with points
+#
+#	-	Materials are defined with RGB approximations to their spectral
+#		reflectance, not the 4 nm sampled spectra on the web page.
+#
+#	-	The walls are defined as planes instead of meshes
+#
+# Notes:
+#
+#	-	The original Cornell box is rendered with a resolution ratio of 1:1.
+
+name = Cornell box
+description = <name>
+
+# The scene cameras.
+camera = {
+	
+	# The default camera.
+	default = front
+
+	# The front camera.
+	front = {
+		# Field of view.
+		fov = 45
+
+		# Camera position.
+		position = {
+			x = 278 
+			y = 273
+			z = -800
+		}
+
+		# Target.
+		# This is equal to the direction (0, 1, 0) 
+		# as defined in the original data.
+		target = {
+			x = 278
+			y = 273
+			z = -799
+		}
+
+		# Up vector.
+		up = {
+			x = 0
+			y = 1
+			z = 0
+		}
+
+		# The focal length of the lense
+		focal_length = 0.035	# not yet implemented
+	}
+}
+
+# The scene lights
+light = {
+
+	# point light source
+	light = {
+
+		# The center point on the quad light in the measured Cornell Box 
+		# (moved down 0.1 units from the ceiling, to avoid numerical errors).  
+		# The light uses arbitrary RGB units rather than a physically 
+		# measured spectrum.
+		position = {
+			x = 278
+			y = 548.7
+			z = 279.5
+		}
+
+		# The following three colors are RGB approximations to the spectral 
+		# measurements of the white, red, and green paints used in the 
+		# Cornell Box.
+		intensity = {
+			r = 1
+			g = 0.85
+			b = 0.43
+		}
+	}
+}
+
+# The scene materials
+material = {
+
+	# The following three colors are RGB approximations to the spectral 
+	# measurements of the white, red, and green paints used in the Cornell Box.
+
+	white = {
+		type = lambert
+
+		diffuse = {
+			r = 0.76
+			g = 0.75
+			b = 0.5
+		}
+	}
+
+	red = {
+		type = lambert
+
+		diffuse = {
+			r = 0.63
+			g = 0.06
+			b = 0.04
+		}
+	}
+
+	green = {
+		type = lambert
+
+		diffuse = {
+			r = 0.15
+			g = 0.48
+			b = 0.09
+		}
+	}
+}
+
+# The scene geometry
+geometry = {
+
+	# The room box
+	floor = {
+	}
+
+	ceiling = {
+	}
+
+	back_wall = {
+	}
+
+	left_wall = {
+	}
+
+	right_wall = {
+	}
+
+	# The props
+	short_box = {
+	}
+
+	tall_box = {
+	}
+}
+
+# The scene objects
+object = {
+
+	floor = {
+		geometry = floor
+		material = white
+	}
+
+	back_wall = {
+		geometry = back_wall
+		material = white
+	}
+
+	left_wall = {
+		geometry = left_wall
+		material = red
+	}
+
+	right_wall = {
+		geometry = right_wall
+		material = green
+	}
+
+	short_box = {
+		geometry = short_box
+		material = white
+	}
+
+	tall_box = {
+		geometry = long_box
+		material = white
+	}
+}
