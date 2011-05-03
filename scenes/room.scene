@@ -3,7 +3,7 @@
 name = Triball
 description = Three balls in a room
 
-k_ambient = 0.01
+k_ambient = 0.06
 
 ambient = {
 	r = 1
@@ -44,8 +44,8 @@ camera = {
 
 		position = {
 			x = 300
-			y = 380
-			z = -1500
+			y = 300
+			z = -1400
 		}
 
 		up = {
@@ -60,10 +60,10 @@ geometry = {
 		type = sphere
 		position = {
 			x = 80 
-			y = -315
-			z = 0
+			y = -305
+			z = -100
 		}
-		radius = 85
+		radius = 95
 	}
 	ball2 = {
 		type = sphere
@@ -77,54 +77,57 @@ geometry = {
 	ball3 = {
 		type = sphere
 		position = {
-			x = -200
+			x = -220
 			y = -205
-			z = 180
+			z = 80
 		}
 		radius = 155
 	}
-#up
-	plane1 = {
+	floor = {
 		type = plane
 		normal = {
 			y = -1
 		}
 		distance = 400
 	}
-#down
-	plane2 = {
+	ceiling = {
 		type = plane
 		normal = {
 			y = 1
 		}
 		distance = 400
 	}
-#back
-	plane3 = {
+	back = {
 		type = plane
 		normal = {
 			z = 1
 		}
 		distance = 500
 	}
-#left
-	plane4 = {
+	right_wall = {
 		type = plane
 		normal = {
 			x = -1
 		}
 		distance = 500
 	}
-#right
-	plane5 = {
+	left_wall = {
 		type = plane
 		normal = {
 			x = 1
 		}
 		distance = 500
 	}
+#front
+	front = {
+		type = plane
+		normal = {
+			z = -1
+		}
+		distance = 1600
+	}
 
-	triangle = {
+	step = {
 		type = triangle
 		vecdata = {
 			
@@ -155,7 +158,7 @@ light = {
 
 	l0 = {
 		position = {
-			x = 0
+			x = -150
 			y = 300
 			z = 200
 		}
@@ -169,15 +172,15 @@ light = {
 
 	l1 = {
 		position = {
-			x = 0
-			y = -300
-			z = -200
+			x = -100
+			y = -200
+			z = -300
 		}
 
 		intensity = {
-			r = .5
-			g = .5
-			b = .5
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 	}
 
@@ -187,7 +190,7 @@ object = {
 
 	ball = {
 		geometry = ball1
-		material = phong_red
+		material = lambert_red
 	}
 	ball2 = {
 		geometry = ball2
@@ -197,29 +200,32 @@ object = {
 		geometry = ball3
 		material = phong_blue
 	}
-	plane1 = {
-		geometry = plane1
+	floor = {
+		geometry = floor
 		material = lambert_silver
 	}
-	plane2 = {
-		geometry = plane2
+	ceiling = {
+		geometry = ceiling
 		material = lambert_silver
 	}
-	plane3 = {
-		geometry = plane3
+	back = {
+		geometry = back
 		material = lambert_silver
 	}
-	plane4 = {
-		geometry = plane4
+	right_wall = {
+		geometry = right_wall
 		material = lambert_silver
 	}
-	plane5 = {
-		geometry = plane5
+	left_wall = {
+		geometry = left_wall
 		material = lambert_silver
 	}
-
-	triangle = {
-		geometry = triangle
+	front = {
+		geometry = front
+		material = lambert_silver
+	}
+	step = {
+		geometry = step
 		material = phong_silver
 	}
 }
