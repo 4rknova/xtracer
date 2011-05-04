@@ -1,7 +1,7 @@
 # Xtracer simple scene
 
-name = Triball with reflections
-description = Three balls in a room
+name = room
+description = Three spheres in a room.
 
 k_ambient = 0.06
 
@@ -15,7 +15,7 @@ camera = {
 	default = front 
 
 	front = {
-		fov = 45
+		fov =45 
 
 		position = {
 			z = -1550
@@ -26,23 +26,6 @@ camera = {
 		}
 	}
 
-	back = {
-		fov = 45
-
-		position = {
-			y = 100
-			z = 480
-		}
-
-		target = {
-			z = 300
-		}
-
-		up = {
-			y = 1
-		}
-	}
-	
 	side = {
 		fov = 45
 
@@ -82,7 +65,7 @@ geometry = {
 		type = sphere
 		position = {
 			x = -220
-			y = -205
+			y = -245
 			z = 80
 		}
 		radius = 155
@@ -127,34 +110,8 @@ geometry = {
 		normal = {
 			z = -1
 		}
-		distance = 2560
+		distance = 2600
 	}
-
-	step = {
-		type = triangle
-		vecdata = {
-			
-			v1 = {
-				x = -500
-				y = -360
-				z = -400
-			}
-
-			v0 = {
-				x = 200
-				y = -360
-				z = 500
-			}
-			
-			v2 = {
-				x = -500 
-				y = -360
-				z = 500
-			}
-		}
-	}
-	
-
 }
 
 light = {
@@ -190,21 +147,22 @@ light = {
 }
 
 object = {
+
 	ball = {
 		geometry = red_ball
-		material = phong_red
+		material = lambert_red
 	}
 	green_ball = {
 		geometry = green_ball
-		material = phong_green
+		material = lambert_green
 	}
 	blue_ball = {
 		geometry = blue_ball
-		material = phong_blue
+		material = lambert_blue
 	}
 	floor = {
 		geometry = floor
-		material = phong_silver
+		material = lambert_silver
 	}
 	ceiling = {
 		geometry = ceiling
@@ -212,23 +170,19 @@ object = {
 	}
 	back = {
 		geometry = back
-		material = phong_silver
+		material = lambert_silver
 	}
 	right_wall = {
 		geometry = right_wall
-		material = phong_silver
+		material = lambert_silver
 	}
 	left_wall = {
 		geometry = left_wall
-		material = phong_silver
+		material = lambert_silver
 	}
 	front = {
 		geometry = front
 		material = lambert_silver
-	}
-	step = {
-		geometry = step
-		material = phong_silver
 	}
 }
 

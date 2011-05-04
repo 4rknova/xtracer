@@ -300,11 +300,15 @@ int main(int argc, char **argv)
 		// set the camera
 		scene.set_camera(camera.c_str());
 	
-		// render
+		// create the renderer
 		Renderer renderer(fb, scene, drv, max_rdepth);
+		// setup the environment
 		renderer.verbosity(verbose);
-		renderer.light_geometry(flag_render_light_positions);
+		renderer.max_recursion_depth(max_rdepth);
+		std::cout << "Maximum recursion depth: "<< renderer.max_recursion_depth() << "\n";
 		renderer.gamma_correction(gamma_correction);
+		renderer.light_geometry(flag_render_light_positions);
+		// render
 		renderer.render();
 	}
 	

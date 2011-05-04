@@ -33,7 +33,7 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	: m_fb(&fb), 
 	m_scene(&scene), 
 	m_drv(drv), 
-	max_rdepth(depthlim), 
+	m_max_rdepth(depthlim), 
 	m_verbosity(0), 
 	m_gamma(1),
 	m_f_light_geometry(false)
@@ -115,7 +115,7 @@ unsigned int Renderer::render_frame()
 		{
 			// generate primary ray and trace it
 			Ray ray = m_scene->camera->get_primary_ray(x, y, w, h);
-			Vector3 color = trace(ray, max_rdepth);
+			Vector3 color = trace(ray, m_max_rdepth);
 			
 			*(m_fb->pixel(x, y)) += color;
 		}
@@ -226,7 +226,9 @@ real_t Renderer::gamma_correction(real_t v)
 	return m_gamma = v;
 }
 
-unsigned int Renderer::max_recursion_depth(unsigned int v)
+unsigned int Renderer::max_recursion_depth(int v)
 {
-	return max_rdepth = v;
+	if (v < 0)
+		return m_max_rdepth;
+	return m_max_rdepth = v;
 }

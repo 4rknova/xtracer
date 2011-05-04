@@ -47,16 +47,16 @@ class Renderer
 		// renders the scene
 		unsigned int render();
 		// set / get verbosity level ( v < 0 returns status without changing it)
-		unsigned int verbosity(int v);
+		unsigned int verbosity(int v=-1);
 
 		// set / get the light geometry flag
-		bool light_geometry(int v);
+		bool light_geometry(int v=-1);
 
 		// set / get the gamma correction
-		real_t gamma_correction(real_t v);
+		real_t gamma_correction(real_t v=-1);
 
 		// set / get the maximum recursion depth
-		unsigned int max_recursion_depth(unsigned int v);
+		unsigned int max_recursion_depth(int v=-1);
 
 	protected:
 		// renders the current frame
@@ -73,7 +73,7 @@ class Renderer
 		Driver *m_drv;
 
 		// recursion depth limit
-		unsigned int max_rdepth;
+		unsigned int m_max_rdepth;
 
 		// verbosity
 		unsigned int m_verbosity;

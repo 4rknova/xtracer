@@ -68,9 +68,9 @@ phong_red = {
 		b = 1
 	}
 
-	k_diffuse = 0.6
-	k_specular = 0.4
-	k_specexp = 90
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 80
 }
 
 # plain green phong
@@ -81,7 +81,7 @@ phong_green = {
 
 	diffuse = {
 		r = 0
-		g = 0.5
+		g = 1
 		b = 0
 	}
 	specular = {
@@ -90,16 +90,16 @@ phong_green = {
 		b = 1
 	}
 
-	k_diffuse = 0.6
-	k_specular = 0.8
-	k_specexp = 60 
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 80 
 }
 
 # plain blue phong
 phong_blue = {
 	type = phong
 
-	reflectance = 0.25
+	reflectance = 0.5
 
 	diffuse = {
 		r = 0
@@ -112,8 +112,8 @@ phong_blue = {
 		b = 1
 	}
 
-	k_diffuse = 0.6
-	k_specular = 0.35
+	k_diffuse = 0.3
+	k_specular = 0.7
 	k_specexp = 80 
 }
 
@@ -121,20 +121,20 @@ phong_blue = {
 phong_silver = {
 	type = phong
 
-	reflectance = 0.85
+	reflectance = 0.5 
 
 	diffuse = {
-		r = 0.9
-		g = 0.9
-		b = 0.9
+		r = 0.5
+		g = 0.5
+		b = 0.5
 	}
 	specular = {
-		r = 1
-		g = 1
-		b = 1
+		r = 0.1
+		g = 0.1
+		b = 0.1
 	}
 
 	k_diffuse = 0.3
 	k_specular = 0.7
-	k_specexp = 100
+	k_specexp = 1000
 }
