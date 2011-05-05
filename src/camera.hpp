@@ -42,7 +42,7 @@ class Camera
 		Camera();
 		Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx=XT_CAM_DEFAULT_FOV);
 
-		Ray get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+		Ray get_primary_ray(float x, float y, float width, float height);
 
 		Vector3 position;
 		Vector3 target;

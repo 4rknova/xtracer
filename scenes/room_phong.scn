@@ -190,7 +190,7 @@ light = {
 }
 
 object = {
-	ball = {
+	red_ball = {
 		geometry = red_ball
 		material = phong_red
 	}
@@ -204,7 +204,7 @@ object = {
 	}
 	floor = {
 		geometry = floor
-		material = phong_silver
+		material = lambert_silver
 	}
 	ceiling = {
 		geometry = ceiling

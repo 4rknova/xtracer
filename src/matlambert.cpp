@@ -25,7 +25,7 @@
 
 */
 
-#include <nmath/lambert.h>
+#include "lambert.hpp"
 
 #include "matlambert.hpp"
 

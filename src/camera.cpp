@@ -39,7 +39,7 @@ Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx)
 :  position(pos), target(trg), up(upv.normalized()), fov(fovx)
 {}
 #include <iostream>
-Ray Camera::get_primary_ray(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+Ray Camera::get_primary_ray(float x, float y, float width, float height)
 {
 	/* Primary ray */
 	Ray pray;

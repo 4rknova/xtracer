@@ -448,6 +448,7 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 
 #include "matlambert.hpp"
 #include "matphong.hpp"
+#include "matblinnphong.hpp"
 
 unsigned int Scene::add_material(NCFGParser *p)
 {
@@ -505,6 +506,41 @@ unsigned int Scene::add_material(NCFGParser *p)
 		((MatPhong *)mat)->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
 		// specular exponential
 		((MatPhong *)mat)->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
+	}
+	else if (!type.compare(XT_CFGPROTO_VAL_BLINNPHONG))
+	{
+		mat = new MatBlinnPhong();
+
+		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
+		mat->reflectance = nstring_to_double(refl);
+
+		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		// diffuse intensity
+		((MatBlinnPhong *)mat)->diffuse = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		// specular intensity
+		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		// diffuse constant
+		((MatBlinnPhong *)mat)->specular = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		// specular constant
+		((MatBlinnPhong *)mat)->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
+		// diffuse constant
+		((MatBlinnPhong *)mat)->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
+		// specular exponential
+		((MatBlinnPhong *)mat)->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
 	}
 	else
 	{

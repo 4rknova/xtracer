@@ -9,24 +9,28 @@ About
 Features
 --------
 
-	Primitives:
+1.	Primitives:
 		- Plane
 		- Triangle
 		- Sphere
 
-	Materials:
+2.	Materials:
 		- Lambert
 		- Phong
+		- Blinn-Phong
 
-	Lights:
+3.	Lights:
 		- Point light
 
-	Cameras:
+4.	Cameras:
 		- Pinhole camera
 	
-	Drivers:
+5.	Drivers:
 		- SDL
 		- PPM
+
+6.	Antialiasing (via supersampling)
+7.	Gamma correction
 
 Dependencies
 ------------

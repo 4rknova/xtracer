@@ -1,16 +1,32 @@
 .TH XTRACER 1 "December 2010" UNIX "User Manuals"
 .SH NAME 
-xtracer \- generate raytraced images
+xtracer
 .SH SYNOPSIS
 .B xtracer [
 .I option
 ]... 
 .B file
 .SH DESCRIPTION
-renders scenes as described in the given file with raytracing.
+A basic raytracing.
 .SH OPTIONS
 .IP "-res %ix%i"
-Define the output buffer resolution
+Sets the output buffer resolution.
+.IP "-depth %i"
+Sets the maximum recursion depth.
+.IP "-drv %s"
+Sets the output driver to use. Available drivers are: ppm, sdl.
+.IP	"-gamma %f"
+Sets the gamma correction.
+.IP "-cam %s"
+Sets the active camera.
+.IP "-lightpos"
+Renders the point lights as spheres.
+.IP "-v"
+Increases the verbosity.
+.IP "-version / -ver"
+Outputs the program version information and exits.
+.IP "-help"
+Outputs basic usage information and exits.
 .SH AUTHOR
 ."BR bar (1)
 Written by Nikos Papadopoulos <nikpapas at gmail dot com>

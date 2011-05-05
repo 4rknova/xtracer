@@ -33,7 +33,7 @@ geometry = {
 	sphere = {
 		type = sphere
 		position = {
-			z = 130
+			z = 330
 		}
 		radius = 75
 	}
@@ -63,9 +63,9 @@ material = {
 		type = lambert
 		
 		diffuse = {
-			r = 0.6
-			g = 0.6
-			b = 0.6
+			r = 0
+			g = 0.3
+			b = 1 
 		}
 
 		reflectance = 0.5;

@@ -58,6 +58,9 @@ class Renderer
 		// set / get the maximum recursion depth
 		unsigned int max_recursion_depth(int v=-1);
 
+		// set / get antialiasing
+		unsigned int antialiasing(int v=-1);
+
 	protected:
 		// renders the current frame
 		unsigned int render_frame();
@@ -77,6 +80,9 @@ class Renderer
 
 		// verbosity
 		unsigned int m_verbosity;
+
+		// antialiasing
+		unsigned int m_antialiasing;
 
 		// gamma correction
 		real_t m_gamma;

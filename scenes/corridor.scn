@@ -18,7 +18,7 @@ camera = {
 		fov = 45
 
 		position = {
-			z = -900
+			z = -1900
 		}
 		
 		up = {
@@ -86,7 +86,7 @@ geometry = {
 		normal = {
 			y = -1
 		}
-		distance = 400
+		distance = 500
 	}
 
 	plane2 = {
@@ -94,7 +94,7 @@ geometry = {
 		normal = {
 			y = 1
 		}
-		distance = 400
+		distance = 500
 	}
 
 	plane4 = {
@@ -118,9 +118,9 @@ light = {
 
 	l0 = {
 		position = {
-			x = 120
-			y = 49
-			z = -255
+			x = 0
+			y = 280
+			z = 1200
 		}
 
 		intensity = {
@@ -132,54 +132,43 @@ light = {
 
 	l1 = {
 		position = {
-			x = -360
-			y = 280
-			z = 200
+			x = -100
+			y = -380
+			z = -300
 		}
 
 		intensity = {
-			r = .7
-			g = .7
-			b = .7
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
-
 }
 
 object = {
 
 	ball = {
 		geometry = ball1
-		material = ball 
+		material = phong_blue
 	}
 	plane1 = {
 		geometry = plane1
-		material = lambert_matte_silver
+		material = lambert_silver
 	}
 	plane2 = {
 		geometry = plane2
-		material = lambert_matte_silver
+		material = lambert_silver
 	}
 	plane4 = {
 		geometry = plane4
-		material = lambert_matte_silver
+		material = lambert_silver
 	}
 	plane5 = {
 		geometry = plane5
-		material = lambert_matte_silver
+		material = lambert_silver
 	}
 }
 
 material = {
 	%include basic.mat
-
-	ball = {
-		type = lambert
-
-		diffuse = {
-			r = 0.2
-			g = 0.54
-			b = 0.93
-		}
-	}
 }

@@ -3,7 +3,7 @@
     This file is part of xtracer.
 
     matphong.cpp
-    Matphong class
+    MatPhong class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,7 +25,7 @@
 
 */
 
-#include <nmath/phong.h>
+#include "phong.hpp"
 
 #include "matphong.hpp"
 

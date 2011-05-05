@@ -58,6 +58,9 @@ int max_rdepth = XT_SETUP_DEFAULT_MAXRDEPTH;
 // other flags
 bool flag_render_light_positions = false;
 
+// antialiasing
+int antialiasing = 0;
+
 unsigned int parsearg(int argc, char **argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -100,15 +103,46 @@ unsigned int parsearg(int argc, char **argv)
 
 			if (sscanf(argv[i], "%d", &max_rdepth) < 1)
 			{
-				std::cerr << "Invalid " << argv[i-1] << " value. Should be %ix%i.\n";
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be %i.\n";
 				return 1;
 			}
 
-			if (max_rdepth <= 0)
+			if (max_rdepth < 0)
 			{
 				std::cerr
 					<< "Invalid " << argv[i-1] << " value. "
 					<< "You provided a negative number.\n";
+				return 1;
+			}
+		}
+		// antialiasing
+		else if (!strcmp(argv[i], "-antialiasing"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			if (sscanf(argv[i], "%d", &antialiasing) < 1)
+			{
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be %i.\n";
+				return 1;
+			}
+			
+			if (antialiasing <= 0)
+			{
+				std::cerr
+					<< "Invalid " << argv[i-1] << " value. "
+					<< "You must provide an integer equal to 1 or greater.\n";
+				return 1;
+			}
+
+			if (antialiasing%2)
+			{
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be a power of 2.\n";
 				return 1;
 			}
 		}
@@ -307,6 +341,9 @@ int main(int argc, char **argv)
 		renderer.max_recursion_depth(max_rdepth);
 		std::cout << "Maximum recursion depth: "<< renderer.max_recursion_depth() << "\n";
 		renderer.gamma_correction(gamma_correction);
+		renderer.antialiasing(antialiasing);
+		if (renderer.antialiasing() > 1)
+			std::cout << "Antialiasing: " << renderer.antialiasing() << "\n";
 		renderer.light_geometry(flag_render_light_positions);
 		// render
 		renderer.render();

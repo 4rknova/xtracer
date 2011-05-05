@@ -70,7 +70,7 @@ phong_red = {
 
 	k_diffuse = 0.3
 	k_specular = 0.7
-	k_specexp = 80
+	k_specexp = 60
 }
 
 # plain green phong
@@ -92,7 +92,7 @@ phong_green = {
 
 	k_diffuse = 0.3
 	k_specular = 0.7
-	k_specexp = 80 
+	k_specexp = 60 
 }
 
 # plain blue phong
@@ -114,7 +114,7 @@ phong_blue = {
 
 	k_diffuse = 0.3
 	k_specular = 0.7
-	k_specexp = 80 
+	k_specexp = 60 
 }
 
 # plain silver phong
@@ -136,5 +136,97 @@ phong_silver = {
 
 	k_diffuse = 0.3
 	k_specular = 0.7
-	k_specexp = 1000
+	k_specexp = 60
+}
+
+# ================================== #
+#	BLINN-PHONG MATERIALS			 #
+# ================================== #
+
+# plain red phong
+blinn_phong_red = {
+	type = blinn_phong
+
+	reflectance = 0.5
+
+	diffuse = {
+		r = 1
+		g = 0
+		b = 0
+	}
+	specular = {
+		r = 1
+		g = 1
+		b = 1
+	}
+
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 180
+}
+
+# plain green phong
+blinn_phong_green = {
+	type = blinn_phong
+
+	reflectance = 0.5
+
+	diffuse = {
+		r = 0
+		g = 1
+		b = 0
+	}
+	specular = {
+		r = 1
+		g = 1
+		b = 1
+	}
+
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 180 
+}
+
+# plain blue phong
+blinn_phong_blue = {
+	type = blinn_phong
+
+	reflectance = 0.5
+
+	diffuse = {
+		r = 0
+		g = 0
+		b = 1
+	}
+	specular = {
+		r = .99
+		g = .99
+		b = 1
+	}
+
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 180 
+}
+
+# plain silver phong
+blinn_phong_silver = {
+	type = blinn_phong
+
+	reflectance = 0.5 
+
+	diffuse = {
+		r = 0.5
+		g = 0.5
+		b = 0.5
+	}
+	specular = {
+		r = 0.1
+		g = 0.1
+		b = 0.1
+	}
+
+	k_diffuse = 0.3
+	k_specular = 0.7
+	k_specexp = 180
 }

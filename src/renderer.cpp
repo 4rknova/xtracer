@@ -34,7 +34,8 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	m_scene(&scene), 
 	m_drv(drv), 
 	m_max_rdepth(depthlim), 
-	m_verbosity(0), 
+	m_verbosity(0),
+	m_antialiasing(1),
 	m_gamma(1),
 	m_f_light_geometry(false)
 {}
@@ -76,6 +77,9 @@ unsigned int Renderer::render()
 	// tag the framebuffer
 	m_fb->tag(file.c_str());
 
+	// clear the framebuffer
+	m_fb->clear();
+
 	// initiate the output driver
 	m_drv->init();
 
@@ -109,15 +113,31 @@ unsigned int Renderer::render_frame()
 	std::cout.setf(std::ios::fixed, std::ios::floatfield);
 	std::cout.setf(std::ios::showpoint);
 
-	for (unsigned int y = 0; y < h; y++) 
+	for (float y = 0; y < (float)h; y++) 
 	{
-		for (unsigned int x = 0; x < w; x++) 
+		for (float x = 0; x < (float)w; x++) 
 		{
-			// generate primary ray and trace it
-			Ray ray = m_scene->camera->get_primary_ray(x, y, w, h);
-			Vector3 color = trace(ray, m_max_rdepth);
-			
-			*(m_fb->pixel(x, y)) += color;
+			// antialiasing loop
+			unsigned int sample_count = m_antialiasing * m_antialiasing;
+			float offset = 1.0 / sample_count;
+			float boundary = (sample_count / 2) * offset;
+	
+			// the final color
+			Vector3 color;
+
+			// here I correct the pixel position
+			for (float fragmenty = y - boundary; fragmenty <= y + boundary; fragmenty += (offset*2))
+			{
+				for (float fragmentx = x - boundary; fragmentx <= x + boundary; fragmentx += (offset*2))
+				{
+					// generate primary ray and trace it
+					Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, w, h);
+					color += trace(ray, m_max_rdepth+1);
+	//				std::cout << fragmentx << "x" << fragmenty << " " << w << "x" << h << " " << color << "\n";getchar();
+				}
+			}
+		//	std::cout << "\n";
+			*(m_fb->pixel(x, y)) += (color / sample_count);
 		}
 
 		// calculate progress
@@ -198,7 +218,7 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	{
 		Ray reflray;
 		reflray.origin = p;
-		reflray.direction = (ray.direction).reflected(n);
+		reflray.direction = (-ray.direction).reflected(n);
 		color += mat->reflectance * trace(reflray, depth-1);
 	}
 
@@ -231,4 +251,11 @@ unsigned int Renderer::max_recursion_depth(int v)
 	if (v < 0)
 		return m_max_rdepth;
 	return m_max_rdepth = v;
+}
+
+unsigned int Renderer::antialiasing(int v)
+{
+	if (v < 1)
+		return m_antialiasing;
+	return m_antialiasing = v;
 }

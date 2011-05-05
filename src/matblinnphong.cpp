@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    material.hpp
-    Material class
+    matblinnphong.cpp
+    MatBlinnPhong class
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,26 +25,13 @@
 
 */
 
-#ifndef XTRACER_MATERIAL_HPP_INCLUDED
-#define XTRACER_MATERIAL_HPP_INCLUDED
+#include "phong.hpp"
+#include "matblinnphong.hpp"
 
-#include <nmath/vector.h>
-#include <nmath/intinfo.h>
+MatBlinnPhong::MatBlinnPhong()
+{}
 
-#include "camera.hpp"
-#include "light.hpp"
-
-class Material 
+Vector3 MatBlinnPhong::shade(const Camera *cam, const Light *light, const IntInfo &info)
 {
-	public:
-		Material();
-		virtual ~Material();
-
-		// shade
-		virtual Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info) = 0;
-		
-		Vector3 diffuse;   	// diffuse intensity
-		real_t reflectance;
-};
-
-#endif /* XTRACER_MATERIAL_HPP_INCLUDED */
+	return blinn_phong(cam->position, light->position, &info, light->intensity, kspec, kdiff, ksexp, diffuse, specular);
+}

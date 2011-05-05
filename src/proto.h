@@ -101,5 +101,6 @@
 
 #define XT_CFGPROTO_VAL_LAMBERT			"lambert"
 #define XT_CFGPROTO_VAL_PHONG			"phong"
+#define XT_CFGPROTO_VAL_BLINNPHONG		"blinn_phong"
 
 #endif /* XTRACER_CFGPROTO_HPP_INCLUDED  */
