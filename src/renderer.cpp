@@ -112,37 +112,33 @@ unsigned int Renderer::render_frame()
 	// setup the output
 	std::cout.setf(std::ios::fixed, std::ios::floatfield);
 	std::cout.setf(std::ios::showpoint);
+			
+	// antialiasing samples
+	unsigned int samples_per_pixel = m_antialiasing * m_antialiasing;
+	float offset_per_sample = 1.0 / m_antialiasing;
 
 	for (float y = 0; y < (float)h; y++) 
 	{
 		for (float x = 0; x < (float)w; x++) 
 		{
-			// antialiasing loop
-			unsigned int sample_count = m_antialiasing * m_antialiasing;
-			float offset = 1.0 / sample_count;
-			float boundary = (sample_count / 2) * offset;
-	
 			// the final color
 			Vector3 color;
 
-			// here I correct the pixel position
-			for (float fragmenty = y - boundary; fragmenty <= y + boundary; fragmenty += (offset*2))
+			// antialiasing loop
+			for (float fragmenty = y; fragmenty < y + 1.0; fragmenty += offset_per_sample)
 			{
-				for (float fragmentx = x - boundary; fragmentx <= x + boundary; fragmentx += (offset*2))
+				for (float fragmentx = x; fragmentx < x + 1.0; fragmentx += offset_per_sample)
 				{
 					// generate primary ray and trace it
 					Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, w, h);
-					color += trace(ray, m_max_rdepth+1);
-	//				std::cout << fragmentx << "x" << fragmenty << " " << w << "x" << h << " " << color << "\n";getchar();
+					color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
 				}
 			}
-		//	std::cout << "\n";
-			*(m_fb->pixel(x, y)) += (color / sample_count);
+			*(m_fb->pixel(x, y)) += color;
 		}
 
 		// calculate progress
 		progress = y / (float)(h-1) * 100;
-
 		// report progress
 		rprog(progress);
 	}

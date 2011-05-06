@@ -29,6 +29,7 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <nmath/mutil.h>
 
 #include "setup.hpp"
 
@@ -140,7 +141,7 @@ unsigned int parsearg(int argc, char **argv)
 				return 1;
 			}
 
-			if (antialiasing%2)
+			if (!is_power_of_2(antialiasing))
 			{
 				std::cerr << "Invalid " << argv[i-1] << " value. Should be a power of 2.\n";
 				return 1;
@@ -175,7 +176,7 @@ unsigned int parsearg(int argc, char **argv)
 			{
 				std::cerr 
 					<< "Invalid " << argv[i-1] << " value. "
-					<< "Please consult the man pages for the available drivers.";
+					<< "Please consult the man pages for the available drivers.\n";
 				return 1;
 			}
 		}
