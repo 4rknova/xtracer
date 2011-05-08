@@ -25,6 +25,8 @@
 
 */
 
+#ifdef ENABLE_SDL
+
 #include "drvsdl.hpp"
 #include "pixel.h"
 
@@ -56,6 +58,8 @@ unsigned int DrvSDL::init()
 	return 0;
 }
 
+#include <iostream>
+
 unsigned int DrvSDL::deinit()
 {
 	if(!m_screen)
@@ -65,6 +69,8 @@ unsigned int DrvSDL::deinit()
 	// until escape is pressed
 	SDL_Event event;
 	int done = 0;
+
+	std::cout << "Press ESC on the sdl window to exit.\n";
 
 	while(SDL_PollEvent(&event) || !done)
 	{
@@ -144,3 +150,5 @@ unsigned int DrvSDL::flip()
 	}
 	return 0;
 }
+
+#endif /* ENABLE_SDL */

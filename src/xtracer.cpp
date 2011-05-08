@@ -167,6 +167,10 @@ unsigned int parsearg(int argc, char **argv)
 			else if (!strcmp(argv[i], "sdl"))
 			{
 				driver = XT_DRV_SDL;
+				#ifndef ENABLE_SDL
+					std::cout << "The program was built without the sdl driver support.\n";
+					return 1;
+				#endif /* ENABLE_SDL */
 			}
 			// dummy driver
 			else if (!strcmp(argv[i], "dum"))
@@ -300,9 +304,12 @@ int main(int argc, char **argv)
 	Driver *drv = NULL;
 	switch ((int)driver)
 	{
-		case XT_DRV_SDL:
-			drv = new DrvSDL(fb);
-			break;
+		#ifdef ENABLE_SDL
+			case XT_DRV_SDL:
+				drv = new DrvSDL(fb);
+				break;
+		#endif /* ENABLE_SDL */
+
 		case XT_DRV_PPM:
 			drv = new DrvPPM(fb);
 			break;

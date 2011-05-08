@@ -3,6 +3,7 @@
 spath = src
 opath = $(bpath)/obj
 tpath = doc
+mpath = man
 
 # - sources
 ccsrc = $(wildcard $(spath)/*.c)
@@ -17,16 +18,17 @@ objcpp = $(ccsrcpp:.cpp=.o)
 
 bin = $(bpath)/$(pkgname)
 doc = $(bpath)/$(pkgname).pdf
+man = $(mpath)/$(pkgname).1
 
 PDFVIEWER = xpdf 
 TEX = xelatex
 RM = rm
 CC = gcc
 CXX = g++
-COFLAGS= $(opt) $(dbg) -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
+COFLAGS= $(opt) $(dbg) -D'$(sdl)' -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
 CCFLAGS = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
 CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing -I$(spath) $(COFLAGS)
-LDFLAGS = -lpthread -lnparse -lnmath `sdl-config --libs`
+LDFLAGS = -lnparse -lnmath $(LDSDL)
 
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
@@ -44,17 +46,10 @@ $(doc): $(doctex)
 	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 .PHONY: all
-all: $(bin) $(doc)
-
-.PHONY: doc
-doc: $(doc)
+all: $(bin)
 
 .PHONY: bin 
 bin: $(bin)
-
-.PHONY: man-preview
-man-preview:
-	clear&&nroff -Tascii -man "man/xtracer.1" | col -x | less -c
 
 .PHONY: test
 test: $(bin)
@@ -64,6 +59,24 @@ test: $(bin)
 #	./bin/xtracer ./scenes/room* -res 512x512 -v
 	./bin/xtracer ./scenes/room* -res 640x360 -v
 #	./bin/xtracer ./scenes/room* -res 1280x720 -v
+
+.PHONY: doc
+doc: $(doc)
+
+.PHONY: man-preview
+man-preview:
+	clear&&nroff -Tascii -man "man/xtracer.1" | col -x | less -c
+
+.PHONY: install
+install: all
+	install -m 775 $(bin) $(PREFIX)/bin/$(pkgname)
+	install -c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
+		  
+.PHONY: uninstall
+uninstall:
+	rm -f $(PREFIX)/bin/$(pkgname)
+	rm -f $(PREFIX)/share/man/man1/$(pkgname).1
+
 
 .PHONY: clean
 clean:

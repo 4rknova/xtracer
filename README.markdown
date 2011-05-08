@@ -20,6 +20,6 @@ Features
 
 Dependencies
 ------------
-	libsdl    
-	libnmath   https://github.com/4rknova/libnmath
-	libnparse  https://github.com/4rknova/libnparse
+	libsdl    (The program can be built without the sdl driver support.)
+	libnmath  https://github.com/4rknova/libnmath
+	libnparse https://github.com/4rknova/libnparse

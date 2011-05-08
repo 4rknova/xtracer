@@ -32,7 +32,12 @@
 
 #define XT_SETUP_DEFAULT_WIDTH		640
 #define XT_SETUP_DEFAULT_HEIGHT		480
-#define XT_SETUP_DEFAULT_DRV		XT_DRV_SDL
+
+#ifdef ENABLE_SDL
+	#define XT_SETUP_DEFAULT_DRV	XT_DRV_SDL
+#else
+	#define XT_SETUP_DEFAULT_DRV	XT_DRV_PPM
+#endif /* ENABLE_SDL */
 
 #define XT_SETUP_DEFAULT_GAMMA		1 			// No gamma correction by default
 #define XT_SETUP_DEFAULT_MAXRDEPTH	10			// Maximum recursion depth

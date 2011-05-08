@@ -28,6 +28,8 @@
 #ifndef XTRACER_DRV_SDL_HPP_INCLUDED
 #define XTRACER_DRV_SDL_HPP_INCLUDED
 
+#ifdef ENABLE_SDL
+
 #include "drv.hpp"
 #include <SDL/SDL.h>
 
@@ -45,5 +47,7 @@ class DrvSDL: public Driver
 	private:
 		SDL_Surface* m_screen;
 };
+
+#endif /* ENABLE_SDL */
 
 #endif /* XTRACER_DRV_SDL_HPP_INCLUDED */
