@@ -58,6 +58,7 @@ int max_rdepth = XT_SETUP_DEFAULT_MAXRDEPTH;
 
 // other flags
 bool flag_render_light_positions = false;
+bool flag_realtime_update = false;
 
 // antialiasing
 int antialiasing = 0;
@@ -215,6 +216,10 @@ unsigned int parsearg(int argc, char **argv)
 		{
 			flag_render_light_positions = true;
 		}
+		else if (!strcmp(argv[i], "-realtime_update"))
+		{
+			flag_realtime_update = true;
+		}
 		// verbosity
 		else if (!strcmp(argv[i], "-v"))
 		{
@@ -337,15 +342,31 @@ int main(int argc, char **argv)
 	
 		// create the renderer
 		Renderer renderer(fb, scene, drv, max_rdepth);
+
 		// setup the environment
 		renderer.verbosity(verbose);
+
+		// recursion depth
 		renderer.max_recursion_depth(max_rdepth);
 		std::cout << "Maximum recursion depth: "<< renderer.max_recursion_depth() << "\n";
+
+		// gamma correction
 		renderer.gamma_correction(gamma_correction);
+
+		// antialiasing
 		renderer.antialiasing(antialiasing);
 		if (renderer.antialiasing() > 1)
 			std::cout << "Antialiasing: " << renderer.antialiasing() << "\n";
+
+		// light geometry
 		renderer.light_geometry(flag_render_light_positions);
+
+		// realtime update
+		if ((int)driver == (XT_DRV_SDL))
+			renderer.realtime_update(flag_realtime_update);
+		else if (flag_realtime_update)
+			std::cout << "Warning: Realtime output update cannot be used with this driver. Ignoring..\n";
+
 		// render
 		renderer.render();
 	}

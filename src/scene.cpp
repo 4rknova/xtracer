@@ -461,40 +461,16 @@ unsigned int Scene::add_material(NCFGParser *p)
 	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
 	{
 		mat = new MatLambert();
-
-		// diffuse intensity
-		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
-		
-		((MatLambert *)mat)->diffuse = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
 	}
 	else if (!type.compare(XT_CFGPROTO_VAL_PHONG))
 	{
 		mat = new MatPhong();
-
-		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
-		mat->reflectance = nstring_to_double(refl);
-
-		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		// diffuse intensity
-		((MatPhong *)mat)->diffuse = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
 
 		// specular intensity
 		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
 		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
 		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
 
-		// diffuse constant
 		((MatPhong *)mat)->specular = 
 			Vector3(nstring_to_double(colr), 
 					nstring_to_double(colg), 
@@ -511,25 +487,11 @@ unsigned int Scene::add_material(NCFGParser *p)
 	{
 		mat = new MatBlinnPhong();
 
-		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
-		mat->reflectance = nstring_to_double(refl);
-
-		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		// diffuse intensity
-		((MatBlinnPhong *)mat)->diffuse = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
-
 		// specular intensity
 		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
 		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
 		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
 
-		// diffuse constant
 		((MatBlinnPhong *)mat)->specular = 
 			Vector3(nstring_to_double(colr), 
 					nstring_to_double(colg), 
@@ -546,6 +508,44 @@ unsigned int Scene::add_material(NCFGParser *p)
 	{
 		std::cout << "Warning: Unsupported material " << p->node() << ". Skipping...\n";
 		return 1;
+	}
+
+	// common properties
+	if (mat)
+	{
+		// diffuse intensity
+		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
+		
+		mat->diffuse = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+	
+		// reflectance
+		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
+		mat->reflectance = nstring_to_double(refl);
+		
+		// normalise the reflectance value
+		if (mat->reflectance > 1.0)
+			mat->reflectance = 1.0;
+		else if (mat->reflectance < 0.0)
+			mat->reflectance = 0.0;
+
+		// transparency
+		std::string transp = p->get(XT_CFGPROTO_PROP_TRANSPARENCY);
+		mat->transparency = nstring_to_double(transp);
+
+		// normalise the transparency value
+		if (mat->transparency > 1.0)
+			mat->transparency = 1.0;
+		else if (mat->transparency < 0.0)
+			mat->transparency = 0.0;
+		
+		// index of refraction
+		std::string ior = p->get(XT_CFGPROTO_PROP_IOR);
+		mat->ior = nstring_to_double(refl);
 	}
 
 	material[p->node()] = mat;
@@ -602,7 +602,6 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 		// test all the objects and find the closest intersection
 		if((geometry[(*it).second->geometry.c_str()])->intersection(ray, &test))
 		{
-
 			if(res.t > test.t)
 			{
 				// set the object name
@@ -640,5 +639,3 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 
 	return info.t != NM_INFINITY ? true : false;
 }
-
-

@@ -52,6 +52,9 @@ class Renderer
 		// set / get the light geometry flag
 		bool light_geometry(int v=-1);
 
+		// set / get the realtime output update flag
+		bool realtime_update(int v=-1);
+
 		// set / get the gamma correction
 		real_t gamma_correction(real_t v=-1);
 
@@ -64,8 +67,8 @@ class Renderer
 	protected:
 		// renders the current frame
 		unsigned int render_frame();
-		Vector3 trace(const Ray &ray, unsigned int depth);
-		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj);
+		Vector3 trace(const Ray &ray, unsigned int depth, real_t ior = 1.0);
+		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior = 1.0);
 
 	private:
 		// pointer to the framebuffer
@@ -88,7 +91,8 @@ class Renderer
 		real_t m_gamma;
 
 		// flags
-		bool m_f_light_geometry; // if true, light sources will be treated as spheres
+		bool m_f_light_geometry;  // if true, light sources will be treated as spheres
+		bool m_f_realtime_update; // if true, the output will be updated at real time
 };
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

@@ -50,16 +50,13 @@
 #define XT_CFGPROTO_PROP_UP       		"up"
 #define XT_CFGPROTO_PROP_NORMAL			"normal"
 
+#define XT_CFGPROTO_PROP_VECDATA		"vecdata"
+
 #define XT_CFGPROTO_PROP_INTENSITY		"intensity"
 
 #define XT_CFGPROTO_PROP_AMBIENT		"ambient"
 #define XT_CFGPROTO_PROP_SPECULAR		"specular"
 #define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
-
-#define XT_CFGPROTO_PROP_KAMBN			"k_ambient"
-#define XT_CFGPROTO_PROP_KDIFF			"k_diffuse"
-#define XT_CFGPROTO_PROP_KSPEC			"k_specular"
-#define XT_CFGPROTO_PROP_KSEXP			"k_specexp"
 
 /*
 	PROPERTIES
@@ -76,11 +73,17 @@
 #define XT_CFGPROTO_PROP_FOV            "fov"
 
 #define XT_CFGPROTO_PROP_REFLECTANCE	"reflectance"
+#define XT_CFGPROTO_PROP_TRANSPARENCY	"transparency"
 
 #define XT_CFGPROTO_PROP_GEOMETRY		"geometry"
 #define XT_CFGPROTO_PROP_MATERIAL       "material"
 
-#define XT_CFGPROTO_PROP_VECDATA		"vecdata"
+#define XT_CFGPROTO_PROP_KAMBN			"k_ambient"
+#define XT_CFGPROTO_PROP_KDIFF			"k_diffuse"
+#define XT_CFGPROTO_PROP_KSPEC			"k_specular"
+#define XT_CFGPROTO_PROP_KSEXP			"k_specexp"
+
+#define XT_CFGPROTO_PROP_IOR			"ior"
 
 #define XT_CFGPROTO_PROP_COORD_X        "x"
 #define XT_CFGPROTO_PROP_COORD_Y        "y"

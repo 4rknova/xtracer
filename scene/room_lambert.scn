@@ -3,7 +3,7 @@
 name = room
 description = Three spheres in a room.
 
-k_ambient = 0.06
+k_ambient = 0.01
 
 ambient = {
 	r = 1

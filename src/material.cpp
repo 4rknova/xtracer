@@ -28,7 +28,10 @@
 #include "material.hpp"
 
 Material::Material()
-	: reflectance(0)
+	: 
+	reflectance(0),
+	transparency(0),
+	ior(2)
 {}
 
 Material::~Material()

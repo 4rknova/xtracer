@@ -3,7 +3,7 @@
 name = Simple sphere
 description = Just a plain sphere
 
-k_ambient = 0.1
+k_ambient = 0.001
 
 ambient = {
 	r = 1
@@ -75,9 +75,9 @@ light = {
 		}
 
 		intensity = {
-			r = 0.7
-			g = 0.7
-			b = 0.7
+			r = 0.51
+			g = 0.51
+			b = 0.51
 		}
 	}
 }
@@ -86,8 +86,8 @@ material = {
 	floor = {
 		type = phong
 
-		k_diffuse = 0.3
-		k_specular = 0.7
+		k_diffuse = 0.4
+		k_specular = 0.6
 		k_specexp = 1350
 	
 		diffuse = {
@@ -102,30 +102,29 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.3
+		reflectance = 0.6
 	}
 
 	plastic = {
 		type = phong
 
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_specexp = 350
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_specexp = 60
 	
 		diffuse = {
-			r = 0
-			g = 0.3
-			b = 1 
+			r = 0.4
+			g = 0.4
+			b = 0.9 
 		}
 
 		specular = {
-			r = 0
-			g = 0.3
+			r = 1
+			g = 1
 			b = 1
 		}
 
-		reflectance = 0.5
-
+		reflectance = 0.3
 	}
 }
 

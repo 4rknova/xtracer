@@ -37,7 +37,8 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	m_verbosity(0),
 	m_antialiasing(1),
 	m_gamma(1),
-	m_f_light_geometry(false)
+	m_f_light_geometry(false),
+	m_f_realtime_update(false)
 {}
 
 // report the progress
@@ -137,6 +138,9 @@ unsigned int Renderer::render_frame()
 			*(m_fb->pixel(x, y)) += color;
 		}
 
+		if (m_f_realtime_update)
+			m_drv->update(0, y, w, y+1); // update the output
+
 		// calculate progress
 		progress = y / (float)(h-1) * 100;
 		// report progress
@@ -147,7 +151,7 @@ unsigned int Renderer::render_frame()
 	return 0;
 }
 
-Vector3 Renderer::trace(const Ray &ray, unsigned int depth)
+Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior)
 {
 	IntInfo info;
 	memset(&info, 1, sizeof(info));
@@ -156,7 +160,7 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth)
 	std::string obj; // this will hold the object name
 	if (m_scene->intersection(ray, info, obj, m_f_light_geometry))
 	{
-		return shade(ray, depth, info, obj);
+		return shade(ray, depth, info, obj, ior);
 	}
 
 	return Vector3(0, 0, 0);
@@ -164,7 +168,7 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth)
 
 #include "matlambert.hpp"
 
-Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj)
+Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior)
 {
 	Vector3 color;
 		
@@ -210,14 +214,26 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	}
 
 	// reflection
-	if( mat->reflectance > 0.0)
+	if(mat->reflectance > 0.0)
 	{
 		Ray reflray;
 		reflray.origin = p;
 		reflray.direction = (-ray.direction).reflected(n);
-		color += mat->reflectance * trace(reflray, depth-1);
+		color += mat->reflectance * trace(reflray, depth-1) * mat->diffuse;
 	}
 
+	// refraction
+/*
+	if(mat->transparency > 0.0)
+	{
+		Ray refrray;
+		refrray.origin = p;
+
+		refrray.direction = (ray.direction).refracted(n, ior, mat->ior);
+
+		color += mat->transparency * trace(refrray, depth-1) * mat->diffuse;
+	}
+*/
 	return color;
 }
 
@@ -226,6 +242,14 @@ unsigned int Renderer::verbosity(int v)
 	if(v < 0)
 		return m_verbosity;
 	return m_verbosity = v;
+}
+
+bool Renderer::realtime_update(int v)
+{
+	if (v < 0)
+		return m_f_realtime_update;
+	return m_f_realtime_update = (v == 0 ? false : true);
+
 }
 
 bool Renderer::light_geometry(int v)

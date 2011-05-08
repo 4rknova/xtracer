@@ -43,7 +43,6 @@ class MatBlinnPhong: public Material
 		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
 
 		Vector3 specular; 	// specular intensity
-		Vector3 diffuse;	// diffuse intensity
 		real_t kspec;		// specular constant
 		real_t kdiff;		// diffuse constant
 		real_t ksexp;		// specular exponential

@@ -45,6 +45,8 @@ class Material
 		
 		Vector3 diffuse;   	// diffuse intensity
 		real_t reflectance;
+		real_t transparency;
+		real_t ior;
 };
 
 #endif /* XTRACER_MATERIAL_HPP_INCLUDED */

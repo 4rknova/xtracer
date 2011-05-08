@@ -14,36 +14,45 @@ ambient = {
 
 # The scene cameras.
 camera = {
-	
-	# The default camera.
 	default = front
 
-	# The front camera.
 	front = {
-		# Field of view.
 		fov = 45
 
-		# Camera position.
 		position = {
 			x = 190.0
 			y = 373.0
 			z = -1200.0
 		}
 
-		# Target.
-		# This is equal to the direction (0, 1, 0) 
-		# as defined in the original data.
 		target = {
 			x = 190.0
 			y = 273.0
 			z = -799.0
 		}
 
-		# Up vector.
 		up = {
-			x = 0
 			y = 1
+		}
+	}
+
+	side = {
+		# Field of view.
+		fov = 45
+
+		# Camera position.
+		position = {
+			x = 1190.0
+			y = 873.0
 			z = 0
+		}
+
+		target = {
+			x = 190.0
+		}
+
+		up = {
+			y = 1
 		}
 	}
 }
@@ -141,19 +150,19 @@ material = {
 		}
 	}
 
-	green = {
+	ball = {
 		type = phong
 
-		reflectance = 0.7
+		reflectance = 0.5
 
-		k_diffuse = 0.3
-		k_specular = 0.7
+		k_diffuse = 0.2
+		k_specular = 0.8
 		k_specexp = 60
 
 		diffuse = {
-			r = 1
-			g = 0.48
-			b = 0.09
+			r = 0.961
+			g = 0.961
+			b = 0.961
 		}
 
 		specular = {
@@ -184,7 +193,7 @@ geometry = {
 		position = {
 			x = -186.0
 			y = 100.0
-			z = 168.5
+			z = -168.5
 		}
 
 		radius = 100
@@ -195,7 +204,7 @@ geometry = {
 		position = {
 			x = -86.0
 			y = 100.0
-			z = 68.5
+			z = -68.5
 		}
 
 		radius = 100
@@ -206,7 +215,7 @@ geometry = {
 		position = {
 			x = 14.0
 			y = 100.0
-			z = 168.5
+			z = -168.5
 		}
 
 		radius = 100
@@ -216,8 +225,8 @@ geometry = {
 		type = sphere
 		position = {
 			x = -76.0
-			y = 300.0
-			z = 128.5
+			y = 260.0
+			z = -128.5
 		}
 
 		radius = 100
@@ -466,22 +475,22 @@ object = {
 	# Sphere stack
 	sphere_1 = {
 		geometry = sphere_1
-		material = green
+		material = ball
 	}
 	
 	sphere_2 = {
 		geometry = sphere_2
-		material = green
+		material = ball
 	}
 	
 	sphere_3 = {
 		geometry = sphere_3
-		material = green
+		material = ball
 	}
 	
 	sphere_4 = {
 		geometry = sphere_4
-		material = green
+		material = ball
 	}
 
 	# Tall block 

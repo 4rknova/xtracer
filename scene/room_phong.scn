@@ -3,7 +3,7 @@
 name = Triball with reflections
 description = Three balls in a room
 
-k_ambient = 0.06
+k_ambient = 0.001
 
 ambient = {
 	r = 1
@@ -208,7 +208,7 @@ object = {
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_silver
+		material = phong_silver
 	}
 	back = {
 		geometry = back
@@ -224,7 +224,7 @@ object = {
 	}
 	front = {
 		geometry = front
-		material = lambert_silver
+		material = phong_silver
 	}
 	step = {
 		geometry = step
@@ -233,5 +233,102 @@ object = {
 }
 
 material = {
-	%include basic.mat
+	# plain red phong
+	phong_red = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 1
+			g = 0
+			b = 0
+		}
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60
+	}
+
+	# plain green phong
+	phong_green = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 0
+			g = 1
+			b = 0
+		}
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60 
+	}
+
+	# plain blue phong
+	phong_blue = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 0.3
+			g = 0.3
+			b = 1
+		}
+		specular = {
+			r = .99
+			g = .99
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60 
+	}
+
+	# plain silver phong
+	phong_silver = {
+		type = phong
+
+		reflectance = 0.5 
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+		specular = {
+			r = 0.1
+			g = 0.1
+			b = 0.1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60
+	}
+	
+	# plain silver lambert
+	lambert_silver = {
+		type = lambert
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+	}
 }
