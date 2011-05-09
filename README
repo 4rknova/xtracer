@@ -16,7 +16,7 @@ Implemented:
 * Lights        : Point light
 * Cameras       : Pinhole camera
 * Drivers       : SDL, PPM, DUM
-* Effects       : Reflection
+* Effects       : Reflection, Refraction (Buggy)
 * Acceleration  : -
 * Anti-aliasing : Supersampling
 * Other         : Gamma correction
@@ -25,7 +25,7 @@ Planned:
 * Primitives   : Cone, Cylinder, Torus, Isosurface, Mesh
 * Materials    : Texture mapping
 * Cameras      : Thin lense
-* Effects      : Refraction, Fresnel
+* Effects      : Fresnel
 * Acceleration : BHV, KD-Trees
 
 Dependencies
@@ -42,5 +42,5 @@ testing process.
 Nuclear          : Technical support and advisory.
 Hikiko           : Technical support and advisory.
 Hardas Apostolhs : Tested over and over again all the features.
-Kokkalhs Nikos   : Tested compilation under freebsd.
+Kokkalis Nikos   : Tested compilation under freebsd.
 Ntzoufras Kwstas : Tested compilation under macosx.

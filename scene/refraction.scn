@@ -1,0 +1,204 @@
+# Xtracer simple sphere scene
+
+name = Simple sphere
+description = Just a plain sphere
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 500
+			y = 300	
+			z = -800
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	sphere10 = {
+		type = sphere
+		position = {
+			x = -725
+			y = 175
+			z = 850
+		}
+		radius = 175
+	}
+	
+	sphere11 = {
+		type = sphere
+		position = {
+			x = -50
+			y = 175
+			z = 500
+		}
+		radius = 175
+	}
+	sphere12 = {
+		type = sphere
+		position = {
+			x = 350
+			y = 175
+			z = 650
+		}
+		radius = 175
+	}
+
+	sphere2 = {
+		type = sphere
+		position = {
+			x = 50
+			y = 175
+			z = 0
+		}
+		radius = 175
+	}
+
+	plane = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 0
+	}
+}
+
+light = {
+	top = {
+		position = {
+			x = 0
+			y = 500
+			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	cat = {
+		position = {
+			x = 0
+			y = 200
+			z = 400
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	floor = {
+		type = phong
+
+		k_diffuse = 0.4
+		k_specular = 0.6
+		k_specexp = 1350
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1 
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+	}
+
+	plastic1 = {
+		type = phong
+
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_specexp = 60
+	
+		diffuse = {
+			r = 0.7
+			g = 0.7
+			b = 0.11 
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+	}
+
+	plastic2 = {
+		type = phong
+
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_specexp = 60
+	
+		diffuse = {
+			r = 0.61
+			g = 0.81
+			b = 0.98 
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+		reflectance = 0.5
+		transparency = 0.7
+		ior = 1.05#41714
+	}
+}
+
+object = {
+	sphere11 = {
+		geometry = sphere11
+		material = plastic1
+	}
+	sphere12 = {
+		geometry = sphere12
+		material = plastic1
+	}
+	sphere10 = {
+		geometry = sphere10
+		material = plastic1
+	}
+	sphere2 = {
+		geometry = sphere2
+		material = plastic2
+	}
+	plane = {
+		geometry = plane
+		material = floor
+	}
+}

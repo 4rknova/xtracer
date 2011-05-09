@@ -43,10 +43,10 @@ class Material
 		// shade
 		virtual Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info) = 0;
 		
-		Vector3 diffuse;   	// diffuse intensity
-		real_t reflectance;
-		real_t transparency;
-		real_t ior;
+		Vector3 diffuse;	   	// diffuse intensity
+		real_t reflectance;		// reflectance
+		real_t transparency;	// transparency
+		real_t ior;				// index of refraction
 };
 
 #endif /* XTRACER_MATERIAL_HPP_INCLUDED */

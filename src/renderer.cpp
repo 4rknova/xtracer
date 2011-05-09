@@ -223,7 +223,6 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	}
 
 	// refraction
-/*
 	if(mat->transparency > 0.0)
 	{
 		Ray refrray;
@@ -231,9 +230,10 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 
 		refrray.direction = (ray.direction).refracted(n, ior, mat->ior);
 
-		color += mat->transparency * trace(refrray, depth-1) * mat->diffuse;
+		color *= (1.0 - mat->transparency);
+		color += mat->transparency * trace(refrray, depth-1, mat->ior) * mat->diffuse;
 	}
-*/
+
 	return color;
 }
 

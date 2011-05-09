@@ -124,7 +124,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.3
+		reflectance = 0.6
 	}
 }
 

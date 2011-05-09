@@ -31,7 +31,7 @@ Material::Material()
 	: 
 	reflectance(0),
 	transparency(0),
-	ior(2)
+	ior(1.0)
 {}
 
 Material::~Material()

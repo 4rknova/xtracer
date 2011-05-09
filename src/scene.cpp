@@ -545,7 +545,7 @@ unsigned int Scene::add_material(NCFGParser *p)
 		
 		// index of refraction
 		std::string ior = p->get(XT_CFGPROTO_PROP_IOR);
-		mat->ior = nstring_to_double(refl);
+		mat->ior = nstring_to_double(ior);
 	}
 
 	material[p->node()] = mat;
