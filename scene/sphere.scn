@@ -119,12 +119,12 @@ material = {
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 0.4
+			g = 0.4
+			b = 0.9
 		}
 
-		reflectance = 0.6
+		reflectance = 0.3
 	}
 }
 

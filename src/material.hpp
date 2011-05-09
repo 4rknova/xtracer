@@ -34,19 +34,39 @@
 #include "camera.hpp"
 #include "light.hpp"
 
+#include "phong.hpp"
+#include "lambert.hpp"
+
+enum MATERIAL_TYPE
+{
+	MATERIAL_LAMBERT,		// Lambert
+	MATERIAL_PHONG,			// Phong
+	MATERIAL_BLINNPHONG		// Blinn-Phong
+};
+
 class Material 
 {
 	public:
 		Material();
-		virtual ~Material();
+		~Material();
 
-		// shade
-		virtual Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info) = 0;
-		
+		// shader
+		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
+	
+		// properties
 		Vector3 diffuse;	   	// diffuse intensity
+		Vector3 specular;		// specular intensity
+		Vector3 ambient;		// ambient intensity
+		
+		real_t kspec;       	// specular constant
+		real_t kdiff;       	// diffuse constant
+		real_t ksexp;       	// specular exponential
+
 		real_t reflectance;		// reflectance
 		real_t transparency;	// transparency
 		real_t ior;				// index of refraction
+
+		MATERIAL_TYPE type;
 };
 
 #endif /* XTRACER_MATERIAL_HPP_INCLUDED */

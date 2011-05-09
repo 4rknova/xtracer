@@ -64,8 +64,8 @@ phong_red = {
 	}
 	specular = {
 		r = 1
-		g = 1
-		b = 1
+		g = 0
+		b = 0
 	}
 
 	k_diffuse = 0.3
@@ -85,9 +85,9 @@ phong_green = {
 		b = 0
 	}
 	specular = {
-		r = 1
+		r = 0
 		g = 1
-		b = 1
+		b = 0
 	}
 
 	k_diffuse = 0.3
@@ -107,8 +107,8 @@ phong_blue = {
 		b = 1
 	}
 	specular = {
-		r = .99
-		g = .99
+		r = 0
+		g = 0
 		b = 1
 	}
 

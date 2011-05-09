@@ -2,8 +2,8 @@
 
     This file is part of xtracer.
 
-    matlambert.hpp
-    MatLambert class
+    color.hpp
+    Color type
 
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
@@ -25,21 +25,11 @@
 
 */
 
-#ifndef XTRACER_MAT_LAMBERT_HPP_INCLUDED
-#define XTRACER_MAT_LAMBERT_HPP_INCLUDED
+#ifndef XTRACER_COLOR_HPP_INCLUDED
+#define XTRACER_COLOR_HPP_INCLUDED
 
 #include <nmath/vector.h>
 
-#include "material.hpp"
-#include "light.hpp"
+typedef Vector4 Color;	// Rgba color
 
-class MatLambert: public Material
-{
-	public:
-		MatLambert();
-
-		// shade
-		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
-};
-
-#endif /* XTRACER_MAT_LAMBERT_HPP_INCLUDED */
+#endif /* XTRACER_COLOR_HPP_INCLUDED */

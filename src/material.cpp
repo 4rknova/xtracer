@@ -28,11 +28,60 @@
 #include "material.hpp"
 
 Material::Material()
-	: 
-	reflectance(0),
-	transparency(0),
-	ior(1.0)
+	:
+	// Color values
+	diffuse(Vector3(1.0, 1.0, 1.0)),
+	specular(Vector3(1.0, 1.0, 1.0)),
+	ambient(Vector3(1.0, 1.0, 1.0)),
+	// Constants
+	kspec(0.0),
+	kdiff(1.0),
+	ksexp(60),
+	// Ratios
+	reflectance(0.0),
+	transparency(0.0),
+	// Index of refraction
+	ior(1.5),
+	// Material type
+	type(MATERIAL_LAMBERT)
 {}
 
 Material::~Material()
 {}
+
+Vector3 Material::shade(const Camera *cam, const Light *light, const IntInfo &info)
+{
+	switch(type)
+	{
+		case MATERIAL_LAMBERT:
+			return lambert(
+				light->position, 
+				&info, 
+				light->intensity, 
+				diffuse);
+
+		case MATERIAL_PHONG:
+			return phong(
+				cam->position, 
+				light->position, 
+				&info, 
+				light->intensity, 
+				kspec, kdiff, ksexp, 
+				diffuse, 
+				specular);
+
+		case MATERIAL_BLINNPHONG:
+			return blinn_phong(
+				cam->position, 
+				light->position, 
+				&info, 
+				light->intensity, 
+				kspec, kdiff, ksexp, 
+				diffuse, 
+				specular);
+	}
+
+	// This should never happen
+	return Vector3(0, 0, 0);
+}
+

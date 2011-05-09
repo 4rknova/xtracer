@@ -97,7 +97,9 @@ unsigned int Renderer::render()
 
 	// update the output
 	m_drv->update();
-	
+
+	// terminate the output driver
+	m_drv->deinit();
 	return 0;
 }
 
@@ -151,7 +153,7 @@ unsigned int Renderer::render_frame()
 	return 0;
 }
 
-Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior)
+Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior_src, real_t ior_dst)
 {
 	IntInfo info;
 	memset(&info, 1, sizeof(info));
@@ -160,15 +162,24 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior)
 	std::string obj; // this will hold the object name
 	if (m_scene->intersection(ray, info, obj, m_f_light_geometry))
 	{
-		return shade(ray, depth, info, obj, ior);
+		// get a pointer to the material
+		Material *mat = m_scene->material[m_scene->object[obj]->material];
+		// if the ray starts inside the geometry
+		if (dot(info.normal, ray.direction) > 0)
+		{
+			info.normal = -info.normal;
+			return shade(ray, depth, info, obj, mat->ior, ior_src);
+		}
+		else
+		{
+			return shade(ray, depth, info, obj, ior_src, mat->ior);
+		}
 	}
 
 	return Vector3(0, 0, 0);
 }
 
-#include "matlambert.hpp"
-
-Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior)
+Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior_src, real_t ior_dst)
 {
 	Vector3 color;
 		
@@ -186,9 +197,9 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	Material *mat = m_scene->material[m_scene->object[obj]->material];
 	
 	// ambient
-	color = m_scene->ambient * m_scene->k_ambient * mat->diffuse;
+	color = mat->ambient * m_scene->k_ambient * mat->diffuse;
 		
-	// calculate shadows
+	// shadows
 	Vector3 n = info.normal;
 	Vector3 p = info.point;
 
@@ -213,25 +224,29 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 		}
 	}
 
-	// reflection
-	if(mat->reflectance > 0.0)
+	// specular effects
+	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG))
 	{
-		Ray reflray;
-		reflray.origin = p;
-		reflray.direction = (-ray.direction).reflected(n);
-		color += mat->reflectance * trace(reflray, depth-1) * mat->diffuse;
-	}
+		// reflection
+		if(mat->reflectance > 0.0)
+		{
+			Ray reflray;
+			reflray.origin = p;
+			reflray.direction = (-ray.direction).reflected(n);
+			color += mat->reflectance * trace(reflray, depth-1) * mat->specular;
+		}
 
-	// refraction
-	if(mat->transparency > 0.0)
-	{
-		Ray refrray;
-		refrray.origin = p;
+		// refraction
+		if(mat->transparency > 0.0)
+		{
+			Ray refrray;
+			refrray.origin = p;
 
-		refrray.direction = (ray.direction).refracted(n, ior, mat->ior);
+			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
-		color *= (1.0 - mat->transparency);
-		color += mat->transparency * trace(refrray, depth-1, mat->ior) * mat->diffuse;
+			color *= (1.0 - mat->transparency);
+			color += mat->transparency * trace(refrray, depth-1, ior_src, ior_dst) * mat->specular;
+		}
 	}
 
 	return color;

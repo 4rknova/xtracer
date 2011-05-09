@@ -67,8 +67,12 @@ class Renderer
 	protected:
 		// renders the current frame
 		unsigned int render_frame();
-		Vector3 trace(const Ray &ray, unsigned int depth, real_t ior = 1.0);
-		Vector3 shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior = 1.0);
+		Vector3 trace(const Ray &ray, unsigned int depth, 
+			real_t ior_src = 1.0, real_t ior_dst = 1.0);
+		Vector3 shade(const Ray &ray, unsigned int depth, 
+			IntInfo &info, 
+			std::string &obj, 
+			real_t ior_src = 1.0, real_t ior_dst = 1.0);
 
 	private:
 		// pointer to the framebuffer

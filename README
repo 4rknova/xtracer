@@ -16,7 +16,7 @@ Implemented:
 * Lights        : Point light
 * Cameras       : Pinhole camera
 * Drivers       : SDL, PPM, DUM
-* Effects       : Reflection, Refraction (Buggy)
+* Effects       : Reflection, Refraction
 * Acceleration  : -
 * Anti-aliasing : Supersampling
 * Other         : Gamma correction
@@ -40,7 +40,7 @@ I would like to thank the following people for helping me with the development a
 testing process.
 
 Prof. T. Panayiotopoulos : My thesis supervising professor.
-Nuclear, Hikiko          : Technical support and troubleshooting advisory.
+Nuclear, Hikiko          : Technical advisory.
 Hardas Apostolhs         : Tested over and over again all the features.
 Kokkalis Nikos           : Tested compilation under freebsd.
 Costas Droggos           : Tested compilation under macosx, windows.

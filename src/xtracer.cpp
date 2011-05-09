@@ -383,9 +383,6 @@ int main(int argc, char **argv)
 		<< "\n"
 		<< "Shutting down..\n";
 
-	// terminate the output driver
-	drv->deinit();
-
 	// release the dynamically allocated memory
 	delete drv;
 	

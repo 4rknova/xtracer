@@ -446,73 +446,53 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 	return 0;
 }
 
-#include "matlambert.hpp"
-#include "matphong.hpp"
-#include "matblinnphong.hpp"
-
 unsigned int Scene::add_material(NCFGParser *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
-	Material *mat = NULL;
+	Material *mat = new Material();
 
 	std::string colr, colg, colb;
 
 	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
 	{
-		mat = new MatLambert();
+		mat->type = MATERIAL_LAMBERT;
 	}
 	else if (!type.compare(XT_CFGPROTO_VAL_PHONG))
 	{
-		mat = new MatPhong();
-
-		// specular intensity
-		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		((MatPhong *)mat)->specular = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
-
-		// specular constant
-		((MatPhong *)mat)->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
-		// diffuse constant
-		((MatPhong *)mat)->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
-		// specular exponential
-		((MatPhong *)mat)->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
+		mat->type = MATERIAL_PHONG;
 	}
 	else if (!type.compare(XT_CFGPROTO_VAL_BLINNPHONG))
 	{
-		mat = new MatBlinnPhong();
-
-		// specular intensity
-		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		((MatBlinnPhong *)mat)->specular = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
-
-		// specular constant
-		((MatBlinnPhong *)mat)->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
-		// diffuse constant
-		((MatBlinnPhong *)mat)->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
-		// specular exponential
-		((MatBlinnPhong *)mat)->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
+		mat->type = MATERIAL_BLINNPHONG;
 	}
 	else
 	{
 		std::cout << "Warning: Unsupported material " << p->node() << ". Skipping...\n";
+		delete mat;
 		return 1;
 	}
 
 	// common properties
 	if (mat)
 	{
+		// specular intensity
+		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
+		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
+		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
+
+		mat->specular = 
+			Vector3(nstring_to_double(colr), 
+					nstring_to_double(colg), 
+					nstring_to_double(colb));
+
+		// specular constant
+		mat->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
+		// diffuse constant
+		mat->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
+		// specular exponential
+		mat->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
+
 		// diffuse intensity
 		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
 		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
@@ -527,7 +507,6 @@ unsigned int Scene::add_material(NCFGParser *p)
 		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
 		mat->reflectance = nstring_to_double(refl);
 		
-		// normalise the reflectance value
 		if (mat->reflectance > 1.0)
 			mat->reflectance = 1.0;
 		else if (mat->reflectance < 0.0)
@@ -537,7 +516,6 @@ unsigned int Scene::add_material(NCFGParser *p)
 		std::string transp = p->get(XT_CFGPROTO_PROP_TRANSPARENCY);
 		mat->transparency = nstring_to_double(transp);
 
-		// normalise the transparency value
 		if (mat->transparency > 1.0)
 			mat->transparency = 1.0;
 		else if (mat->transparency < 0.0)

@@ -97,6 +97,20 @@ light = {
 			b = 1
 		}
 	}
+	
+	front = {
+		position = {
+			x = 0
+			y = 200
+			z = -400
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
 
 	cat = {
 		position = {
@@ -117,8 +131,8 @@ material = {
 	floor = {
 		type = phong
 
-		k_diffuse = 0.4
-		k_specular = 0.6
+		k_diffuse = 0.5
+		k_specular = 0.5
 		k_specexp = 1350
 	
 		diffuse = {
@@ -138,8 +152,8 @@ material = {
 	plastic1 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
+		k_diffuse = 0.3
+		k_specular = 0.7
 		k_specexp = 60
 	
 		diffuse = {
@@ -154,29 +168,32 @@ material = {
 			b = 1
 		}
 
+		#reflectance = 0.9
+
 	}
 
 	plastic2 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
+		k_diffuse = 0.5
+		k_specular = 0.9
 		k_specexp = 60
 	
 		diffuse = {
-			r = 0.61
-			g = 0.81
-			b = 0.98 
+			r = 0.5
+			g = 0.5
+			b = 1 
 		}
 
 		specular = {
-			r = 1
-			g = 1
+			r = 0.85
+			g = 0.85
 			b = 1
 		}
-		reflectance = 0.5
+
+		reflectance = 0.1
 		transparency = 0.7
-		ior = 1.05#41714
+		ior = 1.051714
 	}
 }
 
