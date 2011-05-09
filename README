@@ -39,8 +39,10 @@ Testing
 I would like to thank the following people for helping me with the development and 
 testing process.
 
-Nuclear          : Technical support and advisory.
-Hikiko           : Technical support and advisory.
-Hardas Apostolhs : Tested over and over again all the features.
-Kokkalis Nikos   : Tested compilation under freebsd.
-Ntzoufras Kwstas : Tested compilation under macosx.
+Prof. T. Panayiotopoulos : My thesis supervising professor.
+Nuclear, Hikiko          : Technical support and troubleshooting advisory.
+Hardas Apostolhs         : Tested over and over again all the features.
+Kokkalis Nikos           : Tested compilation under freebsd.
+Costas Droggos           : Tested compilation under macosx, windows.
+Ntzoufras Kwstas         : Tested compilation under macosx.
+
