@@ -20,7 +20,6 @@ bin = $(bpath)/$(pkgname)
 doc = $(bpath)/$(pkgname).pdf
 man = $(mpath)/$(pkgname).1
 
-PDFVIEWER = xpdf 
 TEX = xelatex
 RM = rm
 CC = gcc
@@ -28,13 +27,14 @@ CXX = g++
 COFLAGS= $(opt) $(dbg) -D'$(sdl)' -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
 CCFLAGS = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
 CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing -I$(spath) $(COFLAGS)
+TEXFLAGS = -output-directory=$(tpath)
 LDFLAGS = -lnparse -lnmath $(LDSDL)
 
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
 
 $(doc): $(doctex)
-	$(TEX) $(doctex)
+	$(TEX) $(TEXFLAGS) $(doctex)
 	
 %.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
@@ -50,15 +50,6 @@ all: $(bin)
 
 .PHONY: bin 
 bin: $(bin)
-
-.PHONY: test
-test: $(bin)
-	clear
-
-#	./bin/xtracer ./scenes/room* -res 320x180 -v
-#	./bin/xtracer ./scenes/room* -res 512x512 -v
-	./bin/xtracer ./scenes/room* -res 640x360 -v
-#	./bin/xtracer ./scenes/room* -res 1280x720 -v
 
 .PHONY: doc
 doc: $(doc)
@@ -81,8 +72,9 @@ uninstall:
 .PHONY: clean
 clean:
 	$(RM) -rf $(objc) $(objcc) $(objcpp)
-	$(RM) -rf $(basename $(doc)).{aux,log,out,toc}
+	$(RM) -rf $(tpath)/*.aux $(tpath)/*.log $(tpath)/*.out $(tpath)/*.toc
 
 .PHONY: clean-all
 clean-all: clean
 	rm -f Makefile $(bin)
+	rm -f $(tpath)/*.pdf
