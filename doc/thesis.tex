@@ -1,0 +1,95 @@
+\documentclass[oneside,12pt]{classes/thesis}
+
+% PDF Meta-data
+\ifpdf
+    \pdfinfo {
+		/Title  (Bsc Thesis)
+        /Creator (TeX)
+        /Producer (pdfTeX)
+        /Author (Papadopoulos Nikos nikpapas@gmail.com)
+        /CreationDate (D:20110101000000)  %format D:YYYYMMDDhhmmss
+        /ModDate (D:2011815213532)
+        /Subject (Ray tracing, Theory and implementation)
+        /Keywords (Bsc, Thesis, Ray tracing)
+	}
+    \pdfcatalog 
+	{ 
+		/PageMode (/UseOutlines)
+        /OpenAction (fitbh)  
+	}
+\fi
+
+% Cover
+% - Title
+\title{Ray tracing\\[1ex]
+        Θεωρία και υλοποίηση}
+
+% - Body
+\ifpdf
+	\author{\href{mailto:nikpapas@gmail.com}{Παπαδόπουλος Νικόλαος}}
+	\collegeordept{\href{http://www.cs.unipi.gr}{Τμήμα πληροφορικής}}
+	\university{\href{http://www.unipi.gr}{Πανεπιστήμιο Πειραιώς}}
+	% crest logo
+	\crest{\includegraphics[width=30mm]{unipi}}
+\else
+	\author{Παπαδόπουλος Νικόλαος}
+	\collegeordept{Τμήμα πληροφορικής}
+	\university{Πανεπιστήμιο Πειραιώς}
+	% insert below the file name that contains the crest in-place of 'UnivShield'
+	\crest{\includegraphics[bb = 0 0 292 336, width=30mm]{unipi}}
+\fi
+
+\renewcommand{\submittedtext}{Πτυχιακή εργασία}
+\degree{}
+\degreedate{2011}
+
+% turn of those nasty overfull and underfull hboxes
+\hbadness=10000
+\hfuzz=50pt
+
+% Comment out the next line to get single spacing
+%\onehalfspacing
+
+\begin{document}
+
+% A page with the abstract on including title and author etc may be
+% required to be handed in separately. If this is not so, then comment
+% the below 3 lines (between '\begin{abstractseparte}' and 
+% 'end{abstractseparate}')
+%\begin{abstractseparate}
+%  \input{Abstract/abstract}
+%\end{abstractseparate}
+
+\maketitle
+
+%set the number of sectioning levels that get number and appear in the contents
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\frontmatter % book mode only
+\pagenumbering{roman}
+%\include{Dedication/dedication}
+%\include{Acknowledgement/acknowledgement}
+\include{abstract/abstract}
+\tableofcontents
+\listoffigures
+
+\renewcommand{\chaptername}{Kεφάλαιο}
+\mainmatter % book mode only
+\include{Introduction/introduction}
+\include{Chapter1/chapter1}
+\include{Chapter2/chapter2}
+\include{Chapter3/chapter3}
+\include{Conclusions/conclusions}
+
+\backmatter % book mode only
+\appendix
+\include{Appendix1/appendix1}
+\include{Appendix2/appendix2}
+
+% Bibliography
+\bibliographystyle{classes/biblio}
+\renewcommand{\bibname}{Βιβλιογραφικές πηγές} % changes default name Bibliography to References
+\bibliography{References/references} % References file
+
+\end{document}
