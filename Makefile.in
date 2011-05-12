@@ -9,7 +9,6 @@ mpath = man
 ccsrc = $(wildcard $(spath)/*.c)
 ccsrcc = $(wildcard $(spath)/*.cc)
 ccsrcpp = $(wildcard $(spath)/*.cpp)
-doctex = $(wildcard $(tpath)/*.tex)
 
 # binarys
 objc = $(ccsrc:.c=.o)
@@ -17,11 +16,15 @@ objcc = $(ccsrcc:.cc=.o)
 objcpp = $(ccsrcpp:.cpp=.o)
 
 bin = $(bpath)/$(pkgname)
-doc = $(bpath)/$(pkgname).pdf
 man = $(mpath)/$(pkgname).1
 
-TEX = xelatex
+MAKE = make
+CLEAR = clear
+COL = col
+LESS = less
+NROFF = nroff
 RM = rm
+INSTALL = install
 CC = gcc
 CXX = g++
 COFLAGS= $(opt) $(dbg) -D'$(sdl)' -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
@@ -33,9 +36,6 @@ LDFLAGS = -lnparse -lnmath $(LDSDL)
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
 
-$(doc): $(doctex)
-	$(TEX) $(TEXFLAGS) $(doctex)
-	
 %.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
 
@@ -52,29 +52,31 @@ all: $(bin)
 bin: $(bin)
 
 .PHONY: doc
-doc: $(doc)
+doc:
+	$(MAKE) -C ./$(tpath)
 
 .PHONY: man-preview
 man-preview:
-	clear&&nroff -Tascii -man "man/xtracer.1" | col -x | less -c
+	$(CLEAR)&& $(NROFF) -Tascii -man "man/xtracer.1" | $(COL) -x | $(LESS) -c
 
 .PHONY: install
 install: all
-	install -m 775 $(bin) $(PREFIX)/bin/$(pkgname)
-	install -c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
+	$(INSTALL)-m 775 $(bin) $(PREFIX)/bin/$(pkgname)
+	$(INSTALL)-c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
 		  
 .PHONY: uninstall
 uninstall:
-	rm -f $(PREFIX)/bin/$(pkgname)
-	rm -f $(PREFIX)/share/man/man1/$(pkgname).1
+	$(RM)-f $(PREFIX)/bin/$(pkgname)
+	$(RM)-f $(PREFIX)/share/man/man1/$(pkgname).1
 
 
 .PHONY: clean
 clean:
 	$(RM) -rf $(objc) $(objcc) $(objcpp)
 	$(RM) -rf $(tpath)/*.aux $(tpath)/*.log $(tpath)/*.out $(tpath)/*.toc
+	$(MAKE) -C $(tpath) clean
 
 .PHONY: clean-all
 clean-all: clean
-	rm -f Makefile $(bin)
-	rm -f $(tpath)/*.pdf
+	$(RM) -f Makefile $(bin)
+	$(MAKE) -C $(tpath) clean-all
