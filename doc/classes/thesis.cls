@@ -28,8 +28,6 @@
 %\renewcommand{\refname}{References}%
 \fi
 
-%\DeclareOption{book}{%
-%}%
 \usepackage{setspace}
 \usepackage{tocbibind}
 \usepackage{amssymb}
@@ -41,7 +39,7 @@
 \setsansfont{FreeSans}
 \setmonofont{FreeMono}
 \usepackage[iso-8859-7]{inputenc}
-\usepackage{xgreek}
+%\usepackage{xgreek}
 \usepackage[usenames, dvipsnames]{color}
 \usepackage[perpage]{footmisc}
 \usepackage[square, sort, numbers, authoryear]{natbib}
@@ -117,6 +115,7 @@
 \setlength{\marginparsep}{1mm}
 \setlength{\marginparwidth}{3cm}
 \setlength{\footskip}{2.36cm}
+\frenchspacing
 
 \pagestyle{fancy}
 \renewcommand{\chaptermark}[1]{\markboth{\MakeUppercase{\thechapter. #1 }}{}}
