@@ -21,8 +21,14 @@
 
 % Cover
 % - Title
-\title{Ray tracing\\[1ex]
-        Θεωρία και υλοποίηση}
+\title
+{
+		Ray tracing\\[1ex]
+        Θεωρία και υλοποίηση
+}
+
+\supervisor{Επιβλέπων καθηγητής}
+\supervprof{Θέμης Παναγιωτόπουλος}
 
 % - Body
 \ifpdf
@@ -35,12 +41,11 @@
 	\author{Παπαδόπουλος Νικόλαος}
 	\collegeordept{Τμήμα πληροφορικής}
 	\university{Πανεπιστήμιο Πειραιώς}
-	% insert below the file name that contains the crest in-place of 'UnivShield'
 	\crest{\includegraphics[bb = 0 0 292 336, width=30mm]{unipi}}
 \fi
 
 \renewcommand{\submittedtext}{Πτυχιακή εργασία}
-\degree{}
+%\degree{}
 \degreedate{2011}
 
 % turn of those nasty overfull and underfull hboxes
@@ -51,14 +56,6 @@
 %\onehalfspacing
 
 \begin{document}
-
-% A page with the abstract on including title and author etc may be
-% required to be handed in separately. If this is not so, then comment
-% the below 3 lines (between '\begin{abstractseparte}' and 
-% 'end{abstractseparate}')
-%\begin{abstractseparate}
-%  \input{Abstract/abstract}
-%\end{abstractseparate}
 
 \maketitle
 
@@ -71,25 +68,33 @@
 %\include{Dedication/dedication}
 %\include{Acknowledgement/acknowledgement}
 \include{abstract/abstract}
+
+% Contents
+\renewcommand{\contentsname}{Περιεχόμενα}
 \tableofcontents
+
+% Figures
+\renewcommand*\listfigurename{Λίστα εικόνων}
 \listoffigures
 
+% Chapters
 \renewcommand{\chaptername}{Kεφάλαιο}
 \mainmatter % book mode only
-\include{Introduction/introduction}
-\include{Chapter1/chapter1}
-\include{Chapter2/chapter2}
-\include{Chapter3/chapter3}
-\include{Conclusions/conclusions}
+\include{introduction/introduction}
+\include{chapter1/chapter1}
+\include{chapter2/chapter2}
+\include{chapter3/chapter3}
+\include{conclusions/conclusions}
 
+% Appendices
 \backmatter % book mode only
 \appendix
-\include{Appendix1/appendix1}
-\include{Appendix2/appendix2}
+\include{appendix1/appendix1}
+\include{appendix2/appendix2}
 
 % Bibliography
 \bibliographystyle{classes/biblio}
 \renewcommand{\bibname}{Βιβλιογραφικές πηγές} % changes default name Bibliography to References
-\bibliography{References/references} % References file
+\bibliography{references/references} % References file
 
 \end{document}
