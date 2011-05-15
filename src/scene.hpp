@@ -34,7 +34,7 @@
 #include <nmath/intinfo.h>
 #include <nmath/vector.h>
 #include <nmath/geometry.h>
-#include <nparse/cfgparser.hpp>
+#include <nparse/cf2parser.h>
 
 #include "camera.hpp"
 #include "light.hpp"
@@ -53,11 +53,11 @@ class Scene
 		unsigned int set_ambient();
 		unsigned int set_camera(const char *name);
 
-		unsigned int add_light(NCFGParser *p);
-		unsigned int add_material(NCFGParser *p);
-		unsigned int add_geometry(NCFGParser *p);
+		unsigned int add_light(NCF2Parser *p);
+		unsigned int add_material(NCF2Parser *p);
+		unsigned int add_geometry(NCF2Parser *p);
 		
-		unsigned int add_object(NCFGParser *p);
+		unsigned int add_object(NCF2Parser *p);
 
 		bool intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights=false);
 
@@ -80,7 +80,7 @@ class Scene
 
 	private:
 		// The parser data tree
-		NCFGParser data;
+		NCF2Parser data;
 
 		// This will cleanup all the allocated memory
 		void cleanup();

@@ -67,7 +67,7 @@ void rprog(float progress)
 		<< std::flush;
 }
 
-#include <nparse/parseutils.hpp>
+#include <nparse/parseutils.h>
 #include <nmath/sphere.h>
 unsigned int Renderer::render()
 {

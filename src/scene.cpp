@@ -31,7 +31,7 @@
 
 #include <nmath/vector.h>
 #include <nmath/geometry.h>
-#include <nparse/parseutils.hpp>
+#include <nparse/parseutils.h>
 
 #include "scene.hpp"
 #include "proto.h"
@@ -128,7 +128,7 @@ unsigned int Scene::init()
 			std::cout << "-> section: " << (*it).c_str() << "\n";
 			for (unsigned int i = 1; i<= count; i++)
 			{
-				NCFGParser *lnode = data.group((*it).c_str())->group(i);
+				NCF2Parser *lnode = data.group((*it).c_str())->group(i);
 
 				// Handle node
 				if (!(*it).compare(XT_CFGPROTO_NODE_OBJECT))
@@ -313,7 +313,7 @@ unsigned int Scene::set_camera(const char *name)
 	return 0;
 }
 
-unsigned int Scene::add_light(NCFGParser *p)
+unsigned int Scene::add_light(NCF2Parser *p)
 {
 	// extract the light properties
 	// position
@@ -347,7 +347,7 @@ unsigned int Scene::add_light(NCFGParser *p)
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
 
-unsigned int Scene::add_geometry(NCFGParser *p)
+unsigned int Scene::add_geometry(NCF2Parser *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
@@ -446,7 +446,7 @@ unsigned int Scene::add_geometry(NCFGParser *p)
 	return 0;
 }
 
-unsigned int Scene::add_material(NCFGParser *p)
+unsigned int Scene::add_material(NCF2Parser *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
@@ -531,7 +531,7 @@ unsigned int Scene::add_material(NCFGParser *p)
 	return 0;
 }
 
-unsigned int Scene::add_object(NCFGParser *p)
+unsigned int Scene::add_object(NCF2Parser *p)
 {
 	std::string comp;
 	Object *tobj = new Object;
