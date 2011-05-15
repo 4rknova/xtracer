@@ -128,7 +128,7 @@ unsigned int Scene::init()
 			std::cout << "-> section: " << (*it).c_str() << "\n";
 			for (unsigned int i = 1; i<= count; i++)
 			{
-				NCF2 *lnode = data.group((*it).c_str())->group(i);
+				NCF1 *lnode = data.group((*it).c_str())->group(i);
 
 				// Handle node
 				if (!(*it).compare(XT_CFGPROTO_NODE_OBJECT))
@@ -313,7 +313,7 @@ unsigned int Scene::set_camera(const char *name)
 	return 0;
 }
 
-unsigned int Scene::add_light(NCF2 *p)
+unsigned int Scene::add_light(NCF1 *p)
 {
 	// extract the light properties
 	// position
@@ -347,7 +347,7 @@ unsigned int Scene::add_light(NCF2 *p)
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
 
-unsigned int Scene::add_geometry(NCF2 *p)
+unsigned int Scene::add_geometry(NCF1 *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
@@ -446,7 +446,7 @@ unsigned int Scene::add_geometry(NCF2 *p)
 	return 0;
 }
 
-unsigned int Scene::add_material(NCF2 *p)
+unsigned int Scene::add_material(NCF1 *p)
 {
 	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
 
@@ -531,7 +531,7 @@ unsigned int Scene::add_material(NCF2 *p)
 	return 0;
 }
 
-unsigned int Scene::add_object(NCF2 *p)
+unsigned int Scene::add_object(NCF1 *p)
 {
 	std::string comp;
 	Object *tobj = new Object;

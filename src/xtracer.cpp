@@ -220,7 +220,7 @@ unsigned int parsearg(int argc, char **argv)
 		{
 			flag_render_light_positions = true;
 		}
-		else if (!strcmp(argv[i], "-realtime_update"))
+		else if (!strcmp(argv[i], "-realtime"))
 		{
 			flag_realtime_update = true;
 		}

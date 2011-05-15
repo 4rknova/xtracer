@@ -30,7 +30,7 @@
 #include "drvsdl.hpp"
 #include "pixel.h"
 
-DrvSDL::DrvSDL( Framebuffer &fb):
+DrvSDL::DrvSDL(Framebuffer &fb):
 	Driver(fb), m_screen(NULL)
 {}
 
