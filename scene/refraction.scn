@@ -7,7 +7,7 @@ k_ambient = 0.01
 
 ambient = {
 	r = 1
-	g = 1
+	 = 1
 	b = 1
 }
 
@@ -18,9 +18,9 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 500
-			y = 300	
-			z = -800
+			x = 550
+			y = 500	
+			z = -1000
 		}
 
 		target = {
@@ -38,7 +38,7 @@ geometry = {
 	sphere10 = {
 		type = sphere
 		position = {
-			x = -725
+			x = 325
 			y = 175
 			z = 850
 		}
@@ -57,9 +57,9 @@ geometry = {
 	sphere12 = {
 		type = sphere
 		position = {
-			x = 350
+			x = -350
 			y = 175
-			z = 650
+			z = 50
 		}
 		radius = 175
 	}
@@ -67,9 +67,9 @@ geometry = {
 	sphere2 = {
 		type = sphere
 		position = {
-			x = 50
+			x = 300
 			y = 175
-			z = 0
+			z = -80
 		}
 		radius = 175
 	}
@@ -84,25 +84,25 @@ geometry = {
 }
 
 light = {
-	top = {
-		position = {
-			x = 0
-			y = 500
-			z = 0
-		}
+#	top = {
+#		position = {
+#			x = 0
+#			y = 500
+#			z = 0
+#		}
 
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
-		}
-	}
+#		intensity = {
+#			r = 1
+#			g = 1
+#			b = 1
+#		}
+#	}
 	
 	front = {
 		position = {
 			x = 0
-			y = 200
-			z = -400
+			y = 500
+			z = -800
 		}
 
 		intensity = {
@@ -114,9 +114,9 @@ light = {
 
 	cat = {
 		position = {
-			x = 0
-			y = 200
-			z = 400
+			x = -500
+			y = 100
+			z = -400
 		}
 
 		intensity = {
@@ -152,47 +152,47 @@ material = {
 	plastic1 = {
 		type = phong
 
-		k_diffuse = 0.3
-		k_specular = 0.7
+		k_diffuse = 0.7
+		k_specular = 0.3
 		k_specexp = 60
 	
 		diffuse = {
-			r = 0.7
-			g = 0.7
-			b = 0.11 
+			r = 0.4
+			g = 0.4
+			b = 0.8 
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 0.6
+			g = 0.7
+			b = 0.8
 		}
 
-		#reflectance = 0.9
+		reflectance = 0.3
 
 	}
 
 	plastic2 = {
 		type = phong
 
-		k_diffuse = 0.5
+		k_diffuse = 0.1
 		k_specular = 0.9
 		k_specexp = 60
 	
 		diffuse = {
-			r = 0.5
-			g = 0.5
+			r = 0.1
+			g = 0.7
 			b = 1 
 		}
 
 		specular = {
-			r = 0.85
-			g = 0.85
-			b = 1
+			r = .7
+			g = .7
+			b = .7
 		}
 
-		reflectance = 0.1
-		transparency = 0.7
+		reflectance = 0.6
+		transparency = 0.5
 		ior = 1.051714
 	}
 }
