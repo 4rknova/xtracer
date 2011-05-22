@@ -36,8 +36,7 @@
 #include "scene.hpp"
 #include "proto.h"
 
-Scene::Scene(const char *filepath)
-	: 
+Scene::Scene(const char *filepath): 
 		camera(new Camera()),
 		k_ambient(0.1),
 		source(filepath),
@@ -601,7 +600,6 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 			light.origin = (*itl).second->position;
 			light.radius = 20;
 			light.calc_aabb();
-
 			if (light.intersection(ray, &test))
 			{
 				if(res.t > test.t)

@@ -163,17 +163,22 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior_src, real
 	if (m_scene->intersection(ray, info, obj, m_f_light_geometry))
 	{
 		// get a pointer to the material
-		Material *mat = m_scene->material[m_scene->object[obj]->material];
-		// if the ray starts inside the geometry
-		if (dot(info.normal, ray.direction) > 0)
+		if (!obj.empty())
 		{
-			info.normal = -info.normal;
-			return shade(ray, depth, info, obj, mat->ior, ior_src);
+			Material *mat = m_scene->material[m_scene->object[obj]->material];
+			// if the ray starts inside the geometry
+			if (dot(info.normal, ray.direction) > 0)
+			{
+				info.normal = -info.normal;
+				return shade(ray, depth, info, obj, mat->ior, ior_src);
+			}
+			else
+			{
+				return shade(ray, depth, info, obj, ior_src, mat->ior);
+			}
 		}
 		else
-		{
-			return shade(ray, depth, info, obj, ior_src, mat->ior);
-		}
+			return Vector3(1, 1, 0);
 	}
 
 	return Vector3(0, 0, 0);
