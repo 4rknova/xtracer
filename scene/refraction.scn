@@ -18,7 +18,7 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 550
+			x = -250
 			y = 500	
 			z = -1000
 		}
@@ -84,24 +84,10 @@ geometry = {
 }
 
 light = {
-#	top = {
-#		position = {
-#			x = 0
-#			y = 500
-#			z = 0
-#		}
-
-#		intensity = {
-#			r = 1
-#			g = 1
-#			b = 1
-#		}
-#	}
-	
 	front = {
 		position = {
 			x = 0
-			y = 500
+			y = -500
 			z = -800
 		}
 
@@ -114,9 +100,9 @@ light = {
 
 	cat = {
 		position = {
-			x = -500
-			y = 100
-			z = -400
+			x = -100
+			y = 220
+			z = -800
 		}
 
 		intensity = {
@@ -181,18 +167,18 @@ material = {
 		k_specexp = 60
 	
 		diffuse = {
-			r = 0.1
+			r = 0.4
 			g = 0.7
 			b = 1 
 		}
 
 		specular = {
-			r = .7
-			g = .7
-			b = .7
+			r = 1
+			g = 1
+			b = 1
 		}
 
-		reflectance = 0.6
+		reflectance = 0.3
 		transparency = 0.5
 		ior = 1.051714
 	}

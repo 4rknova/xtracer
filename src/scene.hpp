@@ -29,7 +29,6 @@
 #define XTRACER_SCENE_HPP_INCLUDED
 
 #include <string>
-#include <map>
 
 #include <nmath/intinfo.h>
 #include <nmath/vector.h>
@@ -48,6 +47,7 @@ class Scene
 		~Scene();
 
 		unsigned int init();		// Initiates the scene
+		unsigned int build();		// Build the scene data according to the scene tree
 		unsigned int analyze();		// Outputs a tree representation of the scene
 
 		unsigned int set_ambient();
@@ -60,6 +60,9 @@ class Scene
 		unsigned int add_object(NCF1 *p);
 
 		bool intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights=false);
+
+		// modifiers
+		unsigned int apply_modifier(const char *reg);
 
 		// The camera
 		Camera *camera;

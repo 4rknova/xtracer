@@ -36,6 +36,7 @@
 // the scenes to be processed
 #include <list>
 std::list<std::string> fscenes;
+std::list<std::string> modifiers;
 
 // the output driver
 XT_DRV driver = XT_SETUP_DEFAULT_DRV;
@@ -216,6 +217,19 @@ unsigned int parsearg(int argc, char **argv)
 
 			camera = argv[i];
 		}
+		// modifiers
+		else if (!strcmp(argv[i], "-mod"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			modifiers.push_back(argv[i]);
+		}
 		else if (!strcmp(argv[i], "-lightpos"))
 		{
 			flag_render_light_positions = true;
@@ -341,6 +355,16 @@ int main(int argc, char **argv)
 		if (scene.init())
 			continue;
 
+		// apply modifiers
+		while(!modifiers.empty())
+		{
+			scene.apply_modifier(modifiers.front().c_str());
+			modifiers.pop_front();
+		}
+
+		// Build the scene data
+		scene.build();
+		
 		if (verbose)
 			scene.analyze();
 

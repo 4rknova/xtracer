@@ -88,6 +88,7 @@ void Scene::cleanup()
 	// Release the camera
 	std::cout << "Releasing the camera..\n";
 	delete camera;
+	camera = NULL;
 }
 
 unsigned int Scene::init()
@@ -95,16 +96,19 @@ unsigned int Scene::init()
 	std::cout << "Initiating the scene..\n";
 
 	// Load the scene file and parse it
-	std::cout << "Parsing.. \n";
-	int status = data.parse();
-	if(status)
+	std::cout << "Parsing file.. \n";
+	if(data.parse())
 	{
-		std::cerr << "Error: Failed to load the scene file.\n";
+		std::cerr << "Error: Failed to parse the scene file.\n";
 		return 1;
 	}
+	return 0;
+}
 
-	// Start populating the lists
+unsigned int Scene::build()
+{
 	std::cout << "Setting up the scene environment..\n";
+	// Start populating the lists
 	unsigned int count = 0;
 
 	set_ambient();			// Set the scene ambient color
@@ -117,7 +121,8 @@ unsigned int Scene::init()
 
 	std::list<std::string>::iterator it;
 
-	std::cout << "Creating scene entities..\n";
+	std::cout << "Building scene data..\n";
+
 	for (it = sections.begin(); it != sections.end(); it++)
 	{
 		// Populate the groups
@@ -303,8 +308,9 @@ unsigned int Scene::set_camera(const char *name)
 	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
 
-	// cleanup the previous camera ( I allocate a generic camera in the constructor )
-	delete camera;
+	// cleanup the previous camera if needed
+	if (camera)
+		delete camera;
 
 	// create the camera
 	camera = new Camera(pos, targ, up, fov);
@@ -614,4 +620,36 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 	memcpy(&info, &res, sizeof(info));
 
 	return info.t != NM_INFINITY ? true : false;
+}
+
+unsigned int Scene::apply_modifier(const char *reg)
+{
+	std::string m(reg);
+	std::cout << "Applying modifier: " << m ;
+
+	// Check if there is actually an asignment
+	if(m.find_last_of(':') == std::string::npos)
+	{
+		std::cout << "Warning: No value assignment. Skipping..\n";
+		return 1;
+	}
+
+	NCF1 *node = &data;
+	std::string nleft, nright;
+
+	while(m.find_first_of('.') != std::string::npos)
+	{
+		nstring_split(m, nleft, nright, '.');
+		m = nright;
+
+		// move to node
+		node = node->group(nleft.c_str());
+	}
+
+	nstring_split(m, nleft, nright, ':');
+
+	std::cout<< " [" << node->get(nleft.c_str()) << "]\n";
+	node->set(nleft.c_str(), nright.c_str());
+
+	return 0;
 }
