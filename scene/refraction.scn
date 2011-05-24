@@ -147,6 +147,7 @@ material = {
 			b = 1
 		}
 
+		reflectance = 0.4
 	}
 
 	plastic1 = {

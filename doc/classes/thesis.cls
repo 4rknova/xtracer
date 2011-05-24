@@ -139,6 +139,9 @@
 % These macros are used to declare arguments needed for the
 % construction of the title page and other preamble.
 
+% The registration code
+\def\regcode#1{\gdef\@regcode{#1}}
+
 % The supervisor
 \def\supervisor#1{\gdef\@supervisor{#1}}
 \def\supervprof#1{\gdef\@supervprof{#1}}
@@ -173,19 +176,21 @@
     { \Huge {\bfseries {\@title}} \par}
 {\large \vspace*{35mm} {{\@crest} \par} \vspace*{25mm}}
     {{\Large \@author} \par}
-{\large \vspace*{1ex}
+	{\large \vspace*{2mm}}
+    {{\large \@regcode} \par}
+{\large \vspace*{2.5ex}
     {{\@collegeordept} \par}
 \vspace*{0.5ex}
     {{\@university} \par}
-\vspace*{15mm}
+\vspace*{5mm}
     {{\submittedtext} \par}
+\vspace*{5mm}
+    {\@degreedate}}
 
 \vspace*{15mm}
 	{{\@supervisor} \par}
     {{\@supervprof} \par}
 
-\vspace*{5mm}
-    {\@degreedate}}
   \end{center}
   \null\vfill
 \end{alwayssingle}}

@@ -227,6 +227,13 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 			// shade
 			color += mat->shade(m_scene->camera, light, info);
 		}
+		else
+		{
+			// This is a hack for transparent objects
+			real_t transp = m_scene->material[m_scene->object[obj]->material]->transparency;
+			if (transp > 0.0)
+				color += transp * mat->shade(m_scene->camera, light, info);
+		}
 	}
 
 	// specular effects
