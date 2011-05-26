@@ -40,6 +40,8 @@ class DrvPPM: public Driver
 		unsigned int deinit();
 		unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
 		unsigned int flip();
+
+		bool is_realtime();
 };
 
 #endif /* XTRACER_DRV_PPM_HPP_INCLUDED */

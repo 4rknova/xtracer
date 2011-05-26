@@ -42,57 +42,45 @@
 class Renderer
 {
 	public:
-		Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int depth = XT_SETUP_DEFAULT_RDEPTH );
+		Renderer(Framebuffer &fb, Scene &scene, Driver *drv, 
+			unsigned int depth = XT_SETUP_DEFAULT_RDEPTH );
 
-		// renders the scene
+		// render the scene
 		unsigned int render();
-		// set / get verbosity level ( v < 0 returns status without changing it)
-		unsigned int verbosity(int v=-1);
 
-		// set / get the light geometry flag
-		bool light_geometry(int v=-1);
+		void set_window(unsigned int x0, unsigned int x1,
+			unsigned int y0, unsigned int y1);		// Limit the rendering area
 
-		// set / get the realtime output update flag
-		bool realtime_update(int v=-1);
-
-		// set / get the gamma correction
-		real_t gamma_correction(real_t v=-1);
-
-		// set / get the maximum recursion depth
-		unsigned int max_recursion_depth(int v=-1);
-
-		// set / get antialiasing
-		unsigned int antialiasing(int v=-1);
+		bool light_geometry(int v=-1);				// set / get the light geometry flag
+		bool realtime_update(int v=-1);				// set / get the realtime output update flag
+		real_t gamma_correction(real_t v=-1);		// set / get the gamma correction
+		unsigned int max_recursion_depth(int v=-1);	// set / get the maximum recursion depth
+		unsigned int antialiasing(int v=-1);		// set / get antialiasing
+		unsigned int threads(int v=0);				// set / get the thread count
 
 	protected:
-		// renders the current frame
+		// render the current frame
 		unsigned int render_frame();
+		// trace ray
 		Vector3 trace(const Ray &ray, unsigned int depth, 
 			real_t ior_src = 1.0, real_t ior_dst = 1.0);
+		// shade
 		Vector3 shade(const Ray &ray, unsigned int depth, 
 			IntInfo &info, 
 			std::string &obj, 
 			real_t ior_src = 1.0, real_t ior_dst = 1.0);
 
 	private:
-		// pointer to the framebuffer
-		Framebuffer *m_fb;
-		// pointer to the scene
-		Scene *m_scene;
-		// pointer to the output driver
-		Driver *m_drv;
+		// external entities
+		Framebuffer *m_fb;	// pointer to the framebuffer
+		Scene *m_scene;		// pointer to the scene
+		Driver *m_drv;		// pointer to the output driver
 
-		// recursion depth limit
-		unsigned int m_max_rdepth;
-
-		// verbosity
-		unsigned int m_verbosity;
-
-		// antialiasing
-		unsigned int m_antialiasing;
-
-		// gamma correction
-		real_t m_gamma;
+		// environment
+		unsigned int m_max_rdepth;		// recursion depth limit
+		unsigned int m_antialiasing;	// antialiasing
+		real_t m_gamma;					// gamma correction
+		unsigned int m_threads;			// threads count
 
 		// flags
 		bool m_f_light_geometry;  // if true, light sources will be treated as spheres

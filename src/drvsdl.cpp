@@ -151,4 +151,9 @@ unsigned int DrvSDL::flip()
 	return 0;
 }
 
+bool DrvSDL::is_realtime()
+{
+	return true;
+}
+
 #endif /* ENABLE_SDL */

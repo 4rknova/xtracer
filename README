@@ -1,45 +1,62 @@
 XTracer
 -------
-Copyright 2010, 2011 (c) Papadopoulos Nikos <nikpapas@gmail.com>
+Copyright 2010, 2011 (c) Papadopoulos Nikos <nikpapas@gmail.com>, Knowledge Engineering Lab (KEL) <kel.unipi@gmail.com>
 
 About
 -----
 Xtracer is a basic raytracer written in c and c++. It served as my thesis project 
-for my bsc of computer science in university of Piraeus. The source code is freely 
-distributed under the LGPL license.
+for the bsc of computer science in the university of Piraeus. It was developed under 
+the supervision of Prof. T. Panayiotopoulos as part of the research work of the
+Knowledge Engineering Lab (KEL).
+
+The source code is distributed under the LGPL license.
 
 Features
 --------
-Implemented:
+Implemented
 * Primitives    : Plane, Triangle, Sphere
 * Materials     : Lambert, Phong, Blinn-Phong
 * Lights        : Point light
 * Cameras       : Pinhole camera
 * Drivers       : SDL, PPM, DUM
 * Effects       : Reflection, Refraction
-* Acceleration  : -
+* Acceleration  : Threads 
 * Anti-aliasing : Supersampling
 * Other         : Gamma correction
 
-Planned:
-* Primitives   : Cone, Cylinder, Torus, Isosurface, Mesh
+Planned
+* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Mesh
 * Materials    : Texture mapping
 * Cameras      : Thin lense
-* Effects      : Fresnel
+* Effects      : Fresnel, Beer's law
 * Acceleration : BHV, KD-Trees
+* Drivers      : ASC
+* GI           : Monte Carlo
+
+Compilation / Installation
+--------------------------
+The source code is distributed along with a makefile configuration script for unix based
+systems with a GNU toolchain installed. To view all the available configuration options
+type: ./configure --help. Once the configuration is done, you can build the binary by 
+typing: make bin. To install the binary in your system type: make install. To uninstall 
+type: make uninstall
+
+Windows users should include all the files under ./src in their project and link with 
+the dependencies stated below.
 
 Dependencies
 ------------
-* libsdl    (The program can be built without the sdl driver support.)
+* openmp	
+* libsdl    The program can be built without the sdl driver support. 
 * libnmath  https://github.com/4rknova/libnmath
 * libnparse https://github.com/4rknova/libnparse
 
-Testing
--------
-I would like to thank the following people for helping me with the development and 
+People
+------
+I would like to thank the following people for supporting me with the development and 
 testing process.
 
-Prof. T. Panayiotopoulos : My thesis supervising professor.
+Prof. T. Panayiotopoulos : Supervising professor.
 Nuclear, Hikiko          : Technical advisory.
 Hardas Apostolhs         : Tested over and over again all the features.
 Kokkalis Nikos           : Tested compilation under freebsd.

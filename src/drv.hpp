@@ -51,9 +51,11 @@ class Driver
 
 		unsigned int update();
 		virtual unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
+		virtual unsigned int flip();
+		
+		virtual bool is_realtime();
 		  
 	protected:
-		virtual unsigned int flip();
 		Framebuffer *m_fb;
 };
 

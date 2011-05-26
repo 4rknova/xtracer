@@ -87,7 +87,7 @@ light = {
 	front = {
 		position = {
 			x = 0
-			y = -500
+			y = 500
 			z = -800
 		}
 
@@ -119,7 +119,7 @@ material = {
 
 		k_diffuse = 0.5
 		k_specular = 0.5
-		k_specexp = 1350
+		k_specexp = 3350
 	
 		diffuse = {
 			r = 1

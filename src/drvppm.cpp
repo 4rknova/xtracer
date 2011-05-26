@@ -112,3 +112,8 @@ unsigned int DrvPPM::flip()
 {
 	return 0;
 }
+
+bool DrvPPM::is_realtime()
+{
+	return false;
+}

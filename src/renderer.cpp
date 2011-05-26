@@ -25,6 +25,7 @@
 
 */
 
+#include <omp.h>
 #include <iomanip>
 #include <iostream>
 #include "renderer.hpp"
@@ -34,15 +35,15 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	m_scene(&scene), 
 	m_drv(drv), 
 	m_max_rdepth(depthlim), 
-	m_verbosity(0),
 	m_antialiasing(1),
 	m_gamma(1),
+	m_threads(0),
 	m_f_light_geometry(false),
 	m_f_realtime_update(false)
 {}
 
 // report the progress
-void rprog(float progress)
+void rprog(float progress, int worker)
 {
 	static const unsigned int length = 25;
 
@@ -63,7 +64,7 @@ void rprog(float progress)
 		<< " "
 		<< std::setw(6) << std::setprecision(2)
 		<< progress		 
-		<< "% ]"
+		<< "% ] [ Worker: " << worker << " / " << omp_get_num_threads() << " ]"
 		<< std::flush;
 }
 
@@ -120,9 +121,14 @@ unsigned int Renderer::render_frame()
 	unsigned int samples_per_pixel = m_antialiasing * m_antialiasing;
 	float offset_per_sample = 1.0 / m_antialiasing;
 
-	for (float y = 0; y < (float)h; y++) 
+	// limit the threads if requested
+	if (m_threads != 0)
+		omp_set_num_threads(m_threads);
+
+	#pragma omp parallel for 
+	for (unsigned int y = 0; y < h; y++) 
 	{
-		for (float x = 0; x < (float)w; x++) 
+		for (unsigned int x = 0; x < w; x++) 
 		{
 			// the final color
 			Vector3 color;
@@ -137,16 +143,23 @@ unsigned int Renderer::render_frame()
 					color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
 				}
 			}
-			*(m_fb->pixel(x, y)) += color;
+			
+			#pragma omp critical 
+			{
+				*(m_fb->pixel(x, y)) += color;
+			}
 		}
 
-		if (m_f_realtime_update)
-			m_drv->update(0, y, w, y+1); // update the output
-
-		// calculate progress
-		progress = y / (float)(h-1) * 100;
-		// report progress
-		rprog(progress);
+		#pragma omp critical
+		{
+			if (m_f_realtime_update)
+				m_drv->update(0, y, w, y+1); // update the output
+			
+			// calculate progress
+			progress = y / (float)(h-1) * 100;
+			// report progress
+			rprog(progress, omp_get_thread_num());
+		}
 	}
 
 	std::cout << '\n';
@@ -264,13 +277,6 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 	return color;
 }
 
-unsigned int Renderer::verbosity(int v)
-{
-	if(v < 0)
-		return m_verbosity;
-	return m_verbosity = v;
-}
-
 bool Renderer::realtime_update(int v)
 {
 	if (v < 0)
@@ -305,4 +311,11 @@ unsigned int Renderer::antialiasing(int v)
 	if (v < 1)
 		return m_antialiasing;
 	return m_antialiasing = v;
+}
+
+unsigned int Renderer::threads(int v)
+{
+	if (v < 0)
+		return m_threads;
+	return m_threads = v;
 }

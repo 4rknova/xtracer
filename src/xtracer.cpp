@@ -64,6 +64,9 @@ bool flag_realtime_update = false;
 // antialiasing
 int antialiasing = 0;
 
+// threads to spawn
+int threads = 0;
+
 unsigned int parsearg(int argc, char **argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -238,6 +241,31 @@ unsigned int parsearg(int argc, char **argv)
 		{
 			flag_realtime_update = true;
 		}
+		// threads
+		else if (!strcmp(argv[i], "-threads"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			if (sscanf(argv[i], "%d", &threads) < 1)
+			{
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be %i.\n";
+				return 1;
+			}
+
+			if (threads < 0)
+			{
+				std::cerr
+					<< "Invalid " << argv[i-1] << " value. "
+					<< "You provided a negative number.\n";
+				return 1;
+			}
+		}
 		// verbosity
 		else if (!strcmp(argv[i], "-v"))
 		{
@@ -370,27 +398,15 @@ int main(int argc, char **argv)
 
 		// set the camera
 		scene.set_camera(camera.c_str());
-	
+
 		// create the renderer
 		Renderer renderer(fb, scene, drv, max_rdepth);
 
 		// setup the environment
-		renderer.verbosity(verbose);
-
-		// recursion depth
 		renderer.max_recursion_depth(max_rdepth);
-		std::cout << "Maximum recursion depth: "<< renderer.max_recursion_depth() << "\n";
-
-		// gamma correction
 		renderer.gamma_correction(gamma_correction);
-
-		// antialiasing
-		renderer.antialiasing(antialiasing);
-		if (renderer.antialiasing() > 1)
-			std::cout << "Antialiasing: " << renderer.antialiasing() << "\n";
-
-		// light geometry
 		renderer.light_geometry(flag_render_light_positions);
+		renderer.antialiasing(antialiasing);
 
 		// realtime update
 		if ((int)driver == (XT_DRV_SDL))
@@ -399,6 +415,7 @@ int main(int argc, char **argv)
 			std::cout << "Warning: Realtime output update cannot be used with this driver. Ignoring..\n";
 
 		// render
+		renderer.threads(threads);
 		renderer.render();
 	}
 	
