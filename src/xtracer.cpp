@@ -409,9 +409,9 @@ int main(int argc, char **argv)
 		renderer.antialiasing(antialiasing);
 
 		// realtime update
-		if ((int)driver == (XT_DRV_SDL))
+		if (drv->is_realtime())
 			renderer.realtime_update(flag_realtime_update);
-		else if (flag_realtime_update)
+		else
 			std::cout << "Warning: Realtime output update cannot be used with this driver. Ignoring..\n";
 
 		// render

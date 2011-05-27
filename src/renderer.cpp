@@ -64,7 +64,7 @@ void rprog(float progress, int worker)
 		<< " "
 		<< std::setw(6) << std::setprecision(2)
 		<< progress		 
-		<< "% ] [ Worker: " << worker << " / " << omp_get_num_threads() << " ]"
+		<< "% ] T: " << omp_get_num_threads() << ", C: " << worker + 1
 		<< std::flush;
 }
 
@@ -125,9 +125,12 @@ unsigned int Renderer::render_frame()
 	if (m_threads != 0)
 		omp_set_num_threads(m_threads);
 
-	#pragma omp parallel for 
+	int chunk = 1;
+	#pragma omp parallel for schedule(dynamic,chunk) 
 	for (unsigned int y = 0; y < h; y++) 
 	{
+		chunk = h / omp_get_num_threads();
+
 		for (unsigned int x = 0; x < w; x++) 
 		{
 			// the final color
@@ -144,22 +147,19 @@ unsigned int Renderer::render_frame()
 				}
 			}
 			
-			#pragma omp critical 
-			{
-				*(m_fb->pixel(x, y)) += color;
-			}
+			*(m_fb->pixel(x, y)) += color;
 		}
 
 		#pragma omp critical
 		{
 			if (m_f_realtime_update)
 				m_drv->update(0, y, w, y+1); // update the output
-			
+
 			// calculate progress
-			progress = y / (float)(h-1) * 100;
-			// report progress
-			rprog(progress, omp_get_thread_num());
+			progress += 1.0;
+			rprog(progress / (float)(h) * 100, omp_get_thread_num());
 		}
+		
 	}
 
 	std::cout << '\n';
