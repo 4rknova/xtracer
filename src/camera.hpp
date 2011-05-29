@@ -40,7 +40,7 @@ class Camera
 {
 	public:
 		Camera();
-		Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx=XT_CAM_DEFAULT_FOV, real_t aprt=1.0, real_t shut=0.01);
+		Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx=XT_CAM_DEFAULT_FOV, real_t aprt=1.0, real_t flen=0.0, real_t shut=0.01);
 
 		Ray get_primary_ray(float x, float y, float width, float height);
 		Ray get_primary_ray_dof(float x, float y, float width, float height, float dofx, float dofy);
@@ -51,6 +51,7 @@ class Camera
 		real_t fov;
 
 		real_t apperture;
+		real_t flength;
 		real_t shutter;
 };
 

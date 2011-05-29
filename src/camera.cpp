@@ -35,13 +35,14 @@ Camera::Camera()
 	: position(Vector3(0,0,0)), target(Vector3(0,0,1)), up(Vector3(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx, real_t aprt, real_t shut)
+Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx, real_t aprt, real_t flen, real_t shut)
 	:
 	position(pos), 
 	target(trg), 
 	up(upv.normalized()), 
 	fov(fovx),
 	apperture(aprt),
+	flength(flen),
 	shutter(shut)
 {}
 
@@ -119,17 +120,15 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 	// Calculate the ray's intersection point on the projection plane.
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
 	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
-	pray.direction.z = 1 / tan(fov / 2.0);
+	pray.direction.z = 1.0 / tan(fov / 2.0);
 
 	// Calculate the deviated ray direction
 	fray.origin = pray.direction;
-	fray.origin.x += dofx / width;
-	fray.origin.y += dofy / height;
+	fray.origin.x += (dofx / 100) * apperture;
+	fray.origin.y += (dofy / 100) * apperture;
 
 	// Find the intersection point on the focal plane
-	real_t fpl = ((target - position).length() / (pray.direction.z / pray.direction.length()));
-	Vector3 fpip = fpl * pray.direction.normalized();
-
+	Vector3 fpip = pray.direction + flength * pray.direction.normalized();
 	fray.direction = fpip - fray.origin;
 
 	/*

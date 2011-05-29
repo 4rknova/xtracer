@@ -70,6 +70,9 @@ int antialiasing = 0;
 // threads to spawn
 int threads = 0;
 
+// dof samples
+int dof_samples = 2;
+
 unsigned int parsearg(int argc, char **argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -121,6 +124,31 @@ unsigned int parsearg(int argc, char **argv)
 				std::cerr
 					<< "Invalid " << argv[i-1] << " value. "
 					<< "You provided a negative number.\n";
+				return 1;
+			}
+		}
+		// dof samples
+		else if (!strcmp(argv[i], "-dofsamples"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}
+
+			if (sscanf(argv[i], "%d", &dof_samples) < 1)
+			{
+				std::cerr << "Invalid " << argv[i-1] << " value. Should be %i.\n";
+				return 1;
+			}
+
+			if (dof_samples < 2)
+			{
+				std::cerr
+					<< "Invalid " << argv[i-1] << " value. "
+					<< "You must provide an integer equal to 2 or greater.\n";
 				return 1;
 			}
 		}
@@ -438,6 +466,7 @@ int main(int argc, char **argv)
 		// postprocessing
 		renderer.gamma_correction(gamma_correction);
 		renderer.exposure(exposure);
+		renderer.dof_samples(dof_samples);
 		
 		// realtime update
 		if (drv->is_realtime())

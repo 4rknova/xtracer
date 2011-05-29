@@ -314,12 +314,15 @@ unsigned int Scene::set_camera(const char *name)
 	// shutter
 	real_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
 
+	// focal length
+	real_t flength = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FLENGTH));
+
 	// cleanup the previous camera if needed
 	if (camera)
 		delete camera;
 
 	// create the camera
-	camera = new Camera(pos, targ, up, fov, app, shut);
+	camera = new Camera(pos, targ, up, fov, app, flength, shut);
 
 	return 0;
 }

@@ -53,7 +53,8 @@ class Renderer
 
 		real_t gamma_correction(real_t v=-1);		// set / get the gamma correction
 		real_t exposure(real_t v=0);				// set / get the exposure correction
-		
+	
+		unsigned int dof_samples(int v=0);			// set / get the level of dof samples
 		bool light_geometry(int v=-1);				// set / get the light geometry flag
 		bool realtime_update(int v=-1);				// set / get the realtime output update flag
 		unsigned int max_recursion_depth(int v=-1);	// set / get the maximum recursion depth
@@ -84,6 +85,8 @@ class Renderer
 		
 		real_t m_gamma;					// gamma correction
 		real_t m_exposure;				// exposure
+
+		unsigned int m_dof_samples;		// dof samples
 
 		unsigned int m_threads;			// threads count
 

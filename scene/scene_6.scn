@@ -3,7 +3,7 @@
 name = Simple sphere
 description = Just a plain sphere
 
-k_ambient = 0.001
+k_ambient = 0.01
 
 ambient = {
 	r = 1
@@ -18,31 +18,54 @@ camera = {
 		fov = 45
 
 		position = {
-			y = 100
-			z = -800
+			x = 0
+			y = 25
+			z = -770
 		}
 
 		target = {
-			y = 110
-			z = 300
+			y = 12.5 
+			z = -650
 		}
 
 		up = {
 			y = 1
 		}
 
-		apperture = 1.0
+		apperture = 10
+		flength = 50 
 	}
 }
 
 geometry = {
-	sphere = {
+	sphere1 = {
 		type = sphere
 		position = {
-			y = 175
-			z = 300
+			x = -220
+			y = 25
+			z = 0
 		}
-		radius = 175
+		radius = 25
+	}
+	
+	sphere2 = {
+		type = sphere
+		position = {
+			x = -30
+			y = 25
+			z = -450
+		}
+		radius = 25
+	}
+
+	sphere3 = {
+		type = sphere
+		position = {
+			x = 25
+			y = 23
+			z = -700
+		}
+		radius = 25
 	}
 
 	plane = {
@@ -73,7 +96,7 @@ light = {
 		position = {
 			x = -200
 			y = 400
-			z = -400
+			z = -700
 		}
 
 		intensity = {
@@ -131,8 +154,16 @@ material = {
 }
 
 object = {
-	sphere = {
-		geometry = sphere
+	sphere_far = {
+		geometry = sphere1
+		material = plastic
+	}
+	sphere_middle = {
+		geometry = sphere2
+		material = plastic
+	}
+	sphere_near = {
+		geometry = sphere3
 		material = plastic
 	}
 	plane = {

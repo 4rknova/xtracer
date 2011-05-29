@@ -38,6 +38,7 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	m_antialiasing(1),
 	m_gamma(1),
 	m_exposure(0),
+	m_dof_samples(2),
 	m_threads(0),
 	m_f_light_geometry(false),
 	m_f_realtime_update(false)
@@ -150,10 +151,7 @@ unsigned int Renderer::render_frame()
 	#pragma omp parallel for schedule(dynamic,chunk) 
 	for (unsigned int y = 0; y < h; y++) 
 	{
-		#pragma omp master
-		{
-			chunk = h / omp_get_num_threads();
-		}
+		chunk = h / omp_get_num_threads();
 
 		for (unsigned int x = 0; x < w; x++) 
 		{
@@ -165,17 +163,14 @@ unsigned int Renderer::render_frame()
 			{
 				for (float fragmentx = x; fragmentx < x + 1.0; fragmentx += offset_per_sample)
 				{
-					bool dof = true; //false;
-
-					if (dof)
+					if (m_scene->camera->flength > 0)
 					{
 						// dof loop
-						float apperture_half = m_scene->camera->apperture / 2;
-						unsigned int samples = 2;
-						float step = apperture_half * 2 / samples;
+						unsigned int samples = m_dof_samples;
+						float step = 100 / samples;
 					
-						for (float dofy = -apperture_half; dofy < apperture_half; dofy += step)
-							for (float dofx = -apperture_half; dofx < apperture_half; dofx += step)
+						for (float dofy = -50; dofy < 50; dofy += step)
+							for (float dofx = -50; dofx < 50; dofx += step)
 							{
 								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, w, h, dofx, dofy);
 								color += trace(ray, m_max_rdepth+1) / (samples * samples) / samples_per_pixel;
@@ -368,4 +363,11 @@ unsigned int Renderer::threads(int v)
 	if (v < 0)
 		return m_threads;
 	return m_threads = v;
+}
+
+unsigned int Renderer::dof_samples(int v)
+{
+	if (v < 2)
+		return m_dof_samples;
+	return m_dof_samples = v;
 }
