@@ -102,7 +102,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	return pray;
 }
 
-#include <iostream>
+#include <nmath/prng.h>
 Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, float dofx, float dofy)
 {
 
@@ -124,8 +124,8 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 
 	// Calculate the deviated ray direction
 	fray.origin = pray.direction;
-	fray.origin.x += (dofx / 100) * apperture;
-	fray.origin.y += (dofy / 100) * apperture;
+	fray.origin.x += (prng_c(dofx - apperture/2, dofx + apperture/2) / 100) * apperture;
+	fray.origin.y += (prng_c(dofy - apperture/2, dofy + apperture/2) / 100) * apperture;
 
 	// Find the intersection point on the focal plane
 	Vector3 fpip = pray.direction + flength * pray.direction.normalized();
