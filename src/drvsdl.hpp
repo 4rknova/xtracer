@@ -2,7 +2,7 @@
 
 	This file is part of xtracer.
 
-	drv_sdl.hpp
+	drvsdl.hpp
 	SDL driver
 
 	Copyright (C) 2010, 2011

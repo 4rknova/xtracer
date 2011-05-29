@@ -308,12 +308,18 @@ unsigned int Scene::set_camera(const char *name)
 	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
 
+	// apperture
+	real_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APPERTURE));
+
+	// shutter
+	real_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
+
 	// cleanup the previous camera if needed
 	if (camera)
 		delete camera;
 
 	// create the camera
-	camera = new Camera(pos, targ, up, fov);
+	camera = new Camera(pos, targ, up, fov, app, shut);
 
 	return 0;
 }
@@ -637,7 +643,7 @@ unsigned int Scene::apply_modifier(const char *reg)
 	NCF1 *node = &data;
 	std::string nleft, nright;
 
-	while(m.find_first_of('.') != std::string::npos)
+	while((m.find_first_of('.') != std::string::npos) && (m.find_first_of(':') > m.find_first_of('.')))
 	{
 		nstring_split(m, nleft, nright, '.');
 		m = nright;

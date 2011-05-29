@@ -2,7 +2,7 @@
 
 	This file is part of xtracer.
 
-	ppm.cpp
+	drvppm.cpp
 	PPM driver
 
 	Copyright (C) 2010, 2011

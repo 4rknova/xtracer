@@ -54,6 +54,9 @@ unsigned int verbose = 0;
 // gamma correction
 double gamma_correction = XT_SETUP_DEFAULT_GAMMA;
 
+// exposure
+double exposure = 0;
+
 // maximum recursion depth
 int max_rdepth = XT_SETUP_DEFAULT_MAXRDEPTH;
 
@@ -206,6 +209,31 @@ unsigned int parsearg(int argc, char **argv)
 				
                 return 1;
             }
+		}
+		// exposure
+		else if (!strcmp(argv[i], "-exposure"))
+		{
+			i++;
+
+			if (!argv[i])
+			{
+				std::cerr << "No value was provided for " << argv[i-1] << "\n";
+				return 1;
+			}	
+            
+			if (sscanf(argv[i], "%lf", &exposure) < 1)
+			{
+                std::cerr << "Invalid " << argv[i-1] << " value. Should be a %lf.\n";
+			}				
+			
+			if (exposure <= 0)
+			{
+				std::cerr
+					<< "Invalid " << argv[i-1] << " value. "
+					<< "You must provide a positive integer.\n";
+				return 1;
+			}
+
 		}
 		// camera
 		else if (!strcmp(argv[i], "-cam"))
@@ -404,10 +432,13 @@ int main(int argc, char **argv)
 
 		// setup the environment
 		renderer.max_recursion_depth(max_rdepth);
-		renderer.gamma_correction(gamma_correction);
 		renderer.light_geometry(flag_render_light_positions);
 		renderer.antialiasing(antialiasing);
 
+		// postprocessing
+		renderer.gamma_correction(gamma_correction);
+		renderer.exposure(exposure);
+		
 		// realtime update
 		if (drv->is_realtime())
 			renderer.realtime_update(flag_realtime_update);

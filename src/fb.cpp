@@ -26,6 +26,7 @@
 */
 
 #include "fb.hpp"
+#include <cmath>
 
 Framebuffer::Framebuffer(unsigned int width, unsigned int height): 
 	m_tag(FB_DEFAULT_TAG),
@@ -63,8 +64,6 @@ Vector3 *Framebuffer::pixel(unsigned int x, unsigned int y)
 	return (x < m_width) ? ((y < m_height) ? &m_pixels[n] : &m_pixels[m_width * m_height - 1])  : &m_pixels[m_width * m_height - 1];
 }
 
-#include <nmath/gamma.h>
-
 void Framebuffer::clear(Vector3 v)
 {
 	for (unsigned int y = 0; y < m_height; y++)
@@ -81,7 +80,22 @@ void Framebuffer::apply_gamma(real_t v)
 		for (unsigned int x = 0; x < m_width; x++)
 		{
 			Vector3 *p = pixel(x, y);
-			*p = gamma(*p, v);
+			p->x = pow(p->x, 1.0 / v);
+			p->y = pow(p->y, 1.0 / v);
+			p->z = pow(p->z, 1.0 / v);
 		}
 }
 
+void Framebuffer::apply_exposure(real_t v)
+{
+	for (unsigned int y = 0; y < m_height; y++)
+		for (unsigned int x = 0; x < m_width; x++)
+		{
+			Vector3 *p = pixel(x, y);
+
+			// apply exposure
+			p->x = 1.0f - expf(p->x * (-v));
+			p->y = 1.0f - expf(p->y * (-v));
+			p->z = 1.0f - expf(p->z * (-v));
+		}
+}

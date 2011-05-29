@@ -37,6 +37,7 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 	m_max_rdepth(depthlim), 
 	m_antialiasing(1),
 	m_gamma(1),
+	m_exposure(0),
 	m_threads(0),
 	m_f_light_geometry(false),
 	m_f_realtime_update(false)
@@ -60,16 +61,26 @@ void rprog(float progress, int worker)
 			std::cout << ' ';
 	}
 
+	int totalw = omp_get_num_threads();
+	// get the string length of totalw
+	int wlen = 0;
+	int num = totalw;
+	while (num>0)
+    {
+		num /= 10;
+		wlen++;
+	}
+
 	std::cout
 		<< " "
 		<< std::setw(6) << std::setprecision(2)
 		<< progress		 
-		<< "% ] T: " << omp_get_num_threads() << ", C: " << worker + 1
+		<< "% ] [ T: " << totalw << " C: " << std::setw(wlen) << worker + 1 << " ]"
 		<< std::flush;
 }
 
 #include <nparse/util.hpp>
-#include <nmath/sphere.h>
+
 unsigned int Renderer::render()
 {
 	// get the source file name
@@ -89,10 +100,18 @@ unsigned int Renderer::render()
 	if (render_frame())
 		return 1;
 
-	// apply gamma correction
+	// - Post processing
+	// apply exposure and bloom
+	if (m_exposure > 0)
+	{
+		std::cout << "Applying exposure: " << m_exposure << "..\n";
+		m_fb->apply_exposure(m_exposure);
+	}
+
+	// apply gamma correction [ always apply last ]
 	if (m_gamma != 1.0)
 	{
-		std::cout << "Applying gamma correction: " << m_gamma << "\n";
+		std::cout << "Applying gamma correction: " << m_gamma << "..\n";
 		m_fb->apply_gamma(m_gamma);
 	}
 
@@ -104,6 +123,8 @@ unsigned int Renderer::render()
 	return 0;
 }
 
+#include <nmath/plane.h>
+#include "object.hpp"
 unsigned int Renderer::render_frame()
 {
 	std::cout << "Rendering..\n";
@@ -129,7 +150,10 @@ unsigned int Renderer::render_frame()
 	#pragma omp parallel for schedule(dynamic,chunk) 
 	for (unsigned int y = 0; y < h; y++) 
 	{
-		chunk = h / omp_get_num_threads();
+		#pragma omp master
+		{
+			chunk = h / omp_get_num_threads();
+		}
 
 		for (unsigned int x = 0; x < w; x++) 
 		{
@@ -141,22 +165,41 @@ unsigned int Renderer::render_frame()
 			{
 				for (float fragmentx = x; fragmentx < x + 1.0; fragmentx += offset_per_sample)
 				{
-					// generate primary ray and trace it
-					Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, w, h);
-					color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
+					bool dof = true; //false;
+
+					if (dof)
+					{
+						// dof loop
+						float apperture_half = m_scene->camera->apperture / 2;
+						unsigned int samples = 2;
+						float step = apperture_half * 2 / samples;
+					
+						for (float dofy = -apperture_half; dofy < apperture_half; dofy += step)
+							for (float dofx = -apperture_half; dofx < apperture_half; dofx += step)
+							{
+								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, w, h, dofx, dofy);
+								color += trace(ray, m_max_rdepth+1) / (samples * samples) / samples_per_pixel;
+							}
+					}
+					else
+					{
+						Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, w, h);
+						color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
+					}
 				}
 			}
 			
 			*(m_fb->pixel(x, y)) += color;
 		}
+		
+		// calculate progress
+		progress += 1.0;
 
 		#pragma omp critical
 		{
 			if (m_f_realtime_update)
 				m_drv->update(0, y, w, y+1); // update the output
 
-			// calculate progress
-			progress += 1.0;
 			rprog(progress / (float)(h) * 100, omp_get_thread_num());
 		}
 		
@@ -297,6 +340,13 @@ real_t Renderer::gamma_correction(real_t v)
 	if (v < 0)
 		return m_gamma;
 	return m_gamma = v;
+}
+
+real_t Renderer::exposure(real_t v)
+{
+	if (v == 0)
+		return m_exposure;
+	return m_exposure = v;
 }
 
 unsigned int Renderer::max_recursion_depth(int v)

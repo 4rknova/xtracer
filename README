@@ -22,7 +22,7 @@ Implemented
 * Effects       : Reflection, Refraction
 * Acceleration  : Threads 
 * Anti-aliasing : Supersampling
-* Other         : Gamma correction
+* Other         : HDR, Gamma correction, Exposure correction (Tone mapping), Bloom
 
 Planned
 * Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Mesh
@@ -32,6 +32,13 @@ Planned
 * Acceleration : BHV, KD-Trees
 * Drivers      : ASC
 * GI           : Monte Carlo
+* Other        : Animation system, Interactive mode
+
+Notes
+-----
+
+- 	The rendering is done in HDR. By default, the conversion to LDR though is 
+	done with a sloppy 0.0 - 1.0 range cap. To correct the result, use the exposure switch.
 
 Compilation / Installation
 --------------------------

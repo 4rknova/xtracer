@@ -25,8 +25,8 @@
 
 */
 
-#ifndef XTRACER_OUTPUT_HPP_INCLUDED
-#define XTRACER_OUTPUT_HPP_INCLUDED
+#ifndef XTRACER_DRV_HPP_INCLUDED
+#define XTRACER_DRV_HPP_INCLUDED
 
 #include "fb.hpp"
 
@@ -59,4 +59,4 @@ class Driver
 		Framebuffer *m_fb;
 };
 
-#endif /* XTRACER_OUTPUT_HPP_INCLUDED */
+#endif /* XTRACER_DRV_HPP_INCLUDED */

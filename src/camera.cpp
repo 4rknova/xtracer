@@ -35,31 +35,31 @@ Camera::Camera()
 	: position(Vector3(0,0,0)), target(Vector3(0,0,1)), up(Vector3(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx)
-:  position(pos), target(trg), up(upv.normalized()), fov(fovx)
+Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx, real_t aprt, real_t shut)
+	:
+	position(pos), 
+	target(trg), 
+	up(upv.normalized()), 
+	fov(fovx),
+	apperture(aprt),
+	shutter(shut)
 {}
-#include <iostream>
+
 Ray Camera::get_primary_ray(float x, float y, float width, float height)
 {
-	/* Primary ray */
+	// Primary ray
 	Ray pray;
-
-	/* Set the primary ray's origin at the camera's position. */
-	pray.origin = position;
-
-	/* Take the aspect ratio into consideration */
+	
+	// Take the aspect ratio into consideration.
 	real_t ratio = (real_t)width / (real_t)height;
 
-	/* Construct the ray's direction vector. */
+	// Set the primary ray's origin at the camera's position.
+	pray.origin = position;
+
+	// Construct the ray's intersection point on the projection plane.
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
 	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
 	pray.direction.z = 1 / tan(fov / 2.0);
-
-	pray.direction.normalize();
-
-	/* Calculate the camera direction vector and normalize it. */
-	Vector3 camdir = target - position;
-	camdir.normalize();
 
 	/*
 		Setting up the look-at matrix is easy when you consider that a matrix 
@@ -76,6 +76,10 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 				Note that the y-axis is calculated using the reversed z-axis. The 
 				image will be upside down without this adjustment.
 	*/
+	
+	// Calculate the camera direction vector and normalize it.
+	Vector3 camdir = target - position;
+	camdir.normalize();
 
 	Vector3 rx,ry,rz;
 
@@ -90,9 +94,84 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 					rx.z, ry.z, rz.z, 0,
 					0, 0, 0, 1);
 
-	/* Transform the direction vector */
+	// Transform the direction vector
 	pray.direction.transform(tmat);
 	pray.direction.normalize();
 
 	return pray;
+}
+
+#include <iostream>
+Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, float dofx, float dofy)
+{
+
+//	return get_primary_ray(x, y, width, height);
+
+	// Primary ray
+	Ray pray, fray;
+	
+	// Take the aspect ratio into consideration.
+	real_t ratio = (real_t)width / (real_t)height;
+
+	// Set the primary ray's origin at the camera's position.
+	pray.origin = position;
+
+	// Calculate the ray's intersection point on the projection plane.
+	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
+	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
+	pray.direction.z = 1 / tan(fov / 2.0);
+
+	// Calculate the deviated ray direction
+	fray.origin = pray.direction;
+	fray.origin.x += dofx / width;
+	fray.origin.y += dofy / height;
+
+	// Find the intersection point on the focal plane
+	real_t fpl = ((target - position).length() / (pray.direction.z / pray.direction.length()));
+	Vector3 fpip = fpl * pray.direction.normalized();
+
+	fray.direction = fpip - fray.origin;
+
+	/*
+		Setting up the look-at matrix is easy when you consider that a matrix 
+		is basically a rotated unit cube formed by three vectors (the 3x3 part) at a 
+		particular position (the 1x3 part). 
+		
+		We already have one of the three vectors: 
+			- 	The z-axis of the matrix is simply the view direction.
+			- 	The x-axis of the matrix is a bit tricky: if the camera is not tilted, 
+				then the x-axis of the matrix is perpendicular to the z-axis and 
+				the vector (0, 1, 0). 
+			-	The y-axis is perpendicular to the other two, so we simply calculate
+				the cross product of the x-axis and the z-axis to obtain the y-axis.
+				Note that the y-axis is calculated using the reversed z-axis. The 
+				image will be upside down without this adjustment.
+	*/
+	
+	// Calculate the camera direction vector and normalize it.
+	Vector3 camdir = target - position;
+	camdir.normalize();
+
+	Vector3 rx,ry,rz;
+
+	rz = camdir;
+	rx = cross(up, rz);
+	rx.normalize();
+	ry = cross(rx, rz);
+	ry.normalize();
+
+	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 
+					rx.y, ry.y, rz.y, 0,
+					rx.z, ry.z, rz.z, 0,
+					0, 0, 0, 1);
+
+	// Transform the direction vector
+	fray.direction.transform(tmat);
+	fray.direction.normalize();
+
+	// Transform the origin of the ray
+	fray.origin.transform(tmat);
+	fray.origin += position;
+
+	return fray;
 }

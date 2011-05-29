@@ -51,9 +51,11 @@ class Renderer
 		void set_window(unsigned int x0, unsigned int x1,
 			unsigned int y0, unsigned int y1);		// Limit the rendering area
 
+		real_t gamma_correction(real_t v=-1);		// set / get the gamma correction
+		real_t exposure(real_t v=0);				// set / get the exposure correction
+		
 		bool light_geometry(int v=-1);				// set / get the light geometry flag
 		bool realtime_update(int v=-1);				// set / get the realtime output update flag
-		real_t gamma_correction(real_t v=-1);		// set / get the gamma correction
 		unsigned int max_recursion_depth(int v=-1);	// set / get the maximum recursion depth
 		unsigned int antialiasing(int v=-1);		// set / get antialiasing
 		unsigned int threads(int v=0);				// set / get the thread count
@@ -79,7 +81,10 @@ class Renderer
 		// environment
 		unsigned int m_max_rdepth;		// recursion depth limit
 		unsigned int m_antialiasing;	// antialiasing
+		
 		real_t m_gamma;					// gamma correction
+		real_t m_exposure;				// exposure
+
 		unsigned int m_threads;			// threads count
 
 		// flags

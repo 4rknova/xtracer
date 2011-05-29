@@ -30,6 +30,8 @@ camera = {
 		up = {
 			y = 1
 		}
+
+		apperture = 1.0
 	}
 }
 

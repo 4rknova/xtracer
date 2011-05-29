@@ -64,6 +64,9 @@
 
 #define XT_CFGPROTO_PROP_DEFAULT        "default"
 
+#define XT_CFGPROTO_PROP_APPERTURE      "apperture"
+#define XT_CFGPROTO_PROP_SHUTTER        "shutter"
+
 #define XT_CFGPROTO_PROP_TYPE			"type"
 
 #define XT_CFGPROTO_PROP_RADIUS			"radius"
