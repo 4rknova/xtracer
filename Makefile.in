@@ -62,13 +62,13 @@ man-preview:
 
 .PHONY: install
 install: all
-	$(INSTALL)-m 775 $(bin) $(PREFIX)/bin/$(pkgname)
-	$(INSTALL)-c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
+	$(INSTALL) -D -m 775 $(bin) $(PREFIX)/bin/$(pkgname)
+	$(INSTALL) -D -c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
 		  
 .PHONY: uninstall
 uninstall:
-	$(RM)-f $(PREFIX)/bin/$(pkgname)
-	$(RM)-f $(PREFIX)/share/man/man1/$(pkgname).1
+	$(RM) -f $(PREFIX)/bin/$(pkgname)
+	$(RM) -f $(PREFIX)/share/man/man1/$(pkgname).1
 
 
 .PHONY: clean

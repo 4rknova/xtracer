@@ -35,7 +35,7 @@ Planned
 
 Notes
 -----
-- 	The rendering is done in HDR. By default, the conversion to LDR though is 
+- 	The rendering is done in HDR. By default, the conversion to LDR is 
 	done with a sloppy 0.0 - 1.0 range cap. To correct the result, use the exposure switch.
 
 Compilation / Installation
