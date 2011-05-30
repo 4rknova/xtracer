@@ -22,7 +22,7 @@ Implemented
 * Effects       : Reflection, Refraction, Depth of field
 * Acceleration  : Threads 
 * Anti-aliasing : Supersampling
-* Other         : HDR, Gamma correction, Exposure correction (Tone mapping), Bloom
+* Other         : HDR, Gamma correction, Exposure correction
 
 Planned
 * Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Mesh
