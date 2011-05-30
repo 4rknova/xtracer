@@ -35,8 +35,8 @@ Planned
 
 Notes
 -----
-- 	The rendering is done in HDR. By default, the conversion to LDR is 
-	done with a sloppy 0.0 - 1.0 range cap. To correct the result, use the exposure switch.
+The scene is rendered in HDR. By default, the conversion to LDR is done with a sloppy 
+0.0 - 1.0 range cap. To correct the result, use the exposure switch.
 
 Compilation / Installation
 --------------------------
@@ -63,7 +63,9 @@ testing process.
 
 Prof. T. Panayiotopoulos : Supervising professor.
 Nuclear, Hikiko          : Technical advisory.
-Hardas Apostolhs         : Tested over and over again all the features.
+Hardas Apostolhs         : Tested over and over again all the features, donated cpu time.
 Kokkalis Nikos           : Tested compilation under freebsd.
-Costas Droggos           : Tested compilation under macosx, windows.
-Ntzoufras Kwstas         : Tested compilation under macosx.
+Ntzoufras Kwstas         : Tested compilation under macosx, donated cpu time.
+Gregpuppy                : Donated cpu time.
+Costas Droggos           : Donated cpu time.
+Kouzouphs Antwnhs        : Donated cpu time.
