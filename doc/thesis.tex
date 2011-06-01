@@ -21,11 +21,8 @@
 
 % Cover
 % - Title
-\title
-{
-		Ray tracing\\[1ex]
-        Θεωρία και υλοποίηση
-}
+\title{Ray tracing\\ Θεωρία και υλοποίηση}
+\stitle{Ray tracing, θεωρία και υλοποίηση}
 
 \supervisor{Επιβλέπων καθηγητής}
 \supervprof{Θέμης Παναγιωτόπουλος}
@@ -72,7 +69,9 @@
 
 % Contents
 \renewcommand{\contentsname}{Περιεχόμενα}
+{\pagestyle{plain}
 \tableofcontents
+\cleardoublepage}
 
 % Figures
 \renewcommand*\listfigurename{Λίστα εικόνων}
@@ -93,8 +92,11 @@
 \backmatter % book mode only
 \appendix
 \renewcommand{\figurename}{Εικόνα}
+
+{\pagestyle{plain}
 \include{appendix1/appendix1}
 \include{appendix2/appendix2}
+\cleardoublepage}
 
 % Bibliography
 \bibliographystyle{classes/biblio}

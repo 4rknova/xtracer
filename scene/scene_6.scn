@@ -32,7 +32,7 @@ camera = {
 			y = 1
 		}
 
-		apperture = 10
+		apperture = 1
 		flength = 50 
 	}
 }

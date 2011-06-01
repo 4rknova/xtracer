@@ -39,12 +39,17 @@
 \setsansfont{FreeSans}
 \setmonofont{FreeMono}
 \usepackage[iso-8859-7]{inputenc}
-%\usepackage{xgreek}
 \usepackage[usenames, dvipsnames]{color}
 \usepackage[perpage]{footmisc}
 \usepackage[square, sort, numbers, authoryear]{natbib}
 \usepackage{ifthen}
 \usepackage{ifpdf}
+
+% Math-mode symbol & verbatim
+\def\W#1#2{$#1{#2}$ &\tt\string#1\string{#2\string}}
+\def\X#1{$#1$ &\tt\string#1}
+\def\Y#1{$\big#1$ &\tt\string#1}
+\def\Z#1{\tt\string#1}
 
 %Bibliography
 \renewcommand{\bibname}{Βιβλιογραφικές πηγές}
@@ -118,11 +123,12 @@
 \frenchspacing
 
 \pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
 \renewcommand{\chaptermark}[1]{\markboth{\MakeUppercase{\thechapter. #1 }}{}}
 \renewcommand{\sectionmark}[1]{}
-\fancyhf{}
-\fancyhead[RO]{\bfseries\rightmark}
-\fancyhead[LE]{\bfseries\leftmark}
+\fancyhead[LE,LO]{\@stitle}
+\fancyhead[RO,RE]{\chaptername \, \thechapter}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.5pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -138,6 +144,9 @@
 %
 % These macros are used to declare arguments needed for the
 % construction of the title page and other preamble.
+
+% Stitle
+\def\stitle#1{\gdef\@stitle{#1}}
 
 % The registration code
 \def\regcode#1{\gdef\@regcode{#1}}
@@ -194,6 +203,8 @@
   \end{center}
   \null\vfill
 \end{alwayssingle}}
+
+% Headings
 
 % DEDICATION
 %

@@ -1,6 +1,8 @@
 XTracer
 -------
-Copyright 2010, 2011 (c) Papadopoulos Nikos <nikpapas@gmail.com>, Knowledge Engineering Lab (KEL) <kel.unipi@gmail.com>
+Copyright 2010, 2011 (c) 
+Papadopoulos Nikos <nikpapas@gmail.com>, 
+Knowledge Engineering Lab (KEL) <kel.unipi@gmail.com>
 
 About
 -----
@@ -31,7 +33,7 @@ Planned
 * Acceleration : BHV, KD-Trees
 * Drivers      : ASC
 * GI           : Monte Carlo
-* Other        : Animation system, Interactive mode
+* Other        : Animation system, Interactive mode, Adaptive exposure correction
 
 Notes
 -----
@@ -51,21 +53,34 @@ the dependencies stated below.
 
 Dependencies
 ------------
-* openmp	
-* libsdl    The program can be built without the sdl driver support. 
+* openmp	Must be supported by your compiler.
+* libsdl    The program can be built without the sdl driver support.
+			Type ./configure --help for more information on this.
 * libnmath  https://github.com/4rknova/libnmath
+			[ Last tested commit: df3b2ba6a993e3b66fff7e62b5ffa41f02c35514 ]
 * libnparse https://github.com/4rknova/libnparse
+			[ Last tested commit: d12984ffbab536f15d02b4ebe3d7cf2896c4fb7c ]
+
+Supported platforms
+-------------------
+xtracer should be able to compile and run on any system equipped with openmp compatible
+c and c++ compilers. It was tested without any problems under the following platforms:
+
+* Linux
+* FreeBSD
+* MacOSX
 
 People
 ------
-I would like to thank the following people for supporting me with the development and 
+I would like to thank the following people for supporting me during the development and 
 testing process.
 
 Prof. T. Panayiotopoulos : Supervising professor.
-Nuclear, Hikiko          : Technical advisory.
-Hardas Apostolhs         : Tested over and over again all the features, donated cpu time.
-Kokkalis Nikos           : Tested compilation under freebsd.
-Ntzoufras Kwstas         : Tested compilation under macosx, donated cpu time.
-Gregpuppy                : Donated cpu time.
-Costas Droggos           : Donated cpu time.
-Kouzouphs Antwnhs        : Donated cpu time.
+Tsiombikas John          : Technical advisory.
+Stea Maria Elenh         : Technical advisory.
+Hardalias Apostolhs      : Linux testing, cpu time donation.
+Kokkalis Nikos           : FreeBSD testing.
+Ntzoufras Kwstas         : MacOSX testing, cpu time donation.
+Potamianos Grhgorhs      : cpu time donation.
+Costas Droggos           : cpu time donation.
+Kouzouphs Antwnhs        : cpu time donation.
