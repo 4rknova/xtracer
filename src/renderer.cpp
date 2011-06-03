@@ -169,8 +169,8 @@ unsigned int Renderer::render_frame()
 						unsigned int samples = m_dof_samples;
 						float step = 100 / samples;
 					
-						for (float dofy = -50; dofy < 50; dofy += step)
-							for (float dofx = -50; dofx < 50; dofx += step)
+						for (float dofy = -25; dofy < 25; dofy += step)
+							for (float dofx = -25; dofx < 25; dofx += step)
 							{
 								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, w, h, dofx, dofy);
 								color += trace(ray, m_max_rdepth+1) / (samples * samples) / samples_per_pixel;

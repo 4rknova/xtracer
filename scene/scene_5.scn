@@ -26,8 +26,8 @@
 #	-	The result image appears flipped to the yy' axis. This is due to the
 #		different coordinate system used in the original data.
 
-name = Cornell box replica
-description = <name>. You want to render this scene with a 1:1 aspect ratio.
+name = Cornell box replica (radiosity data)
+description = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
 
 k_ambient = 0.01
 

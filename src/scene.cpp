@@ -25,7 +25,9 @@
 
 */
 
+#include <vector>
 #include <string>
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 
@@ -308,8 +310,8 @@ unsigned int Scene::set_camera(const char *name)
 	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
 
-	// apperture
-	real_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APPERTURE));
+	// aperture
+	real_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APERTURE));
 
 	// shutter
 	real_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
@@ -360,6 +362,7 @@ unsigned int Scene::add_light(NCF1 *p)
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
+#include <nmath/mesh.h>
 
 unsigned int Scene::add_geometry(NCF1 *p)
 {
@@ -439,6 +442,86 @@ unsigned int Scene::add_geometry(NCF1 *p)
 							nstring_to_double(y),
 							nstring_to_double(z));
 		}
+	}
+	// mesh
+	else if (!type.compare(XT_CFGPROTO_VAL_MESH))
+	{
+		geo = new Mesh();
+
+		std::string f = p->get(XT_CFGPROTO_PROP_SOURCE);
+
+		// Open source file from relative path
+		std::string base, file;
+		nstring_path_comp(data.get_source(), base, file);
+		base.append(f);
+
+		std::cout << "Loading data from " << base << "..\n";
+		std::fstream in(base.c_str(), std::ios::in);
+
+		// Check for errors
+		if (!in.good())
+		{
+			std::cout << "Warning: Failed to load mesh from " << f << ".\n";
+			delete geo;
+			return 1;
+		}
+
+		std::string line;
+		unsigned int linec = 0;
+		std::vector<Vector3> verts, norms;
+
+		while (getline(in, line))
+		{
+			linec++;
+
+			if(!line[0] || line[0] == '#') 
+			{
+				continue;
+			}
+
+			int vidx[3];
+			float x, y, z;
+			Vector3 vec;
+
+			nstring_trim(line);
+			switch(line[0])
+			{
+				// vertices
+				case 'v':
+					if(sscanf(line.c_str(), "v %f %f %f", &x, &y, &z) < 3)
+					{
+						std::cout << "Syntax error in " << f << " at line " << linec << ".\n";
+						delete geo;
+						in.close();
+						return 1;
+					}
+					vec = Vector3(x, y, z);
+					verts.push_back(vec);
+					break;
+				// faces
+				case 'f':
+					int res = sscanf(line.c_str(), "f %d %d %d", vidx, vidx + 1, vidx + 2);
+					if(res != 3)
+					{
+						std::cout << "Syntax error in " << base << " at line " << linec << ".\n";
+						delete geo;
+						in.close();
+						return 1;
+					}
+
+					Face *face = new Face;
+					
+					for(unsigned int i = 0; i < 3; i++)
+					{
+						face->v[i].position = verts[vidx[i] -1];
+					}
+					face->calc_normal();
+					((Mesh *)geo)->add_face(face);
+
+					break;
+			}
+		}
+		in.close();
 	}
 	// unknown
 	else
@@ -613,7 +696,7 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 		{
 			Sphere light;
 			light.origin = (*itl).second->position;
-			light.radius = 20;
+			light.radius = 10;
 			light.calc_aabb();
 			if (light.intersection(ray, &test))
 			{

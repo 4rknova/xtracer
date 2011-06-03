@@ -1,13 +1,10 @@
-# Xtracer simple sphere scene
-
-name = Simple sphere
-description = Just a plain sphere
+name = Refractive sphere
 
 k_ambient = 0.01
 
 ambient = {
 	r = 1
-	 = 1
+	g = 1
 	b = 1
 }
 
@@ -18,8 +15,8 @@ camera = {
 		fov = 45
 
 		position = {
-			x = -250
-			y = 500	
+			x = 520
+			y = 300	
 			z = -1000
 		}
 
@@ -31,9 +28,6 @@ camera = {
 		up = {
 			y = 1
 		}
-
-		apperture = 25.5
-		flength = 10
 	}
 }
 
@@ -82,14 +76,12 @@ geometry = {
 		normal = {
 			y = 1
 		}
-		distance = 0
 	}
 }
 
 light = {
 	front = {
 		position = {
-			x = 0
 			y = 500
 			z = -800
 		}
@@ -183,7 +175,7 @@ material = {
 
 		reflectance = 0.3
 		transparency = 0.5
-		ior = 1.051714
+		ior = 1.031714
 	}
 }
 

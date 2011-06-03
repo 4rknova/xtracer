@@ -1,6 +1,4 @@
-# Xtracer simple scene
-
-name = room
+name = Room
 description = Three spheres in a room.
 
 k_ambient = 0.01

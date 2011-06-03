@@ -1,0 +1,148 @@
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 0
+			y = 4.1
+			z = -9.24
+		}
+
+		target = {
+			x = 0
+			y = 1.6 
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	model = {
+		type = mesh
+		source = mesh/teapot.obj
+	}
+
+	plane1 = {
+		type = plane
+
+		normal = {
+			z = 1
+		}
+
+		distance = 1855.2
+	}
+	
+	plane2 = {
+		type = plane
+
+		normal = {
+			y = -1
+		}
+
+		distance = 0
+	}
+}
+
+light = {
+	g1 = {
+		position = {
+			x = 50
+			y = 10
+			z = 80
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+#	g2 = {
+#		position = {
+#			x = -50
+#			y = 2
+#			z = -30
+#		}
+
+#		intensity = {
+#			r = 1
+#			g = 1
+#			b = 1
+#		}
+#	}
+}
+
+material = {
+	floor = {
+		type = phong
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 10
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.4
+	}
+
+	model = {
+		type = phong 
+
+		k_diffuse = 0.5
+		k_specular = 0.5
+		k_specexp = 560
+	
+		diffuse = {
+			r = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.555551
+	}
+}
+
+object = {
+	plane1 = {
+		geometry = plane1
+		material = floor
+	}
+	
+	plane2 = {
+		geometry = plane2
+		material = floor
+	}
+
+	mesh = {
+		geometry = model
+		material = model
+	}
+}

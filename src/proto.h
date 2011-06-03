@@ -62,11 +62,12 @@
 	PROPERTIES
 */
 
-#define XT_CFGPROTO_PROP_DEFAULT        "default"
+#define XT_CFGPROTO_PROP_DEFAULT		"default"
+#define XT_CFGPROTO_PROP_SOURCE			"source"
 
-#define XT_CFGPROTO_PROP_APPERTURE      "apperture"
-#define XT_CFGPROTO_PROP_SHUTTER        "shutter"
-#define XT_CFGPROTO_PROP_FLENGTH        "flength"
+#define XT_CFGPROTO_PROP_APERTURE		"aperture"
+#define XT_CFGPROTO_PROP_SHUTTER		"shutter"
+#define XT_CFGPROTO_PROP_FLENGTH		"flength"
 
 #define XT_CFGPROTO_PROP_TYPE			"type"
 
@@ -105,6 +106,7 @@
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
 #define XT_CFGPROTO_VAL_PLANE			"plane"
 #define XT_CFGPROTO_VAL_TRIANGLE		"triangle"
+#define XT_CFGPROTO_VAL_MESH			"mesh"
 
 #define XT_CFGPROTO_VAL_LAMBERT			"lambert"
 #define XT_CFGPROTO_VAL_PHONG			"phong"

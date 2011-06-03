@@ -50,7 +50,7 @@ class Camera
 		Vector3 up;
 		real_t fov;
 
-		real_t apperture;
+		real_t aperture;
 		real_t flength;
 		real_t shutter;
 };

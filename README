@@ -16,7 +16,7 @@ The source code is distributed under the LGPL license.
 Features
 --------
 Implemented
-* Primitives    : Plane, Triangle, Sphere
+* Primitives    : Plane, Triangle, Sphere, Mesh
 * Materials     : Lambert, Phong, Blinn-Phong
 * Lights        : Point light
 * Cameras       : Pinhole camera, Thin lense
@@ -27,18 +27,23 @@ Implemented
 * Other         : HDR, Gamma correction, Exposure correction
 
 Planned
-* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Mesh
+* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon
 * Materials    : Texture mapping
 * Effects      : Fresnel, Beer's law
-* Acceleration : BHV, KD-Trees
+* Acceleration : BVH, KD-Trees
 * Drivers      : ASC
 * GI           : Monte Carlo
-* Other        : Animation system, Interactive mode, Adaptive exposure correction
+* Other        : Animation system, Interactive mode, Adaptive exposure correction, Transformations
 
 Notes
 -----
-The scene is rendered in HDR. By default, the conversion to LDR is done with a sloppy 
-0.0 - 1.0 range cap. To correct the result, use the exposure switch.
+* The scene is rendered in HDR. By default, the conversion to LDR is done with a sloppy 
+  0.0 - 1.0 range cap. To correct the result, use the exposure switch.
+
+* As far as meshes are concerned, only a bare minimal obj-compatible format is 
+  supported for the time being. If you are using a 3d modeling editor you 
+  MUST choose to only export the vertices and faces of the mesh.
+  The face normals are calculated on the fly.
 
 Compilation / Installation
 --------------------------
@@ -78,7 +83,7 @@ testing process.
 Prof. T. Panayiotopoulos : Supervising professor.
 Tsiombikas John          : Technical advisory.
 Stea Maria Elenh         : Technical advisory.
-Hardalias Apostolhs      : Linux testing, cpu time donation.
+Hardalias Apostolhs      : Windows testing, cpu time donation.
 Kokkalis Nikos           : FreeBSD testing.
 Ntzoufras Kwstas         : MacOSX testing, cpu time donation.
 Potamianos Grhgorhs      : cpu time donation.

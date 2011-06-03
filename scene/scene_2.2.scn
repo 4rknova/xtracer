@@ -1,6 +1,4 @@
-# Xtracer simple scene
-
-name = Triball with reflections
+name = Mirror room
 description = Three balls in a room
 
 k_ambient = 0.001
