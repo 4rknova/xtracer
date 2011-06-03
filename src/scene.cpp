@@ -447,7 +447,23 @@ unsigned int Scene::add_geometry(NCF1 *p)
 	else if (!type.compare(XT_CFGPROTO_VAL_MESH))
 	{
 		geo = new Mesh();
+		
+		// Smooth surface
+		std::string shading = p->get(XT_CFGPROTO_PROP_SMOOTH);
 
+		if (!shading.compare(XT_CFGPROTO_VAL_TRUE))
+			((Mesh *)geo)->smooth = true;
+		else if (!shading.compare(XT_CFGPROTO_VAL_FALSE)) 
+			((Mesh *)geo)->smooth = false;
+		else
+			std::cout 
+				<< "Warning: [" 
+				<<  p->node() 
+				<< "->" 
+				<< XT_CFGPROTO_PROP_SMOOTH << "] invalid value: " 
+				<<  p->get(XT_CFGPROTO_PROP_SMOOTH) << "\n";
+		
+		// Data source
 		std::string f = p->get(XT_CFGPROTO_PROP_SOURCE);
 
 		// Open source file from relative path
@@ -468,7 +484,6 @@ unsigned int Scene::add_geometry(NCF1 *p)
 
 		std::string line;
 		unsigned int linec = 0;
-		std::vector<Vector3> verts, norms;
 
 		while (getline(in, line))
 		{
@@ -479,11 +494,15 @@ unsigned int Scene::add_geometry(NCF1 *p)
 				continue;
 			}
 
+			// Temporary buffers
 			int vidx[3];
 			float x, y, z;
 			Vector3 vec;
+			Vertex vertex;
 
+			// Trim line off spaces
 			nstring_trim(line);
+			// Parse
 			switch(line[0])
 			{
 				// vertices
@@ -495,8 +514,8 @@ unsigned int Scene::add_geometry(NCF1 *p)
 						in.close();
 						return 1;
 					}
-					vec = Vector3(x, y, z);
-					verts.push_back(vec);
+					vertex.position = Vector3(x, y, z);
+					((Mesh *)geo)->vertices.push_back(vertex);
 					break;
 				// faces
 				case 'f':
@@ -509,19 +528,23 @@ unsigned int Scene::add_geometry(NCF1 *p)
 						return 1;
 					}
 
-					Face *face = new Face;
+					Face face;
 					
 					for(unsigned int i = 0; i < 3; i++)
 					{
-						face->v[i].position = verts[vidx[i] -1];
+						face.v[i] = vidx[i] -1;
 					}
-					face->calc_normal();
-					((Mesh *)geo)->add_face(face);
+
+					((Mesh *)geo)->faces.push_back(face);
 
 					break;
 			}
 		}
 		in.close();
+
+		// calculate vertex normal 
+		std::cout << "Calculating vertex normals..\n";
+		((Mesh*)geo)->calc_vertex_normals();
 	}
 	// unknown
 	else

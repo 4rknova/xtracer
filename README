@@ -33,7 +33,8 @@ Planned
 * Acceleration : BVH, KD-Trees
 * Drivers      : ASC
 * GI           : Monte Carlo
-* Other        : Animation system, Interactive mode, Adaptive exposure correction, Transformations
+* Other        : Animation system, Interactive mode, Adaptive 
+				 exposure correction, Transformations, Phong shading
 
 Notes
 -----

@@ -13,8 +13,8 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 0
-			y = 4.1
+			x = 0.01
+			y = 3.1
 			z = -9.24
 		}
 
@@ -33,18 +33,9 @@ geometry = {
 	model = {
 		type = mesh
 		source = mesh/teapot.obj
+		smooth = tru333e
 	}
 
-	plane1 = {
-		type = plane
-
-		normal = {
-			z = 1
-		}
-
-		distance = 1855.2
-	}
-	
 	plane2 = {
 		type = plane
 
@@ -59,9 +50,9 @@ geometry = {
 light = {
 	g1 = {
 		position = {
-			x = 50
-			y = 10
-			z = 80
+			x = 30
+			y = 40
+			z = 50
 		}
 
 		intensity = {
@@ -71,33 +62,33 @@ light = {
 		}
 	}
 
-#	g2 = {
-#		position = {
-#			x = -50
-#			y = 2
-#			z = -30
-#		}
+	g2 = {
+		position = {
+			x = -20
+			y = 2
+			z = -30
+		}
 
-#		intensity = {
-#			r = 1
-#			g = 1
-#			b = 1
-#		}
-#	}
+		intensity = {
+			r = 0.21
+			g = 0.21
+			b = 0.21
+		}
+	}
 }
 
 material = {
 	floor = {
 		type = phong
 
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_specexp = 10
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_specexp = 270
 	
 		diffuse = {
-			r = 1
-			g = 1
-			b = 1
+			r = 0.2923
+			g = 0.315
+			b = 0.11
 		}
 
 		specular = {
@@ -106,7 +97,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.4
+		reflectance = 0.2
 	}
 
 	model = {
@@ -131,11 +122,6 @@ material = {
 }
 
 object = {
-	plane1 = {
-		geometry = plane1
-		material = floor
-	}
-	
 	plane2 = {
 		geometry = plane2
 		material = floor

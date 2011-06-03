@@ -65,6 +65,8 @@
 #define XT_CFGPROTO_PROP_DEFAULT		"default"
 #define XT_CFGPROTO_PROP_SOURCE			"source"
 
+#define XT_CFGPROTO_PROP_SMOOTH			"smooth"
+
 #define XT_CFGPROTO_PROP_APERTURE		"aperture"
 #define XT_CFGPROTO_PROP_SHUTTER		"shutter"
 #define XT_CFGPROTO_PROP_FLENGTH		"flength"
@@ -102,6 +104,9 @@
 /*
 	CONSTANT VALUES
 */
+
+#define XT_CFGPROTO_VAL_TRUE			"true"
+#define XT_CFGPROTO_VAL_FALSE			"false"
 
 #define XT_CFGPROTO_VAL_SPHERE          "sphere"
 #define XT_CFGPROTO_VAL_PLANE			"plane"
