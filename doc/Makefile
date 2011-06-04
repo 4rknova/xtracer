@@ -108,6 +108,8 @@ clean :
 	@$(FIND) . -name "*.brf" -exec $(RM) -f {} \;
 	@$(FIND) . -name "*.nlo" -exec $(RM) -f {} \;
 	@$(FIND) . -name "*.toc" -exec $(RM) -f {} \;
+	@$(FIND) . -name "*.btmp" -exec $(RM) -f {} \;
+	@$(FIND) . -name "*.itmp" -exec $(RM) -f {} \;
 	@$(FIND) . -name "*.texshop" -exec $(RM) -f {} \;
 
 clean-all : clean

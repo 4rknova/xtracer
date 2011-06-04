@@ -449,12 +449,13 @@ unsigned int Scene::add_geometry(NCF1 *p)
 		geo = new Mesh();
 		
 		// Smooth surface
+		bool smooth = false;
 		std::string shading = p->get(XT_CFGPROTO_PROP_SMOOTH);
 
 		if (!shading.compare(XT_CFGPROTO_VAL_TRUE))
-			((Mesh *)geo)->smooth = true;
+			smooth = true;
 		else if (!shading.compare(XT_CFGPROTO_VAL_FALSE)) 
-			((Mesh *)geo)->smooth = false;
+			smooth = false;
 		else
 			std::cout 
 				<< "Warning: [" 
@@ -542,9 +543,12 @@ unsigned int Scene::add_geometry(NCF1 *p)
 		}
 		in.close();
 
-		// calculate vertex normal 
-		std::cout << "Calculating vertex normals..\n";
-		((Mesh*)geo)->calc_vertex_normals();
+		if (smooth)
+		{
+			// calculate vertex normal 
+			std::cout << "Calculating vertex normals..\n";
+			((Mesh*)geo)->calc_vertex_normals();
+		}
 	}
 	// unknown
 	else
@@ -563,6 +567,7 @@ unsigned int Scene::add_geometry(NCF1 *p)
 
 	geo->calc_aabb();
 	geometry[p->node()] = geo;
+
 	return 0;
 }
 

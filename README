@@ -24,7 +24,7 @@ Implemented
 * Effects       : Reflection, Refraction, Depth of field
 * Acceleration  : Threads 
 * Anti-aliasing : Supersampling
-* Other         : HDR, Gamma correction, Exposure correction
+* Other         : HDR, Gamma correction, Exposure correction, Phong shading for meshes
 
 Planned
 * Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon
@@ -34,7 +34,7 @@ Planned
 * Drivers      : ASC
 * GI           : Monte Carlo
 * Other        : Animation system, Interactive mode, Adaptive 
-				 exposure correction, Transformations, Phong shading
+				 exposure correction, Transformations
 
 Notes
 -----

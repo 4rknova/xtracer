@@ -59,7 +59,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 
 	// Construct the ray's intersection point on the projection plane.
 	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
-	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
+	pray.direction.y = ((2.0 * (real_t)y / (real_t)height) - 1.0) / ratio;
 	pray.direction.z = 1 / tan(fov / 2.0);
 
 	/*

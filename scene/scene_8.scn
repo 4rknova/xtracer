@@ -33,7 +33,7 @@ geometry = {
 	model = {
 		type = mesh
 		source = mesh/teapot.obj
-		smooth = tru333e
+		smooth = true
 	}
 
 	plane2 = {
@@ -51,8 +51,8 @@ light = {
 	g1 = {
 		position = {
 			x = 30
-			y = 40
-			z = 50
+			y = 4
+			z = 5
 		}
 
 		intensity = {
@@ -64,14 +64,14 @@ light = {
 
 	g2 = {
 		position = {
-			x = -20
-			y = 2
-			z = -30
+			x = -5
+			y = 0.1
+			z = -5
 		}
 
 		intensity = {
-			r = 0.21
-			g = 0.21
+			r = 0.321
+			g = 0.421
 			b = 0.21
 		}
 	}
@@ -80,24 +80,24 @@ light = {
 material = {
 	floor = {
 		type = phong
+		
+		k_diffuse = 0.4
+		k_specular = 0.6
+		k_specexp = 1350
 
-		k_diffuse = 0.8
-		k_specular = 0.2
-		k_specexp = 270
-	
 		diffuse = {
-			r = 0.2923
-			g = 0.315
-			b = 0.11
+			r = 0.8
+			g = 1
+			b = 1
 		}
-
+		
 		specular = {
 			r = 1
 			g = 1
 			b = 1
 		}
 
-		reflectance = 0.2
+		reflectance = 0.6
 	}
 
 	model = {
@@ -105,10 +105,12 @@ material = {
 
 		k_diffuse = 0.5
 		k_specular = 0.5
-		k_specexp = 560
+		k_specexp = 60
 	
 		diffuse = {
-			r = 1
+			r = 0.980
+			g = 0.9215
+			b = 0.8431
 		}
 
 		specular = {
@@ -117,7 +119,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.555551
+		reflectance = 0.5
 	}
 }
 

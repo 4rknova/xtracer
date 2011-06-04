@@ -185,5 +185,5 @@ object = {
 }
 
 material = {
-	%include basic.mat
+	%include material/basic.mat
 }
