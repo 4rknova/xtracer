@@ -27,14 +27,13 @@ Implemented
 * Other         : HDR, Gamma correction, Exposure correction, Phong shading for meshes
 
 Planned
-* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon
+* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Disk
 * Materials    : Texture mapping
-* Effects      : Fresnel, Beer's law
-* Acceleration : BVH, KD-Trees
-* Drivers      : ASC
+* Lights       : Area lights
+* Effects      : Fresnel, Beer's law, Caustics
+* Acceleration : BVH, Octrees, KD-Trees
 * GI           : Monte Carlo
-* Other        : Animation system, Interactive mode, Adaptive 
-				 exposure correction, Transformations
+* Other        : Animation system, Interactive mode, Adaptive exposure correction, Transformations
 
 Notes
 -----
@@ -59,22 +58,30 @@ the dependencies stated below.
 
 Dependencies
 ------------
-* openmp	Must be supported by your compiler.
-* libsdl    The program can be built without the sdl driver support.
-			Type ./configure --help for more information on this.
-* libnmath  https://github.com/4rknova/libnmath
-			[ Last tested commit: df3b2ba6a993e3b66fff7e62b5ffa41f02c35514 ]
-* libnparse https://github.com/4rknova/libnparse
-			[ Last tested commit: d12984ffbab536f15d02b4ebe3d7cf2896c4fb7c ]
+* openmp	
+  Must be supported by your compiler.
+
+* libsdl
+  The program can be built without the sdl driver support.
+  Type ./configure --help for more information on this.
+
+* libnmath  
+  https://github.com/4rknova/libnmath  
+  [ Last tested commit: df3b2ba6a993e3b66fff7e62b5ffa41f02c35514 ]
+
+* libnparse 
+  https://github.com/4rknova/libnparse 
+  [ Last tested commit: d12984ffbab536f15d02b4ebe3d7cf2896c4fb7c ]
 
 Supported platforms
 -------------------
 xtracer should be able to compile and run on any system equipped with openmp compatible
-c and c++ compilers. It was tested without any problems under the following platforms:
+c and c++ compilers. It has been tested without any problems under the following platforms:
 
 * Linux
 * FreeBSD
 * MacOSX
+* MS Windows XP, 7
 
 People
 ------

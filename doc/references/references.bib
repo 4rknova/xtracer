@@ -1,69 +1,55 @@
-% ------------------------------------------------------------------------
-% SAMPLE BIBLIOGRAPHY FILE
-% ------------------------------------------------------------------------
-
-@MISC{prime-number-theorem,
-   author = "Charles Louis Xavier Joseph de la Vall{\'e}e Poussin",
-   note = "A strong form of the prime number theorem, 19th century" }
-
-% ------------------------------------------------------------------------
+------------------------------------------------------------------------
+% BIBLIOGRAPHY FILE
 
 @BOOK{texbook,
-   author = "Donald E. Knuth",
-   title= "The {{\TeX}book}",
-   publisher = "Addison-Wesley",
-   year = 1984 }
+   	author = "Andrew S. Glassner",
+   	title= "An Introduction to Ray Tracing",
+   	publisher = "Academic Press Ltd. London",
+   	year = 1989
+}
 
-@BOOK{latex,
-   author = "Leslie Lamport",
-   title = "{\LaTeX:} {A} Document Preparation System",
-   publisher = "Addison-Wesley",
-   year = 1986 }
+@INPROCEEDINGS{Kajiya,
+	author = {Kajiya, James T.},
+	title = {The rendering equation},
+   	booktitle = {Proceedings of the 13th annual conference on Computer graphics and interactive techniques},
+    series = {SIGGRAPH '86},
+	year = {1986},
+	pages = {143--150},
+	numpages = {8}, 
+	publisher = {ACM},
+	address = {New York, NY, USA},
+}
 
-% ------------------------------------------------------------------------
+@MASTERSTHESIS{Fitzhorn82,
+	author = "Patrick A. Fitzhorn",
+ 	title = "Realistic Image Synthesis: A Time Complexity Analysis of Ray Tracing",
+   	school = "Colorado State University",
+   	address = "Fort Collins, Colorado",
+	year = 1982,
+	keywords = {ray tracing, ray tree pruning},
+	comments = "Uses importance to avoid tracing rays with insignificant contribution to the image. Referenced in [Speer85]."
+}
 
-@BOOK{RR73,
- author={H. Radjavi and P. Rosenthal},
- title={Invariant {Subspaces}},
- publisher={Springer-Verlag},
- address={New York},
- year={1973},
+@ARTICLE{Cleary86,
+	author = "J. G. Cleary and B. M. Wyvill and G. M. Birtwistle and R. Vatti",
+    title = "Multiprocessor ray tracing",
+	journal = "Computer Graphics Forum",
+	volume = 5,
+	number = 1,
+	month = Mar,
+	year = 1986,
+	keywords = {ray tracing, parallel execution},
+	comments = "Stores importance with each ray?  Referenced in [Pharr97].",
+	note = "(*)"
+}
+
+@INPROCEEDINGS{ Arvo-1986,
+	author = "James Arvo",
+	title = "Backward Ray Tracing",
+	booktitle = "Developments in Ray Tracing, SIGGRAPH `86 Course Notes",
+	volume = 12, 
+	month = Aug,
+	year = 1986,
 }
 
 % ------------------------------------------------------------------------
-
-@ARTICLE{KPS75,
- author={H. W. Kim and C. Pearcy and A. L. Shields},
- title={Rank-One Commutators and Hyperinvariant Subspaces},
- journal={Michigan Math. J.},
- volume={22},
- number={3},
- year={1975},
- pages={193-194},
-}
-
-% --------------------------------------------------------------------------
-
-@MASTERSTHESIS{Sim90,
- author={A. Simoni\v{c}},
- title={Grupe Operatorjev s Pozitivnim Spektrom},
- school={Univerza v Ljubljani, FNT, Oddelek za Matematiko},
- year={1990},
-}
-
-@UNPUBLISHED{Sim91,
- author={A. Simoni\v{c}},
- title={Notes on {Subharmonic} {Functions}},
- note={Lecture Notes, Dalhousie University,
-       Department of Mathematics, Statistics, \& Computing Science},
- year={1991},
-}
-
-@PHDTHESIS{Sim94,
- author={A. Simoni\v{c}},
- title={An {Extension} of {Lomonosov's} {Techniques} to {Non}-{Compact}
-       {Operators}},
- school={Dalhousie University,
-         Department of Mathematics, Statistics, \& Computing Science},
- year={1994},
-}
