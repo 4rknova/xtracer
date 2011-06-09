@@ -45,6 +45,11 @@
 \usepackage{ifthen}
 \usepackage{ifpdf}
 
+\usepackage{color}
+\usepackage{listings}
+\renewcommand\lstlistingname{Πλαίσιο}
+\renewcommand\lstlistlistingname{Πλαίσιο}
+
 % Math-mode symbol & verbatim
 \def\W#1#2{$#1{#2}$ &\tt\string#1\string{#2\string}}
 \def\X#1{$#1$ &\tt\string#1}
