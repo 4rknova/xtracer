@@ -201,7 +201,7 @@
 \vspace*{5mm}
     {\@degreedate}}
 
-\vspace*{15mm}
+\large\vspace*{15mm}
 	{{\@supervisor} \par}
     {{\@supervprof} \par}
 
