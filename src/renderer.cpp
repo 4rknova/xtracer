@@ -99,7 +99,10 @@ unsigned int Renderer::render()
 
 	// render the frame
 	if (render_frame())
+	{
+		m_drv->deinit();
 		return 1;
+	}
 
 	// - Post processing
 	// apply exposure and bloom

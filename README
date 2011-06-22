@@ -22,18 +22,26 @@ Implemented
 * Cameras       : Pinhole camera, Thin lense
 * Drivers       : SDL, PPM, DUM
 * Effects       : Reflection, Refraction, Depth of field
-* Acceleration  : Threads 
+* Acceleration  : Threads
 * Anti-aliasing : Supersampling
-* Other         : HDR, Gamma correction, Exposure correction, Phong shading for meshes
+* Shading       : Phong shading
+* Rendering     : HDR
+* Post-Proc.    : Gamma correction, Exposure correction
 
 Planned
-* Primitives   : Cone, Cylinder, Torus, Isosurface, N-gon, Disk
-* Materials    : Texture mapping
-* Lights       : Area lights
-* Effects      : Fresnel, Beer's law, Caustics
-* Acceleration : BVH, Octrees, KD-Trees
-* GI           : Monte Carlo
-* Other        : Animation system, Interactive mode, Adaptive exposure correction, Transformations
+* Primitives    : Cone, Cylinder, Torus, Isosurface, N-gon, Disk
+* Materials     : Texture mapping
+* Lights        : Area lights
+* Cameras       : Fisheye, Orthographic
+* Effects       : Fresnel, Beer's law, Enviroment maps
+* Acceleration  : BVH, Octrees, KD-Trees
+* GI            : Monte Carlo
+* Anti-aliasing : Adaptive supersampling, Improved supersampling
+* Rendering     : Adaptive exposure correction
+* Other         : Animation system, Interactive mode, Transformations
+
+Things I'd like to check
+Lense flare
 
 Notes
 -----
