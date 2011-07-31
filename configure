@@ -48,6 +48,8 @@ for arg; do
 			echo '  --enable-opt: enable speed optimizations (default)'
 			echo '  --disable-opt: disable speed optimizations'
 			echo '  --enable-debug: include debugging symbols'
+			echo '  --enable-sdl: enable the SDL driver'
+			echo '  --disable-sdl: disable the SDL driver'
 			echo '  --disable-debug: do not include debugging symbols (default)'
 			echo 'all invalid options are silently ignored'
 			exit 0

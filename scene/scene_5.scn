@@ -23,7 +23,7 @@
 # Notes:
 #
 #	-	The original Cornell box is rendered with an aspect ratio of 1:1.
-#	-	The result image appears flipped to the yy' axis. This is due to the
+#	-	The final image appears flipped to the yy' axis. This is due to the
 #		different coordinate system used in the original data.
 
 name = Cornell box replica (radiosity data)

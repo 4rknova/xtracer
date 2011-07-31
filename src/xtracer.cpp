@@ -469,10 +469,10 @@ int main(int argc, char **argv)
 		renderer.dof_samples(dof_samples);
 		
 		// realtime update
-		if (drv->is_realtime())
-			renderer.realtime_update(flag_realtime_update);
-		else
+		if (flag_realtime_update && !(drv->is_realtime()))
 			std::cout << "Warning: Realtime output update cannot be used with this driver. Ignoring..\n";
+		else
+			renderer.realtime_update(flag_realtime_update);
 
 		// render
 		renderer.threads(threads);
