@@ -1,4 +1,6 @@
+# Xtracer
 # Cornell box
+# v1.0
 #
 # This scene describes the standard "Cornell Box" with some caveats.
 # These caveats will be raised as the development of the raytracer progresses.

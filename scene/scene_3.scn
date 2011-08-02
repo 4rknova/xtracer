@@ -1,7 +1,8 @@
-# Trophy 
+# Xtracer
+# Trophy
+# v0.2
 
 name = Trophy 
-description = <name>.
 
 k_ambient = 0.01
 
@@ -10,7 +11,6 @@ ambient = {
 	g = 0.6
 	b = 0.6
 }
-
 
 # The scene cameras.
 camera = {
@@ -128,19 +128,22 @@ material = {
 		}
 	}
 
+	ball = {
+	}
+
 	floor = {
-		type = phong
+		type = blinn_phong
 
-		reflectance = 0.7
+		reflectance = 0.3
 
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_specexp = 90
+		k_diffuse = 0.2
+		k_specular = 0.8
+		k_specexp = 50000
 
 		diffuse = {
-			r = 0.3
-			g = 0.3
-			b = 0.74
+			r = 0.1
+			g = 0.1
+			b = 0.1
 		}
 		
 		specular = {
@@ -151,18 +154,18 @@ material = {
 	}
 
 	ball = {
-		type = phong
+		type = blinn_phong
 
-		reflectance = 0.5
+		reflectance = 0.15
 
-		k_diffuse = 0.2
-		k_specular = 0.8
-		k_specexp = 60
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 660
 
 		diffuse = {
 			r = 0.961
-			g = 0.961
-			b = 0.961
+			g = 0.161
+			b = 0.161
 		}
 
 		specular = {

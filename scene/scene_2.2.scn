@@ -1,5 +1,9 @@
+# Xtracer 
+# Mirror room
+# v0.2
+
 name = Mirror room
-description = Three balls in a room
+description = Three balls in a room with mirrors
 
 k_ambient = 0.001
 
@@ -80,7 +84,7 @@ geometry = {
 		type = sphere
 		position = {
 			x = -220
-			y = -205
+			y = -245
 			z = 80
 		}
 		radius = 155
@@ -127,32 +131,6 @@ geometry = {
 		}
 		distance = 2560
 	}
-
-	step = {
-		type = triangle
-		vecdata = {
-			
-			v1 = {
-				x = -500
-				y = -360
-				z = -400
-			}
-
-			v0 = {
-				x = 200
-				y = -360
-				z = 500
-			}
-			
-			v2 = {
-				x = -500 
-				y = -360
-				z = 500
-			}
-		}
-	}
-	
-
 }
 
 light = {
@@ -160,7 +138,7 @@ light = {
 	l0 = {
 		position = {
 			x = -150
-			y = 300
+			y = 150
 			z = 200
 		}
 
@@ -179,9 +157,9 @@ light = {
 		}
 
 		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
+			r = 0.4
+			g = 0.4
+			b = 0.4
 		}
 	}
 
@@ -222,10 +200,6 @@ object = {
 	}
 	front = {
 		geometry = front
-		material = phong_silver
-	}
-	step = {
-		geometry = step
 		material = phong_silver
 	}
 }

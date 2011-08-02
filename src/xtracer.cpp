@@ -153,7 +153,7 @@ unsigned int parsearg(int argc, char **argv)
 			}
 		}
 		// antialiasing
-		else if (!strcmp(argv[i], "-antialiasing"))
+		else if (!strcmp(argv[i], "-aa"))
 		{
 			i++;
 

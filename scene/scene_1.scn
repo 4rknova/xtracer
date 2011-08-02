@@ -1,7 +1,9 @@
-# Xtracer simple sphere scene
+# Xtracer 
+# Sphere on plane
+# v0.2
 
 name = Simple sphere
-description = Just a plain sphere
+description = A sphere on a plane
 
 k_ambient = 0.001
 
@@ -18,8 +20,9 @@ camera = {
 		fov = 45
 
 		position = {
-			y = 100
-			z = -800
+			x = 900
+			y = 110
+			z = -400
 		}
 
 		target = {
@@ -84,16 +87,16 @@ light = {
 
 material = {
 	floor = {
-		type = phong
+		type = blinn_phong
 
 		k_diffuse = 0.4
 		k_specular = 0.6
 		k_specexp = 1350
 	
 		diffuse = {
-			r = 0.8
-			g = 1
-			b = 1 
+			r = 0.1
+			g = 0.1
+			b = 0.1 
 		}
 
 		specular = {

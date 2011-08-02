@@ -150,12 +150,9 @@ unsigned int Renderer::render_frame()
 	if (m_threads != 0)
 		omp_set_num_threads(m_threads);
 
-	int chunk = 1;
-	#pragma omp parallel for schedule(dynamic,chunk) 
+	#pragma omp parallel for schedule(dynamic,1) 
 	for (unsigned int y = 0; y < h; y++) 
 	{
-		chunk = h / omp_get_num_threads();
-
 		for (unsigned int x = 0; x < w; x++) 
 		{
 			// the final color
