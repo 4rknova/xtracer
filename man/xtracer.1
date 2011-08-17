@@ -22,7 +22,7 @@ Sets the the sampling level for dof calculations.
 Sets the output driver to use. Available drivers are: ppm, sdl, dum.
 .IP	"-gamma %f"
 Sets the gamma correction.
-.IP
+.IP "-exposure %f"
 Sets the exposure correction.
 .IP "-cam %s"
 Sets the active camera.
@@ -42,6 +42,12 @@ Increases the verbosity.
 Outputs the program version information and exits.
 .IP "-help"
 Outputs basic usage information and exits.
+.SH DRIVER SPECIFIC OPTIONS
+.IP "sdl"
+.RS
+.IP "r"
+Triggers an immediate output update.
+.RE
 .SH AUTHOR
 ."BR bar (1)"
 Written by Nikos Papadopoulos <nikpapas at gmail dot com>

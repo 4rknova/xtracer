@@ -354,6 +354,7 @@ unsigned int parsearg(int argc, char **argv)
 #include "drvsdl.hpp"
 #include "drvppm.hpp"
 
+#include "console.hpp"
 #include "renderer.hpp"
 #include "scene.hpp"
 
@@ -396,6 +397,9 @@ int main(int argc, char **argv)
 		<< "Resolution [ " 
 		<< fb.width() / aspect_gcd  << ":" << fb.height() / aspect_gcd << " / "
 		<< fb.width() << "x" << fb.height() << " ]\n";
+
+	// initiate the console
+	Console *con = new Console;
 
 	// initiate the output driver
 	std::cout << "Initiating the output driver..\n";
@@ -485,7 +489,8 @@ int main(int argc, char **argv)
 		<< "Shutting down..\n";
 
 	// release the dynamically allocated memory
-	delete drv;
+	delete drv;	// The driver
+	delete con; // The console
 	
 	return 0;
 }

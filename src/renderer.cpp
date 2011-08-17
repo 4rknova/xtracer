@@ -45,7 +45,7 @@ Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int dept
 {}
 
 // report the progress
-void rprog(float progress, int worker)
+void rprog(float progress, int worker, int workers)
 {
 	static const unsigned int length = 25;
 
@@ -62,7 +62,7 @@ void rprog(float progress, int worker)
 			std::cout << ' ';
 	}
 
-	int totalw = omp_get_num_threads();
+	int totalw = workers;
 	// get the string length of totalw
 	int wlen = 0;
 	int num = totalw;
@@ -195,7 +195,8 @@ unsigned int Renderer::render_frame()
 			if (m_f_realtime_update)
 				m_drv->update(0, y, w, y+1); // update the output
 
-			rprog(progress / (float)(h) * 100, omp_get_thread_num());
+			rprog(progress / (float)(h) * 100, omp_get_thread_num(), omp_get_num_threads());
+			m_drv->hint();
 		}
 		
 	}

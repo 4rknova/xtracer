@@ -52,6 +52,8 @@ class Driver
 		unsigned int update();
 		virtual unsigned int update(unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1);
 		virtual unsigned int flip();
+
+		virtual unsigned int hint();
 		
 		virtual bool is_realtime();
 		  

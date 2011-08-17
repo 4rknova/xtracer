@@ -59,6 +59,11 @@ unsigned int Driver::flip()
 	return 0;
 }
 
+unsigned int Driver::hint()
+{
+	return 0;
+}
+
 bool Driver::is_realtime()
 {
 	return true;

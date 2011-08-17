@@ -151,6 +151,26 @@ unsigned int DrvSDL::flip()
 	return 0;
 }
 
+unsigned int DrvSDL::hint()
+{
+	// handle input
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+			case SDL_KEYDOWN:
+				// Update the output
+				if (event.key.keysym.sym == SDLK_r)
+					Driver::update();
+				break;
+		}
+	}
+
+	return 0;
+
+}
+
 bool DrvSDL::is_realtime()
 {
 	return true;

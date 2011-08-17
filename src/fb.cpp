@@ -2,7 +2,7 @@
 
     This file is part of xtracer.
 
-    fb.hpp
+    fb.cpp
     Framebuffer class
 
     Copyright (C) 2010, 2011
