@@ -13,9 +13,9 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 0.01
+			x = 2
 			y = 3.1
-			z = -9.24
+			z = -8.24
 		}
 
 		target = {
@@ -50,15 +50,15 @@ geometry = {
 light = {
 	g1 = {
 		position = {
-			x = 30
-			y = 4
-			z = 5
+			x = 300
+			y = 14
+			z = -15
 		}
 
 		intensity = {
-			r = 1
-			g = 1
-			b = 1
+			r = 0.51
+			g = 0.51
+			b = 0.51
 		}
 	}
 
@@ -70,9 +70,9 @@ light = {
 		}
 
 		intensity = {
-			r = 0.321
-			g = 0.421
-			b = 0.21
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 	}
 }
@@ -81,14 +81,14 @@ material = {
 	floor = {
 		type = phong
 		
-		k_diffuse = 0.4
-		k_specular = 0.6
-		k_specexp = 1350
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_specexp = 350
 
 		diffuse = {
-			r = 0.8
-			g = 1
-			b = 1
+			r = 0.1
+			g = 0.1
+			b = 0.1
 		}
 		
 		specular = {
@@ -97,29 +97,27 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.6
+		reflectance = 0.1
 	}
 
 	model = {
 		type = phong 
-
-		k_diffuse = 0.5
-		k_specular = 0.5
+		k_diffuse = 0.8
+		k_specular = 0.2
 		k_specexp = 60
-	
+					
 		diffuse = {
 			r = 0.980
 			g = 0.9215
 			b = 0.8431
 		}
-
 		specular = {
 			r = 1
 			g = 1
 			b = 1
 		}
 
-		reflectance = 0.5
+		reflectance = 0.1
 	}
 }
 
