@@ -8,18 +8,18 @@
     Copyright (C) 2010, 2011
     Papadopoulos Nikolaos
 
-    This library is free software; you can redistribute it and/or
+    This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
     License as published by the Free Software Foundation; either
     version 3 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
+    This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General
-    Public License along with this library; if not, write to the
+    Public License along with this program; if not, write to the
     Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA 02110-1301 USA
 
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
 		<< fb.width() << "x" << fb.height() << " ]\n";
 
 	// initiate the console
-	Console *con = new Console;
+	Console con;
 
 	// initiate the output driver
 	std::cout << "Initiating the output driver..\n";
@@ -408,16 +408,16 @@ int main(int argc, char **argv)
 	{
 		#ifdef ENABLE_SDL
 			case XT_DRV_SDL:
-				drv = new DrvSDL(fb);
+				drv = new DrvSDL(fb, con);
 				break;
 		#endif /* ENABLE_SDL */
 
 		case XT_DRV_PPM:
-			drv = new DrvPPM(fb);
+			drv = new DrvPPM(fb, con);
 			break;
 		case XT_DRV_DUM:	/* DUMMY DRIVER */
 		default:
-			drv = new Driver(fb);
+			drv = new Driver(fb, con);
 	}
 
 	// start processing
@@ -490,7 +490,6 @@ int main(int argc, char **argv)
 
 	// release the dynamically allocated memory
 	delete drv;	// The driver
-	delete con; // The console
 	
 	return 0;
 }
