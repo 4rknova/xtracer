@@ -205,7 +205,7 @@ unsigned int Renderer::render_frame()
 	return 0;
 }
 
-Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior_src, real_t ior_dst)
+Vector3 Renderer::trace(const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
 {
 	IntInfo info;
 	memset(&info, 1, sizeof(info));
@@ -236,7 +236,7 @@ Vector3 Renderer::trace(const Ray &ray, unsigned int depth, real_t ior_src, real
 	return Vector3(0, 0, 0);
 }
 
-Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, real_t ior_src, real_t ior_dst)
+Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, scalar_t ior_src, scalar_t ior_dst)
 {
 	Vector3 color;
 		
@@ -268,7 +268,7 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 		Ray sray;
 		sray.origin = p;
 		sray.direction = v.normalized();
-		real_t distance = v.length();
+		scalar_t distance = v.length();
 
 		// if the point is not in shadow for this light
 		std::string obj;
@@ -282,7 +282,7 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 		else
 		{
 			// This is a hack for transparent objects
-			real_t transp = m_scene->material[m_scene->object[obj]->material]->transparency;
+			scalar_t transp = m_scene->material[m_scene->object[obj]->material]->transparency;
 			if (transp > 0.0)
 				color += transp * mat->shade(m_scene->camera, light, info);
 		}
@@ -331,14 +331,14 @@ bool Renderer::light_geometry(int v)
 	return m_f_light_geometry = (v == 0 ? false : true);
 }
 
-real_t Renderer::gamma_correction(real_t v)
+scalar_t Renderer::gamma_correction(scalar_t v)
 {
 	if (v < 0)
 		return m_gamma;
 	return m_gamma = v;
 }
 
-real_t Renderer::exposure(real_t v)
+scalar_t Renderer::exposure(scalar_t v)
 {
 	if (v == 0)
 		return m_exposure;

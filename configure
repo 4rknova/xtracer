@@ -63,7 +63,7 @@ echo "include debugging symbols: $DEBUGS"
 echo "disable sdl: $DISABLE_SDL"
 
 echo "creating makefile..."
-echo "# This is an automatically generated makefile i
+echo "# This is an automatically generated makefile " > Makefile
 echo "# for $SWPKG v$VERSION" >> Makefile
 
 echo "bpath = $BPATH" >> Makefile

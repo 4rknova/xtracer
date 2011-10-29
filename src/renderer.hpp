@@ -51,8 +51,8 @@ class Renderer
 		void set_window(unsigned int x0, unsigned int x1,
 			unsigned int y0, unsigned int y1);		// Limit the rendering area
 
-		real_t gamma_correction(real_t v=-1);		// set / get the gamma correction
-		real_t exposure(real_t v=0);				// set / get the exposure correction
+		scalar_t gamma_correction(scalar_t v=-1);		// set / get the gamma correction
+		scalar_t exposure(scalar_t v=0);				// set / get the exposure correction
 	
 		unsigned int dof_samples(int v=0);			// set / get the level of dof samples
 		bool light_geometry(int v=-1);				// set / get the light geometry flag
@@ -66,12 +66,12 @@ class Renderer
 		unsigned int render_frame();
 		// trace ray
 		Vector3 trace(const Ray &ray, unsigned int depth, 
-			real_t ior_src = 1.0, real_t ior_dst = 1.0);
+			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
 		// shade
 		Vector3 shade(const Ray &ray, unsigned int depth, 
 			IntInfo &info, 
 			std::string &obj, 
-			real_t ior_src = 1.0, real_t ior_dst = 1.0);
+			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
 
 	private:
 		// external entities
@@ -83,8 +83,8 @@ class Renderer
 		unsigned int m_max_rdepth;		// recursion depth limit
 		unsigned int m_antialiasing;	// antialiasing
 		
-		real_t m_gamma;					// gamma correction
-		real_t m_exposure;				// exposure
+		scalar_t m_gamma;					// gamma correction
+		scalar_t m_exposure;				// exposure
 
 		unsigned int m_dof_samples;		// dof samples
 

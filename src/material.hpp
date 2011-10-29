@@ -58,13 +58,13 @@ class Material
 		Vector3 specular;		// specular intensity
 		Vector3 ambient;		// ambient intensity
 		
-		real_t kspec;       	// specular constant
-		real_t kdiff;       	// diffuse constant
-		real_t ksexp;       	// specular exponential
+		scalar_t kspec;       	// specular constant
+		scalar_t kdiff;       	// diffuse constant
+		scalar_t ksexp;       	// specular exponential
 
-		real_t reflectance;		// reflectance
-		real_t transparency;	// transparency
-		real_t ior;				// index of refraction
+		scalar_t reflectance;		// reflectance
+		scalar_t transparency;	// transparency
+		scalar_t ior;				// index of refraction
 
 		MATERIAL_TYPE type;
 };

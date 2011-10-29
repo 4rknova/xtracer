@@ -74,7 +74,7 @@ void Framebuffer::clear(Vector3 v)
 		}
 }
 
-void Framebuffer::apply_gamma(real_t v)
+void Framebuffer::apply_gamma(scalar_t v)
 {
 	for (unsigned int y = 0; y < m_height; y++)
 		for (unsigned int x = 0; x < m_width; x++)
@@ -86,7 +86,7 @@ void Framebuffer::apply_gamma(real_t v)
 		}
 }
 
-void Framebuffer::apply_exposure(real_t v)
+void Framebuffer::apply_exposure(scalar_t v)
 {
 	for (unsigned int y = 0; y < m_height; y++)
 		for (unsigned int x = 0; x < m_width; x++)

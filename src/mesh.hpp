@@ -1,11 +1,12 @@
 /*
 
+
     This file is part of xtracer.
 
-    lambert.inl
-    Lambert
+    mesh.hpp
+    Mesh
 
-    Copyright (C) 2008, 2010
+    Copyright (C) 2008, 2010, 2011
     Papadopoulos Nikolaos
 
     This program is free software; you can redistribute it and/or
@@ -25,23 +26,35 @@
 
 */
 
-#ifndef XTRACER_LAMBERT_INL_INCLUDED
-#define XTRACER_LAMBERT_INL_INCLUDED
+#ifndef LIBNMATH_MESH_HPP_INCLUDED
+#define LIBNMATH_MESH_HPP_INCLUDED
 
-#ifndef XTRACER_LAMBERT_HPP_INCLUDED
-    #error "lambert.hpp must be included before lambert.inl"
-#endif /* XTRACER_LAMBERT_HPP_INCLUDED */
+#include <vector>
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+#include <nmath/geometry.h>
+#include <nmath/ray.h>
+#include "vertex.hpp"
 
-inline Vector3 lambert(const Vector3 lightpos, const IntInfo *info, const Vector3 light, const Vector3 diffuse)
+class Face
 {
-	// calculate the light vector
-	Vector3 lightdir = lightpos - info->point;
-	lightdir.normalize();
+	public:
+		unsigned int v[3];
+};
 
-	// calculate the normal - light dot product
-	scalar_t d = dot(lightdir, info->normal);
+// Mesh
+class Mesh: public Geometry
+{
+    public:
+        Mesh();
+		~Mesh();
 
-	return d > 0 ? d * diffuse * light : Vector3(0, 0 ,0);
-}
+		bool intersection(const Ray &ray, IntInfo* i_info) const;
+		void calc_aabb();
+		void calc_vertex_normals();
 
-#endif /* XTRACER_LAMBERT_INL_INCLUDED */
+		std::vector<Vertex> vertices;
+		std::vector<Face> faces;
+};
+
+#endif /* LIBNMATH_MESH_HPP_INCLUDED */

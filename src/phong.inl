@@ -34,14 +34,14 @@
     #error "phong.hpp must be included before phong.inl"
 #endif /* XTRACER_PHONG_HPP_INCLUDED */
 
-inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, real_t ks, real_t kd, real_t specexp, Vector3 &diffuse, Vector3 &specular)
+inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular)
 {
 	// calculate the light direction vector
 	Vector3 lightdir = lightpos - info->point;
 	lightdir.normalize();
 
 	// calculate the normal - light dot product
-	real_t d = dot(lightdir, info->normal);
+	scalar_t d = dot(lightdir, info->normal);
 
 	if (d < 0.0)
 		d = 0;
@@ -52,7 +52,7 @@ inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntIn
 	Vector3 r = lightdir.reflected(info->normal);
 	r.normalize();
 
-	real_t rmv = dot(r, ray);
+	scalar_t rmv = dot(r, ray);
 
 	if (rmv < 0.0)
 		rmv = 0;
@@ -60,14 +60,14 @@ inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntIn
 	return ((kd * d * diffuse) + (ks * pow(rmv, specexp) * specular)) * light;
 }
 
-inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, real_t ks, real_t kd, real_t specexp, Vector3 &diffuse, Vector3 &specular)
+inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular)
 {
 	// calculate the light direction vector
 	Vector3 lightdir = lightpos - info->point;
 	lightdir.normalize();
 
 	// calculate the normal - light dot product
-	real_t d = dot(lightdir, info->normal);
+	scalar_t d = dot(lightdir, info->normal);
 
 	if (d < 0.0)
 		d = 0;
@@ -78,7 +78,7 @@ inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const
 	Vector3 r = lightdir + ray;
 	r.normalize();
 
-	real_t rmv = dot(r, info->normal);
+	scalar_t rmv = dot(r, info->normal);
 
 	if (rmv < 0.0)
 		rmv = 0;

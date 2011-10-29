@@ -47,8 +47,8 @@ class Framebuffer
 		void clear(Vector3 v = Vector3(0, 0, 0));	// Clear to color v
 
 		// filters
-		void apply_gamma(real_t v);			// Apply gamma correction
-		void apply_exposure(real_t v);		// Apply exposure
+		void apply_gamma(scalar_t v);			// Apply gamma correction
+		void apply_exposure(scalar_t v);		// Apply exposure
 
 		// Pixels are being accessed starting with (0,0). 
 		// In case of out of bounds exceptions, the last pixel is affected.

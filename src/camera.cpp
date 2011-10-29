@@ -35,7 +35,7 @@ Camera::Camera()
 	: position(Vector3(0,0,0)), target(Vector3(0,0,1)), up(Vector3(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, real_t fovx, real_t aprt, real_t flen, real_t shut)
+Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, scalar_t fovx, scalar_t aprt, scalar_t flen, scalar_t shut)
 	:
 	position(pos), 
 	target(trg), 
@@ -52,14 +52,14 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	Ray pray;
 	
 	// Take the aspect ratio into consideration.
-	real_t ratio = (real_t)width / (real_t)height;
+	scalar_t ratio = (scalar_t)width / (scalar_t)height;
 
 	// Set the primary ray's origin at the camera's position.
 	pray.origin = position;
 
 	// Construct the ray's intersection point on the projection plane.
-	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
-	pray.direction.y = ((2.0 * (real_t)y / (real_t)height) - 1.0) / ratio;
+	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
+	pray.direction.y = ((2.0 * (scalar_t)y / (scalar_t)height) - 1.0) / ratio;
 
 	pray.direction.z = 1 / tan(fov / 2.0);
 
@@ -113,14 +113,14 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 	Ray pray, fray;
 	
 	// Take the aspect ratio into consideration.
-	real_t ratio = (real_t)width / (real_t)height;
+	scalar_t ratio = (scalar_t)width / (scalar_t)height;
 
 	// Set the primary ray's origin at the camera's position.
 	pray.origin = position;
 
 	// Calculate the ray's intersection point on the projection plane.
-	pray.direction.x = (2.0 * (real_t)x / (real_t)width) - 1.0;
-	pray.direction.y = -(1.0 - (2.0 * (real_t)y / (real_t)height)) / ratio;
+	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
+	pray.direction.y = -(1.0 - (2.0 * (scalar_t)y / (scalar_t)height)) / ratio;
 	pray.direction.z = 1.0 / tan(fov / 2.0);
 
 	// Calculate the deviated ray direction

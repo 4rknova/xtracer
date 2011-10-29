@@ -290,7 +290,7 @@ unsigned int Scene::set_camera(const char *name)
 	// extract the camera properties
 	// fov
 	std::string f = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FOV);
-	real_t fov = nstring_to_double(f);
+	scalar_t fov = nstring_to_double(f);
 
 	// position
 	std::string x = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
@@ -311,13 +311,13 @@ unsigned int Scene::set_camera(const char *name)
 	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
 
 	// aperture
-	real_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APERTURE));
+	scalar_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APERTURE));
 
 	// shutter
-	real_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
+	scalar_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
 
 	// focal length
-	real_t flength = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FLENGTH));
+	scalar_t flength = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FLENGTH));
 
 	// cleanup the previous camera if needed
 	if (camera)
@@ -362,7 +362,7 @@ unsigned int Scene::add_light(NCF1 *p)
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
-#include <nmath/mesh.h>
+#include "mesh.hpp"
 
 unsigned int Scene::add_geometry(NCF1 *p)
 {
@@ -437,7 +437,7 @@ unsigned int Scene::add_geometry(NCF1 *p)
 			y = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Y);
 			z = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Z);
 
-			((Triangle *)geo)->v[i-1].position = 
+			((Triangle *)geo)->v[i-1] = 
 					Vector3(nstring_to_double(x),
 							nstring_to_double(y),
 							nstring_to_double(z));

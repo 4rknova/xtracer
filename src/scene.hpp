@@ -75,7 +75,7 @@ class Scene
 
 		// Ambient
 		Vector3 ambient;	// intensity
-		real_t k_ambient;	// ratio
+		scalar_t k_ambient;	// ratio
 
 
 		// The scene's source filepath and filename

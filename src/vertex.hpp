@@ -1,11 +1,11 @@
 /*
 
-    This file is part of xtracer.
+    This file is part of xtracer. 
 
-    lambert.inl
-    Lambert
+    vertex.hpp
+    Vertex
 
-    Copyright (C) 2008, 2010
+    Copyright (C) 2008, 2010, 2011
     Papadopoulos Nikolaos
 
     This program is free software; you can redistribute it and/or
@@ -25,23 +25,15 @@
 
 */
 
-#ifndef XTRACER_LAMBERT_INL_INCLUDED
-#define XTRACER_LAMBERT_INL_INCLUDED
+#ifndef LIBNMATH_VERTEX_HPP_INCLUDED
+#define LIBNMATH_VERTEX_HPP_INCLUDED
 
-#ifndef XTRACER_LAMBERT_HPP_INCLUDED
-    #error "lambert.hpp must be included before lambert.inl"
-#endif /* XTRACER_LAMBERT_HPP_INCLUDED */
+#include <nmath/precision.h>
+#include <nmath/vector.h>
 
-inline Vector3 lambert(const Vector3 lightpos, const IntInfo *info, const Vector3 light, const Vector3 diffuse)
-{
-	// calculate the light vector
-	Vector3 lightdir = lightpos - info->point;
-	lightdir.normalize();
+struct Vertex {
+	Vector3 position, normal, tangent;
+	Vector2 texture_uv;
+};
 
-	// calculate the normal - light dot product
-	scalar_t d = dot(lightdir, info->normal);
-
-	return d > 0 ? d * diffuse * light : Vector3(0, 0 ,0);
-}
-
-#endif /* XTRACER_LAMBERT_INL_INCLUDED */
+#endif /* LIBNMATH_VERTEX_HPP_INCLUDED */
