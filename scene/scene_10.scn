@@ -1,0 +1,278 @@
+# Xtracer simple sphere scene
+
+name = scene 6 
+description = dof eyecandy
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = -10
+			y = 35
+			z = -155
+		}
+
+		target = {
+			y = 12
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+
+		aperture = 10 
+		flength = 155 
+	}
+}
+
+geometry = {
+	sphere1 = {
+		type = sphere
+		position = {
+			x = 0
+			y = 15
+			z = 0
+		}
+		radius = 15
+	}
+	
+	sphere2 = {
+		type = sphere
+		position = {
+			x = -13
+			y = 5
+			z = -80
+		}
+		radius = 5
+	}
+	
+	sphere3 = {
+		type = sphere
+		position = {
+			x = 25
+			y = 13
+			z = -60
+		}
+		radius = 13
+	}
+	
+	sphere4 = {
+		type = sphere
+		position = {
+			x = -125
+			y = 30
+			z = 229
+		}
+		radius = 30
+	}
+	
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 0
+	}
+	
+	ceiling = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 500
+	}
+
+	wall = {
+		type = plane
+		normal = {
+			z = 1
+		}
+		distance = 1000
+	}
+}
+
+light = {
+	satl = {
+		position = {
+			x = -260
+			y = 290
+			z = -100
+		}
+
+		intensity = {
+			r = 3.4 
+			g = 3.4
+			b = 3.4
+		}
+	}
+	
+	satr = {
+		position = {
+			x = 180
+			y = 90
+			z = 100
+		}
+
+		intensity = {
+			r = 3.4 
+			g = 3.4
+			b = 3.4
+		}
+	}
+}
+
+material = {
+	plane = {
+		type = phong
+
+		k_diffuse =  0.5
+		k_specular = 0.5
+		k_specexp = 5
+	
+		diffuse = {
+			r = 1 
+			g = 1
+			b = 1.1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.13
+	}
+
+	plastic1 = {
+		type = blinn_phong
+
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_specexp = 60
+	
+		diffuse = {
+			r = 1.4
+			g = 0.294905
+			b = 0.62549
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.4
+	}
+	
+	plastic2 = {
+		type = blinn_phong
+
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_specexp = 60
+	
+		diffuse = {
+			r = 1.5
+			g = 1.6470
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.3
+	}
+	
+	plastic3 = {
+		type = blinn_phong
+
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_specexp = 160
+	
+		diffuse = {
+			r = 0.392156
+			g = 0.584313
+			b = 0.929711
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.3
+	}
+	
+	plastic4 = {
+		type = blinn_phong
+
+		k_diffuse = 0.2
+		k_specular = 0.8
+		k_specexp = 60
+	
+		diffuse = {
+			r = 0.51
+			g = 1.61
+			b = 0.91
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.3
+	}
+}
+
+object = {
+	sphere1 = {
+		geometry = sphere1
+		material = plastic1
+	}
+	sphere2 = {
+		geometry = sphere2
+		material = plastic2
+	}
+	sphere3 = {
+		geometry = sphere3
+		material = plastic3
+	}
+	sphere4 = {
+		geometry = sphere4
+		material = plastic4
+	}
+
+	# planes
+	floor = {
+		geometry = floor
+		material = plane
+	}
+	ceiling = {
+		geometry = ceiling
+		material = plane
+	}
+	wall = {
+		geometry = wall
+		material = plane
+	}
+}
