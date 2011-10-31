@@ -53,14 +53,20 @@ bool Mesh::intersection(const Ray &ray, IntInfo* i_info) const
 	IntInfo nearest;
 	nearest.t = INFINITY;
 
+	Triangle p;
+	Vector3 normal; // Used for phong shading
+
 	for(size_t i = 0; i < faces.size(); i++)
 	{
 		IntInfo inf;
 
-		Triangle p;
 		p.v[0] = vertices[faces[i].v[0]].position;
 		p.v[1] = vertices[faces[i].v[1]].position;
 		p.v[2] = vertices[faces[i].v[2]].position;
+		p.n[0] = vertices[faces[i].v[0]].normal;
+		p.n[1] = vertices[faces[i].v[1]].normal;
+		p.n[2] = vertices[faces[i].v[2]].normal;
+
 		p.calc_aabb();
 
 		if(p.intersection(ray, &inf) && inf.t < nearest.t) 
@@ -77,6 +83,7 @@ bool Mesh::intersection(const Ray &ray, IntInfo* i_info) const
 
 	if(i_info)
 	{
+
 		*i_info = nearest;
 		i_info->geometry = this;
 	}
