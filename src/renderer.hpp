@@ -28,10 +28,10 @@
 #ifndef XTRACER_RENDERER_HPP_INCLUDED
 #define XTRACER_RENDERER_HPP_INCLUDED
 
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/ray.h>
-#include <nmath/intinfo.h>
+#include "nmath/precision.h"
+#include "nmath/vector.h"
+#include "nmath/ray.h"
+#include "nmath/intinfo.h"
 
 #include "fb.hpp"
 #include "scene.hpp"

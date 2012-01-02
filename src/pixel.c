@@ -38,6 +38,8 @@ pixel32_t rgba_c_to_pixel32(unsigned char red, unsigned char green, unsigned cha
 
 pixel32_t rgba_f_to_pixel32(double red, double green, double blue, double alpha)
 {
+	pixel32_t pix = 0;
+
 	/* correct the color */
 	double r = red > 1.0 ? 1.0 : red;
 	double g = green > 1.0 ? 1.0 : green;
@@ -50,7 +52,7 @@ pixel32_t rgba_f_to_pixel32(double red, double green, double blue, double alpha)
 	b *= 255;
 	a *= 255;
 
-	pixel32_t pix = rgba_c_to_pixel32((char)r, (char)g, (char)b, (char)a);
+	pix = rgba_c_to_pixel32((char)r, (char)g, (char)b, (char)a);
 	return pix;
 }
 

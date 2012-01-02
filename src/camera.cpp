@@ -103,7 +103,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	return pray;
 }
 
-#include <nmath/prng.h>
+#include "nmath/prng.h"
 Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, float dofx, float dofy)
 {
 

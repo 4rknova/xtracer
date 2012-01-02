@@ -94,8 +94,8 @@ void Framebuffer::apply_exposure(scalar_t v)
 			Vector3 *p = pixel(x, y);
 
 			// apply exposure
-			p->x = 1.0f - expf(p->x * (-v));
-			p->y = 1.0f - expf(p->y * (-v));
-			p->z = 1.0f - expf(p->z * (-v));
+			p->x = 1.0f - expf((float)(p->x * (-v)));
+			p->y = 1.0f - expf((float)(p->y * (-v)));
+			p->z = 1.0f - expf((float)(p->z * (-v)));
 		}
 }

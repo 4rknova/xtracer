@@ -30,10 +30,10 @@
 #define LIBNMATH_MESH_HPP_INCLUDED
 
 #include <vector>
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/geometry.h>
-#include <nmath/ray.h>
+#include "nmath/precision.h"
+#include "nmath/vector.h"
+#include "nmath/geometry.h"
+#include "nmath/ray.h"
 #include "vertex.hpp"
 
 class Face

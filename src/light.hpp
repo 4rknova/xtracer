@@ -28,7 +28,7 @@
 #ifndef XTRACER_LIGHT_HPP_INCLUDED
 #define XTRACER_LIGHT_HPP_INCLUDED
 
-#include <nmath/vector.h>
+#include "nmath/vector.h"
 
 class Light 
 {

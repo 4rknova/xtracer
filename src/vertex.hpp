@@ -28,8 +28,8 @@
 #ifndef LIBNMATH_VERTEX_HPP_INCLUDED
 #define LIBNMATH_VERTEX_HPP_INCLUDED
 
-#include <nmath/precision.h>
-#include <nmath/vector.h>
+#include "nmath/precision.h"
+#include "nmath/vector.h"
 
 struct Vertex {
 	Vector3 position, normal, tangent;

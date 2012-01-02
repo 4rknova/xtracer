@@ -29,8 +29,8 @@
 #define XTRACER_FB_HPP_INCLUDED
 
 #include <string>
-#include <nmath/precision.h>
-#include <nmath/vector.h>
+#include "nmath/precision.h"
+#include "nmath/vector.h"
 
 #define FB_DEFAULT_TAG "framebuffer"
 

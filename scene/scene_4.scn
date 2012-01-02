@@ -8,8 +8,8 @@ k_ambient = 0.01
 
 ambient = {
 	r = 1
-	g = 1
-	b = 1
+	g = 0.8
+	b = 0.8
 }
 
 camera = {
@@ -19,8 +19,46 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 940
-			y = 400	
+			x = 1040
+			y = 500	
+			z = -1200
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	cam2 = {
+		fov = 45
+
+		position = {
+			x = 3040
+			y = 500	
+			z = 10
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+cam3 = {
+		fov = 45
+
+		position = {
+			x = 840
+			y = 100	
 			z = -1000
 		}
 
@@ -112,19 +150,6 @@ light = {
 		}
 	}
 	
-	back = {
-		position = {
-			x = 595 
-			y = 55
-			z = -250
-		}
-
-		intensity = {
-			r = 2
-			g = 0
-			b = 0
-		}
-	}
 }
 
 material = {
@@ -220,14 +245,14 @@ material = {
 	plastran = {
 		type = phong
 
-		k_diffuse = 0.05
-		k_specular = 0.95
-		k_specexp = 860
+		k_diffuse = 0.1
+		k_specular = 0.9
+		k_specexp = 1000
 	
 		diffuse = {
-			r = 0.97
-			g = 0.97
-			b = 0.97
+			r = 0.8
+			g = 0.8
+			b = 0.99
 		}
 
 		specular = {
@@ -236,8 +261,8 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.3
-		transparency = 0.5
+		reflectance = 0.5
+		transparency = 0.8
 		ior = 1.031714
 	}
 }

@@ -6,9 +6,9 @@ tpath = doc
 mpath = man
 
 # - sources
-ccsrc = $(wildcard $(spath)/*.c)
-ccsrcc = $(wildcard $(spath)/*.cc)
-ccsrcpp = $(wildcard $(spath)/*.cpp)
+ccsrc = $(wildcard $(spath)/*.c $(spath)/nmath/*.c $(spath)/nparse/*.c)
+ccsrcc = $(wildcard $(spath)/*.cc $(spath)/nmath/*.cc $(spath)/nparse/*.cc)
+ccsrcpp = $(wildcard $(spath)/*.cpp $(spath)/nmath/*.cpp $(spath)/nparse/*.cpp)
 
 # binarys
 objc = $(ccsrc:.c=.o)
@@ -32,7 +32,7 @@ COFLAGS= $(opt) $(dbg) -D'$(sdl)' -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/l
 CCFLAGS = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
 CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing -I$(spath) $(COFLAGS)
 TEXFLAGS = -output-directory=$(tpath)
-LDFLAGS = -lnparse -lnmath $(LDSDL)
+LDFLAGS = $(LDSDL)
 
 $(bin): $(objc) $(objcc) $(objcpp)
 	$(CXX) $(OMP) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)

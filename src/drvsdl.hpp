@@ -30,7 +30,15 @@
 
 #ifdef ENABLE_SDL
 
-#include <SDL/SDL.h>
+#ifdef _MSC_VER 
+	// As usual we have to treat our little "special" platform separately.
+	// I have no intention to litter my code more than I already have to keep visual studio satisfied.
+	// Windows just fails when it comes to having a solid infrastructure for software development.
+	// If this fails to compile, you will have to set the SDL library paths manually.
+	#include <SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif /* _MSC_VER */
 
 #include "drv.hpp"
 #include "console.hpp"

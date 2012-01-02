@@ -31,9 +31,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include <nmath/vector.h>
-#include <nmath/geometry.h>
-#include <nparse/util.hpp>
+#include "nmath/vector.h"
+#include "nmath/geometry.h"
+#include "nparse/util.hpp"
 
 #include "scene.hpp"
 #include "proto.h"
@@ -359,9 +359,9 @@ unsigned int Scene::add_light(NCF1 *p)
 	return 0;
 }
 
-#include <nmath/sphere.h>
-#include <nmath/plane.h>
-#include <nmath/triangle.h>
+#include "nmath/sphere.h"
+#include "nmath/plane.h"
+#include "nmath/triangle.h"
 #include "mesh.hpp"
 
 unsigned int Scene::add_geometry(NCF1 *p)

@@ -27,10 +27,10 @@
 
 #include "mesh.hpp"
 
-#include <nmath/defs.h>
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/intinfo.h>
+#include "nmath/defs.h"
+#include "nmath/precision.h"
+#include "nmath/vector.h"
+#include "nmath/intinfo.h"
 
 Mesh::Mesh()
 	: Geometry(GEOMETRY_MESH)
@@ -39,7 +39,7 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {}
 
-#include <nmath/triangle.h>
+#include "nmath/triangle.h"
 
 bool Mesh::intersection(const Ray &ray, IntInfo* i_info) const
 {

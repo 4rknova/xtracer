@@ -28,8 +28,8 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
-#include <nmath/vector.h>
-#include <nmath/intinfo.h>
+#include "nmath/vector.h"
+#include "nmath/intinfo.h"
 
 #include "camera.hpp"
 #include "light.hpp"

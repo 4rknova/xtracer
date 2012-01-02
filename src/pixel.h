@@ -27,12 +27,12 @@
 
 #ifndef XTRACER_PIXEL_H_INCLUDED
 #define XTRACER_PIXEL_H_INCLUDED
- 
+
+#include <stdint.h> 
+
 #ifdef __cplusplus
 	extern "C" {
 #endif  /* __cplusplus */
-
-#include <stdint.h>
 
 typedef uint32_t pixel32_t;
 

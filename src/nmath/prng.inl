@@ -73,7 +73,7 @@ static inline scalar_t prng_c(scalar_t a, scalar_t b)
 
     if (!initialized)
     {
-        srand(time(NULL));
+        srand((unsigned int)time(NULL));
         initialized++;
     }
 
@@ -194,8 +194,8 @@ static inline scalar_t prng_multiplyWithCarry(scalar_t a, scalar_t b)
 
     if (!initialized)
     {
-        m_w = (uint32_t) prng_c(1, time(NULL)); /* must not be zero */
-        m_z = (uint32_t) prng_c(1, time(NULL)); /* must not be zero */
+        m_w = (uint32_t) prng_c(1, (scalar_t)time(NULL)); /* must not be zero */
+        m_z = (uint32_t) prng_c(1, (scalar_t)time(NULL)); /* must not be zero */
         initialized++;
     }
 

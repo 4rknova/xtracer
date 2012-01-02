@@ -1,0 +1,298 @@
+# Xtracer 
+# Mirror room
+# v0.2
+
+name = Mirror room
+description = Three balls in a room with mirrors
+
+k_ambient = 0.001
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = front 
+
+	front = {
+		fov = 45
+
+		position = {
+			z = -1550
+		}
+		
+		up = {
+			y = 1
+		}
+	}
+
+	back = {
+		fov = 45
+
+		position = {
+			y = 100
+			z = 480
+		}
+
+		target = {
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	side = {
+		fov = 45
+
+		position = {
+			x = 300
+			y = 300
+			z = -1400
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+
+	red_ball = {
+		type = sphere
+		position = {
+			x = 80 
+			y = -305
+			z = -100
+		}
+		radius = 95
+	}
+	green_ball = {
+		type = sphere
+		position = {
+			x = 350
+			y = -330
+			z = 350
+		}
+		radius = 77
+	}
+	blue_ball = {
+		type = sphere
+		position = {
+			x = -220
+			y = -245
+			z = 80
+		}
+		radius = 155
+	}
+	floor = {
+		type = plane
+		normal = {
+			y = -1
+		}
+		distance = 400
+	}
+	ceiling = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 400
+	}
+	back = {
+		type = plane
+		normal = {
+			z = 1
+		}
+		distance = -3500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
+	}
+	left_wall = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = 500
+	}
+	front = {
+		type = plane
+		normal = {
+			z = -1
+		}
+		distance = 2560
+	}
+}
+
+light = {
+
+	l0 = {
+		position = {
+			x = -150
+			y = 150
+			z = 200
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	l1 = {
+		position = {
+			x = -100
+			y = -200
+			z = -300
+		}
+
+		intensity = {
+			r = 0.4
+			g = 0.4
+			b = 0.4
+		}
+	}
+
+}
+
+object = {
+	red_ball = {
+		geometry = red_ball
+		material = phong_red
+	}
+	green_ball = {
+		geometry = green_ball
+		material = phong_green
+	}
+	blue_ball = {
+		geometry = blue_ball
+		material = phong_blue
+	}
+	floor = {
+		geometry = floor
+		material = phong_silver
+	}
+	ceiling = {
+		geometry = ceiling
+		material = phong_silver
+	}
+	back = {
+		geometry = back
+		material = phong_silver
+	}
+	right_wall = {
+		geometry = right_wall
+		material = phong_silver
+	}
+	left_wall = {
+		geometry = left_wall
+		material = phong_silver
+	}
+	front = {
+		geometry = front
+		material = phong_silver
+	}
+}
+
+material = {
+	# plain red phong
+	phong_red = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 1
+		}
+		specular = {
+			r = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60
+	}
+
+	# plain green phong
+	phong_green = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			g = 1
+		}
+		specular = {
+			g = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60 
+	}
+
+	# plain blue phong
+	phong_blue = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 0.3
+			g = 0.3
+			b = 1
+		}
+		specular = {
+			r = .99
+			g = .99
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_specexp = 60 
+	}
+
+	# plain silver phong
+	phong_silver = {
+		type = phong
+
+		reflectance = 0.5 
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.2
+		k_specexp = 560
+	}
+	
+	# plain silver lambert
+	lambert_silver = {
+		type = lambert
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+	}
+}

@@ -25,11 +25,19 @@
 
 */
 
+#ifdef _MSC_VER
+	#include <fcntl.h>
+	#include <io.h>
+	#define WIN32_LEAN_AND_MEAN
+	#define WIN64_LEAN_AND_MEAN
+	#include <windows.h>
+#endif /* _MSC_VER */
+
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <iostream>
-#include <nmath/mutil.h>
+#include "nmath/mutil.h"
 
 #include "setup.hpp"
 
@@ -203,7 +211,7 @@ unsigned int parsearg(int argc, char **argv)
 			{
 				driver = XT_DRV_SDL;
 				#ifndef ENABLE_SDL
-					std::cout << "The program was built without the sdl driver support.\n";
+					std::cout << "This version was built without the sdl driver support.\n";
 					return 1;
 				#endif /* ENABLE_SDL */
 			}
@@ -344,7 +352,7 @@ unsigned int parsearg(int argc, char **argv)
 	return 0;
 }
 
-#include <nmath/mutil.h>
+#include "nmath/mutil.h"
 
 // framebuffer
 #include "fb.hpp"
@@ -360,7 +368,21 @@ unsigned int parsearg(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	std::cout << "Xtracer v" << XT_VERSION << " © 2010-2011 Papadopoulos Nikos\n";
+	#ifdef _MSC_VER
+		AllocConsole();
+		HANDLE lStdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		long hConHandle = _open_osfhandle((long)lStdHandle, _O_TEXT);
+		FILE *fp = _fdopen( hConHandle, "w" );
+		*stdout = *fp;
+		setvbuf( stdout, NULL, _IONBF, 0 );
+		setvbuf( stderr, NULL, _IONBF, 0 );
+	#endif /* _MSC_VER */
+
+	#ifdef XT_VERSION
+		std::cout << "Xtracer v" << XT_VERSION << " (c) 2010-2012 Papadopoulos Nikos\n";
+	#else
+		std::cout << "Xtracer (c) 2010-2012 Papadopoulos Nikos\n";
+	#endif /* XT_VERSION */
 
 	// usage information
 	if (argc == 2)

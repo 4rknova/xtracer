@@ -27,6 +27,11 @@
 
 #ifdef ENABLE_SDL
 
+#ifdef _MSC_VER
+	#pragma comment(lib, "SDLMain.lib")
+	#pragma comment(lib, "SDL.lib")
+#endif /* _MSC_VER */
+
 #include "drvsdl.hpp"
 #include "pixel.h"
 
@@ -49,8 +54,13 @@ unsigned int DrvSDL::init()
 		return 1;
 
 	// setup the window caption
-	std::string caption = "Xtracer v";
-	caption.append(XT_VERSION);
+	std::string caption = "Xtracer";
+	
+	#ifdef XT_VERSION
+		caption.append("v");
+		caption.append(XT_VERSION);
+	#endif /* XT_VERSION */
+	
 	caption.append(" - ");
 	caption.append(m_fb->tag());
 

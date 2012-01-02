@@ -80,7 +80,7 @@ void rprog(float progress, int worker, int workers)
 		<< std::flush;
 }
 
-#include <nparse/util.hpp>
+#include "nparse/util.hpp"
 
 unsigned int Renderer::render()
 {
@@ -127,7 +127,7 @@ unsigned int Renderer::render()
 	return 0;
 }
 
-#include <nmath/plane.h>
+#include "nmath/plane.h"
 #include "object.hpp"
 unsigned int Renderer::render_frame()
 {
@@ -144,41 +144,41 @@ unsigned int Renderer::render_frame()
 			
 	// antialiasing samples
 	unsigned int samples_per_pixel = m_antialiasing * m_antialiasing;
-	float offset_per_sample = 1.0 / m_antialiasing;
+	float offset_per_sample = 1.0f / m_antialiasing;
 
 	// limit the threads if requested
 	if (m_threads != 0)
 		omp_set_num_threads(m_threads);
 
 	#pragma omp parallel for schedule(dynamic,1) 
-	for (unsigned int y = 0; y < h; y++) 
+	for (int y = 0; y < (int)h; y++) 
 	{
-		for (unsigned int x = 0; x < w; x++) 
+		for (int x = 0; x < (int)w; x++) 
 		{
 			// the final color
 			Vector3 color;
 
 			// antialiasing loop
-			for (float fragmenty = y; fragmenty < y + 1.0; fragmenty += offset_per_sample)
+			for (float fragmenty = (float)y; fragmenty < (float)y + 1.0f; fragmenty += offset_per_sample)
 			{
-				for (float fragmentx = x; fragmentx < x + 1.0; fragmentx += offset_per_sample)
+				for (float fragmentx = (float)x; fragmentx < (float)x + 1.0f; fragmentx += offset_per_sample)
 				{
 					if (m_scene->camera->flength > 0)
 					{
 						// dof loop
 						unsigned int samples = m_dof_samples;
-						float step = 100 / samples;
+						float step = 100.f / samples;
 					
 						for (float dofy = -25; dofy < 25; dofy += step)
 							for (float dofx = -25; dofx < 25; dofx += step)
 							{
-								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, w, h, dofx, dofy);
+								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, (float)w, (float)h, dofx, dofy);
 								color += trace(ray, m_max_rdepth+1) / (samples * samples) / samples_per_pixel;
 							}
 					}
 					else
 					{
-						Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, w, h);
+						Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, (float)w, (float)h);
 						color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
 					}
 				}

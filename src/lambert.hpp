@@ -29,8 +29,8 @@
 #define XTRACER_LAMBERT_HPP_INCLUDED
 
 
-#include <nmath/vector.h>
-#include <nmath/intinfo.h>
+#include "nmath/vector.h"
+#include "nmath/intinfo.h"
 
 inline Vector3 lambert(const Vector3 lightpos, const IntInfo *info, const Vector3 light, const Vector3 diffuse);
 
