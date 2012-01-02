@@ -27,8 +27,8 @@
 
 #include "camera.hpp"
 
-#include <nmath/precision.h>
-#include <nmath/matrix.h>
+#include "nmath/precision.h"
+#include "nmath/matrix.h"
 
 
 Camera::Camera()

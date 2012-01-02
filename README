@@ -1,6 +1,6 @@
 XTracer
 -------
-Copyright 2010, 2011 (c) 
+Copyright 2010, 2011, 2012 (c) 
 Papadopoulos Nikos <nikpapas@gmail.com>, 
 Knowledge Engineering Lab (KEL) <kel.unipi@gmail.com>
 
@@ -15,7 +15,6 @@ The source code is distributed under the LGPL license.
 
 Features
 --------
-Implemented
 * Primitives    : Plane, Triangle, Sphere, Mesh
 * Materials     : Lambert, Phong, Blinn-Phong
 * Lights        : Point light
@@ -28,30 +27,14 @@ Implemented
 * Rendering     : HDR
 * Post-Proc.    : Gamma correction, Exposure correction
 
-Planned
-* Primitives    : Cone, Cylinder, Torus, Isosurface, N-gon, Disk
-* Materials     : Texture mapping
-* Lights        : Area lights
-* Cameras       : Fisheye, Orthographic
-* Effects       : Fresnel, Beer's law, Enviroment maps
-* Acceleration  : BVH, Octrees, KD-Trees
-* GI            : Monte Carlo
-* Anti-aliasing : Adaptive supersampling, Improved supersampling
-* Rendering     : Adaptive exposure correction
-* Other         : Animation system, Interactive mode, Transformations
-
-Things I'd like to check
-Lense flare
-
 Notes
 -----
 * The scene is rendered in HDR. By default, the conversion to LDR is done with a sloppy 
   0.0 - 1.0 range cap. To correct the result, use the exposure switch.
 
-* As far as meshes are concerned, only a bare minimal obj-compatible format is 
-  supported for the time being. If you are using a 3d modeling editor you 
-  MUST choose to only export the vertices and faces of the mesh.
-  The face normals are calculated on the fly.
+* Only a bare minimal obj-compatible format is supported for the time being. If you are
+  using a 3d modeling editor you MUST choose to export ONLY the vertices and faces of the
+  mesh. The face normals are calculated on the fly.
 
 Compilation / Installation
 --------------------------
@@ -61,8 +44,7 @@ type: ./configure --help. Once the configuration is done, you can build the bina
 typing: make bin. To install the binary in your system type: make install. To uninstall 
 type: make uninstall
 
-Windows users should include all the files under ./src in their project and link with 
-the dependencies stated below.
+For windows users, a visual studio 2010 solution is available in the ide directory.
 
 Dependencies
 ------------
@@ -71,25 +53,23 @@ Dependencies
 
 * libsdl
   The program can be built without the sdl driver support.
-  Type ./configure --help for more information on this.
-
-* libnmath  
-  https://github.com/4rknova/libnmath  
-  [ Last tested commit: df3b2ba6a993e3b66fff7e62b5ffa41f02c35514 ]
-
-* libnparse 
-  https://github.com/4rknova/libnparse 
-  [ Last tested commit: d12984ffbab536f15d02b4ebe3d7cf2896c4fb7c ]
+  If you are using the makefile type ./configure --help for more information on this.
+  Different project files are provided in the visual studio solution.
 
 Supported platforms
 -------------------
 xtracer should be able to compile and run on any system equipped with openmp compatible
 c and c++ compilers. It has been tested without any problems under the following platforms:
 
-* Linux
+* Linux           
 * FreeBSD
 * MacOSX
 * MS Windows XP, 7
+
+Mesh data
+---------
+Some scene files include mesh inputs that are not provided in the repository.
+In order to render those scenes you have to provide your own meshes.
 
 People
 ------
