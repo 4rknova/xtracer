@@ -1,7 +1,7 @@
 XTracer 2
 
 Copyright 2010 - 2012 (c) 
-Papadopoulos Nikos <nikpapas@gmail.com>, 
+Papadopoulos Nikos <nikpapas@gmail.com> 
 
 About
 -----
@@ -58,7 +58,7 @@ Dependencies
 ------------
 * openmp	Must be provided by your compiler.
 * libnmath	https://github.com/4rknova/libnmath
-* libnmesh	https://github.com/4rknova/libnmesg
+* libnmesh	https://github.com/4rknova/libnmesh
 * linimg	https://github.com/4rknova/libnimg
 * libncf	https://github.com/4rknova/libncf
 
