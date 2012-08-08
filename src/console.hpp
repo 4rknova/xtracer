@@ -32,13 +32,15 @@
 class Console
 {
 	public:
-		Console();
-		~Console();
+		static Console &handle();
 
-		void rewind();		
 		void progress(float progress, int worker, int workers);
 
 	private:
+		Console();
+		~Console();
+
+		static Console m_console;
 };
 
 #endif /* XTRACER_CONSOLE_HPP_INCLUDED */

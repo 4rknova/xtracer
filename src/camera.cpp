@@ -25,29 +25,30 @@
 
 */
 
+#include <nmath/matrix.h>
+#include <nmath/prng.h>
 #include "camera.hpp"
 
-#include "nmath/precision.h"
-#include "nmath/matrix.h"
-
+using NMath::Matrix4x4f;
 
 Camera::Camera()
-	: position(Vector3(0,0,0)), target(Vector3(0,0,1)), up(Vector3(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
+	: position(Vector3f(0,0,0)), target(Vector3f(0,0,1)), up(Vector3f(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3 &pos, Vector3 &trg, Vector3 &upv, scalar_t fovx, scalar_t aprt, scalar_t flen, scalar_t shut)
+Camera::Camera(Vector3f &pos, Vector3f &trg, Vector3f &upv, scalar_t fovx, scalar_t aprt, scalar_t flen, scalar_t shut)
 	:
 	position(pos), 
 	target(trg), 
 	up(upv.normalized()), 
 	fov(fovx),
 	aperture(aprt),
-	flength(flen),
-	shutter(shut)
+	flength(flen)
 {}
-#include <iostream>
+
 Ray Camera::get_primary_ray(float x, float y, float width, float height)
 {
+	const scalar_t rad = 0.017453292519943;
+
 	// Primary ray
 	Ray pray;
 	
@@ -61,7 +62,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
 	pray.direction.y = ((2.0 * (scalar_t)y / (scalar_t)height) - 1.0) / ratio;
 
-	pray.direction.z = 1 / tan(fov / 2.0);
+	pray.direction.z = 1.0 / tan(fov * rad / 2.0);
 
 	/*
 		Setting up the look-at matrix is easy when you consider that a matrix 
@@ -80,10 +81,10 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	*/
 	
 	// Calculate the camera direction vector and normalize it.
-	Vector3 camdir = target - position;
+	Vector3f camdir = target - position;
 	camdir.normalize();
 
-	Vector3 rx,ry,rz;
+	Vector3f rx,ry,rz;
 
 	rz = camdir;
 	rx = cross(up, rz);
@@ -91,7 +92,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	ry = cross(rx, rz);
 	ry.normalize();
 
-	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 
+	Matrix4x4f tmat(rx.x, ry.x, rz.x, 0, 
 					rx.y, ry.y, rz.y, 0,
 					rx.z, ry.z, rz.z, 0,
 					0, 0, 0, 1);
@@ -103,11 +104,9 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	return pray;
 }
 
-#include "nmath/prng.h"
-Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, float dofx, float dofy)
+Ray Camera::get_primary_ray_dof(float x, float y, float width, float height)
 {
-
-//	return get_primary_ray(x, y, width, height);
+	const scalar_t rad = 0.017453292519943;
 
 	// Primary ray
 	Ray pray, fray;
@@ -117,19 +116,20 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 
 	// Set the primary ray's origin at the camera's position.
 	pray.origin = position;
-
+	
 	// Calculate the ray's intersection point on the projection plane.
 	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
-	pray.direction.y = -(1.0 - (2.0 * (scalar_t)y / (scalar_t)height)) / ratio;
-	pray.direction.z = 1.0 / tan(fov / 2.0);
+	pray.direction.y = ((2.0 * (scalar_t)y / (scalar_t)height) - 1.0) / ratio;
+	pray.direction.z = 1.0 / tan(fov * rad / 2.0);
 
 	// Calculate the deviated ray direction
 	fray.origin = pray.direction;
-	fray.origin.x += (prng_c(dofx - aperture/2, dofx + aperture/2) / 100) * aperture;
-	fray.origin.y += (prng_c(dofy - aperture/2, dofy + aperture/2) / 100) * aperture;
+	scalar_t half_aperture = aperture / 2.f;
+	fray.origin.x += NMath::prng_c(-half_aperture, half_aperture);
+	fray.origin.y += NMath::prng_c(-half_aperture, half_aperture);
 
 	// Find the intersection point on the focal plane
-	Vector3 fpip = pray.direction + flength * pray.direction.normalized();
+	Vector3f fpip = pray.direction + flength * pray.direction.normalized();
 	fray.direction = fpip - fray.origin;
 
 	/*
@@ -149,10 +149,10 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 	*/
 	
 	// Calculate the camera direction vector and normalize it.
-	Vector3 camdir = target - position;
+	Vector3f camdir = target - position;
 	camdir.normalize();
 
-	Vector3 rx,ry,rz;
+	Vector3f rx,ry,rz;
 
 	rz = camdir;
 	rx = cross(up, rz);
@@ -160,7 +160,7 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height, flo
 	ry = cross(rx, rz);
 	ry.normalize();
 
-	Matrix4x4 tmat(	rx.x, ry.x, rz.x, 0, 
+	Matrix4x4f tmat(rx.x, ry.x, rz.x, 0, 
 					rx.y, ry.y, rz.y, 0,
 					rx.z, ry.z, rz.z, 0,
 					0, 0, 0, 1);

@@ -1,120 +1,80 @@
-/*
-
-    This file is part of xtracer.
-
-    proto.h
-    Configuration protocol definitions
-
-    Copyright (C) 2010, 2011
-    Papadopoulos Nikolaos
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this program; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-#ifndef XTRACER_CFGPROTO_HPP_INCLUDED
-#define XTRACER_CFGPROTO_HPP_INCLUDED
-
-#define XT_CFGPROTO_PROP_NAME			"name"
-#define XT_CFGPROTO_PROP_DESCRIPTION	"description"
+#ifndef XTPROTO_H_INCLUDED
+#define XTPROTO_H_INCLUDED
 
 /*
-	NODES
+**	SYMBOLIC NAME					LITERAL				TYPE						DESCRIPTION
 */
+#define XTPROTO_PROP_TITLE			"title"				/* string     */			/* Scene title */
+#define XTPROTO_PROP_DESCR			"descr"				/* string     */			/* Scene description */
+#define XTPROTO_PROP_VERSN			"versn"				/* string     */			/* Scene version */
 
-#define XT_CFGPROTO_NODE_CAMERA         "camera"
-#define XT_CFGPROTO_NODE_LIGHT          "light"
-#define XT_CFGPROTO_NODE_MATERIAL       "material"
-#define XT_CFGPROTO_NODE_GEOMETRY       "geometry"
-#define XT_CFGPROTO_NODE_OBJECT			"object"
+#define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */			/* Vector's x coordinate */
+#define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */			/* Vector's y coordinate */
+#define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */			/* Vector's z coordinate */
+#define XTPROTO_PROP_CRD_U			"u"					/* scalar_t   */			/* TexCoord's u coordinate */
+#define XTPROTO_PROP_CRD_V			"v"					/* scalar_t   */			/* TexCoord's v coordinate */
+#define XTPROTO_PROP_COL_R			"r"					/* scalar_t   */			/* Color's red component */
+#define XTPROTO_PROP_COL_G			"g"					/* scalar_t   */			/* Color's green component */
+#define XTPROTO_PROP_COL_B			"b"					/* scalar_t   */			/* Color's blue component */
+#define XTPROTO_PROP_COL_A			"a"					/* scalar_t   */			/* Color's alpha component */
 
-/*
-	COMPOSITE PROPERTIES
-*/
+#define XTPROTO_PROP_TYPE			"type"				/* string	  */			/* Type */
+#define XTPROTO_PROP_DEFAULT		"default"			/* string     */			/* Default value */
+#define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */			/* Translation */
+#define XTPROTO_PROP_TEXCOORD		"texcoord"			/* Vector2f   */			/* Texture coordinates */
+#define XTPROTO_PROP_SOURCE			"source"			/* string     */			/* External source file */
+#define XTPROTO_PROP_FOV			"fov"				/* scalar_t   */			/* Field of view */
+#define XTPROTO_PROP_APERTURE		"aperture"			/* scalar_t   */			/* Aperture of the lense */
+#define XTPROTO_PROP_TARGET			"target"			/* Vector3f   */			/* Target position */
+#define XTPROTO_PROP_FLENGTH		"flength"			/* scalar_t   */			/* Focal length */
 
-#define XT_CFGPROTO_PROP_POSITION 		"position"
-#define XT_CFGPROTO_PROP_TARGET   		"target"
-#define XT_CFGPROTO_PROP_UP       		"up"
-#define XT_CFGPROTO_PROP_NORMAL			"normal"
+#define XTPROTO_PROP_INTST			"intensity"			/* ColorRGBf  */			/* Color intensity */
+#define XTPROTO_PROP_IAMBN			"ambient"			/* ColorRGBf  */			/* Ambient intensity */
+#define XTPROTO_PROP_IDIFF			"diffuse"			/* ColorRGBf  */			/* Diffuse intensity */
+#define XTPROTO_PROP_ISPEC			"specular"			/* ColorRGBf  */			/* Specular intensity */
+#define XTPROTO_PROP_KAMBN			"k_ambient"			/* scalar_t   */			/* Ambient ratio */
+#define XTPROTO_PROP_KDIFF			"k_diffuse"			/* scalar_t   */			/* Diffuse ratio */
+#define XTPROTO_PROP_KSPEC			"k_specular"		/* scalar_t   */			/* Specular ratio */
+#define XTPROTO_PROP_KEXPN			"k_exponent"		/* scalar_t   */			/* Specular exponent */
+#define XTPROTO_PROP_REFLC			"reflectance"		/* scalar_t   */			/* Reflectance ratio */
+#define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */			/* Transparency ratio */
+#define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */			/* Index of refraction */
 
-#define XT_CFGPROTO_PROP_VECDATA		"vecdata"
+#define XTPROTO_LTRL_POINTLIGHT		"point"				/* string     */			/* Point light */
+#define XTPROTO_LTRL_SPHERELIGHT	"sphere"			/* string     */			/* Sphere light */
+#define XTPROTO_LTRL_BOXLIGHT		"box"				/* string     */			/* Box light */
 
-#define XT_CFGPROTO_PROP_INTENSITY		"intensity"
+#define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */			/* BRDF: Lambert */
+#define XTPROTO_LTRL_PHONG			"phong"				/* string     */			/* BRDF: Phong */
+#define XTPROTO_LTRL_BLINNPHONG		"blinn_phong"		/* string     */			/* BRDF: Blinn Phong */
+#define XTPROTO_LTRL_PLANE			"plane"				/* string     */			/* Plane */
+#define XTPROTO_LTRL_TRIANGLE		"triangle"			/* string     */			/* Triangle */
+#define XTPROTO_LTRL_SPHERE			"sphere"			/* string     */			/* Sphere */
+#define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */			/* Cylinder */
+#define XTPROTO_LTRL_MESH			"mesh"				/* string     */			/* Mesh */
+#define XTPROTO_PROP_UP				"up"	            /* Vector3f   */            /* Up vector */
+#define XTPROTO_PROP_RIGHT			"right"	            /* Vector3f   */            /* Right vector */
+#define XTPROTO_PROP_NORMAL			"normal"			/* Vector3f   */			/* Normal vector */
+#define XTPROTO_PROP_DISTANCE		"distance"			/* scalar_t   */			/* Distance */
+#define XTPROTO_PROP_USCALE			"u_scale"			/* scalar_t   */			/* U scaling */
+#define XTPROTO_PROP_VSCALE			"v_scale"			/* scalar_t   */			/* V scaling */
+#define XTPROTO_PROP_DIMENSIONS		"dimensions"		/* Vector3f   */			/* Dimensions for 3d shape */
 
-#define XT_CFGPROTO_PROP_AMBIENT		"ambient"
-#define XT_CFGPROTO_PROP_SPECULAR		"specular"
-#define XT_CFGPROTO_PROP_DIFFUSE		"diffuse"
+#define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */			/* Radius */
+#define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */			/* End a */
+#define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */			/* End b */
+#define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */			/* Vertex data */
+#define XTPROTO_PROP_SMOOTH			"smooth"			/* bool		  */			/* Property interpolation */
+#define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */			/* Geometry id */
+#define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */			/* Material id */
+#define XTPROTO_PROP_OBJ_TEX		"texture"			/* asset_id_t */			/* Texture id */
 
-/*
-	PROPERTIES
-*/
+#define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A 	   	  */			/* Configuration node */
+#define XTPROTO_NODE_CAMERA			"camera"			/* N/A 	   	  */			/* Resource node */
+#define XTPROTO_NODE_LIGHT			"light"				/* N/A        */	        /* Resource node */
+#define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */    	    /* Resource node */
+#define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */         	/* Resource node */
+#define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */        	/* Resource node */
+#define XTPROTO_NODE_OBJECT			"object"			/* N/A        */        	/* Resource node */
 
-#define XT_CFGPROTO_PROP_DEFAULT		"default"
-#define XT_CFGPROTO_PROP_SOURCE			"source"
-
-#define XT_CFGPROTO_PROP_SMOOTH			"smooth"
-
-#define XT_CFGPROTO_PROP_APERTURE		"aperture"
-#define XT_CFGPROTO_PROP_SHUTTER		"shutter"
-#define XT_CFGPROTO_PROP_FLENGTH		"flength"
-
-#define XT_CFGPROTO_PROP_TYPE			"type"
-
-#define XT_CFGPROTO_PROP_RADIUS			"radius"
-
-#define XT_CFGPROTO_PROP_DISTANCE		"distance"
-
-#define XT_CFGPROTO_PROP_FOV            "fov"
-
-#define XT_CFGPROTO_PROP_REFLECTANCE	"reflectance"
-#define XT_CFGPROTO_PROP_TRANSPARENCY	"transparency"
-
-#define XT_CFGPROTO_PROP_GEOMETRY		"geometry"
-#define XT_CFGPROTO_PROP_MATERIAL       "material"
-
-#define XT_CFGPROTO_PROP_KAMBN			"k_ambient"
-#define XT_CFGPROTO_PROP_KDIFF			"k_diffuse"
-#define XT_CFGPROTO_PROP_KSPEC			"k_specular"
-#define XT_CFGPROTO_PROP_KSEXP			"k_specexp"
-
-#define XT_CFGPROTO_PROP_IOR			"ior"
-
-#define XT_CFGPROTO_PROP_COORD_X        "x"
-#define XT_CFGPROTO_PROP_COORD_Y        "y"
-#define XT_CFGPROTO_PROP_COORD_Z        "z"
-
-#define XT_CFGPROTO_PROP_COLOR_R		"r"
-#define XT_CFGPROTO_PROP_COLOR_G		"g"
-#define XT_CFGPROTO_PROP_COLOR_B		"b"
-#define XT_CFGPROTO_PROP_COLOR_A		"a"
-
-/*
-	CONSTANT VALUES
-*/
-
-#define XT_CFGPROTO_VAL_TRUE			"true"
-#define XT_CFGPROTO_VAL_FALSE			"false"
-
-#define XT_CFGPROTO_VAL_SPHERE          "sphere"
-#define XT_CFGPROTO_VAL_PLANE			"plane"
-#define XT_CFGPROTO_VAL_TRIANGLE		"triangle"
-#define XT_CFGPROTO_VAL_MESH			"mesh"
-
-#define XT_CFGPROTO_VAL_LAMBERT			"lambert"
-#define XT_CFGPROTO_VAL_PHONG			"phong"
-#define XT_CFGPROTO_VAL_BLINNPHONG		"blinn_phong"
-
-#endif /* XTRACER_CFGPROTO_HPP_INCLUDED  */
+#endif /* XTPROTO_H_INCLUDED */

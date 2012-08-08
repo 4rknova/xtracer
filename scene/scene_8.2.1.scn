@@ -1,0 +1,154 @@
+# Xtracer 2
+
+title = Bloat
+descr = Bloat model from killing floor
+versn = 0.1
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = cam0
+	
+	cam0 = {
+		fov = 45
+
+		position = {
+			x = 3 
+			y = 10
+			z = 5
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+texture = {
+	checker = {
+		source = ../media/texture/checkerboard/1.ppm
+	}
+}
+
+geometry = {
+	3dmodel = {
+		type = mesh
+		source = ../media/mesh/dragon.obj
+	}
+
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+
+		distance = 0
+		u_scale = 0.008
+		v_scale = 0.008
+	}
+}
+
+light = {
+	satl = {
+		type = point
+		
+		position = {
+			x = 10
+			y = 50
+			z = 48
+		}
+
+		intensity = {
+			r = 1 
+			g = 1
+			b = 1
+		}
+	}
+	
+	sat2 = {
+		type = point
+		
+		position = {
+			x = -10
+			y = 300 
+			z = 50
+		}
+
+		intensity = {
+			r = .51 
+			g = .51
+			b = .51
+		}
+	}
+}
+
+material = {
+	3dmodel = {
+		type = blinn_phong
+
+		k_diffuse =  0.75
+		k_specular = 0.25
+		k_exponent = 128
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.07
+	}
+
+	floor = {
+		type = blinn_phong
+
+		k_diffuse = 0.5
+		k_specular = 0.5
+		k_exponent = 1350
+
+		diffuse = {
+	        r = 0.51
+	        g = 0.51
+    	    b = 0.51
+	    }
+
+    	specular = {
+            r = 1
+            g = 1
+            b = 1
+        }
+
+        reflectance = 0.3
+	}   
+}
+
+object = {
+	3dmodel = {
+		geometry = 3dmodel
+		material = 3dmodel
+	}
+
+	floor = {
+		geometry = floor
+		material = floor
+		texture = checker
+	}
+}

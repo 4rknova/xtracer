@@ -27,277 +27,206 @@
 
 #include <omp.h>
 #include <iomanip>
-#include <iostream>
+#include <ncf/util.hpp>
+#include <nmath/sample.h>
+#include <nmath/plane.h>
+#include "setup.h"
+#include "object.hpp"
+#include "argparse.hpp"
+#include "log.hpp"
+#include "console.hpp"
 #include "renderer.hpp"
 
-Renderer::Renderer(Framebuffer &fb, Scene &scene, Driver *drv, unsigned int depthlim)
-	: m_fb(&fb), 
-	m_scene(&scene), 
-	m_drv(drv), 
-	m_max_rdepth(depthlim), 
-	m_antialiasing(1),
-	m_gamma(1),
-	m_exposure(0),
-	m_dof_samples(2),
-	m_threads(0),
-	m_f_light_geometry(false),
-	m_f_realtime_update(false)
+using NCF::Util::path_comp;
+
+Renderer::Renderer()
 {}
 
-// report the progress
-void rprog(float progress, int worker, int workers)
+unsigned int Renderer::render(Framebuffer &fb, Scene &scene)
 {
-	static const unsigned int length = 25;
+	render_frame(fb, scene);
 
-	std::cout
-		<< "\rProgress [ ";
-	for (unsigned int i = 0; i < length; i++)
-	{
-		float p = progress * length / 100;
-		if (i < p) 
-			std::cout << '=';
-		else if (i - p < 1)
-			std::cout << '>';
-		else
-			std::cout << ' ';
-	}
-
-	int totalw = workers;
-	// get the string length of totalw
-	int wlen = 0;
-	int num = totalw;
-	while (num>0)
-    {
-		num /= 10;
-		wlen++;
-	}
-
-	std::cout
-		<< " "
-		<< std::setw(6) << std::setprecision(2)
-		<< progress		 
-		<< "% ] [ T: " << totalw << " C: " << std::setw(wlen) << worker + 1 << " ]"
-		<< std::flush;
-}
-
-#include "nparse/util.hpp"
-
-unsigned int Renderer::render()
-{
-	// get the source file name
-	std::string path, file;
-	nstring_path_comp(m_scene->source, path, file);
-
-	// tag the framebuffer
-	m_fb->tag(file.c_str());
-
-	// clear the framebuffer
-	m_fb->clear();
-
-	// initiate the output driver
-	m_drv->init();
-
-	// render the frame
-	if (render_frame())
-	{
-		m_drv->deinit();
-		return 1;
-	}
-
-	// - Post processing
-	// apply exposure and bloom
-	if (m_exposure > 0)
-	{
-		std::cout << "Applying exposure: " << m_exposure << "..\n";
-		m_fb->apply_exposure(m_exposure);
-	}
-
-	// apply gamma correction [ always apply last ]
-	if (m_gamma != 1.0)
-	{
-		std::cout << "Applying gamma correction: " << m_gamma << "..\n";
-		m_fb->apply_gamma(m_gamma);
-	}
-
-	// update the output
-	m_drv->update();
-
-	// terminate the output driver
-	m_drv->deinit();
 	return 0;
 }
 
-#include "nmath/plane.h"
-#include "object.hpp"
-unsigned int Renderer::render_frame()
+unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 {
-	std::cout << "Rendering..\n";
+	Log::handle().log_message("Rendering..");
 
 	// precalculate some constants
-	const unsigned int w = m_fb->width();
-	const unsigned int h = m_fb->height();
+	const unsigned int rminx = Environment::handle().region_min_x();
+	const unsigned int rminy = Environment::handle().region_min_y();
+	const unsigned int rmaxx = Environment::handle().region_max_x();
+	const unsigned int rmaxy = Environment::handle().region_max_y();
+	const unsigned int width = fb.width();
+	const unsigned int height = fb.height();
+	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
+	const unsigned int h = (rmaxy > 0 && rmaxy < height ? rmaxy : height);
+
+	Log::handle().log_message("Rendering region: %ix%i - %ix%i", rminx, rminy, w, h);
+
 	float progress = 0;
-
-	// setup the output
-	std::cout.setf(std::ios::fixed, std::ios::floatfield);
-	std::cout.setf(std::ios::showpoint);
 			
-	// antialiasing samples
-	unsigned int samples_per_pixel = m_antialiasing * m_antialiasing;
-	float offset_per_sample = 1.0f / m_antialiasing;
+	// Samples per pixel, offset per sample.
+	unsigned int aa = Environment::handle().aa();
 
-	// limit the threads if requested
-	if (m_threads != 0)
-		omp_set_num_threads(m_threads);
+	// Explicitely set the thread count if requested.
+	const unsigned int thread_count = Environment::handle().threads();
+	if (thread_count) {
+		omp_set_num_threads(thread_count);
+	}
 
-	#pragma omp parallel for schedule(dynamic,1) 
-	for (int y = 0; y < (int)h; y++) 
+	const unsigned int dof_samples = Environment::handle().dof_samples();
+	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
+	float spp = aa * aa;
+	double subpixel_size  = 1.0f / (float)(aa);
+	double subpixel_size2 = subpixel_size / 2.0f;
+
+	// Calculate the number of samples per pixel.
+	float sample_scaling = 1.f / (dof_samples * spp);
+
+	#pragma omp parallel for schedule(dynamic, 1)
+	for (int y = rminy; y < (int)h; y++) 
 	{
-		for (int x = 0; x < (int)w; x++) 
+		for (int x = rminx; x < (int)w; x++)
 		{
 			// the final color
-			Vector3 color;
+			ColorRGBf color;
 
 			// antialiasing loop
-			for (float fragmenty = (float)y; fragmenty < (float)y + 1.0f; fragmenty += offset_per_sample)
-			{
-				for (float fragmentx = (float)x; fragmentx < (float)x + 1.0f; fragmentx += offset_per_sample)
-				{
-					if (m_scene->camera->flength > 0)
-					{
-						// dof loop
-						unsigned int samples = m_dof_samples;
-						float step = 100.f / samples;
+			for (unsigned int fy = 0; fy < aa; ++fy) {
+				for (unsigned int fx = 0; fx < aa; ++fx) {
 					
-						for (float dofy = -25; dofy < 25; dofy += step)
-							for (float dofx = -25; dofx < 25; dofx += step)
-							{
-								Ray ray = m_scene->camera->get_primary_ray_dof(fragmentx, fragmenty, (float)w, (float)h, dofx, dofy);
-								color += trace(ray, m_max_rdepth+1) / (samples * samples) / samples_per_pixel;
-							}
+					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
+					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
+
+					if (scene.camera->flength > 0) {
+						// dof loop
+						for (float dofs = 0; dofs < dof_samples; ++dofs) {
+							Ray ray = scene.camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
+							color += (trace(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
+						}
 					}
-					else
-					{
-						Ray ray = m_scene->camera->get_primary_ray(fragmentx, fragmenty, (float)w, (float)h);
-						color += trace(ray, m_max_rdepth+1) / samples_per_pixel;
+					else {
+						Ray ray = scene.camera->get_primary_ray(rx, ry, (float)width, (float)height);
+						color += (trace(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
 					}
 				}
 			}
-			
-			*(m_fb->pixel(x, y)) += color;
+
+			fb.pixel(x, y) = color;
 		}
 		
 		// calculate progress
-		progress += 1.0;
+		progress += 1;
 
 		#pragma omp critical
 		{
-			if (m_f_realtime_update)
-				m_drv->update(0, y, w, y+1); // update the output
-
-			rprog(progress / (float)(h) * 100, omp_get_thread_num(), omp_get_num_threads());
-			m_drv->hint();
+			Console::handle().progress(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
 		}
-		
 	}
 
-	std::cout << '\n';
 	return 0;
 }
 
-Vector3 Renderer::trace(const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
+ColorRGBf Renderer::trace(Scene &scene, const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
 {
 	IntInfo info;
-	memset(&info, 1, sizeof(info));
+	memset(&info, 0, sizeof(info));
 
 	// Check for ray intersection
 	std::string obj; // this will hold the object name
-	if (m_scene->intersection(ray, info, obj, m_f_light_geometry))
-	{
+	if (scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
-		if (!obj.empty())
-		{
-			Material *mat = m_scene->material[m_scene->object[obj]->material];
+		if (!obj.empty()) {
+			Material *mat = scene.m_materials[scene.m_objects[obj]->material];
 			// if the ray starts inside the geometry
-			if (dot(info.normal, ray.direction) > 0)
-			{
+			if (dot(info.normal, ray.direction) > 0) {
 				info.normal = -info.normal;
-				return shade(ray, depth, info, obj, mat->ior, ior_src);
+				return shade(scene, ray, depth, info, obj, mat->ior, ior_src);
 			}
-			else
-			{
-				return shade(ray, depth, info, obj, ior_src, mat->ior);
+			else {
+				return shade(scene, ray, depth, info, obj, ior_src, mat->ior);
 			}
 		}
-		else
-			return Vector3(1, 1, 0);
 	}
 
-	return Vector3(0, 0, 0);
+	return ColorRGBf(0, 0, 0);
 }
 
-Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, scalar_t ior_src, scalar_t ior_dst)
+ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, scalar_t ior_src, scalar_t ior_dst)
 {
-	Vector3 color;
+	ColorRGBf color(0, 0, 0);
 		
-	// check if the intersection geometry is a light
-	if (obj.empty())
-	{
-		return Vector3(1, 1, 0);
-	}
-
 	// check if the depth limit was reached
 	if (!depth)
 		return color;
-
-	std::map<std::string, Light *>::iterator it;
-	Material *mat = m_scene->material[m_scene->object[obj]->material];
 	
-	// ambient
-	color = mat->ambient * m_scene->k_ambient * mat->diffuse;
-		
-	// shadows
-	Vector3 n = info.normal;
-	Vector3 p = info.point;
+	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
+	std::map<std::string, Material  *>::iterator it_mat = scene.m_materials.find(scene.m_objects[obj]->material);
+	std::map<std::string, Light     *>::iterator it;
 
-	for (it = m_scene->light.begin(); it != m_scene->light.end(); it++)
-	{
-		Light *light = (*it).second;
-		Vector3 v = light->position - p;
-
-		Ray sray;
-		sray.origin = p;
-		sray.direction = v.normalized();
-		scalar_t distance = v.length();
-
-		// if the point is not in shadow for this light
-		std::string obj;
-		IntInfo res;
-		bool test = m_scene->intersection(sray, res, obj);
-		if (!test || res.t < EPSILON || res.t > distance) 
-		{
-			// shade
-			color += mat->shade(m_scene->camera, light, info);
-		}
-		else
-		{
-			// This is a hack for transparent objects
-			scalar_t transp = m_scene->material[m_scene->object[obj]->material]->transparency;
-			if (transp > 0.0)
-				color += transp * mat->shade(m_scene->camera, light, info);
-		}
+	if (it_mat == scene.m_materials.end()) {
+		return color;
 	}
 
+	// shadows
+	Vector3f n = info.normal;
+	Vector3f p = info.point;
+
+	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
+
+	// ambient
+	color = mat->ambient * scene.ambient();
+
+	scalar_t shadow_sample_scaling = 1.0f / Environment::handle().light_samples();
+
+	for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {
+		unsigned int tlshsamples = (*it).second->is_area_light() ? Environment::handle().light_samples() : 1;
+		scalar_t tlshscaling = (*it).second->is_area_light() ? shadow_sample_scaling : 1;
+
+		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
+			Light *light = (*it).second;
+			Vector3f v = light->point_sample() - p;
+	
+			// Texture.
+			ColorRGBf texcolor = ColorRGBf(1,1,1);
+			if (it_tex != scene.m_textures.end()) {
+				texcolor = ColorRGBf((*it_tex).second->sample(info.texcoord.x, info.texcoord.y));
+			}
+
+			Ray sray;
+			sray.origin = p;
+			sray.direction = v.normalized();
+			scalar_t distance = v.length();
+
+			// if the point is not in shadow for this light
+			std::string obj;
+			IntInfo res;
+			bool test = scene.intersection(sray, res, obj);
+			if (!test || res.t < EPSILON || res.t > distance) {
+				// shade
+				color += mat->shade(scene.camera, light, texcolor, info) * tlshscaling;
+			}
+		}
+	}
+	
 	// specular effects
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG))
 	{
+
 		// reflection
 		if(mat->reflectance > 0.0)
 		{
-			Ray reflray;
-			reflray.origin = p;
-			reflray.direction = (-ray.direction).reflected(n);
-			color += mat->reflectance * trace(reflray, depth-1) * mat->specular;
+			unsigned int tlmcsamples = Environment::handle().reflec_samples();
+			scalar_t tlmcscaling = 1.0f / tlmcsamples;
+			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
+				Ray reflray;
+				reflray.origin = p;
+				//reflray.direction = (-ray.direction).reflected(n);
+				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->ksexp);
+				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular) * tlmcscaling;
+			}
 		}
 
 		// refraction
@@ -309,66 +238,9 @@ Vector3 Renderer::shade(const Ray &ray, unsigned int depth, IntInfo &info, std::
 			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
 			color *= (1.0 - mat->transparency);
-			color += mat->transparency * trace(refrray, depth-1, ior_src, ior_dst) * mat->specular;
+			color += mat->transparency * trace(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular;
 		}
 	}
 
 	return color;
-}
-
-bool Renderer::realtime_update(int v)
-{
-	if (v < 0)
-		return m_f_realtime_update;
-	return m_f_realtime_update = (v == 0 ? false : true);
-
-}
-
-bool Renderer::light_geometry(int v)
-{
-	if (v < 0)
-		return m_f_light_geometry;
-	return m_f_light_geometry = (v == 0 ? false : true);
-}
-
-scalar_t Renderer::gamma_correction(scalar_t v)
-{
-	if (v < 0)
-		return m_gamma;
-	return m_gamma = v;
-}
-
-scalar_t Renderer::exposure(scalar_t v)
-{
-	if (v == 0)
-		return m_exposure;
-	return m_exposure = v;
-}
-
-unsigned int Renderer::max_recursion_depth(int v)
-{
-	if (v < 0)
-		return m_max_rdepth;
-	return m_max_rdepth = v;
-}
-
-unsigned int Renderer::antialiasing(int v)
-{
-	if (v < 1)
-		return m_antialiasing;
-	return m_antialiasing = v;
-}
-
-unsigned int Renderer::threads(int v)
-{
-	if (v < 0)
-		return m_threads;
-	return m_threads = v;
-}
-
-unsigned int Renderer::dof_samples(int v)
-{
-	if (v < 2)
-		return m_dof_samples;
-	return m_dof_samples = v;
 }

@@ -30,63 +30,82 @@
 
 #include <string>
 
-#include "nmath/intinfo.h"
-#include "nmath/vector.h"
-#include "nmath/geometry.h"
-#include "nparse/cf1.hpp"
+#include <nmath/intinfo.h>
+#include <nmath/vector.h>
+#include <nmath/geometry.h>
+#include <ncf/ncf1.hpp>
 
 #include "camera.hpp"
 #include "light.hpp"
 #include "material.hpp"
+#include "texture.hpp"
 #include "object.hpp"
+
+using NMath::Geometry;
+using NCF::NCF1;
 
 class Scene
 {
+	friend class Renderer;
+	private:
+		Scene(const Scene &);
+		Scene &operator =(const Scene &);
+
 	public:
-		Scene(const char *filepath);
+		Scene();
 		~Scene();
 
-		unsigned int init();		// Initiates the scene
-		unsigned int build();		// Build the scene data according to the scene tree
-		unsigned int analyze();		// Outputs a tree representation of the scene
+		const char *source();
 
-		unsigned int set_ambient();
+		unsigned int load(const char *filename);
+		unsigned int build();		// Build the scene data according to the scene tree
+
+		const ColorRGBf &ambient();
+		void ambient(const ColorRGBf &ambient);
+
 		unsigned int set_camera(const char *name);
 
-		unsigned int add_light(NCF1 *p);
-		unsigned int add_material(NCF1 *p);
-		unsigned int add_geometry(NCF1 *p);
-		
-		unsigned int add_object(NCF1 *p);
+		unsigned int create_light(NCF1 *p);
+		unsigned int create_material(NCF1 *p);
+		unsigned int create_texture(NCF1 *p);
+		unsigned int create_geometry(NCF1 *p);
+		unsigned int create_object(NCF1 *p);
 
-		bool intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights=false);
-
-		// modifiers
-		unsigned int apply_modifier(const char *reg);
+		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
 
 		// The camera
 		Camera *camera;
 
+	private:
+		// RETURN CODES:
+		//  0. Everything went well.
+		//  1. The resource was not found.
+		unsigned int destroy_camera(const char *name);
+		unsigned int destroy_light(const char *name);
+		unsigned int destroy_material(const char *name);
+		unsigned int destroy_texture(const char *name);
+		unsigned int destroy_geometry(const char *name);
+		unsigned int destroy_object(const char *name);
+
 		// Maps of the scene entities		
-		std::map<std::string, Light *> light;
-		std::map<std::string, Material *> material;
-		std::map<std::string, Geometry *> geometry;
-		std::map<std::string, Object *> object;
+		std::map<std::string, Camera*   > m_cameras;
+		std::map<std::string, Light*    > m_lights;
+		std::map<std::string, Material* > m_materials;
+		std::map<std::string, Texture2D*> m_textures;
+		std::map<std::string, Geometry* > m_geometry;
+		std::map<std::string, Object*   > m_objects;
 
 		// Ambient
-		Vector3 ambient;	// intensity
-		scalar_t k_ambient;	// ratio
-
+		ColorRGBf m_ambient;	// intensity
 
 		// The scene's source filepath and filename
-		const std::string source;
-
-	private:
+		const std::string m_source;
+		
 		// The parser data tree
-		NCF1 data;
+		NCF1 m_scene;
 
 		// This will cleanup all the allocated memory
-		void cleanup();
+		void release();
 };
 
 #endif /* XTRACER_SCENE_HPP_INCLUDED */

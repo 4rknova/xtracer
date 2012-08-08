@@ -28,14 +28,15 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
-#include "nmath/vector.h"
-#include "nmath/intinfo.h"
-
+#include <nmath/intinfo.h>
+#include <nimg/color.hpp>
 #include "camera.hpp"
 #include "light.hpp"
-
 #include "phong.hpp"
 #include "lambert.hpp"
+
+using NMath::IntInfo;
+using NImg::ColorRGBf;
 
 enum MATERIAL_TYPE
 {
@@ -51,20 +52,20 @@ class Material
 		~Material();
 
 		// shader
-		Vector3 shade(const Camera *cam, const Light *light, const IntInfo &info);
+		ColorRGBf shade(const Camera *cam, const Light *light, ColorRGBf &texcolor, const IntInfo &info);
 	
 		// properties
-		Vector3 diffuse;	   	// diffuse intensity
-		Vector3 specular;		// specular intensity
-		Vector3 ambient;		// ambient intensity
+		ColorRGBf ambient;		// ambient intensity
+		ColorRGBf diffuse;	   	// diffuse intensity
+		ColorRGBf specular;		// specular intensity
 		
 		scalar_t kspec;       	// specular constant
 		scalar_t kdiff;       	// diffuse constant
 		scalar_t ksexp;       	// specular exponential
 
-		scalar_t reflectance;		// reflectance
+		scalar_t reflectance;	// reflectance
 		scalar_t transparency;	// transparency
-		scalar_t ior;				// index of refraction
+		scalar_t ior;			// index of refraction
 
 		MATERIAL_TYPE type;
 };

@@ -1,60 +1,66 @@
-XTracer
--------
-Copyright 2010, 2011, 2012 (c) 
+XTracer 2
+
+Copyright 2010 - 2012 (c) 
 Papadopoulos Nikos <nikpapas@gmail.com>, 
-Knowledge Engineering Lab (KEL) <kel.unipi@gmail.com>
 
 About
 -----
-Xtracer is a basic raytracer written in c and c++. It served as my thesis project 
-for the bsc of computer science in the university of Piraeus. It was developed under 
-the supervision of Prof. T. Panayiotopoulos as part of the research work of the
-Knowledge Engineering Lab (KEL).
+XTracer is a raytracer written in c and c++. 
 
-The source code is distributed under the LGPL license.
+v0.7 served as my thesis project for the BSc of computer science at the University 
+of Piraeus. It was developed under the supervision of Prof. T. Panayiotopoulos as 
+part of the research work of the Knowledge Engineering Lab (KEL).
+
+v1.x is currently under development as part of my dissertation for the MSc of
+computer graphics programming at the University of Hull.
+
+License
+-------
+The source code is distributed under the LGPL license version 3 or later.
+
+Version history
+---------------
+0.7		2866bf99ca04d84a85ab13b755ded7d42014bee7
+1.x		HEAD
 
 Features
 --------
+Implemented:
 * Primitives    : Plane, Triangle, Sphere, Mesh
 * Materials     : Lambert, Phong, Blinn-Phong
-* Lights        : Point light
-* Cameras       : Pinhole camera, Thin lense
-* Drivers       : SDL, PPM, DUM
-* Effects       : Reflection, Refraction, Depth of field
-* Acceleration  : Threads
+* Lights        : Point, Sphere, Box
+* Cameras       : Pinhole, Thin lense
+* Shading       : Reflection (glossy & perfect mirror), Refraction, 
+				  Depth of field, Soft shadows, Texture mapping
+* Acceleration  : Threads, Octrees
 * Anti-aliasing : Supersampling
-* Shading       : Phong shading
 * Rendering     : HDR
-* Post-Proc.    : Gamma correction, Exposure correction
 
-Notes
------
-* The scene is rendered in HDR. By default, the conversion to LDR is done with a sloppy 
-  0.0 - 1.0 range cap. To correct the result, use the exposure switch.
-
-* Only a bare minimal obj-compatible format is supported for the time being. If you are
-  using a 3d modeling editor you MUST choose to export ONLY the vertices and faces of the
-  mesh. The face normals are calculated on the fly.
+Future expansion:
+* Primitives	: Cylinder, Blob
+* Lights		: Mesh
+* GI			: Photon mapping
+* Shading		: Normal mapping, Fresnel, Beer's law
+* Anti-aliasing	: Jittering
+* Other			: Support for multiple renderers, Lua shaders
 
 Compilation / Installation
 --------------------------
 The source code is distributed along with a makefile configuration script for unix based
 systems with a GNU toolchain installed. To view all the available configuration options
 type: ./configure --help. Once the configuration is done, you can build the binary by 
-typing: make bin. To install the binary in your system type: make install. To uninstall 
+typing: make. To install the binary in your system type: make install. To uninstall 
 type: make uninstall
 
 For windows users, a visual studio 2010 solution is available in the ide directory.
 
 Dependencies
 ------------
-* openmp	
-  Must be supported by your compiler.
-
-* libsdl
-  The program can be built without the sdl driver support.
-  If you are using the makefile type ./configure --help for more information on this.
-  Different project files are provided in the visual studio solution.
+* openmp	Must be provided by your compiler.
+* libnmath	https://github.com/4rknova/libnmath
+* libnmesh	https://github.com/4rknova/libnmesg
+* linimg	https://github.com/4rknova/libnimg
+* libncf	https://github.com/4rknova/libncf
 
 Supported platforms
 -------------------
@@ -66,22 +72,22 @@ c and c++ compilers. It has been tested without any problems under the following
 * MacOSX
 * MS Windows XP, 7
 
-Mesh data
----------
-Some scene files include mesh inputs that are not provided in the repository.
-In order to render those scenes you have to provide your own meshes.
+Contributions
+-------------
+I would like to thank the following people for their help and support.
 
-People
-------
-I would like to thank the following people for supporting me during the development and 
-testing process.
+version 0.x
 
-Prof. T. Panayiotopoulos : Supervising professor.
-Tsiombikas John          : Technical advisory.
-Stea Maria Elenh         : Technical advisory.
-Hardalias Apostolhs      : Windows testing, cpu time donation.
-Kokkalis Nikos           : FreeBSD testing.
-Ntzoufras Kwstas         : MacOSX testing, cpu time donation.
-Potamianos Grhgorhs      : cpu time donation.
-Costas Droggos           : cpu time donation.
-Kouzouphs Antwnhs        : cpu time donation.
+	Prof. T. Panayiotopoulos : Supervising professor at University of Piraeus.
+	Tsiombikas John          : Technical advisory.
+	Stea Maria Elenh         : Technical advisory.
+	Hardalias Apostolhs      : Windows testing, cpu time donation.
+	Kokkalis Nikos           : FreeBSD testing.
+	Ntzoufras Kwstas         : MacOSX testing, cpu time donation.
+	Potamianos Grhgorhs      : cpu time donation.
+	Costas Droggos           : cpu time donation.
+	Kouzouphs Antwnhs        : cpu time donation.
+
+version 1.x
+
+	Dr Qingde Li             : Supervising professor at University of Hull

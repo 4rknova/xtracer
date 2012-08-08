@@ -28,16 +28,70 @@
 #ifndef XTRACER_LIGHT_HPP_INCLUDED
 #define XTRACER_LIGHT_HPP_INCLUDED
 
-#include "nmath/vector.h"
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+#include <nimg/color.hpp>
 
+using NMath::scalar_t;
+using NMath::Vector3f;
+using NImg::ColorRGBf;
+
+/* Light interface */
 class Light 
 {
 	public:
-		Light(const Vector3 &pos, const Vector3 &ints);
+		Light(const Vector3f &pos, const ColorRGBf &ints);
 		Light();
+		virtual ~Light();
 
-		Vector3 position;
-		Vector3 intensity;
+		virtual bool is_area_light() const = 0;
+		virtual Vector3f point_sample() const = 0;
+
+		const Vector3f &position() const;
+		const ColorRGBf &intensity() const;
+		void position(const Vector3f &position);
+		void intensity(const ColorRGBf &intensity); 
+
+	private:
+		Vector3f m_position;
+		ColorRGBf m_intensity;
+};
+
+class PointLight : public Light
+{
+	public:
+		bool is_area_light() const;
+		Vector3f point_sample() const;
+};
+
+class SphereLight : public Light
+{
+	public:
+		SphereLight();
+
+		scalar_t radius() const;
+		void radius(scalar_t r);
+		
+		bool is_area_light() const;
+		Vector3f point_sample() const;
+
+	private:
+		scalar_t m_radius;
+};
+
+class BoxLight : public Light
+{
+	public:
+		BoxLight();
+
+		const Vector3f &dimensions() const;
+		void dimensions(const Vector3f &dimensions);
+
+		bool is_area_light() const;
+		Vector3f point_sample() const;
+
+	private:
+		Vector3f m_dimensions;
 };
 
 #endif /* XTRACER_LIGHT_HPP_INCLUDED */

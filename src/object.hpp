@@ -38,9 +38,12 @@ class Object
 
 		// The geometry's name
 		std::string geometry;
-
+		
 		// The material's name
 		std::string material;
+
+		// The texture's name
+		std::string texture;
 };
 
 #endif /* XTRACER_OBJECT_HPP_INCLUDED */

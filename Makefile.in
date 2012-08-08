@@ -1,83 +1,59 @@
-# paths
-# - target
-spath = src
-opath = $(bpath)/obj
-tpath = doc
-mpath = man
+SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)
+SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)
+SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp)
 
-# - sources
-ccsrc = $(wildcard $(spath)/*.c $(spath)/nmath/*.c $(spath)/nparse/*.c)
-ccsrcc = $(wildcard $(spath)/*.cc $(spath)/nmath/*.cc $(spath)/nparse/*.cc)
-ccsrcpp = $(wildcard $(spath)/*.cpp $(spath)/nmath/*.cpp $(spath)/nparse/*.cpp)
+BINOBJ_C   = $(SOURCE_C:.c=.o)
+BINOBJ_CC  = $(SOURCE_CC:.cc=.o)
+BINOBJ_CPP = $(SOURCE_CPP:.cpp=.o)
+BINOBJ     = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
 
-# binarys
-objc = $(ccsrc:.c=.o)
-objcc = $(ccsrcc:.cc=.o)
-objcpp = $(ccsrcpp:.cpp=.o)
+BIN = $(PATH_BIN)/$(SW_PACKG)
+MAN = $(PATH_BIN)/$(SW_TITLE).1
 
-bin = $(bpath)/$(pkgname)
-man = $(mpath)/$(pkgname).1
+COFLAGS  = $(DEP_DEFS) -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"' $(FLAGS_OPT) $(FLAGS_DBG) -fopenmp -Wall -Wno-unknown-pragmas
+CCFLAGS  = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
+CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing $(COFLAGS)
+LDFLAGS  = $(DEP_LIBS)
 
-MAKE = make
-CLEAR = clear
-COL = col
-LESS = less
-NROFF = nroff
-RM = rm
-OMP = -fopenmp
-INSTALL = install
-CC = gcc
-CXX = g++
-COFLAGS= $(opt) $(dbg) -D'$(sdl)' -D'XT_VERSION="$(shell cat VERSION)"' -I/usr/local/include -Wall
-CCFLAGS = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
-CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing -I$(spath) $(COFLAGS)
-TEXFLAGS = -output-directory=$(tpath)
-LDFLAGS = $(LDSDL)
-
-$(bin): $(objc) $(objcc) $(objcpp)
-	$(CXX) $(OMP) $(CXXFLAGS) $(objc) $(objcc) $(objcpp) -o $@ $(LDFLAGS)
+# Targets
+$(BIN): $(BINOBJ)
+	$(CXX) $(CXXFLAGS) $(BINOBJ) -o $@ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(OMP) -c $(CCFLAGS) -o $@ $<
+	$(CC) -c $(CCFLAGS) -o $@ $<
 
 %.o: %.cc
-	$(CXX) $(OMP) -c $(CXXFLAGS) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 %.o: %.cpp
-	$(CXX) $(OMP) -c $(CXXFLAGS) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 .PHONY: all
-all: $(bin)
+all: $(BIN)
 
-.PHONY: bin 
-bin: $(bin)
-
-.PHONY: doc
-doc:
-	$(MAKE) -C ./$(tpath)
+.PHONY: bin
+bin: $(BIN)
 
 .PHONY: man-preview
 man-preview:
-	$(CLEAR)&& $(NROFF) -Tascii -man "man/xtracer.1" | $(COL) -x | $(LESS) -c
+	$(CLEAR) && $(NROFF) -Tascii -man "man/xtracer.1" | $(COL) -x | $(LESS) -c
 
 .PHONY: install
 install: all
-	$(INSTALL) -D -m 775 $(bin) $(PREFIX)/bin/$(pkgname)
-	$(INSTALL) -D -c -m 444 $(man) $(PREFIX)/share/man/man1/$(pkgname).1
+	$(INSTALL) -D -m 775 $(BIN) $(PATH_PREFIX)/bin/$(SW_PACKG)
+	$(INSTALL) -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man1/$(SW_PACKG).1
 		  
 .PHONY: uninstall
 uninstall:
-	$(RM) -f $(PREFIX)/bin/$(pkgname)
-	$(RM) -f $(PREFIX)/share/man/man1/$(pkgname).1
-
+	$(RM) -f $(PATH_PREFIX)/bin/$(SW_PACKG)
+	$(RM) -f $(PATH_PREFIX)/share/man/man1/$(SW_PACKG).1
 
 .PHONY: clean
 clean:
-	$(RM) -rf $(objc) $(objcc) $(objcpp)
-	$(RM) -rf $(tpath)/*.aux $(tpath)/*.log $(tpath)/*.out $(tpath)/*.toc
-	$(MAKE) -C $(tpath) clean
+	$(RM) -rf $(BINOBJ)
 
 .PHONY: clean-all
 clean-all: clean
-	$(RM) -f Makefile $(bin)
-	$(MAKE) -C $(tpath) clean-all
+	$(RM) -f Makefile
+	$(RM) $(BIN)
+	$(RM) -rf $(PATH_BIN)

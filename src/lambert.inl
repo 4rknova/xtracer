@@ -32,16 +32,16 @@
     #error "lambert.hpp must be included before lambert.inl"
 #endif /* XTRACER_LAMBERT_HPP_INCLUDED */
 
-inline Vector3 lambert(const Vector3 lightpos, const IntInfo *info, const Vector3 light, const Vector3 diffuse)
+inline ColorRGBf lambert(const Vector3f &lightpos, const IntInfo *info, const ColorRGBf &light, const ColorRGBf &diffuse)
 {
 	// calculate the light vector
-	Vector3 lightdir = lightpos - info->point;
+	Vector3f lightdir = lightpos - info->point;
 	lightdir.normalize();
 
 	// calculate the normal - light dot product
 	scalar_t d = dot(lightdir, info->normal);
 
-	return d > 0 ? d * diffuse * light : Vector3(0, 0 ,0);
+	return d > 0 ? d * diffuse * light : ColorRGBf(0, 0 ,0);
 }
 
 #endif /* XTRACER_LAMBERT_INL_INCLUDED */

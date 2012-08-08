@@ -1,4 +1,4 @@
-.TH XTRACER 1 "December 2010" UNIX "User Manuals"
+.TH XTRACER 2 "December 2010" UNIX "User Manuals"
 .SH NAME 
 xtracer
 .SH SYNOPSIS
@@ -7,46 +7,40 @@ xtracer
 ]... 
 .B file
 .SH DESCRIPTION
-A basic raytracing.
+A basic raytracer.
 .SH OPTIONS
-.IP "-res %ix%i"
-Sets the output buffer resolution.
-.IP "-threads %i"
-Sets the number of threads that will be spawned. 
-A value of zero, lets the system decide.
-.IP "-depth %i"
-Sets the maximum recursion depth.
-.IP "-dofsamples %i"
-Sets the the sampling level for dof calculations.
-.IP "-drv %s"
-Sets the output driver to use. Available drivers are: ppm, sdl, dum.
-.IP	"-gamma %f"
-Sets the gamma correction.
-.IP "-exposure %f"
-Sets the exposure correction.
-.IP "-cam %s"
-Sets the active camera.
-.IP "-lightpos"
-Renders the point lights as spheres.
-.IP "-aa %i"
-Enables antialiasing. %i must be a power of 2.
-.IP "-realtime"
-When a gui based driver is used, it forces the update of the output at realtime.
-.IP "-mod %s"
-Defines a modifier.
-.br
-The format is: section.[subsection.]:value
-.IP "-v"
-Increases the verbosity.
-.IP "-version / -ver"
+.IP "-version"
 Outputs the program version information and exits.
 .IP "-help"
 Outputs basic usage information and exits.
-.SH DRIVER SPECIFIC OPTIONS
-.IP "sdl"
-.RS
-.IP "r"
-Triggers an immediate output update.
+.IP "-threads %i"
+Sets the number of threads that will be spawned. 
+A value of 0 lets the system decide.
+.IP "-res %ix%i"
+Sets the output buffer resolution.
+.IP "-rdepth %i"
+Sets the maximum recursion depth.
+.IP "-dofs %i"
+Sets the number of dof samples.
+.IP "-mcs %i"
+Sets the number of samples for monte carlo integration.
+.IP "-aa %i"
+Enables antialiasing (supersampling). %i must be 1 or greater.
+.IP "-resume %s"
+Resumes rendering of the given file.
+.IP "-region %ix%i:%ix%i"
+Restricts rendering to the given area.
+.IP "-cam %s"
+Sets the active camera.
+.IP "-outdrv %s"
+Sets the output driver to use. Available drivers are: ppm, dum.
+.IP "-outdir %s"
+Sets the output directory.
+.SH DRIVERS
+.IP "ppm"
+Exports the framebuffer to a ppm image file.
+.IP "nul"
+Performs all the computation without exporting anything. Used for benchmarking.
 .RE
 .SH AUTHOR
 ."BR bar (1)"

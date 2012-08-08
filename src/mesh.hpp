@@ -29,21 +29,18 @@
 #ifndef LIBNMATH_MESH_HPP_INCLUDED
 #define LIBNMATH_MESH_HPP_INCLUDED
 
-#include <vector>
-#include "nmath/precision.h"
-#include "nmath/vector.h"
-#include "nmath/geometry.h"
-#include "nmath/ray.h"
-#include "vertex.hpp"
+#include <nmesh/mesh.hpp>
+#include <nmath/ray.h>
+#include <nmath/geometry.h>
+#include <nmath/triangle.h>
+#include "octree.hpp"
 
-class Face
-{
-	public:
-		unsigned int v[3];
-};
+using NMath::Ray;
+using NMath::Geometry;
+using NMath::Triangle;
 
 // Mesh
-class Mesh: public Geometry
+class Mesh: public NMesh::Mesh, public Geometry
 {
     public:
         Mesh();
@@ -51,10 +48,10 @@ class Mesh: public Geometry
 
 		bool intersection(const Ray &ray, IntInfo* i_info) const;
 		void calc_aabb();
-		void calc_vertex_normals();
+		void build_octree();
 
-		std::vector<Vertex> vertices;
-		std::vector<Face> faces;
+	private:
+		Octree<Triangle> m_octree;
 };
 
 #endif /* LIBNMATH_MESH_HPP_INCLUDED */

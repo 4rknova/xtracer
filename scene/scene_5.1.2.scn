@@ -1,0 +1,1076 @@
+# Xtracer 2
+#
+# This scene describes the standard "Cornell Box" with some caveats.
+# These caveats will be raised as the development of the raytracer progresses.
+#
+# Caveats:
+#
+# 	- 	The light's color intensity is defined in arbitrary RGB units rather than
+# 		the physically measured spectrum described on the Cornell Box page.
+#		(http://www.graphics.cornell.edu/online/box/data.html)
+#
+#	-	Materials are defined with RGB approximations to their spectral
+#		reflectance, not the 4 nm sampled spectra on the web page.
+#
+#	-	The walls are defined as ( clockwise ) triangles instead of quads
+#
+# Notes:
+#
+#	-	The original Cornell box is rendered with an aspect ratio of 1:1.
+#	-	The final image appears flipped to the yy' axis. This is due to the
+#		different coordinate system used in the original data.
+
+title = Cornell box replica (based on the original radiosity dataset)
+descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
+versn = 0.2
+
+k_ambient = 0.01
+
+ambient = {
+	r = 0.6
+	g = 0.6
+	b = 0.6
+}
+
+
+# The scene cameras.
+camera = {
+	
+	# The default camera.
+	default = front
+
+	# The front camera.
+	front = {
+		# Field of view.
+		fov = 38.39
+
+		# Camera position.
+		position = {
+			x = 278.0
+			y = 273.0
+			z = -800.0
+		}
+
+		# Target.
+		# This is equal to the direction (0, 1, 0) 
+		# as defined in the original data.
+		target = {
+			x = 278.0
+			y = 273.0
+			z = -799.0
+		}
+
+		# Up vector.
+		up = {
+			x = 0
+			y = 1
+			z = 0
+		}
+	}
+}
+
+# The scene lights
+light = {
+
+	# I will use 4 point lights, one per vertex of the original 
+	# data for the light source ( quad ).
+	# Also the original data sets it to y = 548.8 which is the same 
+	# as the height of the ceiling. I set it much lower to avoid 
+	# numerical errors and compensate for intensity loses due to 
+	# the nature of point lights.
+	light = {
+		type = box
+
+		dimensions = {
+			x = 130
+			y = 0
+			z = 105
+		}
+		
+		position = {
+			x = 278.0
+			y = 525.0
+			z = 279.5
+		}
+
+		intensity = {
+			r = 1.0
+			g = 0.85
+			b = 0.43
+		}
+	}
+}
+
+# The scene materials
+material = {
+
+	# The following three colors are RGB approximations to the spectral 
+	# measurements of the white, red, and green paints used in the Cornell Box.
+	white = {
+		type = lambert
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+	}
+
+	red = {
+		type = lambert
+
+		diffuse = {
+			r = 0.63
+			g = 0.06
+			b = 0.04
+		}
+	}
+
+	green = {
+		type = lambert
+
+		diffuse = {
+			r = 0.15
+			g = 0.48
+			b = 0.09
+		}
+	}
+
+	light = {
+		type = lambert
+
+		diffuse = {
+			r = 1.0
+			g = 1.0
+			b = 1.0
+		}
+	}
+}
+
+# The scene geometry
+geometry = {
+
+	# The room box
+	# - The light
+	# The light geometry is lowered by a small number to avoid numeric errors
+	# The original height is 548.8
+	light_1 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7999
+				z = 227.0
+			}
+
+			v1 = {
+				x = 343.0
+				y = 548.7999
+				z = 332.0
+			}
+
+			v2 = {
+				x = 213.0
+				y = 548.7999
+				z = 332.0
+			}
+
+		}
+	}
+
+	light_2 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7999
+				z = 227.0
+			}
+
+			v1 = {
+				x = 213.0
+				y = 548.7999
+				z = 332.0
+			}
+
+			v2 = {
+				x = 213.0
+				y = 548.7999
+				z = 227.0
+			}
+		}
+	}
+
+	# - Floor
+	floor_1 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 552.8 
+				y = 0.0
+				z = 0.0
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+		}
+	}
+
+	floor_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+			
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+		}
+	}
+
+	# - Ceiling
+	ceiling_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v1 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	ceiling_2 = {
+		type = triangle
+		
+		vecdata = {
+			v0 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+	
+	# - Back wall
+	back_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 549.6 
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+	
+	back_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	# - Left wall
+	left_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+
+			v1 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	left_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+			v1 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+	# - Right wall
+	right_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+	right_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	# The props
+	# - Small block
+	short_block_1_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 130.0
+				y = 165.0
+				z = 65.0
+			}
+
+			v1 = {
+				x = 82.0
+				y = 165.0
+				z = 225.0
+			}
+
+			v2 = {
+				x = 240.0
+				y = 165.0
+				z = 272.0
+			}
+		}
+	}
+	
+	short_block_1_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 130.0
+				y = 165.0
+				z = 65.0
+			}
+
+			v1 = {
+				x = 240.0
+				y = 165.0
+				z = 272.0
+			}
+
+			v2 = {
+				x = 290.0
+				y = 165.0
+				z = 114.0
+			}
+		}
+	}
+
+	short_block_2_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 290.0
+				y = 0.0
+				z = 114.0
+			}
+
+			v1 = {
+				x = 290.0
+				y = 165.0
+				z = 114.0
+			}
+
+			v2 = {
+				x = 240.0
+				y = 165.0
+				z = 272.0
+			}
+		}
+	}
+	
+	short_block_2_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 290.0
+				y = 0.0
+				z = 114.0
+			}
+
+			v1 = {
+				x = 240.0
+				y = 165.0
+				z = 272.0
+			}
+
+			v2 = {
+				x = 240.0
+				y = 0.0
+				z = 272.0
+			}
+		}
+	}
+
+	short_block_3_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 130.0
+				y = 0.0
+				z = 65.0
+			}
+
+			v1 = {
+				x = 130.0
+				y = 165.0
+				z = 65.0
+			}
+
+			v2 = {
+				x = 290.0
+				y = 165.0
+				z = 114.0
+			}
+		}
+	}
+
+	short_block_3_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 130.0
+				y = 0.0
+				z = 65.0
+			}
+
+			v1 = {
+				x = 290.0
+				y = 165.0
+				z = 114.0
+			}
+
+			v2 = {
+				x = 290.0
+				y = 0.0
+				z = 114.0
+			}
+		}
+	}
+
+	short_block_4_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 82.0
+				y = 0.0
+				z = 225.0
+			}
+
+			v1 = {
+				x = 82.0
+				y = 165.0
+				z = 225.0
+			}
+
+			v2 = {
+				x = 130.0
+				y = 165.0
+				z = 65.0
+			}
+		}
+	}
+
+	short_block_4_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 82.0
+				y = 0.0
+				z = 225.0
+			}
+
+			v1 = {
+				x = 130.0
+				y = 165.0
+				z = 65.0
+			}
+
+			v2 = {
+				x = 130.0
+				y = 0.0
+				z = 65.0
+			}
+		}
+	}
+
+	short_block_5_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 240.0
+				y = 0.0
+				z = 272.0
+			}
+
+			v1 = {
+				x = 240.0
+				y = 165.0
+				z = 272.0
+			}
+
+			v2 = {
+				x = 82.0
+				y = 165.0
+				z = 225.0
+			}
+		}
+	}
+
+	short_block_5_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 240.0
+				y = 0.0
+				z = 272.0
+			}
+
+			v1 = {
+				x = 82.0
+				y = 165.0
+				z = 225.0
+			}
+
+			v2 = {
+				x = 82.0
+				y = 0.0
+				z = 225.0
+			}
+		}
+	}
+
+	# - Big block
+	tall_block_1_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_1_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+		}
+	}
+	
+	tall_block_3_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_3_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+		}
+	}
+	
+	tall_block_4_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_4_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_5_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+		}
+	}
+
+	tall_block_5_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+		}
+	}
+}
+
+# The scene objects
+object = {
+	# Light
+	light_1 = {
+		geometry = light_1
+		material = light
+	}	
+
+	light_2 = {
+		geometry = light_2
+		material = light 
+	}
+
+	# Floor
+	floor_1 = {
+		geometry = floor_1
+		material = white
+	}
+
+	floor_2 = {
+		geometry = floor_2
+		material = white
+	}
+
+	# Ceiling
+	ceiling_1 = {
+		geometry = ceiling_1
+		material = white
+	}
+
+	ceiling_2 = {
+		geometry = ceiling_2
+		material = white
+	}
+
+	# Back wall
+	back_wall_1 = {
+		geometry = back_wall_1
+		material = white
+	}
+
+	back_wall_2 = {
+		geometry = back_wall_2
+		material = white
+	}
+
+	# Left wall
+	left_wall_1 = {
+		geometry = left_wall_1
+		material = red
+	}
+
+	left_wall_2 = {
+		geometry = left_wall_2
+		material = red
+	}
+	
+	# Right wall
+	right_wall_1 = {
+		geometry = right_wall_1
+		material = green
+	}
+	
+	right_wall_2 = {
+		geometry = right_wall_2
+		material = green
+	}
+
+	# Short box
+	short_block_1_1 = {
+		geometry = short_block_1_1
+		material = white
+	}
+	
+	short_block_1_2 = {
+		geometry = short_block_1_2
+		material = white
+	}
+		
+	short_block_2_1 = {
+		geometry = short_block_2_2
+		material = white
+	}
+
+	short_block_2_2 = {
+		geometry = short_block_2_2
+		material = white
+	}
+		
+	short_block_3_1 = {
+		geometry = short_block_3_1
+		material = white
+	}
+	
+	short_block_3_2 = {
+		geometry = short_block_3_2
+		material = white
+	}
+		
+	short_block_4_1 = {
+		geometry = short_block_4_1
+		material = white
+	}
+	
+	short_block_4_2 = {
+		geometry = short_block_4_2
+		material = white
+	}
+			
+	short_block_5_1 = {
+		geometry = short_block_5_1
+		material = white
+	}
+
+	short_block_5_2 = {
+		geometry = short_block_5_2
+		material = white
+	}
+
+	# Tall box
+	tall_block_1_1 = {
+		geometry = tall_block_1_1
+		material = white
+	}
+
+	tall_block_1_2 = {
+		geometry = tall_block_1_2
+		material = white
+	}
+
+	tall_block_2_1 = {
+		geometry = tall_block_2_1
+		material = white
+	}
+
+	tall_block_2_2 = {
+		geometry = tall_block_2_2
+		material = white
+	}
+
+	tall_block_3_1 = {
+		geometry = tall_block_3_1
+		material = white
+	}
+
+	tall_block_3_2 = {
+		geometry = tall_block_3_2
+		material = white
+	}
+
+	tall_block_4_1 = {
+		geometry = tall_block_4_1
+		material = white
+	}
+
+	tall_block_4_2 = {
+		geometry = tall_block_4_2
+		material = white
+	}
+
+	tall_block_5_1 = {
+		geometry = tall_block_5_1
+		material = white
+	}
+
+	tall_block_5_2 = {
+		geometry = tall_block_5_2
+		material = white
+	}
+}

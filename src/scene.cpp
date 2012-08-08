@@ -28,123 +28,252 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <iostream>
-#include <iomanip>
 
-#include "nmath/vector.h"
-#include "nmath/geometry.h"
-#include "nparse/util.hpp"
+#include <ncf/util.hpp>
+#include <nmesh/calcnormals.hpp>
+#include <nmesh/obj.hpp>
 
-#include "scene.hpp"
+#include <nmath/vector.h>
+#include <nmath/geometry.h>
+#include <nmath/sphere.h>
+#include <nmath/plane.h>
+#include <nmath/triangle.h>
+#include "mesh.hpp"
 #include "proto.h"
+#include "log.hpp"
+#include "scene.hpp"
 
-Scene::Scene(const char *filepath): 
-		camera(new Camera()),
-		k_ambient(0.1),
-		source(filepath),
-		data(filepath)
+using NMath::Vector2f;
+using NMath::Vector3f;
+using NMath::Geometry;
+using NMath::Plane;
+using NMath::Triangle;
+using NMath::Sphere;
+using NCF::Util::path_comp;
+using NCF::Util::trim;
+using NCF::Util::split;
+using NCF::Util::to_double;
+using NCF::Util::to_bool;
+
+// Private constructor & assignment operator.
+// They are not implemented but declared private
+// for the time being.
+Scene::Scene(const Scene &)
+{}
+
+Scene &Scene::operator =(const Scene &)
+{
+	return *this;
+}
+
+Scene::Scene()
+	: camera(new Camera())
 {}
 
 Scene::~Scene()
 {
-	cleanup();
+	release();
 }
 
-void Scene::cleanup()
+const char *Scene::source()
 {
+	return m_source.c_str();
+}
 
-	std::cout << "Cleaning up..\n";
+void Scene::release()
+{
+	Log::handle().log_message("Cleaning up..");
 
 	// Release the lights
-	if(!light.empty())
-	{
-		std::cout << "Releasing the lights..\n";
-		for (std::map<std::string, Light *>::iterator it = light.begin(); it != light.end(); it++)
+	if(!m_lights.empty()) {
+		Log::handle().log_message("Releasing the lights..");
+		for (std::map<std::string, Light *>::iterator it = m_lights.begin(); it != m_lights.end(); ++it) {
 			delete (*it).second;
+		}
+		m_lights.clear();
 	}
-
+	
 	// Release the materials
-	if(!material.empty())
-	{
-		std::cout << "Releasing the materials..\n";
-		for (std::map<std::string, Material *>::iterator it = material.begin(); it != material.end(); it++)
+	if(!m_materials.empty()) {
+		Log::handle().log_message("Releasing the materials..");
+		for (std::map<std::string, Material *>::iterator it = m_materials.begin(); it != m_materials.end(); ++it) {
 			delete (*it).second;
+		}
+		m_materials.clear();
+	} 
+
+	// Release the textures
+	if(!m_textures.empty()) {
+		Log::handle().log_message("Releasing the textures..");
+		for (std::map<std::string, Texture2D *>::iterator it = m_textures.begin(); it != m_textures.end(); ++it) {
+			delete (*it).second;
+		}
+		m_textures.clear();
 	} 
 
 	// Release the geometry
-	if(!geometry.empty())
-	{
-		std::cout << "Releasing the geometry..\n";
-		for (std::map<std::string, Geometry *>::iterator it = geometry.begin(); it != geometry.end(); it++)
+	if(!m_geometry.empty()) {
+		Log::handle().log_message("Releasing the geometry..");
+		for (std::map<std::string, Geometry *>::iterator it = m_geometry.begin(); it != m_geometry.end(); ++it) {
 			delete (*it).second;
+		}
+		m_geometry.clear();
 	}
 
 	// Release the objects
-	if(!object.empty())
-	{
-		std::cout << "Releasing the objects..\n";
-		for (std::map<std::string, Object *>::iterator it = object.begin(); it != object.end(); it++)
+	if(!m_objects.empty()) {
+		Log::handle().log_message("Releasing the objects..");
+		for (std::map<std::string, Object *>::iterator it = m_objects.begin(); it != m_objects.end(); ++it) {
 			delete (*it).second;
+		}
+		m_objects.clear();
 	} 
 
 	// Release the camera
-	std::cout << "Releasing the camera..\n";
+	Log::handle().log_message("Releasing the camera..");
 	delete camera;
 	camera = NULL;
 }
 
-unsigned int Scene::init()
+unsigned int Scene::destroy_camera(const char *name)
 {
-	std::cout << "Initiating the scene..\n";
+	std::map<std::string, Camera *>::iterator it = m_cameras.find(name);
 
-	// Load the scene file and parse it
-	std::cout << "Parsing file.. \n";
-	if(data.parse())
-	{
-		std::cerr << "Error: Failed to parse the scene file.\n";
+	if (it == m_cameras.end())
+	    return 1;
+
+	delete (*it).second;
+	m_cameras.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::destroy_light(const char *name)
+{
+	std::map<std::string, Light *>::iterator it = m_lights.find(name);
+
+	if (it == m_lights.end())
+	    return 1;
+
+	delete (*it).second;
+	m_lights.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::destroy_material(const char *name)
+{
+	std::map<std::string, Material *>::iterator it = m_materials.find(name);
+
+	if (it == m_materials.end())
+	    return 1;
+
+	delete (*it).second;
+	m_materials.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::destroy_texture(const char *name)
+{
+	std::map<std::string, Texture2D *>::iterator it = m_textures.find(name);
+
+	if (it == m_textures.end())
+	    return 1;
+
+	delete (*it).second;
+	m_textures.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::destroy_geometry(const char *name)
+{
+	std::map<std::string, Geometry *>::iterator it = m_geometry.find(name);
+
+	if (it == m_geometry.end())
+	    return 1;
+
+	delete (*it).second;
+	m_geometry.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::destroy_object(const char *name)
+{
+	std::map<std::string, Object *>::iterator it = m_objects.find(name);
+
+	if (it == m_objects.end())
+	    return 1;
+
+	delete (*it).second;
+	m_objects.erase(it);
+
+	return 0;
+}
+
+unsigned int Scene::load(const char *filename)
+{
+	Log::handle().log_message("Loading scene [%s]..", filename);
+	m_scene.source(filename);
+
+	if (m_scene.parse())  {
+		Log::handle().log_error("Failed to parse the scene script.");
 		return 1;
 	}
+
 	return 0;
 }
 
 unsigned int Scene::build()
 {
-	std::cout << "Setting up the scene environment..\n";
+	Log::handle().log_message("Setting up the scene environment..");
+
 	// Start populating the lists
 	unsigned int count = 0;
 
-	set_ambient();			// Set the scene ambient color
+	scalar_t r, g, b, k;
+	r = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_R));
+	g = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_G));
+	b = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_B));
+ 	k = to_double(m_scene.get(XTPROTO_PROP_KAMBN));
+
+	m_ambient = ColorRGBf(r, g, b) * (k < 0.f ? 0.f : k);
 
 	std::list<std::string> sections;
-	sections.push_back(XT_CFGPROTO_NODE_LIGHT);
-	sections.push_back(XT_CFGPROTO_NODE_MATERIAL);
-	sections.push_back(XT_CFGPROTO_NODE_GEOMETRY);
-	sections.push_back(XT_CFGPROTO_NODE_OBJECT);
+	sections.push_back(XTPROTO_NODE_LIGHT);
+	sections.push_back(XTPROTO_NODE_MATERIAL);
+	sections.push_back(XTPROTO_NODE_TEXTURE);
+	sections.push_back(XTPROTO_NODE_GEOMETRY);
+	sections.push_back(XTPROTO_NODE_OBJECT);
 
 	std::list<std::string>::iterator it;
 
-	std::cout << "Building scene data..\n";
+	Log::handle().log_message("Building the scene objects..");
 
 	for (it = sections.begin(); it != sections.end(); it++)
 	{
 		// Populate the groups
-		count = data.group((*it).c_str())->count_groups();
+		count = m_scene.group((*it).c_str())->count_groups();
 		if (count)
 		{
-			std::cout << "-> section: " << (*it).c_str() << "\n";
+			Log::handle().log_message("Processing section: %s", (*it).c_str());
 			for (unsigned int i = 1; i<= count; i++)
 			{
-				NCF1 *lnode = data.group((*it).c_str())->group(i);
+				NCF1 *lnode = m_scene.group((*it).c_str())->group(i);
 
 				// Handle node
-				if (!(*it).compare(XT_CFGPROTO_NODE_OBJECT))
-					add_object(lnode);
-				else if (!(*it).compare(XT_CFGPROTO_NODE_LIGHT))
-					add_light(lnode);
-				else if (!(*it).compare(XT_CFGPROTO_NODE_MATERIAL))
-					add_material(lnode);
-				else if (!(*it).compare(XT_CFGPROTO_NODE_GEOMETRY))
-					add_geometry(lnode);
+				if (!(*it).compare(XTPROTO_NODE_OBJECT))
+					create_object(lnode);
+				else if (!(*it).compare(XTPROTO_NODE_LIGHT))
+					create_light(lnode);
+				else if (!(*it).compare(XTPROTO_NODE_MATERIAL))
+					create_material(lnode);
+				else if (!(*it).compare(XTPROTO_NODE_TEXTURE))
+					create_texture(lnode);
+				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY))
+					create_geometry(lnode);
 			}
 		}
 	}
@@ -152,110 +281,22 @@ unsigned int Scene::build()
 	return 0;
 }
 
-unsigned int Scene::analyze()
+const ColorRGBf &Scene::ambient()
 {
-	std::cout << "Analyzing scene data..\n";
-	/* Print statistics */
-	std::string pad = "    ";
-	std::string name = data.get(XT_CFGPROTO_PROP_NAME);
-	std::string info = data.get(XT_CFGPROTO_PROP_DESCRIPTION);
-
-	if(!name.empty())
-		std::cout 
-			<< "Name: " << data.get(XT_CFGPROTO_PROP_NAME) << '\n';
-
-	if(!info.empty())
-		std::cout
-			<< "Info: " << data.get(XT_CFGPROTO_PROP_DESCRIPTION) << "\n";
-
-	std::string l;
-	unsigned int c = 0;
-
-	std::list<std::string> nodes;
-
-	nodes.push_back(XT_CFGPROTO_NODE_CAMERA);
-	nodes.push_back(XT_CFGPROTO_NODE_MATERIAL);
-	nodes.push_back(XT_CFGPROTO_NODE_LIGHT);
-	nodes.push_back(XT_CFGPROTO_NODE_GEOMETRY);
-	nodes.push_back(XT_CFGPROTO_NODE_OBJECT);
-
-	unsigned int n = nodes.size();
-
-	unsigned int padl = pad.length();
-	while(padl--) std::cout << '-';
-	std::cout << '.' << '\n';
-
-	std::cout << pad << "|\n";
-
-	for (std::list<std::string>::iterator it = nodes.begin(); it != nodes.end(); it++)
-	{
-		n--;
-		std::string node = (*it);
-		c = data.group(node.c_str())->count_groups();
-		if (c)
-		{
-			std::cout 
-				<< pad << (n ? "|" : "'")
-				<< "-> [" << c << "] " 
-				<< node 
-				<< "\n";
-
-			for (unsigned int i = 1; i <= c; i++)
-			{
-				std::cout
-					<< pad
-					<< (n ? "|" : " ") << pad
-					<< (i == c ? "'" : "|") << "-> " 
-					<< data.group(node.c_str())->group(i)->node();
-
-				if (!node.compare(XT_CFGPROTO_NODE_MATERIAL) || !node.compare(XT_CFGPROTO_NODE_GEOMETRY))
-					std::cout
-						<< "\n"	<< pad << (n ? "|" : " ")
-						<< pad << (i == c ? " " : "|")
-						<< pad << "type: "
-						<<  data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_TYPE);
-				else if (!node.compare(XT_CFGPROTO_NODE_OBJECT))
-					std::cout
-						<< "\n"	<< pad << (n ? "|" : " ")
-						<< pad << (i == c ? " " : "|")
-						<< pad << "geometry: "
-						<< data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_GEOMETRY)
-						<< "\n"	<< pad << (n ? "|" : " ")
-						<< pad << (i == c ? " " : "|")
-						<< pad << "material: "
-						<< data.group(node.c_str())->group(i)->get(XT_CFGPROTO_PROP_MATERIAL);
-				// TODO: Here list each item's properties
-				
-				std::cout << "\n";
-			}
-
-			std::cout << (n?pad:"") << (n ? "|" : "") << (n?"\n":"");
-		}
-	}
-
-	return 0;
+	return m_ambient;
 }
 
-unsigned int Scene::set_ambient()
+void Scene::ambient(const ColorRGBf &ambient)
 {
-	std::string r, g, b, k;
-	r = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_R);
-	g = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_G);
-	b = data.group(XT_CFGPROTO_PROP_AMBIENT)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-	k = data.get(XT_CFGPROTO_PROP_KAMBN);
-
-	ambient = Vector3(nstring_to_double(r), nstring_to_double(g), nstring_to_double(b));
-	k_ambient = nstring_to_double(k);
-	return 0;
+	m_ambient = ambient;
 }
 
 unsigned int Scene::set_camera(const char *name)
 {
 	// Check if there are no cameras in the scene
-	if(data.group(XT_CFGPROTO_NODE_CAMERA)->count_groups() < 1)
+	if(m_scene.group(XTPROTO_NODE_CAMERA)->count_groups() < 1)
 	{
-		std::cout << "No cameras were specified. Nothing to render..\n";
+		Log::handle().log_message("No cameras were specified. Nothing to render..");
 		return 1;
 	}
 
@@ -270,440 +311,414 @@ unsigned int Scene::set_camera(const char *name)
 
 	if (dcam.empty())
 	{
-		dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->get(XT_CFGPROTO_PROP_DEFAULT);
+		dcam = m_scene.group(XTPROTO_NODE_CAMERA)->get(XTPROTO_PROP_DEFAULT);
 		if (dcam.empty())
 		{
-			std::cout << "Warning: No default camera was specified.\n";
-			dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->group(1)->node();
+			Log::handle().log_message("No default camera was specified.");
+			dcam = m_scene.group(XTPROTO_NODE_CAMERA)->group(1)->name();
 		}   
 	}
 
 	// Check if camera exists
-	if(!data.group(XT_CFGPROTO_NODE_CAMERA)->query_group(dcam.c_str()))
+	if(!m_scene.group(XTPROTO_NODE_CAMERA)->query_group(dcam.c_str()))
 	{
-		std::cout << "Invalid camera: " << dcam << "\n";
-		dcam = data.group(XT_CFGPROTO_NODE_CAMERA)->group(1)->node();
+		Log::handle().log_warning("Invalid camera: %s", dcam.c_str());
+		dcam = m_scene.group(XTPROTO_NODE_CAMERA)->group(1)->name();
 	}   
 
-	std::cout << "Using camera: " << dcam << "\n";
+	Log::handle().log_message("Using camera: %s", dcam.c_str());
 
 	// extract the camera properties
 	// fov
-	std::string f = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FOV);
-	scalar_t fov = nstring_to_double(f);
+	std::string f = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XTPROTO_PROP_FOV);
+	scalar_t fov = to_double(f);
 
 	// position
-	std::string x = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
-	std::string y = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
-	std::string z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
-	Vector3 pos(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
+	std::string x = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_X);
+	std::string y = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Y);
+	std::string z = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Z);
+	Vector3f pos(to_double(x), to_double(y), to_double(z));
 
 	// target
-	x = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_TARGET)->get(XT_CFGPROTO_PROP_COORD_X);
-	y = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_TARGET)->get(XT_CFGPROTO_PROP_COORD_Y);
-	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_TARGET)->get(XT_CFGPROTO_PROP_COORD_Z);
-	Vector3 targ(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
+	x = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_TARGET)->get(XTPROTO_PROP_CRD_X);
+	y = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_TARGET)->get(XTPROTO_PROP_CRD_Y);
+	z = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_TARGET)->get(XTPROTO_PROP_CRD_Z);
+	Vector3f targ(to_double(x), to_double(y), to_double(z));
 
 	// up vector
-	x = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_X);
-	y = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_Y);
-	z = data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XT_CFGPROTO_PROP_UP)->get(XT_CFGPROTO_PROP_COORD_Z);
-	Vector3 up(nstring_to_double(x), nstring_to_double(y), nstring_to_double(z));
+	x = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_UP)->get(XTPROTO_PROP_CRD_X);
+	y = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_UP)->get(XTPROTO_PROP_CRD_Y);
+	z = m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->group(XTPROTO_PROP_UP)->get(XTPROTO_PROP_CRD_Z);
+	Vector3f up(to_double(x), to_double(y), to_double(z));
 
 	// aperture
-	scalar_t app = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_APERTURE));
-
-	// shutter
-	scalar_t shut = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_SHUTTER));
+	scalar_t app = to_double(m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XTPROTO_PROP_APERTURE));
 
 	// focal length
-	scalar_t flength = nstring_to_double(data.group(XT_CFGPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XT_CFGPROTO_PROP_FLENGTH));
+	scalar_t flength = to_double(m_scene.group(XTPROTO_NODE_CAMERA)->group(dcam.c_str())->get(XTPROTO_PROP_FLENGTH));
 
-	// cleanup the previous camera if needed
+	// release the previous camera if needed
 	if (camera)
 		delete camera;
 
 	// create the camera
-	camera = new Camera(pos, targ, up, fov, app, flength, shut);
+	camera = new Camera(pos, targ, up, fov, app, flength);
 
 	return 0;
 }
 
-unsigned int Scene::add_light(NCF1 *p)
+unsigned int Scene::create_light(NCF1 *p)
 {
-	// extract the light properties
-	// position
-	std::string posx = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
-	std::string posy = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
-	std::string posz = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
+	if (!p)
+		return 1;
 
-	// intensity
-	std::string r = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_R);
-	std::string g = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_G);
-	std::string b = p->group(XT_CFGPROTO_PROP_INTENSITY)->get(XT_CFGPROTO_PROP_COLOR_B);
+	// Extract the properties.
+	scalar_t posx = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_X));
+	scalar_t posy = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Y));
+	scalar_t posz = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Z));
+	
+	scalar_t colr = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_R));
+	scalar_t colg = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_G));
+	scalar_t colb = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_B));
 
-	// Create the light
-	Light *tlight = new Light();
+	std::string type = p->get(XTPROTO_PROP_TYPE);
 
-	tlight->position = 
-		Vector3(nstring_to_double(posx), 
-				nstring_to_double(posy), 
-				nstring_to_double(posz));
-	tlight->intensity = 
-		Vector3(nstring_to_double(r),
-				nstring_to_double(g),
-				nstring_to_double(b));
+	Light *light = NULL;
 
-	light[p->node()] = tlight;
+	if (!type.compare(XTPROTO_LTRL_POINTLIGHT)) {
+		light = new (std::nothrow) PointLight;
 
-	return 0;
+		if (!light)
+			return 2;
+	}
+	else if (!type.compare(XTPROTO_LTRL_SPHERELIGHT)) {
+		light = new (std::nothrow) SphereLight;
+		if (!light)
+			return 2;
+		
+		scalar_t radius = (scalar_t)to_double(p->get(XTPROTO_PROP_RADIUS));
+		((SphereLight *)light)->radius(radius);
+	}
+	else if (!type.compare(XTPROTO_LTRL_BOXLIGHT)) {
+		light = new (std::nothrow) BoxLight;
+
+		scalar_t dimx = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_X)); 
+		scalar_t dimy = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_Y));
+		scalar_t dimz = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_Z));
+
+		((BoxLight *)light)->dimensions(Vector3f(dimx, dimy, dimz));
+
+		if (!light)
+			return 2;
+	}
+	else {
+		Log::handle().log_warning("Unsupported light type %s [%s]. Skipping..", p->name(), type.c_str());
+		return 2;
+	}
+
+	// Set the common properties.
+	light->position(Vector3f(posx, posy, posz));
+	light->intensity(ColorRGBf(colr, colg, colb));
+
+	// Destroy the old instance (if one exists).
+	unsigned int res = destroy_light(p->name());
+
+	// Add it to the list.
+	m_lights[p->name()] = light;
+
+	return res ? 0 : 3;
 }
 
-#include "nmath/sphere.h"
-#include "nmath/plane.h"
-#include "nmath/triangle.h"
-#include "mesh.hpp"
-
-unsigned int Scene::add_geometry(NCF1 *p)
+unsigned int Scene::create_geometry(NCF1 *p)
 {
-	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
+	if (!p)
+		return 1;
 
-	Geometry *geo = NULL;
+	Geometry *geometry = NULL;
 
-	// sphere
-	if (!type.compare(XT_CFGPROTO_VAL_SPHERE))
-	{
-		geo = new Sphere();
+	std::string type = p->get(XTPROTO_PROP_TYPE);
 
-		std::string x, y, z, r;
+	// - Plane.
+	if (!type.compare(XTPROTO_LTRL_PLANE)) {
+		scalar_t normx		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_X));
+		scalar_t normy 		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_Y));
+		scalar_t normz		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_Z));
+		scalar_t distance 	= (scalar_t)to_double(p->get(XTPROTO_PROP_DISTANCE));
 
-		x = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_X);
-		y = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Y);
-		z = p->group(XT_CFGPROTO_PROP_POSITION)->get(XT_CFGPROTO_PROP_COORD_Z);
-		r = p->get(XT_CFGPROTO_PROP_RADIUS);
+		geometry = new (std::nothrow) Plane;
 
-		// set the position
-		((Sphere*)geo)->origin = Vector3(
-			nstring_to_double(x), 
-			nstring_to_double(y), 
-			nstring_to_double(z));
+		if(!geometry)
+			return 2;
 
-		// set the radius
-		((Sphere *)geo)->radius = nstring_to_double(r);
+		// Set the properties.
+		((Plane *)geometry)->normal = Vector3f(normx, normy, normz);
+		((Plane *)geometry)->distance = distance;
 	}
-	// plane
-	else if (!type.compare(XT_CFGPROTO_VAL_PLANE))
-	{
-		geo = new Plane();
+	// - Sphere.
+	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
+		scalar_t posx	= (scalar_t)to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_X));
+		scalar_t posy	= (scalar_t)to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Y));
+		scalar_t posz	= (scalar_t)to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Z));
+		scalar_t radius	= (scalar_t)to_double(p->get(XTPROTO_PROP_RADIUS));
 
-		std::string x, y, z, d;
+		geometry = new (std::nothrow) Sphere;
 
-		x = p->group(XT_CFGPROTO_PROP_NORMAL)->get(XT_CFGPROTO_PROP_COORD_X);
-		y = p->group(XT_CFGPROTO_PROP_NORMAL)->get(XT_CFGPROTO_PROP_COORD_Y);
-		z = p->group(XT_CFGPROTO_PROP_NORMAL)->get(XT_CFGPROTO_PROP_COORD_Z);
-		d = p->get(XT_CFGPROTO_PROP_DISTANCE);
+		if(!geometry)
+			return 2;
+		
+		// set the properties.
+		((Sphere *)geometry)->origin = Vector3f(posx, posy, posz);
+		((Sphere *)geometry)->radius = radius;
+	}	
+	// - Triangle.
+	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
+		geometry = new (std::nothrow) Triangle;
 
-		// set the normal
-		((Plane *)geo)->normal = Vector3(
-			nstring_to_double(x), 
-			nstring_to_double(y), 
-			nstring_to_double(z));
+		if(!geometry)
+			return 2;
+		
+		for (unsigned int i = 1; i <= 3; i++) {
+			NCF1 *vnode = p->group(XTPROTO_PROP_VRTXDATA)->group(i);
 
-		// set the distance
-		((Plane *)geo)->distance = nstring_to_double(d);
-	}
-	// triangle
-	else if (!type.compare(XT_CFGPROTO_VAL_TRIANGLE))
-	{
-		geo = new Triangle();
+			scalar_t px = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_X));
+			scalar_t py = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Y));
+			scalar_t pz = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Z));
+			scalar_t tu = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_U));
+			scalar_t tv = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_V));
 
-		std::string x, y, z, d;
-
-		unsigned int c = p->group(XT_CFGPROTO_PROP_VECDATA)->count_groups();
-
-		if (c != 3)
-		{
-			std::cout 
-				<< "Error: Geometry " << p->node()  
-				<< " provided " << c << " vertices for a triangle.\n";
-
-			delete geo;
-			return 1;
-		}
-
-		for (unsigned int i = 1; i < c+1; i++)
-		{
-			x = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_X);
-			y = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Y);
-			z = p->group(XT_CFGPROTO_PROP_VECDATA)->group(i)->get(XT_CFGPROTO_PROP_COORD_Z);
-
-			((Triangle *)geo)->v[i-1] = 
-					Vector3(nstring_to_double(x),
-							nstring_to_double(y),
-							nstring_to_double(z));
+			((Triangle *)geometry)->v[i-1] = Vector3f(px, py, pz);
+			((Triangle *)geometry)->tc[i-1] = Vector2f(tu, tv);
 		}
 	}
-	// mesh
-	else if (!type.compare(XT_CFGPROTO_VAL_MESH))
-	{
-		geo = new Mesh();
+	// - Mesh
+	else if (!type.compare(XTPROTO_LTRL_MESH)) {
+		geometry = new (std::nothrow) Mesh;
 		
 		// Smooth surface
-		bool smooth = false;
-		std::string shading = p->get(XT_CFGPROTO_PROP_SMOOTH);
-
-		if (!shading.compare(XT_CFGPROTO_VAL_TRUE))
-			smooth = true;
-		else if (!shading.compare(XT_CFGPROTO_VAL_FALSE)) 
-			smooth = false;
-		else
-			std::cout 
-				<< "Warning: [" 
-				<<  p->node() 
-				<< "->" 
-				<< XT_CFGPROTO_PROP_SMOOTH << "] invalid value: " 
-				<<  p->get(XT_CFGPROTO_PROP_SMOOTH) << "\n";
+		bool smooth = to_bool(p->get(XTPROTO_PROP_SMOOTH));
 		
 		// Data source
-		std::string f = p->get(XT_CFGPROTO_PROP_SOURCE);
+		std::string f = p->get(XTPROTO_PROP_SOURCE);
 
 		// Open source file from relative path
 		std::string base, file;
-		nstring_path_comp(data.get_source(), base, file);
+		path_comp(m_scene.source(), base, file);
 		base.append(f);
 
-		std::cout << "Loading data from " << base << "..\n";
-		std::fstream in(base.c_str(), std::ios::in);
+		Log::handle().log_message("Loading data from %s", base.c_str());
 
-		// Check for errors
-		if (!in.good())
+		if (NMesh::IO::Import::obj(base.c_str(), dynamic_cast<NMesh::Mesh &>(*geometry)))
 		{
-			std::cout << "Warning: Failed to load mesh from " << f << ".\n";
-			delete geo;
+			Log::handle().log_warning("Failed to load mesh from %s", f.c_str());
+			delete geometry;
 			return 1;
 		}
 
-		std::string line;
-		unsigned int linec = 0;
-
-		while (getline(in, line))
-		{
-			linec++;
-
-			if(!line[0] || line[0] == '#') 
-			{
-				continue;
-			}
-
-			// Temporary buffers
-			int vidx[3];
-			float x, y, z;
-			Vector3 vec;
-			Vertex vertex;
-
-			// Trim line off spaces
-			nstring_trim(line);
-			// Parse
-			switch(line[0])
-			{
-				// vertices
-				case 'v':
-					if(sscanf(line.c_str(), "v %f %f %f", &x, &y, &z) < 3)
-					{
-						std::cout << "Syntax error in " << f << " at line " << linec << ".\n";
-						delete geo;
-						in.close();
-						return 1;
-					}
-					vertex.position = Vector3(x, y, z);
-					((Mesh *)geo)->vertices.push_back(vertex);
-					break;
-				// faces
-				case 'f':
-					int res = sscanf(line.c_str(), "f %d %d %d", vidx, vidx + 1, vidx + 2);
-					if(res != 3)
-					{
-						std::cout << "Syntax error in " << base << " at line " << linec << ".\n";
-						delete geo;
-						in.close();
-						return 1;
-					}
-
-					Face face;
-					
-					for(unsigned int i = 0; i < 3; i++)
-					{
-						face.v[i] = vidx[i] -1;
-					}
-
-					((Mesh *)geo)->faces.push_back(face);
-
-					break;
-			}
+		if (smooth) {
+			Log::handle().log_message("Recalculating normals..");
+			NMesh::Mutator::calc_normals(dynamic_cast<NMesh::Mesh &>(*geometry));
 		}
-		in.close();
 
-		if (smooth)
-		{
-			// calculate vertex normal 
-			std::cout << "Calculating vertex normals..\n";
-			((Mesh*)geo)->calc_vertex_normals();
-		}
+		Log::handle().log_message("Building octree..");
+		((Mesh *)geometry)->build_octree();
 	}
 	// unknown
-	else
-	{
-		std::cout << "Warning: Unsupported type " << p->node() << " [ " << type << " ]";
-
-		if (!type.empty())
-		{
-			std::cout << ": " << type ;
-		}
-
-		std::cout << ". Ingoring..\n";
-
+	else {
+		Log::handle().log_warning("Unsupported geometry type %s [%s]. Skipping..", p->name(), type.c_str());
 		return 1;
 	}
-
-	geo->calc_aabb();
-	geometry[p->node()] = geo;
-
-	return 0;
-}
-
-unsigned int Scene::add_material(NCF1 *p)
-{
-	std::string type = p->get(XT_CFGPROTO_PROP_TYPE);
-
-	Material *mat = new Material();
-
-	std::string colr, colg, colb;
-
-	if (!type.compare(XT_CFGPROTO_VAL_LAMBERT))
-	{
-		mat->type = MATERIAL_LAMBERT;
-	}
-	else if (!type.compare(XT_CFGPROTO_VAL_PHONG))
-	{
-		mat->type = MATERIAL_PHONG;
-	}
-	else if (!type.compare(XT_CFGPROTO_VAL_BLINNPHONG))
-	{
-		mat->type = MATERIAL_BLINNPHONG;
-	}
-	else
-	{
-		std::cout << "Warning: Unsupported material " << p->node() << ". Skipping...\n";
-		delete mat;
-		return 1;
-	}
-
-	// common properties
-	if (mat)
-	{
-		// specular intensity
-		colr = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_SPECULAR)->get(XT_CFGPROTO_PROP_COLOR_B);
-
-		mat->specular = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
-
-		// specular constant
-		mat->kspec = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSPEC));
-		// diffuse constant
-		mat->kdiff = nstring_to_double(p->get(XT_CFGPROTO_PROP_KDIFF));
-		// specular exponential
-		mat->ksexp = nstring_to_double(p->get(XT_CFGPROTO_PROP_KSEXP));
-
-		// diffuse intensity
-		colr = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_R);
-		colg = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_G);
-		colb = p->group(XT_CFGPROTO_PROP_DIFFUSE)->get(XT_CFGPROTO_PROP_COLOR_B);
-		
-		mat->diffuse = 
-			Vector3(nstring_to_double(colr), 
-					nstring_to_double(colg), 
-					nstring_to_double(colb));
 	
-		// reflectance
-		std::string refl = p->get(XT_CFGPROTO_PROP_REFLECTANCE);
-		mat->reflectance = nstring_to_double(refl);
-		
-		if (mat->reflectance > 1.0)
-			mat->reflectance = 1.0;
-		else if (mat->reflectance < 0.0)
-			mat->reflectance = 0.0;
+	scalar_t u_scale = (scalar_t)to_double(p->get(XTPROTO_PROP_USCALE));
+	scalar_t v_scale = (scalar_t)to_double(p->get(XTPROTO_PROP_VSCALE));
+	geometry->uv_scale = Vector2f(u_scale, v_scale);
 
-		// transparency
-		std::string transp = p->get(XT_CFGPROTO_PROP_TRANSPARENCY);
-		mat->transparency = nstring_to_double(transp);
+	geometry->calc_aabb();
 
-		if (mat->transparency > 1.0)
-			mat->transparency = 1.0;
-		else if (mat->transparency < 0.0)
-			mat->transparency = 0.0;
-		
-		// index of refraction
-		std::string ior = p->get(XT_CFGPROTO_PROP_IOR);
-		mat->ior = nstring_to_double(ior);
-	}
+	// Destroy the old instance (if one exists).
+	unsigned int res = destroy_geometry(p->name());
 
-	material[p->node()] = mat;
-
-	return 0;
+	// Add it to the list.
+	m_geometry[p->name()] = geometry;
+	
+	return res ? 0 : 3;
 }
 
-unsigned int Scene::add_object(NCF1 *p)
+unsigned int Scene::create_material(NCF1 *p)
 {
-	std::string comp;
-	Object *tobj = new Object;
+	if (!p)
+		return 1;
 
-	// Set the geometry
-	comp = p->get(XT_CFGPROTO_PROP_GEOMETRY);
-	if(geometry.find(comp)!=geometry.end())
-	{
-		tobj->geometry = comp;
+	Material *material = new (std::nothrow) Material;
+
+	if (!material)
+		return 2;
+
+	std::string type = p->get(XTPROTO_PROP_TYPE);
+
+	if (!type.compare(XTPROTO_LTRL_LAMBERT)) {
+		material->type = MATERIAL_LAMBERT;
 	}
-	else
-	{
-		std::cerr 
-			<< "Warning: At object: " << p->node() 
-			<<  " geometry " << comp << " does not exist. Skipping.\n";
-		delete tobj;
+	else if (!type.compare(XTPROTO_LTRL_PHONG)) {
+		material->type = MATERIAL_PHONG;
+	}
+	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) {
+		material->type = MATERIAL_BLINNPHONG;
+	}
+	else {
+		Log::handle().log_warning("Unsupported material %s. Skipping..", p->name());
+		delete material;
 		return 1;
 	}
 
-	// Set the material
-	comp = p->get(XT_CFGPROTO_PROP_MATERIAL);
-	if(material.find(comp)!=material.end())
-	{
-		tobj->material = comp;
-	}
-	else
-	{
-		std::cerr
-			<< "Warning: At object: " << p->node() 
-			<<  " material " << comp << " does not exist. Skipping.\n";
-		delete tobj;
-		return 1;
-	}
-	object[p->node()] = tobj;
+	// ambient intensity
+	scalar_t ambr = (scalar_t)to_double(p->group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_R));
+	scalar_t ambg = (scalar_t)to_double(p->group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_G));
+	scalar_t ambb = (scalar_t)to_double(p->group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_B));
 
-	return 0;
+	material->ambient = ColorRGBf(ambr, ambg, ambb);
+
+	// specular intensity
+	scalar_t specr = (scalar_t)to_double(p->group(XTPROTO_PROP_ISPEC)->get(XTPROTO_PROP_COL_R));
+	scalar_t specg = (scalar_t)to_double(p->group(XTPROTO_PROP_ISPEC)->get(XTPROTO_PROP_COL_G));
+	scalar_t specb = (scalar_t)to_double(p->group(XTPROTO_PROP_ISPEC)->get(XTPROTO_PROP_COL_B));
+
+	material->specular = ColorRGBf(specr, specg, specb);
+
+	material->kspec = (scalar_t)to_double(p->get(XTPROTO_PROP_KSPEC));
+	material->kdiff = (scalar_t)to_double(p->get(XTPROTO_PROP_KDIFF));
+	material->ksexp = (scalar_t)to_double(p->get(XTPROTO_PROP_KEXPN));
+
+	// diffuse intensity
+	scalar_t diffr = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_R));
+	scalar_t diffg = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_G));
+	scalar_t diffb = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_B));
+		
+	material->diffuse = ColorRGBf(diffr, diffg, diffb);
+	
+	// reflectance
+	material->reflectance = (scalar_t)to_double(p->get(XTPROTO_PROP_REFLC));
+		
+	if (material->reflectance > 1.0)
+		material->reflectance = 1.0;
+	else if (material->reflectance < 0.0)
+		material->reflectance = 0.0;
+
+	// transparency
+	material->transparency = (scalar_t)to_double(p->get(XTPROTO_PROP_TRSPC));
+
+	if (material->transparency > 1.0)
+		material->transparency = 1.0;
+	else if (material->transparency < 0.0)
+		material->transparency = 0.0;
+		
+	// index of refraction
+	material->ior = (scalar_t)to_double(p->get(XTPROTO_PROP_IOR));
+
+	// Destroy the old material from the list if it exists.
+	unsigned int res = destroy_material(p->name());
+
+	// Add the material to the list.
+	m_materials[p->name()] = material;
+ 
+	return res ? 0 : 3;
 }
 
-bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool lights)
+unsigned int Scene::create_texture(NCF1 *p)
+{
+	if (!p)
+		return 1;
+
+	Texture2D *texture = new (std::nothrow) Texture2D;
+
+	if (!texture)
+		return 2;
+
+	std::string source = p->get(XTPROTO_PROP_SOURCE);
+
+	std::string script_source = m_scene.source();
+	std::string script_base, script_filename;
+	path_comp(script_source, script_base, script_filename);
+
+	source = script_base + source;	
+
+	Log::handle().log_message("Loading data from %s", source.c_str());
+	if (texture->load(source.c_str())) {
+		Log::handle().log_warning("Failed to load texture [%s->%s]", p->name(), source.c_str());
+
+		delete texture;
+		return 1;
+	}
+
+	// Destroy the old texture from the list if it exists.
+	unsigned int res = destroy_texture(p->name());
+
+	// Add the texture to the list.
+	m_textures[p->name()] = texture;
+
+	return res ? 0 : 3;
+
+}
+
+unsigned int Scene::create_object(NCF1 *p)
+{
+	if (!p)
+		return 1;
+
+	Object *object = new (std::nothrow) Object;
+
+	std::string n;
+	
+	n = p->get(XTPROTO_PROP_OBJ_GEO);
+	if(m_geometry.find(n) != m_geometry.end()) {
+		object->geometry = n;
+	}
+	else {
+		Log::handle().log_warning("At object: %s, geometry %s does not exist.", p->name(), n.c_str());
+		delete object;
+		return 5;
+	}
+
+	n = p->get(XTPROTO_PROP_OBJ_MAT);
+	if(m_materials.find(n) != m_materials.end()) {
+		object->material = n;
+	}
+	else {
+		Log::handle().log_warning("At object: %s, material %s does not exist.", p->name(), n.c_str());
+		delete object;
+		return 5;
+	}
+
+	n = p->get(XTPROTO_PROP_OBJ_TEX);
+
+	if (!n.empty()) {
+		if(m_textures.find(n) != m_textures.end()) {
+			object->texture = n;
+		}
+		else {
+			Log::handle().log_warning("At object: %s, texture %s does not exist.", p->name(), n.c_str());
+			delete object;
+			return 5;
+		}
+	}
+
+	// Destroy the old instance (if one exists).
+	unsigned int res = destroy_object(p->name());
+
+	// Add the object to the list
+	m_objects[p->name()] = object;
+	
+	return res ? 0 : 3;
+}
+
+bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 {
 	IntInfo test, res;
 
 	std::map<std::string, Object *>::iterator it;
-	for (it = object.begin(); it != object.end(); it++)
+	for (it = m_objects.begin(); it != m_objects.end(); it++)
 	{
 		// test all the objects and find the closest intersection
-		if((geometry[(*it).second->geometry.c_str()])->intersection(ray, &test))
+		if((m_geometry[(*it).second->geometry.c_str()])->intersection(ray, &test))
 		{
 			if(res.t > test.t)
 			{
@@ -716,60 +731,8 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj, bool l
 		}
 	}
 
-	// check for light intersections
-	if (lights)
-	{
-		std::map<std::string, Light *>::iterator itl;
-		for (itl = light.begin(); itl != light.end(); itl++)
-		{
-			Sphere light;
-			light.origin = (*itl).second->position;
-			light.radius = 10;
-			light.calc_aabb();
-			if (light.intersection(ray, &test))
-			{
-				if(res.t > test.t)
-				{
-					obj.clear();	
-				}
-			}
-		}
-	}
-
 	// copy result to info
 	memcpy(&info, &res, sizeof(info));
 
-	return info.t != NM_INFINITY ? true : false;
-}
-
-unsigned int Scene::apply_modifier(const char *reg)
-{
-	std::string m(reg);
-	std::cout << "Applying modifier: " << m ;
-
-	// Check if there is actually an asignment
-	if(m.find_last_of(':') == std::string::npos)
-	{
-		std::cout << "Warning: No value assignment. Skipping..\n";
-		return 1;
-	}
-
-	NCF1 *node = &data;
-	std::string nleft, nright;
-
-	while((m.find_first_of('.') != std::string::npos) && (m.find_first_of(':') > m.find_first_of('.')))
-	{
-		nstring_split(m, nleft, nright, '.');
-		m = nright;
-
-		// move to node
-		node = node->group(nleft.c_str());
-	}
-
-	nstring_split(m, nleft, nright, ':');
-
-	std::cout<< " [" << node->get(nleft.c_str()) << "]\n";
-	node->set(nleft.c_str(), nright.c_str());
-
-	return 0;
+	return info.t != INFINITY ? true : false;
 }

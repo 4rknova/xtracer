@@ -1,0 +1,247 @@
+# Xtracer 2
+
+title = Simple sphere
+descr = A sphere on a plane
+versn = 0.3
+
+k_ambient = 0.001
+
+ambient = {
+	r = 0
+	g = 0
+	b = 0
+}
+
+camera = {
+	default = cam2
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 800
+			y = 110
+			z = -400
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	cam2 = {
+		fov = 45
+
+		position = {
+			x = 0
+			y = 1010
+			z = -2400
+		}
+
+		target = {
+			y = 110
+			z = 200
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	cam3 = {
+		fov = 45
+
+		position = {
+			x = -900
+			y = 510
+			z = 900
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			x = 0.5
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	sphere1 = {
+		type = sphere
+		position = {
+			x = -650
+			y = 175
+			z = -300
+		}
+		radius = 175
+		
+		u_scale = 0.9
+		v_scale = -0.9
+	}
+
+	sphere2 = {
+		type = sphere
+		position = {
+			x = 234
+			y = 175
+			z = -600
+		}
+		radius = 175
+		
+		u_scale = 0.9
+		v_scale = -0.9
+	}
+	
+	sphere3 = {
+		type = sphere
+		position = {
+			x = -200
+			y = 175
+			z = 150
+		}
+		radius = 175
+		
+		u_scale = 0.9
+		v_scale = -0.9
+	}
+
+	sphere4 = {
+		type = sphere
+		position = {
+			x = 350
+			y = 175
+			z = 450
+		}
+		radius = 175
+		
+		u_scale = 0.9
+		v_scale = -0.9
+	}
+
+	plane = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 0
+		u_scale = 0.001
+		v_scale = 0.001
+	}
+}
+
+light = {
+	sat = {
+		type = box
+
+		dimensions = {
+			x = 600
+			y = 600
+			z = 600
+		}
+		
+		position = {
+			x = 400
+			y = 5000
+			z = -6400
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	floor = {
+		type = blinn_phong
+
+		k_diffuse = 0.5
+		k_specular = 0.5
+		k_exponent = 1350
+	
+		diffuse = {
+			r = 0.251
+			g = 0.251
+			b = 0.251 
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.3
+	}
+
+	plastic = {
+		type = phong
+
+		k_diffuse = 0.5
+		k_specular = 0.9
+		k_exponent = 60
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1 
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.1
+	}
+}
+
+texture = {
+	floor = {
+		source = ../media/texture/tile/2.ppm
+	}
+
+	face = {
+		source = ../media/texture/epic_smile.ppm
+	}
+}
+
+object = {
+	sphere1 = {
+		geometry = sphere1
+		material = plastic
+		texture = face
+	}
+	sphere2 = {
+		geometry = sphere2
+		material = plastic
+		texture = face
+	}
+	sphere3 = {
+		geometry = sphere3
+		material = plastic
+		texture = face
+	}
+	sphere4 = {
+		geometry = sphere4
+		material = plastic
+		texture = face
+	}
+	plane = {
+		geometry = plane
+		material = floor
+		texture = floor
+	}
+}

@@ -1,0 +1,557 @@
+# Xtracer 2
+
+title = Trophy
+descr = A box and a sphere stack
+versn = 0.4
+
+k_ambient = 0.01
+
+ambient = {
+	r = 0.6
+	g = 0.6
+	b = 0.6
+}
+
+# The scene cameras.
+camera = {
+	default = front
+
+	front = {
+		fov = 45
+
+		position = {
+			x = 190.0
+			y = 373.0
+			z = -1200.0
+		}
+
+		target = {
+			x = 190.0
+			y = 273.0
+			z = -799.0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	side = {
+		# Field of view.
+		fov = 45
+
+		# Camera position.
+		position = {
+			x = 1190.0
+			y = 873.0
+			z = 0
+		}
+
+		target = {
+			x = 190.0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+# The scene lights
+light = {
+	light_p0 = {
+		type = point
+		
+		position = {
+			x = 43.0
+			y = 238.0
+			z = 0.0
+		}
+
+		intensity = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+	}
+
+	light_p1 = {
+		type = point
+		
+		position = {
+			x = -200.0
+			y = 238.0
+			z = 0.0
+		}
+
+		intensity = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+	}
+
+	light_p2 = {
+		type = point
+		
+		position = {
+			x = 500.0
+			y = 238.0
+			z = 250.0
+		}
+
+		intensity = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+	}
+	
+	light_plow = {
+		type = point
+		
+		position = {
+			x = 0.0
+			y = 500.1
+			z = 0.0
+		}
+
+		intensity = {
+			r = 0.9
+			g = 0.9
+			b = 0.9
+		}
+	}
+}
+
+# The scene materials
+material = {
+	block = {
+		type = lambert 
+		
+		diffuse = {
+			r = 1
+			g = 1
+			b = 0.5
+		}
+	}
+
+	ball = {
+	}
+
+	floor = {
+		type = blinn_phong
+
+		reflectance = 0.3
+
+		k_diffuse = 0.2
+		k_specular = 0.8
+		k_exponent = 50000
+
+		diffuse = {
+			r = 0.1
+			g = 0.1
+			b = 0.1
+		}
+		
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	ball = {
+		type = blinn_phong
+
+		reflectance = 0.15
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 660
+
+		diffuse = {
+			r = 0.961
+			g = 0.161
+			b = 0.161
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+# The scene geometry
+geometry = {
+
+	# Floor
+	floor = {
+		type = plane 
+		normal = {
+			y = 1.0
+		}
+
+		distance = 0
+	}
+
+	# The props
+	# - Trophy
+	sphere_1 = {
+		type = sphere
+		position = {
+			x = -186.0
+			y = 100.0
+			z = -168.5
+		}
+
+		radius = 100
+	}
+	
+	sphere_2 = {
+		type = sphere
+		position = {
+			x = -86.0
+			y = 100.0
+			z = -68.5
+		}
+
+		radius = 100
+	}
+	
+	sphere_3 = {
+		type = sphere
+		position = {
+			x = 14.0
+			y = 100.0
+			z = -168.5
+		}
+
+		radius = 100
+	}
+
+	sphere_4 = {
+		type = sphere
+		position = {
+			x = -76.0
+			y = 260.0
+			z = -128.5
+		}
+
+		radius = 100
+	}
+
+	# - Big block
+	tall_block_1_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_1_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+		}
+	}
+	
+	tall_block_3_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_3_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+		}
+	}
+	
+	tall_block_4_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_4_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_5_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+		}
+	}
+
+	tall_block_5_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+		}
+	}
+}
+
+# The scene objects
+object = {
+	# Floor
+	floor = {
+		geometry = floor
+		material = floor
+	}
+
+	# Sphere stack
+	sphere_1 = {
+		geometry = sphere_1
+		material = ball
+	}
+	
+	sphere_2 = {
+		geometry = sphere_2
+		material = ball
+	}
+	
+	sphere_3 = {
+		geometry = sphere_3
+		material = ball
+	}
+	
+	sphere_4 = {
+		geometry = sphere_4
+		material = ball
+	}
+
+	# Tall block 
+	tall_block_1_1 = {
+		geometry = tall_block_1_1
+		material = block
+	}
+
+	tall_block_1_2 = {
+		geometry = tall_block_1_2
+		material = block
+	}
+
+	tall_block_2_1 = {
+		geometry = tall_block_2_1
+		material = block
+	}
+
+	tall_block_2_2 = {
+		geometry = tall_block_2_2
+		material = block
+	}
+
+	tall_block_3_1 = {
+		geometry = tall_block_3_1
+		material = block
+	}
+
+	tall_block_3_2 = {
+		geometry = tall_block_3_2
+		material = block
+	}
+
+	tall_block_4_1 = {
+		geometry = tall_block_4_1
+		material = block
+	}
+
+	tall_block_4_2 = {
+		geometry = tall_block_4_2
+		material = block
+	}
+
+	tall_block_5_1 = {
+		geometry = tall_block_5_1
+		material = block
+	}
+
+	tall_block_5_2 = {
+		geometry = tall_block_5_2
+		material = block
+	}
+}

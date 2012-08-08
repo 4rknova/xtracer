@@ -28,16 +28,19 @@
 #ifndef XTRACER_PHONG_INL_INCLUDED
 #define XTRACER_PHONG_INL_INCLUDED
 
+#include <iostream>
 #include <math.h>
 
 #ifndef XTRACER_PHONG_HPP_INCLUDED
     #error "phong.hpp must be included before phong.inl"
 #endif /* XTRACER_PHONG_HPP_INCLUDED */
 
-inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular)
+inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, const IntInfo *info,
+					 const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp, 
+					 const ColorRGBf &diffuse, const ColorRGBf &specular)
 {
 	// calculate the light direction vector
-	Vector3 lightdir = lightpos - info->point;
+	Vector3f lightdir = lightpos - info->point;
 	lightdir.normalize();
 
 	// calculate the normal - light dot product
@@ -46,10 +49,10 @@ inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntIn
 	if (d < 0.0)
 		d = 0;
 
-	Vector3 ray = campos - info->point;
+	Vector3f ray = campos - info->point;
 	ray.normalize();
 
-	Vector3 r = lightdir.reflected(info->normal);
+	Vector3f r = lightdir.reflected(info->normal);
 	r.normalize();
 
 	scalar_t rmv = dot(r, ray);
@@ -60,10 +63,12 @@ inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntIn
 	return ((kd * d * diffuse) + (ks * pow(rmv, specexp) * specular)) * light;
 }
 
-inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular)
+inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos, const IntInfo *info,
+						   const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp, 
+						   const ColorRGBf &diffuse, const ColorRGBf &specular)
 {
 	// calculate the light direction vector
-	Vector3 lightdir = lightpos - info->point;
+	Vector3f lightdir = lightpos - info->point;
 	lightdir.normalize();
 
 	// calculate the normal - light dot product
@@ -72,10 +77,10 @@ inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const
 	if (d < 0.0)
 		d = 0;
 
-	Vector3 ray = campos - info->point;
+	Vector3f ray = campos - info->point;
 	ray.normalize();
 
-	Vector3 r = lightdir + ray;
+	Vector3f r = lightdir + ray;
 	r.normalize();
 
 	scalar_t rmv = dot(r, info->normal);

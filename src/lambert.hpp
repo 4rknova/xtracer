@@ -28,11 +28,13 @@
 #ifndef XTRACER_LAMBERT_HPP_INCLUDED
 #define XTRACER_LAMBERT_HPP_INCLUDED
 
+#include <nmath/vector.h>
+#include <nmath/intinfo.h>
+#include <nimg/color.hpp>
 
-#include "nmath/vector.h"
-#include "nmath/intinfo.h"
+using NImg::ColorRGBf;
 
-inline Vector3 lambert(const Vector3 lightpos, const IntInfo *info, const Vector3 light, const Vector3 diffuse);
+inline ColorRGBf lambert(const Vector3f &lightpos, const IntInfo *info, const ColorRGBf &light, const ColorRGBf &diffuse);
 
 #include "lambert.inl"
 

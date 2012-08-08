@@ -1,23 +1,53 @@
 #!/bin/sh
 
-PREFIX=/usr/local
-SWPKG="xtracer"
-BPATH=bin
-VERSION=`head -n1 VERSION`
+#=============== CUSTOMIZATION =================
+
+SW_TITLE="xtracer"
+SW_PACKG="xtracer"
+SW_DESCR="Renderer"
+
+PATH_PREFIX=/usr/local
+PATH_SRC=src
+PATH_BIN=bin
+PATH_MAN=man
+
+DEP_DEFS=""
+DEP_LIBS="-lnmath -lncf -lnimg -lnmesh"
+
+#===============================================
+
+# Utils
+CD="cd"
+ECHO="echo"
+HEAD="head"
+CLEAR="clear"
+RM="rm"
+RMDIR="rmdir"
+SED="sed"
+AR="ar"
+TR="tr"
+COL="col"
+LESS="less"
+NROFF="nroff"
+MAKE="make"
+CC="gcc"
+CXX="g++"
+LDCONFIG="ldconfig"
+INSTALL="install"
+
+# Version string
+SW_VERSION="`$HEAD -n1 VERSION`"
+
+# Options
 DEBUGS=no
 OPTSPD=yes
-DISABLE_SDL=no
 
-echo "configuring $SWPKG v$VERSION..."
-echo "#" > Makefile
-echo "# auto generated makefile for $SWPKG v$VERSION" >> Makefile
-echo "#" >> Makefile
-
+# Parse arguments
 for arg; do
 	case "$arg" in
 		--prefix=*)
 			value=`echo $arg | sed 's/--prefix=//'`
-			PREFIX=${value:-$prefix}
+			PATH_PREFIX=${value:-$prefix}
 			;;
 
         --enable-opt)
@@ -34,13 +64,6 @@ for arg; do
 			DEBUGS=no
 			;;
 
-		--enable-sdl)
-			DISABLE_SDL=no
-			;;
-		--disable-sdl)
-			DISABLE_SDL=yes
-			;;
-
 		--help)
 			echo 'usage: ./configure [options]'
 			echo 'options:'
@@ -48,8 +71,6 @@ for arg; do
 			echo '  --enable-opt: enable speed optimizations (default)'
 			echo '  --disable-opt: disable speed optimizations'
 			echo '  --enable-debug: include debugging symbols'
-			echo '  --enable-sdl: enable the SDL driver'
-			echo '  --disable-sdl: disable the SDL driver'
 			echo '  --disable-debug: do not include debugging symbols (default)'
 			echo 'all invalid options are silently ignored'
 			exit 0
@@ -57,38 +78,76 @@ for arg; do
 	esac
 done
 
-echo "installation path prefix: $PREFIX"
-echo "optimize for speed: $OPTSPD"
-echo "include debugging symbols: $DEBUGS"
-echo "disable sdl: $DISABLE_SDL"
+# Replace spaces in paths to avoid accidents
+PATH_PREFIX="`$ECHO $PATH_PREFIX | $SED -e 's/ /_/g'`"
+PATH_SRC="`$ECHO $PATH_SRC | $SED -e 's/ /_/g'`"
+PATH_BIN="`$ECHO $PATH_BIN | $SED -e 's/ /_/g'`"
+PATH_MAN="`$ECHO $PATH_MAN | $SED -e 's/ /_/g'`"
 
-echo "creating makefile..."
+SW_TITLE="`$ECHO $SW_TITLE | $SED -e 's/ /_/g'`"
+SW_PACKG="`$ECHO $SW_PACKG | $SED -e 's/ /_/g'`"
+SW_SYMID="`$ECHO $SW_TITLE | $TR '[:lower:]' '[:upper:]'`"
+
+echo "Configuring $SW_PACKG v$SW_VERSION..."
+echo "- installation path prefix: $PATH_PREFIX"
+echo "- optimize for speed: $OPTSPD"
+echo "- include debugging symbols: $DEBUGS"
+echo "- installation path prefix: $PREFIX"
+echo "- optimize for speed: $OPTSPD"
+echo "- include debugging symbols: $DEBUGS"
+
+echo "Creating makefile..."
 echo "# This is an automatically generated makefile " > Makefile
-echo "# for $SWPKG v$VERSION" >> Makefile
+echo "# for $SW_PACKG v$SW_VERSION" >> Makefile
 
-echo "bpath = $BPATH" >> Makefile
-echo "PREFIX = $PREFIX" >> Makefile
+echo "# Software info" >> Makefile
+echo "SW_SYMID   = $SW_SYMID" >> Makefile
+echo "SW_TITLE   = $SW_TITLE" >> Makefile
+echo "SW_PACKG   = $SW_PACKG" >> Makefile
+echo "SW_VERSION = $SW_VERSION" >> Makefile
+echo >> Makefile
 
-if [ ! -d "$BPATH" ]; then
-    mkdir $BPATH
-fi
+echo "# Tools" >> Makefile
+echo "CD     = $CD" >> Makefile
+echo "ECHO   = $ECHO" >> Makefile
+echo "CLEAR  = $CLEAR" >> Makefile
+echo "RM     = $RM" >> Makefile
+echo "RMDIR  = $RMDIR" >> Makefile
+echo "COL    = $COL" >> Makefile
+echo "LESS   = $LESS" >> Makefile
+echo "NROFF  = $NROFF" >> Makefile
+echo "MAKE   = $MAKE" >> Makefile
+echo "CC     = $CC" >> Makefile
+echo "CXX    = $CXX" >> Makefile
+echo "INSTALL= $INSTALL" >> Makefile
+echo >> Makefile
 
-if [ "$DISABLE_SDL" = 'yes' ]; then
-	echo 'sdl = DISABLE_SDL' >> Makefile
-else
-	echo 'sdl = ENABLE_SDL' >> Makefile
-	echo 'LDSDL = `sdl-config --libs`' >> Makefile
-fi
+
+echo "# Paths" >> Makefile
+echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
+echo "PATH_SRC = $PATH_SRC" >> Makefile
+echo "PATH_BIN = $PATH_BIN" >> Makefile
+echo "PATH_MAN = $PATH_MAN" >> Makefile
+echo >> Makefile
 
 if [ "$DBGSPD" = 'yes' ]; then
-	echo 'dbg = -g' >> Makefile
+	echo 'FLAGS_DBG = -g' >> Makefile
 fi
 
-if [ "$OPT" = 'yes' ]; then
-	echo 'opt = -O3' >> Makefile
+if [ "$FLAG_OPTSPD" = 'yes' ]; then
+	echo 'FLAGS_OPT = -O3' >> Makefile
 fi
 
-echo "pkgname = $SWPKG" >> Makefile
-cat Makefile.in >> Makefile
+echo "DEP_DEFS = $DEP_DEFS" >> Makefile
+echo "DEP_LIBS = $DEP_LIBS" >> Makefile
+echo >> Makefile
 
-echo 'configuration completed, type make (or gmake) to build.'
+# Import Makefile.in 
+cat Makefile.in >> Makefile 
+
+# Update the directory structure.
+if [ ! -d "$PATH_BIN" ]; then
+    mkdir $PATH_BIN
+fi
+
+echo 'Configuration completed.'

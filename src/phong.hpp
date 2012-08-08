@@ -28,12 +28,25 @@
 #ifndef XTRACER_PHONG_HPP_INCLUDED
 #define XTRACER_PHONG_HPP_INCLUDED
 
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+#include <nmath/intinfo.h>
+#include <nimg/color.hpp>
 
-#include "nmath/vector.h"
-#include "nmath/intinfo.h"
+using NMath::scalar_t;
+using NMath::Vector3f;
+using NMath::IntInfo;
+using NImg::ColorRGBf;
 
-inline Vector3 phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular);
-inline Vector3 blinn_phong(const Vector3 &campos, const Vector3 &lightpos, const IntInfo *info, const Vector3 &light, scalar_t ks, scalar_t kd, scalar_t specexp, Vector3 &diffuse, Vector3 &specular);
+inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, 
+					 const IntInfo *info, const ColorRGBf &light, 
+					 scalar_t ks, scalar_t kd, scalar_t specexp,
+					 const ColorRGBf &diffuse, const ColorRGBf &specular);
+
+inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos,
+						   const IntInfo *info, const ColorRGBf &light, 
+						   scalar_t ks, scalar_t kd, scalar_t specexp, 
+						   const ColorRGBf &diffuse, const ColorRGBf &specular);
 
 #include "phong.inl"
 
