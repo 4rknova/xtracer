@@ -37,7 +37,7 @@ using NMath::scalar_t;
 using NMath::Vector3f;
 using NMath::Ray;
 
-#define XT_CAM_DEFAULT_FOV M_PI/4
+#define XT_CAM_DEFAULT_FOV M_PI / 4
 
 /* Pinhole camera */
 class Camera

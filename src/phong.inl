@@ -60,7 +60,7 @@ inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, const I
 	if (rmv < 0.0)
 		rmv = 0;
 
-	return ((kd * d * diffuse) + (ks * pow(rmv, specexp) * specular)) * light;
+	return ((kd * d * diffuse) + (ks * pow((long double)rmv, (long double)specexp) * specular)) * light;
 }
 
 inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos, const IntInfo *info,

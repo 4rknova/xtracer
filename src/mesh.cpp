@@ -45,7 +45,11 @@ bool Mesh::intersection(const Ray &ray, IntInfo* i_info) const
 		return false;
 	}
 
-	return (bool)m_octree.intersection(ray, i_info);
+	if (m_octree.intersection(ray, i_info) != NULL) {
+		return true;
+	}
+
+	return false;
 }
 
 void Mesh::calc_aabb()

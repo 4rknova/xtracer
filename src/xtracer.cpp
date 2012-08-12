@@ -112,11 +112,19 @@ int main(int argc, char **argv)
 			}
 			else {
 				std::string base, sw, sh, sa, random_token;
-				path_comp(scene_source, base, file);
+				
+				#ifdef _WIN32
+					const char path_delim = '\\';
+				#else
+					const char path_delim = '/';
+				#endif /* _WIN32 */
+
+				path_comp(scene_source, base, file, path_delim);
+		
 				std::string cam = Environment::handle().active_camera_name();
 				std::string outdir = Environment::handle().outdir();
-				if (outdir[outdir.length()-1] != '/' && !outdir.empty()) {
-					outdir.append(1, '/');
+				if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
+					outdir.append(1, path_delim);
 				}
 
 				to_string(random_token, (int)NMath::prng_c(1000000, 9999999));

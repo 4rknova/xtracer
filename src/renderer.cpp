@@ -78,7 +78,7 @@ unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 
 	const unsigned int dof_samples = Environment::handle().dof_samples();
 	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
-	float spp = aa * aa;
+	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
 
@@ -97,8 +97,8 @@ unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 			for (unsigned int fy = 0; fy < aa; ++fy) {
 				for (unsigned int fx = 0; fx < aa; ++fx) {
 					
-					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
-					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
+					float rx = (float)x + (float)fx * (float)(subpixel_size + subpixel_size2);
+					float ry = (float)y + (float)fy * (float)(subpixel_size + subpixel_size2);
 
 					if (scene.camera->flength > 0) {
 						// dof loop
@@ -192,7 +192,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
 			if (it_tex != scene.m_textures.end()) {
-				texcolor = ColorRGBf((*it_tex).second->sample(info.texcoord.x, info.texcoord.y));
+				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 			}
 
 			Ray sray;

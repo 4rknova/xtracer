@@ -1,1 +1,6 @@
+ide/inc/
+ide/lib/
+src/*.o
+bin/
 media/
+Makefile
