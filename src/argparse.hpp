@@ -14,9 +14,9 @@ class Environment
 		unsigned int height() const;
 		unsigned int threads() const;
 		unsigned int max_rdepth() const;
-		unsigned int dof_samples() const;
-		unsigned int light_samples() const;
-		unsigned int reflec_samples() const;
+		unsigned int samples_dof() const;
+		unsigned int samples_light() const;
+		unsigned int samples_reflection() const;
 		unsigned int aa() const;
 		unsigned int region_min_x() const;
 		unsigned int region_min_y() const;

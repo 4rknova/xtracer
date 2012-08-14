@@ -52,17 +52,17 @@ unsigned int Environment::max_rdepth() const
 	return m_max_rdepth;
 }
 
-unsigned int Environment::dof_samples() const
+unsigned int Environment::samples_dof() const
 {
 	return m_samples_dof;
 }
 
-unsigned int Environment::light_samples() const
+unsigned int Environment::samples_light() const
 {
 	return m_samples_light;
 }
 
-unsigned int Environment::reflec_samples() const
+unsigned int Environment::samples_reflection() const
 {
 	return m_samples_reflec;
 }
@@ -154,6 +154,12 @@ unsigned int Environment::setup(int argc, char **argv)
 		return 1;
 	}
 
+	// Temporary variables to hold the sample configuration.
+	unsigned int arg_s_mc	 = 0;
+	unsigned int arg_s_light = 0;
+	unsigned int arg_s_refl	 = 0;
+	unsigned int arg_s_dof	 = 0;
+
 	for (unsigned int i = 1; i < (unsigned int)argc; i++) {
 		// Framebuffer resolution.
 		if (!strcmp(argv[i], XTRACER_ARGDEFS_RESOLUTION)) {
@@ -203,13 +209,13 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u", &m_samples_dof) < 1) {
+			if (sscanf(argv[i], "%u", &arg_s_dof) < 1) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
 
-			if (m_samples_dof < 2) {
-				Log::handle().log_error("Invalid %s value. Must be 2 or greater.", argv[i-1]);
+			if (arg_s_dof < 1) {
+				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
 			}
 		}
@@ -222,12 +228,12 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u", &m_samples_light) < 1) {
+			if (sscanf(argv[i], "%u", &arg_s_light) < 1) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
 			
-			if (m_samples_light < 1) {
+			if (arg_s_light < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
 			}
@@ -241,12 +247,31 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u", &m_samples_reflec) < 1) {
+			if (sscanf(argv[i], "%u", &arg_s_refl) < 1) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
 		
-			if (m_samples_reflec < 1) {
+			if (arg_s_refl < 1) {
+				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
+				return 2;
+			}
+		}
+		// Monte carlo samples
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_GLOBAL)) {
+			i++;
+
+			if (!argv[i]) {
+				Log::handle().log_error("No value was provided for %s", argv[i-1]);
+				return 2;
+			}
+
+			if (sscanf(argv[i], "%u", &arg_s_mc) < 1) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
+				return 2;
+			}
+		
+			if (arg_s_mc < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
 			}
@@ -254,6 +279,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Antialiasing
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_ANTIALIASING)) {
 			i++;
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -272,6 +298,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Output directory.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OUTDIR)) {
 			i++;
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -282,6 +309,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Output mode.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OUTDRV)) {
 			i++;
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -301,6 +329,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Camera id
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_ACTIVE_CAMERA)) {
 			i++;
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -311,6 +340,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Threads
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_THREADS))	{
 			i++;
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -346,6 +376,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Resume file.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_RESUMEFILE)) {
 			i++;
+
 			if (!argv[i]) {		
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -364,6 +395,11 @@ unsigned int Environment::setup(int argc, char **argv)
 			m_scenes.push_back(argv[i]);
 		}
 	}
+
+	// Setup the sampling environment
+	m_samples_dof = (arg_s_dof > 0 ? arg_s_dof : (arg_s_mc > 0 ? arg_s_mc : 1));
+	m_samples_light = (arg_s_light > 0 ? arg_s_light : (arg_s_mc > 0 ? arg_s_mc : 1));
+	m_samples_reflec = (arg_s_refl > 0 ? arg_s_refl : (arg_s_mc > 0 ? arg_s_mc : 1));
 
 	if (m_scenes.empty()) {
 		Log::handle().log_message("No scenes were provided. Nothing to do..");

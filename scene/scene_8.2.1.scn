@@ -19,9 +19,9 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 3 
-			y = 10
-			z = 5
+			x = -3
+			y = 3.5
+			z = -2
 		}
 
 		target = {
@@ -45,7 +45,7 @@ texture = {
 geometry = {
 	3dmodel = {
 		type = mesh
-		source = ../media/mesh/dragon.obj
+		source = ../media/mesh/bunny.obj
 	}
 
 	floor = {
@@ -55,41 +55,31 @@ geometry = {
 		}
 
 		distance = 0
-		u_scale = 0.008
-		v_scale = 0.008
+		u_scale = 0.5
+		v_scale = 0.5
 	}
 }
 
 light = {
 	satl = {
-		type = point
+		type = box
+
+		dimensions = {
+			x = 1
+			y = 1
+			z = 1
+		}
 		
 		position = {
-			x = 10
-			y = 50
-			z = 48
+			x = -8
+			y = 15
+			z = -8
 		}
 
 		intensity = {
 			r = 1 
 			g = 1
 			b = 1
-		}
-	}
-	
-	sat2 = {
-		type = point
-		
-		position = {
-			x = -10
-			y = 300 
-			z = 50
-		}
-
-		intensity = {
-			r = .51 
-			g = .51
-			b = .51
 		}
 	}
 }

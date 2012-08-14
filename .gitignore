@@ -3,4 +3,5 @@ ide/lib/
 src/*.o
 bin/
 media/
+temp/
 Makefile

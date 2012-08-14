@@ -47,6 +47,9 @@ int main(int argc, char **argv)
 
 			Log::handle().log_message("-> Resolution: %ix%i", fb.width(), fb.height());
 			Log::handle().log_message("-> Aspect ratio: %i:%i", fb.width() / aspgcd, fb.height() / aspgcd);
+			Log::handle().log_message("-> Sampling: [ dof: %i, lights: %i, reflection: %i ]", Environment::handle().samples_dof(),
+																							  Environment::handle().samples_light(),
+																							  Environment::handle().samples_reflection());
 		}
 
 		// Get the next scene.

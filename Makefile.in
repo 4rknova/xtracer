@@ -8,7 +8,7 @@ BINOBJ_CPP = $(SOURCE_CPP:.cpp=.o)
 BINOBJ     = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
 
 BIN = $(PATH_BIN)/$(SW_PACKG)
-MAN = $(PATH_BIN)/$(SW_TITLE).1
+MAN = $(PATH_MAN)/$(SW_TITLE).1
 
 COFLAGS  = $(DEP_DEFS) -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"' $(FLAGS_OPT) $(FLAGS_DBG) -fopenmp -Wall -Wno-unknown-pragmas
 CCFLAGS  = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)

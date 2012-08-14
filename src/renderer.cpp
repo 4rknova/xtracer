@@ -76,14 +76,14 @@ unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 		omp_set_num_threads(thread_count);
 	}
 
-	const unsigned int dof_samples = Environment::handle().dof_samples();
+	const unsigned int dof_samples = Environment::handle().samples_dof();
 	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	// Calculate the number of samples per pixel.
-	float sample_scaling = 1.f / (dof_samples * spp);
+	float sample_scaling = 1.0f / ((scene.camera->flength > 0 ? dof_samples : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
 	for (int y = rminy; y < (int)h; y++) 
@@ -179,11 +179,11 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 	// ambient
 	color = mat->ambient * scene.ambient();
 
-	scalar_t shadow_sample_scaling = 1.0f / Environment::handle().light_samples();
+	scalar_t shadow_sample_scaling = 1.0f / Environment::handle().samples_light();
 
 	for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {
-		unsigned int tlshsamples = (*it).second->is_area_light() ? Environment::handle().light_samples() : 1;
-		scalar_t tlshscaling = (*it).second->is_area_light() ? shadow_sample_scaling : 1;
+		unsigned int tlshsamples = ((*it).second->is_area_light() ? Environment::handle().samples_light() : 1);
+		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
 			Light *light = (*it).second;
@@ -214,21 +214,20 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 	// specular effects
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG))
 	{
-
+/*
 		// reflection
 		if(mat->reflectance > 0.0)
 		{
-			unsigned int tlmcsamples = Environment::handle().reflec_samples();
-			scalar_t tlmcscaling = 1.0f / tlmcsamples;
+			unsigned int tlmcsamples = Environment::handle().samples_reflection();
+			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;
 				reflray.origin = p;
-				//reflray.direction = (-ray.direction).reflected(n);
 				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->ksexp);
-				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular) * tlmcscaling;
+				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}
-
+*/
 		// refraction
 		if(mat->transparency > 0.0)
 		{
@@ -238,7 +237,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
 			color *= (1.0 - mat->transparency);
-			color += mat->transparency * trace(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular;
+			color += mat->transparency * trace(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
 		}
 	}
 
