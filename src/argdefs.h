@@ -16,6 +16,7 @@
 #define XTRACER_ARGDEFS_ACTIVE_CAMERA	"-cam"			/* Active camera name */
 #define XTRACER_ARGDEFS_OUTDRV			"-outdrv"		/* Output mode */
 #define XTRACER_ARGDEFS_OUTDIR			"-outdir"		/* Output directory */
+#define XTRACER_ARGDEFS_GI				"-gi"			/* Compute indirect lighting */
 
 #define XTRACER_OUTPUT_STR_NUL 			"nul"			/* Output driver: dummy */
 #define XTRACER_OUTPUT_STR_PPM 			"ppm"			/* Output driver: ppm image */

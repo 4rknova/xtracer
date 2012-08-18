@@ -40,6 +40,7 @@
 #include "material.hpp"
 #include "texture.hpp"
 #include "object.hpp"
+#include "photonmap.hpp"
 
 using NMath::Geometry;
 using NCF::NCF1;
@@ -106,6 +107,9 @@ class Scene
 
 		// This will cleanup all the allocated memory
 		void release();
+
+		PhotonMap m_pm_global;
+		PhotonMap m_pm_caustic;
 };
 
 #endif /* XTRACER_SCENE_HPP_INCLUDED */

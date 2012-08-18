@@ -20,6 +20,9 @@ Environment::Environment()
 	  m_region_min_y(0),
 	  m_region_max_x(0),
 	  m_region_max_y(0),
+	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
+	  m_photon_sradius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
+	  m_flag_gi(XTRACER_SETUP_DEFAULT_GI),
 	  m_flag_resume(false),
 	  m_output(XTRACER_OUTPUT_PPM)
 {}
@@ -90,6 +93,21 @@ unsigned int Environment::region_max_x() const
 unsigned int Environment::region_max_y() const
 {
 	return m_region_max_y;
+}
+
+unsigned int Environment::photon_count() const
+{
+	return m_photon_count;
+}
+
+float Environment::photon_sradius() const
+{
+	return m_photon_sradius;
+}
+
+bool Environment::flag_gi() const
+{
+	return m_flag_gi;
 }
 
 bool Environment::flag_resume() const
@@ -372,6 +390,27 @@ unsigned int Environment::setup(int argc, char **argv)
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
 			}
+		}
+		// GI
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GI)) {
+			i++;
+
+			if (!argv[i]) {
+				Log::handle().log_error("No value was provided for %s", argv[i-1]);
+				return 2;
+			}
+
+			if (sscanf(argv[i], "%u:%f", &m_photon_count, &m_photon_sradius) < 2) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>:<float>.", argv[i-1]);
+				return 2;
+			}
+
+			if ((int)m_photon_count < 1 || m_photon_sradius <= 0.0) {
+				Log::handle().log_error("Invalid %s value.", argv[i-1]);
+				return 2;
+			}
+
+			m_flag_gi = true;
 		}
 		// Resume file.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_RESUMEFILE)) {

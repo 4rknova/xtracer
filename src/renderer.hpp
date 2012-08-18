@@ -45,21 +45,25 @@ class Renderer
 		Renderer();
 
 		// render the scene
-		unsigned int render(Framebuffer &fb, Scene &scene);
+		void render(Framebuffer &fb, Scene &scene);
 
 		void set_window(unsigned int x0, unsigned int x1,
-			unsigned int y0, unsigned int y1);		// Limit the rendering area
+						unsigned int y0, unsigned int y1);		// Limit the rendering area
 
 	protected:
-		// render the current frame
-		unsigned int render_frame(Framebuffer &fb, Scene &scene);
-		// trace ray
+		// Populate the photon maps
+		void trace_photons();
+
+		// Render the current frame
+		void render_frame(Framebuffer &fb, Scene &scene);
+
+		// Trace ray
 		ColorRGBf trace(Scene &scene, const Ray &ray, unsigned int depth, 
 			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
-		// shade
+
+		// Shade
 		ColorRGBf shade(Scene &scene, const Ray &ray, unsigned int depth, 
-			IntInfo &info, 
-			std::string &obj, 
+			IntInfo &info, std::string &obj,
 			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
 };
 

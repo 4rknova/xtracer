@@ -42,14 +42,27 @@ using NCF::Util::path_comp;
 Renderer::Renderer()
 {}
 
-unsigned int Renderer::render(Framebuffer &fb, Scene &scene)
+void Renderer::render(Framebuffer &fb, Scene &scene)
 {
-	render_frame(fb, scene);
+	if(Environment::handle().flag_gi()) {
+		trace_photons();
+	}
 
-	return 0;
+	render_frame(fb, scene);
 }
 
-unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
+void Renderer::trace_photons()
+{
+
+	unsigned int photon_count = Environment::handle().photon_count();
+	float photon_sradius = Environment::handle().photon_sradius();
+
+	Log::handle().log_message("Global illumination enabled.", photon_count);
+	Log::handle().log_message("Pass 1: Tracing %i photons", photon_count);
+
+}
+
+void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 {
 	Log::handle().log_message("Rendering..");
 
@@ -97,8 +110,8 @@ unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 			for (unsigned int fy = 0; fy < aa; ++fy) {
 				for (unsigned int fx = 0; fx < aa; ++fx) {
 					
-					float rx = (float)x + (float)fx * (float)(subpixel_size + subpixel_size2);
-					float ry = (float)y + (float)fy * (float)(subpixel_size + subpixel_size2);
+					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
+					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
 					if (scene.camera->flength > 0) {
 						// dof loop
@@ -125,8 +138,6 @@ unsigned int Renderer::render_frame(Framebuffer &fb, Scene &scene)
 			Console::handle().progress(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
 		}
 	}
-
-	return 0;
 }
 
 ColorRGBf Renderer::trace(Scene &scene, const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
@@ -214,7 +225,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 	// specular effects
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG))
 	{
-/*
+
 		// reflection
 		if(mat->reflectance > 0.0)
 		{
@@ -227,7 +238,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}
-*/
+
 		// refraction
 		if(mat->transparency > 0.0)
 		{

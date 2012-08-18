@@ -22,7 +22,11 @@ class Environment
 		unsigned int region_min_y() const;
 		unsigned int region_max_x() const;
 		unsigned int region_max_y() const;
+
+		unsigned int photon_count() const;
+		float photon_sradius() const;
 		
+		bool flag_gi() const;
 		bool flag_resume() const;
 
 		XTRACER_OUTPUT_TYPE output() const;
@@ -59,6 +63,10 @@ class Environment
 		unsigned int m_region_max_x;
 		unsigned int m_region_max_y;
 
+		unsigned int m_photon_count;
+		float m_photon_sradius;
+
+		bool m_flag_gi;
 		bool m_flag_resume;
 
 		XTRACER_OUTPUT_TYPE m_output;
