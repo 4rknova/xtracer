@@ -35,6 +35,7 @@
 #include "argparse.hpp"
 #include "log.hpp"
 #include "console.hpp"
+#include "photonmap.hpp"
 #include "renderer.hpp"
 
 using NCF::Util::path_comp;
@@ -45,13 +46,13 @@ Renderer::Renderer()
 void Renderer::render(Framebuffer &fb, Scene &scene)
 {
 	if(Environment::handle().flag_gi()) {
-		trace_photons();
+		trace_photons(scene);
 	}
 
 	render_frame(fb, scene);
 }
 
-void Renderer::trace_photons()
+void Renderer::trace_photons(Scene &scene)
 {
 
 	unsigned int photon_count = Environment::handle().photon_count();
@@ -60,12 +61,39 @@ void Renderer::trace_photons()
 	Log::handle().log_message("Global illumination enabled.", photon_count);
 	Log::handle().log_message("Pass 1: Tracing %i photons", photon_count);
 
+	scene.m_pm_global.init(photon_count);
+
+	Log::handle().log_message("Progress ...");
+	
+	unsigned int stored_photon_count = 0;
+
+	float one_over_total = 100.0f / (float)photon_count;
+
+	while (stored_photon_count < photon_count) {
+		std::map<std::string, Light*>::iterator it;
+		for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {}
+			stored_photon_count++;
+
+			float position[3] = {NMath::prng_c(0, 1000), NMath::prng_c(0, 1000), NMath::prng_c(0, 1000)};
+			float power[3] = {1, 1, 1};
+			float direction[3] = {0, 1, 0};
+
+			scene.m_pm_global.store(position, power, direction);
+
+
+		#pragma omp critical
+		{
+			Console::handle().progress((float)stored_photon_count * one_over_total, 1, 1);
+		}
+		
+	}
+
+	scene.m_pm_global.balance();
+
 }
 
 void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 {
-	Log::handle().log_message("Rendering..");
-
 	// precalculate some constants
 	const unsigned int rminx = Environment::handle().region_min_x();
 	const unsigned int rminy = Environment::handle().region_min_y();
@@ -77,6 +105,8 @@ void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 	const unsigned int h = (rmaxy > 0 && rmaxy < height ? rmaxy : height);
 
 	Log::handle().log_message("Rendering region: %ix%i - %ix%i", rminx, rminy, w, h);
+	Log::handle().log_message("Progress ...");
+
 
 	float progress = 0;
 			
@@ -187,6 +217,9 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 
 	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
 
+	// Precalculated roughness.
+	scalar_t roughness = 1000000.0 / mat->roughness;
+
 	// ambient
 	color = mat->ambient * scene.ambient();
 
@@ -223,25 +256,9 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 	}
 	
 	// specular effects
-	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG))
-	{
-
-		// reflection
-		if(mat->reflectance > 0.0)
-		{
-			unsigned int tlmcsamples = Environment::handle().samples_reflection();
-			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
-			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
-				Ray reflray;
-				reflray.origin = p;
-				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->ksexp);
-				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
-			}
-		}
-
+	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG)) {
 		// refraction
-		if(mat->transparency > 0.0)
-		{
+		if(mat->transparency > 0.0) {
 			Ray refrray;
 			refrray.origin = p;
 
@@ -249,6 +266,18 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 
 			color *= (1.0 - mat->transparency);
 			color += mat->transparency * trace(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+		}
+
+		// reflection
+		if(mat->reflectance > 0.0) {
+			unsigned int tlmcsamples = Environment::handle().samples_reflection();
+			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
+			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
+				Ray reflray;
+				reflray.origin = p;
+				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : roughness);
+				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
+			}
 		}
 	}
 

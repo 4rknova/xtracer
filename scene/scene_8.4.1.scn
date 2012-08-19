@@ -1,7 +1,7 @@
 # Xtracer 2
 
-title = Sponza Atrium
-descr = Sponza Atrium
+title = Happy Buddha
+descr = Happy Buddha
 versn = 0.1
 
 k_ambient = 0.01
@@ -13,110 +13,73 @@ ambient = {
 }
 
 camera = {
-	default = cam1
+	default = cam0
 	
 	cam0 = {
-		fov = 60
+		fov = 45
 
 		position = {
-			x = 0.9
-			y = 10
-			z = 0.8 
+			x = -4
+			y = 3
+			z = -2.3
 		}
 
 		target = {
-			x = 10
-			y = 6
-			z = 1
+			x = 0
+			y = 0.5
+			z = 0
 		}
 
 		up = {
 			y = 1
 		}
-	}
-	
-	cam1 = {
-		fov = 60
-
-		position = {
-			x = -13.5
-			y = 7
-			z = 0.8 
-		}
-
-		target = {
-			x = 10
-			y = 6
-			z = 1
-		}
-
-		up = {
-			y = 1
-		}
-
-		aperture = 0.15
-		flength = 20.0
 	}
 }
 
 texture = {
-	3dtexture = {
+	checker = {
+		source = ../media/texture/checkerboard/1.ppm
 	}
 }
 
 geometry = {
 	3dmodel = {
 		type = mesh
-		source = ../media/mesh/sponza.obj
+		source = ../media/mesh/happy_buddha.obj
+	}
+
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+
+		distance = 0
+		u_scale = 0.5
+		v_scale = 0.5
 	}
 }
 
 light = {
 	satl = {
-		type = point
-		
-		position = {
-			x = 0
-			y = 0
-			z = -0.5
-		}
+		type = box
 
-		intensity = {
-			r = 0.51 
-			g = 0.51
-			b = 0.51
-		}
-	}
-	
-	sat2 = {
-		type = point
-		
-		position = {
+		dimensions = {
 			x = 1
-			y = 1.5 
-			z = -1
+			y = 1
+			z = 1
 		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
-	}
-
-	sat3 = {
-		type = point
 		
 		position = {
-			x = -13.5
-			y = 7
-			z = 0.8 
+			x = -8
+			y = 15
+			z = -8
 		}
 
 		intensity = {
-			r = 0.31
-			g = 0.31
-			b = 0.31
+			r = 1 
+			g = 1
+			b = 1
 		}
 	}
 }
@@ -130,9 +93,9 @@ material = {
 		k_exponent = 128
 	
 		diffuse = {
-			r = 0.980
-			g = 0.9215
-			b = 0.8431
+			r = 1
+			g = 1
+			b = 1
 		}
 
 		specular = {
@@ -141,7 +104,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0
+		reflectance = 0.07
 	}
 
 	floor = {
@@ -171,5 +134,11 @@ object = {
 	3dmodel = {
 		geometry = 3dmodel
 		material = 3dmodel
+	}
+
+	floor = {
+		geometry = floor
+		material = floor
+		texture = checker
 	}
 }

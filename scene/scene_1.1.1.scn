@@ -135,8 +135,7 @@ material = {
 
 		k_diffuse = 0.5
 		k_specular = 0.5
-		k_exponent = 10000000
-		k_exponent = 500
+		k_exponent = 1350
 
 		ambient = {
 			r = 1

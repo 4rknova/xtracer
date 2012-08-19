@@ -36,6 +36,7 @@
 #define XTPROTO_PROP_KDIFF			"k_diffuse"			/* scalar_t   */			/* Diffuse ratio */
 #define XTPROTO_PROP_KSPEC			"k_specular"		/* scalar_t   */			/* Specular ratio */
 #define XTPROTO_PROP_KEXPN			"k_exponent"		/* scalar_t   */			/* Specular exponent */
+#define	XTPROTO_PROP_ROUGH			"roughness"			/* scalar_t   */			/* Roughness */
 #define XTPROTO_PROP_REFLC			"reflectance"		/* scalar_t   */			/* Reflectance ratio */
 #define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */			/* Transparency ratio */
 #define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */			/* Index of refraction */

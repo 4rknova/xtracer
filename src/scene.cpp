@@ -587,6 +587,7 @@ unsigned int Scene::create_material(NCF1 *p)
 	material->kspec = (scalar_t)to_double(p->get(XTPROTO_PROP_KSPEC));
 	material->kdiff = (scalar_t)to_double(p->get(XTPROTO_PROP_KDIFF));
 	material->ksexp = (scalar_t)to_double(p->get(XTPROTO_PROP_KEXPN));
+	material->roughness = (scalar_t)to_double(p->get(XTPROTO_PROP_ROUGH));
 
 	// diffuse intensity
 	scalar_t diffr = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_R));

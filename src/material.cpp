@@ -34,6 +34,7 @@ Material::Material()
 	  kspec(0.0),
 	  kdiff(1.0),
 	  ksexp(60),
+	  roughness(0),
 	  reflectance(0.0),
 	  transparency(0.0),
 	  ior(1.5),

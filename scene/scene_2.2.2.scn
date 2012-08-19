@@ -203,7 +203,7 @@ object = {
 	}
 	front = {
 		geometry = front
-		material = lambert_silver
+		material = phong_silver
 	}
 }
 
@@ -223,7 +223,8 @@ material = {
 
 		k_diffuse = 0.3
 		k_specular = 0.7
-		k_exponent = 60
+		k_exponent = 128
+		roughness = 0.1
 	}
 
 	# plain green phong
@@ -241,7 +242,8 @@ material = {
 
 		k_diffuse = 0.3
 		k_specular = 0.7
-		k_exponent = 60 
+		k_exponent = 128
+		roughness = 0.1
 	}
 
 	# plain blue phong
@@ -263,7 +265,8 @@ material = {
 
 		k_diffuse = 0.3
 		k_specular = 0.7
-		k_exponent = 60 
+		k_exponent = 128
+		roughness = 0.1
 	}
 
 	# plain silver phong
@@ -285,7 +288,8 @@ material = {
 
 		k_diffuse = 0.01
 		k_specular = 0.99
-		k_exponent = 1560
+		k_exponent = 1000000000
+		roughness = 0.0001
 	}
 	
 	# plain silver lambert

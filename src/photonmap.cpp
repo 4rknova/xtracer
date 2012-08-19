@@ -41,6 +41,10 @@ unsigned int PhotonMap::init(unsigned int max_count)
 void PhotonMap::release()
 {
 	free(m_photons);
+
+	m_count_stored = 0;
+	m_count_max = 0;
+	m_prev_scale = 1;
 }
 
 void PhotonMap::calc_conversion_tables()
@@ -64,12 +68,12 @@ void PhotonMap::photon_dir(float *dir, const photon_t *p) const
 
 void PhotonMap::store(const float position[3], const float power[3], const float direction[3])
 {
-	if ( m_count_stored > m_count_max) {
+	if (m_count_stored >= m_count_max) {
 		return;
 	}
 
 	m_count_stored++;
-	photon_t * const node = &m_photons[m_count_stored];
+	photon_t *const node = &m_photons[m_count_stored];
 
 	for (unsigned int i = 0; i < 3; i++) {
 		node->position[i] = position[i];
@@ -280,7 +284,7 @@ void PhotonMap::scale_power(const float factor)
 
 	m_prev_scale = m_count_stored + 1;
 }
-
+#include <iostream>
 void PhotonMap::balance()
 {
 	if (m_count_stored > 1) {
@@ -289,19 +293,20 @@ void PhotonMap::balance()
 		photon_t **pa1 = (photon_t **) malloc(sizeof(photon_t*) * (m_count_stored + 1));
 		photon_t **pa2 = (photon_t **) malloc(sizeof(photon_t*) * (m_count_stored + 1));
 
-		for (unsigned int i = 0; i < m_count_stored; ++i) {
+		for (unsigned int i = 0; i <= m_count_stored; i++) {
 			pa2[i] = &m_photons[i];
 		}
-
+std::cout << std::endl << "%%%%" << m_count_stored << "%%%%" << std::endl;
 		balance_segment(pa1, pa2, 1, 1, m_count_stored);
 
+std::cout << "---------" << std::endl;
 		free(pa2);
-
+		
 		// Re-organise the balanced KD-Tree
 		unsigned int d, j = 1, foo = 1;
 		photon_t foo_photon = m_photons[j];
 
-		for (unsigned int i = 0; i <= m_count_stored; ++i) {
+		for (unsigned int i = 1; i <= m_count_stored; i++) {
 			d = pa1[j] - m_photons;
 			pa1[j] = NULL;
 
@@ -342,6 +347,8 @@ void PhotonMap::median_split(photon_t **p,
 {
 	unsigned int left = start;
 	unsigned int right = end;
+
+std::cout << std::endl << "Start::" << start << " End::" << end << "   ++++++++" << std::endl;
 
 	while (right > left) {
 		const float v = p[right]->position[axis];
@@ -401,7 +408,7 @@ void PhotonMap::balance_segment(photon_t **pbal, photon_t **porg,
 	else if ((m_aabb_max[1] - m_aabb_min[1]) > (m_aabb_max[2] - m_aabb_min[2])) {
 		axis = 1;
 	}
-
+std::cout << "Balancing " << start << "-" << end << std::endl;
 	// Partition photon block around the median.
 	median_split(porg, start, end, median, axis);
 

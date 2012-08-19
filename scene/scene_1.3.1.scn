@@ -1,4 +1,4 @@
-# Xtracer 2
+# Xtracer/ 2
 
 title = Simple sphere
 descr = A sphere on a plane
@@ -143,9 +143,9 @@ light = {
 		type = box
 
 		dimensions = {
-			x = 400
+			x = 700
 			y = 1
-			z = 400
+			z = 700
 		}
 		
 		position = {
@@ -214,7 +214,7 @@ texture = {
 	}
 
 	face = {
-		source = ../media/texture/epic_smile.ppm
+		source = ../media/texture/pika.ppm
 	}
 }
 

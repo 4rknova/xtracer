@@ -25,6 +25,7 @@
 
 */
 
+#include <nmath/precision.h>
 #include <nmath/matrix.h>
 #include <nmath/prng.h>
 #include "camera.hpp"
@@ -47,8 +48,6 @@ Camera::Camera(Vector3f &pos, Vector3f &trg, Vector3f &upv, scalar_t fovx, scala
 
 Ray Camera::get_primary_ray(float x, float y, float width, float height)
 {
-	const scalar_t rad = 0.017453292519943;
-
 	// Primary ray
 	Ray pray;
 	
@@ -62,7 +61,7 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
 	pray.direction.y = ((2.0 * (scalar_t)y / (scalar_t)height) - 1.0) / ratio;
 
-	pray.direction.z = 1.0 / tan(fov * rad / 2.0);
+	pray.direction.z = 1.0 / tan(fov * NMath::RADIAN / 2.0);
 
 	/*
 		Setting up the look-at matrix is easy when you consider that a matrix 
@@ -106,8 +105,6 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 
 Ray Camera::get_primary_ray_dof(float x, float y, float width, float height)
 {
-	const scalar_t rad = 0.017453292519943;
-
 	// Primary ray
 	Ray pray, fray;
 	
@@ -120,7 +117,7 @@ Ray Camera::get_primary_ray_dof(float x, float y, float width, float height)
 	// Calculate the ray's intersection point on the projection plane.
 	pray.direction.x = (2.0 * (scalar_t)x / (scalar_t)width) - 1.0;
 	pray.direction.y = ((2.0 * (scalar_t)y / (scalar_t)height) - 1.0) / ratio;
-	pray.direction.z = 1.0 / tan(fov * rad / 2.0);
+	pray.direction.z = 1.0 / tan(fov * NMath::RADIAN / 2.0);
 
 	// Calculate the deviated ray direction
 	fray.origin = pray.direction;

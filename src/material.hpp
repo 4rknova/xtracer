@@ -62,6 +62,7 @@ class Material
 		scalar_t kspec;       	// specular constant
 		scalar_t kdiff;       	// diffuse constant
 		scalar_t ksexp;       	// specular exponential
+		scalar_t roughness;		// roughness (Ideally equal to exponent)
 
 		scalar_t reflectance;	// reflectance
 		scalar_t transparency;	// transparency

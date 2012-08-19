@@ -52,7 +52,7 @@ class Renderer
 
 	protected:
 		// Populate the photon maps
-		void trace_photons();
+		void trace_photons(Scene &scene);
 
 		// Render the current frame
 		void render_frame(Framebuffer &fb, Scene &scene);
