@@ -143,14 +143,14 @@ light = {
 		type = box
 
 		dimensions = {
-			x = 700
-			y = 1
-			z = 700
+			x = 125
+			y = 0.1
+			z = 125
 		}
 		
 		position = {
 			x = 0
-			y = 250
+			y = 300
 			z = -100
 		}
 
@@ -186,10 +186,10 @@ material = {
 	}
 
 	plastic = {
-		type = phong
+		type = blinn_phong
 
-		k_diffuse = 0.5
-		k_specular = 0.9
+		k_diffuse = 0.4
+		k_specular = 0.6
 		k_exponent = 60
 	
 		diffuse = {

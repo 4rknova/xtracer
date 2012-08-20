@@ -46,19 +46,17 @@ Renderer::Renderer()
 void Renderer::render(Framebuffer &fb, Scene &scene)
 {
 	if(Environment::handle().flag_gi()) {
-		trace_photons(scene);
+		Log::handle().log_message("Global illumination enabled.");
+		photon_pass(scene);
 	}
 
 	render_frame(fb, scene);
 }
 
-void Renderer::trace_photons(Scene &scene)
+void Renderer::photon_pass(Scene &scene)
 {
-
 	unsigned int photon_count = Environment::handle().photon_count();
-	float photon_sradius = Environment::handle().photon_sradius();
 
-	Log::handle().log_message("Global illumination enabled.", photon_count);
 	Log::handle().log_message("Pass 1: Tracing %i photons", photon_count);
 
 	scene.m_pm_global.init(photon_count);
@@ -71,25 +69,39 @@ void Renderer::trace_photons(Scene &scene)
 
 	while (stored_photon_count < photon_count) {
 		std::map<std::string, Light*>::iterator it;
+
+		// Pick a light at random.
+		unsigned int curl = (unsigned int) NMath::prng_c(0, (double)(scene.m_lights.size() - 1));
+
+//		scene.m_lights[curl];
+
+//		std::cout << curl << std::endl;
+/*
+
 		for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {}
 			stored_photon_count++;
 
-			float position[3] = {NMath::prng_c(0, 1000), NMath::prng_c(0, 1000), NMath::prng_c(0, 1000)};
+			float position[3] = {(float)NMath::prng_c(0, 1000), (float)NMath::prng_c(0, 1000), (float)NMath::prng_c(0, 1000)};
 			float power[3] = {1, 1, 1};
 			float direction[3] = {0, 1, 0};
 
 			scene.m_pm_global.store(position, power, direction);
-
+*/
 
 		#pragma omp critical
 		{
-			Console::handle().progress((float)stored_photon_count * one_over_total, 1, 1);
+			Console::handle().progress((float)stored_photon_count * one_over_total, 1, 0);
 		}
 		
 	}
 
+	Log::handle().log_message("Balancing the photon map..");
 	scene.m_pm_global.balance();
+}
 
+bool Renderer::trace_photon(Scene &scene, const Ray &ray, unsigned int depth)
+{
+	return false;
 }
 
 void Renderer::render_frame(Framebuffer &fb, Scene &scene)
@@ -147,12 +159,12 @@ void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 						// dof loop
 						for (float dofs = 0; dofs < dof_samples; ++dofs) {
 							Ray ray = scene.camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
-							color += (trace(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
+							color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
 						}
 					}
 					else {
 						Ray ray = scene.camera->get_primary_ray(rx, ry, (float)width, (float)height);
-						color += (trace(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
+						color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
 					}
 				}
 			}
@@ -170,7 +182,7 @@ void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 	}
 }
 
-ColorRGBf Renderer::trace(Scene &scene, const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
+ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
 {
 	IntInfo info;
 	memset(&info, 0, sizeof(info));
@@ -265,7 +277,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
 			color *= (1.0 - mat->transparency);
-			color += mat->transparency * trace(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+			color += mat->transparency * trace_ray(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
 		}
 
 		// reflection
@@ -276,7 +288,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntI
 				Ray reflray;
 				reflray.origin = p;
 				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : roughness);
-				color += (mat->reflectance * trace(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
+				color += (mat->reflectance * trace_ray(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}
 	}

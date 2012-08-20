@@ -76,6 +76,14 @@ Vector3f PointLight::point_sample() const
 	return position();
 }
 
+Ray PointLight::ray_sample() const
+{
+	Ray ray;
+	ray.origin = position();
+	ray.direction = NMath::Sample::sphere();
+	return ray;
+}
+
 /* Sphere light */
 SphereLight::SphereLight()
 	: m_radius(0.1f)
@@ -101,6 +109,19 @@ Vector3f SphereLight::point_sample() const
 	return Vector3f(NMath::Sample::sphere() * m_radius) + position();
 }
 
+Ray SphereLight::ray_sample() const
+{
+	Ray ray;
+
+	Vector3f sphpoint = Vector3f(NMath::Sample::sphere() * m_radius);
+	Vector3f normal = sphpoint.normalized();
+
+	ray.origin = sphpoint + position();
+	ray.direction = NMath::Sample::hemisphere(normal, normal);
+
+	return ray;
+}
+
 /* Box light */
 BoxLight::BoxLight()
 	: m_dimensions(Vector3f(0.5, 0.1, 0.5))
@@ -124,9 +145,93 @@ bool BoxLight::is_area_light() const
 Vector3f BoxLight::point_sample() const
 {
 	Vector3f v;
-    v.x = NMath::prng_c(0, m_dimensions.x) - 0.5f * m_dimensions.x;
-	v.y = NMath::prng_c(0, m_dimensions.y) - 0.5f * m_dimensions.y;
-	v.z = NMath::prng_c(0, m_dimensions.z) - 0.5f * m_dimensions.z;
+
+	unsigned int side = (unsigned int)NMath::prng_c(1, 7);
+	scalar_t ra = NMath::prng_c(0, 1) - 0.5;
+	scalar_t rb = NMath::prng_c(0, 1) - 0.5;
+
+	switch (side) {
+		case 1:
+			v.x = ra * m_dimensions.x;
+			v.y = rb * m_dimensions.y;
+			v.z = -m_dimensions.z;
+			break;
+		case 2:
+			v.z = ra * m_dimensions.z;
+			v.y = rb * m_dimensions.y;
+			v.x = m_dimensions.x;
+			break;
+		case 3:
+			v.x = ra * m_dimensions.x;
+			v.y = rb * m_dimensions.y;
+			v.z = m_dimensions.z;
+			break;
+		case 4:
+			v.z = ra * m_dimensions.z;
+			v.y = rb * m_dimensions.y;
+			v.x = -m_dimensions.x;
+			break;
+		case 5:
+			v.x = ra * m_dimensions.x;
+			v.z = rb * m_dimensions.z;
+			v.y = m_dimensions.y;
+			break;
+		case 6:
+			v.x = ra * m_dimensions.x;
+			v.z = rb * m_dimensions.z;
+			v.y = -m_dimensions.y;
+			break;
+	}
 
 	return position() + v;
+}
+
+Ray BoxLight::ray_sample() const {
+	Vector3f v, normal;
+	Ray ray;
+	
+	unsigned int side = (unsigned int)NMath::prng_c(1, 7);
+	scalar_t ra = NMath::prng_c(0, 1) - 0.5;
+	scalar_t rb = NMath::prng_c(0, 1) - 0.5;
+
+	switch (side) {
+		case 1:
+			v.x = ra * m_dimensions.x;
+			v.y = rb * m_dimensions.y;
+			v.z = -m_dimensions.z;
+			normal = Vector3f(0, 0, -1);
+			break;
+		case 2:
+			v.z = ra * m_dimensions.z;
+			v.y = rb * m_dimensions.y;
+			v.x = m_dimensions.x;
+			normal = Vector3f(1, 0, 0);
+			break;
+		case 3:
+			v.x = ra * m_dimensions.x;
+			v.y = rb * m_dimensions.y;
+			v.z = m_dimensions.z;
+			normal = Vector3f(0, 0, 1);
+			break;
+		case 4:
+			v.z = ra * m_dimensions.z;
+			v.y = rb * m_dimensions.y;
+			v.x = -m_dimensions.x;
+			normal = Vector3f(-1, 0, 0);
+			break;
+		case 5:
+			v.x = ra * m_dimensions.x;
+			v.z = rb * m_dimensions.z;
+			v.y = m_dimensions.y;
+			normal = Vector3f(0, 1, 0);
+			break;
+		case 6:
+			v.x = ra * m_dimensions.x;
+			v.z = rb * m_dimensions.z;
+			normal = Vector3f(0, -1, 0);
+			break;
+	}
+
+	ray.origin = position() + v;
+	ray.direction = NMath::Sample::hemisphere(normal, normal);
 }

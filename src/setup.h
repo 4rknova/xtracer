@@ -13,7 +13,7 @@
 #define XTRACER_SETUP_DEFAULT_AA				1						/* Default anti-aliasing level. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT		100						/* Default photon count for gi */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS	1.0						/* Default photon sampling radius */
-#define XTRACER_SETUP_DEFAULT_GI				true					/* Default gi flag value */
+#define XTRACER_SETUP_DEFAULT_GI				false					/* Default gi flag value */
 #define XTRACER_SETUP_DEFAULT_OUTPUT			XTRACER_OUTPUT_PPM		/* Default output mode. */
 
 #endif /* XTRACER_SETUP_H_INCLUDED */

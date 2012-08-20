@@ -30,10 +30,12 @@
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
+#include <nmath/ray.h>
 #include <nimg/color.hpp>
 
 using NMath::scalar_t;
 using NMath::Vector3f;
+using NMath::Ray;
 using NImg::ColorRGBf;
 
 /* Light interface */
@@ -45,7 +47,9 @@ class Light
 		virtual ~Light();
 
 		virtual bool is_area_light() const = 0;
+
 		virtual Vector3f point_sample() const = 0;
+		virtual Ray ray_sample() const = 0;
 
 		const Vector3f &position() const;
 		const ColorRGBf &intensity() const;
@@ -62,6 +66,7 @@ class PointLight : public Light
 	public:
 		bool is_area_light() const;
 		Vector3f point_sample() const;
+		Ray ray_sample() const;
 };
 
 class SphereLight : public Light
@@ -74,6 +79,7 @@ class SphereLight : public Light
 		
 		bool is_area_light() const;
 		Vector3f point_sample() const;
+		Ray ray_sample() const;
 
 	private:
 		scalar_t m_radius;
@@ -89,6 +95,7 @@ class BoxLight : public Light
 
 		bool is_area_light() const;
 		Vector3f point_sample() const;
+		Ray ray_sample() const;
 
 	private:
 		Vector3f m_dimensions;

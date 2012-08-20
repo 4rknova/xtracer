@@ -83,13 +83,13 @@ light = {
 
 		dimensions = {
 			x = 130
-			y = 0
+			y = 0.0001
 			z = 105
 		}
 		
 		position = {
 			x = 278.0
-			y = 525.0
+			y = 545.0
 			z = 279.5
 		}
 

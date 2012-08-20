@@ -52,13 +52,16 @@ class Renderer
 
 	protected:
 		// Populate the photon maps
-		void trace_photons(Scene &scene);
+		void photon_pass(Scene &scene);
 
 		// Render the current frame
 		void render_frame(Framebuffer &fb, Scene &scene);
 
+		// Trace photon
+		bool trace_photon(Scene &scene, const Ray &ray, unsigned int depth);
+		
 		// Trace ray
-		ColorRGBf trace(Scene &scene, const Ray &ray, unsigned int depth, 
+		ColorRGBf trace_ray(Scene &scene, const Ray &ray, unsigned int depth, 
 			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
 
 		// Shade
