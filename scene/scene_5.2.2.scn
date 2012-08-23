@@ -9,12 +9,6 @@
 # 		the physically measured spectrum described on the Cornell Box page.
 #		(http://www.graphics.cornell.edu/online/box/data.html)
 #
-# 	-	The light is defined as 4 point lights instead of a quad light source
-#		The intensity at each point is 1/4 of the original intensity. The y
-#		value of the lights is considerably lower to compensate for the losses
-#		in shading due to the nature of the point lights. As a result, the shadows
-#		will be in slightly different positions than the original cornell box.
-#
 #	-	Materials are defined with RGB approximations to their spectral
 #		reflectance, not the 4 nm sampled spectra on the web page.
 #
@@ -27,8 +21,8 @@
 #		different coordinate system used in the original data.
 
 title = Cornell box replica (based on the original radiosity dataset)
-descr = <title>. You will normally want to render this scene with a 1:1 aspect ratio.
-versn = 0.1
+descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
+versn = 0.2
 
 k_ambient = 0.01
 
@@ -37,6 +31,7 @@ ambient = {
 	g = 0.6
 	b = 0.6
 }
+
 
 # The scene cameras.
 camera = {
@@ -83,70 +78,27 @@ light = {
 	# as the height of the ceiling. I set it much lower to avoid 
 	# numerical errors and compensate for intensity loses due to 
 	# the nature of point lights.
-	light_p0 = {
-		type = point
+	light = {
+		type = box
+
+		dimensions = {
+			x = 130
+			y = 0.1
+			z = 105
+		}
 		
 		position = {
-			x = 343.0
-			y = 438.0
-			z = 227.0
+			x = 278.0
+			y = 545.0
+			z = 279.5
 		}
 
 		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
+			r = 1.0
+			g = 0.85
+			b = 0.43
 		}
 	}
-
-	light_p1 = {
-		type = point
-		
-		position = {
-			x = 343.0
-			y = 438.0
-			z = 332.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
-		}
-	}
-
-	light_p2 = {
-		type = point
-		
-		position = {
-			x = 213.0
-			y = 438.0
-			z = 332.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
-		}
-	}
-	
-	light_p3 = {
-		type = point
-		
-		position = {
-			x = 213.0
-			y = 438.0
-			z = 227.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
-		}
-	}
-
 }
 
 # The scene materials
@@ -162,6 +114,28 @@ material = {
 			g = 0.5
 			b = 0.5
 		}
+	}
+
+	mirror = {
+		type = blinn_phong
+
+		k_diffuse  = 0.0
+		k_specular = 1
+		k_exponent = 160
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 1
 	}
 
 	red = {
@@ -1074,51 +1048,51 @@ object = {
 	# Tall box
 	tall_block_1_1 = {
 		geometry = tall_block_1_1
-		material = white
+		material = mirror
 	}
 
 	tall_block_1_2 = {
 		geometry = tall_block_1_2
-		material = white
+		material = mirror
 	}
 
 	tall_block_2_1 = {
 		geometry = tall_block_2_1
-		material = white
+		material = mirror
 	}
 
 	tall_block_2_2 = {
 		geometry = tall_block_2_2
-		material = white
+		material = mirror
 	}
 
 	tall_block_3_1 = {
 		geometry = tall_block_3_1
-		material = white
+		material = mirror
 	}
 
 	tall_block_3_2 = {
 		geometry = tall_block_3_2
-		material = white
+		material = mirror
 	}
 
 	tall_block_4_1 = {
 		geometry = tall_block_4_1
-		material = white
+		material = mirror
 	}
 
 	tall_block_4_2 = {
 		geometry = tall_block_4_2
-		material = white
+		material = mirror
 	}
 
 	tall_block_5_1 = {
 		geometry = tall_block_5_1
-		material = white
+		material = mirror
 	}
 
 	tall_block_5_2 = {
 		geometry = tall_block_5_2
-		material = white
+		material = mirror
 	}
 }

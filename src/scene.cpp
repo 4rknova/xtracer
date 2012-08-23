@@ -33,6 +33,7 @@
 #include <nmesh/calcnormals.hpp>
 #include <nmesh/obj.hpp>
 
+#include <nmath/mutil.h>
 #include <nmath/vector.h>
 #include <nmath/geometry.h>
 #include <nmath/sphere.h>
@@ -584,9 +585,17 @@ unsigned int Scene::create_material(NCF1 *p)
 
 	material->specular = ColorRGBf(specr, specg, specb);
 
-	material->kspec = (scalar_t)to_double(p->get(XTPROTO_PROP_KSPEC));
-	material->kdiff = (scalar_t)to_double(p->get(XTPROTO_PROP_KDIFF));
-	material->ksexp = (scalar_t)to_double(p->get(XTPROTO_PROP_KEXPN));
+
+	 if (!type.compare(XTPROTO_LTRL_LAMBERT)) {
+		material->kdiff = 1;
+		material->kspec = 0;
+	 }
+	 else {
+		material->kdiff = (scalar_t)to_double(p->get(XTPROTO_PROP_KDIFF));
+		material->kspec = (scalar_t)to_double(p->get(XTPROTO_PROP_KSPEC));
+		material->ksexp = (scalar_t)to_double(p->get(XTPROTO_PROP_KEXPN));
+	 }
+
 	material->roughness = (scalar_t)to_double(p->get(XTPROTO_PROP_ROUGH));
 
 	// diffuse intensity
@@ -596,22 +605,9 @@ unsigned int Scene::create_material(NCF1 *p)
 		
 	material->diffuse = ColorRGBf(diffr, diffg, diffb);
 	
-	// reflectance
-	material->reflectance = (scalar_t)to_double(p->get(XTPROTO_PROP_REFLC));
-		
-	if (material->reflectance > 1.0)
-		material->reflectance = 1.0;
-	else if (material->reflectance < 0.0)
-		material->reflectance = 0.0;
+	material->reflectance  = NMath::saturate((scalar_t)to_double(p->get(XTPROTO_PROP_REFLC)));
+	material->transparency = NMath::saturate((scalar_t)to_double(p->get(XTPROTO_PROP_TRSPC)));
 
-	// transparency
-	material->transparency = (scalar_t)to_double(p->get(XTPROTO_PROP_TRSPC));
-
-	if (material->transparency > 1.0)
-		material->transparency = 1.0;
-	else if (material->transparency < 0.0)
-		material->transparency = 0.0;
-		
 	// index of refraction
 	material->ior = (scalar_t)to_double(p->get(XTPROTO_PROP_IOR));
 

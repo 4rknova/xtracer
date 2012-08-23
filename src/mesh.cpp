@@ -30,6 +30,7 @@
 #include <nmath/intinfo.h>
 #include <nmath/vector.h>
 #include <nmesh/vertex.h>
+#include "argparse.hpp"
 #include "mesh.hpp"
 
 Mesh::Mesh()
@@ -117,6 +118,8 @@ void Mesh::build_octree()
 
 		m_octree.add(p.aabb, p);
 	}
-
+	
+	m_octree.max_items_per_node(Environment::handle().octree_max_items_per_node());
+	m_octree.max_depth(Environment::handle().octree_max_depth());
 	m_octree.build();
 }

@@ -43,20 +43,37 @@ int main(int argc, char **argv)
 
 		// Log info.
 		{
-			int aspgcd = gcd(fb.width(), fb.height());
+			int aspgcd = NMath::gcd(fb.width(), fb.height());
+			Log::handle().log_message("- Output       : Resolution %ix%i, Aspect ratio %i:%i", 
+				fb.width(), fb.height(), 
+				fb.width() / aspgcd, fb.height() / aspgcd);
+			Log::handle().log_message("- Antialiasing : Supersampling %ix%i, %i spp",
+				Environment::handle().aa(), Environment::handle().aa(),
+				Environment::handle().aa() * Environment::handle().aa());
+			Log::handle().log_message("- Recursion    : %i", Environment::handle().max_rdepth());
+			Log::handle().log_message("- Sampling     : DoF %i, Shading %i, Reflections %i",
+				Environment::handle().samples_dof(), 
+				Environment::handle().samples_light(), Environment::handle().samples_reflection());
 
-			Log::handle().log_message("-> Resolution: %ix%i", fb.width(), fb.height());
-			Log::handle().log_message("-> Aspect ratio: %i:%i", fb.width() / aspgcd, fb.height() / aspgcd);
-			Log::handle().log_message("-> Sampling: [ dof: %i, lights: %i, reflection: %i ]", Environment::handle().samples_dof(),
-																							  Environment::handle().samples_light(),
-																							  Environment::handle().samples_reflection());
+			if (Environment::handle().flag_gi()) {
+				Log::handle().log_message("- Photon maps  : Total %i, Per pixel %i, Radius %f", 
+					Environment::handle().photon_count(), Environment::handle().photon_max_samples(),
+					Environment::handle().photon_max_sampling_radius());
+			}
+		}
+		
+		// Export.
+		if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
+			Log::handle().log_warning("Benchmark mode selected.");
 		}
 
 		// Get the next scene.
 		std::string scene_source;
 		Environment::handle().scene_pop(scene_source);
 
-		Log::handle().log_message("Processing %i / %i [%s]", ++scene_index, scene_count, scene_source.c_str());
+		if (scene_count > 1) {
+			Log::handle().log_message("Current task %i / %i", ++scene_index, scene_count);
+		}
 
 		// create and initialize the scene
 		Scene scene;
@@ -103,11 +120,7 @@ int main(int argc, char **argv)
 		Log::handle().set_append();
 		Log::handle().log_message(" %f seconds.", secs);
 
-		// Export.
-		if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
-			Log::handle().log_message("Running on benchmark mode. No output.");
-		}
-		else if (Environment::handle().output() == XTRACER_OUTPUT_PPM) {
+		if (Environment::handle().output() == XTRACER_OUTPUT_PPM) {
 			std::string file;
 
 			if (Environment::handle().flag_resume()) {

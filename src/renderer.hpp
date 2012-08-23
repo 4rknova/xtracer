@@ -43,31 +43,24 @@ class Renderer
 {
 	public:
 		Renderer();
-
-		// render the scene
 		void render(Framebuffer &fb, Scene &scene);
 
-		void set_window(unsigned int x0, unsigned int x1,
-						unsigned int y0, unsigned int y1);		// Limit the rendering area
+	private:
+		// Pass functions.
+		void pass_ptrace(Scene &scene);						// Rendering pass: Photon tracing.
+		void pass_rtrace(Framebuffer &fb, Scene &scene);	// Rendering pass: Ray tracing.
 
-	protected:
-		// Populate the photon maps
-		void photon_pass(Scene &scene);
+		// Trace functions.
+		bool trace_photon(Scene &scene, const Ray &ray, const unsigned int depth, 
+						  const ColorRGBf power, unsigned int &map_capacity);
 
-		// Render the current frame
-		void render_frame(Framebuffer &fb, Scene &scene);
+		ColorRGBf trace_ray(Scene &scene, const Ray &ray, const unsigned int depth,
+							const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
-		// Trace photon
-		bool trace_photon(Scene &scene, const Ray &ray, unsigned int depth);
-		
-		// Trace ray
-		ColorRGBf trace_ray(Scene &scene, const Ray &ray, unsigned int depth, 
-			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
-
-		// Shade
-		ColorRGBf shade(Scene &scene, const Ray &ray, unsigned int depth, 
-			IntInfo &info, std::string &obj,
-			scalar_t ior_src = 1.0, scalar_t ior_dst = 1.0);
+		// Shading.
+		ColorRGBf shade(Scene &scene, const Ray &ray, const unsigned int depth, 
+						IntInfo &info, std::string &obj,
+						const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 };
 
 #endif /* XTRACER_RENDERER_HPP_INCLUDED */

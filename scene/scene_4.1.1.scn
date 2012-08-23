@@ -211,8 +211,8 @@ material = {
 	plastic2 = {
 		type = blinn_phong
 
-		k_diffuse = 0.2
-		k_specular = 0.8
+		k_diffuse = 0.1
+		k_specular = 0.9
 		k_exponent = 60
 	
 		diffuse = {

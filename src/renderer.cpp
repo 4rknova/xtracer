@@ -25,11 +25,14 @@
 
 */
 
-#include <omp.h>
+#include <vector>
 #include <iomanip>
+#include <omp.h>
 #include <ncf/util.hpp>
+#include <nmath/prng.h>
 #include <nmath/sample.h>
 #include <nmath/plane.h>
+#include <nimg/luminance.hpp>
 #include "setup.h"
 #include "object.hpp"
 #include "argparse.hpp"
@@ -42,69 +45,144 @@ using NCF::Util::path_comp;
 
 Renderer::Renderer()
 {}
-
+#include <nmath/interpolation.h>
 void Renderer::render(Framebuffer &fb, Scene &scene)
 {
-	if(Environment::handle().flag_gi()) {
-		Log::handle().log_message("Global illumination enabled.");
-		photon_pass(scene);
+	// If gi is enabled, do the photon mapping 1st pass.
+	if (Environment::handle().flag_gi()) {
+		Log::handle().log_message("Global illumination is enabled.");
+		pass_ptrace(scene);
 	}
 
-	render_frame(fb, scene);
+	// Render the frame.
+	pass_rtrace(fb, scene);
 }
 
-void Renderer::photon_pass(Scene &scene)
+void Renderer::pass_ptrace(Scene &scene)
 {
 	unsigned int photon_count = Environment::handle().photon_count();
-
-	Log::handle().log_message("Pass 1: Tracing %i photons", photon_count);
-
-	scene.m_pm_global.init(photon_count);
-
-	Log::handle().log_message("Progress ...");
 	
-	unsigned int stored_photon_count = 0;
+	Log::handle().log_message("Initiating the photon maps..", photon_count);
+	Log::handle().log_message("Using %i photons..", photon_count);
+	scene.m_pm_global.init(photon_count);
+	scene.m_pm_caustic.init(photon_count);
 
-	float one_over_total = 100.0f / (float)photon_count;
+	Log::handle().log_message("Distributing photons to light sources..", photon_count);
+	// Calculate each light's contribution by using the intensity luminance.
+	// In future revisions I should also take the light source's size into consideration.
+	std::vector<unsigned int> light_photons;
+	{
+		unsigned int light_count = scene.m_lights.size();	// Total light count.
+		std::vector<scalar_t> light_contribution;			// Vector with each light's contribution.
+		std::vector<scalar_t> light_luminance;				// Vector with each light's luminance.
+		scalar_t light_total_luminance = 0;					// Total light luminance.
 
-	while (stored_photon_count < photon_count) {
-		std::map<std::string, Light*>::iterator it;
+		// Calculate the luminance for each light and the total.
+		for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
+			scalar_t lum = NImg::Operator::luminance((*it).second->intensity());
+			light_luminance.push_back(lum);
+			light_total_luminance += lum;
+		}
 
-		// Pick a light at random.
-		unsigned int curl = (unsigned int) NMath::prng_c(0, (double)(scene.m_lights.size() - 1));
+		// Calculate the contributions and number of photons per light.
+		for (unsigned int i = 0; i < light_count; ++i) {
+			light_contribution.push_back(light_luminance[i] / light_total_luminance);
+			light_photons.push_back((scalar_t) (photon_count+1) * light_contribution[i]);
+			Log::handle().log_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i, 
+				light_photons[i], light_luminance[i], light_contribution[i] * 100);
+		}
+	}
+	
+	Log::handle().log_message("Casting photons..");
+	Log::handle().log_message("Progress ...");
 
-//		scene.m_lights[curl];
-
-//		std::cout << curl << std::endl;
-/*
-
-		for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {}
-			stored_photon_count++;
-
-			float position[3] = {(float)NMath::prng_c(0, 1000), (float)NMath::prng_c(0, 1000), (float)NMath::prng_c(0, 1000)};
-			float power[3] = {1, 1, 1};
-			float direction[3] = {0, 1, 0};
-
-			scene.m_pm_global.store(position, power, direction);
-*/
-
-		#pragma omp critical
-		{
-			Console::handle().progress((float)stored_photon_count * one_over_total, 1, 0);
+	// Photon tracing.
+	unsigned int light_index = 0;
+	for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
+		while (light_photons[light_index] > 0) {
+			Ray ray = (*it).second->ray_sample();
+			trace_photon(scene, ray, 0, (*it).second->intensity(), light_photons[light_index]);
 		}
 		
+		light_index++;
 	}
 
 	Log::handle().log_message("Balancing the photon map..");
 	scene.m_pm_global.balance();
 }
 
-bool Renderer::trace_photon(Scene &scene, const Ray &ray, unsigned int depth)
+bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
+	if (depth > Environment::handle().max_rdepth())
+		return false;
+
+	// Intersect.
+	IntInfo info;
+	memset(&info, 0, sizeof(info));
+	std::string obj;
+
+	if (!scene.intersection(ray, info, obj))
+		return false;
+	
+	// Get the material.
+	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
+
+	// Russian rulette.
+	// Calculate the propabilities.
+	scalar_t prob_diffuse  = (1.0f - mat->transparency) * mat->kdiff;
+	scalar_t prob_specular = (1.0f - mat->transparency) * mat->kspec;
+	scalar_t prob_transmit = mat->transparency;
+
+	scalar_t prob_total = prob_diffuse + prob_specular + prob_transmit;
+
+
+//std::cout << "dif: " << prob_diffuse << "spec: " << prob_specular << "trans: " << prob_transmit <<std::endl;
+
+	// Random value.
+	scalar_t event = NMath::prng_c(0.0, prob_total);
+
+	if (event < prob_diffuse + prob_specular + prob_transmit) {
+		Ray nray;
+		ColorRGBf npower = power;
+		
+		nray.origin = info.point;
+
+		if (event < prob_diffuse) { // Interdiffuse.
+			nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
+			npower *= (1.0 / prob_diffuse) * mat->diffuse;
+
+			trace_photon(scene, nray, depth + 1, npower, map_capacity);
+		}
+		else if (event < prob_diffuse + prob_specular) { // Caustic.
+			std::cout << "s" << std::endl;
+		}
+		else { // Transmision caustic.
+			std::cout << "t" << std::endl;
+		}
+
+		// Store the photon.
+		float pos[3]; // Photon position.
+		float pwr[3]; // Photon intensity.
+		float dir[3]; // Photon direction.
+		
+		pwr[0] = npower.r(); 		pwr[1] = npower.g(); 		pwr[2] = npower.b();
+		pos[0] = info.point.x;		pos[1] = info.point.y;		pos[2] = info.point.z;
+		dir[0] = ray.direction.x; 	dir[1] = ray.direction.y; 	dir[2] = ray.direction.z;
+
+		// Check if there are photons left to consume.
+		if (depth > 0 && map_capacity > 0) {
+			scene.m_pm_global.store(pos, pwr, dir);
+			map_capacity--;
+			std::cout << "\r Depth:" << depth << " Light: " << std::setw(3) << "x" << " Remaining photons: " << std::setw(12) << map_capacity << std::flush;
+		}
+		
+
+		return true;
+	}
 	return false;
 }
 
-void Renderer::render_frame(Framebuffer &fb, Scene &scene)
+void Renderer::pass_rtrace(Framebuffer &fb, Scene &scene)
 {
 	// precalculate some constants
 	const unsigned int rminx = Environment::handle().region_min_x();
@@ -116,9 +194,12 @@ void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
 	const unsigned int h = (rmaxy > 0 && rmaxy < height ? rmaxy : height);
 
-	Log::handle().log_message("Rendering region: %ix%i - %ix%i", rminx, rminy, w, h);
-	Log::handle().log_message("Progress ...");
+	if ( rminx != 0 && rminy != 0 && w != width && h != height) {
+		Log::handle().log_message("-> Using regional boundaries: %ix%i - %ix%i", rminx, rminy, w, h);
+	}
 
+	Log::handle().log_message("Rendering..");
+	Log::handle().log_message("Progress ...");
 
 	float progress = 0;
 			
@@ -182,7 +263,8 @@ void Renderer::render_frame(Framebuffer &fb, Scene &scene)
 	}
 }
 
-ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, unsigned int depth, scalar_t ior_src, scalar_t ior_dst)
+ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int depth, 
+	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	IntInfo info;
 	memset(&info, 0, sizeof(info));
@@ -192,22 +274,53 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, unsigned int depth, 
 	if (scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
+
+
+			// Direct visualization ---------------------------------------
+			
+			float irad1[3], irad2[3];
+			float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
+		
+			float norm[3];
+			norm[0] = (float)info.normal.x;
+			norm[1] = (float)info.normal.y; 
+			norm[2] = (float)info.normal.z;
+
+			scene.m_pm_global.irradiance_estimate(irad1, posi, norm, 
+				Environment::handle().photon_max_sampling_radius(), 
+				Environment::handle().photon_max_samples());
+
+			norm[0] = (float)-info.normal.x;
+			norm[1] = (float)-info.normal.y; 
+			norm[2] = (float)-info.normal.z;
+			
+			scene.m_pm_global.irradiance_estimate(irad2, posi, norm, 
+				Environment::handle().photon_max_sampling_radius(), 
+				Environment::handle().photon_max_samples());
+
+			ColorRGBf res(irad1[0] + irad2[0] , irad1[1] + irad2[1], irad1[2] + irad2[2]);
+			return res;
+			
+			// Direct visualization ---------------------------------------
+		
+
 			Material *mat = scene.m_materials[scene.m_objects[obj]->material];
+
 			// if the ray starts inside the geometry
-			if (dot(info.normal, ray.direction) > 0) {
-				info.normal = -info.normal;
-				return shade(scene, ray, depth, info, obj, mat->ior, ior_src);
-			}
-			else {
-				return shade(scene, ray, depth, info, obj, ior_src, mat->ior);
-			}
+			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
+			scalar_t ior_a = dot_normal_dir > 0 ? mat->ior : ior_src;
+			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : mat->ior;
+
+			return shade(scene, ray, depth, info, obj, ior_a, ior_b);
 		}
 	}
 
 	return ColorRGBf(0, 0, 0);
 }
 
-ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, unsigned int depth, IntInfo &info, std::string &obj, scalar_t ior_src, scalar_t ior_dst)
+ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth, 
+	IntInfo &info, std::string &obj, 
+	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	ColorRGBf color(0, 0, 0);
 		

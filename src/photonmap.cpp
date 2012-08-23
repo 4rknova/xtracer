@@ -129,19 +129,17 @@ void PhotonMap::irradiance_estimate(float irradiance[3],
 	np.count = 0;
 	np.flag_heap = 0;
 	np.distance_squared[0] = max_distance * max_distance;
-
 	// locate the nearest photons.
 	locate_photons(&np, 1);
 
 	// if less than 8 photons return.
-	if (np.count < 8) {
+	if (np.count < 8) 
 		return;
-	}
 
 	float pdir[3];
 
 	// Sum irradiance from all photons.
-	for (unsigned int i = 1; i <= np.count; ++i) {
+	for (unsigned int i = 1; i <= np.count; i++) {
 		const photon_t *p = np.index[i];
 
 		// The following check is not needed if the scene does not contain any

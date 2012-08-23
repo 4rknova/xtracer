@@ -1,7 +1,7 @@
 # Xtracer 2
 
 title = Bunny
-descr = Bunny
+descr = Bunny ( Transparent )
 versn = 0.1
 
 k_ambient = 0.01
@@ -104,9 +104,9 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.07
-		transparency = 0.7
-		ior = 1.034
+		reflectance = 0.1
+		transparency = 0.8
+		ior = 1.0491
 	}
 
 	floor = {

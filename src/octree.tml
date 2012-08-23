@@ -32,8 +32,8 @@ unsigned int OctreeNode<T>::count_items()
 template <typename T>
 Octree<T>::Octree()
 	: m_root(NULL),
-	  m_max_items_per_node(10),
-	  m_max_depth(11)
+	  m_max_items_per_node(1),
+	  m_max_depth(10)
 {
 	clear();
 }

@@ -228,10 +228,13 @@ Ray BoxLight::ray_sample() const {
 		case 6:
 			v.x = ra * m_dimensions.x;
 			v.z = rb * m_dimensions.z;
+			v.y = -m_dimensions.y;
 			normal = Vector3f(0, -1, 0);
 			break;
 	}
 
 	ray.origin = position() + v;
 	ray.direction = NMath::Sample::hemisphere(normal, normal);
+
+	return ray;
 }

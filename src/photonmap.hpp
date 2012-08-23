@@ -82,7 +82,7 @@ class PhotonMap
 		void photon_dir(float *dir, const photon_t *p) const;	// Get the photon direction.
 
 		void store(const float position[3],						// Photon's position.
-				   const float power[3],							// Photon's power.
+				   const float power[3],						// Photon's power.
 				   const float direction[3]);					// Photon's incident direction.
 
 		void irradiance_estimate(float irradiance[3],			// Returned irradiance.

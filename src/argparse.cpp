@@ -8,23 +8,33 @@
 Environment Environment::m_environment;
 
 Environment::Environment()
-	: m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH),
+	: m_aa(XTRACER_SETUP_DEFAULT_AA),
+	  m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH),
 	  m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT),
+	  
 	  m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT),
+	  
 	  m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH),
+	  
 	  m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES),
 	  m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES),
 	  m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES),
-	  m_aa(XTRACER_SETUP_DEFAULT_AA),
-	  m_region_min_x(0),
+
+		m_region_min_x(0),
 	  m_region_min_y(0),
 	  m_region_max_x(0),
 	  m_region_max_y(0),
-	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
-	  m_photon_sradius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
+	  
 	  m_flag_gi(XTRACER_SETUP_DEFAULT_GI),
-	  m_flag_resume(false),
-	  m_output(XTRACER_OUTPUT_PPM)
+	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
+	  m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES),
+	  m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
+	  
+	  m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH),
+	  m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE),
+
+	  m_output(XTRACER_OUTPUT_PPM),
+	  m_flag_resume(false)
 {}
 
 Environment::~Environment()
@@ -100,9 +110,14 @@ unsigned int Environment::photon_count() const
 	return m_photon_count;
 }
 
-float Environment::photon_sradius() const
+unsigned int Environment::photon_max_samples() const
 {
-	return m_photon_sradius;
+	return m_photon_max_samples;
+}
+
+float Environment::photon_max_sampling_radius() const
+{
+	return m_photon_max_sampling_radius;
 }
 
 bool Environment::flag_gi() const
@@ -113,6 +128,16 @@ bool Environment::flag_gi() const
 bool Environment::flag_resume() const
 {
 	return m_flag_resume;
+}
+
+unsigned int Environment::octree_max_depth()
+{
+	return m_octree_max_depth;
+}
+
+unsigned int Environment::octree_max_items_per_node()
+{
+	return m_octree_max_items_per_node;
 }
 
 const char *Environment::resume_file() const
@@ -391,7 +416,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 		}
-		// GI
+		// G.I.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GI)) {
 			i++;
 
@@ -400,17 +425,55 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u:%f", &m_photon_count, &m_photon_sradius) < 2) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>:<float>.", argv[i-1]);
+			if (sscanf(argv[i], "%u:%u:%f", &m_photon_count, &m_photon_max_samples, &m_photon_max_sampling_radius) < 3) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>:<uint>:<float>.", argv[i-1]);
 				return 2;
 			}
 
-			if ((int)m_photon_count < 1 || m_photon_sradius <= 0.0) {
+			if ((int)m_photon_count < 1 || m_photon_max_samples < 1 || m_photon_max_sampling_radius <= 0.0) {
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
 			}
 
 			m_flag_gi = true;
+		}
+		// Octree max depth.
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_DEPTH)) {
+			i++;
+
+			if (!argv[i]) {
+				Log::handle().log_error("No value was provided for %s", argv[i-1]);
+				return 2;
+			}
+
+			if (sscanf(argv[i], "%u", &m_octree_max_depth) < 1) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
+				return 2;
+			}
+
+			if (m_octree_max_depth < 1) {
+				 Log::handle().log_error("Invalid %s value.", argv[i-1]);
+				 return 2;
+			}
+		}
+		// Octre max items per node.
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_IPN)) {
+			i++;
+
+			if (!argv[i]) {
+				Log::handle().log_error("No value was provided for %s", argv[i-1]);
+				return 2;
+			}
+
+			if (sscanf(argv[i], "%u", &m_octree_max_items_per_node) < 1) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
+				return 2;
+			}
+
+			if (m_octree_max_items_per_node < 1) {
+				Log::handle().log_error("Invalid %s value.", argv[i-1]);
+				return 2;
+			}
 		}
 		// Resume file.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_RESUMEFILE)) {
