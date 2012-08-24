@@ -99,6 +99,8 @@ void Renderer::pass_ptrace(Scene &scene)
 	// Photon tracing.
 	unsigned int light_index = 0;
 	for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
+		unsigned int it_count = light_photons[light_index];
+
 		while (light_photons[light_index] > 0) {
 			Ray ray = (*it).second->ray_sample();
 			trace_photon(scene, ray, 0, (*it).second->intensity(), light_photons[light_index]);
@@ -115,12 +117,13 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 {
 	if (depth > Environment::handle().max_rdepth())
 		return false;
-
-	// Intersect.
+	
+	// Create a photon ray.
 	IntInfo info;
 	memset(&info, 0, sizeof(info));
-	std::string obj;
 
+	// Intersect.
+	std::string obj;
 	if (!scene.intersection(ray, info, obj))
 		return false;
 	
@@ -135,7 +138,6 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 
 	scalar_t prob_total = prob_diffuse + prob_specular + prob_transmit;
 
-
 //std::cout << "dif: " << prob_diffuse << "spec: " << prob_specular << "trans: " << prob_transmit <<std::endl;
 
 	// Random value.
@@ -143,13 +145,13 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 
 	if (event < prob_diffuse + prob_specular + prob_transmit) {
 		Ray nray;
-		ColorRGBf npower = power;
+		ColorRGBf npower = npower * mat->diffuse;
 		
 		nray.origin = info.point;
 
 		if (event < prob_diffuse) { // Interdiffuse.
 			nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
-			npower *= (1.0 / prob_diffuse) * mat->diffuse;
+			npower *= (1.0 / prob_diffuse);
 
 			trace_photon(scene, nray, depth + 1, npower, map_capacity);
 		}
@@ -169,13 +171,10 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 		pos[0] = info.point.x;		pos[1] = info.point.y;		pos[2] = info.point.z;
 		dir[0] = ray.direction.x; 	dir[1] = ray.direction.y; 	dir[2] = ray.direction.z;
 
-		// Check if there are photons left to consume.
-		if (depth > 0 && map_capacity > 0) {
-			scene.m_pm_global.store(pos, pwr, dir);
-			map_capacity--;
-			std::cout << "\r Depth:" << depth << " Light: " << std::setw(3) << "x" << " Remaining photons: " << std::setw(12) << map_capacity << std::flush;
-		}
+		scene.m_pm_global.store(pos, pwr, dir);
+		map_capacity--;
 		
+		std::cout << "\r Depth:" << depth << " Light: " << std::setw(3) << "x" << " Remaining photons: " << std::setw(12) << map_capacity << std::flush;
 
 		return true;
 	}
@@ -277,7 +276,7 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 
 
 			// Direct visualization ---------------------------------------
-			
+		if (Environment::handle().flag_gi()) {	
 			float irad1[3], irad2[3];
 			float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
 		
@@ -290,17 +289,10 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 				Environment::handle().photon_max_sampling_radius(), 
 				Environment::handle().photon_max_samples());
 
-			norm[0] = (float)-info.normal.x;
-			norm[1] = (float)-info.normal.y; 
-			norm[2] = (float)-info.normal.z;
-			
-			scene.m_pm_global.irradiance_estimate(irad2, posi, norm, 
-				Environment::handle().photon_max_sampling_radius(), 
-				Environment::handle().photon_max_samples());
 
-			ColorRGBf res(irad1[0] + irad2[0] , irad1[1] + irad2[1], irad1[2] + irad2[2]);
+			ColorRGBf res(irad1[0] + irad2[0], irad1[1] + irad2[1], irad1[2] + irad2[2]);
 			return res;
-			
+		}
 			// Direct visualization ---------------------------------------
 		
 
@@ -308,9 +300,10 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
+			if (dot_normal_dir > 0) info.normal = -info.normal;
 			scalar_t ior_a = dot_normal_dir > 0 ? mat->ior : ior_src;
 			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : mat->ior;
-
+			
 			return shade(scene, ray, depth, info, obj, ior_a, ior_b);
 		}
 	}

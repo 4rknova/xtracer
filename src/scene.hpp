@@ -56,6 +56,7 @@ class Scene
 		Scene();
 		~Scene();
 
+		const char *name();
 		const char *source();
 
 		unsigned int load(const char *filename);

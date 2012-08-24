@@ -76,6 +76,11 @@ Scene::~Scene()
 	release();
 }
 
+const char *Scene::name()
+{
+	return m_scene.get(XTPROTO_PROP_TITLE);
+}
+
 const char *Scene::source()
 {
 	return m_source.c_str();

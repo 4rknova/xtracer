@@ -183,7 +183,7 @@ Vector3f BoxLight::point_sample() const
 			break;
 	}
 
-	return position() + v;
+	return position() + (v / 2);
 }
 
 Ray BoxLight::ray_sample() const {
@@ -233,7 +233,7 @@ Ray BoxLight::ray_sample() const {
 			break;
 	}
 
-	ray.origin = position() + v;
+	ray.origin = position() + (v / 2);
 	ray.direction = NMath::Sample::hemisphere(normal, normal);
 
 	return ray;
