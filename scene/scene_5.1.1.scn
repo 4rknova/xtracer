@@ -146,7 +146,6 @@ light = {
 			b = 0.1075
 		}
 	}
-
 }
 
 # The scene materials

@@ -222,14 +222,14 @@ Ray BoxLight::ray_sample() const {
 		case 5:
 			v.x = ra * m_dimensions.x;
 			v.z = rb * m_dimensions.z;
-			v.y = m_dimensions.y;
-			normal = Vector3f(0, 1, 0);
+			v.y = -m_dimensions.y;
+			normal = Vector3f(0, -1, 0);
 			break;
 		case 6:
 			v.x = ra * m_dimensions.x;
 			v.z = rb * m_dimensions.z;
-			v.y = -m_dimensions.y;
-			normal = Vector3f(0, -1, 0);
+			v.y = m_dimensions.y;
+			normal = Vector3f(0, 1, 0);
 			break;
 	}
 

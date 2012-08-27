@@ -90,21 +90,21 @@ geometry = {
 	floor = {
 		type = plane
 		normal = {
-			y = -1
+			y = 1
 		}
-		distance = 400
+		distance = -400
 	}
 	ceiling = {
 		type = plane
 		normal = {
-			y = 1
+			y = -1
 		}
 		distance = 400
 	}
 	back = {
 		type = plane
 		normal = {
-			z = 1
+			z = -1
 		}
 		distance = 500
 	}
@@ -120,14 +120,14 @@ geometry = {
 		normal = {
 			x = 1
 		}
-		distance = 500
+		distance = -500
 	}
 	front = {
 		type = plane
 		normal = {
-			z = -1
+			z = 1
 		}
-		distance = 2560
+		distance = -2600
 	}
 }
 

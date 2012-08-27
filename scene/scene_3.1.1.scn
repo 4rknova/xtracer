@@ -191,7 +191,7 @@ geometry = {
 	floor = {
 		type = plane 
 		normal = {
-			y = 1.0
+			y = 1
 		}
 
 		distance = 0

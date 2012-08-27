@@ -16,6 +16,7 @@
 #define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES	1						/* Default sample count for reflection. */
 
 #define XTRACER_SETUP_DEFAULT_GI				false					/* Default gi flag value. */
+#define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT		100000					/* Default photon count for gi. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES	1000					/* Default photon samples. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS	1.0						/* Default photon sampling radius. */

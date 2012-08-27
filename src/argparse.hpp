@@ -29,6 +29,7 @@ class Environment
 		unsigned int region_max_y() const;
 
 		bool flag_gi() const;
+		bool flag_giviz() const;
 		unsigned int photon_count() const;
 		unsigned int photon_max_samples() const;
 		float photon_max_sampling_radius() const;
@@ -76,6 +77,7 @@ class Environment
 		unsigned int m_region_max_y;
 
 		bool m_flag_gi;
+		bool m_flag_giviz;
 		unsigned int m_photon_count;
 		unsigned int m_photon_max_samples;
 		float m_photon_max_sampling_radius;

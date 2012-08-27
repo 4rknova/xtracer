@@ -54,8 +54,8 @@ void PhotonMap::calc_conversion_tables()
 
 		m_sintheta[i] = nmath_sin(angle);
 		m_costheta[i] = nmath_cos(angle);
-		m_sinphi[i]   = nmath_sin(angle);
-		m_cosphi[i]   = nmath_cos(angle);
+		m_sinphi[i]   = nmath_sin(2.0 * angle);
+		m_cosphi[i]   = nmath_cos(2.0 *angle);
 	}
 }
 

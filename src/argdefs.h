@@ -16,7 +16,8 @@
 #define XTRACER_ARGDEFS_ACTIVE_CAMERA		"-cam"				/* Active camera name */
 #define XTRACER_ARGDEFS_OUTDRV				"-outdrv"			/* Output mode */
 #define XTRACER_ARGDEFS_OUTDIR				"-outdir"			/* Output directory */
-#define XTRACER_ARGDEFS_GI					"-gi"				/* Compute indirect lighting */
+#define XTRACER_ARGDEFS_GI					"-gi"				/* Flag to compute indirect lighting */
+#define XTRACER_ARGDEFS_GIVIZ				"-giviz"			/* Flag to output a direct visualization of the photon map */
 #define XTRACER_ARGDEFS_OCTREE_MAX_DEPTH	"-octree_depth"		/* Set the maximum octree depth */
 #define XTRACER_ARGDEFS_OCTREE_MAX_IPN		"-octree_ipn"		/* Set the maximum octree items per node */
 

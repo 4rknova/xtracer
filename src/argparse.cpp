@@ -20,12 +20,13 @@ Environment::Environment()
 	  m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES),
 	  m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES),
 
-		m_region_min_x(0),
+	  m_region_min_x(0),
 	  m_region_min_y(0),
 	  m_region_max_x(0),
 	  m_region_max_y(0),
 	  
 	  m_flag_gi(XTRACER_SETUP_DEFAULT_GI),
+	  m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ),
 	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
 	  m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES),
 	  m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
@@ -123,6 +124,11 @@ float Environment::photon_max_sampling_radius() const
 bool Environment::flag_gi() const
 {
 	return m_flag_gi;
+}
+
+bool Environment::flag_giviz() const
+{
+	return m_flag_giviz;
 }
 
 bool Environment::flag_resume() const
@@ -436,6 +442,10 @@ unsigned int Environment::setup(int argc, char **argv)
 			}
 
 			m_flag_gi = true;
+		}
+		// G.I. photonmap visualization
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GIVIZ)) {
+			m_flag_giviz = true;	
 		}
 		// Octree max depth.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_DEPTH)) {

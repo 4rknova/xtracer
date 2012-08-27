@@ -74,44 +74,37 @@ geometry = {
 	floor = {
 		type = plane
 		normal = {
-			y = -1
+			y = 1
 		}
-		distance = 400
+		distance = -400
 	}
 	ceiling = {
 		type = plane
 		normal = {
-			y = 1
+			y = -1
 		}
 		distance = 400
 	}
 	back = {
 		type = plane
 		normal = {
-			z = 1
+			z = -1
 		}
 		distance = 500
 	}
 	left_wall = {
 		type = plane
 		normal = {
-			x = -1
+			x = 1
 		}
-		distance = 500
+		distance = -500
 	}
 	right_wall = {
 		type = plane
 		normal = {
-			x = 1
+			x = -1
 		}
 		distance = 500
-	}
-	front = {
-		type = plane
-		normal = {
-			z = -1
-		}
-		distance = 2600
 	}
 }
 
@@ -181,10 +174,6 @@ object = {
 	}
 	left_wall = {
 		geometry = left_wall
-		material = lambert_silver
-	}
-	front = {
-		geometry = front
 		material = lambert_silver
 	}
 }

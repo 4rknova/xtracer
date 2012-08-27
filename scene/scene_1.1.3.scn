@@ -39,7 +39,7 @@ camera = {
 
 		position = {
 			x = -800
-			y = 810
+			y = 950
 			z = -1400
 		}
 
