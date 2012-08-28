@@ -30,6 +30,7 @@ Environment::Environment()
 	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
 	  m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES),
 	  m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
+	  m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC),
 	  
 	  m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH),
 	  m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE),
@@ -119,6 +120,11 @@ unsigned int Environment::photon_max_samples() const
 float Environment::photon_max_sampling_radius() const
 {
 	return m_photon_max_sampling_radius;
+}
+
+float Environment::photon_power_scaling() const
+{
+	return m_photon_power_scaling;
 }
 
 bool Environment::flag_gi() const
@@ -431,8 +437,8 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u:%u:%f", &m_photon_count, &m_photon_max_samples, &m_photon_max_sampling_radius) < 3) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>:<uint>:<float>.", argv[i-1]);
+			if (sscanf(argv[i], "%u:%u:%fx%f", &m_photon_count, &m_photon_max_samples, &m_photon_max_sampling_radius, &m_photon_power_scaling) < 4) {
+				Log::handle().log_error("Invalid %s value. Should be <uint>:<uint>:<float>x<float>.", argv[i-1]);
 				return 2;
 			}
 

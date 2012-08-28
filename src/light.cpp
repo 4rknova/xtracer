@@ -238,3 +238,61 @@ Ray BoxLight::ray_sample() const {
 
 	return ray;
 }
+
+TriangleLight::TriangleLight()
+{}
+
+bool TriangleLight::is_area_light() const
+{
+	return true;
+}
+
+void TriangleLight::geometry(const Vector3f &a, const Vector3f &b, const Vector3f &c)
+{
+	m_a = a;
+	m_b = b;
+	m_c = c;
+}
+
+const Vector3f TriangleLight::a() const
+{
+	return m_a;
+}
+
+const Vector3f TriangleLight::b() const
+{
+	return m_b;
+}
+
+const Vector3f TriangleLight::c() const
+{
+	return m_c;
+}
+
+Vector3f TriangleLight::point_sample() const
+{
+	// Rejection sampling for barycentric coordinates.
+	scalar_t b0, b1, b2;
+	
+	do {
+		b0 = NMath::prng_c(0, 1);
+		b1 = NMath::prng_c(0, 1);
+		b2 = NMath::prng_c(0, 1);
+	} while (b0 + b1 + b2 > 1.0);
+
+	return Vector3f(b0 * m_a + b1 * m_b + b2 * m_c) + position(); 
+}
+
+Ray TriangleLight::ray_sample() const
+{
+	Ray ray;
+
+	// Origin.
+	ray.origin = point_sample();
+
+	// Direction.
+	Vector3f normal = cross(m_b - m_a, m_c - m_a).normalized();
+	ray.direction = NMath::Sample::hemisphere(normal, normal);
+
+	return ray;
+}

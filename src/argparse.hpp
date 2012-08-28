@@ -33,6 +33,7 @@ class Environment
 		unsigned int photon_count() const;
 		unsigned int photon_max_samples() const;
 		float photon_max_sampling_radius() const;
+		float photon_power_scaling() const;
 		
 		unsigned int octree_max_depth();
 		unsigned int octree_max_items_per_node();
@@ -81,6 +82,7 @@ class Environment
 		unsigned int m_photon_count;
 		unsigned int m_photon_max_samples;
 		float m_photon_max_sampling_radius;
+		float m_photon_power_scaling;
 
 		unsigned int m_octree_max_depth;
 		unsigned int m_octree_max_items_per_node;

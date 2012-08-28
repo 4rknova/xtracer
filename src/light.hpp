@@ -101,4 +101,22 @@ class BoxLight : public Light
 		Vector3f m_dimensions;
 };
 
+class TriangleLight : public Light
+{
+	public:
+		TriangleLight();
+
+		void geometry(const Vector3f &a, const Vector3f &b, const Vector3f &c);
+		const Vector3f a() const;
+		const Vector3f b() const;
+		const Vector3f c() const;
+
+		bool is_area_light() const;
+		Vector3f point_sample() const;
+		Ray ray_sample() const;
+
+	private:
+		Vector3f m_a, m_b, m_c;
+};
+
 #endif /* XTRACER_LIGHT_HPP_INCLUDED */

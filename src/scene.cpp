@@ -417,6 +417,22 @@ unsigned int Scene::create_light(NCF1 *p)
 		if (!light)
 			return 2;
 	}
+	else if (!type.compare(XTPROTO_LTRL_TRIANGLELIGHT)) {
+		light = new (std::nothrow) TriangleLight;
+
+		Vector3f v[3];
+		for (unsigned int i = 1; i <= 3; i++) {
+			NCF1 *vnode = p->group(XTPROTO_PROP_VRTXDATA)->group(i);
+			
+			scalar_t px = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_X));
+			scalar_t py = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Y));
+			scalar_t pz = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Z));
+			
+			v[i-1] = Vector3f(px, py, pz);
+		}
+
+		((TriangleLight*)light)->geometry(v[0], v[1], v[2]);
+	}
 	else {
 		Log::handle().log_warning("Unsupported light type %s [%s]. Skipping..", p->name(), type.c_str());
 		return 2;

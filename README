@@ -28,21 +28,17 @@ Features
 Implemented:
 * Primitives    : Plane, Triangle, Sphere, Mesh
 * Materials     : Lambert, Phong, Blinn-Phong
-* Lights        : Point, Sphere, Box
+* Lights        : Point, Sphere, Box, Triangle
 * Cameras       : Pinhole, Thin lense
-* Shading       : Reflection (glossy & perfect mirror), Refraction, 
+* Shading       : Reflection (glossy & perfect mirror), Refraction,
 				  Depth of field, Soft shadows, Texture mapping
-* Acceleration  : Threads, Octrees
+* Acceleration  : Threads, Octrees, KD-trees
 * Anti-aliasing : Supersampling
-* Rendering     : HDR
+* Rendering     : HDR, Whitted/Distributed raytracing, Photon mapping (diffuse term)
 
 Future expansion:
-* Primitives	: Cylinder, Blob
-* Lights		: Mesh
-* GI			: Photon mapping
-* Shading		: Normal mapping, Fresnel, Beer's law
-* Anti-aliasing	: Jittering
-* Other			: Support for multiple renderers, Lua shaders
+* Shading		: Fresnel, Beer's law
+* Anti-aliasing	: Adaptive SS, Jittering
 
 Compilation / Installation
 --------------------------
@@ -91,3 +87,5 @@ version 0.x
 version 1.x
 
 	Dr Qingde Li             : Supervising professor at University of Hull
+	Tsiombikas John          : Technical advisory.
+

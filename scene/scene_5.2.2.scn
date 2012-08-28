@@ -72,25 +72,57 @@ camera = {
 # The scene lights
 light = {
 
-	# I will use 4 point lights, one per vertex of the original 
-	# data for the light source ( quad ).
-	# Also the original data sets it to y = 548.8 which is the same 
-	# as the height of the ceiling. I set it much lower to avoid 
-	# numerical errors and compensate for intensity loses due to 
-	# the nature of point lights.
-	light = {
-		type = box
+	light1 = {
+		type = triangle
 
-		dimensions = {
-			x = 130
-			y = 0.1
-			z = 105
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7998
+				z = 227.0
+			}
+
+			v1 = {
+				x = 343.0
+				y = 548.7998
+				z = 332.0
+			}
+ 
+			v2 = {
+				x = 213.0
+				y = 548.7998
+				z = 332.0
+			}
 		}
-		
-		position = {
-			x = 278.0
-			y = 545.0
-			z = 279.5
+
+		intensity = {
+			r = 1.0
+			g = 0.85
+			b = 0.43
+		}
+	}
+
+	light2 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7998
+				z = 227.0
+			}
+
+			v1 = {
+				x = 213.0
+				y = 548.7998
+				z = 332.0
+			}
+
+			v2 = {
+				x = 213.0
+				y = 548.7998
+				z = 227.0
+			}
 		}
 
 		intensity = {

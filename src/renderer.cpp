@@ -102,7 +102,7 @@ void Renderer::pass_ptrace(Scene &scene)
 	for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
 		while (light_photons[light_index] > 0) {
 			Ray ray = (*it).second->ray_sample();
-			trace_photon(scene, ray, 0, (*it).second->intensity() * 0.9, light_photons[light_index]);
+			trace_photon(scene, ray, 0, (*it).second->intensity() * Environment::handle().photon_power_scaling(), light_photons[light_index]);
 		}
 		
 		light_index++;

@@ -20,6 +20,7 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT		100000					/* Default photon count for gi. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES	1000					/* Default photon samples. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS	1.0						/* Default photon sampling radius. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC	1.0						/* Default photon power scaling factor. */
 
 #define XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH	8						/* Default octree max depth. */
 #define XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE  1						/* Default octree max items per node. */

@@ -44,6 +44,7 @@
 #define XTPROTO_LTRL_POINTLIGHT		"point"				/* string     */			/* Point light */
 #define XTPROTO_LTRL_SPHERELIGHT	"sphere"			/* string     */			/* Sphere light */
 #define XTPROTO_LTRL_BOXLIGHT		"box"				/* string     */			/* Box light */
+#define XTPROTO_LTRL_TRIANGLELIGHT	"triangle"			/* string	  */			/* Triangular light */
 
 #define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */			/* BRDF: Lambert */
 #define XTPROTO_LTRL_PHONG			"phong"				/* string     */			/* BRDF: Phong */
