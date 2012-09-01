@@ -118,6 +118,9 @@ geometry = {
 		normal = {
 			y = 1
 		}
+
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 }
 
@@ -156,18 +159,24 @@ light = {
 	
 }
 
+texture = {
+	floor = {
+		source = ../media/texture/wood/1.ppm
+	}
+}
+
 material = {
 	floor = {
 		type = blinn_phong
 
-		k_diffuse = 0.2
-		k_specular = 0.8
-		k_exponent = 10000
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_exponent = 1000
 	
 		diffuse = {
-			r = 0.105
-			g = 0.105
-			b = 0.105
+			r = 1
+			g = 1
+			b = 1
 		}
 
 		specular = {
@@ -193,9 +202,9 @@ material = {
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 0.980
+			g = 0.9215
+			b = 0.8431
 		}
 
 		reflectance = 0.15
@@ -216,8 +225,8 @@ material = {
 
 		specular = {
 			r = 0.2
-			g = 0.57
-			b = 0.08
+			g = 0.94
+			b = 0.01 
 		}
 
 		reflectance = 0.3
@@ -265,9 +274,9 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.1
-		transparency = 0.8
-		ior = 1.031714
+		reflectance = 0
+		transparency = 0.9
+		ior = 1.0131714
 	}
 }
 
@@ -291,5 +300,6 @@ object = {
 	plane = {
 		geometry = plane
 		material = floor
+		texture = floor
 	}
 }

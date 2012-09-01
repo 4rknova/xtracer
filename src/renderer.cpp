@@ -95,7 +95,6 @@ void Renderer::pass_ptrace(Scene &scene)
 	}
 	
 	Log::handle().log_message("Casting photons..");
-	Log::handle().log_message("Progress ...");
 
 	// Photon tracing.
 	unsigned int light_index = 0;
@@ -141,7 +140,7 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 
 		scene.m_pm_global.store(pos, pwr, dir);
 		map_capacity--;
-		std::cout << "\r Depth:" << depth << " Light: " << std::setw(3) << "x" << " Remaining photons: " << std::setw(12) << map_capacity << std::flush;
+		std::cout << "\rCasting photons.. " << std::setw(12) << map_capacity << std::flush;
 	}
 	
 	// Russian rulette.
@@ -282,7 +281,7 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
-			if (mat->transparency >= 1.0 && dot_normal_dir > 0) info.normal = -info.normal;
+			if (mat->transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
 			scalar_t ior_a = dot_normal_dir > 0 ? mat->ior : ior_src;
 			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : mat->ior;
 

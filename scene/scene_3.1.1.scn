@@ -124,6 +124,14 @@ light = {
 	}
 }
 
+texture = {
+	floor = {
+		source = ../media/texture/checkerboard/1.ppm
+	}
+}
+
+
+
 # The scene materials
 material = {
 	block = {
@@ -136,17 +144,14 @@ material = {
 		}
 	}
 
-	ball = {
-	}
-
 	floor = {
 		type = blinn_phong
 
-		reflectance = 0.3
+		reflectance = 0.2
 
-		k_diffuse = 0.2
-		k_specular = 0.8
-		k_exponent = 50000
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_exponent = 500
 
 		diffuse = {
 			r = 0.1
@@ -195,6 +200,9 @@ geometry = {
 		}
 
 		distance = 0
+
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 
 	# The props
@@ -481,6 +489,7 @@ object = {
 	floor = {
 		geometry = floor
 		material = floor
+		texture = floor
 	}
 
 	# Sphere stack

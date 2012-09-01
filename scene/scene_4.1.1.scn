@@ -79,6 +79,9 @@ geometry = {
 		normal = {
 			y = 1
 		}
+
+		v_scale = 0.003
+		u_scale = 0.003
 	}
 }
 
@@ -117,16 +120,16 @@ light = {
 
 material = {
 	floor = {
-		type = blinn_phong
+		type = phong
 
-		k_diffuse = 0.7
-		k_specular = 0.1
-		k_exponent = 790
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_exponent = 128
 	
 		diffuse = {
-			r = 0.03
-			g = 0.03
-			b = 0.03
+			r = 0.51
+			g = 0.51
+			b = 0.51
 		}
 
 		specular = {
@@ -135,7 +138,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.23
+		reflectance = 0.2
 	}
 
 	ball1 = {
@@ -183,7 +186,6 @@ material = {
 		reflectance = 0.003
 
 	}
-
 	
 	ball3 = {
 		type = blinn_phong
@@ -211,9 +213,9 @@ material = {
 	plastic2 = {
 		type = blinn_phong
 
-		k_diffuse = 0.1
-		k_specular = 0.9
-		k_exponent = 60
+		k_diffuse = 0
+		k_specular = 1
+		k_exponent = 128
 	
 		diffuse = {
 			r = 1
@@ -227,9 +229,15 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.3
-		transparency = 0.8
-		ior = 1.031714
+		reflectance = 0.4
+		transparency = 0.9
+		ior = 1.341714
+	}
+}
+
+texture = {
+	floor = {
+		source = ../media/texture/checkerboard/1.ppm
 	}
 }
 
@@ -250,8 +258,9 @@ object = {
 		geometry = sphere2
 		material = plastic2
 	}
-	plane = {
+	floor = {
 		geometry = plane
 		material = floor
+		texture = floor
 	}
 }
