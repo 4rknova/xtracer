@@ -271,14 +271,17 @@ const Vector3f TriangleLight::c() const
 
 Vector3f TriangleLight::point_sample() const
 {
-	// Rejection sampling for barycentric coordinates.
 	scalar_t b0, b1, b2;
 	
-	do {
-		b0 = NMath::prng_c(0, 1);
-		b1 = NMath::prng_c(0, 1);
-		b2 = NMath::prng_c(0, 1);
-	} while (b0 + b1 + b2 > 1.0);
+	b0 = NMath::prng_c(0, 1);
+	b1 = NMath::prng_c(0, 1);
+	b2 = NMath::prng_c(0, 1);
+
+	scalar_t bt = b0 + b1 + b2;
+
+	b0 /= bt;
+	b1 /= bt;
+	b2 /= bt;
 
 	return Vector3f(b0 * m_a + b1 * m_b + b2 * m_c) + position(); 
 }

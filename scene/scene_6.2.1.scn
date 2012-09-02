@@ -87,6 +87,9 @@ geometry = {
 			y = 1
 		}
 		distance = 0
+
+		u_scale = 0.03
+		v_scale = 0.03
 	}
 	
 	ceiling = {
@@ -251,6 +254,12 @@ material = {
 	}
 }
 
+texture = {
+	floor = {
+		source = ../media/texture/checkerboard/1.ppm
+	}
+}
+
 object = {
 	sphere1 = {
 		geometry = sphere1
@@ -273,6 +282,7 @@ object = {
 	floor = {
 		geometry = floor
 		material = plane
+		texture = floor
 	}
 	ceiling = {
 		geometry = ceiling

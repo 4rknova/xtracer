@@ -105,6 +105,9 @@ geometry = {
 			y = 1
 		}
 		distance = 0
+
+		u_scale = 0.001
+		v_scale = 0.001
 	}
 
 	wall = {
@@ -301,6 +304,12 @@ material = {
 	}
 }
 
+texture = {
+	floor = {
+		source = ../media/texture/checkerboard/2.ppm
+	}
+}
+
 object = {
 	sphere1 = {
 		geometry = sphere1
@@ -329,6 +338,7 @@ object = {
 	floor = {
 		geometry = floor
 		material = plane
+		texture = floor
 	}
 	wall = {
 		geometry = wall
