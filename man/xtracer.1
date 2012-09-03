@@ -20,10 +20,14 @@ A value of 0 lets the system decide.
 Sets the output buffer resolution.
 .IP "-rdepth %i"
 Sets the maximum recursion depth.
-.IP "-dofs %i"
+.IP "-s_global"
+Sets the number of samples for s_dof, s_light, s_refl.
+.IP "-s_dof %i"
 Sets the number of dof samples.
-.IP "-mcs %i"
-Sets the number of samples for monte carlo integration.
+.IP "-s_light %i"
+Sets the number of samples for area lights.
+.IP "-s_refl %i"
+Sets the number of samples for specular reflections.
 .IP "-aa %i"
 Enables antialiasing (supersampling). %i must be 1 or greater.
 .IP "-resume %s"
@@ -36,6 +40,16 @@ Sets the active camera.
 Sets the output driver to use. Available drivers are: ppm, dum.
 .IP "-outdir %s"
 Sets the output directory.
+.IP "-gi %i:%i:%ix%f"
+Sets up the photon mapping step. The first number sets the total ammount of photons.
+The second defines the maximum number of samples per pixel, the third number sets the
+maximum sampling radius per pixel and the last number is the photon power multiplier.
+.IP "-giviz"
+The output is calculated by sampling the photon map and direct illumination is ignored.
+.IP "-octree_depth"
+Maximum depth for octree generation.
+.IP "-octree_ipn"
+Maximum number of items per octree node.
 .SH DRIVERS
 .IP "ppm"
 Exports the framebuffer to a ppm image file.
