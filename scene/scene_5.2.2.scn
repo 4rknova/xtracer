@@ -96,9 +96,9 @@ light = {
 		}
 
 		intensity = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 	}
 
@@ -126,9 +126,9 @@ light = {
 		}
 
 		intensity = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 	}
 }
@@ -198,6 +198,28 @@ material = {
 			g = 1.0
 			b = 1.0
 		}
+	}
+
+	glossy = {
+		type = blinn_phong
+
+		k_diffuse  = 0.0
+		k_specular = 1
+		k_exponent = 160
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 1
 	}
 }
 
@@ -754,12 +776,12 @@ object = {
 	# Floor
 	floor_1 = {
 		geometry = floor_1
-		material = white
+		material = glossy
 	}
 
 	floor_2 = {
 		geometry = floor_2
-		material = white
+		material = glossy
 	}
 
 	# Ceiling

@@ -123,9 +123,9 @@ material = {
 		type = lambert
 
 		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
 
@@ -462,11 +462,40 @@ geometry = {
 			}
 		}
 	}
-	
+
+	# Spheres
+	sphere1 = {
+		type = sphere
+		radius = 50
+
+		position = {
+			x = 100
+			y = 50
+			z = 100
+		}
+	}
+
+	sphere2 = {
+		type = sphere
+		radius = 25
+
+		position = {
+			x = 400
+			y = 25
+			z = 140
+		}
+	}
+
 	# Model
 	model = {
 		type = mesh
-		source = ../media/mesh/sonic_and_tails.obj
+		source = ../media/mesh/head_cornell.obj
+	}
+}
+
+texture = {
+	model = {
+		source = ../media/texture/head/Map-COL.ppm
 	}
 }
 
@@ -538,9 +567,21 @@ object = {
 		material = green
 	}
 
+	# Spheres
+	sphere1 = {
+		geometry = sphere1
+		material = matte
+	}
+	
+	sphere2 = {
+		geometry = sphere2
+		material = matte
+	}
+
 	# Model
 	model = {
 		geometry = model
 		material = matte
+		texture = model
 	}
 }

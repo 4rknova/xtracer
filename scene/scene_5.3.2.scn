@@ -1,28 +1,8 @@
 # Xtracer 2
-#
-# This scene describes the standard "Cornell Box" with some caveats.
-# These caveats will be raised as the development of xtracer progresses.
-#
-# Caveats:
-#
-# 	- 	The light's color intensity is defined in arbitrary RGB units rather than
-# 		the physically measured spectrum described on the Cornell Box page.
-#		(http://www.graphics.cornell.edu/online/box/data.html)
-#
-#	-	Materials are defined with RGB approximations to their spectral
-#		reflectance, not the 4 nm sampled spectra on the web page.
-#
-#	-	The walls are defined as ( clockwise ) triangles instead of quads
-#
-# Notes:
-#
-#	-	The original Cornell box is rendered with an aspect ratio of 1:1.
-#	-	The final image appears flipped to the yy' axis. This is due to the
-#		different coordinate system used in the original data.
 
-title = Cornell box replica (based on the original radiosity dataset)
-descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
-versn = 0.3
+title = Cornell box
+descr = <title> variant. ( Whitted friendly version )
+versn = 0.1
 
 # The scene cameras.
 camera = {
@@ -62,65 +42,57 @@ camera = {
 
 # The scene lights
 light = {
-
 	light1 = {
 		type = triangle
-
 		vecdata = {
 			v0 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7998
-				z = 227.0
+				z = 127.0
 			}
-
 			v1 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7998
-				z = 332.0
+				z = 132.0
 			}
-
 			v2 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7998
-				z = 332.0
+				z = 132.0
 			}
-
 		}
 
 		intensity = {
-			r = 1.0
-			g = 0.85
-			b = 0.43
+				r = 0.5
+				g = 0.5
+				b = 0.5
 		}
 	}
 
 	light2 = {
 		type = triangle
-
 		vecdata = {
 			v0 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7998
-				z = 227.0
+				z = 127.0
 			}
-
 			v1 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7998
-				z = 332.0
+				z = 132.0
 			}
-
 			v2 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7998
-				z = 227.0
+				z = 127.0
 			}
 		}
-	
+
 		intensity = {
-			r = 1.0
-			g = 0.85
-			b = 0.43
+			r = 0.50
+			g = 0.50
+			b = 0.50
 		}
 	}
 }
@@ -134,9 +106,19 @@ material = {
 		type = lambert
 
 		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	matte = {
+		type = lambert
+
+		diffuse = {
+			r = 0.980
+			g = 0.9215
+			b = 0.8431
 		}
 	}
 
@@ -164,19 +146,9 @@ material = {
 		type = lambert
 
 		diffuse = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
-		}
-	}
-
-	matte = {
-		type = lambert
-
-		diffuse = {
-			r = 0.980
-			g = 0.9215
-			b = 0.8431
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
 }
@@ -193,21 +165,21 @@ geometry = {
 
 		vecdata = {
 			v0 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7999
-				z = 227.0
+				z = 127.0
 			}
 
 			v1 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7999
-				z = 332.0
+				z = 132.0
 			}
 
 			v2 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7999
-				z = 332.0
+				z = 132.0
 			}
 
 		}
@@ -218,21 +190,21 @@ geometry = {
 
 		vecdata = {
 			v0 = {
-				x = 343.0
+				x = 143.0
 				y = 548.7999
-				z = 227.0
+				z = 127.0
 			}
 
 			v1 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7999
-				z = 332.0
+				z = 132.0
 			}
 
 			v2 = {
-				x = 213.0
+				x = 113.0
 				y = 548.7999
-				z = 227.0
+				z = 127.0
 			}
 		}
 	}
@@ -474,11 +446,16 @@ geometry = {
 		}
 	}
 
-	# The props
 	# Model
 	model = {
 		type = mesh
-		source = ../media/mesh/sonic_and_tails.obj
+		source = ../media/mesh/head_cornell.obj
+	}
+}
+
+texture = {
+	model = {
+		source = ../media/texture/head/Map-COL.ppm
 	}
 }
 
@@ -554,5 +531,6 @@ object = {
 	model = {
 		geometry = model
 		material = matte
+		texture = model
 	}
 }

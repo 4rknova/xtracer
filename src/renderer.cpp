@@ -124,9 +124,10 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	if (!scene.intersection(ray, info, obj))
 		return false;
 	
-	// Get the material.
+	// Get the material & texture.
 	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
-	
+	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
+
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
 		// Store the photon.
@@ -155,7 +156,12 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	if (event < avg_diff) { // Interdiffuse.
 		nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
 		nray.origin += nray.direction * 0.5;
-		trace_photon(scene, nray, depth + 1, power * mat->diffuse, map_capacity);
+		
+		ColorRGBf texcol = ColorRGBf(1, 1, 1);
+		if (it_tex != scene.m_textures.end())
+			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
+		
+		trace_photon(scene, nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
 
 		return true;
 	}
