@@ -30,6 +30,8 @@
 #include <fstream>
 
 #include <ncf/util.hpp>
+
+#include <nmesh/transform.hpp>
 #include <nmesh/calcnormals.hpp>
 #include <nmesh/obj.hpp>
 
@@ -534,6 +536,20 @@ unsigned int Scene::create_geometry(NCF1 *p)
 			Log::handle().log_warning("Failed to load mesh from %s", f.c_str());
 			delete geometry;
 			return 1;
+		}
+		
+		if (p->query_group(XTPROTO_PROP_SCALE)) {
+			NMesh::Mutator::scale(dynamic_cast<NMesh::Mesh &>(*geometry),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_SCALE)->get(XTPROTO_PROP_CRD_X)),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_SCALE)->get(XTPROTO_PROP_CRD_Y)),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_SCALE)->get(XTPROTO_PROP_CRD_Z)));
+		}
+
+		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
+			NMesh::Mutator::translate(dynamic_cast<NMesh::Mesh &>(*geometry),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_TRANSLATION)->get(XTPROTO_PROP_CRD_X)),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_TRANSLATION)->get(XTPROTO_PROP_CRD_Y)),
+				(scalar_t)to_double(p->group(XTPROTO_PROP_TRANSLATION)->get(XTPROTO_PROP_CRD_Z)));
 		}
 
 		if (smooth) {

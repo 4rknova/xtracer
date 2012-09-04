@@ -62,6 +62,10 @@
 #define XTPROTO_PROP_VSCALE			"v_scale"			/* scalar_t   */			/* V scaling */
 #define XTPROTO_PROP_DIMENSIONS		"dimensions"		/* Vector3f   */			/* Dimensions for 3d shape */
 
+#define XTPROTO_PROP_TRANSLATION	"translation"		/* Vector3f   */			/* Translation */
+#define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */			/* Rotation */
+#define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */			/* Scale */
+
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */			/* Radius */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */			/* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */			/* End b */
