@@ -192,6 +192,23 @@ bool Environment::scene_pop(std::string &res)
 
 	return true;
 }
+ 
+void Environment::modifier_push(std::string &modifier)
+{
+	m_modifiers.push_back(modifier);
+}
+
+bool Environment::modifier_pop(std::string &res)
+{
+	if (m_modifiers.empty()) {
+		return false;
+	}
+	
+	res = m_modifiers.back();
+	m_modifiers.pop_back();
+
+	return true;
+}
 
 unsigned int Environment::setup(int argc, char **argv)
 {
@@ -502,6 +519,17 @@ unsigned int Environment::setup(int argc, char **argv)
 
 			m_resume_file = argv[i];
 			m_flag_resume = true;
+		}
+		// Modifier
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MOD)) {
+			i++;
+
+			if (!argv[i]) {
+				Log::handle().log_error("Invalid argument: %s", argv[i]);
+				return 2;
+			}
+
+			m_modifiers.push_back(argv[i]);
 		}
 		// Invalid argument
 		else if (argv[i][0] == '-') {

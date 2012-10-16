@@ -55,6 +55,9 @@ class Environment
 		void scene_push(std::string &scene);
 		bool scene_pop(std::string &res);
 
+		void modifier_push(std::string &modifier);
+		bool modifier_pop(std::string &res);
+
 	private:
 		static Environment m_environment;
 
@@ -95,6 +98,7 @@ class Environment
 		std::string m_active_camera_name;
 
 		std::list<std::string> m_scenes;
+		std::list<std::string> m_modifiers;
 };
 
 #endif /* XTRACER_ARGPARSE_HPP_INCLUDED */

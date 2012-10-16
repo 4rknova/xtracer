@@ -20,6 +20,7 @@
 #define XTRACER_ARGDEFS_GIVIZ				"-giviz"			/* Flag to output a direct visualization of the photon map. */
 #define XTRACER_ARGDEFS_OCTREE_MAX_DEPTH	"-octree_depth"		/* Set the maximum octree depth. */
 #define XTRACER_ARGDEFS_OCTREE_MAX_IPN		"-octree_ipn"		/* Set the maximum octree items per node. */
+#define XTRACER_ARGDEFS_MOD					"-mod"				/* Apply a modifier */
 
 #define XTRACER_OUTPUT_STR_NUL 				"nul"				/* Output driver: dummy */
 #define XTRACER_OUTPUT_STR_PPM 				"ppm"				/* Output driver: ppm image */

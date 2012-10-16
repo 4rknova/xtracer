@@ -80,6 +80,10 @@ int main(int argc, char **argv)
 		if (scene.load(scene_source.c_str()))
 			continue;
 
+		// apply the modifiers
+		Log::handle().log_message("Applying modifiers..");
+		scene.apply_modifiers();
+		
 		Log::handle().log_message("- Name: %s", scene.name()); 
 
 		// Build the scene data

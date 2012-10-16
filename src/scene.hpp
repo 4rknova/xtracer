@@ -60,6 +60,7 @@ class Scene
 		const char *source();
 
 		unsigned int load(const char *filename);
+		void apply_modifiers();
 		unsigned int build();		// Build the scene data according to the scene tree
 
 		const ColorRGBf &ambient();

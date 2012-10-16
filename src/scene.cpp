@@ -41,6 +41,7 @@
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
+#include "argparse.hpp"
 #include "mesh.hpp"
 #include "proto.h"
 #include "log.hpp"
@@ -232,6 +233,33 @@ unsigned int Scene::load(const char *filename)
 	}
 
 	return 0;
+}
+
+void Scene::apply_modifiers()
+{
+	std::string mod;
+	while (Environment::handle().modifier_pop(mod)) {
+
+		// Check if there is actually an assignment
+		if (mod.find_last_of(':') == std::string::npos) {
+			Log::handle().log_warning("Invalid rule: %s", mod.c_str());
+			continue;
+		}
+
+		NCF1 *node = &m_scene;
+
+		std::string nleft, nright;
+		while((mod.find_first_of('.') != std::string::npos) && (mod.find_first_of(':') > mod.find_first_of('.'))) {
+			NCF::Util::split(mod, nleft, nright, '.');
+			mod = nright;
+
+			// move to node
+			node = node->group(nleft.c_str());
+		}
+
+		NCF::Util::split(mod, nleft, nright, ':');
+		node->set(nleft.c_str(), nright.c_str());
+	}
 }
 
 unsigned int Scene::build()
