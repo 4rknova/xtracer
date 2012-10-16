@@ -46,10 +46,12 @@ The second defines the maximum number of samples per pixel, the third number set
 maximum sampling radius per pixel and the last number is the photon power multiplier.
 .IP "-giviz"
 The output is calculated by sampling the photon map and direct illumination is ignored.
-.IP "-octree_depth"
+.IP "-octree_depth %i"
 Maximum depth for octree generation.
-.IP "-octree_ipn"
+.IP "-octree_ipn %i"
 Maximum number of items per octree node.
+.IP "-mod %s"
+Forces a scene modifier. Modifiers are expressed in the form group.subgroup.*.property:value.
 .SH DRIVERS
 .IP "ppm"
 Exports the framebuffer to a ppm image file.
