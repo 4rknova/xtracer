@@ -1,28 +1,31 @@
 #!/bin/sh
 
-#=============== CUSTOMIZATION =================
+#=============== CUSTOMIZATION ==================
 
 SW_TITLE="xtracer"
-SW_PACKG="xtracer"
-SW_DESCR="Photorealistic Renderer"
+SW_PACKAGE="xtracer"
+SW_DESCRIPTION="Photorealistic Renderer"
+
+MAN_SECTION=""
 
 PATH_PREFIX=/usr/local
 PATH_SRC=src
 PATH_BIN=bin
 PATH_MAN=man
 
-DEP_DEFS=""
-DEP_LIBS="-lnmath -lncf -lnimg -lnmesh"
+FLAGS_XTR="-fopenmp -Wall -Wno-unknown-pragmas -ffast-math -funsafe-math-optimizations"
+DEP_DLIB="-lgomp -lnmath -lncf -lnimg -lnmesh"
 
-#===============================================
+#================================================
 
-# Utils
+# Utils 
 CD="cd"
 ECHO="echo"
 HEAD="head"
 CLEAR="clear"
 RM="rm"
 RMDIR="rmdir"
+TEST="test"
 SED="sed"
 AR="ar"
 TR="tr"
@@ -35,96 +38,98 @@ CXX="g++"
 LDCONFIG="ldconfig"
 INSTALL="install"
 
-# Version string
-SW_VERSION="`$HEAD -n1 VERSION`"
+if [ -z "$MAN_SECTION" ]; then MAN_SECTION="1"; fi
 
-# Options
-DEBUGS=no
-OPTSPD=yes
-
-# Parse arguments
-for arg; do
-	case "$arg" in
-		--prefix=*)
-			value=`echo $arg | sed 's/--prefix=//'`
-			PATH_PREFIX=${value:-$prefix}
-			;;
-
-        --enable-opt)
-			OPTSPD=yes
-			;;
-        --disable-opt)
-			OPTSPD=no
-			;;
-
-		--enable-debug)
-			DEBUGS=yes
-			;;
-		--disable-debug)
-			DEBUGS=no
-			;;
-
-		--help)
-			echo 'usage: ./configure [options]'
-			echo 'options:'
-			echo '  --prefix=<path>: installation path (default: /usr/local)'
-			echo '  --enable-opt: enable speed optimizations (default)'
-			echo '  --disable-opt: disable speed optimizations'
-			echo '  --enable-debug: include debugging symbols'
-			echo '  --disable-debug: do not include debugging symbols (default)'
-			echo 'all invalid options are silently ignored'
-			exit 0
-			;;
-	esac
-done
-
-# Replace spaces in paths to avoid accidents
 PATH_PREFIX="`$ECHO $PATH_PREFIX | $SED -e 's/ /_/g'`"
 PATH_SRC="`$ECHO $PATH_SRC | $SED -e 's/ /_/g'`"
 PATH_BIN="`$ECHO $PATH_BIN | $SED -e 's/ /_/g'`"
 PATH_MAN="`$ECHO $PATH_MAN | $SED -e 's/ /_/g'`"
 
 SW_TITLE="`$ECHO $SW_TITLE | $SED -e 's/ /_/g'`"
-SW_PACKG="`$ECHO $SW_PACKG | $SED -e 's/ /_/g'`"
+SW_PACKAGE="`$ECHO $SW_PACKAGE | $SED -e 's/ /_/g'`"
 SW_SYMID="`$ECHO $SW_TITLE | $TR '[:lower:]' '[:upper:]'`"
 
-echo "Configuring $SW_PACKG v$SW_VERSION..."
+SW_VERSION="`$HEAD -n1 VERSION`"
+
+# Options
+FLAG_OMPLIB=no
+FLAG_DBGSYM=no
+FLAG_OPTSPD=yes
+
+for arg; do
+	case "$arg" in
+		--prefix=*)
+			value = `echo $arg | sed 's/--prefix = //'`
+			PREFIX = ${value:-$prefix}
+			;;
+
+        --enable-opt)
+			FLAG_OPTSPD = yes
+			;;
+        --disable-opt)
+			FLAG_OPTSPD = no
+			;;
+
+		--enable-debug)
+			FLAG_DBGSYM = yes
+			;;
+		--disable-debug)
+			FLAG_DBGSYM = no
+			;;
+
+		--help)
+			echo 'Usage: ./configure [options]'
+			echo 'Options:'
+			echo '  --prefix=<path>: installation path (default: /usr/local)'
+			echo '  --enable-opt: Enable speed optimizations (default)'
+			echo '  --disable-opt: Disable speed optimizations'
+			echo '  --enable-debug: Include debugging symbols'
+			echo '  --disable-debug: Ommit debugging symbols (default)'
+			echo 'All invalid options are silently ignored'
+			exit 0
+			;;
+	esac
+done
+
+echo "Configuring $SW_PACKAGE v$SW_VERSION..."
 echo "- installation path prefix: $PATH_PREFIX"
-echo "- optimize for speed: $OPTSPD"
-echo "- include debugging symbols: $DEBUGS"
+echo "- optimize for speed: $FLAG_OPTSPD"
+echo "- include debugging symbols: $FLAG_DBGSYM"
 
 echo "Creating makefile..."
-echo "# This is an automatically generated makefile " > Makefile
-echo "# for $SW_PACKG v$SW_VERSION" >> Makefile
+echo "# $SW_PACKAGE v$SW_VERSION" > Makefile
+echo "# Auto-generated makefile" >> Makefile
+echo >> Makefile
 
-echo "# Software info" >> Makefile
 echo "SW_SYMID   = $SW_SYMID" >> Makefile
 echo "SW_TITLE   = $SW_TITLE" >> Makefile
-echo "SW_PACKG   = $SW_PACKG" >> Makefile
+echo "SW_PACKAGE = $SW_PACKAGE" >> Makefile
 echo "SW_VERSION = $SW_VERSION" >> Makefile
 echo >> Makefile
 
-echo "# Tools" >> Makefile
-echo "CD     = $CD" >> Makefile
-echo "ECHO   = $ECHO" >> Makefile
-echo "CLEAR  = $CLEAR" >> Makefile
-echo "RM     = $RM" >> Makefile
-echo "RMDIR  = $RMDIR" >> Makefile
-echo "COL    = $COL" >> Makefile
-echo "LESS   = $LESS" >> Makefile
-echo "NROFF  = $NROFF" >> Makefile
-echo "MAKE   = $MAKE" >> Makefile
-echo "CC     = $CC" >> Makefile
-echo "CXX    = $CXX" >> Makefile
-echo "INSTALL= $INSTALL" >> Makefile
+echo "CD       = $CD" >> Makefile
+echo "ECHO     = $ECHO" >> Makefile
+echo "CLEAR    = $CLEAR" >> Makefile
+echo "RM       = $RM" >> Makefile
+echo "RMDIR    = $RMDIR" >> Makefile
+echo "COL      = $COL" >> Makefile
+echo "TEST     = $TEST" >> Makefile
+echo "LESS     = $LESS" >> Makefile
+echo "NROFF    = $NROFF" >> Makefile
+echo "MAKE     = $MAKE" >> Makefile
+echo "CC       = $CC" >> Makefile
+echo "CXX      = $CXX" >> Makefile
+echo "INSTALL  = $INSTALL" >> Makefile
+echo "LDCONFIG = $LDCONFIG" >> Makefile
 echo >> Makefile
 
-
-echo "# Paths" >> Makefile
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
 echo "PATH_SRC = $PATH_SRC" >> Makefile
 echo "PATH_BIN = $PATH_BIN" >> Makefile
 echo "PATH_MAN = $PATH_MAN" >> Makefile
+echo >> Makefile
+
+echo "MAN_SECTION = $MAN_SECTION" >> Makefile
 echo >> Makefile
 
 if [ "$DBGSPD" = 'yes' ]; then
@@ -135,16 +140,36 @@ if [ "$FLAG_OPTSPD" = 'yes' ]; then
 	echo 'FLAGS_OPT = -O3' >> Makefile
 fi
 
-echo "DEP_DEFS = $DEP_DEFS" >> Makefile
-echo "DEP_LIBS = $DEP_LIBS" >> Makefile
 echo >> Makefile
 
-# Import Makefile.in 
-cat Makefile.in >> Makefile 
+echo 'EXT_STATIC = a' >> Makefile
 
-# Update the directory structure.
+echo >> Makefile
+
+echo "DEP_DLIB = $DEP_DLIB" >> Makefile
+echo >> Makefile
+
+echo "FLAGS_XTR = $FLAGS_XTR" >> Makefile
+echo >> Makefile
+
+cat Makefile.in >> Makefile
+
+echo 'Creating pkg-config file ...'
+
+echo "Name: $SW_TITLE" > $SW_TITLE.pc
+echo "Description: $SW_DESCRIPTION" >> $SW_TITLE.pc
+echo "Version: $SW_VERSION" >> $SW_TITLE.pc
+echo "Cflags: -I$PATH_PREFIX/include/$SW_TITLE" >> $SW_TITLE.pc
+echo "Libs: -L$PATH_PREFIX/lib -l$SW_TITLE" >> $SW_TITLE.pc
+
+echo "Setting up the directory structure..."
 if [ ! -d "$PATH_BIN" ]; then
     mkdir $PATH_BIN
 fi
 
-echo 'Configuration completed.'
+if [ ! -d "$PATH_MAN" ]; then
+	mkdir $PATH_MAN
+fi
+
+echo "Configuration completed." 
+echo "Type make (or gmake) to build."

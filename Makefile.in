@@ -1,52 +1,64 @@
+SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)
+SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp)
+SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl)
+SOURCE_TML = $(wildcard $(PATH_SRC)/*.tml)
 SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)
 SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)
 SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp)
+
+SOURCE_API = $(SOURCE_H) $(SOURCE_HPP) $(SOURCE_INL) $(SOURCE_TML)
 
 BINOBJ_C   = $(SOURCE_C:.c=.o)
 BINOBJ_CC  = $(SOURCE_CC:.cc=.o)
 BINOBJ_CPP = $(SOURCE_CPP:.cpp=.o)
 BINOBJ     = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
 
-BIN = $(PATH_BIN)/$(SW_PACKG)
-MAN = $(PATH_MAN)/$(SW_TITLE).1
+BIN = $(PATH_BIN)/$(SW_PACKAGE)
 
-COFLAGS  = $(DEP_DEFS) -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"' $(FLAGS_OPT) $(FLAGS_DBG) -fopenmp -Wall -Wno-unknown-pragmas -ffast-math -funsafe-math-optimizations
-CCFLAGS  = -std=c89 -Wno-strict-aliasing -I$(spath) $(COFLAGS)
-CXXFLAGS = -ansi -pedantic -Wno-strict-aliasing $(COFLAGS)
-LDFLAGS  = $(DEP_LIBS)
+MAN = $(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)
 
-# Targets
-$(BIN): $(BINOBJ)
-	$(CXX) $(CXXFLAGS) $(BINOBJ) -o $@ $(LDFLAGS)
+FLAGS_WARNLV = -Wall
+FLAGS_INCLSN = -I/usr/local/include -I$(PATH_SRC)
+FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
+FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC)
+FLAGS_LD =
+FLAGS_CC  = $(FLAGS_COMMON) -std=c89
+FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 
-%.o: %.c
-	$(CC) -c $(CCFLAGS) -o $@ $<
-
-%.o: %.cc
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
-
-%.o: %.cpp
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
-
+# TARGETS
 .PHONY: all
 all: $(BIN)
 
-.PHONY: bin
-bin: $(BIN)
+.PHONY: dirtree
+dirtree:
+	mkdir -p $(PATH_BIN)
 
-.PHONY: man-preview
-man-preview:
-	$(CLEAR) && $(NROFF) -Tascii -man "man/xtracer.1" | $(COL) -x | $(LESS) -c
+%.o: %.c
+	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
+
+%.o: %.cc
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+%.o: %.cpp
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+
+$(BIN): dirtree $(BINOBJ)
+	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(BINOBJ) $(DEP_DLIB) -o $@
 
 .PHONY: install
 install: all
-	$(INSTALL) -D -m 775 $(BIN) $(PATH_PREFIX)/bin/$(SW_PACKG)
-	$(INSTALL) -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man1/$(SW_PACKG).1
-		  
+	$(INSTALL) -m 755 $(BIN) $(PATH_PREFIX)/$(BIN)
+	if $(TEST) -f $(MAN); then $(INSTALL) -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+
 .PHONY: uninstall
 uninstall:
-	$(RM) -f $(PATH_PREFIX)/bin/$(SW_PACKG)
-	$(RM) -f $(PATH_PREFIX)/share/man/man1/$(SW_PACKG).1
+	$(RM) -f $(PATH_PREFIX)/$(BIN)
+	if $(TEST) -f $(MAN); then $(RM) -f $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+
+.PHONY: man-preview
+man-preview:
+	$(CLEAR) && $(NROFF) -Tascii -man "$(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)" | $(COL) -x | $(LESS) -c
 
 .PHONY: clean
 clean:
@@ -54,6 +66,5 @@ clean:
 
 .PHONY: clean-all
 clean-all: clean
-	$(RM) -f Makefile
-	$(RM) $(BIN)
+	$(RM) -f Makefile $(SW_TITLE).pc $(BIN)
 	$(RM) -rf $(PATH_BIN)
