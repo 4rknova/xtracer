@@ -4,7 +4,7 @@
 
 SW_TITLE="xtracer"
 SW_PACKG="xtracer"
-SW_DESCR="Renderer"
+SW_DESCR="Photorealistic Renderer"
 
 PATH_PREFIX=/usr/local
 PATH_SRC=src
@@ -90,9 +90,6 @@ SW_SYMID="`$ECHO $SW_TITLE | $TR '[:lower:]' '[:upper:]'`"
 
 echo "Configuring $SW_PACKG v$SW_VERSION..."
 echo "- installation path prefix: $PATH_PREFIX"
-echo "- optimize for speed: $OPTSPD"
-echo "- include debugging symbols: $DEBUGS"
-echo "- installation path prefix: $PREFIX"
 echo "- optimize for speed: $OPTSPD"
 echo "- include debugging symbols: $DEBUGS"
 
