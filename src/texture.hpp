@@ -2,10 +2,10 @@
 #define XTRACER_TEXTURE_HPP_INCLUDED
 
 #include <nimg/color.hpp>
-#include <nimg/framebuffer.hpp>
+#include <nimg/pixmap.hpp>
 
 using NImg::ColorRGBAf;
-using NImg::Framebuffer;
+using NImg::Pixmap;
 
 class Texture2D
 {
@@ -14,12 +14,12 @@ class Texture2D
 		//	0. Everything went well.
 		//	1. Failed to load the texture data.
 		unsigned int load(const char *file);
-		unsigned int load(const Framebuffer &fb);
+		unsigned int load(const Pixmap &map);
 
 		const ColorRGBAf &sample(const float s, const float t) const;
-		
+
 	private:
-		Framebuffer m_fb;
+		Pixmap m_map;
 };
 
 #endif /* XTRACER_TEXTURE_HPP_INCLUDED */

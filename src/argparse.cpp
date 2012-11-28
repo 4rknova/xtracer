@@ -11,11 +11,11 @@ Environment::Environment()
 	: m_aa(XTRACER_SETUP_DEFAULT_AA),
 	  m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH),
 	  m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT),
-	  
+
 	  m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT),
-	  
+
 	  m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH),
-	  
+
 	  m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES),
 	  m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES),
 	  m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES),
@@ -24,14 +24,14 @@ Environment::Environment()
 	  m_region_min_y(0),
 	  m_region_max_x(0),
 	  m_region_max_y(0),
-	  
+
 	  m_flag_gi(XTRACER_SETUP_DEFAULT_GI),
 	  m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ),
 	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
 	  m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES),
 	  m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
 	  m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC),
-	  
+
 	  m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH),
 	  m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE),
 
@@ -192,7 +192,7 @@ bool Environment::scene_pop(std::string &res)
 
 	return true;
 }
- 
+
 void Environment::modifier_push(std::string &modifier)
 {
 	m_modifiers.push_back(modifier);
@@ -203,7 +203,7 @@ bool Environment::modifier_pop(std::string &res)
 	if (m_modifiers.empty()) {
 		return false;
 	}
-	
+
 	res = m_modifiers.back();
 	m_modifiers.pop_back();
 
@@ -212,20 +212,6 @@ bool Environment::modifier_pop(std::string &res)
 
 unsigned int Environment::setup(int argc, char **argv)
 {
-	// Display usage information.
-	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
-		Log::handle().log_message("%s", XTRACER_VERSION);
-		return 1;
-	}
-
-	Log::handle().log_message("XTracer %s (C) 2010-2012 Papadopoulos Nikos", XTRACER_VERSION);
-		
-	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
-		Log::handle().log_message("Usage: %s [option]... scene_file...", argv[0]);
-		Log::handle().log_message("For a complete list of the available options, refer to the man pages.");
-		return 1;
-	}
-
 	// Temporary variables to hold the sample configuration.
 	unsigned int arg_s_mc	 = 0;
 	unsigned int arg_s_light = 0;
@@ -270,12 +256,12 @@ unsigned int Environment::setup(int argc, char **argv)
 			if (m_max_rdepth < 1) {
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
-			}			
+			}
 		}
 		// DOF samples
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_DOF)) {
 			i++;
-			
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -294,7 +280,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		// Light samples
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_LIGHT)) {
 			i++;
-			
+
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
@@ -304,7 +290,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
-			
+
 			if (arg_s_light < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
@@ -323,7 +309,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
-		
+
 			if (arg_s_refl < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
@@ -342,7 +328,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
-		
+
 			if (arg_s_mc < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
@@ -432,14 +418,14 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%ux%u:%ux%u", &m_region_min_x, &m_region_min_y, 
+			if (sscanf(argv[i], "%ux%u:%ux%u", &m_region_min_x, &m_region_min_y,
 											   &m_region_max_x, &m_region_max_y) < 4) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>x<uint>:<uint>x<uint>.", argv[i-1]);
 				return 2;
 			}
 
-			if (    (m_region_min_x > m_region_max_x) 
-				 || (m_region_min_y > m_region_max_y) 
+			if (    (m_region_min_x > m_region_max_x)
+				 || (m_region_min_y > m_region_max_y)
 				 || (m_region_min_x == m_region_max_x && m_region_min_y == m_region_max_y)) {
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
@@ -468,7 +454,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		}
 		// G.I. photonmap visualization
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GIVIZ)) {
-			m_flag_giviz = true;	
+			m_flag_giviz = true;
 		}
 		// Octree max depth.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_DEPTH)) {
@@ -512,7 +498,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_RESUMEFILE)) {
 			i++;
 
-			if (!argv[i]) {		
+			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);
 				return 2;
 			}

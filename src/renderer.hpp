@@ -29,7 +29,7 @@
 #define XTRACER_RENDERER_HPP_INCLUDED
 
 #include <nimg/color.hpp>
-#include <nimg/framebuffer.hpp>
+#include <nimg/pixmap.hpp>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nmath/ray.h>
@@ -37,18 +37,18 @@
 #include "scene.hpp"
 
 using NImg::ColorRGBf;
-using NImg::Framebuffer;
+using NImg::Pixmap;
 
 class Renderer
 {
 	public:
 		Renderer();
-		void render(Framebuffer &fb, Scene &scene);
+		void render(Pixmap &fb, Scene &scene);
 
 	private:
 		// Pass functions.
 		void pass_ptrace(Scene &scene);						// Rendering pass: Photon tracing.
-		void pass_rtrace(Framebuffer &fb, Scene &scene);	// Rendering pass: Ray tracing.
+		void pass_rtrace(Pixmap &fb, Scene &scene);	// Rendering pass: Ray tracing.
 
 		// Trace functions.
 		bool trace_photon(Scene &scene, const Ray &ray, const unsigned int depth, 

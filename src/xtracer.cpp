@@ -3,10 +3,11 @@
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
 #include <ncf/util.hpp>
-#include <nimg/framebuffer.hpp>
+#include <nimg/pixmap.hpp>
 #include <nimg/ppm.hpp>
 #include "renderer.hpp"
 #include "scene.hpp"
+#include "argdefs.h"
 #include "argparse.hpp"
 #include "timer.hpp"
 #include "timeutil.hpp"
@@ -17,6 +18,20 @@ using NCF::Util::path_comp;
 
 int main(int argc, char **argv)
 {
+	// Display usage information.
+	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
+		Log::handle().log_message("%s", XTRACER_VERSION);
+		return 1;
+	}
+
+	Log::handle().log_message("XTracer %s (C) 2010-2012 Papadopoulos Nikos", XTRACER_VERSION);
+
+	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
+		Log::handle().log_message("Usage: %s [option]... scene_file...", argv[0]);
+		Log::handle().log_message("For a complete list of the available options, refer to the man pages.");
+		return 1;
+	}
+
 	// parse the argument list.
 	if (Environment::handle().setup(argc, argv)) {
 		return 1;
@@ -27,10 +42,10 @@ int main(int argc, char **argv)
 	unsigned int scene_index = 0;
 	while (Environment::handle().scene_count())
 	{
-		// Create and initiate the framebuffer.
-		Log::handle().log_message("Initiating the framebuffer..");
-		Framebuffer fb;
-			
+		// Create and initiate the pixmap.
+		Log::handle().log_message("Initiating the pixmap..");
+		Pixmap fb;
+
 		if (Environment::handle().flag_resume()) {
 			if(NImg::IO::Import::ppm_raw(Environment::handle().resume_file(), fb)) {
 				Log::handle().log_error("Failed to load %s", Environment::handle().resume_file());
@@ -61,7 +76,7 @@ int main(int argc, char **argv)
 					Environment::handle().photon_max_sampling_radius());
 			}
 		}
-		
+
 		// Export.
 		if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
 			Log::handle().log_warning("Benchmark mode selected.");
@@ -83,18 +98,18 @@ int main(int argc, char **argv)
 		// apply the modifiers
 		Log::handle().log_message("Applying modifiers..");
 		scene.apply_modifiers();
-		
-		Log::handle().log_message("- Name: %s", scene.name()); 
+
+		Log::handle().log_message("- Name: %s", scene.name());
 
 		// Build the scene data
 		scene.build();
-		
+
 		// set the camera
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
 		Renderer renderer;
-		
+
 		// Create and initiate a timer.
 		Timer timer;
 		timer.start();
@@ -122,7 +137,7 @@ int main(int argc, char **argv)
 		if (mins  > 0) {
 			Log::handle().set_append();
 			Log::handle().log_message(" %i mins,", mins);
-		}	
+		}
 		Log::handle().set_append();
 		Log::handle().log_message(" %f seconds.", secs);
 
@@ -134,7 +149,7 @@ int main(int argc, char **argv)
 			}
 			else {
 				std::string base, sw, sh, sa, random_token;
-				
+
 				#ifdef _WIN32
 					const char path_delim = '\\';
 				#else
@@ -142,7 +157,7 @@ int main(int argc, char **argv)
 				#endif /* _WIN32 */
 
 				path_comp(scene_source, base, file, path_delim);
-		
+
 				std::string cam = Environment::handle().active_camera_name();
 				std::string outdir = Environment::handle().outdir();
 				if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
@@ -153,9 +168,9 @@ int main(int argc, char **argv)
 				to_string(sw, (int)Environment::handle().width());
 				to_string(sh, (int)Environment::handle().height());
 				to_string(sa, (int)Environment::handle().aa());
-				file = outdir + file + "_cam-" + cam 
-							  + "_aa" + sa + "_res" 
-							  + sw + "x" + sh 
+				file = outdir + file + "_cam-" + cam
+							  + "_aa" + sa + "_res"
+							  + sw + "x" + sh
 							  + "_" + random_token
 							  + ".ppm";
 			}
@@ -166,9 +181,9 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	
+
 	// Clean up.
-	Log::handle().log_message("All tasks completed."); 
+	Log::handle().log_message("All tasks completed.");
 	Log::handle().log_message("Shutting down.");
 
 	return 0;

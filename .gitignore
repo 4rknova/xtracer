@@ -1,8 +1,9 @@
 ide/inc/
 ide/lib/
-src/*.o
 bin/
 media/
 temp/
-Makefile
+src/*.o
+*.pc
 *.ppm
+Makefile

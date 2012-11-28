@@ -47,7 +47,7 @@ using NCF::Util::path_comp;
 Renderer::Renderer()
 {}
 #include <nmath/interpolation.h>
-void Renderer::render(Framebuffer &fb, Scene &scene)
+void Renderer::render(Pixmap &fb, Scene &scene)
 {
 	// If gi is enabled, do the photon mapping 1st pass.
 	if (Environment::handle().flag_gi()) {
@@ -169,7 +169,7 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	return false;
 }
 
-void Renderer::pass_rtrace(Framebuffer &fb, Scene &scene)
+void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 {
 	// precalculate some constants
 	const unsigned int rminx = Environment::handle().region_min_x();
