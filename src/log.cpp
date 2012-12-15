@@ -74,7 +74,6 @@ std::string Log::get_log_entry(const unsigned int idx) const{
 
 	if (idx < m_log.size())
 		return m_log[m_log.size()-1-idx]->p_msg;
-	
 	return std::string("");
 }
 
@@ -112,7 +111,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 	// The va_arg internal casting is inherently not safe here.
 	for(unsigned int x = 0; x < msg_size; x++) {
 		if(msg[x] == delim)	{
-			// If there is a next character, and it is not a delim, 
+			// If there is a next character, and it is not a delim,
 			if(x + 1 < msg_size && msg[x + 1] != delim) {
 				// String
 				if (msg[x + 1] == 's') {
@@ -127,7 +126,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 					str << temp;
 					x++;
 				}
-				
+
 				// Integer
 				else if (msg[x + 1] == 'i') {
 					int temp = va_arg(args, int);
@@ -141,7 +140,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 					str << temp;
 					x++;
 				}
-			} 
+			}
 			else if(x + 1 < msg_size) {
 				// Save the delim that "delimdelim" was used for
 				str << delim;
@@ -156,24 +155,23 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 		}
 	}
 
-	LogEntry *entry = new (std::nothrow) LogEntry();
-
-	if (!entry)
-		return;
-
-	
 	if(m_flag_append) {
 		m_log.back()->p_type = type;
 		m_log.back()->p_msg.append(str.str());
 	}
 	else {
+		LogEntry *entry = new (std::nothrow) LogEntry();
+
+		if (!entry)
+			return;
+
 		entry->p_type = type;
 		entry->p_msg = str.str();
 		m_log.push_back(entry);
 	}
 
 	std::vector<LogEntry *>::reverse_iterator it = m_log.rbegin();
-	
+
 	if(m_flag_echo) {
 		if (!m_flag_append && m_log.size() != 1) {
 			std::cout << std::endl;
@@ -182,7 +180,6 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 			std::cout << '\r';
 			m_flag_append = false;
 		}
-			
 
 		switch ((*it)->p_type) {
 			case LOGENTRY_MESSAGE:
@@ -197,7 +194,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 
 		std::cout << (*it)->p_msg;
 	}
-	
+
 	if (m_max_log_size) {
 		while (m_max_log_size < m_log.size()) {
 			pop_front();
@@ -245,10 +242,10 @@ void Log::rewind(bool clear)
 		if (clear) {
 			std::cout << std::setw(m_log.back()->p_msg.length()) << ' ' << std::flush;
 		}
-	
-		std::cout << '\r' << std::flush;	
+
+		std::cout << '\r' << std::flush;
 	}
-	
+
 	m_log.back()->p_msg.clear();
 }
 
