@@ -20,26 +20,26 @@ The source code is distributed under the LGPL license version 3 or later.
 
 Version history
 ---------------
-0.7		2866bf99ca04d84a85ab13b755ded7d42014bee7
-1.x		HEAD
+0.7 : 2866bf99ca04d84a85ab13b755ded7d42014bee7
+1.x : HEAD
 
 Features
 --------
-Implemented:
+Implemented
 * Primitives    : Plane, Triangle, Sphere, Mesh
 * Materials     : Lambert, Phong, Blinn-Phong
 * Lights        : Point, Sphere, Box, Triangle
 * Cameras       : Pinhole, Thin lense
-* Shading       : Reflection (glossy & perfect mirror), Refraction,
-				  Depth of field, Soft shadows, Texture mapping
+* Shading       : Reflection (glossy & perfect mirror), Refraction, Depth
+	              of field, Soft shadows, Texture mapping
 * Acceleration  : Threads, Octrees, KD-trees
 * Anti-aliasing : Supersampling
 * Rendering     : HDR, Whitted/Distributed raytracing, Photon mapping
-				  (diffuse term)
+                  (diffuse term)
 
-Future expansion:
-* Shading		: Fresnel, Beer's law
-* Anti-aliasing	: Adaptive SS, Jittering
+Future expansion
+* Shading       : Fresnel, Beer's law
+* Anti-aliasing : Adaptive SS, Jittering
 
 Compilation / Installation
 --------------------------
