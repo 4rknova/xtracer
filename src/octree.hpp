@@ -25,7 +25,7 @@ class OctreeNode
 	public:
 		OctreeNode();
 		unsigned int count_items();
-	
+
 		BoundingBox3 aabb;
 		std::list<OctreeItem<T>*> items;
 		OctreeNode<T> *child[8];

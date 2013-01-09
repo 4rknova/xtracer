@@ -112,7 +112,7 @@ void PhotonMap::store(const float position[3], const float power[3], const float
 }
 
 void PhotonMap::irradiance_estimate(float irradiance[3],
-	const float position[3], const float normal[3], 
+	const float position[3], const float normal[3],
 	const float max_distance, const unsigned int count) const
 {
 	// Zero out the irradiance.
@@ -133,7 +133,7 @@ void PhotonMap::irradiance_estimate(float irradiance[3],
 	locate_photons(&np, 1);
 
 	// if less than 8 photons return.
-	if (np.count < 8) 
+	if (np.count < 8)
 		return;
 
 	float pdir[3];
@@ -188,7 +188,7 @@ void PhotonMap::locate_photons(photon_cloud_t * const np, const unsigned int ind
 				locate_photons(np, 2 * index + 1);
 			}
 		}
-	}	
+	}
 
 	// Compute square distance between current photon and np->position.
 	float dist2 = 0;
@@ -236,7 +236,7 @@ void PhotonMap::locate_photons(photon_cloud_t * const np, const unsigned int ind
 						np->index[parent] = np->index[j];
 						parent = j;
 					}
-					
+
 					np->distance_squared[parent] = dst_squared;
 					np->index[parent] = phot;
 				}
@@ -298,7 +298,7 @@ void PhotonMap::balance()
 		balance_segment(pa1, pa2, 1, 1, m_count_stored);
 
 		free(pa2);
-		
+
 		// Re-organise the balanced KD-Tree
 		unsigned int d, j = 1, foo = 1;
 		photon_t foo_photon = m_photons[j];
@@ -338,7 +338,7 @@ void PhotonMap::balance()
 
 #define swap(ph, a , b) { photon_t *ph2 = ph[a]; ph[a] = ph[b]; ph[b] = ph2;}
 
-void PhotonMap::median_split(photon_t **p, 
+void PhotonMap::median_split(photon_t **p,
 	const unsigned int start, const unsigned int end,
 	const unsigned int median, const unsigned int axis)
 {
@@ -363,7 +363,7 @@ void PhotonMap::median_split(photon_t **p,
 		}
 
 		swap(p, i, right);
-		
+
 		if (i >= median) {
 			right = i - 1;
 		}
@@ -389,7 +389,7 @@ void PhotonMap::balance_segment(photon_t **pbal, photon_t **porg,
 	if ((3 * median) <= (end - start + 1)) {
 		median += median;
 		median += start - 1;
-	} 
+	}
 	else {
 		median = end - median + 1;
 	}

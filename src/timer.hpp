@@ -15,30 +15,30 @@
 class Timer
 {
     public:
-        Timer();
-        ~Timer();
+		Timer();
+		~Timer();
 
-        void start();   			// starts the timer
-		void resume();				// resumes the timer
-        void stop();    			// stops the timer
+		void start();
+		void resume();
+		void stop();
 
-        double get_time_in_sec();   // returns elapsed time in seconds
-        double get_time_in_mlsec(); // returns elapsed time in milli-seconds
-        double get_time_in_mcsec(); // returns elapsed time in micro-seconds
+		double get_time_in_sec();
+		double get_time_in_mlsec();
+		double get_time_in_mcsec();
 
     private:
-        double m_stime; 			// starting time in micro-seconds
-        double m_etime; 			// ending time in micro-seconds
-        bool m_stopped; 			// stop flag
+		double m_stime;
+		double m_etime;
+		bool m_stopped;
 
 	#if defined(_WIN32)
-        LARGE_INTEGER m_freq; 		// ticks per second
-        LARGE_INTEGER m_scount; 	// start count
-        LARGE_INTEGER m_ecount; 	// end count
+		LARGE_INTEGER m_freq;
+		LARGE_INTEGER m_scount;
+		LARGE_INTEGER m_ecount;
 
 	#elif defined(__linux) || defined(__unix) || defined (__posix)
-        timeval m_scount; 			// start count
-        timeval m_ecount; 			// end count
+		timeval m_scount;
+		timeval m_ecount;
 
     #endif /* _WIN32  */
 };

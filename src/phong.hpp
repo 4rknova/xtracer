@@ -38,14 +38,14 @@ using NMath::Vector3f;
 using NMath::IntInfo;
 using NImg::ColorRGBf;
 
-inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, 
-					 const IntInfo *info, const ColorRGBf &light, 
+inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos,
+					 const IntInfo *info, const ColorRGBf &light,
 					 scalar_t ks, scalar_t kd, scalar_t specexp,
 					 const ColorRGBf &diffuse, const ColorRGBf &specular);
 
 inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos,
-						   const IntInfo *info, const ColorRGBf &light, 
-						   scalar_t ks, scalar_t kd, scalar_t specexp, 
+						   const IntInfo *info, const ColorRGBf &light,
+						   scalar_t ks, scalar_t kd, scalar_t specexp,
 						   const ColorRGBf &diffuse, const ColorRGBf &specular);
 
 #include "phong.inl"

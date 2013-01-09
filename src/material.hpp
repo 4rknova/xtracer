@@ -45,7 +45,7 @@ enum MATERIAL_TYPE
 	MATERIAL_BLINNPHONG		// Blinn-Phong
 };
 
-class Material 
+class Material
 {
 	public:
 		Material();
@@ -53,15 +53,15 @@ class Material
 
 		// shader
 		ColorRGBf shade(const Camera *cam, const Light *light, ColorRGBf &texcolor, const IntInfo &info);
-	
+
 		// properties
 		ColorRGBf ambient;		// ambient intensity
-		ColorRGBf diffuse;	   	// diffuse intensity
+		ColorRGBf diffuse;		// diffuse intensity
 		ColorRGBf specular;		// specular intensity
-		
-		scalar_t kspec;       	// specular constant
-		scalar_t kdiff;       	// diffuse constant
-		scalar_t ksexp;       	// specular exponential
+
+		scalar_t kspec;			// specular constant
+		scalar_t kdiff;			// diffuse constant
+		scalar_t ksexp;			// specular exponential
 		scalar_t roughness;		// roughness (Ideally equal to exponent)
 
 		scalar_t reflectance;	// reflectance

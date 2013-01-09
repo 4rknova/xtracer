@@ -30,7 +30,7 @@
 
 #include <string>
 
-class Object 
+class Object
 {
 	public:
 		Object();
@@ -38,7 +38,7 @@ class Object
 
 		// The geometry's name
 		std::string geometry;
-		
+
 		// The material's name
 		std::string material;
 

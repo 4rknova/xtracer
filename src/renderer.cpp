@@ -62,7 +62,7 @@ void Renderer::render(Pixmap &fb, Scene &scene)
 void Renderer::pass_ptrace(Scene &scene)
 {
 	unsigned int photon_count = Environment::handle().photon_count();
-	
+
 	Log::handle().log_message("Initiating the photon maps..", photon_count);
 	Log::handle().log_message("Using %i photons..", photon_count);
 	scene.m_pm_global.init(photon_count);
@@ -89,11 +89,11 @@ void Renderer::pass_ptrace(Scene &scene)
 		for (unsigned int i = 0; i < light_count; ++i) {
 			light_contribution.push_back(light_luminance[i] / light_total_luminance);
 			light_photons.push_back((scalar_t) (photon_count+1) * light_contribution[i]);
-			Log::handle().log_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i, 
+			Log::handle().log_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
 				light_photons[i], light_luminance[i], light_contribution[i] * 100);
 		}
 	}
-	
+
 	Log::handle().log_message("Casting photons..");
 
 	// Photon tracing.
@@ -103,7 +103,7 @@ void Renderer::pass_ptrace(Scene &scene)
 			Ray ray = (*it).second->ray_sample();
 			trace_photon(scene, ray, 0, (*it).second->intensity() * Environment::handle().photon_power_scaling(), light_photons[light_index]);
 		}
-		
+
 		light_index++;
 	}
 
@@ -123,7 +123,7 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 
 	if (!scene.intersection(ray, info, obj))
 		return false;
-	
+
 	// Get the material & texture.
 	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
 	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
@@ -134,16 +134,22 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 		float pos[3]; // Photon position.
 		float pwr[3]; // Photon intensity.
 		float dir[3]; // Photon direction.
-		
-		pwr[0] = power.r(); 		pwr[1] = power.g(); 		pwr[2] = power.b();
-		pos[0] = ray.origin.x;		pos[1] = ray.origin.y;		pos[2] = ray.origin.z;
-		dir[0] = -ray.direction.x; 	dir[1] = -ray.direction.y; 	dir[2] = -ray.direction.z;
+
+		pwr[0] = power.r();
+		pwr[1] = power.g();
+		pwr[2] = power.b();
+		pos[0] = ray.origin.x;
+		pos[1] = ray.origin.y;
+		pos[2] = ray.origin.z;
+		dir[0] = -ray.direction.x;
+		dir[1] = -ray.direction.y;
+		dir[2] = -ray.direction.z;
 
 		scene.m_pm_global.store(pos, pwr, dir);
 		map_capacity--;
 		std::cout << "\rCasting photons.. " << std::setw(12) << map_capacity << std::flush;
 	}
-	
+
 	// Russian rulette.
 	scalar_t avg_diff = (mat->diffuse.r() + mat->diffuse.g() + mat->diffuse.b()) / 3;
 	scalar_t avg_spec = (mat->specular.r() + mat->specular.g() + mat->specular.b()) / 3;
@@ -156,11 +162,11 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	if (event < avg_diff) { // Interdiffuse.
 		nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
 		nray.origin += nray.direction * 0.5;
-		
+
 		ColorRGBf texcol = ColorRGBf(1, 1, 1);
 		if (it_tex != scene.m_textures.end())
 			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
-		
+
 		trace_photon(scene, nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
 
 		return true;
@@ -189,7 +195,7 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 	Log::handle().log_message("Progress ...");
 
 	float progress = 0;
-			
+
 	// Samples per pixel, offset per sample.
 	unsigned int aa = Environment::handle().aa();
 
@@ -209,17 +215,15 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 	float sample_scaling = 1.0f / ((scene.camera->flength > 0 ? dof_samples : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
-	for (int y = rminy; y < (int)h; y++) 
-	{
-		for (int x = rminx; x < (int)w; x++)
-		{
+	for (int y = rminy; y < (int)h; y++) {
+		for (int x = rminx; x < (int)w; x++) {
 			// the final color
 			ColorRGBf color;
 
 			// antialiasing loop
 			for (unsigned int fy = 0; fy < aa; ++fy) {
 				for (unsigned int fx = 0; fx < aa; ++fx) {
-					
+
 					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
 					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
@@ -239,7 +243,7 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 
 			fb.pixel(x, y) = color;
 		}
-		
+
 		// calculate progress
 		progress += 1;
 
@@ -250,7 +254,7 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 	}
 }
 
-ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int depth, 
+ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	IntInfo info;
@@ -264,25 +268,25 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 		// get a pointer to the material
 		if (!obj.empty()) {
 
-			if (Environment::handle().flag_gi()) {			
+			if (Environment::handle().flag_gi()) {
 				float irad[3] = {0,0,0};
 				float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
-		
+
 				float norm[3];
 				norm[0] = (float)info.normal.x;
-				norm[1] = (float)info.normal.y; 
+				norm[1] = (float)info.normal.y;
 				norm[2] = (float)info.normal.z;
 
-				scene.m_pm_global.irradiance_estimate(irad, posi, norm, 
-					Environment::handle().photon_max_sampling_radius(), 
+				scene.m_pm_global.irradiance_estimate(irad, posi, norm,
+					Environment::handle().photon_max_sampling_radius(),
 					Environment::handle().photon_max_samples());
 
 				gi_res = ColorRGBf(irad[0], irad[1], irad[2]);
 
 				if (Environment::handle().flag_giviz())
 					return gi_res;
-			}			
-		
+			}
+
 			Material *mat = scene.m_materials[scene.m_objects[obj]->material];
 
 			// if the ray starts inside the geometry
@@ -298,16 +302,16 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 	return ColorRGBf(0, 0, 0);
 }
 
-ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth, 
+ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth,
 	IntInfo &info, std::string &obj, 
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	ColorRGBf color(0, 0, 0);
-		
+
 	// check if the depth limit was reached
 	if (!depth)
 		return color;
-	
+
 	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
 	std::map<std::string, Material  *>::iterator it_mat = scene.m_materials.find(scene.m_objects[obj]->material);
 	std::map<std::string, Light     *>::iterator it;
@@ -337,7 +341,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
 			Light *light = (*it).second;
 			Vector3f v = light->point_sample() - p;
-	
+
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
 			if (it_tex != scene.m_textures.end()) {
@@ -359,7 +363,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 			}
 		}
 	}
-	
+
 	// specular effects
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG)) {
 		// refraction

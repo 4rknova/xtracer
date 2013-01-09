@@ -33,12 +33,12 @@ using NMath::vec3_t;
 
 /* Light interface */
 Light::Light(const Vector3f &pos, const ColorRGBf &ints)
-	: m_position(pos), 
+	: m_position(pos),
 	  m_intensity(ints)
 {}
 
 Light::Light()
-	: m_position(Vector3f(0, 0, 0)), 
+	: m_position(Vector3f(0, 0, 0)),
 	  m_intensity(ColorRGBf(1, 1, 1))
 {}
 
@@ -189,7 +189,7 @@ Vector3f BoxLight::point_sample() const
 Ray BoxLight::ray_sample() const {
 	Vector3f v, normal;
 	Ray ray;
-	
+
 	unsigned int side = (unsigned int)NMath::prng_c(1, 7);
 	scalar_t ra = NMath::prng_c(0, 1) - 0.5;
 	scalar_t rb = NMath::prng_c(0, 1) - 0.5;
@@ -272,7 +272,7 @@ const Vector3f TriangleLight::c() const
 Vector3f TriangleLight::point_sample() const
 {
 	scalar_t b0, b1, b2;
-	
+
 	b0 = NMath::prng_c(0, 1);
 	b1 = NMath::prng_c(0, 1);
 	b2 = NMath::prng_c(0, 1);
@@ -283,7 +283,7 @@ Vector3f TriangleLight::point_sample() const
 	b1 /= bt;
 	b2 /= bt;
 
-	return Vector3f(b0 * m_a + b1 * m_b + b2 * m_c) + position(); 
+	return Vector3f(b0 * m_a + b1 * m_b + b2 * m_c) + position();
 }
 
 Ray TriangleLight::ray_sample() const

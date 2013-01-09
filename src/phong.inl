@@ -36,7 +36,7 @@
 #endif /* XTRACER_PHONG_HPP_INCLUDED */
 
 inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, const IntInfo *info,
-					 const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp, 
+					 const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp,
 					 const ColorRGBf &diffuse, const ColorRGBf &specular)
 {
 	// calculate the light direction vector
@@ -64,7 +64,7 @@ inline ColorRGBf phong(const Vector3f &campos, const Vector3f &lightpos, const I
 }
 
 inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos, const IntInfo *info,
-						   const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp, 
+						   const ColorRGBf &light, scalar_t ks, scalar_t kd, scalar_t specexp,
 						   const ColorRGBf &diffuse, const ColorRGBf &specular)
 {
 	// calculate the light direction vector
@@ -89,7 +89,6 @@ inline ColorRGBf blinn_phong(const Vector3f &campos, const Vector3f &lightpos, c
 		rmv = 0;
 
 	return ((kd * d * diffuse) + (ks * pow(rmv, specexp) * specular)) * light;
-	
 }
 
 #endif /* XTRACER_PHONG_INL_INCLUDED */

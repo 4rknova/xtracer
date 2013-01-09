@@ -50,33 +50,32 @@ ColorRGBf Material::shade(const Camera *cam, const Light *light, ColorRGBf &texc
 	{
 		case MATERIAL_LAMBERT:
 			return lambert(
-				light->point_sample(), 
-				&info, 
-				light->intensity(), 
+				light->point_sample(),
+				&info,
+				light->intensity(),
 				diffuse * texcolor);
 
 		case MATERIAL_PHONG:
 			return phong(
-				cam->position, 
-				light->point_sample(), 
-				&info, 
-				light->intensity(), 
-				kspec, kdiff, ksexp, 
-				diffuse * texcolor, 
+				cam->position,
+				light->point_sample(),
+				&info,
+				light->intensity(),
+				kspec, kdiff, ksexp,
+				diffuse * texcolor,
 				specular);
 
 		case MATERIAL_BLINNPHONG:
 			return blinn_phong(
-				cam->position, 
-				light->point_sample(), 
-				&info, 
-				light->intensity(), 
-				kspec, kdiff, ksexp, 
-				diffuse * texcolor, 
+				cam->position,
+				light->point_sample(),
+				&info,
+				light->intensity(),
+				kspec, kdiff, ksexp,
+				diffuse * texcolor,
 				specular);
 	}
 
 	// This should never happen
 	return ColorRGBf(0, 0, 0);
 }
-

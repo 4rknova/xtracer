@@ -90,7 +90,7 @@ class Scene
 		unsigned int destroy_geometry(const char *name);
 		unsigned int destroy_object(const char *name);
 
-		// Maps of the scene entities		
+		// Maps of the scene entities
 		std::map<std::string, Camera*   > m_cameras;
 		std::map<std::string, Light*    > m_lights;
 		std::map<std::string, Material* > m_materials;
@@ -103,7 +103,7 @@ class Scene
 
 		// The scene's source filepath and filename
 		const std::string m_source;
-		
+
 		// The parser data tree
 		NCF1 m_scene;
 

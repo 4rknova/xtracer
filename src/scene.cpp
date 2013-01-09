@@ -101,7 +101,7 @@ void Scene::release()
 		}
 		m_lights.clear();
 	}
-	
+
 	// Release the materials
 	if(!m_materials.empty()) {
 		Log::handle().log_message("Releasing the materials..");
@@ -109,7 +109,7 @@ void Scene::release()
 			delete (*it).second;
 		}
 		m_materials.clear();
-	} 
+	}
 
 	// Release the textures
 	if(!m_textures.empty()) {
@@ -118,7 +118,7 @@ void Scene::release()
 			delete (*it).second;
 		}
 		m_textures.clear();
-	} 
+	}
 
 	// Release the geometry
 	if(!m_geometry.empty()) {
@@ -136,7 +136,7 @@ void Scene::release()
 			delete (*it).second;
 		}
 		m_objects.clear();
-	} 
+	}
 
 	// Release the camera
 	Log::handle().log_message("Releasing the camera..");
@@ -273,7 +273,7 @@ unsigned int Scene::build()
 	r = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_R));
 	g = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_G));
 	b = to_double(m_scene.group(XTPROTO_PROP_IAMBN)->get(XTPROTO_PROP_COL_B));
- 	k = to_double(m_scene.get(XTPROTO_PROP_KAMBN));
+	k = to_double(m_scene.get(XTPROTO_PROP_KAMBN));
 
 	m_ambient = ColorRGBf(r, g, b) * (k < 0.f ? 0.f : k);
 
@@ -313,7 +313,7 @@ unsigned int Scene::build()
 			}
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -337,30 +337,27 @@ unsigned int Scene::set_camera(const char *name)
 	}
 
 	// Try the given -> default -> first available camera
-	std::string dcam; 
-	
-	// I do this in order to avoid exception: 
+	std::string dcam;
+
+	// I do this in order to avoid exception:
 	//		basic_string::_S_construct null not valid
 	// in case of: name == NULL
 	if (name)
 		dcam = name;
 
-	if (dcam.empty())
-	{
+	if (dcam.empty()) {
 		dcam = m_scene.group(XTPROTO_NODE_CAMERA)->get(XTPROTO_PROP_DEFAULT);
-		if (dcam.empty())
-		{
+		if (dcam.empty()) {
 			Log::handle().log_message("No default camera was specified.");
 			dcam = m_scene.group(XTPROTO_NODE_CAMERA)->group(1)->name();
-		}   
+		}
 	}
 
 	// Check if camera exists
-	if(!m_scene.group(XTPROTO_NODE_CAMERA)->query_group(dcam.c_str()))
-	{
+	if(!m_scene.group(XTPROTO_NODE_CAMERA)->query_group(dcam.c_str())) {
 		Log::handle().log_warning("Invalid camera: %s", dcam.c_str());
 		dcam = m_scene.group(XTPROTO_NODE_CAMERA)->group(1)->name();
-	}   
+	}
 
 	Log::handle().log_message("Using camera: %s", dcam.c_str());
 
@@ -412,7 +409,7 @@ unsigned int Scene::create_light(NCF1 *p)
 	scalar_t posx = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_X));
 	scalar_t posy = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Y));
 	scalar_t posz = to_double(p->group(XTPROTO_PROP_POSITION)->get(XTPROTO_PROP_CRD_Z));
-	
+
 	scalar_t colr = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_R));
 	scalar_t colg = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_G));
 	scalar_t colb = to_double(p->group(XTPROTO_PROP_INTST)->get(XTPROTO_PROP_COL_B));
@@ -431,14 +428,14 @@ unsigned int Scene::create_light(NCF1 *p)
 		light = new (std::nothrow) SphereLight;
 		if (!light)
 			return 2;
-		
+
 		scalar_t radius = (scalar_t)to_double(p->get(XTPROTO_PROP_RADIUS));
 		((SphereLight *)light)->radius(radius);
 	}
 	else if (!type.compare(XTPROTO_LTRL_BOXLIGHT)) {
 		light = new (std::nothrow) BoxLight;
 
-		scalar_t dimx = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_X)); 
+		scalar_t dimx = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_X));
 		scalar_t dimy = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_Y));
 		scalar_t dimz = (scalar_t)to_double(p->group(XTPROTO_PROP_DIMENSIONS)->get(XTPROTO_PROP_CRD_Z));
 
@@ -453,11 +450,11 @@ unsigned int Scene::create_light(NCF1 *p)
 		Vector3f v[3];
 		for (unsigned int i = 1; i <= 3; i++) {
 			NCF1 *vnode = p->group(XTPROTO_PROP_VRTXDATA)->group(i);
-			
+
 			scalar_t px = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_X));
 			scalar_t py = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Y));
 			scalar_t pz = (scalar_t)to_double(vnode->get(XTPROTO_PROP_CRD_Z));
-			
+
 			v[i-1] = Vector3f(px, py, pz);
 		}
 
@@ -476,6 +473,8 @@ unsigned int Scene::create_light(NCF1 *p)
 	unsigned int res = destroy_light(p->name());
 
 	// Add it to the list.
+
+	Log::handle().log_warning("light ok");
 	m_lights[p->name()] = light;
 
 	return res ? 0 : 3;
@@ -493,9 +492,9 @@ unsigned int Scene::create_geometry(NCF1 *p)
 	// - Plane.
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		scalar_t normx		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_X));
-		scalar_t normy 		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_Y));
+		scalar_t normy		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_Y));
 		scalar_t normz		= (scalar_t)to_double(p->group(XTPROTO_PROP_NORMAL)->get(XTPROTO_PROP_CRD_Z));
-		scalar_t distance 	= (scalar_t)to_double(p->get(XTPROTO_PROP_DISTANCE));
+		scalar_t distance	= (scalar_t)to_double(p->get(XTPROTO_PROP_DISTANCE));
 
 		geometry = new (std::nothrow) Plane;
 
@@ -517,18 +516,18 @@ unsigned int Scene::create_geometry(NCF1 *p)
 
 		if(!geometry)
 			return 2;
-		
+
 		// set the properties.
 		((Sphere *)geometry)->origin = Vector3f(posx, posy, posz);
 		((Sphere *)geometry)->radius = radius;
-	}	
+	}
 	// - Triangle.
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		geometry = new (std::nothrow) Triangle;
 
 		if(!geometry)
 			return 2;
-		
+
 		for (unsigned int i = 1; i <= 3; i++) {
 			NCF1 *vnode = p->group(XTPROTO_PROP_VRTXDATA)->group(i);
 
@@ -545,10 +544,10 @@ unsigned int Scene::create_geometry(NCF1 *p)
 	// - Mesh
 	else if (!type.compare(XTPROTO_LTRL_MESH)) {
 		geometry = new (std::nothrow) Mesh;
-		
+
 		// Smooth surface
 		bool smooth = to_bool(p->get(XTPROTO_PROP_SMOOTH));
-		
+
 		// Data source
 		std::string f = p->get(XTPROTO_PROP_SOURCE);
 
@@ -565,7 +564,7 @@ unsigned int Scene::create_geometry(NCF1 *p)
 			delete geometry;
 			return 1;
 		}
-		
+
 		if (p->query_group(XTPROTO_PROP_SCALE)) {
 			NMesh::Mutator::scale(dynamic_cast<NMesh::Mesh &>(*geometry),
 				(scalar_t)to_double(p->group(XTPROTO_PROP_SCALE)->get(XTPROTO_PROP_CRD_X)),
@@ -593,7 +592,7 @@ unsigned int Scene::create_geometry(NCF1 *p)
 		Log::handle().log_warning("Unsupported geometry type %s [%s]. Skipping..", p->name(), type.c_str());
 		return 1;
 	}
-	
+
 	scalar_t u_scale = (scalar_t)to_double(p->get(XTPROTO_PROP_USCALE));
 	scalar_t v_scale = (scalar_t)to_double(p->get(XTPROTO_PROP_VSCALE));
 	geometry->uv_scale = Vector2f(u_scale, v_scale);
@@ -605,7 +604,7 @@ unsigned int Scene::create_geometry(NCF1 *p)
 
 	// Add it to the list.
 	m_geometry[p->name()] = geometry;
-	
+
 	return res ? 0 : 3;
 }
 
@@ -667,9 +666,8 @@ unsigned int Scene::create_material(NCF1 *p)
 	scalar_t diffr = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_R));
 	scalar_t diffg = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_G));
 	scalar_t diffb = (scalar_t)to_double(p->group(XTPROTO_PROP_IDIFF)->get(XTPROTO_PROP_COL_B));
-		
+
 	material->diffuse = ColorRGBf(diffr, diffg, diffb);
-	
 	material->reflectance  = NMath::saturate((scalar_t)to_double(p->get(XTPROTO_PROP_REFLC)));
 	material->transparency = NMath::saturate((scalar_t)to_double(p->get(XTPROTO_PROP_TRSPC)));
 
@@ -681,7 +679,7 @@ unsigned int Scene::create_material(NCF1 *p)
 
 	// Add the material to the list.
 	m_materials[p->name()] = material;
- 
+
 	return res ? 0 : 3;
 }
 
@@ -701,7 +699,7 @@ unsigned int Scene::create_texture(NCF1 *p)
 	std::string script_base, script_filename;
 	path_comp(script_source, script_base, script_filename);
 
-	source = script_base + source;	
+	source = script_base + source;
 
 	Log::handle().log_message("Loading data from %s", source.c_str());
 	if (texture->load(source.c_str())) {
@@ -729,7 +727,7 @@ unsigned int Scene::create_object(NCF1 *p)
 	Object *object = new (std::nothrow) Object;
 
 	std::string n;
-	
+
 	n = p->get(XTPROTO_PROP_OBJ_GEO);
 	if(m_geometry.find(n) != m_geometry.end()) {
 		object->geometry = n;
@@ -768,7 +766,7 @@ unsigned int Scene::create_object(NCF1 *p)
 
 	// Add the object to the list
 	m_objects[p->name()] = object;
-	
+
 	return res ? 0 : 3;
 }
 
@@ -777,13 +775,10 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 	IntInfo test, res;
 
 	std::map<std::string, Object *>::iterator it;
-	for (it = m_objects.begin(); it != m_objects.end(); it++)
-	{
+	for (it = m_objects.begin(); it != m_objects.end(); it++) {
 		// test all the objects and find the closest intersection
-		if((m_geometry[(*it).second->geometry.c_str()])->intersection(ray, &test))
-		{
-			if(res.t > test.t)
-			{
+		if((m_geometry[(*it).second->geometry.c_str()])->intersection(ray, &test)) {
+			if(res.t > test.t) {
 				// set the object name
 				obj = (*it).first;
 

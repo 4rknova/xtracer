@@ -51,14 +51,14 @@ class Renderer
 		void pass_rtrace(Pixmap &fb, Scene &scene);	// Rendering pass: Ray tracing.
 
 		// Trace functions.
-		bool trace_photon(Scene &scene, const Ray &ray, const unsigned int depth, 
+		bool trace_photon(Scene &scene, const Ray &ray, const unsigned int depth,
 						  const ColorRGBf power, unsigned int &map_capacity);
 
 		ColorRGBf trace_ray(Scene &scene, const Ray &ray, const unsigned int depth,
 							const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
 		// Shading.
-		ColorRGBf shade(Scene &scene, const Ray &ray, const unsigned int depth, 
+		ColorRGBf shade(Scene &scene, const Ray &ray, const unsigned int depth,
 						IntInfo &info, std::string &obj,
 						const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 };

@@ -71,7 +71,7 @@ class Log
 		unsigned int m_max_log_size;
 		bool m_flag_echo;
 		bool m_flag_append;
-		
+
 		std::vector<LogEntry*> m_log;
 		static Log m_log_manager;
 };

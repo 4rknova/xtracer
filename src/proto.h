@@ -75,12 +75,12 @@
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */			/* Material id */
 #define XTPROTO_PROP_OBJ_TEX		"texture"			/* asset_id_t */			/* Texture id */
 
-#define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A 	   	  */			/* Configuration node */
-#define XTPROTO_NODE_CAMERA			"camera"			/* N/A 	   	  */			/* Resource node */
+#define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A		  */			/* Configuration node */
+#define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */			/* Resource node */
 #define XTPROTO_NODE_LIGHT			"light"				/* N/A        */	        /* Resource node */
-#define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */    	    /* Resource node */
-#define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */         	/* Resource node */
-#define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */        	/* Resource node */
-#define XTPROTO_NODE_OBJECT			"object"			/* N/A        */        	/* Resource node */
+#define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */			/* Resource node */
+#define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */			/* Resource node */
+#define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */			/* Resource node */
+#define XTPROTO_NODE_OBJECT			"object"			/* N/A        */			/* Resource node */
 
 #endif /* XTPROTO_H_INCLUDED */

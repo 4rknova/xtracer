@@ -39,7 +39,7 @@ using NMath::Ray;
 using NImg::ColorRGBf;
 
 /* Light interface */
-class Light 
+class Light
 {
 	public:
 		Light(const Vector3f &pos, const ColorRGBf &ints);
@@ -54,7 +54,7 @@ class Light
 		const Vector3f &position() const;
 		const ColorRGBf &intensity() const;
 		void position(const Vector3f &position);
-		void intensity(const ColorRGBf &intensity); 
+		void intensity(const ColorRGBf &intensity);
 
 	private:
 		Vector3f m_position;
@@ -76,7 +76,7 @@ class SphereLight : public Light
 
 		scalar_t radius() const;
 		void radius(scalar_t r);
-		
+
 		bool is_area_light() const;
 		Vector3f point_sample() const;
 		Ray ray_sample() const;
