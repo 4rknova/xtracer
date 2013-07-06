@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include <nmath/precision.h>
+#include "precision.h"
 #include "photonmap.hpp"
 
 PhotonMap::PhotonMap()

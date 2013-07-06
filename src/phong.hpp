@@ -28,10 +28,10 @@
 #ifndef XTRACER_PHONG_HPP_INCLUDED
 #define XTRACER_PHONG_HPP_INCLUDED
 
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include "precision.h"
+#include "vector.h"
+#include "intinfo.h"
+#include "color.hpp"
 
 using NMath::scalar_t;
 using NMath::Vector3f;

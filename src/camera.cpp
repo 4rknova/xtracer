@@ -25,9 +25,9 @@
 
 */
 
-#include <nmath/precision.h>
-#include <nmath/matrix.h>
-#include <nmath/prng.h>
+#include "precision.h"
+#include "matrix.h"
+#include "prng.h"
 #include "camera.hpp"
 
 using NMath::Matrix4x4f;

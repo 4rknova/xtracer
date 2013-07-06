@@ -11,7 +11,7 @@
 #include <cstring>
 #include <new>
 
-#include <nmath/vector.h>
+#include "vector.h"
 
 using NMath::Vector3f;
 

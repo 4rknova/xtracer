@@ -28,12 +28,12 @@
 #include <vector>
 #include <iomanip>
 #include <omp.h>
-#include <ncf/util.hpp>
-#include <nmath/mutil.h>
-#include <nmath/prng.h>
-#include <nmath/sample.h>
-#include <nmath/plane.h>
-#include <nimg/luminance.hpp>
+#include "util.hpp"
+#include "mutil.h"
+#include "prng.h"
+#include "sample.h"
+#include "plane.h"
+#include "luminance.hpp"
 #include "setup.h"
 #include "object.hpp"
 #include "argparse.hpp"
@@ -46,7 +46,7 @@ using NCF::Util::path_comp;
 
 Renderer::Renderer()
 {}
-#include <nmath/interpolation.h>
+
 void Renderer::render(Pixmap &fb, Scene &scene)
 {
 	// If gi is enabled, do the photon mapping 1st pass.

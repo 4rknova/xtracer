@@ -14,7 +14,7 @@ PATH_BIN=bin
 PATH_MAN=man
 
 FLAGS_XTR="-fopenmp -Wall -Wno-unknown-pragmas -ffast-math -funsafe-math-optimizations"
-DEP_DLIB="-lgomp -lnmath -lncf -lnimg -lnmesh"
+DEP_DLIB="-lgomp"
 
 #================================================
 

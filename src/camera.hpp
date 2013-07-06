@@ -28,10 +28,10 @@
 #ifndef XTRACER_CAMERA_HPP_INCLUDED
 #define XTRACER_CAMERA_HPP_INCLUDED
 
-#include <nmath/defs.h>
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/ray.h>
+#include "defs.h"
+#include "precision.h"
+#include "vector.h"
+#include "ray.h"
 
 using NMath::scalar_t;
 using NMath::Vector3f;

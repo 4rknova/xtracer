@@ -28,12 +28,12 @@
 #ifndef XTRACER_RENDERER_HPP_INCLUDED
 #define XTRACER_RENDERER_HPP_INCLUDED
 
-#include <nimg/color.hpp>
-#include <nimg/pixmap.hpp>
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/ray.h>
-#include <nmath/intinfo.h>
+#include "color.hpp"
+#include "pixmap.hpp"
+#include "precision.h"
+#include "vector.h"
+#include "ray.h"
+#include "intinfo.h"
 #include "scene.hpp"
 
 using NImg::ColorRGBf;

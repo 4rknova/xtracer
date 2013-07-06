@@ -28,8 +28,8 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
-#include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include "intinfo.h"
+#include "color.hpp"
 #include "camera.hpp"
 #include "light.hpp"
 #include "phong.hpp"

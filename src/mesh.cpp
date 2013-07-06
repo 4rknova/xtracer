@@ -1,35 +1,8 @@
-/*
-
-	This file is part of xtracer.
-
-	mesh.cc
-	Mesh
-
-	Copyright (C) 2008, 2010, 2011
-	Papadopoulos Nikolaos
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-	You should have received a copy of the GNU Lesser General
-    Public License along with this program; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-#include <nmath/defs.h>
-#include <nmath/precision.h>
-#include <nmath/intinfo.h>
-#include <nmath/vector.h>
-#include <nmesh/vertex.h>
+#include "defs.h"
+#include "precision.h"
+#include "intinfo.h"
+#include "vector.h"
+#include "vertex.h"
 #include "argparse.hpp"
 #include "mesh.hpp"
 
@@ -58,7 +31,7 @@ void Mesh::calc_aabb()
 	aabb.min = Vector3f(INFINITY, INFINITY, INFINITY);
 	aabb.max = Vector3f(-INFINITY, -INFINITY, -INFINITY);
 
-	const NMesh::Buffer<NMesh::vertex_t> &vref = vertices_ro();
+	const Buffer<NMesh::vertex_t> &vref = vertices_ro();
 
 	for (unsigned int i = 0; i < vref.count(); ++i) {
 		Vector3f v = Vector3f(vref[i].px, vref[i].py, vref[i].pz);

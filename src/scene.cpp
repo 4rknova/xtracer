@@ -29,18 +29,18 @@
 #include <string>
 #include <fstream>
 
-#include <ncf/util.hpp>
+#include "util.hpp"
 
-#include <nmesh/transform.hpp>
-#include <nmesh/calcnormals.hpp>
-#include <nmesh/obj.hpp>
+#include "transform.hpp"
+#include "calcnormals.hpp"
+#include "obj.hpp"
 
-#include <nmath/mutil.h>
-#include <nmath/vector.h>
-#include <nmath/geometry.h>
-#include <nmath/sphere.h>
-#include <nmath/plane.h>
-#include <nmath/triangle.h>
+#include "mutil.h"
+#include "vector.h"
+#include "geometry.h"
+#include "sphere.h"
+#include "plane.h"
+#include "triangle.h"
 #include "argparse.hpp"
 #include "mesh.hpp"
 #include "proto.h"

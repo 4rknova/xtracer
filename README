@@ -1,6 +1,6 @@
 XTracer 2
 
-Copyright 2010 - 2012 (c)
+Copyright 2010 - 2013 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
 About
@@ -11,8 +11,10 @@ v0.7 served as my thesis project for the BSc of computer science at the
 University of Piraeus. It was developed under the supervision of Prof. T.
 Panayiotopoulos as part of the research work of the Knowledge Engineering Lab.
 
-v1.x is currently under development as part of my dissertation for the MSc of
-computer graphics programming at the University of Hull.
+v1.1 was developed as part of my dissertation for the MSc of computer graphics 
+programming at the University of Hull.
+
+v1.2 is the current version. All external dependencies have be integrated.
 
 License
 -------
@@ -54,11 +56,17 @@ directory.
 
 Dependencies
 ------------
+Version:  0.x - 1.1.2.0
 * openmp	Must be provided by your compiler.
 * libnmath	https://github.com/4rknova/libnmath
 * libnmesh	https://github.com/4rknova/libnmesh
 * linimg	https://github.com/4rknova/libnimg
 * libncf	https://github.com/4rknova/libncf
+
+NOTE: You might need older versions of the libraries.
+
+Version: 1.2.0.0
+* openmp	Must be provided by your compiler.
 
 Supported platforms
 -------------------

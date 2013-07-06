@@ -30,10 +30,10 @@
 
 #include <string>
 
-#include <nmath/intinfo.h>
-#include <nmath/vector.h>
-#include <nmath/geometry.h>
-#include <ncf/ncf1.hpp>
+#include "intinfo.h"
+#include "vector.h"
+#include "geometry.h"
+#include "ncf1.hpp"
 
 #include "camera.hpp"
 #include "light.hpp"

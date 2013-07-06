@@ -1,10 +1,10 @@
 #include <string>
 #include <sstream>
-#include <nmath/mutil.h>
-#include <nmath/prng.h>
-#include <ncf/util.hpp>
-#include <nimg/pixmap.hpp>
-#include <nimg/ppm.hpp>
+#include "mutil.h"
+#include "prng.h"
+#include "util.hpp"
+#include "pixmap.hpp"
+#include "ppm.hpp"
 #include "renderer.hpp"
 #include "scene.hpp"
 #include "argdefs.h"

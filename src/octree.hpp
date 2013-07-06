@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <list>
-#include <nmath/ray.h>
-#include <nmath/aabb.h>
-#include <nmath/intinfo.h>
+#include "ray.h"
+#include "aabb.h"
+#include "intinfo.h"
 
 using NMath::Ray;
 using NMath::BoundingBox3;

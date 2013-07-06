@@ -28,10 +28,10 @@
 #ifndef XTRACER_LIGHT_HPP_INCLUDED
 #define XTRACER_LIGHT_HPP_INCLUDED
 
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-#include <nmath/ray.h>
-#include <nimg/color.hpp>
+#include "precision.h"
+#include "vector.h"
+#include "ray.h"
+#include "color.hpp"
 
 using NMath::scalar_t;
 using NMath::Vector3f;
