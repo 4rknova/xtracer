@@ -1,7 +1,7 @@
 # Xtracer simple materials
 #	To use these materials just include this file 
 #	in your scene's material section
-#	with: %include material_01.mat
+#	with: %include mat01.mat
 
 # ================================== #
 #	LAMBERTIAN MATERIALS			 #
@@ -37,13 +37,13 @@ lambert_blue = {
 	}
 }
 	
-# plain silver lambert
-lambert_silver = {
+# plain white lambert
+lambert_white = {
 	type = lambert
 	diffuse = {
-		r = 0.5
-		g = 0.5
-		b = 0.5
+		r = 1.0
+		g = 1.0
+		b = 1.0
 	}
 }
 
@@ -117,26 +117,26 @@ phong_blue = {
 	k_specexp = 60 
 }
 
-# plain silver phong
-phong_silver = {
+# plain white phong
+phong_white = {
 	type = phong
 
 	reflectance = 0.5 
 
 	diffuse = {
-		r = 0.5
-		g = 0.5
-		b = 0.5
+		r = 1.0
+		g = 1.0
+		b = 1.0
 	}
 	specular = {
-		r = 0.1
-		g = 0.1
-		b = 0.1
+		r = 1.0
+		g = 1.0
+		b = 1.0
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
-	k_specexp = 60
+	k_diffuse = 0.5
+	k_specular = 0.5
+	k_specexp = 260
 }
 
 # ================================== #
@@ -209,24 +209,24 @@ blinn_phong_blue = {
 	k_specexp = 180 
 }
 
-# plain silver phong
-blinn_phong_silver = {
+# plain white phong
+blinn_phong_white = {
 	type = blinn_phong
 
 	reflectance = 0.5 
 
 	diffuse = {
-		r = 0.5
-		g = 0.5
-		b = 0.5
+		r = 1.0
+		g = 1.0
+		b = 1.0
 	}
 	specular = {
-		r = 0.1
-		g = 0.1
-		b = 0.1
+		r = 1.0
+		g = 1.0
+		b = 1.0
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
+	k_diffuse = 0.5
+	k_specular = 0.5
 	k_specexp = 180
 }

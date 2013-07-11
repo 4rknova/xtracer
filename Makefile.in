@@ -21,9 +21,9 @@ FLAGS_WARNLV = -Wall
 FLAGS_INCLSN = -I/usr/local/include -I$(PATH_SRC)
 FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
-FLAGS_LD =
+FLAGS_LD  = -lgomp -pthread -lglut -lGLU -lGL
 FLAGS_CC  = $(FLAGS_COMMON) -std=c89
-FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
+FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic -std=c++0x
 
 # TARGETS
 .PHONY: all
@@ -44,7 +44,7 @@ dirtree:
 
 
 $(BIN): dirtree $(BINOBJ)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(BINOBJ) $(DEP_DLIB) -o $@
+	$(CXX) $(FLAGS_LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) -o $@
 
 .PHONY: install
 install: all

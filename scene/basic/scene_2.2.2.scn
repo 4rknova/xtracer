@@ -60,6 +60,7 @@ camera = {
 }
 
 geometry = {
+
 	red_ball = {
 		type = sphere
 		position = {
@@ -108,19 +109,19 @@ geometry = {
 		}
 		distance = 500
 	}
-	right_wall = {
-		type = plane
-		normal = {
-			x = -1
-		}
-		distance = 500
-	}
 	left_wall = {
 		type = plane
 		normal = {
 			x = 1
 		}
 		distance = -500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
 	}
 	front = {
 		type = plane
@@ -170,91 +171,110 @@ light = {
 object = {
 	red_ball = {
 		geometry = red_ball
-		material = lambert_red
+		material = phong_red
 	}
 	green_ball = {
 		geometry = green_ball
-		material = lambert_green
+		material = phong_green
 	}
 	blue_ball = {
 		geometry = blue_ball
-		material = phong_silver
+		material = phong_blue
 	}
 	floor = {
 		geometry = floor
-		material = lambert_silver
+		material = lambert_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_silver
+		material = lambert_grey
 	}
 	back = {
 		geometry = back
-		material = lambert_silver
+		material = phong_grey
 	}
 	right_wall = {
 		geometry = right_wall
-		material = lambert_silver
+		material = lambert_grey
 	}
 	left_wall = {
 		geometry = left_wall
-		material = lambert_silver
+		material = lambert_grey
 	}
 	front = {
 		geometry = front
-		material = lambert_silver
+		material = lambert_grey
 	}
 }
 
 material = {
-	# plain red phong
-	lambert_red = {
-		type = lambert
-
-		reflectance = 0.5
-
-		diffuse = {
-			r = 1
-		}
-		specular = {
-			r = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 60
-	}
-
-	# plain green phong
-	lambert_green = {
-		type = lambert
-	
-		reflectance = 0.5
-
-		diffuse = {
-			g = 1
-		}
-		specular = {
-			g = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 60 
-	}
-
-	# plain silver phong
-	phong_silver = {
+	phong_red = {
 		type = phong
 
-		transparency = 0.3
-		ior = 10
-		reflectance = 0.7
+		reflectance = 0.5
 
 		diffuse = {
-			r = 0
-			g = 0
-			b = 0
+			r = 1
+		}
+		specular = {
+			r = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 128
+		roughness = 1000.0
+	}
+
+	phong_green = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			g = 1
+		}
+		specular = {
+			g = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 128
+		roughness = 1000.0
+	}
+
+	phong_blue = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 0.3
+			g = 0.3
+			b = 1
+		}
+		specular = {
+			r = .99
+			g = .99
+			b = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 2048
+		roughness = 1000.0
+	}
+
+	phong_grey = {
+		type = phong
+
+		reflectance = 0.9
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
 		}
 		specular = {
 			r = 1
@@ -262,13 +282,13 @@ material = {
 			b = 1
 		}
 
-		k_diffuse = 0
-		k_specular = 1
-		k_exponent = 160
+		k_diffuse = 0.01
+		k_specular = 0.99
+		k_exponent = 128
+		roughness = 10000.0
 	}
 	
-	# plain silver lambert
-	lambert_silver = {
+	lambert_grey = {
 		type = lambert
 
 		diffuse = {

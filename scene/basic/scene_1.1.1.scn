@@ -1,8 +1,6 @@
-# Xtracer 2
-
 title = Simple sphere
 descr = A sphere on a plane
-versn = 0.3
+versn = 0.4
 
 k_ambient = 0.001
 
@@ -97,8 +95,10 @@ geometry = {
 
 light = {
 	sat = {
-		type = point
-		
+		type = sphere
+
+		radius = 50
+
 		position = {
 			x = 200
 			y = 300
@@ -113,8 +113,10 @@ light = {
 	}
 
 	cat = {
-		type = point
-		
+		type = sphere
+
+		radius = 20
+
 		position = {
 			x = -200
 			y = 400
@@ -133,20 +135,20 @@ material = {
 	floor = {
 		type = blinn_phong
 
-		k_diffuse = 0.8
-		k_specular = 0.2
+		k_diffuse = 0.5
+		k_specular = 0.5
 		k_exponent = 1350
 	
 		diffuse = {
-			r = 0.251
-			g = 0.251
-			b = 0.251 
+			r = 1.0
+			g = 1.0
+			b = 1.0 
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 
 		reflectance = 0.3
@@ -160,28 +162,18 @@ material = {
 		k_exponent = 60
 	
 		diffuse = {
-			r = 1
-			g = 1
-			b = 1 
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 
-		reflectance = 0.053
-	}
-}
-
-texture = {
-	checker = {
-		source = ../media/texture/checkerboard/1.ppm
-	}
-
-	wood = {
-		source = ../media/texture/wood/1.ppm
+		reflectance = 0.3
 	}
 }
 
@@ -189,11 +181,9 @@ object = {
 	sphere = {
 		geometry = sphere
 		material = plastic
-		texture = wood
 	}
 	plane = {
 		geometry = plane
 		material = floor
-		texture = checker
 	}
 }

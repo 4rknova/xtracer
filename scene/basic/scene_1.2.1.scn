@@ -1,8 +1,8 @@
-# Xtracer 2
-
 title = Simple sphere
 descr = A sphere on a plane
 versn = 0.3
+
+%include scene_common.scn
 
 k_ambient = 0.001
 
@@ -97,10 +97,8 @@ geometry = {
 
 light = {
 	sat = {
-		type = sphere
-
-		radius = 50
-
+		type = point
+		
 		position = {
 			x = 200
 			y = 300
@@ -115,10 +113,8 @@ light = {
 	}
 
 	cat = {
-		type = sphere
-
-		radius = 20
-
+		type = point
+		
 		position = {
 			x = -200
 			y = 400
@@ -137,14 +133,14 @@ material = {
 	floor = {
 		type = blinn_phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
+		k_diffuse = 0.8
+		k_specular = 0.2
 		k_exponent = 1350
 	
 		diffuse = {
-			r = 0.1
-			g = 0.1
-			b = 0.1 
+			r = 0.251
+			g = 0.251
+			b = 0.251 
 		}
 
 		specular = {
@@ -175,20 +171,29 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.3
+		reflectance = 0.053
 	}
 }
 
 texture = {
+	checker = {
+		source = <texdir>/chbd01.ppm
+	}
+
+	wood = {
+		source = <texdir>/wood01.ppm
+	}
 }
 
 object = {
 	sphere = {
 		geometry = sphere
 		material = plastic
+		texture = wood
 	}
 	plane = {
 		geometry = plane
 		material = floor
+		texture = checker
 	}
 }

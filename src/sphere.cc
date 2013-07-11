@@ -59,46 +59,29 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 #endif
 
 	// We use the algebraic solution
-	scalar_t a = dot(ray.direction, ray.direction);
+	scalar_t b = 2 * dot(ray.origin - origin, ray.direction);
+	scalar_t c = dot(origin, origin) + dot(ray.origin, ray.origin) + 2 * dot(-origin, ray.origin) - radius * radius;
 
-	scalar_t b = 2 * ray.direction.x * (ray.origin.x - origin.x) +
-		2 * ray.direction.y * (ray.origin.y - origin.y) +
-		2 * ray.direction.z * (ray.origin.z - origin.z);
+	scalar_t discr = (b * b - 4 * c);
 
-	scalar_t c = dot(origin, origin) + dot(ray.origin, ray.origin) + 
-		2 * dot(-origin, ray.origin) - radius * radius;
-	
-	scalar_t discr = (b * b - 4 * a * c);
-
-	if (discr < 0.0) 
+	if (discr > 0.0)
 	{
-		return false;
+		scalar_t sqrt_discr = sqrt(discr);
+		scalar_t t1 = (-b + sqrt_discr) / 2.0;
+		scalar_t t2 = (-b - sqrt_discr) / 2.0;
+		scalar_t t = t1 < t2 ? t1 : t2;
+
+		if (t > EPSILON && i_info)
+		{
+			i_info->t = t;
+			i_info->point = ray.origin + ray.direction * t;
+			i_info->normal = (i_info->point - origin) / radius;
+			i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / PI + 0.5), 
+								(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / PI + 0.5));
+			i_info->geometry = this;
+		}
 	}
 
-	scalar_t sqrt_discr = sqrt(discr);
-	scalar_t t1 = (-b + sqrt_discr) / (2.0 * a);
-	scalar_t t2 = (-b - sqrt_discr) / (2.0 * a);
-	
-	if (t1 < EPSILON) t1 = t2;
-	if (t2 < EPSILON) t2 = t1;
-	
-	scalar_t t = t1 < t2 ? t1 : t2;
-
-	if (t < EPSILON )
-	{
-		return false;
-	}
-
-	if (i_info)
-	{
-		i_info->t = t;
-		i_info->point = ray.origin + ray.direction * t;
-		i_info->normal = (i_info->point - origin) / radius;
-		i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / PI + 0.5), 
-									(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / PI + 0.5));
-		i_info->geometry = this;
-	}
-	
 	return true;
 }
 

@@ -1,8 +1,8 @@
-# Xtracer 2
-
 title = Refraction
 descr = A refractive sphere
 versn = 0.4
+
+%include scene_common.scn
 
 k_ambient = 0.01
 
@@ -161,7 +161,7 @@ light = {
 
 texture = {
 	floor = {
-		source = ../media/texture/wood/1.ppm
+		source = <texdir>/wood01.ppm
 	}
 }
 
@@ -258,25 +258,20 @@ material = {
 	plastran = {
 		type = blinn_phong
 
-		k_diffuse = 0.1
-		k_specular = 0.9
-		k_exponent = 1000
+		k_diffuse = 0.0
+		k_specular = 1.0
+		k_exponent = 128
 	
-		diffuse = {
-			r = 0.8
-			g = 0.8
-			b = 0.8
-		}
-
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 
-		reflectance = 0
+		reflectance = 0.3
 		transparency = 0.9
-		ior = 1.0131714
+
+		ior = 1.02714
 	}
 }
 

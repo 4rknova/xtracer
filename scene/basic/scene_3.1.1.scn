@@ -1,8 +1,8 @@
-# Xtracer 2
-
 title = Room
-descr = Three spheres in a room.
-versn = 0.3
+descr = A refractive sphere in a room.
+versn = 0.4
+
+%include scene_common.scn
 
 k_ambient = 0.001
 
@@ -60,29 +60,28 @@ camera = {
 }
 
 geometry = {
-
-	red_ball = {
+	glass_ball = {
 		type = sphere
 		position = {
 			x = 80 
-			y = -305
-			z = -100
+			y = -200
+			z = -500
 		}
-		radius = 95
+		radius = 200
 	}
-	green_ball = {
+	ball_1 = {
 		type = sphere
 		position = {
-			x = 350
+			x = 250
 			y = -330
 			z = 350
 		}
 		radius = 77
 	}
-	blue_ball = {
+	ball_2 = {
 		type = sphere
 		position = {
-			x = -220
+			x = -120
 			y = -245
 			z = 80
 		}
@@ -94,6 +93,8 @@ geometry = {
 			y = 1
 		}
 		distance = -400
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 	ceiling = {
 		type = plane
@@ -101,6 +102,8 @@ geometry = {
 			y = -1
 		}
 		distance = 400
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 	back = {
 		type = plane
@@ -108,13 +111,8 @@ geometry = {
 			z = -1
 		}
 		distance = 500
-	}
-	left_wall = {
-		type = plane
-		normal = {
-			x = 1
-		}
-		distance = -500
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 	right_wall = {
 		type = plane
@@ -122,6 +120,17 @@ geometry = {
 			x = -1
 		}
 		distance = 500
+		u_scale = 0.003
+		v_scale = 0.003
+	}
+	left_wall = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = -500
+		u_scale = 0.003
+		v_scale = 0.003
 	}
 	front = {
 		type = plane
@@ -129,18 +138,28 @@ geometry = {
 			z = 1
 		}
 		distance = -2600
+		u_scale = 0.003
+		v_scale = 0.003
+	}
+}
+
+texture = {
+	tex1 = {
+		source = <texdir>/chbd01.ppm
 	}
 }
 
 light = {
 
 	l0 = {
-		type = point
+		type = sphere
+
+		radius = 10.0
 		
 		position = {
-			x = -150
-			y = 150
-			z = 200
+			x = 0
+			y = 50
+			z = -300
 		}
 
 		intensity = {
@@ -151,12 +170,14 @@ light = {
 	}
 
 	l1 = {
-		type = point
+		type = sphere
+
+		radius = 25.0
 		
 		position = {
-			x = -100
-			y = -200
-			z = -300
+			x = -200
+			y = 300
+			z = -1500
 		}
 
 		intensity = {
@@ -169,137 +190,106 @@ light = {
 }
 
 object = {
-	red_ball = {
-		geometry = red_ball
-		material = phong_red
+	glass_ball = {
+		geometry = glass_ball
+		material = phong_glass
 	}
-	green_ball = {
-		geometry = green_ball
-		material = phong_green
+	ball_1 = {
+		geometry = ball_1
+		material = phong_ball
 	}
-	blue_ball = {
-		geometry = blue_ball
-		material = phong_blue
+	ball_2 = {
+		geometry = ball_2
+		material = phong_ball
 	}
 	floor = {
 		geometry = floor
-		material = lambert_silver
+		material = plastic1
+		texture = tex1
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_silver
+		material = plastic1
 	}
 	back = {
 		geometry = back
-		material = phong_silver
+		material = plastic2
 	}
 	right_wall = {
 		geometry = right_wall
-		material = phong_silver
+		material = plastic3
 	}
 	left_wall = {
 		geometry = left_wall
-		material = phong_silver
-	}
-	front = {
-		geometry = front
-		material = phong_silver
+		material = plastic3
 	}
 }
 
 material = {
-	# plain red phong
-	phong_red = {
+	phong_glass = {
 		type = phong
 
-		reflectance = 0.5
+		reflectance = 1.0
+		transparency = 1.0
 
-		diffuse = {
-			r = 1
-		}
 		specular = {
-			r = 1
+			r = 1.0
+			g = 1.0
+			b = 1.0
 		}
 
-		k_diffuse = 0.3
-		k_specular = 0.7
+		k_diffuse = 0.0
+		k_specular = 1.0
 		k_exponent = 128
-		roughness = 0.1
-	}
-
-	# plain green phong
-	phong_green = {
-		type = phong
-
-		reflectance = 0.5
-
-		diffuse = {
-			g = 1
-		}
-		specular = {
-			g = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 128
-		roughness = 0.1
-	}
-
-	# plain blue phong
-	phong_blue = {
-		type = phong
-
-		reflectance = 0.5
-
-		diffuse = {
-			r = 0.3
-			g = 0.3
-			b = 1
-		}
-		specular = {
-			r = .99
-			g = .99
-			b = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 128
-		roughness = 0.1
-	}
-
-	# plain silver phong
-	phong_silver = {
-		type = phong
-
-		reflectance = 1 
-
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		k_diffuse = 0.01
-		k_specular = 0.99
-		k_exponent = 1000000000
-		roughness = 0.0001
+		ior = 1.35714
+		roughness = 10000000.0
 	}
 	
-	# plain silver lambert
-	lambert_silver = {
+	phong_ball = {
+		type = phong
+
+		transparency = 0.0
+		reflectance = 1.0
+
+		specular = {
+			r = 1.0
+			g = 1.0
+			b = 1.0
+		}
+
+		k_diffuse  = 0.0
+		k_specular = 1.0
+		k_exponent = 64 
+		roughness  = 100.0
+	}
+	
+	plastic1 = {
 		type = lambert
 
 		diffuse = {
 			r = 0.5
-			g = 0.5
-			b = 0.5
+			g = 0.6
+			b = 0.7
+		}
+	}
+	
+	plastic2 = {
+		type = lambert
+
+		diffuse = {
+			r = 0.8
+			g = 0.9
+			b = 0.7
+		}
+	}
+	
+	plastic3 = {
+		type = lambert
+
+		diffuse = {
+			r = 0.9
+			g = 0.6
+			b = 0.4
 		}
 	}
 }

@@ -1,8 +1,8 @@
-# Xtracer 2
-
 title = Cornell box
 descr = <title> variant. ( Whitted friendly version )
-versn = 0.1
+versn = 0.2
+
+%include scene_common.scn
 
 # The scene cameras.
 camera = {
@@ -28,14 +28,12 @@ camera = {
 		target = {
 			x = 278.0
 			y = 273.0
-			z = -799.0
+			z = 0.0
 		}
 
 		# Up vector.
 		up = {
-			x = 0
 			y = 1
-			z = 0
 		}
 	}
 }
@@ -43,23 +41,17 @@ camera = {
 # The scene lights
 light = {
 	light1 = {
-		type = triangle
-		vecdata = {
-			v0 = {
-				x = 143.0
-				y = 548.7998
-				z = 127.0
-			}
-			v1 = {
-				x = 143.0
-				y = 548.7998
-				z = 132.0
-			}
-			v2 = {
-				x = 113.0
-				y = 548.7998
-				z = 132.0
-			}
+		type = sphere
+		radius = 25.0
+
+		position = {
+			x = 50
+			y = 200
+			z = 0
+
+			x = 380
+			y = 300
+			z = 150
 		}
 
 		intensity = {
@@ -68,40 +60,13 @@ light = {
 				b = 0.5
 		}
 	}
-
-	light2 = {
-		type = triangle
-		vecdata = {
-			v0 = {
-				x = 143.0
-				y = 548.7998
-				z = 127.0
-			}
-			v1 = {
-				x = 113.0
-				y = 548.7998
-				z = 132.0
-			}
-			v2 = {
-				x = 113.0
-				y = 548.7998
-				z = 127.0
-			}
-		}
-
-		intensity = {
-			r = 0.50
-			g = 0.50
-			b = 0.50
-		}
-	}
 }
 
 # The scene materials
 material = {
 
 	# The following three colors are RGB approximations to the spectral 
-	# measurements of the white, red, and green paints used in the Cornell Box.
+	# measurements of the white, yellow, and green paints used in the Cornell Box.
 	white = {
 		type = lambert
 
@@ -122,13 +87,23 @@ material = {
 		}
 	}
 
+	yellow = {
+		type = lambert
+
+		diffuse = {
+			r = 0.83
+			g = 0.76
+			b = 0.04
+		}
+	}
+
 	red = {
 		type = lambert
 
 		diffuse = {
-			r = 0.63
-			g = 0.06
-			b = 0.04
+			r = 0.89
+			g = 0.54
+			b = 0.31
 		}
 	}
 
@@ -136,9 +111,9 @@ material = {
 		type = lambert
 
 		diffuse = {
-			r = 0.15
-			g = 0.48
-			b = 0.09
+			r = 0.54
+			g = 0.89
+			b = 0.32
 		}
 	}
 
@@ -157,57 +132,6 @@ material = {
 geometry = {
 
 	# The room box
-	# - The light
-	# The light geometry is lowered by a small number to avoid numeric errors
-	# The original height is 548.8
-	light_1 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 143.0
-				y = 548.7999
-				z = 127.0
-			}
-
-			v1 = {
-				x = 143.0
-				y = 548.7999
-				z = 132.0
-			}
-
-			v2 = {
-				x = 113.0
-				y = 548.7999
-				z = 132.0
-			}
-
-		}
-	}
-
-	light_2 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 143.0
-				y = 548.7999
-				z = 127.0
-			}
-
-			v1 = {
-				x = 113.0
-				y = 548.7999
-				z = 132.0
-			}
-
-			v2 = {
-				x = 113.0
-				y = 548.7999
-				z = 127.0
-			}
-		}
-	}
 
 	# - Floor
 	floor_1 = {
@@ -449,38 +373,27 @@ geometry = {
 	# Model
 	model = {
 		type = mesh
-		source = ../media/mesh/head_cornell.obj
+		source = <meshdir>/head_cornell.obj
 	}
 }
 
 texture = {
 	model = {
-		source = ../media/texture/head/Map-COL.ppm
+		source = <texdir>/head/Map-COL.ppm
 	}
 }
 
 # The scene objects
 object = {
-	# Light
-	light_1 = {
-		geometry = light_1
-		material = light
-	}	
-
-	light_2 = {
-		geometry = light_2
-		material = light 
-	}
-
 	# Floor
 	floor_1 = {
 		geometry = floor_1
-		material = white
+		material = red
 	}
 
 	floor_2 = {
 		geometry = floor_2
-		material = white
+		material = red
 	}
 
 	# Ceiling
@@ -508,12 +421,12 @@ object = {
 	# Left wall
 	left_wall_1 = {
 		geometry = left_wall_1
-		material = red
+		material = yellow
 	}
 
 	left_wall_2 = {
 		geometry = left_wall_2
-		material = red
+		material = yellow
 	}
 	
 	# Right wall

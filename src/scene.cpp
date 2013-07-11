@@ -672,7 +672,7 @@ unsigned int Scene::create_material(NCF1 *p)
 	material->transparency = NMath::saturate((scalar_t)to_double(p->get(XTPROTO_PROP_TRSPC)));
 
 	// index of refraction
-	material->ior = (scalar_t)to_double(p->get(XTPROTO_PROP_IOR));
+	material->ior = p->query_property(XTPROTO_PROP_IOR) ? (scalar_t)to_double(p->get(XTPROTO_PROP_IOR)) : 1.0;
 
 	// Destroy the old material from the list if it exists.
 	unsigned int res = destroy_material(p->name());

@@ -1,7 +1,7 @@
 # Xtracer porcelain material 
 #	To use these material just include this file 
 #	in your scene's material section
-#	with: %include material_02.mat
+#	with: %include mat02.mat
 
 porcelain = {
 	type = phong 

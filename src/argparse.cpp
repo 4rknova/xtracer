@@ -3,40 +3,42 @@
 #include "setup.h"
 #include "argdefs.h"
 #include "log.hpp"
+#include "mutil.h"
 #include "argparse.hpp"
 
 Environment Environment::m_environment;
 
 Environment::Environment()
-	: m_aa(XTRACER_SETUP_DEFAULT_AA),
-	  m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH),
-	  m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT),
+	: m_gui(false)
+	, m_aa(XTRACER_SETUP_DEFAULT_AA)
+	, m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH)
+	, m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT)
 
-	  m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT),
+	, m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT)
 
-	  m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH),
+	, m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH)
 
-	  m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES),
-	  m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES),
-	  m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES),
+	, m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES)
+	, m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES)
+	, m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES)
 
-	  m_region_min_x(0),
-	  m_region_min_y(0),
-	  m_region_max_x(0),
-	  m_region_max_y(0),
+	, m_region_min_x(0)
+	, m_region_min_y(0)
+	, m_region_max_x(0)
+	, m_region_max_y(0)
 
-	  m_flag_gi(XTRACER_SETUP_DEFAULT_GI),
-	  m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ),
-	  m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT),
-	  m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES),
-	  m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS),
-	  m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC),
+	, m_flag_gi(XTRACER_SETUP_DEFAULT_GI)
+	, m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ)
+	, m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT)
+	, m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES)
+	, m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS)
+	, m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC)
 
-	  m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH),
-	  m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE),
+	, m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH)
+	, m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE)
 
-	  m_output(XTRACER_OUTPUT_PPM),
-	  m_flag_resume(false)
+	, m_output(XTRACER_OUTPUT_PPM)
+	, m_flag_resume(false)
 {}
 
 Environment::~Environment()
@@ -45,6 +47,11 @@ Environment::~Environment()
 Environment &Environment::handle()
 {
 	return m_environment;
+}
+
+bool Environment::gui() const
+{
+	return m_gui;
 }
 
 unsigned int Environment::width() const
@@ -172,27 +179,6 @@ const char *Environment::active_camera_name() const
 	return m_active_camera_name.c_str();
 }
 
-unsigned int Environment::scene_count()
-{
-	return m_scenes.size();
-}
-
-void Environment::scene_push(std::string &scene)
-{
-	m_scenes.push_back(scene);
-}
-
-bool Environment::scene_pop(std::string &res)
-{
-	if (m_scenes.empty())
-		return false;
-
-	res = m_scenes.back();
-	m_scenes.pop_back();
-
-	return true;
-}
-
 void Environment::modifier_push(std::string &modifier)
 {
 	m_modifiers.push_back(modifier);
@@ -238,6 +224,10 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
+		}
+		// GUI
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GUI)) {
+			m_gui = true;
 		}
 		// Maximum recursion depth
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MAX_RDEPTH)) {
@@ -524,7 +514,13 @@ unsigned int Environment::setup(int argc, char **argv)
 		}
 		// Scene file
 		else {
-			m_scenes.push_back(argv[i]);
+			if (mScene.empty()) {
+				mScene = argv[i];
+			}
+			else {
+				Log::handle().log_error("Multiple scenes were given in input.");
+				return 2;
+			}
 		}
 	}
 
@@ -533,17 +529,32 @@ unsigned int Environment::setup(int argc, char **argv)
 	m_samples_light = (arg_s_light > 0 ? arg_s_light : (arg_s_mc > 0 ? arg_s_mc : 1));
 	m_samples_reflec = (arg_s_refl > 0 ? arg_s_refl : (arg_s_mc > 0 ? arg_s_mc : 1));
 
-	if (m_scenes.empty()) {
-		Log::handle().log_message("No scenes were provided. Nothing to do..");
+	if (mScene.empty()) {
+		Log::handle().log_message("No scene was provided. Nothing to do..");
 		return 1;
 	}
 
-	// Resume file feature cannot be used with multiple scenes.
-	if (m_scenes.size() > 1 && !m_resume_file.empty()) {
-		Log::handle().log_message("You cannot use the resume feature with multiple scenes. Ignoring..");
-		m_resume_file.clear();
-		m_flag_resume = false;
-	}
-
 	return 0;
+}
+
+const char *Environment::scene()
+{
+	return mScene.c_str();
+}
+
+void Environment::log_info() const
+{
+	int aspgcd = NMath::gcd(m_width, m_height);
+	Log::handle().log_message("- Output       : Resolution %ix%i, Aspect ratio %i:%i",
+		m_width, m_height, m_width / aspgcd, m_height / aspgcd);
+	Log::handle().log_message("- Antialiasing : Supersampling %ix%i, %i spp",
+		m_aa, m_aa, m_aa * m_aa);
+	Log::handle().log_message("- Recursion    : %i", m_max_rdepth);
+	Log::handle().log_message("- Sampling     : DoF %i, Shading %i, Reflections %i",
+		m_samples_dof, m_samples_light, m_samples_reflec);
+
+	if (m_flag_gi) {
+		Log::handle().log_message("- Photon maps  : Total %i, Per pixel %i, Radius %f",
+			m_photon_count, m_photon_max_samples, m_photon_max_sampling_radius);
+	}
 }

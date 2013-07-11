@@ -1,8 +1,8 @@
-# Xtracer 2
-
 title = Refraction
 descr = A refractive sphere
 versn = 0.4
+
+%include scene_common.scn
 
 ambient = {
 	r = 0.01
@@ -229,7 +229,7 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.4
+		reflectance = 0.5
 		transparency = 0.9
 		ior = 1.341714
 	}
@@ -237,7 +237,7 @@ material = {
 
 texture = {
 	floor = {
-		source = ../media/texture/checkerboard/1.ppm
+		source = <texdir>/wood01.ppm
 	}
 }
 

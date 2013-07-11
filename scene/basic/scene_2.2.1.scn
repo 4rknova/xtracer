@@ -1,8 +1,6 @@
-# Xtracer 2
-
 title = Room
 descr = Three spheres in a room.
-versn = 0.3
+versn = 0.4
 
 k_ambient = 0.001
 
@@ -183,32 +181,31 @@ object = {
 	}
 	floor = {
 		geometry = floor
-		material = lambert_silver
+		material = lambert_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_silver
+		material = lambert_grey
 	}
 	back = {
 		geometry = back
-		material = phong_silver
+		material = phong_grey
 	}
 	right_wall = {
 		geometry = right_wall
-		material = phong_silver
+		material = phong_grey
 	}
 	left_wall = {
 		geometry = left_wall
-		material = phong_silver
+		material = phong_grey
 	}
 	front = {
 		geometry = front
-		material = lambert_silver
+		material = lambert_grey
 	}
 }
 
 material = {
-	# plain red phong
 	phong_red = {
 		type = phong
 
@@ -221,12 +218,11 @@ material = {
 			r = 1
 		}
 
-		k_diffuse = 0.3
+		k_diffuse  = 0.3
 		k_specular = 0.7
 		k_exponent = 60
 	}
 
-	# plain green phong
 	phong_green = {
 		type = phong
 
@@ -239,12 +235,11 @@ material = {
 			g = 1
 		}
 
-		k_diffuse = 0.3
+		k_diffuse  = 0.3
 		k_specular = 0.7
 		k_exponent = 60 
 	}
 
-	# plain blue phong
 	phong_blue = {
 		type = phong
 
@@ -261,16 +256,15 @@ material = {
 			b = 1
 		}
 
-		k_diffuse = 0.3
+		k_diffuse  = 0.3
 		k_specular = 0.7
 		k_exponent = 60 
 	}
 
-	# plain silver phong
-	phong_silver = {
+	phong_grey = {
 		type = phong
 
-		reflectance = 1 
+		reflectance = 1.0 
 
 		diffuse = {
 			r = 1
@@ -283,13 +277,12 @@ material = {
 			b = 1
 		}
 
-		k_diffuse = 0.01
-		k_specular = 0.99
-		k_exponent = 1560
+		k_diffuse  = 0.0
+		k_specular = 1.0
+		k_exponent = 999
 	}
 	
-	# plain silver lambert
-	lambert_silver = {
+	lambert_grey = {
 		type = lambert
 
 		diffuse = {

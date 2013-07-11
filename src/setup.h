@@ -9,7 +9,7 @@
 
 #define XTRACER_SETUP_DEFAULT_THREAD_COUNT		0						/* Default thread count (0: auto-detect). */
 
-#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH		10						/* Default maximum recursion depth. */
+#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH		3						/* Default maximum recursion depth. */
 
 #define XTRACER_SETUP_DEFAULT_DOF_SAMPLES		1						/* Default sample count for DOF. */
 #define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES		1						/* Default sample count for lights. */

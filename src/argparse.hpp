@@ -10,6 +10,8 @@ class Environment
 	public:
 		static Environment &handle();
 
+		bool gui() const;
+
 		unsigned int width() const;
 		unsigned int height() const;
 
@@ -51,18 +53,20 @@ class Environment
 		//	*. Invalid parametre.
 		unsigned int setup(int argc, char **argv);
 
-		unsigned int scene_count();
-		void scene_push(std::string &scene);
-		bool scene_pop(std::string &res);
-
 		void modifier_push(std::string &modifier);
 		bool modifier_pop(std::string &res);
+
+		const char *scene();
+
+		void log_info() const;
 
 	private:
 		static Environment m_environment;
 
 		Environment();
 		~Environment();
+
+		bool m_gui;
 
 		unsigned int m_aa;
 		unsigned int m_width, m_height;
@@ -97,8 +101,9 @@ class Environment
 		std::string m_outdir;
 		std::string m_active_camera_name;
 
-		std::list<std::string> m_scenes;
 		std::list<std::string> m_modifiers;
+
+		std::string mScene;
 };
 
 #endif /* XTRACER_ARGPARSE_HPP_INCLUDED */

@@ -1,30 +1,3 @@
-/*
-
-    This file is part of xtracer.
-
-    renderer.cpp
-    Renderer class
-
-    Copyright (C) 2010, 2011
-    Papadopoulos Nikolaos
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this program; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
 #include <vector>
 #include <iomanip>
 #include <omp.h>
@@ -45,41 +18,54 @@
 using NCF::Util::path_comp;
 
 Renderer::Renderer()
+	: mFramebuffer(NULL)
+	, mScene(NULL)
 {}
 
-void Renderer::render(Pixmap &fb, Scene &scene)
+void Renderer::setup(Pixmap &fb, Scene &scene)
 {
-	// If gi is enabled, do the photon mapping 1st pass.
-	if (Environment::handle().flag_gi()) {
-		Log::handle().log_message("Global illumination is enabled.");
-		pass_ptrace(scene);
-	}
-
-	// Render the frame.
-	pass_rtrace(fb, scene);
+	mFramebuffer = &fb;
+	mScene = &scene;
 }
 
-void Renderer::pass_ptrace(Scene &scene)
+void Renderer::render(void)
+{
+	if (mScene && mFramebuffer) {
+		// If gi is enabled, do the photon mapping 1st pass.
+		if (Environment::handle().flag_gi()) {
+			Log::handle().log_message("Global illumination is enabled.");
+			pass_ptrace(mScene);
+		}
+
+		// Render the frame.
+		pass_rtrace(mFramebuffer, mScene);
+
+	} else {
+		Log::handle().log_error("Scene or Framebuffer is NULL");
+	}
+}
+
+void Renderer::pass_ptrace(Scene *scene)
 {
 	unsigned int photon_count = Environment::handle().photon_count();
 
 	Log::handle().log_message("Initiating the photon maps..", photon_count);
 	Log::handle().log_message("Using %i photons..", photon_count);
-	scene.m_pm_global.init(photon_count);
-	scene.m_pm_caustic.init(photon_count);
+	scene->m_pm_global.init(photon_count);
+	scene->m_pm_caustic.init(photon_count);
 
 	Log::handle().log_message("Distributing photons to light sources..", photon_count);
 	// Calculate each light's contribution by using the intensity luminance.
 	// In future revisions I should also take the light source's size into consideration.
 	std::vector<unsigned int> light_photons;
 	{
-		unsigned int light_count = scene.m_lights.size();	// Total light count.
+		unsigned int light_count = scene->m_lights.size();	// Total light count.
 		std::vector<scalar_t> light_contribution;			// Vector with each light's contribution.
 		std::vector<scalar_t> light_luminance;				// Vector with each light's luminance.
 		scalar_t light_total_luminance = 0;					// Total light luminance.
 
 		// Calculate the luminance for each light and the total.
-		for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
+		for (std::map<std::string, Light*>::iterator it = scene->m_lights.begin(); it != scene->m_lights.end(); ++it) {
 			scalar_t lum = NImg::Operator::luminance((*it).second->intensity());
 			light_luminance.push_back(lum);
 			light_total_luminance += lum;
@@ -98,7 +84,7 @@ void Renderer::pass_ptrace(Scene &scene)
 
 	// Photon tracing.
 	unsigned int light_index = 0;
-	for (std::map<std::string, Light*>::iterator it = scene.m_lights.begin(); it != scene.m_lights.end(); ++it) {
+	for (std::map<std::string, Light*>::iterator it = scene->m_lights.begin(); it != scene->m_lights.end(); ++it) {
 		while (light_photons[light_index] > 0) {
 			Ray ray = (*it).second->ray_sample();
 			trace_photon(scene, ray, 0, (*it).second->intensity() * Environment::handle().photon_power_scaling(), light_photons[light_index]);
@@ -108,10 +94,10 @@ void Renderer::pass_ptrace(Scene &scene)
 	}
 
 	Log::handle().log_message("Balancing the photon map..");
-	scene.m_pm_global.balance();
+	scene->m_pm_global.balance();
 }
 
-bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
+bool Renderer::trace_photon(Scene *scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
 	if (depth > Environment::handle().max_rdepth())
 		return false;
@@ -121,12 +107,12 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	memset(&info, 0, sizeof(info));
 	std::string obj;
 
-	if (!scene.intersection(ray, info, obj))
+	if (!scene->intersection(ray, info, obj))
 		return false;
 
 	// Get the material & texture.
-	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
-	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
+	Material *mat = scene->m_materials[scene->m_objects[obj]->material];
+	std::map<std::string, Texture2D *>::iterator it_tex = scene->m_textures.find(scene->m_objects[obj]->texture);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -145,7 +131,7 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 		dir[1] = -ray.direction.y;
 		dir[2] = -ray.direction.z;
 
-		scene.m_pm_global.store(pos, pwr, dir);
+		scene->m_pm_global.store(pos, pwr, dir);
 		map_capacity--;
 		std::cout << "\rCasting photons.. " << std::setw(12) << map_capacity << std::flush;
 	}
@@ -164,7 +150,7 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 		nray.origin += nray.direction * 0.5;
 
 		ColorRGBf texcol = ColorRGBf(1, 1, 1);
-		if (it_tex != scene.m_textures.end())
+		if (it_tex != scene->m_textures.end())
 			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 
 		trace_photon(scene, nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
@@ -175,15 +161,15 @@ bool Renderer::trace_photon(Scene &scene, const Ray &ray, const unsigned int dep
 	return false;
 }
 
-void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
+void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 {
 	// precalculate some constants
 	const unsigned int rminx = Environment::handle().region_min_x();
 	const unsigned int rminy = Environment::handle().region_min_y();
 	const unsigned int rmaxx = Environment::handle().region_max_x();
 	const unsigned int rmaxy = Environment::handle().region_max_y();
-	const unsigned int width = fb.width();
-	const unsigned int height = fb.height();
+	const unsigned int width = fb->width();
+	const unsigned int height = fb->height();
 	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
 	const unsigned int h = (rmaxy > 0 && rmaxy < height ? rmaxy : height);
 
@@ -212,7 +198,7 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	// Calculate the number of samples per pixel.
-	float sample_scaling = 1.0f / ((scene.camera->flength > 0 ? dof_samples : 1.0f) * spp);
+	float sample_scaling = 1.0f / ((scene->camera->flength > 0 ? dof_samples : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
 	for (int y = rminy; y < (int)h; y++) {
@@ -227,21 +213,21 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
 					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
-					if (scene.camera->flength > 0) {
+					if (scene->camera->flength > 0) {
 						// dof loop
 						for (float dofs = 0; dofs < dof_samples; ++dofs) {
-							Ray ray = scene.camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
+							Ray ray = scene->camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
 							color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
 						}
 					}
 					else {
-						Ray ray = scene.camera->get_primary_ray(rx, ry, (float)width, (float)height);
+						Ray ray = scene->camera->get_primary_ray(rx, ry, (float)width, (float)height);
 						color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
 					}
 				}
 			}
 
-			fb.pixel(x, y) = color;
+			fb->pixel(x, y) = color;
 		}
 
 		// calculate progress
@@ -254,7 +240,7 @@ void Renderer::pass_rtrace(Pixmap &fb, Scene &scene)
 	}
 }
 
-ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::trace_ray(Scene *scene, const Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	IntInfo info;
@@ -264,7 +250,7 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 
 	// Check for ray intersection
 	std::string obj; // this will hold the object name
-	if (scene.intersection(ray, info, obj)) {
+	if (scene->intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
 
@@ -277,7 +263,7 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 				norm[1] = (float)info.normal.y;
 				norm[2] = (float)info.normal.z;
 
-				scene.m_pm_global.irradiance_estimate(irad, posi, norm,
+				scene->m_pm_global.irradiance_estimate(irad, posi, norm,
 					Environment::handle().photon_max_sampling_radius(),
 					Environment::handle().photon_max_samples());
 
@@ -287,7 +273,7 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 					return gi_res;
 			}
 
-			Material *mat = scene.m_materials[scene.m_objects[obj]->material];
+			Material *mat = scene->m_materials[scene->m_objects[obj]->material];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -302,8 +288,8 @@ ColorRGBf Renderer::trace_ray(Scene &scene, const Ray &ray, const unsigned int d
 	return ColorRGBf(0, 0, 0);
 }
 
-ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth,
-	IntInfo &info, std::string &obj, 
+ColorRGBf Renderer::shade(Scene *scene, const Ray &ray, const unsigned int depth,
+	IntInfo &info, std::string &obj,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	ColorRGBf color(0, 0, 0);
@@ -312,11 +298,11 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 	if (!depth)
 		return color;
 
-	std::map<std::string, Texture2D *>::iterator it_tex = scene.m_textures.find(scene.m_objects[obj]->texture);
-	std::map<std::string, Material  *>::iterator it_mat = scene.m_materials.find(scene.m_objects[obj]->material);
+	std::map<std::string, Texture2D *>::iterator it_tex = scene->m_textures.find(scene->m_objects[obj]->texture);
+	std::map<std::string, Material  *>::iterator it_mat = scene->m_materials.find(scene->m_objects[obj]->material);
 	std::map<std::string, Light     *>::iterator it;
 
-	if (it_mat == scene.m_materials.end()) {
+	if (it_mat == scene->m_materials.end()) {
 		return color;
 	}
 
@@ -324,17 +310,17 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 	Vector3f n = info.normal;
 	Vector3f p = info.point;
 
-	Material *mat = scene.m_materials[scene.m_objects[obj]->material];
+	Material *mat = scene->m_materials[scene->m_objects[obj]->material];
 
 	// Precalculated roughness.
-	scalar_t roughness = 1000000.0 / mat->roughness;
+	scalar_t roughness = mat->roughness;
 
 	// ambient
-	color = mat->ambient * scene.ambient();
+	color = mat->ambient * scene->ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / Environment::handle().samples_light();
 
-	for (it = scene.m_lights.begin(); it != scene.m_lights.end(); it++) {
+	for (it = scene->m_lights.begin(); it != scene->m_lights.end(); it++) {
 		unsigned int tlshsamples = ((*it).second->is_area_light() ? Environment::handle().samples_light() : 1);
 		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
@@ -344,7 +330,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
-			if (it_tex != scene.m_textures.end()) {
+			if (it_tex != scene->m_textures.end()) {
 				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 			}
 
@@ -356,15 +342,20 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 			// if the point is not in shadow for this light
 			std::string obj;
 			IntInfo res;
-			bool test = scene.intersection(sray, res, obj);
+			bool test = scene->intersection(sray, res, obj);
 			if (!test || res.t < EPSILON || res.t > distance) {
 				// shade
-				color += mat->shade(scene.camera, light, texcolor, info) * tlshscaling;
+				color += mat->shade(scene->camera, light, texcolor, info) * tlshscaling;
 			}
 		}
 	}
 
 	// specular effects
+
+	// Fresnel
+	float fr = 1.0;
+	float ft = 0.0;
+
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG)) {
 		// refraction
 		if(mat->transparency > 0.0) {
@@ -373,8 +364,14 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 
 			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
+			float f1 = ior_src * (1.0 - dot(n, ray.direction));
+			float f2 = ior_dst * (1.0 - dot(-n, refrray.direction));
+
+			ft = pow((f1 - f2) / (f1 + f2), 2.0);
+			fr = 1.0 - ft;
+
 			color *= (1.0 - mat->transparency);
-			color += mat->transparency * trace_ray(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+			color += ft * mat->transparency * trace_ray(scene, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
 		}
 
 		// reflection
@@ -385,7 +382,7 @@ ColorRGBf Renderer::shade(Scene &scene, const Ray &ray, const unsigned int depth
 				Ray reflray;
 				reflray.origin = p;
 				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : roughness);
-				color += (mat->reflectance * trace_ray(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
+				color += fr * (mat->reflectance * trace_ray(scene, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}
 	}

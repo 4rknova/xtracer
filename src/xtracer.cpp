@@ -1,3 +1,4 @@
+#include <thread>
 #include <string>
 #include <sstream>
 #include "mutil.h"
@@ -9,9 +10,9 @@
 #include "scene.hpp"
 #include "argdefs.h"
 #include "argparse.hpp"
-#include "timer.hpp"
 #include "timeutil.hpp"
 #include "log.hpp"
+#include "xtgl.h"
 
 using NCF::Util::to_string;
 using NCF::Util::path_comp;
@@ -37,64 +38,30 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	// Process the scenes.
-	unsigned int scene_count = Environment::handle().scene_count();
-	unsigned int scene_index = 0;
-	while (Environment::handle().scene_count())
-	{
-		// Create and initiate the pixmap.
-		Log::handle().log_message("Initiating the pixmap..");
-		Pixmap fb;
+	// Create and initiate the pixmap.
+	Log::handle().log_message("Initiating the pixmap..");
+	Pixmap fb;
 
-		if (Environment::handle().flag_resume()) {
-			if(NImg::IO::Import::ppm_raw(Environment::handle().resume_file(), fb)) {
-				Log::handle().log_error("Failed to load %s", Environment::handle().resume_file());
-				return 1;
-			}
+	if (Environment::handle().flag_resume()) {
+		if(NImg::IO::Import::ppm_raw(Environment::handle().resume_file(), fb)) {
+			Log::handle().log_error("Failed to load %s", Environment::handle().resume_file());
+			return 1;
 		}
-		else {
-			fb.init(Environment::handle().width(), Environment::handle().height());
-		}
+	}
+	else {
+		fb.init(Environment::handle().width(), Environment::handle().height());
+	}
 
-		// Log info.
-		{
-			int aspgcd = NMath::gcd(fb.width(), fb.height());
-			Log::handle().log_message("- Output       : Resolution %ix%i, Aspect ratio %i:%i",
-				fb.width(), fb.height(),
-				fb.width() / aspgcd, fb.height() / aspgcd);
-			Log::handle().log_message("- Antialiasing : Supersampling %ix%i, %i spp",
-				Environment::handle().aa(), Environment::handle().aa(),
-				Environment::handle().aa() * Environment::handle().aa());
-			Log::handle().log_message("- Recursion    : %i", Environment::handle().max_rdepth());
-			Log::handle().log_message("- Sampling     : DoF %i, Shading %i, Reflections %i",
-				Environment::handle().samples_dof(),
-				Environment::handle().samples_light(), Environment::handle().samples_reflection());
+	Environment::handle().log_info();
 
-			if (Environment::handle().flag_gi()) {
-				Log::handle().log_message("- Photon maps  : Total %i, Per pixel %i, Radius %f",
-					Environment::handle().photon_count(), Environment::handle().photon_max_samples(),
-					Environment::handle().photon_max_sampling_radius());
-			}
-		}
+	// Export.
+	if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
+		Log::handle().log_warning("Benchmark mode selected.");
+	}
 
-		// Export.
-		if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
-			Log::handle().log_warning("Benchmark mode selected.");
-		}
-
-		// Get the next scene.
-		std::string scene_source;
-		Environment::handle().scene_pop(scene_source);
-
-		if (scene_count > 1) {
-			Log::handle().log_message("Current task %i / %i", ++scene_index, scene_count);
-		}
-
-		// create and initialize the scene
-		Scene scene;
-		if (scene.load(scene_source.c_str()))
-			continue;
-
+	// create and initialize the scene
+	Scene scene;
+	if (!scene.load(Environment::handle().scene())) {
 		// apply the modifiers
 		Log::handle().log_message("Applying modifiers..");
 		scene.apply_modifiers();
@@ -110,36 +77,18 @@ int main(int argc, char **argv)
 		// Create the renderer.
 		Renderer renderer;
 
-		// Create and initiate a timer.
+		renderer.setup(fb, scene);
+
 		Timer timer;
-		timer.start();
 
 		// Render.
-		renderer.render(fb, scene);
+		timer.start();
+		std::thread rthread(&Renderer::render, renderer);
 
-		// Timer stats.
+		rthread.join();
 		timer.stop();
-		unsigned int days, hours, mins;
-		float secs;
 
-		convert_mlseconds(timer.get_time_in_mlsec(), days, hours, mins, secs);
-
-		Log::handle().log_message("Total time:");
-
-		if (days  > 0){
-			Log::handle().set_append();
-			Log::handle().log_message(" %i days,", days);
-		}
-		if (hours  > 0) {
-			Log::handle().set_append();
-			Log::handle().log_message(" %i hours,", hours);
-		}
-		if (mins  > 0) {
-			Log::handle().set_append();
-			Log::handle().log_message(" %i mins,", mins);
-		}
-		Log::handle().set_append();
-		Log::handle().log_message(" %f seconds.", secs);
+		print_time_breakdown(timer.get_time_in_mlsec());
 
 		if (Environment::handle().output() == XTRACER_OUTPUT_PPM) {
 			std::string file;
@@ -156,7 +105,7 @@ int main(int argc, char **argv)
 					const char path_delim = '/';
 				#endif /* _WIN32 */
 
-				path_comp(scene_source, base, file, path_delim);
+				path_comp(Environment::handle().scene(), base, file, path_delim);
 
 				std::string cam = Environment::handle().active_camera_name();
 				std::string outdir = Environment::handle().outdir();
@@ -183,7 +132,6 @@ int main(int argc, char **argv)
 	}
 
 	// Clean up.
-	Log::handle().log_message("All tasks completed.");
 	Log::handle().log_message("Shutting down.");
 
 	return 0;

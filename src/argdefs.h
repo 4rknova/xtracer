@@ -3,6 +3,7 @@
 
 #define XTRACER_ARGDEFS_VERSION				"-version"			/* Display version. */
 #define XTRACER_ARGDEFS_HELP				"-help"				/* Display usage information. */
+#define XTRACER_ARGDEFS_GUI					"-gui"				/* Use GUI */
 #define XTRACER_ARGDEFS_THREADS				"-threads"			/* Number of threads to use. */
 #define XTRACER_ARGDEFS_RESOLUTION			"-res"				/* Framebuffer resolution. */
 #define XTRACER_ARGDEFS_MAX_RDEPTH			"-rdepth"			/* Maximum recursion depth. */

@@ -1,5 +1,3 @@
-# Xtracer 2
-
 title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
@@ -162,28 +160,27 @@ object = {
 	}
 	floor = {
 		geometry = floor
-		material = lambert_silver
+		material = lambert_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_silver
+		material = lambert_grey
 	}
 	back = {
 		geometry = back
-		material = lambert_silver
+		material = lambert_grey
 	}
 	right_wall = {
 		geometry = right_wall
-		material = lambert_silver
+		material = lambert_grey
 	}
 	left_wall = {
 		geometry = left_wall
-		material = lambert_silver
+		material = lambert_grey
 	}
 }
 
 material = {
-	# plain red lambert 
 	lambert_red = {
 		type = lambert
 		diffuse = {
@@ -193,7 +190,6 @@ material = {
 		}
 	}
 
-	# plain green lambert
 	lambert_green = {
 		type = lambert
 		diffuse = {
@@ -203,7 +199,6 @@ material = {
 		}
 	}
 
-	# plain blue lambert
 	lambert_blue = {
 		type = lambert
 		diffuse = {
@@ -213,8 +208,7 @@ material = {
 		}
 	}
 	
-	# plain silver lambert
-	lambert_silver = {
+	lambert_grey = {
 		type = lambert
 		diffuse = {
 			r = 0.5
