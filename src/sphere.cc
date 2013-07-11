@@ -79,10 +79,12 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 			i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / PI + 0.5), 
 								(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / PI + 0.5));
 			i_info->geometry = this;
+
+			return true;
 		}
 	}
 
-	return true;
+	return false;
 }
 
 void Sphere::calc_aabb()
