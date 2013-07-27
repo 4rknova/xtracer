@@ -43,7 +43,6 @@ Future expansion
 * Primitives	: CSG
 * Shading       : Beer's law, External shaders
 * Anti-aliasing : Adaptive SS, Jittering
-* Other			: Proper transformations (preprocessing && adaptive)
 
 Compilation / Installation
 --------------------------
