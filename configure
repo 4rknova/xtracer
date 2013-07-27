@@ -18,38 +18,18 @@ DEP_DLIB=""
 
 #================================================
 
-# Utils 
-CD="cd"
-ECHO="echo"
-HEAD="head"
-CLEAR="clear"
-RM="rm"
-RMDIR="rmdir"
-TEST="test"
-SED="sed"
-AR="ar"
-TR="tr"
-COL="col"
-LESS="less"
-NROFF="nroff"
-MAKE="make"
-CC="gcc"
-CXX="g++"
-LDCONFIG="ldconfig"
-INSTALL="install"
-
 if [ -z "$MAN_SECTION" ]; then MAN_SECTION="1"; fi
 
-PATH_PREFIX="`$ECHO $PATH_PREFIX | $SED -e 's/ /_/g'`"
-PATH_SRC="`$ECHO $PATH_SRC | $SED -e 's/ /_/g'`"
-PATH_BIN="`$ECHO $PATH_BIN | $SED -e 's/ /_/g'`"
-PATH_MAN="`$ECHO $PATH_MAN | $SED -e 's/ /_/g'`"
+PATH_PREFIX="`echo $PATH_PREFIX | sed -e 's/ /_/g'`"
+PATH_SRC="`echo $PATH_SRC | sed -e 's/ /_/g'`"
+PATH_BIN="`echo $PATH_BIN | sed -e 's/ /_/g'`"
+PATH_MAN="`echo $PATH_MAN | sed -e 's/ /_/g'`"
 
-SW_TITLE="`$ECHO $SW_TITLE | $SED -e 's/ /_/g'`"
-SW_PACKAGE="`$ECHO $SW_PACKAGE | $SED -e 's/ /_/g'`"
-SW_SYMID="`$ECHO $SW_TITLE | $TR '[:lower:]' '[:upper:]'`"
+SW_TITLE="`echo $SW_TITLE | sed -e 's/ /_/g'`"
+SW_PACKAGE="`echo $SW_PACKAGE | sed -e 's/ /_/g'`"
+SW_SYMID="`echo $SW_TITLE | tr '[:lower:]' '[:upper:]'`"
 
-SW_VERSION="`$HEAD -n1 VERSION`"
+SW_VERSION="`head -n1 VERSION`"
 
 # Options
 FLAG_OMPLIB=no
@@ -105,22 +85,6 @@ echo "SW_SYMID   = $SW_SYMID" >> Makefile
 echo "SW_TITLE   = $SW_TITLE" >> Makefile
 echo "SW_PACKAGE = $SW_PACKAGE" >> Makefile
 echo "SW_VERSION = $SW_VERSION" >> Makefile
-echo >> Makefile
-
-echo "CD       = $CD" >> Makefile
-echo "ECHO     = $ECHO" >> Makefile
-echo "CLEAR    = $CLEAR" >> Makefile
-echo "RM       = $RM" >> Makefile
-echo "RMDIR    = $RMDIR" >> Makefile
-echo "COL      = $COL" >> Makefile
-echo "TEST     = $TEST" >> Makefile
-echo "LESS     = $LESS" >> Makefile
-echo "NROFF    = $NROFF" >> Makefile
-echo "MAKE     = $MAKE" >> Makefile
-echo "CC       = $CC" >> Makefile
-echo "CXX      = $CXX" >> Makefile
-echo "INSTALL  = $INSTALL" >> Makefile
-echo "LDCONFIG = $LDCONFIG" >> Makefile
 echo >> Makefile
 
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile

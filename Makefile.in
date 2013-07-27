@@ -1,3 +1,7 @@
+CC  = @echo "compiling [c  ]: $<"; gcc
+CXX = @echo "compiling [c++]: $<"; g++
+LD  = @echo "linking $@ ..."; g++
+
 SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)
 SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp)
 SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl)
@@ -21,9 +25,9 @@ FLAGS_WARNLV = -Wall
 FLAGS_INCLSN = -I/usr/local/include -I$(PATH_SRC)
 FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
-FLAGS_LD  = -lgomp -pthread -lglut -lGLU -lGL
+FLAGS_LD  = -lgomp -lglut -lGLU -lGL
 FLAGS_CC  = $(FLAGS_COMMON) -std=c89
-FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic -std=c++0x
+FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 
 # TARGETS
 .PHONY: all
@@ -44,27 +48,27 @@ dirtree:
 
 
 $(BIN): dirtree $(BINOBJ)
-	$(CXX) $(FLAGS_LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) -o $@
+	$(LD) $(FLAGS_LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) -o $@
 
 .PHONY: install
 install: all
-	$(INSTALL) -m 755 $(BIN) $(PATH_PREFIX)/$(BIN)
-	if $(TEST) -f $(MAN); then $(INSTALL) -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+	install -m 755 $(BIN) $(PATH_PREFIX)/$(BIN)
+	if test -f $(MAN); then install -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
 
 .PHONY: uninstall
 uninstall:
-	$(RM) -f $(PATH_PREFIX)/$(BIN)
-	if $(TEST) -f $(MAN); then $(RM) -f $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+	rm -f $(PATH_PREFIX)/$(BIN)
+	if test -f man; then rm -f $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
 
 .PHONY: man-preview
 man-preview:
-	$(CLEAR) && $(NROFF) -Tascii -man "$(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)" | $(COL) -x | $(LESS) -c
+	clear && nroff -Tascii -man "$(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)" | col -x | less -c
 
 .PHONY: clean
 clean:
-	$(RM) -rf $(BINOBJ)
+	rm -rf $(BINOBJ)
 
 .PHONY: clean-all
 clean-all: clean
-	$(RM) -f Makefile $(SW_TITLE).pc $(BIN)
-	$(RM) -rf $(PATH_BIN)
+	rm -f Makefile $(SW_TITLE).pc $(BIN)
+	rm -rf $(PATH_BIN)

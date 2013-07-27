@@ -1,4 +1,3 @@
-#include <thread>
 #include <string>
 #include <sstream>
 #include "mutil.h"
@@ -12,7 +11,6 @@
 #include "argparse.hpp"
 #include "timeutil.hpp"
 #include "log.hpp"
-#include "xtgl.h"
 
 using NCF::Util::to_string;
 using NCF::Util::path_comp;
@@ -83,9 +81,7 @@ int main(int argc, char **argv)
 
 		// Render.
 		timer.start();
-		std::thread rthread(&Renderer::render, renderer);
-
-		rthread.join();
+		renderer.render();
 		timer.stop();
 
 		print_time_breakdown(timer.get_time_in_mlsec());
