@@ -1,0 +1,64 @@
+.TH XTRACER 2 "December 2010" UNIX "User Manuals"
+.SH NAME 
+xtracer
+.SH SYNOPSIS
+.B xtracer [
+.I option
+]... 
+.B file
+.SH DESCRIPTION
+A basic raytracer.
+.SH OPTIONS
+.IP "-version"
+Outputs the program version information and exits.
+.IP "-help"
+Outputs basic usage information and exits.
+.IP "-threads %i"
+Sets the number of threads that will be spawned. 
+A value of 0 lets the system decide.
+.IP "-res %ix%i"
+Sets the output buffer resolution.
+.IP "-rdepth %i"
+Sets the maximum recursion depth.
+.IP "-s_global"
+Sets the number of samples for s_dof, s_light, s_refl.
+.IP "-s_dof %i"
+Sets the number of dof samples.
+.IP "-s_light %i"
+Sets the number of samples for area lights.
+.IP "-s_refl %i"
+Sets the number of samples for specular reflections.
+.IP "-aa %i"
+Enables antialiasing (supersampling). %i must be 1 or greater.
+.IP "-resume %s"
+Resumes rendering of the given file.
+.IP "-region %ix%i:%ix%i"
+Restricts rendering to the given area.
+.IP "-cam %s"
+Sets the active camera.
+.IP "-outdrv %s"
+Sets the output driver to use. Available drivers are: ppm, dum.
+.IP "-outdir %s"
+Sets the output directory.
+.IP "-gi %i:%i:%ix%f"
+Sets up the photon mapping step. The first number sets the total ammount of photons.
+The second defines the maximum number of samples per pixel, the third number sets the
+maximum sampling radius per pixel and the last number is the photon power multiplier.
+.IP "-giviz"
+The output is calculated by sampling the photon map and direct illumination is ignored.
+.IP "-octree_depth %i"
+Maximum depth for octree generation.
+.IP "-octree_ipn %i"
+Maximum number of items per octree node.
+.IP "-mod %s"
+Forces a scene modifier. Modifiers are expressed in the form group.subgroup.*.property:value.
+.SH DRIVERS
+.IP "ppm"
+Exports the framebuffer to a ppm image file.
+.IP "nul"
+Performs all the computation without exporting anything. Used for benchmarking.
+.RE
+.SH AUTHOR
+."BR bar (1)"
+Written by Nikos Papadopoulos <nikpapas at gmail dot com>
+

@@ -1,0 +1,9 @@
+ide/inc/
+ide/lib/
+bin/
+media/
+temp/
+src/*.o
+*.pc
+*.ppm
+Makefile

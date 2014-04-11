@@ -1,0 +1,200 @@
+# Xtracer 2
+
+title = Head
+descr = Head mesh ( with sphere lights )
+versn = 0.1
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = cam1
+	
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 0
+			y = 0
+			z = 0.8
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	cam2 = {
+		fov = 45
+
+		position = {
+			x = -0.35
+			y = 0.1
+			z = 0.65
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	cam3 = {
+		fov = 45
+
+		position = {
+			x = 0.35
+			y = 0.1
+			z = 0.65
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	cam4 = {
+		fov = 45
+
+		position = {
+			x = 0
+			y = -0.3
+			z = 0.8
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+	
+	cam5 = {
+		fov = 45
+
+		position = {
+			x = 0
+			y = 0.3
+			z = 0.8
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	head = {
+		type = mesh
+		source = ../media/mesh/head2.obj
+	}
+}
+
+light = {
+	satl = {
+		type = sphere
+
+		radius = 35
+		
+		position = {
+			x = 0
+			y = 0
+			z = 80
+		}
+
+		intensity = {
+			r = .71 
+			g = .71
+			b = .71
+		}
+	}
+	
+	sat2 = {
+		type = sphere
+
+		radius = 80
+		
+		position = {
+			x = -300
+			y = 0 
+			z = 150
+		}
+
+		intensity = {
+			r = .51 
+			g = .51
+			b = .51
+		}
+	}
+}
+
+material = {
+	head = {
+		type = blinn_phong
+
+		k_diffuse =  0.75
+		k_specular = 0.25
+		k_exponent = 128
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.07
+	}
+}
+
+texture = {
+	head = {
+		source = ../media/texture/face_2.ppm
+	}
+}
+
+object = {
+	head = {
+		geometry = head
+		material = head
+		texture = head
+	}
+}

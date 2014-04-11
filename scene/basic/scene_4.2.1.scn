@@ -1,0 +1,300 @@
+title = Refraction
+descr = A refractive sphere
+versn = 0.4
+
+%include scene_common.scn
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 0.8
+	b = 0.8
+}
+
+camera = {
+	default = cam1
+
+	cam1 = {
+		fov = 45
+
+		position = {
+			x = 1140
+			y = 430	
+			z = -1200
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	cam2 = {
+		fov = 45
+
+		position = {
+			x = 3040
+			y = 500	
+			z = 10
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+cam3 = {
+		fov = 45
+
+		position = {
+			x = 840
+			y = 100	
+			z = -1000
+		}
+
+		target = {
+			y = 110
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	sphere10 = {
+		type = sphere
+		position = {
+			x = 295
+			y = 115
+			z = 100
+		}
+		radius = 115
+	}
+	
+	sphere11 = {
+		type = sphere
+		position = {
+			x = -180
+			y = 125
+			z = 300
+		}
+		radius = 125
+	}
+	sphere12 = {
+		type = sphere
+		position = {
+			x = -100
+			y = 75
+			z = -300
+		}
+		radius = 75
+	}
+
+	sphere2 = {
+		type = sphere
+		position = {
+			x = 425
+			y = 145
+			z = -300
+		}
+		radius = 145
+	}
+
+	plane = {
+		type = plane
+		normal = {
+			y = 1
+		}
+
+		u_scale = 0.003
+		v_scale = 0.003
+	}
+}
+
+light = {
+	front = {
+		type = point
+		
+		position = {
+			x = 300
+			y = 1500
+			z = -500
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+
+	cat = {
+		type = point
+		
+		position = {
+			x = -300
+			y = 220
+			z = -300
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+	
+}
+
+texture = {
+	floor = {
+		source = <texdir>/wood01.ppm
+	}
+}
+
+material = {
+	floor = {
+		type = blinn_phong
+
+		k_diffuse = 0.8
+		k_specular = 0.2
+		k_exponent = 1000
+	
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.15
+	}
+
+	plastic3 = {
+		type = blinn_phong
+
+		k_diffuse = 0.6
+		k_specular = 0.4
+		k_exponent = 360
+	
+		diffuse = {
+			r = 0.980
+			g = 0.9215
+			b = 0.8431
+		}
+
+		specular = {
+			r = 0.980
+			g = 0.9215
+			b = 0.8431
+		}
+
+		reflectance = 0.15
+	}
+
+	plastic2 = {
+		type = blinn_phong
+
+		k_diffuse = 0.2
+		k_specular = 0.8
+		k_exponent = 560
+	
+		diffuse = {
+			r = 0.2
+			g = 0.94
+			b = 0.01 
+		}
+
+		specular = {
+			r = 0.2
+			g = 0.94
+			b = 0.01 
+		}
+
+		reflectance = 0.3
+	}
+	
+	plastic1 = {
+		type = blinn_phong
+
+		k_diffuse = 0.2
+		k_specular = 0.8
+		k_exponent = 560
+	
+		diffuse = {
+			r = 0.23
+			g = 0.41
+			b = 0.87
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.15
+	}
+
+
+	plastran = {
+		type = blinn_phong
+
+		k_diffuse = 0.0
+		k_specular = 1.0
+		k_exponent = 128
+	
+		specular = {
+			r = 1.0
+			g = 1.0
+			b = 1.0
+		}
+
+		reflectance = 0.3
+		transparency = 0.9
+
+		ior = 1.02714
+	}
+}
+
+object = {
+	sphere11 = {
+		geometry = sphere10
+		material = plastic1
+	}
+	sphere12 = {
+		geometry = sphere11
+		material = plastic2
+	}
+	sphere10 = {
+		geometry = sphere12
+		material = plastic3
+	}
+	sphere2 = {
+		geometry = sphere2
+		material = plastran
+	}
+	plane = {
+		geometry = plane
+		material = floor
+		texture = floor
+	}
+}
