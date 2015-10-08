@@ -64,6 +64,9 @@ uninstall:
 man-preview:
 	clear && nroff -Tascii -man "$(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)" | col -x | less -c
 
+.PHONY: test
+test:
+
 .PHONY: clean
 clean:
 	rm -rf $(BINOBJ)
