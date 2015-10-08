@@ -3,6 +3,10 @@ XTracer 2
 Copyright 2010 - 2013 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
+
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
+
 About
 -----
 XTracer is a raytracer written in c and c++.
