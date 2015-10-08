@@ -7,21 +7,19 @@ Papadopoulos Nikos <nikpapas@gmail.com>
 Build Status
 ------------
 
-Unstable:
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
-
-Stable:
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
+Version   | Status
+--------- | -------
+Beta      | [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
+Release   | [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
 
 About
 -----
 XTracer is a raytracer written in c and c++.
 
-v0.7 served as my thesis project for the BSc of computer science at the
-University of Piraeus. It was developed under the supervision of Prof. T.
+Version 0.7 served as my thesis project for the BSc of computer science at the University of Piraeus. It was developed under the supervision of Prof. T.
 Panayiotopoulos as part of the research work of the Knowledge Engineering Lab.
 
-v1.1 was developed as part of my dissertation for the MSc of computer graphics 
+Version 1.1 was developed as part of my dissertation for the MSc of computer graphics 
 programming at the University of Hull.
 
 v1.2 is the current version. All external dependencies have been integrated.
@@ -62,7 +60,8 @@ scenes require textures or meshes that are not included in the repository.
 
 Dependencies
 ------------
-Version:  0.x - 1.1.2.0
+
+### 0.x - 1.1.2.0
 
 Library  | Source
 ---------|------------------------------------------
@@ -74,8 +73,11 @@ libncf	 | https://github.com/4rknova/libncf
 
 NOTE: You might need older versions of the libraries.
 
-Version: 1.2.0.0
-* openmp	Must be provided by your compiler.
+### 1.2.0.0
+
+Library  | Source
+---------|------------------------------------------
+openmp   | Should be provided by your compiler.
 
 Supported platforms
 -------------------
