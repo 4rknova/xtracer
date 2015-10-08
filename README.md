@@ -32,6 +32,7 @@ The source code is distributed under the LGPL license version 3 or later.
 
 Features
 --------
+| ---           | ---
 | Primitives    | Plane, Triangle, Sphere, Mesh
 | Materials     | Lambert, Phong, Blinn-Phong
 | Lights        | Point, Sphere, Box, Triangle
