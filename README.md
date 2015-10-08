@@ -1,10 +1,16 @@
 XTracer 2
+=========
 
-Copyright 2010 - 2013 (c)
+Copyright 2010 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
+Build Status
+------------
+
+Unstable:
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
 
+Stable:
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
 
 About
@@ -24,23 +30,16 @@ License
 -------
 The source code is distributed under the LGPL license version 3 or later.
 
-Version history
----------------
-0.7 : 2866bf99ca04d84a85ab13b755ded7d42014bee7
-1.x : HEAD
-
 Features
 --------
-* Primitives    : Plane, Triangle, Sphere, Mesh
-* Materials     : Lambert, Phong, Blinn-Phong
-* Lights        : Point, Sphere, Box, Triangle
-* Cameras       : Pinhole, Thin lense
-* Shading       : Reflection (glossy & perfect mirror), Refraction, Depth
-	              of field, Soft shadows, Texture mapping, Fresnel
-* Acceleration  : Threads, Octrees, KD-trees
-* Anti-aliasing : Supersampling
-* Rendering     : HDR, Whitted/Distributed raytracing, Photon mapping
-                  (diffuse term)
+| Primitives    | Plane, Triangle, Sphere, Mesh
+| Materials     | Lambert, Phong, Blinn-Phong
+| Lights        | Point, Sphere, Box, Triangle
+| Cameras       | Pinhole, Thin lense
+| Shading       | Reflection (glossy & perfect mirror), Refraction, Depth of field, Soft shadows, Texture mapping, Fresnel
+| Acceleration  | Threads, Octrees, KD-trees
+| Anti-aliasing | Supersampling
+| Rendering     | HDR, Whitted/Distributed raytracing, Photon mapping (diffuse term)
 
 Compilation / Installation
 --------------------------
