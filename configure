@@ -11,6 +11,7 @@ MAN_SECTION=""
 PATH_PREFIX=/usr/local
 PATH_SRC=src
 PATH_BIN=bin
+PATH_OBJ=$PATH_BIN/obj
 PATH_MAN=man
 
 FLAGS_XTR="-fopenmp -Wall -Wno-unknown-pragmas -ffast-math -funsafe-math-optimizations"
@@ -23,6 +24,7 @@ if [ -z "$MAN_SECTION" ]; then MAN_SECTION="1"; fi
 PATH_PREFIX="`echo $PATH_PREFIX | sed -e 's/ /_/g'`"
 PATH_SRC="`echo $PATH_SRC | sed -e 's/ /_/g'`"
 PATH_BIN="`echo $PATH_BIN | sed -e 's/ /_/g'`"
+PATH_OBJ="`echo $PATH_OBJ | sed -e 's/ /_/g'`"
 PATH_MAN="`echo $PATH_MAN | sed -e 's/ /_/g'`"
 
 SW_TITLE="`echo $SW_TITLE | sed -e 's/ /_/g'`"
@@ -90,6 +92,7 @@ echo >> Makefile
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
 echo "PATH_SRC = $PATH_SRC" >> Makefile
 echo "PATH_BIN = $PATH_BIN" >> Makefile
+echo "PATH_OBJ = $PATH_OBJ" >> Makefile
 echo "PATH_MAN = $PATH_MAN" >> Makefile
 echo >> Makefile
 

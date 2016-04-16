@@ -12,10 +12,10 @@ SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp)
 
 SOURCE_API = $(SOURCE_H) $(SOURCE_HPP) $(SOURCE_INL) $(SOURCE_TML)
 
-BINOBJ_C   = $(SOURCE_C:.c=.o)
-BINOBJ_CC  = $(SOURCE_CC:.cc=.o)
-BINOBJ_CPP = $(SOURCE_CPP:.cpp=.o)
-BINOBJ     = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
+BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_C:.c=.o)))
+BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_CC:.cc=.o)))
+BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_CPP:.cpp=.o)))
+BINOBJ	 = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
 
 BIN = $(PATH_BIN)/$(SW_PACKAGE)
 
@@ -26,7 +26,7 @@ FLAGS_INCLSN = -I/usr/local/include -I$(PATH_SRC)
 FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
 FLAGS_LD  = -lgomp
-FLAGS_CC  = $(FLAGS_COMMON) -std=c89
+FLAGS_CC  = $(FLAGS_COMMON) -std=c89 -Wall
 FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 
 # TARGETS
@@ -36,16 +36,16 @@ all: $(BIN)
 .PHONY: dirtree
 dirtree:
 	mkdir -p $(PATH_BIN)
+	mkdir -p $(PATH_OBJ)
 
-%.o: %.c
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
 
-%.o: %.cc
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.cc
 	$(CXX) -c $(FLAGS_CXX) -o $@ $<
 
-%.o: %.cpp
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.cpp
 	$(CXX) -c $(FLAGS_CXX) -o $@ $<
-
 
 $(BIN): dirtree $(BINOBJ)
 	$(LD) $(FLAGS_LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) -o $@
