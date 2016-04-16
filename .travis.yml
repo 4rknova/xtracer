@@ -5,4 +5,4 @@ os:
   
 matrix:
   allow_failures:
-    - os: osx
+    - os: osx 
