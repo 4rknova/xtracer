@@ -1,16 +1,15 @@
 XTracer 2
 =========
 
-Copyright 2010 (c)
+Copyright 2010 - 2016 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
 Build Status
 ------------
 
-Version   | Status
---------- | -------
-Beta      | [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
-Release   | [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
+[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
 
 About
 -----
@@ -19,7 +18,7 @@ XTracer is a raytracer written in c and c++.
 Version 0.7 served as my thesis project for the BSc of computer science at the University of Piraeus. It was developed under the supervision of Prof. T.
 Panayiotopoulos as part of the research work of the Knowledge Engineering Lab.
 
-Version 1.1 was developed as part of my dissertation for the MSc of computer graphics 
+Version 1.1 was developed as part of my dissertation for the MSc of computer graphics.
 programming at the University of Hull.
 
 v1.2 is the current version. All external dependencies have been integrated.
