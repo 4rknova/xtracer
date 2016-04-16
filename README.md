@@ -4,12 +4,13 @@ XTracer 2
 Copyright 2010 - 2016 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
+[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
+
 Build Status
 ------------
 
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
-[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
+Beta [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
+Release [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
 
 About
 -----
