@@ -1,11 +1,9 @@
 XTracer 2
 =========
 
-[![License](http://img.shields.io/:license-lgpl-blue.svg)]
+[![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
-
-[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
 
 Copyright 2010 - 2016 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
@@ -42,7 +40,7 @@ Rendering     | HDR, Whitted/Distributed raytracing, Photon mapping (diffuse ter
 Compilation / Installation
 --------------------------
 
-xtracer should be able to compile and run on any system equipped with openmp
+XTracer should be able to compile and run on any system equipped with openmp
 compatible c and c++ compilers. It has been tested without any problems under
 the following platforms:
 
@@ -109,3 +107,6 @@ Name                     | Contributions
 -------------------------|------------------------------------------------
 Dr Qingde Li             | Supervising professor at University of Hull
 Tsiombikas John          | Technical advisory.
+
+[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
+
