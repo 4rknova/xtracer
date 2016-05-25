@@ -48,7 +48,7 @@ $(PATH_OBJ)/%.o: $(PATH_SRC)/%.cpp
 	$(CXX) -c $(FLAGS_CXX) -o $@ $<
 
 $(BIN): dirtree $(BINOBJ)
-	$(LD) $(FLAGS_LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) -o $@
+	$(LD) $(FLAGS_CXX) $(BINOBJ) $(DEP_DLIB) $(FLAGS_LD) -o $@
 
 .PHONY: install
 install: all
