@@ -3,20 +3,26 @@
 #include "mutil.h"
 #include "prng.h"
 #include "util.hpp"
-#include "pixmap.hpp"
+#include "pixmap.h"
 #include "ppm.hpp"
-#include "renderer.hpp"
-#include "scene.hpp"
+#include "scene.h"
 #include "argdefs.h"
 #include "argparse.hpp"
 #include "timeutil.hpp"
 #include "log.hpp"
+#include "photon_mapper.h"
+
+#include "plm.h"
+
 
 using NCF::Util::to_string;
 using NCF::Util::path_comp;
 
 int main(int argc, char **argv)
 {
+	PLM::load();
+
+
 	// Display usage information.
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
 		Log::handle().log_message("%s", XTRACER_VERSION);
@@ -73,16 +79,18 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		Renderer renderer;
+		Renderer *renderer = new PhotonMapper();
 
-		renderer.setup(fb, scene);
+		renderer->setup(fb, scene);
 
 		Timer timer;
 
 		// Render.
 		timer.start();
-		renderer.render();
+		renderer->render();
 		timer.stop();
+
+		delete renderer;
 
 		print_time_breakdown(timer.get_time_in_mlsec());
 

@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include "precision.h"
-#include "photonmap.hpp"
+#include "photonmap.h"
 
 PhotonMap::PhotonMap()
 	: m_photons(NULL),

@@ -5,8 +5,6 @@
 	#error "octree.hpp must be included before octree.tml"
 #endif /* XTRACER_OCTREE_HPP_INCLUDED */
 
-#endif /* NMESH_OCTREE_TML_INCLUDED */
-
 #include <cfloat>
 #include <cstring>
 #include <new>
@@ -227,7 +225,8 @@ OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, In
 	if (closest && point) {
 		*point = pt0;
 	}
-	
+
 	return closest;
 }
 
+#endif /* NMESH_OCTREE_TML_INCLUDED */

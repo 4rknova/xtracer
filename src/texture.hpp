@@ -2,7 +2,7 @@
 #define XTRACER_TEXTURE_HPP_INCLUDED
 
 #include "color.hpp"
-#include "pixmap.hpp"
+#include "pixmap.h"
 
 using NImg::ColorRGBAf;
 using NImg::Pixmap;

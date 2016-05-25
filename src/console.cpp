@@ -1,34 +1,6 @@
-/*
-
-    This file is part of xtracer.
-
-    console.cpp
-    Console class
-
-    Copyright (C) 2010, 2011
-    Papadopoulos Nikolaos
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this program; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
 #include <iomanip>
 #include <iostream>
 
-// antialiasing loop
 #ifdef _MSC_VER
 	#include <fcntl.h>
 	#include <io.h>
@@ -37,7 +9,7 @@
 	#include <windows.h>
 #endif /* _MSC_VER */
 
-#include "console.hpp"
+#include "console.h"
 
 // Singleton
 Console Console::m_console;
@@ -53,7 +25,7 @@ Console &Console::handle()
 	return m_console;
 }
 
-void Console::progress(float progress, int worker, int workers)
+void Console::update(float progress, int worker, int workers)
 {
 	std::cout.setf(std::ios::fixed, std::ios::floatfield);
 	std::cout.setf(std::ios::showpoint);
