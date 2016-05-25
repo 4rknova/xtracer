@@ -1,31 +1,26 @@
 XTracer 2
 =========
 
+[![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
+[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
+
 Copyright 2010 - 2016 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
-[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
-
-Beta / Develop branch
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
-
-Release / Master branch
-[![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer) Release
-
-About
------
 XTracer is a raytracer written in c and c++.
 
-Version 0.7 served as my thesis project for the BSc of computer science at the University of Piraeus. It was developed under the supervision of Prof. T.
-Panayiotopoulos as part of the research work of the Knowledge Engineering Lab.
+**Version 0.7** served as my thesis project for the BSc of computer
+science at the University of Piraeus. It was developed under the
+supervision of Prof. T. Panayiotopoulos as part of the research work
+of the Knowledge Engineering Lab.
 
-Version 1.1 was developed as part of my dissertation for the MSc of computer graphics.
-programming at the University of Hull.
+**Version 1.1** was developed as part of my dissertation for the MSc
+of computer graphics programming at the University of Hull.
 
-v1.2 is the current version. All external dependencies have been integrated.
+**Version 1.2** is the current version. All external dependencies have
+been integrated.
 
-License
--------
 The source code is distributed under the LGPL license version 3 or later.
 
 Features
@@ -44,6 +39,16 @@ Rendering     | HDR, Whitted/Distributed raytracing, Photon mapping (diffuse ter
 
 Compilation / Installation
 --------------------------
+
+XTracer should be able to compile and run on any system equipped with openmp
+compatible c and c++ compilers. It has been tested without any problems under
+the following platforms:
+
+* Linux
+* FreeBSD
+* MacOSX
+* MS Windows XP, 7
+
 The source code is distributed along with a makefile configuration script for
 unix based systems with a GNU toolchain installed. To view all the available
 configuration options type: ./configure --help. Once the configuration is done,
@@ -53,13 +58,7 @@ type: make install. To uninstall type: make uninstall
 For windows users, a visual studio 2010 solution is available in the ide
 directory.
 
-How to use
-----------
-You can find sample scenes in the scene directory. Note that some of the 
-scenes require textures or meshes that are not included in the repository.
-
-Dependencies
-------------
+The external dependencies are as follows:
 
 ### 0.x - 1.1.2.0
 
@@ -73,22 +72,16 @@ libncf	 | https://github.com/4rknova/libncf
 
 NOTE: You might need older versions of the libraries.
 
-### 1.2.0.0
+### 1.2.0.0 or later
 
 Library  | Source
 ---------|------------------------------------------
 openmp   | Should be provided by your compiler.
 
-Supported platforms
--------------------
-xtracer should be able to compile and run on any system equipped with openmp
-compatible c and c++ compilers. It has been tested without any problems under
-the following platforms:
-
-* Linux
-* FreeBSD
-* MacOSX
-* MS Windows XP, 7
+How to use
+----------
+You can find sample scenes in the scene directory. Note that some of the 
+scenes require textures or meshes that are not included in the repository.
 
 Contributions
 -------------
@@ -114,3 +107,6 @@ Name                     | Contributions
 -------------------------|------------------------------------------------
 Dr Qingde Li             | Supervising professor at University of Hull
 Tsiombikas John          | Technical advisory.
+
+[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
+
