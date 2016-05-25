@@ -1,0 +1,30 @@
+#ifndef XTRACER_PLUGIN_TML_INCLUDED
+#define XTRACER_PLUGIN_TML_INCLUDED
+
+#ifndef XTRACER_PLUGIN_H_INCLUDED
+	#error "plugin.h must be included before plugin.tml"
+#endif /* XTRACER_PLUGIN_H_INCLUDED */
+
+template <typename T>
+Plugin<T>::Plugin()
+	: m_impl(0)
+{}
+
+template <typename T>
+Plugin<T>::~Plugin()
+{}
+
+template <typename T>
+T *Plugin<T>::handle()
+{
+	return m_impl;
+}
+
+template <typename T>
+Status Plugin<T>::set(const char *property
+                    , const char *value)
+{
+	return STATUS_OK;
+}
+
+#endif /* XTRACER_PLUGIN_TML_INCLUDED */

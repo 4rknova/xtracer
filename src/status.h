@@ -1,0 +1,11 @@
+#ifndef XTRACER_STATUS_H_INCLUDED
+#define XTRACER_STATUS_H_INCLUDED
+
+typedef enum STATUS
+{
+	  STATUS_OK
+	, STATUS_ERROR
+
+} Status;
+
+#endif /* XTRACER_STATUS_H_INCLUDED */
