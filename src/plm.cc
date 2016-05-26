@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string>
 
 #include "plm.h"
 #include "dlloader.h"
@@ -8,8 +9,12 @@ namespace PLM {
 
 void list(const char *file)
 {
-	printf ("Checking %s..\n", file);
-	void *lib = load_library(file);
+	std::string fpath = PLUGIN_PATH;
+	fpath.append("/");
+	fpath.append(file);
+
+	printf ("Checking %s..\n", fpath.c_str());
+	void *lib = load_library(fpath.c_str());
 
 	if (lib == NULL) {
 		printf("Not a plugin!\n");
@@ -23,7 +28,7 @@ void list(const char *file)
 
 void load()
 {
-	scan_directory("plugins", list);
+	scan_directory(PLUGIN_PATH, list);
 }
 
 } /* namespace PLM */

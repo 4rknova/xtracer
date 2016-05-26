@@ -1,8 +1,8 @@
 #include "dlloader.h"
-#include "plugin.h"
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #if defined (__linux__)
 #include <dlfcn.h>
@@ -13,29 +13,52 @@
 #error Target platform is not supported
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-void scan_directory(const char *path, void(*f)(const char*))
+int scan_directory(const char *path, void(*f)(const char*))
 {
 #if defined(_MSC_VER)
-#error not yet implemented!
-#elif defined(__GNUC__) // GNU Compiler
+	WIN32_FIND_DATA fdFile;
+    HANDLE hFind = NULL;
+
+	if((hFind = FindFirstFile(sPath, &fdFile)) != INVALID_HANDLE_VALUE) {
+		do {
+	        if (   strcmp(fdFile.cFileName, "." ) != 0
+				&& strcmp(fdFile.cFileName, "..") != 0) {
+				f(sPath);
+        	}
+    	}
+	    while (FindNextFile(hFind, &fdFile));
+	    FindClose(hFind);
+		return 0;
+	}
+
+#elif defined(__GNUC__)
 	DIR           *d;
 	struct dirent *dir;
 	d = opendir(path);
 	if (d) {
 	    while ((dir = readdir(d)) != NULL) {
-			f(dir->d_name);
+	        if (   strcmp(dir->d_name, "." ) != 0
+				&& strcmp(dir->d_name, "..") != 0) {
+				f(dir->d_name);
+			}
 	    }
 		closedir(d);
+		return 0;
 	}
 #endif
+
+	return 1;
 }
 
 void* load_library(const char *dlpath)
 {
 #if defined(_MSC_VER)
 	return (void*)LoadLibrary(dlpath);
-#elif defined(__GNUC__) // GNU compiler
+#elif defined(__GNUC__)
 	return dlopen(dlpath, RTLD_NOW);
 #endif
 }
@@ -44,7 +67,7 @@ void* load_function(void *lib, const char *fname)
 {
 #if defined(_MSC_VER)
 	    return (void*)GetProcAddress((HINSTANCE)lib, fname);
-#elif defined(__GNUC__) // GNU compiler
+#elif defined(__GNUC__)
 	    return dlsym(lib, fname);
 #endif
 }
@@ -52,10 +75,14 @@ void* load_function(void *lib, const char *fname)
 int free_library(void *lib)
 {
 #if defined(_MSC_VER)
-		// FreeLibrary will return non-zero value on success.
+		/* FreeLibrary will return non-zero value on success. */
 	    return FreeLibrary((HINSTANCE)lib) != 0 ? 0 : 1;
 #elif defined(__GNUC__)
-		// dlclose will return 0 on success.
+		/* dlclose will return 0 on success. */
 	    return dlclose(lib);
 #endif
 }
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
