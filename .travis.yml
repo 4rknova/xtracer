@@ -13,4 +13,5 @@ deploy:
   on:
     tags: true
     repo: 4rknova/xtracer
+	skip_cleanup: true
     all_branches: true
