@@ -1,12 +1,14 @@
 #include <vector>
 #include <iomanip>
 #include <omp.h>
+
+#include <nmath/mutil.h>
+#include <nmath/prng.h>
+#include <nmath/sample.h>
+#include <nimg/luminance.hpp>
+
 #include "util.hpp"
-#include "mutil.h"
-#include "prng.h"
-#include "sample.h"
 #include "plane.h"
-#include "luminance.hpp"
 #include "setup.h"
 #include "object.hpp"
 #include "argparse.hpp"

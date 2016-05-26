@@ -1,7 +1,8 @@
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+
 #include "defs.h"
-#include "precision.h"
 #include "intinfo.h"
-#include "vector.h"
 #include "vertex.h"
 #include "argparse.hpp"
 #include "mesh.hpp"

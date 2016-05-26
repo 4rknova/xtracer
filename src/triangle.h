@@ -1,38 +1,12 @@
-/*
+#ifndef XTCORE_TRIANGLE_H_INCLUDED
+#define XTCORE_TRIANGLE_H_INCLUDED
 
-    This file is part of the libnmath.
-
-    triangle.h
-    Triangle
-
-    Copyright (C) 2008, 2010, 2011
-    Papadopoulos Nikolaos
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this library; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-#ifndef NMATH_TRIANGLE_H_INCLUDED
-#define NMATH_TRIANGLE_H_INCLUDED
+#include <nmath/precision.h>
+#include <nmath/types.h>
+#include <nmath/vector.h>
 
 #include "defs.h"
 
-#include "precision.h"
-#include "types.h"
-#include "vector.h"
 #include "geometry.h"
 #include "ray.h"
 
@@ -71,4 +45,4 @@ class Triangle: public Geometry
 
 #include "triangle.inl"
 
-#endif /* NMATH_TRIANGLE_H_INCLUDED */
+#endif /* XTCORE_TRIANGLE_H_INCLUDED */

@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <list>
+#include <nmath/aabb.h>
 #include "ray.h"
-#include "aabb.h"
 #include "intinfo.h"
 
 using NMath::Ray;

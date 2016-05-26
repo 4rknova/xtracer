@@ -28,8 +28,6 @@
 #ifndef NIMG_COLOR_HPP_INCLUDED
 #define NIMG_COLOR_HPP_INCLUDED
 
-#include "precision.h"
-
 namespace NImg {
 
 // Forward declarations
@@ -40,7 +38,7 @@ class ColorRGBAf;
 class ColorRGBf
 {
 	public:
-		explicit ColorRGBf(const NMath::scalar_t r = 0.0f, const NMath::scalar_t g = 0.0f, const NMath::scalar_t b = 0.0f);
+		explicit ColorRGBf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f);
 		ColorRGBf(const ColorRGBf &rhs);
 		ColorRGBf(const ColorRGBAf &rhs);
 
@@ -48,18 +46,18 @@ class ColorRGBf
 		inline ColorRGBf &operator +=(const ColorRGBf &rhs);
 		inline ColorRGBf &operator -=(const ColorRGBf &rhs);
 		inline ColorRGBf &operator *=(const ColorRGBf &rhs);
-		inline ColorRGBf &operator *=(const NMath::scalar_t s);
+		inline ColorRGBf &operator *=(const float s);
 
-		inline void r(const NMath::scalar_t r);
-		inline void g(const NMath::scalar_t g);
-		inline void b(const NMath::scalar_t b);
+		inline void r(const float r);
+		inline void g(const float g);
+		inline void b(const float b);
 
-		inline NMath::scalar_t r() const;
-		inline NMath::scalar_t g() const;
-		inline NMath::scalar_t b() const;
+		inline float r() const;
+		inline float g() const;
+		inline float b() const;
 
 	private:
-		NMath::scalar_t m_r, m_g, m_b;
+		float m_r, m_g, m_b;
 
 };
 
@@ -67,8 +65,8 @@ class ColorRGBf
 inline ColorRGBf operator +(const ColorRGBf &lhs, const ColorRGBf &rhs);
 inline ColorRGBf operator -(const ColorRGBf &lhs, const ColorRGBf &rhs);
 inline ColorRGBf operator *(const ColorRGBf &lhs, const ColorRGBf &rhs);
-inline ColorRGBf operator *(const ColorRGBf &lhs, const NMath::scalar_t s);
-inline ColorRGBf operator *(const NMath::scalar_t s, const ColorRGBf &lhs);
+inline ColorRGBf operator *(const ColorRGBf &lhs, const float s);
+inline ColorRGBf operator *(const float s, const ColorRGBf &lhs);
 
 /*
     COLOR RGBA
@@ -76,7 +74,7 @@ inline ColorRGBf operator *(const NMath::scalar_t s, const ColorRGBf &lhs);
 class ColorRGBAf
 {
 	public:
-		explicit ColorRGBAf(const NMath::scalar_t r = 0.0f, const NMath::scalar_t g = 0.0f, const NMath::scalar_t b = 0.0f, const NMath::scalar_t a = 1.0f);
+		explicit ColorRGBAf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f, const float a = 1.0f);
 		ColorRGBAf(const ColorRGBf &rhs);
 		ColorRGBAf(const ColorRGBAf &rhs);
 
@@ -84,20 +82,20 @@ class ColorRGBAf
 		inline ColorRGBAf &operator +=(const ColorRGBAf &rhs);
 		inline ColorRGBAf &operator -=(const ColorRGBAf &rhs);
 		inline ColorRGBAf &operator *=(const ColorRGBAf &rhs);
-		inline ColorRGBAf &operator *=(const NMath::scalar_t s);
+		inline ColorRGBAf &operator *=(const float s);
 
-		void r(const NMath::scalar_t r);
-		void g(const NMath::scalar_t g);
-		void b(const NMath::scalar_t b);
-		void a(const NMath::scalar_t a);
+		void r(const float r);
+		void g(const float g);
+		void b(const float b);
+		void a(const float a);
 
-		NMath::scalar_t r() const;
-		NMath::scalar_t g() const;
-		NMath::scalar_t b() const;
-		NMath::scalar_t a() const;
+		float r() const;
+		float g() const;
+		float b() const;
+		float a() const;
 
 	private:
-		NMath::scalar_t m_r, m_g, m_b, m_a;
+		float m_r, m_g, m_b, m_a;
 
 };
 
@@ -105,8 +103,8 @@ class ColorRGBAf
 inline ColorRGBAf operator +(const ColorRGBAf &lhs, const ColorRGBAf &rhs);
 inline ColorRGBAf operator -(const ColorRGBAf &lhs, const ColorRGBAf &rhs);
 inline ColorRGBAf operator *(const ColorRGBAf &lhs, const ColorRGBAf &rhs);
-inline ColorRGBAf operator *(const ColorRGBAf &lhs, const NMath::scalar_t s);
-inline ColorRGBAf operator *(const NMath::scalar_t s, const ColorRGBAf &lhs);
+inline ColorRGBAf operator *(const ColorRGBAf &lhs, const float s);
+inline ColorRGBAf operator *(const float s, const ColorRGBAf &lhs);
 
 } /* namespace NImg */
 

@@ -9,7 +9,7 @@
 #include <cstring>
 #include <new>
 
-#include "vector.h"
+#include <nmath/vector.h>
 
 using NMath::Vector3f;
 

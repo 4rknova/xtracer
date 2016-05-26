@@ -63,7 +63,7 @@ inline ColorRGBf &ColorRGBf::operator *=(const ColorRGBf &rhs)
 }
 
 
-inline ColorRGBf &ColorRGBf::operator *=(const NMath::scalar_t s)
+inline ColorRGBf &ColorRGBf::operator *=(const float s)
 {
 	r(r() * s);
 	g(g() * s);
@@ -72,32 +72,32 @@ inline ColorRGBf &ColorRGBf::operator *=(const NMath::scalar_t s)
 	return *this;
 }
 
-inline void ColorRGBf::r(const NMath::scalar_t r)
+inline void ColorRGBf::r(const float r)
 {
 	m_r = (r < 0.f ? 0.f : r);
 }
 
-inline void ColorRGBf::g(const NMath::scalar_t g)
+inline void ColorRGBf::g(const float g)
 {
 	m_g = (g < 0.f ? 0.f : g);
 }
 
-inline void ColorRGBf::b(const NMath::scalar_t b)
+inline void ColorRGBf::b(const float b)
 {
 	m_b = (b < 0.f ? 0.f : b);
 }
 
-inline NMath::scalar_t ColorRGBf::r() const
+inline float ColorRGBf::r() const
 {
 	return m_r;
 }
 
-inline NMath::scalar_t ColorRGBf::g() const
+inline float ColorRGBf::g() const
 {
 	return m_g;
 }
 
-inline NMath::scalar_t ColorRGBf::b() const
+inline float ColorRGBf::b() const
 {
 	return m_b;
 }
@@ -117,12 +117,12 @@ inline ColorRGBf operator *(const ColorRGBf &lhs, const ColorRGBf &rhs)
 	return ColorRGBf(lhs) *= rhs;
 }
 
-inline ColorRGBf operator *(const ColorRGBf &lhs, const NMath::scalar_t s)
+inline ColorRGBf operator *(const ColorRGBf &lhs, const float s)
 {
 	return ColorRGBf(lhs) *= s;
 }
 
-inline ColorRGBf operator *(const NMath::scalar_t s, const ColorRGBf &lhs)
+inline ColorRGBf operator *(const float s, const ColorRGBf &lhs)
 {
 	return ColorRGBf(lhs) *= s;
 }
@@ -155,7 +155,7 @@ inline ColorRGBAf &ColorRGBAf::operator *=(const ColorRGBAf &rhs)
 	return *this;
 }
 
-inline ColorRGBAf &ColorRGBAf::operator *=(const NMath::scalar_t s)
+inline ColorRGBAf &ColorRGBAf::operator *=(const float s)
 {
 	r(r() * s);
 	g(g() * s);
@@ -164,42 +164,42 @@ inline ColorRGBAf &ColorRGBAf::operator *=(const NMath::scalar_t s)
 	return *this;
 }
 
-inline void ColorRGBAf::r(const NMath::scalar_t r)
+inline void ColorRGBAf::r(const float r)
 {
 	m_r = (r < 0.f ? 0.f : r);
 }
 
-inline void ColorRGBAf::g(const NMath::scalar_t g)
+inline void ColorRGBAf::g(const float g)
 {
 	m_g = (g < 0.f ? 0.f : g);
 }
 
-inline void ColorRGBAf::b(const NMath::scalar_t b)
+inline void ColorRGBAf::b(const float b)
 {
 	m_b = (b < 0.f ? 0.f : b);
 }
 
-inline void ColorRGBAf::a(const NMath::scalar_t a)
+inline void ColorRGBAf::a(const float a)
 {
 	m_a = (a < 0.f ? 0.f : (a > 1.f ? 1.f : a));
 }
 
-inline NMath::scalar_t ColorRGBAf::r() const
+inline float ColorRGBAf::r() const
 {
 	return m_r;
 }
 
-inline NMath::scalar_t ColorRGBAf::g() const
+inline float ColorRGBAf::g() const
 {
 	return m_g;
 }
 
-inline NMath::scalar_t ColorRGBAf::b() const
+inline float ColorRGBAf::b() const
 {
 	return m_b;
 }
 
-inline NMath::scalar_t ColorRGBAf::a() const
+inline float ColorRGBAf::a() const
 {
 	return m_a;
 }
@@ -219,12 +219,12 @@ inline ColorRGBAf operator *(const ColorRGBAf &lhs, const ColorRGBAf &rhs)
 	return ColorRGBAf(lhs) *= rhs;
 }
 
-inline ColorRGBAf operator *(const ColorRGBAf &lhs, const NMath::scalar_t s)
+inline ColorRGBAf operator *(const ColorRGBAf &lhs, const float s)
 {
 	return ColorRGBAf(lhs) *= s;
 }
 
-inline ColorRGBAf operator *(const NMath::scalar_t s, const ColorRGBAf &lhs)
+inline ColorRGBAf operator *(const float s, const ColorRGBAf &lhs)
 {
 	return ColorRGBAf(lhs) *= s;
 }

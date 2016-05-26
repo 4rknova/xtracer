@@ -1,36 +1,9 @@
-/*
+#ifndef XTCORE_TRIANGLE_INL_INCLUDED
+#define XTCORE_TRIANGLE_INL_INCLUDED
 
-    This file is part of the libnmath.
-
-    triangle.h
-    Triangle inline functions
-
-    Copyright (C) 2008, 2010, 2011
-    Papadopoulos Nikolaos
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this library; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-#ifndef NMATH_TRIANGLE_INL_INCLUDED
-#define NMATH_TRIANGLE_INL_INCLUDED
-
-#ifndef NMATH_TRIANGLE_H_INCLUDED
+#ifndef XTCORE_TRIANGLE_H_INCLUDED
     #error "triangle.h must be included before triangle.inl"
-#endif /* NMATH_TRIANGLE_H_INCLUDED */
+#endif /* XTCORE_TRIANGLE_H_INCLUDED */
 
 namespace NMath {
 
@@ -53,4 +26,4 @@ static inline triangle_t triangle_pack(vec3_t v0, vec3_t v1, vec3_t v2)
 
 } /* namespace NMath */
 
-#endif /* NMATH_TRIANGLE_INL_INCLUDED */
+#endif /* XTCORE_TRIANGLE_INL_INCLUDED */

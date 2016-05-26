@@ -1,4 +1,4 @@
-#include "ppm.hpp"
+#include "nimg/ppm.hpp"
 #include "texture.hpp"
 
 unsigned int Texture2D::load(const char *file)

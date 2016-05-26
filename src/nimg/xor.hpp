@@ -1,7 +1,6 @@
 #ifndef NIMG_XOR_HPP_INCLUDED
 #define NIMG_XOR_HPP_INCLUDED
 
-
 #include "pixmap.h"
 
 namespace NImg {

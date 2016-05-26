@@ -2,20 +2,22 @@ CC  = @echo "compiling [c  ]: $<"; gcc
 CXX = @echo "compiling [c++]: $<"; g++
 LD  = @echo "linking $@ ..."; g++
 
-SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)
-SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp)
-SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl)
-SOURCE_TML = $(wildcard $(PATH_SRC)/*.tml)
-SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)
-SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)
-SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp)
+SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)   $(wildcard $(PATH_SRC)/*/*.h)
+SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp) $(wildcard $(PATH_SRC)/*/*.hpp)
+SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl) $(wildcard $(PATH_SRC)/*/*.inl)
+SOURCE_TML = $(wildcard $(PATH_SRC)/*.tml) $(wildcard $(PATH_SRC)/*/*.tml)
+SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)   $(wildcard $(PATH_SRC)/*/*.c)
+SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)  $(wildcard $(PATH_SRC)/*/*.cc)
+SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp) $(wildcard $(PATH_SRC)/*/*.cpp)
 
 SOURCE_API = $(SOURCE_H) $(SOURCE_HPP) $(SOURCE_INL) $(SOURCE_TML)
 
-BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_C:.c=.o)))
-BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_CC:.cc=.o)))
-BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(notdir $(SOURCE_CPP:.cpp=.o)))
-BINOBJ	 = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
+
+BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_C:.c=.o)))
+BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CC:.cc=.o)))
+BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CPP:.cpp=.o)))
+BINOBJ	   = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
+BINPATHS   = $(sort $(dir $(BINOBJ)))
 
 BIN = $(PATH_BIN)/$(SW_PACKAGE)
 
@@ -36,7 +38,7 @@ all: $(BIN)
 .PHONY: dirtree
 dirtree:
 	mkdir -p $(PATH_BIN)
-	mkdir -p $(PATH_OBJ)
+	mkdir -p $(BINPATHS)
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)

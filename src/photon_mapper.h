@@ -1,11 +1,12 @@
 #ifndef XTRACER_PHOTON_MAPPER_HPP_INCLUDED
 #define XTRACER_PHOTON_MAPPER_HPP_INCLUDED
 
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+#include <nimg/color.hpp>
+#include <nimg/pixmap.h>
+
 #include "timer.hpp"
-#include "color.hpp"
-#include "pixmap.h"
-#include "precision.h"
-#include "vector.h"
 #include "ray.h"
 #include "intinfo.h"
 #include "scene.h"

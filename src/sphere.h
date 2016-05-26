@@ -28,10 +28,11 @@
 #ifndef NMATH_SPHERE_H_INCLUDED
 #define NMATH_SPHERE_H_INCLUDED
 
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+
 #include "defs.h"
 
-#include "precision.h"
-#include "vector.h"
 #include "geometry.h"
 #include "ray.h"
 

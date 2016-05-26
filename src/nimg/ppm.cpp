@@ -141,9 +141,9 @@ int ppm_raw(const char *filename, Pixmap &fb)
 
 			ColorRGBAf &pixel = fb.pixel(i, j);
 
-			pixel.r((NMath::scalar_t)p[0] / 255.0f);
-			pixel.g((NMath::scalar_t)p[1] / 255.0f);
-			pixel.b((NMath::scalar_t)p[2] / 255.0f);
+			pixel.r((float)p[0] / 255.0f);
+			pixel.g((float)p[1] / 255.0f);
+			pixel.b((float)p[2] / 255.0f);
 			pixel.a(1.0f);
 		}
 	}
@@ -177,12 +177,12 @@ int ppm_raw(const char *filename, const Pixmap &fb)
 			const ColorRGBAf &pixel = fb.pixel_ro(i, j);
 
 			// Do some basic tone mapping.
-			NMath::scalar_t fmax = 0.0f;
+			float fmax = 0.0f;
 			fmax = pixel.r() > fmax ? pixel.r() : fmax;
 			fmax = pixel.g() > fmax ? pixel.g() : fmax;
 			fmax = pixel.b() > fmax ? pixel.b() : fmax;
 
-			NMath::scalar_t scale = 1.f;
+			float scale = 1.f;
 
 			if (fmax > 1.f) {
 				scale = 1.f / fmax;

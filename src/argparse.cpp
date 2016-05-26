@@ -1,9 +1,9 @@
 #include <cstring>
 #include <cstdio>
+#include <nmath/mutil.h>
 #include "setup.h"
 #include "argdefs.h"
 #include "log.hpp"
-#include "mutil.h"
 #include "argparse.hpp"
 
 Environment Environment::m_environment;

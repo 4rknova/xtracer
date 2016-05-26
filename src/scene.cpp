@@ -1,15 +1,14 @@
 #include <vector>
 #include <string>
 #include <fstream>
-
+#include <nmath/mutil.h>
+#include <nmath/vector.h>
 #include "util.hpp"
 
 #include "transform.hpp"
 #include "calcnormals.hpp"
 #include "obj.hpp"
 
-#include "mutil.h"
-#include "vector.h"
 #include "geometry.h"
 #include "sphere.h"
 #include "plane.h"

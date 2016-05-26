@@ -1,7 +1,7 @@
 #ifndef XTRACER_RENDERER_H_INCLUDED
 #define XTRACER_RENDERER_H_INCLUDED
 
-#include "pixmap.h"
+#include <nimg/pixmap.h>
 #include "scene.h"
 
 class Renderer

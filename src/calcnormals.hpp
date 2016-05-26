@@ -28,7 +28,6 @@
 #ifndef NMESH_CALCNORMALS_HPP_INCLUDED
 #define NMESH_CALCNORMALS_HPP_INCLUDED
 
-
 #include "mesh.hpp"
 
 namespace NMesh {
