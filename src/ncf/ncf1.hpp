@@ -32,8 +32,6 @@
 #include <string>
 #include <list>
 
-
-
 // For visual studio:
 // Disable "<type> needs to have dll-interface to be used by clients"
 // This warning refers to STL member variables which are private and
@@ -51,7 +49,7 @@ class NCF1
 
 		void source(const char *file);						// Set source file.
 		const char* source() const;							// Get source file.
-		
+
 		void purge();										// Purge the subtree.
 
 		// RETURN CODES:
@@ -64,7 +62,7 @@ class NCF1
 		// 0. Everything went well.
 		// 1. File I/O error.
 		int dump(const char *file, int create = 1) const;	// Dump to file.
-        
+
 		const char* get(const char *name) const;			// Get property value by name.
 		const char* get(unsigned int index) const;			// Get property value by index.
 		const char* name(unsigned int index) const;			// Get property name by index.
@@ -72,12 +70,12 @@ class NCF1
 
 		NCF1* group(const char *name) const;				// Get a pointer to a labeled sub group.
 		NCF1* group(unsigned int index) const;				// Get a pointer to an indexed sub group.
-		
+
 		unsigned int count_properties() const;				// Count the properties.
 		unsigned int count_groups() const;					// Count the subgroups.
 		unsigned int query_property(const char* name) const;// Return 1 if the property exists and 0 if not.
 		unsigned int query_group(const char *name) const;	// Return 1 if the group exists and 0 if not.
-		
+
 		const char *name() const;							// Return the node's name.
 
     private:
@@ -88,7 +86,7 @@ class NCF1
 		NCF1 &operator =(const NCF1 &);
 
 		void release();
-		
+
 		/* Expand symbols. */
 		void expand_symbol(std::map<std::string, std::string> &symbols, std::string &s);
 

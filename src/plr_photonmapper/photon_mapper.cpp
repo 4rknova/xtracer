@@ -6,8 +6,8 @@
 #include <nmath/prng.h>
 #include <nmath/sample.h>
 #include <nimg/luminance.hpp>
+#include <ncf/util.hpp>
 
-#include "util.hpp"
 #include "plane.h"
 #include "setup.h"
 #include "object.hpp"

@@ -1,18 +1,18 @@
 #include <string>
 #include <sstream>
+
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
-#include "util.hpp"
+#include <nimg/pixmap.h>
+#include <nimg/ppm.hpp>
+#include <ncf/util.hpp>
+#include <plr_photonmapper/photon_mapper.h>
+
 #include "scene.h"
 #include "argdefs.h"
 #include "argparse.hpp"
 #include "timeutil.hpp"
 #include "log.hpp"
-#include "photon_mapper.h"
-
-#include <nimg/pixmap.h>
-#include <nimg/ppm.hpp>
-
 #include "plm.h"
 
 

@@ -3,11 +3,10 @@
 #include <fstream>
 #include <nmath/mutil.h>
 #include <nmath/vector.h>
-#include "util.hpp"
-
-#include "transform.hpp"
-#include "calcnormals.hpp"
-#include "obj.hpp"
+#include <ncf/util.hpp>
+#include <nmesh/transform.hpp>
+#include <nmesh/calcnormals.hpp>
+#include <nmesh/obj.hpp>
 
 #include "geometry.h"
 #include "sphere.h"
