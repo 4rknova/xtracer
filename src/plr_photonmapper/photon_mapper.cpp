@@ -4,17 +4,25 @@
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
+#include <nmath/plane.h>
 #include <nmath/sample.h>
 #include <nimg/luminance.hpp>
 #include <ncf/util.hpp>
-
-#include "plane.h"
-#include "setup.h"
-#include "object.hpp"
-#include "argparse.hpp"
-#include "log.hpp"
-#include "console.h"
+//#include "object.hpp"
+//#include "argparse.hpp"
+#include <xtcore/log.hpp>
 #include "photon_mapper.h"
+
+#define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
+#define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      100000                  /* Default photon count for gi. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000                    /* Default photon samples. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    1.0                     /* Default photon sampling radius. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.0                     /* Default photon power scaling factor. */
+#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        3                       /* Default maximum recursion depth. */
+#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1                       /* Default sample count for DOF. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1                       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1                       /* Default sample count for reflection. */
 
 using NCF::Util::path_comp;
 
@@ -33,7 +41,7 @@ void PhotonMapper::render(void)
 {
 	if (mScene && mFramebuffer) {
 		// If gi is enabled, do the photon mapping 1st pass.
-		if (Environment::handle().flag_gi()) {
+		if (XTRACER_SETUP_DEFAULT_GI) { //Environment::handle().flag_gi()) {
 			Log::handle().log_message("Global illumination is enabled.");
 			pass_ptrace(mScene);
 		}
@@ -48,7 +56,7 @@ void PhotonMapper::render(void)
 
 void PhotonMapper::pass_ptrace(Scene *scene)
 {
-	unsigned int photon_count = Environment::handle().photon_count();
+	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
 	Log::handle().log_message("Initiating the photon maps..", photon_count);
 	Log::handle().log_message("Using %i photons..", photon_count);
@@ -88,7 +96,10 @@ void PhotonMapper::pass_ptrace(Scene *scene)
 	for (std::map<std::string, Light*>::iterator it = scene->m_lights.begin(); it != scene->m_lights.end(); ++it) {
 		while (light_photons[light_index] > 0) {
 			Ray ray = (*it).second->ray_sample();
-			trace_photon(scene, ray, 0, (*it).second->intensity() * Environment::handle().photon_power_scaling(), light_photons[light_index]);
+			trace_photon(scene, ray, 0, (*it).second->intensity()
+					// * Environment::handle().photon_power_scaling()
+					* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
+					, light_photons[light_index]);
 		}
 
 		light_index++;
@@ -100,7 +111,7 @@ void PhotonMapper::pass_ptrace(Scene *scene)
 
 bool PhotonMapper::trace_photon(Scene *scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
-	if (depth > Environment::handle().max_rdepth())
+	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH)//Environment::handle().max_rdepth())
 		return false;
 
 	// Intersect.
@@ -165,10 +176,10 @@ bool PhotonMapper::trace_photon(Scene *scene, const Ray &ray, const unsigned int
 void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 {
 	// precalculate some constants
-	const unsigned int rminx = Environment::handle().region_min_x();
-	const unsigned int rminy = Environment::handle().region_min_y();
-	const unsigned int rmaxx = Environment::handle().region_max_x();
-	const unsigned int rmaxy = Environment::handle().region_max_y();
+	const unsigned int rminx = 0;// Environment::handle().region_min_x();
+	const unsigned int rminy = 0;//Environment::handle().region_min_y();
+	const unsigned int rmaxx = 800;//Environment::handle().region_max_x();
+	const unsigned int rmaxy = 600;//Environment::handle().region_max_y();
 	const unsigned int width = fb->width();
 	const unsigned int height = fb->height();
 	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
@@ -184,16 +195,16 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 	float progress = 0;
 
 	// Samples per pixel, offset per sample.
-	unsigned int aa = Environment::handle().aa();
+	unsigned int aa = 4; // Environment::handle().aa();
 
 	// Explicitely set the thread count if requested.
-	const unsigned int thread_count = Environment::handle().threads();
+	const unsigned int thread_count = 0; // Environment::handle().threads();
 	if (thread_count) {
 		omp_set_num_threads(thread_count);
 	}
 
-	const unsigned int dof_samples = Environment::handle().samples_dof();
-	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
+	const unsigned int dof_samples = 1; //Environment::handle().samples_dof();
+	//float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
@@ -218,12 +229,12 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 						// dof loop
 						for (float dofs = 0; dofs < dof_samples; ++dofs) {
 							Ray ray = scene->camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
-							color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
+							color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /* Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
 						}
 					}
 					else {
 						Ray ray = scene->camera->get_primary_ray(rx, ry, (float)width, (float)height);
-						color += (trace_ray(scene, ray, Environment::handle().max_rdepth() + 1) * sample_scaling);
+						color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /*Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
 					}
 				}
 			}
@@ -236,7 +247,7 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 
 		#pragma omp critical
 		{
-			Console::handle().update(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
+		//	Console::handle().update(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
 		}
 	}
 }
@@ -255,7 +266,7 @@ ColorRGBf PhotonMapper::trace_ray(Scene *scene, const Ray &ray, const unsigned i
 		// get a pointer to the material
 		if (!obj.empty()) {
 
-			if (Environment::handle().flag_gi()) {
+			if (XTRACER_SETUP_DEFAULT_GI) { // Environment::handle().flag_gi()) {
 				float irad[3] = {0,0,0};
 				float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
 
@@ -265,12 +276,13 @@ ColorRGBf PhotonMapper::trace_ray(Scene *scene, const Ray &ray, const unsigned i
 				norm[2] = (float)info.normal.z;
 
 				m_pm_global.irradiance_estimate(irad, posi, norm,
-					Environment::handle().photon_max_sampling_radius(),
-					Environment::handle().photon_max_samples());
+					XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS, //Environment::handle().photon_max_sampling_radius(),
+					XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES  //Environment::handle().photon_max_samples()
+				);
 
 				gi_res = ColorRGBf(irad[0], irad[1], irad[2]);
 
-				if (Environment::handle().flag_giviz())
+				if (XTRACER_SETUP_DEFAULT_GIVIZ) //Environment::handle().flag_giviz())
 					return gi_res;
 			}
 
@@ -319,10 +331,11 @@ ColorRGBf PhotonMapper::shade(Scene *scene, const Ray &ray, const unsigned int d
 	// ambient
 	color = mat->ambient * scene->ambient();
 
-	scalar_t shadow_sample_scaling = 1.0f / Environment::handle().samples_light();
+	scalar_t shadow_sample_scaling = 1.0f / XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES;// Environment::handle().samples_light();
 
 	for (it = scene->m_lights.begin(); it != scene->m_lights.end(); it++) {
-		unsigned int tlshsamples = ((*it).second->is_area_light() ? Environment::handle().samples_light() : 1);
+		unsigned int tlshsamples = ((*it).second->is_area_light() ? XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES
+			/*Environment::handle().samples_light()*/ : 1);
 		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
@@ -377,7 +390,7 @@ ColorRGBf PhotonMapper::shade(Scene *scene, const Ray &ray, const unsigned int d
 
 		// reflection
 		if(mat->reflectance > 0.0) {
-			unsigned int tlmcsamples = Environment::handle().samples_reflection();
+			unsigned int tlmcsamples = XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES; // Environment::handle().samples_reflection();
 			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;

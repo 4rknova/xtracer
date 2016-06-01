@@ -1,6 +1,6 @@
-#include "status.h"
-#include "plugin.h"
-#include "renderer.h"
+#include <xtcore/status.h>
+#include <xtcore/plugin.h>
+#include <xtcore/renderer.h>
 
 typedef std::vector<Plugin<Renderer> *> Plugin_Renderers;
 

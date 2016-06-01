@@ -1,9 +1,9 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
-#include "nimg/color.hpp"
+#include <nimg/color.hpp>
+#include <nmath/intinfo.h>
 
-#include "intinfo.h"
 #include "camera.hpp"
 #include "light.hpp"
 #include "phong.hpp"

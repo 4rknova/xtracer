@@ -27,7 +27,7 @@ namespace NMesh {
 	No header data.
 */
 
-int obj(const char* filename, Mesh &mesh)
+int obj(const char* filename, NMesh::Mesh &mesh)
 {
 	if(!filename)
 		return 1;

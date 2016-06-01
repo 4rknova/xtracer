@@ -1,9 +1,8 @@
 #ifndef XTCORE_GEOMETRY_H_INCLUDED
 #define XTCORE_GEOMETRY_H_INCLUDED
 
-#include <nmath/vector.h>
-#include <nmath/aabb.h>
-
+#include "vector.h"
+#include "aabb.h"
 #include "ray.h"
 
 namespace NMath {

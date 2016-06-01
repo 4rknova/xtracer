@@ -1,9 +1,8 @@
 #ifndef XTCORE_INTINFO_H_INCLUDED
 #define XTCORE_INTINFO_H_INCLUDED
 
-#include <nmath/precision.h>
-#include <nmath/vector.h>
-
+#include "precision.h"
+#include "vector.h"
 #include "geometry.h"
 
 namespace NMath {

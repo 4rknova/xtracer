@@ -3,7 +3,7 @@
 #include <nmath/mutil.h>
 #include "setup.h"
 #include "argdefs.h"
-#include "log.hpp"
+#include <xtcore/log.hpp>
 #include "argparse.hpp"
 
 Environment Environment::m_environment;
@@ -16,23 +16,23 @@ Environment::Environment()
 
 	, m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT)
 
-	, m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH)
+//	, m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH)
 
-	, m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES)
-	, m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES)
-	, m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES)
+//	, m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES)
+//	, m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES)
+//	, m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES)
 
 	, m_region_min_x(0)
 	, m_region_min_y(0)
 	, m_region_max_x(0)
 	, m_region_max_y(0)
 
-	, m_flag_gi(XTRACER_SETUP_DEFAULT_GI)
-	, m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ)
-	, m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT)
-	, m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES)
-	, m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS)
-	, m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC)
+//	, m_flag_gi(XTRACER_SETUP_DEFAULT_GI)
+//	, m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ)
+//	, m_photon_count(XTRACER_SETUP_DEFAULT_PHOTON_COUNT)
+//	, m_photon_max_samples(XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES)
+//	, m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS)
+//	, m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC)
 
 	, m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH)
 	, m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE)

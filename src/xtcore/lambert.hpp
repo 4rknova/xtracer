@@ -2,9 +2,8 @@
 #define XTRACER_LAMBERT_HPP_INCLUDED
 
 #include <nmath/vector.h>
+#include <nmath/intinfo.h>
 #include <nimg/color.hpp>
-
-#include "intinfo.h"
 
 using NImg::ColorRGBf;
 

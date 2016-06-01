@@ -3,9 +3,8 @@
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
+#include <nmath/ray.h>
 #include <nimg/color.hpp>
-
-#include "ray.h"
 
 using NMath::scalar_t;
 using NMath::Vector3f;

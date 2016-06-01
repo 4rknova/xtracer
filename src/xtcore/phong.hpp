@@ -3,9 +3,8 @@
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
+#include <nmath/intinfo.h>
 #include <nimg/color.hpp>
-
-#include "intinfo.h"
 
 using NMath::scalar_t;
 using NMath::Vector3f;

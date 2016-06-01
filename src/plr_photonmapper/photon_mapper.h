@@ -3,14 +3,13 @@
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
+#include <nmath/ray.h>
+#include <nmath/intinfo.h>
 #include <nimg/color.hpp>
 #include <nimg/pixmap.h>
-
-#include "timer.hpp"
-#include "ray.h"
-#include "intinfo.h"
-#include "scene.h"
-#include "renderer.h"
+#include <nplatform/timer.hpp>
+#include <xtcore/scene.h>
+#include <xtcore/renderer.h>
 #include "photonmap.h"
 
 using NImg::ColorRGBf;

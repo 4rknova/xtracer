@@ -1,8 +1,8 @@
 #ifndef XTCORE_RAY_H_INCLUDED
 #define XTCORE_RAY_H_INCLUDED
 
-#include "nmath/types.h"
-#include "nmath/vector.h"
+#include <nmath/types.h>
+#include <nmath/vector.h>
 
 #include "defs.h"
 

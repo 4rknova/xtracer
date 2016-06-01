@@ -1,9 +1,9 @@
 /*
 
-	This file is part of libnmesh.
+	This file is part of libnimg.
 
-	obj.hpp
-	OBJ
+	defs.h
+	C constants
 
 	Copyright (C) 2008, 2010 - 2012
 	Papadopoulos Nikolaos
@@ -25,37 +25,16 @@
 
 */
 
-#ifndef NMESH_OBJ_HPP_INCLUDED
-#define NMESH_OBJ_HPP_INCLUDED
+#ifndef LIBNIMG_DEFS_H_INCLUDED
+#define LIBNIMG_DEFS_H_INCLUDED
 
+#if (__STDC_VERSION__ < 199999)
+    #if defined(__GNUC__) || defined(_MSC_VER)
+        #define inline __inline
+    #else
+        /* Inline functions not supported. Performance will suffer */
+        #define inline
+	#endif
+#endif /* __STDC_VERSION__ */
 
-#include "nmesh.hpp"
-
-namespace NMesh {
-		namespace IO {
-			namespace Import {
-
-// RESTRICTIONS:
-// When exporting the obj file you MUST
-// select to triangulate the mesh and export
-// uv coordinates and normals. Incompatible
-// formats will be treated as having erroneous
-// syntax.
-//
-// RETURN CODES:
-// 0. Everything went well.
-// 1. filename equals NULL.
-// 3. Failed to open file.
-// 4. Invalid format.
-// 5. Failed to initialize the Mesh.
-int obj(const char *file, NMesh::Mesh &mesh);
-
-			} /* namespace Import */
-
-			namespace Export {
-			} /* namespace Export */
-
-		} /* namespace IO */
-} /* namespace NMesh */
-
-#endif /* NMESH_OBJ_HPP_INCLUDED */
+#endif /* LIBNIMG_DEFS_H_INCLUDED */

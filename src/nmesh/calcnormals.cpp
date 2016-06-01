@@ -7,7 +7,7 @@
 namespace NMesh {
 	namespace Mutator {
 
-int calc_normals(Mesh &mesh)
+int calc_normals(NMesh::Mesh &mesh)
 {
 	Buffer<vertex_t> &p_meshv = mesh.vertices();
 	Buffer<index_t>  &p_meshi = mesh.indices();

@@ -1,12 +1,13 @@
 #ifndef LIBNMATH_MESH_HPP_INCLUDED
 #define LIBNMATH_MESH_HPP_INCLUDED
 
+#include <nmath/ray.h>
+#include <nmath/geometry.h>
+#include <nmath/triangle.h>
+#include <nmath/octree.hpp>
+
 #include <nmesh/nmesh.hpp>
 
-#include "ray.h"
-#include "geometry.h"
-#include "triangle.h"
-#include "octree.hpp"
 
 using NMath::Ray;
 using NMath::Geometry;

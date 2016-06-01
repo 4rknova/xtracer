@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string>
 
+#include <nplatform/dlloader.h>
+
 #include "plm.h"
-#include "dlloader.h"
 
 
 namespace PLM {

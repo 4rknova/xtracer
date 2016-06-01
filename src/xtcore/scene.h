@@ -4,17 +4,15 @@
 #include <string>
 
 #include <nmath/vector.h>
+#include <nmath/intinfo.h>
+#include <nmath/geometry.h>
 #include <ncf/ncf1.hpp>
 
-
-#include "intinfo.h"
-#include "geometry.h"
-
-#include "camera.hpp"
-#include "light.hpp"
-#include "material.hpp"
-#include "texture.hpp"
-#include "object.hpp"
+#include <xtcore/camera.hpp>
+#include <xtcore/light.hpp>
+#include <xtcore/material.hpp>
+#include <xtcore/texture.hpp>
+#include <xtcore/object.hpp>
 
 using NMath::Geometry;
 using NCF::NCF1;

@@ -8,12 +8,11 @@
 #include <nmesh/calcnormals.hpp>
 #include <nmesh/obj.hpp>
 
-#include "geometry.h"
-#include "sphere.h"
-#include "plane.h"
-#include "triangle.h"
-#include "argparse.hpp"
-#include "mesh.hpp"
+#include <nmath/geometry.h>
+#include <nmath/sphere.h>
+#include <nmath/plane.h>
+#include <nmath/triangle.h>
+#include <nmesh/mesh.hpp>
 #include "proto.h"
 #include "log.hpp"
 #include "scene.h"
@@ -209,6 +208,7 @@ unsigned int Scene::load(const char *filename)
 void Scene::apply_modifiers()
 {
 	std::string mod;
+/*
 	while (Environment::handle().modifier_pop(mod)) {
 
 		// Check if there is actually an assignment
@@ -231,6 +231,7 @@ void Scene::apply_modifiers()
 		NCF::Util::split(mod, nleft, nright, ':');
 		node->set(nleft.c_str(), nright.c_str());
 	}
+*/
 }
 
 unsigned int Scene::build()

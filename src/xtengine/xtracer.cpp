@@ -8,11 +8,11 @@
 #include <ncf/util.hpp>
 #include <plr_photonmapper/photon_mapper.h>
 
-#include "scene.h"
+#include <xtcore/scene.h>
+#include <xtcore/timeutil.hpp>
+#include <xtcore/log.hpp>
 #include "argdefs.h"
 #include "argparse.hpp"
-#include "timeutil.hpp"
-#include "log.hpp"
 #include "plm.h"
 
 

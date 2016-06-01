@@ -28,14 +28,14 @@
 #ifndef NMESH_CALCNORMALS_HPP_INCLUDED
 #define NMESH_CALCNORMALS_HPP_INCLUDED
 
-#include "mesh.hpp"
+#include "nmesh.hpp"
 
 namespace NMesh {
 	namespace Mutator {
 
 // RETURN CODES:
 // 0. Everything went well.
-int calc_normals(Mesh &mesh);
+int calc_normals(NMesh::Mesh &mesh);
 
 	} /* namespace Mutator */
 } /* namespace NMesh */

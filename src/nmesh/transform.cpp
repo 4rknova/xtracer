@@ -31,10 +31,10 @@
 namespace NMesh {
 	namespace Mutator {
 
-int translate(Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+int translate(NMesh::Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
 {
 	Buffer<vertex_t> &p_meshv = mesh.vertices();
-	
+
 	// Invert the faces.
 	for (unsigned int i = 0; i < p_meshv.count(); i++) {
 		p_meshv[i].px += x;
@@ -45,7 +45,7 @@ int translate(Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t 
 	return 0;
 }
 
-int scale(Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+int scale(NMesh::Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
 {
 	Buffer<vertex_t> &p_meshv = mesh.vertices();
 
