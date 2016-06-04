@@ -6,7 +6,7 @@
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
 #include <nmath/geometry.h>
-#include <ncf/ncf1.hpp>
+#include <ncf/ncf.h>
 
 #include <xtcore/camera.hpp>
 #include <xtcore/light.hpp>
@@ -15,7 +15,6 @@
 #include <xtcore/object.hpp>
 
 using NMath::Geometry;
-using NCF::NCF1;
 
 class Scene
 {
@@ -40,11 +39,11 @@ class Scene
 
 		unsigned int set_camera(const char *name);
 
-		unsigned int create_light(NCF1 *p);
-		unsigned int create_material(NCF1 *p);
-		unsigned int create_texture(NCF1 *p);
-		unsigned int create_geometry(NCF1 *p);
-		unsigned int create_object(NCF1 *p);
+		unsigned int create_light(NCF *p);
+		unsigned int create_material(NCF *p);
+		unsigned int create_texture(NCF *p);
+		unsigned int create_geometry(NCF *p);
+		unsigned int create_object(NCF *p);
 
 		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
 
@@ -76,7 +75,7 @@ class Scene
 		const std::string m_source;
 
 		// The parser data tree
-		NCF1 m_scene;
+		NCF m_scene;
 
 		// This will cleanup all the allocated memory
 		void release();

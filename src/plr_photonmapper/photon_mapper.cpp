@@ -7,7 +7,7 @@
 #include <nmath/plane.h>
 #include <nmath/sample.h>
 #include <nimg/luminance.hpp>
-#include <ncf/util.hpp>
+#include <ncf/util.h>
 //#include "object.hpp"
 //#include "argparse.hpp"
 #include <xtcore/log.hpp>
@@ -24,7 +24,7 @@
 #define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1                       /* Default sample count for lights. */
 #define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1                       /* Default sample count for reflection. */
 
-using NCF::Util::path_comp;
+using Util::String::path_comp;
 
 PhotonMapper::PhotonMapper()
 	: mFramebuffer(NULL)

@@ -5,7 +5,7 @@
 #include <nmath/prng.h>
 #include <nimg/pixmap.h>
 #include <nimg/ppm.hpp>
-#include <ncf/util.hpp>
+#include <ncf/util.h>
 #include <plr_photonmapper/photon_mapper.h>
 
 #include <xtcore/scene.h>
@@ -16,8 +16,8 @@
 #include "plm.h"
 
 
-using NCF::Util::to_string;
-using NCF::Util::path_comp;
+using Util::String::to_string;
+using Util::String::path_comp;
 
 int main(int argc, char **argv)
 {
