@@ -49,6 +49,23 @@ Scene::~Scene()
 	release();
 }
 
+void Scene::deserialize_color(const NCF *node, NImg::ColorRGBf& result)
+{
+	result = ColorRGBf(0.f,0.f,0.f);
+
+	if (node) {
+		const char *sr = node->get_property_by_name(XTPROTO_PROP_COL_R);
+		const char *sg = node->get_property_by_name(XTPROTO_PROP_COL_G);
+		const char *sb = node->get_property_by_name(XTPROTO_PROP_COL_B);
+
+		result = ColorRGBf(
+			sr ? (scalar_t)to_double(sr) : 0.f,
+			sg ? (scalar_t)to_double(sg) : 0.f,
+			sb ? (scalar_t)to_double(sb) : 0.f
+		);
+	}
+}
+
 const char *Scene::name()
 {
 	return m_scene.get_property_by_name(XTPROTO_PROP_TITLE);
@@ -267,7 +284,7 @@ unsigned int Scene::build()
 		if (count)
 		{
 			Log::handle().log_message("Processing section: %s", (*it).c_str());
-			for (unsigned int i = 1; i<= count; i++)
+			for (unsigned int i = 0; i < count; ++i)
 			{
 				NCF *lnode = m_scene.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
@@ -321,14 +338,14 @@ unsigned int Scene::set_camera(const char *name)
 		dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_property_by_name(XTPROTO_PROP_DEFAULT);
 		if (dcam.empty()) {
 			Log::handle().log_message("No default camera was specified.");
-			dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(1)->get_name();
+			dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(0)->get_name();
 		}
 	}
 
 	// Check if camera exists
 	if(!m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->query_group(dcam.c_str())) {
 		Log::handle().log_warning("Invalid camera: %s", dcam.c_str());
-		dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(1)->get_name();
+		dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(0)->get_name();
 	}
 
 	Log::handle().log_message("Using camera: %s", dcam.c_str());
@@ -382,9 +399,6 @@ unsigned int Scene::create_light(NCF *p)
 	scalar_t posy = to_double(p->get_group_by_name(XTPROTO_PROP_POSITION)->get_property_by_name(XTPROTO_PROP_CRD_Y));
 	scalar_t posz = to_double(p->get_group_by_name(XTPROTO_PROP_POSITION)->get_property_by_name(XTPROTO_PROP_CRD_Z));
 
-	scalar_t colr = to_double(p->get_group_by_name(XTPROTO_PROP_INTST)->get_property_by_name(XTPROTO_PROP_COL_R));
-	scalar_t colg = to_double(p->get_group_by_name(XTPROTO_PROP_INTST)->get_property_by_name(XTPROTO_PROP_COL_G));
-	scalar_t colb = to_double(p->get_group_by_name(XTPROTO_PROP_INTST)->get_property_by_name(XTPROTO_PROP_COL_B));
 
 	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
 
@@ -420,14 +434,14 @@ unsigned int Scene::create_light(NCF *p)
 		light = new (std::nothrow) TriangleLight;
 
 		Vector3f v[3];
-		for (unsigned int i = 1; i <= 3; i++) {
+		for (unsigned int i = 0; i < 3; ++i) {
 			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
 
 			scalar_t px = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_X));
 			scalar_t py = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_Y));
 			scalar_t pz = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_Z));
 
-			v[i-1] = Vector3f(px, py, pz);
+			v[i] = Vector3f(px, py, pz);
 		}
 
 		((TriangleLight*)light)->geometry(v[0], v[1], v[2]);
@@ -438,15 +452,15 @@ unsigned int Scene::create_light(NCF *p)
 	}
 
 	// Set the common properties.
+	NImg::ColorRGBf intensity;
+	deserialize_color(p->get_group_by_name(XTPROTO_PROP_INTST), intensity);
+	light->intensity(intensity);
 	light->position(Vector3f(posx, posy, posz));
-	light->intensity(ColorRGBf(colr, colg, colb));
 
 	// Destroy the old instance (if one exists).
 	unsigned int res = destroy_light(p->get_name());
 
 	// Add it to the list.
-
-	Log::handle().log_warning("light ok");
 	m_lights[p->get_name()] = light;
 
 	return res ? 0 : 3;
@@ -500,7 +514,7 @@ unsigned int Scene::create_geometry(NCF *p)
 		if(!geometry)
 			return 2;
 
-		for (unsigned int i = 1; i <= 3; i++) {
+		for (unsigned int i = 0; i < 3; ++i) {
 			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
 
 			scalar_t px = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_X));
@@ -509,8 +523,8 @@ unsigned int Scene::create_geometry(NCF *p)
 			scalar_t tu = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_U));
 			scalar_t tv = (scalar_t)to_double(vnode->get_property_by_name(XTPROTO_PROP_CRD_V));
 
-			((Triangle *)geometry)->v[i-1] = Vector3f(px, py, pz);
-			((Triangle *)geometry)->tc[i-1] = Vector2f(tu, tv);
+			((Triangle *)geometry)->v[i] = Vector3f(px, py, pz);
+			((Triangle *)geometry)->tc[i] = Vector2f(tu, tv);
 		}
 	}
 	// - Mesh
@@ -582,69 +596,43 @@ unsigned int Scene::create_geometry(NCF *p)
 
 unsigned int Scene::create_material(NCF *p)
 {
-	if (!p)
-		return 1;
+	if (!p) return 1;
 
 	Material *material = new (std::nothrow) Material;
 
-	if (!material)
-		return 2;
+	if (!material) return 2;
 
 	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
 
-	if (!type.compare(XTPROTO_LTRL_LAMBERT)) {
-		material->type = MATERIAL_LAMBERT;
-	}
-	else if (!type.compare(XTPROTO_LTRL_PHONG)) {
-		material->type = MATERIAL_PHONG;
-	}
-	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) {
-		material->type = MATERIAL_BLINNPHONG;
-	}
+	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) material->type = MATERIAL_LAMBERT;
+	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) material->type = MATERIAL_PHONG;
+	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) material->type = MATERIAL_BLINNPHONG;
 	else {
 		Log::handle().log_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete material;
 		return 1;
 	}
 
-	// ambient intensity
-	scalar_t ambr = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IAMBN)->get_property_by_name(XTPROTO_PROP_COL_R));
-	scalar_t ambg = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IAMBN)->get_property_by_name(XTPROTO_PROP_COL_G));
-	scalar_t ambb = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IAMBN)->get_property_by_name(XTPROTO_PROP_COL_B));
+	deserialize_color(p->get_group_by_name(XTPROTO_PROP_IAMBN), material->ambient);
+	deserialize_color(p->get_group_by_name(XTPROTO_PROP_ISPEC), material->specular);
+	deserialize_color(p->get_group_by_name(XTPROTO_PROP_IDIFF), material->diffuse);
 
-	material->ambient = ColorRGBf(ambr, ambg, ambb);
+	const char *skdiff = p->get_property_by_name(XTPROTO_PROP_KDIFF);
+	const char *skspec = p->get_property_by_name(XTPROTO_PROP_KSPEC);
+	const char *sksexp = p->get_property_by_name(XTPROTO_PROP_KEXPN);
+	material->kdiff = skdiff ? (scalar_t)to_double(skdiff) : 1.f;
+	material->kspec = skspec ? (scalar_t)to_double(skspec) : 0.f;
+	material->ksexp = sksexp ? (scalar_t)to_double(sksexp) : 0.f;
 
-	// specular intensity
-	scalar_t specr = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_ISPEC)->get_property_by_name(XTPROTO_PROP_COL_R));
-	scalar_t specg = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_ISPEC)->get_property_by_name(XTPROTO_PROP_COL_G));
-	scalar_t specb = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_ISPEC)->get_property_by_name(XTPROTO_PROP_COL_B));
+	const char *sroughness    = p->get_property_by_name(XTPROTO_PROP_ROUGH);
+	const char *stransparency = p->get_property_by_name(XTPROTO_PROP_TRSPC);
+	const char *sreflectance  = p->get_property_by_name(XTPROTO_PROP_REFLC);
+	const char *sior          = p->get_property_by_name(XTPROTO_PROP_IOR);
 
-	material->specular = ColorRGBf(specr, specg, specb);
-
-
-	 if (!type.compare(XTPROTO_LTRL_LAMBERT)) {
-		material->kdiff = 1;
-		material->kspec = 0;
-	 }
-	 else {
-		material->kdiff = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_KDIFF));
-		material->kspec = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_KSPEC));
-		material->ksexp = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_KEXPN));
-	 }
-
-	material->roughness = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_ROUGH));
-
-	// diffuse intensity
-	scalar_t diffr = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IDIFF)->get_property_by_name(XTPROTO_PROP_COL_R));
-	scalar_t diffg = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IDIFF)->get_property_by_name(XTPROTO_PROP_COL_G));
-	scalar_t diffb = (scalar_t)to_double(p->get_group_by_name(XTPROTO_PROP_IDIFF)->get_property_by_name(XTPROTO_PROP_COL_B));
-
-	material->diffuse = ColorRGBf(diffr, diffg, diffb);
-	material->reflectance  = NMath::saturate((scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_REFLC)));
-	material->transparency = NMath::saturate((scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_TRSPC)));
-
-	// index of refraction
-	material->ior = p->query_property(XTPROTO_PROP_IOR) ? (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_IOR)) : 1.0;
+	material->roughness    = sroughness    ? (scalar_t)to_double(sroughness)    : 0.f;
+	material->transparency = stransparency ? (scalar_t)to_double(stransparency) : 0.f;
+	material->reflectance  = sreflectance  ? (scalar_t)to_double(sreflectance)  : 0.f;
+	material->ior          = sior          ? (scalar_t)to_double(sior)          : 1.0;
 
 	// Destroy the old material from the list if it exists.
 	unsigned int res = destroy_material(p->get_name());

@@ -23,6 +23,8 @@ class Scene
 		Scene(const Scene &);
 		Scene &operator =(const Scene &);
 
+		void deserialize_color(const NCF *node, NImg::ColorRGBf& result);
+
 	public:
 		Scene();
 		~Scene();

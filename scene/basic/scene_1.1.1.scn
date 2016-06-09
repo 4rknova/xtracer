@@ -50,7 +50,7 @@ camera = {
 			y = 1
 		}
 	}
-	
+
 	cam3 = {
 		fov = 45
 
@@ -138,11 +138,11 @@ material = {
 		k_diffuse = 0.5
 		k_specular = 0.5
 		k_exponent = 1350
-	
+
 		diffuse = {
 			r = 1.0
 			g = 1.0
-			b = 1.0 
+			b = 1.0
 		}
 
 		specular = {
@@ -160,7 +160,7 @@ material = {
 		k_diffuse = 0.5
 		k_specular = 0.5
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 1.0
 			g = 1.0
