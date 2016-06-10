@@ -25,7 +25,7 @@ bool to_bool(const std::string &s)
 int to_int(const std::string &s)
 {
 	std::string val = s;
-	return atoi(val.c_str());
+	return strtol(val.c_str(), NULL, 0);
 }
 
 double to_double(const std::string &s)

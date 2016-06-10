@@ -13,7 +13,7 @@ ambient = {
 }
 
 camera = {
-	default = front 
+	default = front
 
 	front = {
 		fov = 45
@@ -21,7 +21,7 @@ camera = {
 		position = {
 			z = -2000
 		}
-		
+
 		up = {
 			y = 1
 		}
@@ -43,7 +43,7 @@ camera = {
 			y = 1
 		}
 	}
-	
+
 	side = {
 		fov = 45
 
@@ -63,7 +63,7 @@ geometry = {
 	glass_ball = {
 		type = sphere
 		position = {
-			x = 80 
+			x = 80
 			y = -200
 			z = -500
 		}
@@ -155,7 +155,7 @@ light = {
 		type = sphere
 
 		radius = 10.0
-		
+
 		position = {
 			x = 0
 			y = 50
@@ -173,7 +173,7 @@ light = {
 		type = sphere
 
 		radius = 25.0
-		
+
 		position = {
 			x = -200
 			y = 300
@@ -244,7 +244,7 @@ material = {
 		ior = 1.35714
 		roughness = 10000000.0
 	}
-	
+
 	phong_ball = {
 		type = phong
 
@@ -259,10 +259,10 @@ material = {
 
 		k_diffuse  = 0.0
 		k_specular = 1.0
-		k_exponent = 64 
+		k_exponent = 64
 		roughness  = 100.0
 	}
-	
+
 	plastic1 = {
 		type = lambert
 
@@ -272,7 +272,7 @@ material = {
 			b = 0.7
 		}
 	}
-	
+
 	plastic2 = {
 		type = lambert
 
@@ -282,7 +282,7 @@ material = {
 			b = 0.7
 		}
 	}
-	
+
 	plastic3 = {
 		type = lambert
 

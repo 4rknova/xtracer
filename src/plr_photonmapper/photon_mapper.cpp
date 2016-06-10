@@ -13,6 +13,8 @@
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
+#include "plo_console/console.h"
+
 #define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      100000                  /* Default photon count for gi. */
@@ -195,16 +197,16 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 	float progress = 0;
 
 	// Samples per pixel, offset per sample.
-	unsigned int aa = 4; // Environment::handle().aa();
+	unsigned int aa = 1; // Environment::handle().aa();
 
 	// Explicitely set the thread count if requested.
-	const unsigned int thread_count = 0; // Environment::handle().threads();
+	const unsigned int thread_count = 8;// Environment::handle().threads();
 	if (thread_count) {
 		omp_set_num_threads(thread_count);
 	}
 
 	const unsigned int dof_samples = 1; //Environment::handle().samples_dof();
-	//float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
+	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
@@ -247,7 +249,7 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 
 		#pragma omp critical
 		{
-		//	Console::handle().update(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
+			Console::handle().update(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
 		}
 	}
 }
