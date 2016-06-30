@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <iomanip>
 #include <omp.h>
@@ -12,8 +13,6 @@
 //#include "argparse.hpp"
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
-
-#include "plo_console/console.h"
 
 #define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
@@ -249,7 +248,33 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 
 		#pragma omp critical
 		{
-			Console::handle().update(progress * one_over_h, omp_get_thread_num(), omp_get_num_threads());
+			{
+				std::cout.setf(std::ios::fixed, std::ios::floatfield);
+				std::cout.setf(std::ios::showpoint);
+
+				static const unsigned int length = 25;
+				std::cout << "\rProgress [ ";
+
+				float pr = progress * one_over_h;
+
+				for (unsigned int i = 0; i < length; i++) {
+					float p = pr * length / 100;
+					if		(i < p) std::cout << '=';
+					else if (i - p < 1) std::cout << '>';
+					else	std::cout << ' ';
+				}
+
+				int totalw = omp_get_num_threads();
+				// get the string length of totalw
+				int wlen = 0;
+				int num = totalw;
+
+				while (num>0) {	num /= 10; wlen++; }
+
+				std::cout	<< " " << std::setw(6) << std::setprecision(2) << pr
+							<< "% ] [ "<< totalw << " C: " << std::setw(wlen)
+							<< omp_get_num_threads() + 1 << " ]" << std::flush;
+			}
 		}
 	}
 }

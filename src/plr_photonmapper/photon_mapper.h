@@ -7,7 +7,7 @@
 #include <nmath/intinfo.h>
 #include <nimg/color.hpp>
 #include <nimg/pixmap.h>
-#include <nplatform/timer.hpp>
+#include <nplatform/timer.h>
 #include <xtcore/scene.h>
 #include <xtcore/renderer.h>
 #include "photonmap.h"

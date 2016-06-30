@@ -1,4 +1,5 @@
 #include "material.hpp"
+#include "brdf.h"
 
 Material::Material()
 	: ambient(ColorRGBf(1.0, 1.0, 1.0)),
@@ -39,7 +40,7 @@ ColorRGBf Material::shade(const Camera *cam, const Light *light, ColorRGBf &texc
 				specular);
 
 		case MATERIAL_BLINNPHONG:
-			return blinn_phong(
+			return blinn(
 				cam->position,
 				light->point_sample(),
 				&info,

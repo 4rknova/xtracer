@@ -2,7 +2,7 @@
 	#include <string.h> // For NULL
 #endif
 
-#include "timer.hpp"
+#include "timer.h"
 
 Timer::Timer()
 {

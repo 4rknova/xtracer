@@ -6,8 +6,6 @@
 
 #include "camera.hpp"
 #include "light.hpp"
-#include "phong.hpp"
-#include "lambert.hpp"
 
 using NMath::IntInfo;
 using NImg::ColorRGBf;

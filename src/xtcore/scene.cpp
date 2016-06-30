@@ -109,6 +109,11 @@ NMath::scalar_t Scene::deserialize_numf(const char *val, const NMath::scalar_t d
 	return val ? (scalar_t)to_double(val) : def;
 }
 
+std::string Scene::deserialize_cstr(const char *val, const char* def)
+{
+	return val ? val : def;
+}
+
 const char *Scene::name()
 {
 	return m_scene.get_property_by_name(XTPROTO_PROP_TITLE);
@@ -336,6 +341,8 @@ unsigned int Scene::build()
 			}
 		}
 	}
+
+	Log::handle().log_message("Scene loaded.");
 	return 0;
 }
 
@@ -489,8 +496,7 @@ unsigned int Scene::create_geometry(NCF *p)
 
 		// set the properties.
 		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-		scalar_t radius	= (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_RADIUS));
-		((Sphere *)geometry)->radius = radius;
+		((Sphere *)geometry)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
 	// - Triangle.
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
@@ -661,9 +667,7 @@ unsigned int Scene::create_object(NCF *p)
 
 	{
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
-		if (m_materials.find(n) != m_materials.end()) {
-			object->material = n;
-		}
+		if (m_materials.find(n) != m_materials.end()) object->material = n;
 		else {
 			Log::handle().log_warning("At object: %s, material %s does not exist.", p->get_name(), n);
 			delete object;
@@ -675,9 +679,7 @@ unsigned int Scene::create_object(NCF *p)
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_TEX);
 
 		if (n) {
-			if(m_textures.find(n) != m_textures.end()) {
-				object->texture = n;
-			}
+			if (m_textures.find(n) != m_textures.end()) object->texture = n;
 			else {
 				Log::handle().log_warning("At object: %s, texture %s does not exist.", p->get_name(), n);
 				delete object;
@@ -704,10 +706,7 @@ bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
 		// test all the objects and find the closest intersection
 		if((m_geometry[(*it).second->geometry.c_str()])->intersection(ray, &test)) {
 			if(res.t > test.t) {
-				// set the object name
 				obj = (*it).first;
-
-				// copy intinfo
 				memcpy(&res, &test, sizeof(res));
 			}
 		}

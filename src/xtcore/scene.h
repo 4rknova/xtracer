@@ -18,6 +18,7 @@
 #define VALUE_DEFAULT_TEX2 (NMath::Vector2f(0.f,0.f))
 #define VALUE_DEFAULT_VEC3 (NMath::Vector3f(0.f,0.f,0.f))
 #define VALUE_DEFAULT_COL3 (NImg::ColorRGBf(0.f,0.f,0.f))
+#define VALUE_DEFAULT_CSTR ("")
 
 using NMath::Geometry;
 
@@ -32,6 +33,7 @@ class Scene
 		NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def = VALUE_DEFAULT_TEX2);
 		NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def = VALUE_DEFAULT_VEC3);
 		NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = VALUE_DEFAULT_NUMF);
+		std::string     deserialize_cstr(const char *val, const char*           def = VALUE_DEFAULT_CSTR);
 
 	public:
 		Scene();

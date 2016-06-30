@@ -6,17 +6,21 @@
 using NMath::Matrix4x4f;
 
 Camera::Camera()
-	: position(Vector3f(0,0,0)), target(Vector3f(0,0,1)), up(Vector3f(0,1,0)), fov(XT_CAM_DEFAULT_FOV)
+	: position(Vector3f(0,0,0))
+	, target(Vector3f(0,0,1))
+	, up(Vector3f(0,1,0))
+	, fov(XT_CAM_DEFAULT_FOV)
 {}
 
-Camera::Camera(Vector3f &pos, Vector3f &trg, Vector3f &upv, scalar_t fovx, scalar_t aprt, scalar_t flen, scalar_t shut)
-	:
-	position(pos),
-	target(trg),
-	up(upv.normalized()),
-	fov(fovx),
-	aperture(aprt),
-	flength(flen)
+Camera::Camera(Vector3f &pos, Vector3f &trg, Vector3f &upv,
+			   scalar_t fovx, scalar_t aprt, scalar_t flen,
+			   scalar_t shut)
+	: position(pos)
+	, target(trg)
+	, up(upv.normalized())
+	, fov(fovx)
+	, aperture(aprt)
+	, flength(flen)
 {}
 
 Ray Camera::get_primary_ray(float x, float y, float width, float height)
@@ -37,19 +41,19 @@ Ray Camera::get_primary_ray(float x, float y, float width, float height)
 	pray.direction.z = 1.0 / tan(fov * NMath::RADIAN / 2.0);
 
 	/*
-		Setting up the look-at matrix is easy when you consider that a matrix
-		is basically a rotated unit cube formed by three vectors (the 3x3 part) at a
-		particular position (the 1x3 part).
-
-		We already have one of the three vectors:
-			-	The z-axis of the matrix is simply the view direction.
-			-	The x-axis of the matrix is a bit tricky: if the camera is not tilted,
-				then the x-axis of the matrix is perpendicular to the z-axis and
-				the vector (0, 1, 0).
-			-	The y-axis is perpendicular to the other two, so we simply calculate
-				the cross product of the x-axis and the z-axis to obtain the y-axis.
-				Note that the y-axis is calculated using the reversed z-axis. The
-				image will be upside down without this adjustment.
+	**	Setting up the look-at matrix is easy when you consider that a matrix
+	**	is basically a rotated unit cube formed by three vectors (the 3x3 part) at a
+	**	particular position (the 1x3 part).
+	**
+	**	We already have one of the three vectors:
+	**	-	The z-axis of the matrix is simply the view direction.
+	**	-	The x-axis of the matrix is a bit tricky: if the camera is not tilted,
+	**		then the x-axis of the matrix is perpendicular to the z-axis and the
+	**		vector (0, 1, 0).
+	**	-	The y-axis is perpendicular to the other two, so we simply calculate
+	**		the cross product of the x-axis and the z-axis to obtain the y-axis.
+	**		Note that the y-axis is calculated using the reversed z-axis. The
+	**		image will be upside down without this adjustment.
 	*/
 
 	// Calculate the camera direction vector and normalize it.
