@@ -5,6 +5,9 @@ os:
 matrix:
   allow_failures:
   - os: osx
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install freeglut3
 deploy:
   provider: releases
   api_key:
