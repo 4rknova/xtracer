@@ -7,7 +7,7 @@ matrix:
   - os: osx
 before_install:
   - sudo apt-get update
-  - sudo apt-get install freeglut3
+  - sudo apt-get install freeglut3 freeglut3-dev
 deploy:
   provider: releases
   api_key:
