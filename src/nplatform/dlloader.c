@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#if defined (__linux__)
+#if defined(__linux) || defined(__unix) || defined (__posix)
 #include <dlfcn.h>
 #include <dirent.h>
 #elif defined (_WIN32)
