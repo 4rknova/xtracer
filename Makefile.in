@@ -47,7 +47,7 @@ dirtree:
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
 
-$(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN
+$(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
 	$(BIN) -res 800x800 $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
