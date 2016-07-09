@@ -6,8 +6,10 @@ matrix:
   allow_failures:
   - os: osx
 before_install:
-  - sudo apt-get update
-  - sudo apt-get install freeglut3 freeglut3-dev
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update          ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install freeglut; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install freeglut3 freeglut3-dev; fi
 deploy:
   provider: releases
   api_key:
