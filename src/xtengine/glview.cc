@@ -8,6 +8,8 @@
 #include <cmath>
 #include <time.h>
 
+#include <nimg/pixmap.h>
+
 #define STRINGIFY(A) #A
 
 char const *vsh =
@@ -33,10 +35,7 @@ char const *fsh=
 #define WIDTH  800
 #define HEIGHT 600
 
-surface_t buff_a, buff_b, front, back;
 GLuint tex = 0, p = 0;
-
-triangle_t tri;
 
 long ms()
 {
@@ -49,6 +48,7 @@ long t = ms();
 
 void display(void)
 {
+	/*
     surface_t temp = front;
     front = back;
     back = temp;
@@ -56,10 +56,10 @@ void display(void)
     float s = float(t-ms())/1000. * M_PI * 2.;
     clear(back, {0,0,0});
     tri.b.v.y = 100 + int(cos(s) * 250.f);
-    draw_triangle(back, tri);
-    fill_triangle(back, tri);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, back.data);
-
+//    draw_triangle(back, tri);
+//    fill_triangle(back, tri);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, back.);
+*/
     glClearColor(1, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
     glRecti(1,1,-1,-1);
@@ -77,37 +77,13 @@ void reshape(int w, int h)
 
 void init()
 {
-    buff_a.width  = WIDTH;
-    buff_a.height = HEIGHT;
-    buff_a.data   = new uint32_t[buff_a.width * buff_a.height];
-
-    buff_b.width  = WIDTH;
-    buff_b.height = HEIGHT;
-    buff_b.data   = new uint32_t[buff_b.width * buff_b.height];
-
-    front = buff_a;
-    back  = buff_b;
-
-    color_rgba_t cb;
-    cb.r = 0; cb.g = 0; cb.b = 0; cb.a = 1;
-    clear(buff_a, cb);
-    clear(buff_b, cb);
-
-    tri.a.c.r = 1; tri.a.c.g = 0; tri.a.c.b = 0; tri.a.c.a = 1;
-    tri.b.c.r = 0; tri.b.c.g = 1; tri.b.c.b = 0; tri.b.c.a = 1;
-    tri.c.c.r = 0; tri.c.c.g = 0; tri.c.c.b = 1; tri.c.c.a = 1;
-    tri.a.v.x = 400; tri.a.v.y = 400; tri.a.v.z = 0;
-    tri.b.v.x = 100; tri.b.v.y = 100; tri.b.v.z = 0;
-    tri.c.v.x = 700; tri.c.v.y = 100; tri.c.v.z = 0;
 }
 
 void cleanup()
 {
-    delete[] buff_a.data;
-    delete[] buff_b.data;
 }
 
-int main(int argc, char **argv)
+int gl_main(int argc, char **argv)
 {
     init();
     putenv( (char *) "__GL_SYNC_TO_VBLANK=1" );

@@ -2,37 +2,6 @@ CC  = @echo "compiling [c  ]: $<"; gcc
 CXX = @echo "compiling [c++]: $<"; g++
 LD  = @echo "linking $@ ..."; g++
 
-SW_PKG_XTCORE  = xtcore
-SW_PKG_XTRACER = xtengine
-EXT_DYNAMIC = so
-
-# libxtcore
-PATH_SRC_XTCORE      = $(PATH_SRC)/$(SW_PKG_XTCORE)
-LIBXTCORE_SOURCE_H   = $(wildcard $(PATH_SRC_XTCORE)/*.h)
-LIBXTCORE_SOURCE_HPP = $(wildcard $(PATH_SRC_XTCORE)/*.hpp)
-LIBXTCORE_SOURCE_INL = $(wildcard $(PATH_SRC_XTCORE)/*.inl)
-LIBXTCORE_SOURCE_TML = $(wildcard $(PATH_SRC_XTCORE)/*.tml)
-LIBXTCORE_SOURCE_C   = $(wildcard $(PATH_SRC_XTCORE)/*.c)
-LIBXTCORE_SOURCE_CC  = $(wildcard $(PATH_SRC_XTCORE)/*.cc)
-LIBXTCORE_SOURCE_CPP = $(wildcard $(PATH_SRC_XTCORE)/*.cpp)
-LIBXTCORE_SOURCE_API = $(LIBXTCORE_SOURCE_H) $(LIBXTCORE_SOURCE_HPP) $(LIBXTCORE_SOURCE_INL) $(LIBXTCORE_SOURCE_TML)
-LIBXTCORE_BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(LIBXTCORE_SOURCE_C:.c=.o)))
-LIBXTCORE_BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(LIBXTCORE_SOURCE_CC:.cc=.o)))
-LIBXTCORE_BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(LIBXTCORE_SOURCE_CPP:.cpp=.o)))
-LIBXTCORE_BINOBJ	 = $(LIBXTCORE_BINOBJ_C) $(LIBXTCORE_BINOBJ_CC) $(LIBXTCORE_BINOBJ_CPP)
-LIBXTCORE_BINPATHS   = $(sort $(dir $(LIBXTCORE_BINOBJ)))
-
-LIB_DYNAMIC_XTCORE = $(PATH_BIN)/$(SW_PKG_XTCORE).$(EXT_DYNAMIC)
-
-.PHONY: dirtree_xtcore
-
-dirtree_xtcore:
-	mkdir -p $(LIBXTCORE_BINPATHS)
-
-$(LIB_DYNAMIC_XTCORE): dirtree_xtcore $(LIBXTCORE_BINOBJ)
-	$(CXX) $(FLAGS_CC) $(FLAGS_SHARED) -o $@ $(LIBXTCORE_BINOBJ) $(FLAGS_LD) $(DEP_DLIB) -shared -fPIC
-
-# all
 SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)   $(wildcard $(PATH_SRC)/*/*.h)
 SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp) $(wildcard $(PATH_SRC)/*/*.hpp)
 SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl) $(wildcard $(PATH_SRC)/*/*.inl)
@@ -40,10 +9,12 @@ SOURCE_TML = $(wildcard $(PATH_SRC)/*.tml) $(wildcard $(PATH_SRC)/*/*.tml)
 SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)   $(wildcard $(PATH_SRC)/*/*.c)
 SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)  $(wildcard $(PATH_SRC)/*/*.cc)
 SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp) $(wildcard $(PATH_SRC)/*/*.cpp)
+SOURCE_SCN = $(wildcard $(PATH_SCN)/*.scn)
 
 SOURCE_API = $(SOURCE_H) $(SOURCE_HPP) $(SOURCE_INL) $(SOURCE_TML)
 
 
+BINPPM_SCN = $(SOURCE_SCN:.scn=.ppm)
 BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_C:.c=.o)))
 BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CC:.cc=.o)))
 BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CPP:.cpp=.o)))
@@ -60,7 +31,7 @@ FLAGS_WARNLV = -Wall
 FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC)
 FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
-FLAGS_LD  = -lgomp -ldl
+FLAGS_LD  = -lgomp -ldl -lGL -lglut
 FLAGS_CC  = $(FLAGS_COMMON) -std=c89 -Wall
 FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 
@@ -68,10 +39,16 @@ FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 .PHONY: all
 all: $(BIN)
 
+.PHONY: test
+test: $(BINPPM_SCN)
+
 .PHONY: dirtree
 dirtree:
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
+
+$(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN
+	$(BIN) -res 800x800 $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)

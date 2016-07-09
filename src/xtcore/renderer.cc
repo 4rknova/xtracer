@@ -1,4 +1,4 @@
 #include "renderer.h"
 
-Renderer::~Renderer()
+IRenderer::~IRenderer()
 {}

@@ -19,6 +19,7 @@
 #define VALUE_DEFAULT_VEC3 (NMath::Vector3f(0.f,0.f,0.f))
 #define VALUE_DEFAULT_COL3 (NImg::ColorRGBf(0.f,0.f,0.f))
 #define VALUE_DEFAULT_CSTR ("")
+#define VALUE_DEFAULT_BOOL false
 
 using NMath::Geometry;
 
@@ -34,6 +35,7 @@ class Scene
 		NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def = VALUE_DEFAULT_VEC3);
 		NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = VALUE_DEFAULT_NUMF);
 		std::string     deserialize_cstr(const char *val, const char*           def = VALUE_DEFAULT_CSTR);
+		bool            deserialize_bool(const char *val, const bool            def = VALUE_DEFAULT_BOOL);
 
 	public:
 		Scene();

@@ -15,10 +15,10 @@
 using NImg::ColorRGBf;
 using NImg::Pixmap;
 
-class PhotonMapper : public Renderer
+class Renderer : public IRenderer
 {
 	public:
-		PhotonMapper();
+		Renderer();
 
 		virtual void setup(Pixmap &fb, Scene &scene);
 		virtual void render(void);

@@ -27,18 +27,18 @@
 
 using Util::String::path_comp;
 
-PhotonMapper::PhotonMapper()
+Renderer::Renderer()
 	: mFramebuffer(NULL)
 	, mScene(NULL)
 {}
 
-void PhotonMapper::setup(Pixmap &fb, Scene &scene)
+void Renderer::setup(Pixmap &fb, Scene &scene)
 {
 	mFramebuffer = &fb;
 	mScene = &scene;
 }
 
-void PhotonMapper::render(void)
+void Renderer::render(void)
 {
 	if (mScene && mFramebuffer) {
 		// If gi is enabled, do the photon mapping 1st pass.
@@ -55,7 +55,7 @@ void PhotonMapper::render(void)
 	}
 }
 
-void PhotonMapper::pass_ptrace(Scene *scene)
+void Renderer::pass_ptrace(Scene *scene)
 {
 	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
@@ -110,7 +110,7 @@ void PhotonMapper::pass_ptrace(Scene *scene)
 	m_pm_global.balance();
 }
 
-bool PhotonMapper::trace_photon(Scene *scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
+bool Renderer::trace_photon(Scene *scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
 	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH)//Environment::handle().max_rdepth())
 		return false;
@@ -174,13 +174,13 @@ bool PhotonMapper::trace_photon(Scene *scene, const Ray &ray, const unsigned int
 	return false;
 }
 
-void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
+void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 {
 	// precalculate some constants
 	const unsigned int rminx = 0;// Environment::handle().region_min_x();
 	const unsigned int rminy = 0;//Environment::handle().region_min_y();
-	const unsigned int rmaxx = 800;//Environment::handle().region_max_x();
-	const unsigned int rmaxy = 600;//Environment::handle().region_max_y();
+	const unsigned int rmaxx = fb->width();//Environment::handle().region_max_x();
+	const unsigned int rmaxy = fb->height();//Environment::handle().region_max_y();
 	const unsigned int width = fb->width();
 	const unsigned int height = fb->height();
 	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
@@ -279,7 +279,7 @@ void PhotonMapper::pass_rtrace(Pixmap *fb, Scene *scene)
 	}
 }
 
-ColorRGBf PhotonMapper::trace_ray(Scene *scene, const Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::trace_ray(Scene *scene, const Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	IntInfo info;
@@ -328,7 +328,7 @@ ColorRGBf PhotonMapper::trace_ray(Scene *scene, const Ray &ray, const unsigned i
 	return ColorRGBf(0, 0, 0);
 }
 
-ColorRGBf PhotonMapper::shade(Scene *scene, const Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::shade(Scene *scene, const Ray &ray, const unsigned int depth,
 	IntInfo &info, std::string &obj,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {

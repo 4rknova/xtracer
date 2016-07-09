@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		Renderer *renderer = new PhotonMapper();
+		IRenderer *renderer = new Renderer();
 
 		renderer->setup(fb, scene);
 

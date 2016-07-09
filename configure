@@ -10,6 +10,7 @@ MAN_SECTION=""
 
 PATH_PREFIX=/usr/local
 PATH_SRC=src
+PATH_SCN=scene
 PATH_BIN=bin
 PATH_OBJ=$PATH_BIN/obj
 PATH_MAN=man
@@ -90,6 +91,7 @@ echo "SW_VERSION = $SW_VERSION" >> Makefile
 echo >> Makefile
 
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
+echo "PATH_SCN = $PATH_SCN" >> Makefile
 echo "PATH_SRC = $PATH_SRC" >> Makefile
 echo "PATH_BIN = $PATH_BIN" >> Makefile
 echo "PATH_OBJ = $PATH_OBJ" >> Makefile

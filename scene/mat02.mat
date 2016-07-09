@@ -1,14 +1,14 @@
-# Xtracer porcelain material 
-#	To use these material just include this file 
-#	in your scene's material section
-#	with: %include mat02.mat
+# Xtracer porcelain material
+# To use these material include
+# this file in your scene's material
+# section with: %include mat02.mat
 
 porcelain = {
-	type = phong 
+	type = phong
 	k_diffuse = 0.8
 	k_specular = 0.2
 	k_specexp = 60
-	
+
 	diffuse = {
 		r = 0.980
 		g = 0.9215

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -7,7 +8,7 @@
 #include <nmesh/transform.hpp>
 #include <nmesh/calcnormals.hpp>
 #include <nmesh/obj.hpp>
-
+#include <nimg/checkerboard.h>
 #include <nmath/geometry.h>
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
@@ -109,6 +110,14 @@ NMath::scalar_t Scene::deserialize_numf(const char *val, const NMath::scalar_t d
 	return val ? (scalar_t)to_double(val) : def;
 }
 
+bool Scene::deserialize_bool(const char *val, const bool def)
+{
+	if (!val) return false;
+	std::string s = val;
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	return ( (s == "yes") || (s == "true") ) ? true : false;
+}
+
 std::string Scene::deserialize_cstr(const char *val, const char* def)
 {
 	return val ? val : def;
@@ -124,56 +133,37 @@ const char *Scene::source()
 	return m_source.c_str();
 }
 
+
+template<typename T>
+void purge(std::map<std::string, T*> &map)
+{
+	if(!map.empty()) {
+		for (typename std::map<std::string, T*>::iterator it = map.begin(); it != map.end(); ++it) {
+			Log::handle().log_message("Releasing %s..", (*it).first.c_str());
+			delete (*it).second;
+		}
+		map.clear();
+	}
+}
+
+template<typename T>
+unsigned int purge(std::map<std::string, T*> &map, const char *name)
+{
+	typename std::map<std::string, T*>::iterator it = map.find(name);
+	if (it == map.end()) return 1;
+	delete (*it).second;
+	map.erase(it);
+	return 0;
+}
+
 void Scene::release()
 {
 	Log::handle().log_message("Cleaning up..");
-
-	// Release the lights
-	if(!m_lights.empty()) {
-		Log::handle().log_message("Releasing the lights..");
-		for (std::map<std::string, Light *>::iterator it = m_lights.begin(); it != m_lights.end(); ++it) {
-			delete (*it).second;
-		}
-		m_lights.clear();
-	}
-
-	// Release the materials
-	if(!m_materials.empty()) {
-		Log::handle().log_message("Releasing the materials..");
-		for (std::map<std::string, Material *>::iterator it = m_materials.begin(); it != m_materials.end(); ++it) {
-			delete (*it).second;
-		}
-		m_materials.clear();
-	}
-
-	// Release the textures
-	if(!m_textures.empty()) {
-		Log::handle().log_message("Releasing the textures..");
-		for (std::map<std::string, Texture2D *>::iterator it = m_textures.begin(); it != m_textures.end(); ++it) {
-			delete (*it).second;
-		}
-		m_textures.clear();
-	}
-
-	// Release the geometry
-	if(!m_geometry.empty()) {
-		Log::handle().log_message("Releasing the geometry..");
-		for (std::map<std::string, Geometry *>::iterator it = m_geometry.begin(); it != m_geometry.end(); ++it) {
-			delete (*it).second;
-		}
-		m_geometry.clear();
-	}
-
-	// Release the objects
-	if(!m_objects.empty()) {
-		Log::handle().log_message("Releasing the objects..");
-		for (std::map<std::string, Object *>::iterator it = m_objects.begin(); it != m_objects.end(); ++it) {
-			delete (*it).second;
-		}
-		m_objects.clear();
-	}
-
-	// Release the camera
+	purge(m_lights);
+	purge(m_materials);
+	purge(m_textures);
+	purge(m_geometry);
+	purge(m_objects);
 	Log::handle().log_message("Releasing the camera..");
 	delete camera;
 	camera = NULL;
@@ -181,80 +171,32 @@ void Scene::release()
 
 unsigned int Scene::destroy_camera(const char *name)
 {
-	std::map<std::string, Camera *>::iterator it = m_cameras.find(name);
-
-	if (it == m_cameras.end())
-	    return 1;
-
-	delete (*it).second;
-	m_cameras.erase(it);
-
-	return 0;
+	return purge(m_cameras, name);
 }
 
 unsigned int Scene::destroy_light(const char *name)
 {
-	std::map<std::string, Light *>::iterator it = m_lights.find(name);
-
-	if (it == m_lights.end())
-	    return 1;
-
-	delete (*it).second;
-	m_lights.erase(it);
-
-	return 0;
+	return purge(m_lights, name);
 }
 
 unsigned int Scene::destroy_material(const char *name)
 {
-	std::map<std::string, Material *>::iterator it = m_materials.find(name);
-
-	if (it == m_materials.end())
-	    return 1;
-
-	delete (*it).second;
-	m_materials.erase(it);
-
-	return 0;
+	return purge(m_materials, name);
 }
 
 unsigned int Scene::destroy_texture(const char *name)
 {
-	std::map<std::string, Texture2D *>::iterator it = m_textures.find(name);
-
-	if (it == m_textures.end())
-	    return 1;
-
-	delete (*it).second;
-	m_textures.erase(it);
-
-	return 0;
+	return purge(m_textures, name);
 }
 
 unsigned int Scene::destroy_geometry(const char *name)
 {
-	std::map<std::string, Geometry *>::iterator it = m_geometry.find(name);
-
-	if (it == m_geometry.end())
-	    return 1;
-
-	delete (*it).second;
-	m_geometry.erase(it);
-
-	return 0;
+	return purge(m_geometry, name);
 }
 
 unsigned int Scene::destroy_object(const char *name)
 {
-	std::map<std::string, Object *>::iterator it = m_objects.find(name);
-
-	if (it == m_objects.end())
-	    return 1;
-
-	delete (*it).second;
-	m_objects.erase(it);
-
-	return 0;
+	return purge(m_objects, name);
 }
 
 unsigned int Scene::load(const char *filename)
@@ -306,9 +248,8 @@ unsigned int Scene::build()
 	// Start populating the lists
 	unsigned int count = 0;
 
-	scalar_t k = to_double(m_scene.get_property_by_name(XTPROTO_PROP_KAMBN));
-	m_ambient = deserialize_col3(m_scene.get_group_by_name(XTPROTO_PROP_IAMBN))
-			  * (k < 0.f ? 0.f : k);
+	m_ambient  = deserialize_col3(m_scene.get_group_by_name(XTPROTO_PROP_IAMBN))
+			   * deserialize_numf(m_scene.get_property_by_name(XTPROTO_PROP_KAMBN));
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_LIGHT);
@@ -317,22 +258,19 @@ unsigned int Scene::build()
 	sections.push_back(XTPROTO_NODE_GEOMETRY);
 	sections.push_back(XTPROTO_NODE_OBJECT);
 
-	std::list<std::string>::iterator it;
-
 	Log::handle().log_message("Building the scene objects..");
 
-	for (it = sections.begin(); it != sections.end(); it++)
-	{
+	std::list<std::string>::iterator it = sections.begin();
+	std::list<std::string>::iterator et = sections.end();
+
+	for (; it != et; ++it) {
 		// Populate the groups
 		count = m_scene.get_group_by_name((*it).c_str())->count_groups();
-		if (count)
-		{
+		if (count) {
 			Log::handle().log_message("Processing section: %s", (*it).c_str());
-			for (unsigned int i = 0; i < count; ++i)
-			{
+			for (unsigned int i = 0; i < count; ++i) {
 				NCF *lnode = m_scene.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
-				// Handle node
 				     if (!(*it).compare(XTPROTO_NODE_OBJECT   )) create_object(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_LIGHT    )) create_light(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_MATERIAL )) create_material(lnode);
@@ -368,16 +306,13 @@ unsigned int Scene::set_camera(const char *name)
 	// Try the given -> default -> first available camera
 	std::string dcam;
 
-	// I do this in order to avoid exception:
-	//		basic_string::_S_construct null not valid
-	// in case of: name == NULL
-	if (name) dcam = name;
+	if (name) dcam = deserialize_cstr(name);
 
 	if (dcam.empty()) {
-		dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_property_by_name(XTPROTO_PROP_DEFAULT);
+		dcam = deserialize_cstr(m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_property_by_name(XTPROTO_PROP_DEFAULT));
 		if (dcam.empty()) {
 			Log::handle().log_message("No default camera was specified.");
-			dcam = m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(0)->get_name();
+			dcam = deserialize_cstr(m_scene.get_group_by_name(XTPROTO_NODE_CAMERA)->get_group_by_index(0)->get_name());
 		}
 	}
 
@@ -409,7 +344,7 @@ unsigned int Scene::create_light(NCF *p)
 	if (!p)
 		return 1;
 
-	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
+	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	Light *light = NULL;
 
@@ -424,7 +359,7 @@ unsigned int Scene::create_light(NCF *p)
 		if (!light)
 			return 2;
 
-		scalar_t radius = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_RADIUS));
+		scalar_t radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 		((SphereLight *)light)->radius(radius);
 	}
 	else if (!type.compare(XTPROTO_LTRL_BOXLIGHT)) {
@@ -475,35 +410,30 @@ unsigned int Scene::create_geometry(NCF *p)
 
 	Geometry *geometry = NULL;
 
-	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
-	// - Plane.
+	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		geometry = new (std::nothrow) Plane;
 
-		if(!geometry)
-			return 2;
+		if(!geometry) return 2;
 
 		// Set the properties.
 		((Plane *)geometry)->normal   = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_NORMAL));
-		((Plane *)geometry)->distance = (scalar_t)to_double(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+		((Plane *)geometry)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
 	}
-	// - Sphere.
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		geometry = new (std::nothrow) Sphere;
 
-		if(!geometry)
-			return 2;
+		if(!geometry) return 2;
 
 		// set the properties.
 		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
 		((Sphere *)geometry)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
-	// - Triangle.
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		geometry = new (std::nothrow) Triangle;
 
-		if(!geometry)
-			return 2;
+		if(!geometry) return 2;
 
 		for (unsigned int i = 0; i < 3; ++i) {
 			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
@@ -516,7 +446,7 @@ unsigned int Scene::create_geometry(NCF *p)
 		geometry = new (std::nothrow) Mesh;
 
 		// Smooth surface
-		bool smooth = to_bool(p->get_property_by_name(XTPROTO_PROP_SMOOTH));
+		bool smooth = deserialize_bool(p->get_property_by_name(XTPROTO_PROP_SMOOTH));
 
 		// Data source
 		std::string f = p->get_property_by_name(XTPROTO_PROP_SOURCE);
@@ -613,17 +543,14 @@ unsigned int Scene::create_material(NCF *p)
 
 unsigned int Scene::create_texture(NCF *p)
 {
-	if (!p)
-		return 1;
+	if (!p)	return 1;
 
 	Texture2D *texture = new (std::nothrow) Texture2D;
 
-	if (!texture)
-		return 2;
+	if (!texture) return 2;
 
-	std::string source = p->get_property_by_name(XTPROTO_PROP_SOURCE);
-
-	std::string script_source = m_scene.get_source();
+	std::string source        = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string script_source = deserialize_cstr(m_scene.get_source());
 	std::string script_base, script_filename;
 	path_comp(script_source, script_base, script_filename);
 
@@ -632,9 +559,14 @@ unsigned int Scene::create_texture(NCF *p)
 	Log::handle().log_message("Loading data from %s", source.c_str());
 	if (texture->load(source.c_str())) {
 		Log::handle().log_warning("Failed to load texture [%s->%s]", p->get_name(), source.c_str());
+		Log::handle().log_warning("Replacing with checkerboard..");
 
-		delete texture;
-		return 1;
+		NImg::Pixmap tex;
+		NImg::ColorRGBAf a   = NImg::ColorRGBAf(0.5,0.5,0.5,1);
+		NImg::ColorRGBAf b   = NImg::ColorRGBAf(1,1,1,1);
+		NImg::Generate::checkerboard(tex, 2, 2, a, b);
+
+		texture->load(tex);
 	}
 
 	// Destroy the old texture from the list if it exists.
@@ -656,7 +588,7 @@ unsigned int Scene::create_object(NCF *p)
 	{
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
 		if (m_geometry.find(n) != m_geometry.end()) {
-			object->geometry = n;
+			object->geometry = deserialize_cstr(n);
 		}
 		else {
 			Log::handle().log_warning("At object: %s, geometry %s does not exist.", p->get_name(), n);
@@ -667,7 +599,7 @@ unsigned int Scene::create_object(NCF *p)
 
 	{
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
-		if (m_materials.find(n) != m_materials.end()) object->material = n;
+		if (m_materials.find(n) != m_materials.end()) object->material = deserialize_cstr(n);
 		else {
 			Log::handle().log_warning("At object: %s, material %s does not exist.", p->get_name(), n);
 			delete object;
@@ -679,7 +611,7 @@ unsigned int Scene::create_object(NCF *p)
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_TEX);
 
 		if (n) {
-			if (m_textures.find(n) != m_textures.end()) object->texture = n;
+			if (m_textures.find(n) != m_textures.end()) object->texture = deserialize_cstr(n);
 			else {
 				Log::handle().log_warning("At object: %s, texture %s does not exist.", p->get_name(), n);
 				delete object;

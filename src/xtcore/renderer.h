@@ -4,10 +4,10 @@
 #include <nimg/pixmap.h>
 #include "scene.h"
 
-class Renderer
+class IRenderer
 {
 	public:
-		virtual ~Renderer();
+		virtual ~IRenderer();
 
 		virtual void setup(NImg::Pixmap &fb, Scene &scene) = 0;
 		virtual void render(void) = 0;
