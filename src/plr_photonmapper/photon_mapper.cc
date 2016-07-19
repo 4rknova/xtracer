@@ -199,7 +199,7 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	unsigned int aa = 1; // Environment::handle().aa();
 
 	// Explicitely set the thread count if requested.
-	const unsigned int thread_count = 8;// Environment::handle().threads();
+	const unsigned int thread_count = 0;// Environment::handle().threads();
 	if (thread_count) {
 		omp_set_num_threads(thread_count);
 	}
