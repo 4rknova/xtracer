@@ -35,7 +35,7 @@ ambient = {
 
 # The scene cameras.
 camera = {
-	
+
 	# The default camera.
 	default = front
 
@@ -87,7 +87,7 @@ light = {
 				y = 548.7998
 				z = 332.0
 			}
- 
+
 			v2 = {
 				x = 213.0
 				y = 548.7998
@@ -136,7 +136,7 @@ light = {
 # The scene materials
 material = {
 
-	# The following three colors are RGB approximations to the spectral 
+	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, col1, and col2 paints used in the Cornell Box.
 	white = {
 		type = lambert
@@ -285,7 +285,7 @@ geometry = {
 
 		vecdata = {
 			v0 = {
-				x = 552.8 
+				x = 552.8
 				y = 0.0
 				z = 0.0
 			}
@@ -312,7 +312,7 @@ geometry = {
 				y = 0.0
 				z = 0.0
 			}
-			
+
 			v1 = {
 				x = 0.0
 				y = 0.0
@@ -354,7 +354,7 @@ geometry = {
 
 	ceiling_2 = {
 		type = triangle
-		
+
 		vecdata = {
 			v0 = {
 				x = 556.0
@@ -376,7 +376,7 @@ geometry = {
 		}
 	}
 
-	
+
 	# - Back wall
 	back_wall_1 = {
 		type = triangle
@@ -400,7 +400,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	back_wall_2 = {
 		type = triangle
 		vecdata = {
@@ -620,7 +620,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	tall_block_3_1 = {
 		type = triangle
 		vecdata = {
@@ -666,7 +666,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	tall_block_4_1 = {
 		type = triangle
 		vecdata = {
@@ -766,11 +766,11 @@ object = {
 	light_1 = {
 		geometry = light_1
 		material = light
-	}	
+	}
 
 	light_2 = {
 		geometry = light_2
-		material = light 
+		material = light
 	}
 
 	# Floor
@@ -816,13 +816,13 @@ object = {
 		geometry = left_wall_2
 		material = col1
 	}
-	
+
 	# Right wall
 	right_wall_1 = {
 		geometry = right_wall_1
 		material = col2
 	}
-	
+
 	right_wall_2 = {
 		geometry = right_wall_2
 		material = col2

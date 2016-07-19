@@ -25,9 +25,6 @@
 
 */
 
-#include "matrix.h"
-#include "vector.h"
-
 #ifdef __cplusplus
     #include <cmath>
 	#include <cstdio>
@@ -35,6 +32,8 @@
     #include <math.h>
 	#include <stdio.h>
 #endif  /* __cplusplus */
+#include "matrix.h"
+#include "vector.h"
 
 namespace NMath {
 
@@ -381,7 +380,7 @@ Matrix4x4f::Matrix4x4f()
     *this = identity;
 }
 
-Matrix4x4f::Matrix4x4f(   scalar_t m11, scalar_t m12, scalar_t m13, scalar_t m14,
+Matrix4x4f::Matrix4x4f( scalar_t m11, scalar_t m12, scalar_t m13, scalar_t m14,
                         scalar_t m21, scalar_t m22, scalar_t m23, scalar_t m24,
                         scalar_t m31, scalar_t m32, scalar_t m33, scalar_t m34,
                         scalar_t m41, scalar_t m42, scalar_t m43, scalar_t m44)
@@ -437,8 +436,8 @@ Matrix4x4f operator *(const Matrix4x4f &m1, const Matrix4x4f &m2)
 
 	for(int i=0; i<4; i++) {
 		for(int j=0; j<4; j++) {
-			res.data[i][j] =	m1.data[i][0] * m2.data[0][j] + 
-									m1.data[i][1] * m2.data[1][j] + 
+			res.data[i][j] =	m1.data[i][0] * m2.data[0][j] +
+									m1.data[i][1] * m2.data[1][j] +
 									m1.data[i][2] * m1.data[i][2] +
 									m1.data[i][3] * m2.data[3][j];
         }
@@ -471,10 +470,10 @@ void operator *=(Matrix4x4f &m1, const Matrix4x4f &m2)
     Matrix4x4f res;
     for(int i=0; i<4; i++) {
         for(int j=0; j<4; j++) {
-			res.data[i][j] =	m1.data[i][0] * m2.data[0][j] + 
-									m1.data[i][1] * m2.data[1][j] + 
-									m1.data[i][2] * m1.data[i][2] +
-									m1.data[i][3] * m2.data[3][j];
+			res.data[i][j] = m1.data[i][0] * m2.data[0][j] +
+							 m1.data[i][1] * m2.data[1][j] +
+							 m1.data[i][2] * m2.data[2][j] +
+							 m1.data[i][3] * m2.data[3][j];
 
         }
     }
@@ -513,7 +512,7 @@ Vector4f operator *(const Matrix4x4f &mat, const Vector4f &vec)
 	res.y = (mat[1][0] * vec.x) + (mat[1][1] * vec.y) + (mat[1][2] * vec.z) + (mat[1][3] * vec.w);
 	res.z = (mat[2][0] * vec.x) + (mat[2][1] * vec.y) + (mat[2][2] * vec.z) + (mat[2][3] * vec.w);
 	res.w = (mat[3][0] * vec.x) + (mat[3][1] * vec.y) + (mat[3][2] * vec.z) + (mat[3][3] * vec.w);
-	
+
 	return res;
 }
 

@@ -6,7 +6,7 @@ versn = 0.2
 
 # The scene cameras.
 camera = {
-	
+
 	# The default camera.
 	default = front
 
@@ -23,7 +23,7 @@ camera = {
 		}
 
 		# Target.
-		# This is equal to the direction (0, 1, 0) 
+		# This is equal to the direction (0, 1, 0)
 		# as defined in the original data.
 		target = {
 			x = 278.0
@@ -65,7 +65,7 @@ light = {
 # The scene materials
 material = {
 
-	# The following three colors are RGB approximations to the spectral 
+	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, yellow, and green paints used in the Cornell Box.
 	white = {
 		type = lambert
@@ -139,7 +139,7 @@ geometry = {
 
 		vecdata = {
 			v0 = {
-				x = 552.8 
+				x = 552.8
 				y = 0.0
 				z = 0.0
 			}
@@ -166,7 +166,7 @@ geometry = {
 				y = 0.0
 				z = 0.0
 			}
-			
+
 			v1 = {
 				x = 0.0
 				y = 0.0
@@ -208,7 +208,7 @@ geometry = {
 
 	ceiling_2 = {
 		type = triangle
-		
+
 		vecdata = {
 			v0 = {
 				x = 556.0
@@ -230,13 +230,13 @@ geometry = {
 		}
 	}
 
-	
+
 	# - Back wall
 	back_wall_1 = {
 		type = triangle
 		vecdata = {
 			v0 = {
-				x = 549.6 
+				x = 549.6
 				y = 0.0
 				z = 559.2
 			}
@@ -254,7 +254,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	back_wall_2 = {
 		type = triangle
 		vecdata = {
@@ -373,13 +373,13 @@ geometry = {
 	# Model
 	model = {
 		type = mesh
-		source = <meshdir>/head_cornell.obj
+		source = data/head_cornell.obj
 	}
 }
 
 texture = {
 	model = {
-		source = <texdir>/head/Map-COL.ppm
+		source = data/Map-COL.ppm
 	}
 }
 
@@ -428,13 +428,13 @@ object = {
 		geometry = left_wall_2
 		material = yellow
 	}
-	
+
 	# Right wall
 	right_wall_1 = {
 		geometry = right_wall_1
 		material = green
 	}
-	
+
 	right_wall_2 = {
 		geometry = right_wall_2
 		material = green

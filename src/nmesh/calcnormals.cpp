@@ -13,7 +13,7 @@ int calc_normals(NMesh::Mesh &mesh)
 	Buffer<index_t>  &p_meshi = mesh.indices();
 
 	// Zero out all the normals.
-	for (unsigned int i = 0; i < p_meshv.count(); i++) {
+	for (unsigned int i = 0; i < p_meshv.count(); ++i) {
 		p_meshv[i].nx = 0.0f;
 		p_meshv[i].ny = 0.0f;
 		p_meshv[i].nz = 0.0f;
@@ -79,17 +79,18 @@ int calc_normals(NMesh::Mesh &mesh)
 		p_meshv[p_meshi[i+2]].ny = (NMath::scalar_t)n2.y;
 		p_meshv[p_meshi[i+2]].nz = (NMath::scalar_t)n2.z;
 	}
-/*
+
 	for (unsigned int i = 0; i < p_meshv.count(); ++i) {
-		NMath::Vector3f v = NMath::Vector3f(p_meshv[i].nx,
-						      p_meshv[i].ny,
-							  p_meshv[i].nz).normalized();
+		NMath::Vector3f v = NMath::Vector3f(
+			p_meshv[i].nx,
+			p_meshv[i].ny,
+			p_meshv[i].nz).normalized();
 
 		p_meshv[i].nx = (NMath::scalar_t)v.x;
 		p_meshv[i].ny = (NMath::scalar_t)v.y;
 		p_meshv[i].nz = (NMath::scalar_t)v.z;
 	}
-*/
+
 	return 0;
 }
 

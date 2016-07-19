@@ -273,7 +273,7 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 
 				std::cout	<< " " << std::setw(6) << std::setprecision(2) << pr
 							<< "% ] [ "<< totalw << " C: " << std::setw(wlen)
-							<< omp_get_num_threads() + 1 << " ]" << std::flush;
+							<< omp_get_thread_num() << " ]" << std::flush;
 			}
 		}
 	}

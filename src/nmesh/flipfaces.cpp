@@ -39,8 +39,8 @@ int flip_faces(Mesh &mesh)
 	// Invert the faces.
 	for (unsigned int i = 0; i < p_meshi.count(); i+=3) {
 		int temp = p_meshi[i];
-		p_meshi[i] = p_meshi[i+2]; 
-		p_meshi[i+2] = temp; 
+		p_meshi[i] = p_meshi[i+2];
+		p_meshi[i+2] = temp;
 	}
 
 	// Correct the normals.

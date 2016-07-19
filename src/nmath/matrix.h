@@ -181,7 +181,7 @@ class Matrix4x4f
 
 		void scale(const Vector4f &vec);
 		void set_scaling(const Vector4f &vec);
-		
+
 		/* Tuple operations */
  		void set_column_vector(const Vector4f &vec, unsigned int index);
 		void set_row_vector(const Vector4f &vec, unsigned int index);

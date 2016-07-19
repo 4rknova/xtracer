@@ -139,7 +139,7 @@ void purge(std::map<std::string, T*> &map)
 {
 	if(!map.empty()) {
 		for (typename std::map<std::string, T*>::iterator it = map.begin(); it != map.end(); ++it) {
-			Log::handle().log_message("Releasing %s..", (*it).first.c_str());
+//			Log::handle().log_message("Releasing %s..", (*it).first.c_str());
 			delete (*it).second;
 		}
 		map.clear();
@@ -164,7 +164,7 @@ void Scene::release()
 	purge(m_textures);
 	purge(m_geometry);
 	purge(m_objects);
-	Log::handle().log_message("Releasing the camera..");
+//	Log::handle().log_message("Releasing the camera..");
 	delete camera;
 	camera = NULL;
 }
@@ -463,6 +463,11 @@ unsigned int Scene::create_geometry(NCF *p)
 			Log::handle().log_warning("Failed to load mesh from %s", f.c_str());
 			delete geometry;
 			return 1;
+		}
+
+		if (p->query_group(XTPROTO_PROP_ROTATION)) {
+			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ROTATION));
+			NMesh::Mutator::rotate(dynamic_cast<NMesh::Mesh &>(*geometry), v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_SCALE)) {

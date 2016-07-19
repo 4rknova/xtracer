@@ -51,44 +51,22 @@ void Mesh::calc_aabb()
 void Mesh::build_octree()
 {
 	for (unsigned int i = 0; i < indices_ro().count(); i+=3) {
+		unsigned int k = indices_ro()[i  ],
+		             l = indices_ro()[i+1],
+					 m = indices_ro()[i+2];
+
 		Triangle p;
-		IntInfo inf;
-
-		p.v[0] = Vector3f(vertices_ro()[indices_ro()[i  ]].px,
-						  vertices_ro()[indices_ro()[i  ]].py,
-						  vertices_ro()[indices_ro()[i  ]].pz);
-
-		p.v[1] = Vector3f(vertices_ro()[indices_ro()[i+1]].px,
-						  vertices_ro()[indices_ro()[i+1]].py,
-						  vertices_ro()[indices_ro()[i+1]].pz);
-
-		p.v[2] = Vector3f(vertices_ro()[indices_ro()[i+2]].px,
-						  vertices_ro()[indices_ro()[i+2]].py,
-						  vertices_ro()[indices_ro()[i+2]].pz);
-
-		p.n[0] = Vector3f(vertices_ro()[indices_ro()[i  ]].nx,
-						  vertices_ro()[indices_ro()[i  ]].ny,
-						  vertices_ro()[indices_ro()[i  ]].nz);
-
-		p.n[1] = Vector3f(vertices_ro()[indices_ro()[i+1]].nx,
-						  vertices_ro()[indices_ro()[i+1]].ny,
-						  vertices_ro()[indices_ro()[i+1]].nz);
-
-		p.n[2] = Vector3f(vertices_ro()[indices_ro()[i+2]].nx,
-						  vertices_ro()[indices_ro()[i+2]].ny,
-						  vertices_ro()[indices_ro()[i+2]].nz);
-
-		p.tc[0] = Vector3f(vertices_ro()[indices_ro()[i  ]].u,
-						   vertices_ro()[indices_ro()[i  ]].v);
-
-		p.tc[1] = Vector3f(vertices_ro()[indices_ro()[i+1]].u,
-						   vertices_ro()[indices_ro()[i+1]].v);
-
-		p.tc[2] = Vector3f(vertices_ro()[indices_ro()[i+2]].u,
-						   vertices_ro()[indices_ro()[i+2]].v);
+		p.v[0]  = Vector3f(vertices_ro()[k].px, vertices_ro()[k].py, vertices_ro()[k].pz);
+		p.v[1]  = Vector3f(vertices_ro()[l].px, vertices_ro()[l].py, vertices_ro()[l].pz);
+		p.v[2]  = Vector3f(vertices_ro()[m].px, vertices_ro()[m].py, vertices_ro()[m].pz);
+		p.n[0]  = Vector3f(vertices_ro()[k].nx, vertices_ro()[k].ny, vertices_ro()[k].nz);
+		p.n[1]  = Vector3f(vertices_ro()[l].nx, vertices_ro()[l].ny, vertices_ro()[l].nz);
+		p.n[2]  = Vector3f(vertices_ro()[m].nx, vertices_ro()[m].ny, vertices_ro()[m].nz);
+		p.tc[0] = Vector3f(vertices_ro()[k].u, vertices_ro()[k].v);
+		p.tc[1] = Vector3f(vertices_ro()[l].u, vertices_ro()[l].v);
+		p.tc[2] = Vector3f(vertices_ro()[m].u, vertices_ro()[m].v);
 
 		p.calc_aabb();
-
 		m_octree.add(p.aabb, p);
 	}
 

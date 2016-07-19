@@ -1,30 +1,5 @@
-/*
-
-	This file is part of libnmesh.
-
-	transform.hpp
-	Transformation mutators
-
-	Copyright (C) 2008, 2010 - 2012
-	Papadopoulos Nikolaos
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 3 of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU	Lesser General Public License for more details.
-
-	You should have received a copy of the GNU Lesser General
-	Public License along with this program; if not, write to the
-	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-	Boston, MA 02110-1301 USA
-
-*/
-
+#include <nmath/vector.h>
+#include <nmath/matrix.h>
 #include "buffer.hpp"
 #include "transform.hpp"
 
@@ -35,7 +10,6 @@ int translate(NMesh::Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::sc
 {
 	Buffer<vertex_t> &p_meshv = mesh.vertices();
 
-	// Invert the faces.
 	for (unsigned int i = 0; i < p_meshv.count(); i++) {
 		p_meshv[i].px += x;
 		p_meshv[i].py += y;
@@ -49,11 +23,32 @@ int scale(NMesh::Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar
 {
 	Buffer<vertex_t> &p_meshv = mesh.vertices();
 
-	// Invert the faces.
 	for (unsigned int i = 0; i < p_meshv.count(); i++) {
 		p_meshv[i].px *= x;
 		p_meshv[i].py *= y;
 		p_meshv[i].pz *= z;
+	}
+
+	return 0;
+}
+
+int rotate(NMesh::Mesh &mesh, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+{
+	Buffer<vertex_t> &p_meshv = mesh.vertices();
+	NMath::Matrix4x4f mat;
+	mat.set_rotation(NMath::Vector3f(x,y,z));
+
+	for (unsigned int i = 0; i < p_meshv.count(); i++) {
+		NMath::Vector3f v(p_meshv[i].px, p_meshv[i].py, p_meshv[i].pz);
+		NMath::Vector3f n(p_meshv[i].nx, p_meshv[i].ny, p_meshv[i].nz);
+		v.transform(mat);
+		n.transform(mat);
+		p_meshv[i].px = v.x;
+		p_meshv[i].py = v.y;
+		p_meshv[i].pz = v.z;
+		p_meshv[i].nx = n.x;
+		p_meshv[i].ny = n.y;
+		p_meshv[i].nz = n.z;
 	}
 
 	return 0;
