@@ -6,7 +6,9 @@
 #include <nimg/pixmap.h>
 #include <nimg/ppm.hpp>
 #include <ncf/util.h>
+
 #include <plr_photonmapper/photon_mapper.h>
+#include <plr_depth/depth.h>
 
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.hpp>

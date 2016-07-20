@@ -14,15 +14,16 @@
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
+#define XTRACER_SETUP_DEFAULT_AA                3
 #define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      100000                  /* Default photon count for gi. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000                  /* Default photon count for gi. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000                    /* Default photon samples. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    1.0                     /* Default photon sampling radius. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.0                     /* Default photon power scaling factor. */
-#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        3                       /* Default maximum recursion depth. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0                    /* Default photon sampling radius. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25                     /* Default photon power scaling factor. */
+#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        5                       /* Default maximum recursion depth. */
 #define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1                       /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1                       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     5                       /* Default sample count for lights. */
 #define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1                       /* Default sample count for reflection. */
 
 using Util::String::path_comp;
@@ -40,19 +41,9 @@ void Renderer::setup(Pixmap &fb, Scene &scene)
 
 void Renderer::render(void)
 {
-	if (mScene && mFramebuffer) {
-		// If gi is enabled, do the photon mapping 1st pass.
-		if (XTRACER_SETUP_DEFAULT_GI) { //Environment::handle().flag_gi()) {
-			Log::handle().log_message("Global illumination is enabled.");
-			pass_ptrace(mScene);
-		}
-
-		// Render the frame.
-		pass_rtrace(mFramebuffer, mScene);
-
-	} else {
-		Log::handle().log_error("Scene or Framebuffer is NULL");
-	}
+	if (!mScene || !mFramebuffer) return;
+	if (XTRACER_SETUP_DEFAULT_GI) pass_ptrace(mScene);
+	pass_rtrace(mFramebuffer, mScene);
 }
 
 void Renderer::pass_ptrace(Scene *scene)
@@ -98,7 +89,6 @@ void Renderer::pass_ptrace(Scene *scene)
 		while (light_photons[light_index] > 0) {
 			Ray ray = (*it).second->ray_sample();
 			trace_photon(scene, ray, 0, (*it).second->intensity()
-					// * Environment::handle().photon_power_scaling()
 					* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
 					, light_photons[light_index]);
 		}
@@ -112,16 +102,14 @@ void Renderer::pass_ptrace(Scene *scene)
 
 bool Renderer::trace_photon(Scene *scene, const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
-	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH)//Environment::handle().max_rdepth())
-		return false;
+	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH) return false;
 
 	// Intersect.
 	IntInfo info;
 	memset(&info, 0, sizeof(info));
 	std::string obj;
 
-	if (!scene->intersection(ray, info, obj))
-		return false;
+	if (!scene->intersection(ray, info, obj)) return false;
 
 	// Get the material & texture.
 	Material *mat = scene->m_materials[scene->m_objects[obj]->material];
@@ -170,6 +158,11 @@ bool Renderer::trace_photon(Scene *scene, const Ray &ray, const unsigned int dep
 
 		return true;
 	}
+	else if (event < avg_range)
+	{
+	//	nray.direction = NMath::
+
+	}
 
 	return false;
 }
@@ -191,12 +184,11 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	}
 
 	Log::handle().log_message("Rendering..");
-	Log::handle().log_message("Progress ...");
 
 	float progress = 0;
 
 	// Samples per pixel, offset per sample.
-	unsigned int aa = 1; // Environment::handle().aa();
+	unsigned int aa = XTRACER_SETUP_DEFAULT_AA; // Environment::handle().aa();
 
 	// Explicitely set the thread count if requested.
 	const unsigned int thread_count = 0;// Environment::handle().threads();

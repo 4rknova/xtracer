@@ -422,17 +422,6 @@ geometry = {
 		}
 	}
 
-	sphere2 = {
-		type = sphere
-		radius = 25
-
-		position = {
-			x = 200
-			y = 25
-			z = 20
-		}
-	}
-
 	# Model
 	model = {
 		type   = mesh
@@ -539,15 +528,10 @@ object = {
 		material = matte
 	}
 
-	sphere2 = {
-		geometry = sphere2
-		material = matte
-	}
-
 	# Model
 	model = {
 		geometry = model
 		material = matte
-#		texture = model
+		texture = model
 	}
 }
