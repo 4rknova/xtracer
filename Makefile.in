@@ -30,7 +30,7 @@ BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CC:.cc=.
 			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CC:.cc=.o)))
 BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CPP:.cpp=.o))) \
 		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CPP:.cpp=.o)))
-BINOBJ	   = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
+BINOBJ	   = $(sort $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP))
 BINPATHS   = $(sort $(dir $(BINOBJ)))
 
 BIN = $(PATH_BIN)/$(SW_PACKAGE)
