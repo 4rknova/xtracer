@@ -56,7 +56,6 @@ test: $(BINPPM_SCN)
 
 .PHONY: dirtree
 dirtree:
-	echo $(BINOBJ)
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
 
