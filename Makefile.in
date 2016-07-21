@@ -1,23 +1,35 @@
+SW_VERSION=$(shell git describe --long)
+
 CC  = @echo "compiling [c  ]: $<"; gcc
 CXX = @echo "compiling [c++]: $<"; g++
 LD  = @echo "linking $@ ..."; g++
 
-SOURCE_H   = $(wildcard $(PATH_SRC)/*.h)   $(wildcard $(PATH_SRC)/*/*.h)
-SOURCE_HPP = $(wildcard $(PATH_SRC)/*.hpp) $(wildcard $(PATH_SRC)/*/*.hpp)
-SOURCE_INL = $(wildcard $(PATH_SRC)/*.inl) $(wildcard $(PATH_SRC)/*/*.inl)
-SOURCE_TML = $(wildcard $(PATH_SRC)/*.tml) $(wildcard $(PATH_SRC)/*/*.tml)
-SOURCE_C   = $(wildcard $(PATH_SRC)/*.c)   $(wildcard $(PATH_SRC)/*/*.c)
-SOURCE_CC  = $(wildcard $(PATH_SRC)/*.cc)  $(wildcard $(PATH_SRC)/*/*.cc)
-SOURCE_CPP = $(wildcard $(PATH_SRC)/*.cpp) $(wildcard $(PATH_SRC)/*/*.cpp)
-SOURCE_SCN = $(wildcard $(PATH_SCN)/*.scn)
+LIB_H   = $(wildcard $(PATH_LIB)/*/*.h)
+LIB_HPP = $(wildcard $(PATH_LIB)/*/*.hpp)
+LIB_INL = $(wildcard $(PATH_LIB)/*/*.inl)
+LIB_TML = $(wildcard $(PATH_LIB)/*/*.tml)
+LIB_C   = $(wildcard $(PATH_LIB)/*/*.c)
+LIB_CC  = $(wildcard $(PATH_LIB)/*/*.cc)
+LIB_CPP = $(wildcard $(PATH_LIB)/*/*.cpp)
+SRC_H   = $(wildcard $(PATH_SRC)/*.h)   $(wildcard $(PATH_SRC)/*/*.h)
+SRC_HPP = $(wildcard $(PATH_SRC)/*.hpp) $(wildcard $(PATH_SRC)/*/*.hpp)
+SRC_INL = $(wildcard $(PATH_SRC)/*.inl) $(wildcard $(PATH_SRC)/*/*.inl)
+SRC_TML = $(wildcard $(PATH_SRC)/*.tml) $(wildcard $(PATH_SRC)/*/*.tml)
+SRC_C   = $(wildcard $(PATH_SRC)/*.c)   $(wildcard $(PATH_SRC)/*/*.c)
+SRC_CC  = $(wildcard $(PATH_SRC)/*.cc)  $(wildcard $(PATH_SRC)/*/*.cc)
+SRC_CPP = $(wildcard $(PATH_SRC)/*.cpp) $(wildcard $(PATH_SRC)/*/*.cpp)
+SRC_SCN = $(wildcard $(PATH_SCN)/*.scn)
 
-SOURCE_API = $(SOURCE_H) $(SOURCE_HPP) $(SOURCE_INL) $(SOURCE_TML)
+SRC_API = $(LIB_H) $(LIB_HPP) $(LIB_INL) $(LIB_TML) \
+			 $(SRC_H) $(SRC_HPP) $(SRC_INL) $(SRC_TML)
 
-
-BINPPM_SCN = $(SOURCE_SCN:.scn=.ppm)
-BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_C:.c=.o)))
-BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CC:.cc=.o)))
-BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SOURCE_CPP:.cpp=.o)))
+BINPPM_SCN = $(SRC_SCN:.scn=.ppm)
+BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_C:.c=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C:.c=.o)))
+BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CC:.cc=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CC:.cc=.o)))
+BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CPP:.cpp=.o))) \
+		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CPP:.cpp=.o)))
 BINOBJ	   = $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP)
 BINPATHS   = $(sort $(dir $(BINOBJ)))
 
@@ -28,7 +40,7 @@ LIB_DYNAMIC= $(BIN).$(EXT_DYNAMIC)
 MAN = $(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)
 
 FLAGS_WARNLV = -Wall
-FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC)
+FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC) -I$(PATH_LIB)
 FLAGS_PREPRC = -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
 FLAGS_LD  = -lgomp -ldl -lGL -lglut
@@ -44,6 +56,7 @@ test: $(BINPPM_SCN)
 
 .PHONY: dirtree
 dirtree:
+	echo $(BINOBJ)
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
 
@@ -53,10 +66,19 @@ $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
 
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.c
+	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
+
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.cc
 	$(CXX) -c $(FLAGS_CXX) -o $@ $<
 
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.cc
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.cpp
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.cpp
 	$(CXX) -c $(FLAGS_CXX) -o $@ $<
 
 $(BIN): dirtree $(BINOBJ)

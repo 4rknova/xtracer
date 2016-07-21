@@ -8,7 +8,6 @@
 #include <ncf/util.h>
 
 #include <plr_photonmapper/photon_mapper.h>
-#include <plr_depth/depth.h>
 
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.hpp>
@@ -82,7 +81,7 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		IRenderer *renderer = new DRenderer();
+		IRenderer *renderer = new Renderer();
 
 		renderer->setup(fb, scene);
 
