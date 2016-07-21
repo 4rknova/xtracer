@@ -107,6 +107,3 @@ Name                     | Contributions
 -------------------------|------------------------------------------------
 Dr Qingde Li             | Supervising professor at University of Hull
 Tsiombikas John          | Technical advisory.
-
-[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.svg)](https://gratipay.com/4rknova/)
-
