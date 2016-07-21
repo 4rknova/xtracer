@@ -14,7 +14,6 @@
 
 #include "depth.h"
 
-#define XTRACER_SETUP_DEFAULT_AA                3
 using Util::String::path_comp;
 
 DRenderer::DRenderer()

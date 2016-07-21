@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		IRenderer *renderer = new Renderer();
+		IRenderer *renderer = new DRenderer();
 
 		renderer->setup(fb, scene);
 
