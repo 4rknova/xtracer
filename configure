@@ -32,7 +32,7 @@ PATH_MAN="`echo $PATH_MAN | sed -e 's/ /_/g'`"
 SW_TITLE="`echo $SW_TITLE | sed -e 's/ /_/g'`"
 SW_PACKAGE="`echo $SW_PACKAGE | sed -e 's/ /_/g'`"
 SW_SYMID="`echo $SW_TITLE | tr '[:lower:]' '[:upper:]'`"
-
+SW_VERSION="`git describe --long)`"
 
 # Options
 FLAG_OMPLIB=no
@@ -74,7 +74,7 @@ for arg; do
 	esac
 done
 
-echo "Configuring $SW_PACKAGE.."
+echo "Configuring $SW_PACKAGE v$SW_VERSION.."
 echo "- installation path prefix: $PATH_PREFIX"
 echo "- optimize for speed: $FLAG_OPTSPD"
 echo "- include debugging symbols: $FLAG_DBGSYM"
@@ -87,6 +87,7 @@ echo >> Makefile
 echo "SW_SYMID   = $SW_SYMID" >> Makefile
 echo "SW_TITLE   = $SW_TITLE" >> Makefile
 echo "SW_PACKAGE = $SW_PACKAGE" >> Makefile
+echo "SW_VERSION = $SW_VERSION" >> Makefile
 echo >> Makefile
 
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
@@ -127,7 +128,7 @@ echo 'Creating pkg-config file ...'
 
 echo "Name: $SW_TITLE" > $SW_TITLE.pc
 echo "Description: $SW_DESCRIPTION" >> $SW_TITLE.pc
-#echo "Version: $SW_VERSION" >> $SW_TITLE.pc
+echo "Version: $SW_VERSION" >> $SW_TITLE.pc
 echo "Cflags: -I$PATH_PREFIX/include/$SW_TITLE" >> $SW_TITLE.pc
 echo "Libs: -L$PATH_PREFIX/lib -l$SW_TITLE" >> $SW_TITLE.pc
 

@@ -1,5 +1,3 @@
-SW_VERSION=$(shell git describe --long)
-
 CC  = @echo "compiling [c  ]: $<"; gcc
 CXX = @echo "compiling [c++]: $<"; g++
 LD  = @echo "linking $@ ..."; g++
