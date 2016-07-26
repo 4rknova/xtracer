@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	Log::handle().log_message("XTracer %s (C) 2010-2012 Papadopoulos Nikos", XTRACER_VERSION);
+	Log::handle().log_message("XTracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
 
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
 		Log::handle().log_message("Usage: %s [option]... scene_file...", argv[0]);

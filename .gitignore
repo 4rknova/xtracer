@@ -1,5 +1,4 @@
-ide/inc/
-ide/lib/
+scene/data
 bin/
 media/
 temp/
