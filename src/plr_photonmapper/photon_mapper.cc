@@ -14,7 +14,7 @@
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
-#define XTRACER_SETUP_DEFAULT_AA                3
+#define XTRACER_SETUP_DEFAULT_AA                1
 #define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000                  /* Default photon count for gi. */
@@ -23,8 +23,10 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25                     /* Default photon power scaling factor. */
 #define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        5                       /* Default maximum recursion depth. */
 #define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1                       /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     5                       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1                       /* Default sample count for lights. */
 #define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1                       /* Default sample count for reflection. */
+
+#define TILESIZE 64
 
 using Util::String::path_comp;
 
@@ -170,20 +172,14 @@ bool Renderer::trace_photon(Scene *scene, const Ray &ray, const unsigned int dep
 void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 {
 	// precalculate some constants
-	const unsigned int rminx = 0;// Environment::handle().region_min_x();
-	const unsigned int rminy = 0;//Environment::handle().region_min_y();
-	const unsigned int rmaxx = fb->width();//Environment::handle().region_max_x();
-	const unsigned int rmaxy = fb->height();//Environment::handle().region_max_y();
-	const unsigned int width = fb->width();
-	const unsigned int height = fb->height();
-	const unsigned int w = (rmaxx > 0 && rmaxx < width ? rmaxx : width);
-	const unsigned int h = (rmaxy > 0 && rmaxy < height ? rmaxy : height);
+	const unsigned int w = fb->width();
+	const unsigned int h = fb->height();
 
-	if ( rminx != 0 && rminy != 0 && w != width && h != height) {
-		Log::handle().log_message("-> Using regional boundaries: %ix%i - %ix%i", rminx, rminy, w, h);
-	}
+	// prep data
+    const int numxtiles = w / TILESIZE;
+	const int numytiles = h / TILESIZE;
+	const int numtiles  = numxtiles*numytiles;
 
-	Log::handle().log_message("Rendering..");
 
 	float progress = 0;
 
@@ -197,7 +193,7 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	}
 
 	const unsigned int dof_samples = 1; //Environment::handle().samples_dof();
-	float one_over_h = 1.f / (float)(h - rminy > 0 ? h - rminy : 1) * 100.f;
+	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
@@ -206,67 +202,73 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	float sample_scaling = 1.0f / ((scene->camera->flength > 0 ? dof_samples : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
-	for (int y = rminy; y < (int)h; y++) {
-		for (int x = rminx; x < (int)w; x++) {
-			// the final color
-			ColorRGBf color;
+    for (int tile = 0; tile < numtiles; ++tile) {
+		// tile offset
+        const int ia = TILESIZE*(tile % numxtiles);
+        const int ja = TILESIZE*(tile / numxtiles);
 
-			// antialiasing loop
-			for (unsigned int fy = 0; fy < aa; ++fy) {
-				for (unsigned int fx = 0; fx < aa; ++fx) {
+		// for every pixel in this tile, compute color
+	    for (int j = 0; j < TILESIZE; ++j) {
+	        for( int i = 0; i < TILESIZE; ++i) {
+				float x = ia + i;
+				float y = ja + j;
+				ColorRGBf color;
 
-					float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
-					float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
+				// antialiasing loop
+				for (unsigned int fy = 0; fy < aa; ++fy) {
+					for (unsigned int fx = 0; fx < aa; ++fx) {
 
-					if (scene->camera->flength > 0) {
-						// dof loop
-						for (float dofs = 0; dofs < dof_samples; ++dofs) {
-							Ray ray = scene->camera->get_primary_ray_dof(rx , ry, (float)width, (float)height);
-							color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /* Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
+						float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
+						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
+
+						if (scene->camera->flength > 0) {
+							// dof loop
+							for (float dofs = 0; dofs < dof_samples; ++dofs) {
+								Ray ray = scene->camera->get_primary_ray_dof(rx , ry, (float)w, (float)h);
+								color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /* Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
+							}
+						}
+						else {
+							Ray ray = scene->camera->get_primary_ray(rx, ry, (float)w, (float)h);
+							color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /*Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
 						}
 					}
-					else {
-						Ray ray = scene->camera->get_primary_ray(rx, ry, (float)width, (float)height);
-						color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /*Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
-					}
 				}
+
+				fb->pixel(x, y) = color;
 			}
-
-			fb->pixel(x, y) = color;
 		}
-
-		// calculate progress
-		progress += 1;
 
 		#pragma omp critical
 		{
-			{
-				std::cout.setf(std::ios::fixed, std::ios::floatfield);
-				std::cout.setf(std::ios::showpoint);
+			// calculate progress
+			++progress;
 
-				static const unsigned int length = 25;
-				std::cout << "\rProgress [ ";
+			std::cout.setf(std::ios::fixed, std::ios::floatfield);
+			std::cout.setf(std::ios::showpoint);
 
-				float pr = progress * one_over_h;
+			static const unsigned int length = 25;
+			std::cout << "\rProgress [ ";
 
-				for (unsigned int i = 0; i < length; i++) {
-					float p = pr * length / 100;
-					if		(i < p) std::cout << '=';
-					else if (i - p < 1) std::cout << '>';
-					else	std::cout << ' ';
-				}
+			float pr = progress * one_over_h;
 
-				int totalw = omp_get_num_threads();
-				// get the string length of totalw
-				int wlen = 0;
-				int num = totalw;
-
-				while (num>0) {	num /= 10; wlen++; }
-
-				std::cout	<< " " << std::setw(6) << std::setprecision(2) << pr
-							<< "% ] [ "<< totalw << " C: " << std::setw(wlen)
-							<< omp_get_thread_num() << " ]" << std::flush;
+			for (unsigned int i = 0; i < length; i++) {
+				float p = pr * length;
+				if		(i < p) std::cout << '=';
+				else if (i - p < 1) std::cout << '>';
+				else	std::cout << ' ';
 			}
+
+			int totalw = omp_get_num_threads();
+			// get the string length of totalw
+			int wlen = 0;
+			int num = totalw;
+
+			while (num > 0) { num /= 10; wlen++; }
+
+			std::cout	<< " " << std::setw(6) << std::setprecision(2) << pr * 100.0
+						<< "% ] [ "<< totalw << " C: " << std::setw(wlen)
+						<< omp_get_thread_num() << " ]" << std::flush;
 		}
 	}
 }
