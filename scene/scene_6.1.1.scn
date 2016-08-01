@@ -25,7 +25,7 @@ camera = {
 		}
 
 		target = {
-			y = 355 
+			y = 355
 			z = -6500
 		}
 
@@ -33,7 +33,7 @@ camera = {
 			y = 1
 		}
 
-		aperture = 100
+		aperture = 50
 		flength = 2800
 	}
 }
@@ -48,7 +48,7 @@ geometry = {
 		}
 		radius = 250
 	}
-	
+
 	sphere2 = {
 		type = sphere
 		position = {
@@ -78,7 +78,7 @@ geometry = {
 		}
 		radius = 250
 	}
-	
+
 	sphere5 = {
 		type = sphere
 		position = {
@@ -122,7 +122,7 @@ geometry = {
 light = {
 	sat = {
 		type = point
-		
+
 		position = {
 			x = 2000
 			y = 3000
@@ -138,7 +138,7 @@ light = {
 
 	cat = {
 		type = point
-		
+
 		position = {
 			x = -2000
 			y = 4000
@@ -160,9 +160,9 @@ material = {
 		k_diffuse = 0.6
 		k_specular = 0.4
 		k_exponent = 9350
-	
+
 		diffuse = {
-			r = 1 
+			r = 1
 			g = 1
 			b = 1
 		}
@@ -182,7 +182,7 @@ material = {
 		k_diffuse = 0.5
 		k_specular = 0.5
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 1
 			g = 0.3431
@@ -196,14 +196,14 @@ material = {
 
 		reflectance = 0.3
 	}
-	
+
 	plastic2 = {
 		type = phong
 
 		k_diffuse = 0.6
 		k_specular = 0.4
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 1.5
 			g = 1.6470
@@ -217,14 +217,14 @@ material = {
 
 		reflectance = 0.3
 	}
-	
+
 	plastic3 = {
 		type = phong
 
 		k_diffuse = 0.6
 		k_specular = 0.4
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 1
 		}
@@ -237,14 +237,14 @@ material = {
 
 		reflectance = 0.3
 	}
-	
+
 	plastic4 = {
 		type = phong
 
 		k_diffuse = 0.5
 		k_specular = 0.5
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 0.51
 			g = 0.61
@@ -266,7 +266,7 @@ material = {
 		k_diffuse = 0.6
 		k_specular = 0.4
 		k_exponent = 60
-	
+
 		diffuse = {
 			g = 1
 			b = 1
@@ -280,14 +280,14 @@ material = {
 
 		reflectance = 0.3
 	}
-	
+
 	plastic6 = {
 		type = phong
 
 		k_diffuse = 0.6
 		k_specular = 0.4
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 0.1
 			g = 0.6

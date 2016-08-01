@@ -14,17 +14,17 @@
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
-#define XTRACER_SETUP_DEFAULT_AA                1
-#define XTRACER_SETUP_DEFAULT_GI                false                   /* Default gi flag value. */
-#define XTRACER_SETUP_DEFAULT_GIVIZ             false                   /* Default giviz flag value. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000                  /* Default photon count for gi. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000                    /* Default photon samples. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0                    /* Default photon sampling radius. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25                     /* Default photon power scaling factor. */
-#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        5                       /* Default maximum recursion depth. */
-#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1                       /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1                       /* Default sample count for lights. */
-#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1                       /* Default sample count for reflection. */
+#define XTRACER_SETUP_DEFAULT_AA                3
+#define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
+#define XTRACER_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000    /* Default photon samples. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
+#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
+#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        5       /* Default maximum recursion depth. */
+#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       10      /* Default sample count for DOF. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1       /* Default sample count for reflection. */
 
 #define TILESIZE 64
 
@@ -175,11 +175,11 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	const unsigned int w = fb->width();
 	const unsigned int h = fb->height();
 
-	// prep data
-    const int numxtiles = w / TILESIZE;
-	const int numytiles = h / TILESIZE;
-	const int numtiles  = numxtiles*numytiles;
-
+	const unsigned int dxt       = (w % TILESIZE > 0 ? 1 : 0);
+	const unsigned int dyt       = (h % TILESIZE > 0 ? 1 : 0);
+    const unsigned int numxtiles = w / TILESIZE + dxt;
+	const unsigned int numytiles = h / TILESIZE + dyt;
+	const unsigned int numtiles  = numxtiles * numytiles;
 
 	float progress = 0;
 
@@ -192,7 +192,7 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 		omp_set_num_threads(thread_count);
 	}
 
-	const unsigned int dof_samples = 1; //Environment::handle().samples_dof();
+	const unsigned int dof_samples = XTRACER_SETUP_DEFAULT_DOF_SAMPLES;
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
@@ -202,18 +202,21 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 	float sample_scaling = 1.0f / ((scene->camera->flength > 0 ? dof_samples : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
-    for (int tile = 0; tile < numtiles; ++tile) {
+    for (unsigned int tile = 0; tile < numtiles; ++tile) {
 		// tile offset
         const int ia = TILESIZE*(tile % numxtiles);
         const int ja = TILESIZE*(tile / numxtiles);
 
 		// for every pixel in this tile, compute color
 	    for (int j = 0; j < TILESIZE; ++j) {
+			float y = ja + j;
+			if (y > h) continue;
+
 	        for( int i = 0; i < TILESIZE; ++i) {
 				float x = ia + i;
-				float y = ja + j;
-				ColorRGBf color;
+				if (x > w) continue;
 
+				ColorRGBf color;
 				// antialiasing loop
 				for (unsigned int fy = 0; fy < aa; ++fy) {
 					for (unsigned int fx = 0; fx < aa; ++fx) {
@@ -225,12 +228,12 @@ void Renderer::pass_rtrace(Pixmap *fb, Scene *scene)
 							// dof loop
 							for (float dofs = 0; dofs < dof_samples; ++dofs) {
 								Ray ray = scene->camera->get_primary_ray_dof(rx , ry, (float)w, (float)h);
-								color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /* Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
+								color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
 							}
 						}
 						else {
 							Ray ray = scene->camera->get_primary_ray(rx, ry, (float)w, (float)h);
-							color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH /*Environment::handle().max_rdepth()*/ + 1) * sample_scaling);
+							color += (trace_ray(scene, ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
 						}
 					}
 				}
