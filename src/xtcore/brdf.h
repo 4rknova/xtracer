@@ -22,16 +22,16 @@ class BSDF
 	* evaluate the radiant exitance along "outdir", of light coming from "indir"
 	* returns the intensity for each color channel
 	*/
-	virtual NImg::ColorRGBf evaluate(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const = 0;
+//	virtual NImg::ColorRGBf evaluate(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const = 0;
 
 	/* evaluate the percentage of incident energy arriving from indir, which
      * ends up reflecting towards outdir (this is just the mean of eval()'s RGB
      * values).
     */
-    virtual double eval_energy(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const;
+//    virtual double eval_energy(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const;
 
 	// generate a random BRDF sampling direction
-    virtual Vector3 sample_dir(const SurfPoint &pt, const Vector3 &outdir) const = 0;
+//    virtual Vector3 sample_dir(const SurfPoint &pt, const Vector3 &outdir) const = 0;
 };
 
 	}
