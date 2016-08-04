@@ -12,6 +12,7 @@
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.hpp>
 #include <xtcore/log.hpp>
+#include <xtcore/context.h>
 #include "argdefs.h"
 #include "argparse.hpp"
 #include "plm.h"
@@ -81,9 +82,12 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		IRenderer *renderer = new Renderer();
+		XT::Render::IRenderer *renderer = new Renderer();
+		XT::Render::Context context;
+		context.scene       = &scene;
+		context.framebuffer = &fb;
 
-		renderer->setup(fb, scene);
+		renderer->setup(context);
 
 		Timer timer;
 

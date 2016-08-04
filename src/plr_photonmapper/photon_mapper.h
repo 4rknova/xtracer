@@ -14,37 +14,29 @@
 
 using NImg::ColorRGBf;
 using NImg::Pixmap;
+using XT::Render::IRenderer;
+using XT::Render::Context;
 
 class Renderer : public IRenderer
 {
 	public:
 		Renderer();
 
-		virtual void setup(Pixmap &fb, Scene &scene);
-		virtual void render(void);
+		virtual void setup(Context &context);
+		virtual void render();
 
 	private:
-		// Pass functions.
-		void pass_ptrace(Scene *scene);						// Rendering pass: Photon tracing.
-		void pass_rtrace(Pixmap *fb, Scene *scene);			// Rendering pass: Ray tracing.
+		void pass_ptrace(); // Rendering pass: Photon tracing.
+		void pass_rtrace();	// Rendering pass: Ray tracing.
 
-		// Trace functions.
-		bool trace_photon(Scene *scene, const Ray &ray, const unsigned int depth,
-						  const ColorRGBf power, unsigned int &map_capacity);
+		bool      trace_photon (const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity);
+		ColorRGBf trace_ray    (const Ray &ray, const unsigned int depth, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
+		ColorRGBf shade        (const Ray &ray, const unsigned int depth, IntInfo &info, std::string &obj, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
-		ColorRGBf trace_ray(Scene *scene, const Ray &ray, const unsigned int depth,
-							const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
-
-		// Shading.
-		ColorRGBf shade(Scene *scene, const Ray &ray, const unsigned int depth,
-						IntInfo &info, std::string &obj,
-						const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
-
-		Pixmap *mFramebuffer;
-		Scene *mScene;
-
-		PhotonMap m_pm_global;
-		PhotonMap m_pm_caustic;
+		Pixmap    *mFramebuffer;
+		Scene     *mScene;
+		PhotonMap  m_pm_global;
+		PhotonMap  m_pm_caustic;
 };
 
 #endif /* XTRACER_PHOTON_MAPPER_HPP_INCLUDED */

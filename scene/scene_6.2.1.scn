@@ -111,7 +111,9 @@ geometry = {
 
 light = {
 	satl = {
-		type = point
+		type = sphere
+
+		radius = 10
 
 		position = {
 			x = 0
@@ -127,7 +129,9 @@ light = {
 	}
 
 	sat2 = {
-		type = point
+		type = sphere
+
+		radius = 10
 
 		position = {
 			x = -500

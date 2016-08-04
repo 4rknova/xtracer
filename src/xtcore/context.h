@@ -4,8 +4,8 @@
 #include "nimg/pixmap.h"
 #include "scene.h"
 
-namespace xtracer {
-	namespace render {
+namespace XT {
+	namespace Render {
 
 class Context
 {
