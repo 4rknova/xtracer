@@ -166,11 +166,10 @@ void extract(std::string &s, std::string &t, const char p1, const char p2)
 	if ((count_p2 != count_p1) || (count_p1 == 0)) return;
 
 	// Extract index positions.
+    // No need for boundaries check, as it's done above.
 	unsigned int index=0, index_1=0, index_2=0;
-	while ((index++ < s.length()) && (s[index]!=p2));
-	index_2 = index;
-	while ((index-- >= 0) && (s[index]!=p1));
-	index_1 = index;
+	while (s[++index]!=p2);	index_2 = index;
+	while (s[--index]!=p1);	index_1 = index;
 
 	// Extract tokens.
 	t = s.substr(index_1, index_2 + 1 - index_1);

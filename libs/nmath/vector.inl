@@ -590,8 +590,8 @@ inline Vector2f Vector2f::transform(Matrix3x3f &m)
 
 inline Vector2f Vector2f::transformed(Matrix3x3f &m)
 {
-	scalar_t nx = m.data[0][0] * x + m.data[0][1]* y + m.data[0][3];
-	scalar_t ny = m.data[1][0] * x + m.data[1][1]* y + m.data[1][3];
+	scalar_t nx = m.data[0][0] * x + m.data[0][1]* y + m.data[0][2];
+	scalar_t ny = m.data[1][0] * x + m.data[1][1]* y + m.data[1][2];
 	return Vector2f(nx, ny);
 }
 
