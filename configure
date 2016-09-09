@@ -32,7 +32,7 @@ PATH_MAN="`echo $PATH_MAN | sed -e 's/ /_/g'`"
 SW_TITLE="`echo $SW_TITLE | sed -e 's/ /_/g'`"
 SW_PACKAGE="`echo $SW_PACKAGE | sed -e 's/ /_/g'`"
 SW_SYMID="`echo $SW_TITLE | tr '[:lower:]' '[:upper:]'`"
-SW_VERSION="`git describe --long)`"
+SW_VERSION="`git describe --long`"
 
 # Options
 FLAG_OMPLIB=no
