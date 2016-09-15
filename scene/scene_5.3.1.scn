@@ -1,5 +1,7 @@
 # Xtracer 2
 
+data  = ./data
+
 title = Cornell box
 descr = <title> variant.
 versn = 0.1
@@ -425,7 +427,7 @@ geometry = {
 	# Model
 	model = {
 		type   = mesh
-		source = data/dragon.obj
+		source = <data>/dragon.obj
 #		smooth = true
 
 		rotation = {
@@ -445,12 +447,6 @@ geometry = {
 			x = 300.0
 			z = 200.0
 		}
-	}
-}
-
-texture = {
-	model = {
-		source = data/Map-COL.ppm
 	}
 }
 
@@ -532,6 +528,5 @@ object = {
 	model = {
 		geometry = model
 		material = matte
-		texture = model
 	}
 }

@@ -1,5 +1,7 @@
 # Xtracer 2
 
+data  = ./data
+
 title = Bunny
 descr = Bunny
 versn = 0.1
@@ -14,14 +16,14 @@ ambient = {
 
 camera = {
 	default = cam0
-	
+
 	cam0 = {
 		fov = 45
 
 		position = {
 			x = -3
 			y = 3.5
-			z = -2
+			z = -5
 		}
 
 		target = {
@@ -38,14 +40,57 @@ camera = {
 
 texture = {
 	checker = {
-		source = ../media/texture/checkerboard/1.ppm
+		source = N/A
 	}
 }
 
 geometry = {
-	3dmodel = {
+	m0 = {
 		type = mesh
-		source = ../media/mesh/bunny.obj
+		source = <data>/bunny.obj
+
+		rotation = {
+			z = 1.5708
+		}
+
+		scale = {
+			x = .75
+			y = .75
+			z = .75
+		}
+
+		translation = {
+			y = 0.72
+		}
+	}
+
+	m1 = {
+		type = mesh
+		source = <data>/dragon.obj
+
+		rotation = {
+			z = 1.5708
+		}
+
+		translation = {
+			y = 0.7
+			x = 1.5
+		}
+	}
+
+	m2 = {
+		type = mesh
+		source = <data>/happy_buddha.obj
+
+		rotation = {
+			z = 1.5708
+			y = -1.5708
+		}
+
+		translation = {
+			y = 1.00
+			x = -1.5
+		}
 	}
 
 	floor = {
@@ -69,7 +114,7 @@ light = {
 			y = 1
 			z = 1
 		}
-		
+
 		position = {
 			x = -8
 			y = 15
@@ -77,7 +122,7 @@ light = {
 		}
 
 		intensity = {
-			r = 1 
+			r = 1
 			g = 1
 			b = 1
 		}
@@ -85,13 +130,37 @@ light = {
 }
 
 material = {
-	3dmodel = {
+	m0 = {
+		type = blinn_phong
+
+		k_diffuse =  0.0
+		k_specular = 1.0
+		k_exponent = 60
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.0
+		transparency = 1.0
+		ior = 1.51714
+	}
+
+	m1 = {
 		type = blinn_phong
 
 		k_diffuse =  0.75
 		k_specular = 0.25
 		k_exponent = 128
-	
+
 		diffuse = {
 			r = 1
 			g = 1
@@ -127,13 +196,23 @@ material = {
         }
 
         reflectance = 0.3
-	}   
+	}
 }
 
 object = {
-	3dmodel = {
-		geometry = 3dmodel
-		material = 3dmodel
+	m0 = {
+		geometry = m0
+		material = m1
+	}
+
+	m1 = {
+		geometry = m1
+		material = m1
+	}
+
+	m2 = {
+		geometry = m2
+		material = m1
 	}
 
 	floor = {
