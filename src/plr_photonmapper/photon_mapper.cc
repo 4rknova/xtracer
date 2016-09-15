@@ -199,7 +199,10 @@ void Renderer::pass_rtrace()
 		omp_set_num_threads(thread_count);
 	}
 
-	const unsigned int dof_samples = XTRACER_SETUP_DEFAULT_DOF_SAMPLES;
+	const unsigned int dof_samples = mScene->camera->flength > 0
+                                   ? XTRACER_SETUP_DEFAULT_DOF_SAMPLES
+                                   : 1.0;
+
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.0f / (float)(aa);
@@ -231,16 +234,9 @@ void Renderer::pass_rtrace()
 						float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
 						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
-						if (mScene->camera->flength > 0) {
-							// dof loop
-							for (float dofs = 0; dofs < dof_samples; ++dofs) {
-								Ray ray = mScene->camera->get_primary_ray_dof(rx , ry, (float)w, (float)h);
-								color += (trace_ray(ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
-							}
-						}
-						else {
-							Ray ray = mScene->camera->get_primary_ray(rx, ry, (float)w, (float)h);
-							color += (trace_ray(ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
+                        for (float dofs = 0; dofs < dof_samples; ++dofs) {
+						    Ray ray = mScene->camera->get_primary_ray(rx , ry, (float)w, (float)h);
+						    color += (trace_ray(ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
 						}
 					}
 				}

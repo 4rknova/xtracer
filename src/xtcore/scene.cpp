@@ -332,17 +332,23 @@ unsigned int Scene::set_camera(const char *name)
 	NMath::Vector3f target  = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_TARGET));
 	NMath::Vector3f up      = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_UP));
 	NMath::scalar_t flength = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_FLENGTH));
-	NMath::scalar_t app     = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_APERTURE));
+	NMath::scalar_t ap      = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_APERTURE));
 	NMath::scalar_t fov     = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_FOV));
-	camera = new Camera(pos, target, up, fov, app, flength);
+
+	camera = new Camera();
+    camera->position = pos;
+    camera->target   = target;
+    camera->up       = up;
+    camera->fov      = fov;
+    camera->aperture = ap;
+    camera->flength  = flength;
 
 	return 0;
 }
 
 unsigned int Scene::create_light(NCF *p)
 {
-	if (!p)
-		return 1;
+	if (!p)	return 1;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -351,13 +357,11 @@ unsigned int Scene::create_light(NCF *p)
 	if (!type.compare(XTPROTO_LTRL_POINTLIGHT)) {
 		light = new (std::nothrow) PointLight;
 
-		if (!light)
-			return 2;
+		if (!light)	return 2;
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERELIGHT)) {
 		light = new (std::nothrow) SphereLight;
-		if (!light)
-			return 2;
+		if (!light)	return 2;
 
 		scalar_t radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 		((SphereLight *)light)->radius(radius);
@@ -368,8 +372,7 @@ unsigned int Scene::create_light(NCF *p)
 		NMath::Vector3f dimensions = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_DIMENSIONS));
 		((BoxLight *)light)->dimensions(dimensions);
 
-		if (!light)
-			return 2;
+		if (!light)	return 2;
 	}
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLELIGHT)) {
 		light = new (std::nothrow) TriangleLight;

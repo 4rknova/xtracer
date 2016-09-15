@@ -4,7 +4,7 @@
 #include <nimg/color.hpp>
 #include <nmath/intinfo.h>
 
-#include "camera.hpp"
+#include "camera.h"
 #include "light.hpp"
 
 using NMath::IntInfo;

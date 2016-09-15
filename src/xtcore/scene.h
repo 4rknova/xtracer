@@ -8,7 +8,7 @@
 #include <nmath/geometry.h>
 #include <ncf/ncf.h>
 
-#include <xtcore/camera.hpp>
+#include <xtcore/camera.h>
 #include <xtcore/light.hpp>
 #include <xtcore/material.hpp>
 #include <xtcore/texture.hpp>
