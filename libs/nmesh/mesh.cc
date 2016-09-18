@@ -54,9 +54,9 @@ void Mesh::build_octree(object_t &object)
 		    if (b_n != -1) p.n[1]  = NMath::Vector3f(d->n[3*b_n], d->n[3*b_n+1], d->n[3*b_n+2]);
 		    if (c_n != -1) p.n[2]  = NMath::Vector3f(d->n[3*c_n], d->n[3*c_n+1], d->n[3*c_n+2]);
 
-		    if (a_t != -1) p.tc[0] = NMath::Vector3f(d->uv[3*a_t], d->uv[3*a_t+1], 0);
-		    if (b_t != -1) p.tc[1] = NMath::Vector3f(d->uv[3*b_t], d->uv[3*b_t+1], 0);
-		    if (c_t != -1) p.tc[2] = NMath::Vector3f(d->uv[3*c_t], d->uv[3*c_t+1], 0);
+		    if (a_t != -1) p.tc[0] = NMath::Vector3f(d->uv[2*a_t], d->uv[2*a_t+1], 0);
+		    if (b_t != -1) p.tc[1] = NMath::Vector3f(d->uv[2*b_t], d->uv[2*b_t+1], 0);
+		    if (c_t != -1) p.tc[2] = NMath::Vector3f(d->uv[2*c_t], d->uv[2*c_t+1], 0);
 
 		    p.calc_aabb();
     		m_octree.add(p.aabb, p);

@@ -24,7 +24,7 @@
 #define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     2       /* Default sample count for lights. */
 #define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    2       /* Default sample count for reflection. */
 
-#define TILESIZE 8
+#define TILESIZE 32
 
 using Util::String::path_comp;
 

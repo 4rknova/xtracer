@@ -1,6 +1,0 @@
-- Improve OBJ loader
-- Re-enable modifier support in scene
-- Implement passing arguments to the renderer
-- Support render by coordinates and render full frame
-- implement interactive interface
-- split interactive and cli interface

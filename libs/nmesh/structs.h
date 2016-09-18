@@ -1,11 +1,12 @@
 #ifndef NMESH_MESH_HPP_INCLUDED
 #define NMESH_MESH_HPP_INCLUDED
 
+#include <string>
 #include <vector>
+#include <map>
 
 namespace NMesh {
 
-/*
 typedef struct {
   std::string name;
 
@@ -15,20 +16,18 @@ typedef struct {
   float transmittance[3];
   float emission[3];
   float shininess;
-  float ior;       // index of refraction
-  float dissolve;  // 1 == opaque; 0 == fully transparent
-  // illumination model (see http://www.fileformat.info/format/material/)
-  int illum;
+  float ior;               // index of refraction
+  float dissolve;          // 1 == opaque; 0 == fully transparent
+  int   illum;             // illumination model (see http://www.fileformat.info/format/material/)
+  int   dummy;             // Suppress padding warning.
 
-  int dummy;  // Suppress padding warning.
-
-  std::string ambient_texname;             // map_Ka
-  std::string diffuse_texname;             // map_Kd
-  std::string specular_texname;            // map_Ks
-  std::string specular_highlight_texname;  // map_Ns
-  std::string bump_texname;                // map_bump, bump
-  std::string displacement_texname;        // disp
-  std::string alpha_texname;               // map_d
+  std::string texture_ambient;             // map_Ka
+  std::string texture_diffuse;             // map_Kd
+  std::string texture_specular;            // map_Ks
+  std::string texture_specular_highlight;  // map_Ns
+  std::string texture_bump;                // map_bump, bump
+  std::string texture_displacement;        // disp
+  std::string texture_alpha;               // map_d
 
   // PBR extension
   // http://exocortex.com/blog/extending_wavefront_mtl_to_support_pbr
@@ -39,15 +38,14 @@ typedef struct {
   float clearcoat_roughness;      // [0, 1] default 0
   float anisotropy;               // aniso. [0, 1] default 0
   float anisotropy_rotation;      // anisor. [0, 1] default 0
-  std::string roughness_texname;  // map_Pr
-  std::string metallic_texname;   // map_Pm
-  std::string sheen_texname;      // map_Ps
-  std::string emissive_texname;   // map_Ke
-  std::string normal_texname;     // norm. For normal mapping.
+  std::string texture_roughness;  // map_Pr
+  std::string texture_metallic;   // map_Pm
+  std::string texture_sheen;      // map_Ps
+  std::string texture_emissive;   // map_Ke
+  std::string texture_normal;     // norm. For normal mapping.
 
-  std::map<std::string, std::string> unknown_parameter;
+  std::map<std::string, std::string> parameters;
 } material_t;
-*/
 
 typedef struct {
     int v;	// vertex
@@ -72,8 +70,9 @@ typedef struct {
 } shape_t;
 
 typedef struct {
-	std::vector<shape_t> shapes;
-    attrib_t             attributes;
+	std::vector<shape_t>    shapes;
+    attrib_t                attributes;
+    std::vector<material_t> materials;
 } object_t;
 
 } /* namespace NMesh */
