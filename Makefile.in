@@ -51,8 +51,8 @@ FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 .PHONY: all
 all: $(BIN)
 
-.PHONY: test
-test: $(BINPPM_SCN)
+.PHONY: test-scenes
+test-scenes: $(BINPPM_SCN)
 
 .PHONY: dirtree
 dirtree:
