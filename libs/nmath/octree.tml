@@ -108,6 +108,12 @@ void Octree<T>::add(const BoundingBox3 &aabb, const T &data)
 }
 
 template <typename T>
+BoundingBox3 Octree<T>::bbox()
+{
+    return m_root.aabb;
+}
+
+template <typename T>
 void Octree<T>::build()
 {
 	release(m_root);
@@ -115,12 +121,12 @@ void Octree<T>::build()
 	m_root = new (std::nothrow) OctreeNode<T>;
 
 	m_root->aabb = m_aabb;
-	
+
 	// The root node references all the items.
 	for (unsigned int i = 0; i < (unsigned int)m_items.size(); ++i) {
 		m_root->items.push_back(&m_items[i]);
 	}
-	
+
 	// Subdivide the tree.
 	if (m_root->count_items() > m_max_items_per_node) {
 		subdivide(m_root, 0);
@@ -142,8 +148,8 @@ void Octree<T>::subdivide(OctreeNode<T> *node, unsigned int level)
 	Vector3f center = n_aabb.center();
 
 	c_aabb[0] = BoundingBox3(n_aabb.min, center);
-	
-	c_aabb[1] = BoundingBox3(Vector3f(center.x, n_aabb.min.y, n_aabb.min.z), 
+
+	c_aabb[1] = BoundingBox3(Vector3f(center.x, n_aabb.min.y, n_aabb.min.z),
 							   Vector3f(n_aabb.max.x, center.y, center.z));
 	c_aabb[2] = BoundingBox3(Vector3f(center.x, center.y, n_aabb.min.z),
 							   Vector3f(n_aabb.max.x, n_aabb.max.y, center.z));
@@ -162,7 +168,7 @@ void Octree<T>::subdivide(OctreeNode<T> *node, unsigned int level)
 			OctreeNode<T> *c = new (std::nothrow) OctreeNode<T>;
 
 			node->child[i] = c;
-			
+
 			c->aabb = c_aabb[i];
 
 			typename std::list<OctreeItem<T>* >::iterator iter = node->items.begin();
@@ -192,7 +198,7 @@ OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, In
 	if (!node || !node->aabb.intersection(ray)) {
 		return NULL;
 	}
-	
+
 	IntInfo pt0;
 	pt0.t = FLT_MAX;
 

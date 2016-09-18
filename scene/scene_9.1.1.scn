@@ -14,14 +14,14 @@ ambient = {
 
 camera = {
 	default = cam1
-	
+
 	cam0 = {
 		fov = 60
 
 		position = {
 			x = 0.9
 			y = 10
-			z = 0.8 
+			z = 0.8
 		}
 
 		target = {
@@ -34,14 +34,14 @@ camera = {
 			y = 1
 		}
 	}
-	
+
 	cam1 = {
 		fov = 60
 
 		position = {
 			x = -13.5
 			y = 7
-			z = 0.8 
+			z = 0.8
 		}
 
 		target = {
@@ -74,7 +74,7 @@ geometry = {
 light = {
 	satl = {
 		type = point
-		
+
 		position = {
 			x = 0
 			y = 0
@@ -82,18 +82,18 @@ light = {
 		}
 
 		intensity = {
-			r = 0.51 
+			r = 0.51
 			g = 0.51
 			b = 0.51
 		}
 	}
-	
+
 	sat2 = {
 		type = point
-		
+
 		position = {
 			x = 1
-			y = 1.5 
+			y = 1.5
 			z = -1
 		}
 
@@ -106,11 +106,11 @@ light = {
 
 	sat3 = {
 		type = point
-		
+
 		position = {
 			x = -13.5
 			y = 7
-			z = 0.8 
+			z = 0.8
 		}
 
 		intensity = {
@@ -128,7 +128,7 @@ material = {
 		k_diffuse =  0.75
 		k_specular = 0.25
 		k_exponent = 128
-	
+
 		diffuse = {
 			r = 0.980
 			g = 0.9215
@@ -164,7 +164,7 @@ material = {
         }
 
         reflectance = 0.3
-	}   
+	}
 }
 
 object = {

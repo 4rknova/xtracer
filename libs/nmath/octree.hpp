@@ -48,6 +48,8 @@ class Octree
 		unsigned int max_items_per_node();
 		unsigned int max_depth();
 
+        BoundingBox3 bbox();
+
 	private:
 		OctreeItem<T> *r_intersection(OctreeNode<T> *node, const Ray &ray, IntInfo *point) const;
 		void subdivide(OctreeNode<T> *node, unsigned int level);

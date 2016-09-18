@@ -109,4 +109,5 @@ Ray Camera::get_primary_ray_perspective(float x, float y, float width, float hei
 
 Ray Camera::get_primary_ray_ods(float x, float y, float width, float height)
 {
+    return get_perspective_ray(x, y, width, height);
 }

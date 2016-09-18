@@ -126,7 +126,7 @@ light = {
 # The scene materials
 material = {
 
-	# The following three colors are RGB approximations to the spectral 
+	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, red, and green paints used in the Cornell Box.
 	white = {
 		type = lambert

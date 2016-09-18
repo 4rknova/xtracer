@@ -20,6 +20,8 @@
 #	-	The final image appears flipped to the yy' axis. This is due to the
 #		different coordinate system used in the original data.
 
+data = ./data
+
 title = Cornell box replica (based on the original radiosity dataset)
 descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
 versn = 0.2
@@ -34,7 +36,7 @@ ambient = {
 
 light_x = 340
 light_y = 340
-light_z = 310
+light_z = -200
 
 
 # The scene cameras.
@@ -131,15 +133,21 @@ material = {
 		}
 	}
 
-	light = {
+	model = {
 		type = lambert
 
 		diffuse = {
 			r = 1.0
-			g = 1.0
-			b = 1.0
+			g = 0.87843137254
+			b = 0.74117647058
 		}
-	}
+    }
+}
+
+texture = {
+    model = {
+        source = <data>/obj/map/LaikenTorsoA.ppm
+    }
 }
 
 # The scene geometry
@@ -435,33 +443,26 @@ geometry = {
 		}
 	}
 
-	# The props
-	# - Small sphere
-	sphere = {
-		type = sphere
-		radius = 100
-		position = {
-			x = 200
-			y = 100
-			z = 100
-		}
-	}
-
-	lightsph = {
-		type = sphere
-		radius = 10
-		position = {
-			x = <light_x>
-			y = <light_y>
-			z = <light_z>
-		}
-	}
-
-
-	# - Big block
-	lamp = {
+	model = {
 		type = mesh
-		source = ../media/mesh/lamp.obj
+		source = <data>/obj/sexy-girl-092-001.obj
+
+        rotation = {
+            y = 3.14159
+            z = 0.15159
+        }
+
+        translation = {
+            x = 425
+            z = 200
+            y = -65
+        }
+
+        scale = {
+            x = 25.
+            y = 25.
+            z = 25.
+        }
 	}
 }
 
@@ -533,19 +534,9 @@ object = {
 		material = col2
 	}
 
-	# Sphere
-	sphere = {
-		geometry = sphere
-		material = white
-	}
-
-#	spherelight = {
-#		geometry = lightsph
-#		material = col1
-#	}
-
-	lamp = {
-		geometry = lamp
-		material = white
+	model = {
+		geometry = model
+		material = model
+        texture  = model
 	}
 }

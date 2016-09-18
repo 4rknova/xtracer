@@ -52,7 +52,7 @@ camera = {
 			y = 1
 		}
 	}
-	
+
 	cam3 = {
 		fov = 45
 
@@ -100,7 +100,7 @@ light = {
 		type = sphere
 
 		radius = 50
-		
+
 		position = {
 			x = 200
 			y = 300
@@ -140,11 +140,11 @@ material = {
 		k_diffuse = 0.8
 		k_specular = 0.2
 		k_exponent = 1350
-	
+
 		diffuse = {
 			r = 0.251
 			g = 0.251
-			b = 0.251 
+			b = 0.251
 		}
 
 		specular = {
@@ -162,11 +162,11 @@ material = {
 		k_diffuse = 0.5
 		k_specular = 0.5
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 1
 			g = 1
-			b = 1 
+			b = 1
 		}
 
 		specular = {

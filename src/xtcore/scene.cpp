@@ -2,18 +2,18 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <ncf/util.h>
 #include <nmath/mutil.h>
 #include <nmath/vector.h>
-#include <ncf/util.h>
-#include <nmesh/transform.hpp>
-#include <nmesh/calcnormals.hpp>
-#include <nmesh/obj.hpp>
-#include <nimg/checkerboard.h>
 #include <nmath/geometry.h>
 #include <nmath/sphere.h>
 #include <nmath/plane.h>
 #include <nmath/triangle.h>
-#include <nmesh/mesh.hpp>
+#include <nmesh/transform.h>
+#include <nmesh/obj.h>
+#include <nmesh/structs.h>
+#include <nmesh/mesh.h>
+#include <nimg/checkerboard.h>
 #include "proto.h"
 #include "log.hpp"
 #include "scene.h"
@@ -446,10 +446,7 @@ unsigned int Scene::create_geometry(NCF *p)
 	}
 	// - Mesh
 	else if (!type.compare(XTPROTO_LTRL_MESH)) {
-		geometry = new (std::nothrow) Mesh;
-
-		// Smooth surface
-		bool smooth = deserialize_bool(p->get_property_by_name(XTPROTO_PROP_SMOOTH));
+		geometry = new (std::nothrow) NMesh::Mesh;
 
 		// Data source
 		std::string f = p->get_property_by_name(XTPROTO_PROP_SOURCE);
@@ -461,7 +458,9 @@ unsigned int Scene::create_geometry(NCF *p)
 
 		Log::handle().log_message("Loading data from %s", base.c_str());
 
-		if (NMesh::IO::Import::obj(base.c_str(), dynamic_cast<NMesh::Mesh &>(*geometry)))
+        NMesh::object_t obj;
+
+		if (NMesh::IO::Import::obj(base.c_str(), obj))
 		{
 			Log::handle().log_warning("Failed to load mesh from %s", f.c_str());
 			delete geometry;
@@ -470,26 +469,21 @@ unsigned int Scene::create_geometry(NCF *p)
 
 		if (p->query_group(XTPROTO_PROP_ROTATION)) {
 			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ROTATION));
-			NMesh::Mutator::rotate(dynamic_cast<NMesh::Mesh &>(*geometry), v.x, v.y, v.z);
+			NMesh::Mutator::rotate(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_SCALE)) {
 			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_SCALE));
-			NMesh::Mutator::scale(dynamic_cast<NMesh::Mesh &>(*geometry), v.x, v.y, v.z);
+			NMesh::Mutator::scale(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
 			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TRANSLATION));
-			NMesh::Mutator::translate(dynamic_cast<NMesh::Mesh &>(*geometry), v.x, v.y, v.z);
-		}
-
-		if (smooth) {
-			Log::handle().log_message("Recalculating normals..");
-			NMesh::Mutator::calc_normals(dynamic_cast<NMesh::Mesh &>(*geometry));
+			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
 		}
 
 		Log::handle().log_message("Building octree..");
-		((Mesh *)geometry)->build_octree();
+		((NMesh::Mesh *)geometry)->build_octree(obj);
 	}
 	// unknown
 	else {

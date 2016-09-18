@@ -11,15 +11,15 @@ ambient = {
 }
 
 camera = {
-	default = front 
+	default = front
 
 	front = {
-		fov =45 
+		fov =45
 
 		position = {
 			z = -2000
 		}
-		
+
 		up = {
 			y = 1
 		}
@@ -45,7 +45,7 @@ geometry = {
 	red_ball = {
 		type = sphere
 		position = {
-			x = 80 
+			x = 80
 			y = -305
 			z = -100
 		}
@@ -112,7 +112,7 @@ light = {
 		type = sphere
 
 		radius = 20
-		
+
 		position = {
 			x = -150
 			y = 150
@@ -130,7 +130,7 @@ light = {
 		type = sphere
 
 		radius = 20
-		
+
 		position = {
 			x = -100
 			y = -200
@@ -207,7 +207,7 @@ material = {
 			b = 1
 		}
 	}
-	
+
 	lambert_grey = {
 		type = lambert
 		diffuse = {

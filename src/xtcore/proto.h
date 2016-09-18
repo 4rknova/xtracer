@@ -70,7 +70,6 @@
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */			/* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */			/* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */			/* Vertex data */
-#define XTPROTO_PROP_SMOOTH			"smooth"			/* bool		  */			/* Property interpolation */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */			/* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */			/* Material id */
 #define XTPROTO_PROP_OBJ_TEX		"texture"			/* asset_id_t */			/* Texture id */

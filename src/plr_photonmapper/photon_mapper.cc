@@ -9,8 +9,6 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.hpp>
 #include <ncf/util.h>
-//#include "object.hpp"
-//#include "argparse.hpp"
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
@@ -21,12 +19,12 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000    /* Default photon samples. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
-#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        3       /* Default maximum recursion depth. */
-#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       10      /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1       /* Default sample count for lights. */
-#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1       /* Default sample count for reflection. */
+#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
+#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       2       /* Default sample count for DOF. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     2       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    2       /* Default sample count for reflection. */
 
-#define TILESIZE 64
+#define TILESIZE 8
 
 using Util::String::path_comp;
 
@@ -181,6 +179,7 @@ void Renderer::pass_rtrace()
 	// precalculate some constants
 	const unsigned int w = mFramebuffer->width();
 	const unsigned int h = mFramebuffer->height();
+	const unsigned int thread_count = 0;// Environment::handle().threads();
 
 	const unsigned int dxt       = (w % TILESIZE > 0 ? 1 : 0);
 	const unsigned int dyt       = (h % TILESIZE > 0 ? 1 : 0);
@@ -193,8 +192,6 @@ void Renderer::pass_rtrace()
 	// Samples per pixel, offset per sample.
 	unsigned int aa = XTRACER_SETUP_DEFAULT_AA; // Environment::handle().aa();
 
-	// Explicitely set the thread count if requested.
-	const unsigned int thread_count = 0;// Environment::handle().threads();
 	if (thread_count) {
 		omp_set_num_threads(thread_count);
 	}
@@ -247,34 +244,14 @@ void Renderer::pass_rtrace()
 
 		#pragma omp critical
 		{
-			// calculate progress
 			++progress;
 
 			std::cout.setf(std::ios::fixed, std::ios::floatfield);
 			std::cout.setf(std::ios::showpoint);
-
-			static const unsigned int length = 25;
-			std::cout << "\rProgress [ ";
-
-			float pr = progress * one_over_h;
-
-			for (unsigned int i = 0; i < length; i++) {
-				float p = pr * length;
-				if		(i < p) std::cout << '=';
-				else if (i - p < 1) std::cout << '>';
-				else	std::cout << ' ';
-			}
-
-			int totalw = omp_get_num_threads();
-			// get the string length of totalw
-			int wlen = 0;
-			int num = totalw;
-
-			while (num > 0) { num /= 10; wlen++; }
-
-			std::cout	<< " " << std::setw(6) << std::setprecision(2) << pr * 100.0
-						<< "% ] [ "<< totalw << " C: " << std::setw(wlen)
-						<< omp_get_thread_num() << " ]" << std::flush;
+			std::cout << "\rRendering "
+                      << std::setw(6) << std::setprecision(2)
+                      << progress * one_over_h * 100.f << "%"
+                      << " @ " << omp_get_num_threads() << "T" << std::flush;
 		}
 	}
 }
@@ -303,13 +280,13 @@ ColorRGBf Renderer::trace_ray(const Ray &ray, const unsigned int depth,
 				norm[2] = (float)info.normal.z;
 
 				m_pm_global.irradiance_estimate(irad, posi, norm,
-					XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS, //Environment::handle().photon_max_sampling_radius(),
-					XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES  //Environment::handle().photon_max_samples()
+					XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS,
+					XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES
 				);
 
 				gi_res = ColorRGBf(irad[0], irad[1], irad[2]);
 
-				if (XTRACER_SETUP_DEFAULT_GIVIZ) //Environment::handle().flag_giviz())
+				if (XTRACER_SETUP_DEFAULT_GIVIZ)
 					return gi_res;
 			}
 
@@ -335,8 +312,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 	ColorRGBf color(0, 0, 0);
 
 	// check if the depth limit was reached
-	if (!depth)
-		return color;
+	if (!depth)	return color;
 
 	Object *mobj = mScene->m_objects[obj];
 	std::map<std::string, Texture2D *>::iterator it_tex = mScene->m_textures.find(mobj->texture);
@@ -391,33 +367,37 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 		}
 	}
 
-	// specular effects
-
 	// Fresnel
 	float fr = 1.0;
-	float ft = 0.0;
 
 	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG)) {
 		// refraction
 		if(mat->transparency > 0.0) {
 			Ray refrray;
-			refrray.origin = p;
-
+			refrray.origin    = p;
 			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
-			float f1 = ior_src * (1.0 - dot(n, ray.direction));
-			float f2 = ior_dst * (1.0 - dot(-n, refrray.direction));
+            if (dot(n, refrray.direction) > 0.) fr = 1.;
+            else {
+                float ci = 1. - dot( n, ray.direction);
+                float ct = dot(-n, refrray.direction);
+    	    	float f1 = ior_src * ci;
+       		    float f2 = ior_dst * ct;
+                float f3 = ior_dst * ci;
+                float f4 = ior_src * ct;
+   		    	float fra = pow((f1 - f2) / (f1 + f2), 2.0);
+ 			    float frb = pow((f3 - f4) / (f3 + f4), 2.0);
+                fr  = (fra + frb) * .5;
 
-			ft = pow((f1 - f2) / (f1 + f2), 2.0);
-			fr = 1.0 - ft;
-
-			color *= (1.0 - mat->transparency);
-			color += ft * mat->transparency * trace_ray(refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+	    		float ft = 1.0 - fr;
+    			color *= mat->transparency;
+			    color += ft * mat->transparency * trace_ray(refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+            }
 		}
 
 		// reflection
 		if(mat->reflectance > 0.0) {
-			unsigned int tlmcsamples = XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES; // Environment::handle().samples_reflection();
+			unsigned int tlmcsamples = XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES;
 			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;

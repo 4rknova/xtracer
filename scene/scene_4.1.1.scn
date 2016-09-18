@@ -19,7 +19,7 @@ camera = {
 
 		position = {
 			x = 450
-			y = 400	
+			y = 400
 			z = -1000
 		}
 
@@ -44,7 +44,7 @@ geometry = {
 		}
 		radius = 175
 	}
-	
+
 	sphere11 = {
 		type = sphere
 		position = {
@@ -88,7 +88,7 @@ geometry = {
 light = {
 	front = {
 		type = point
-		
+
 		position = {
 			y = 900
 			z = -800
@@ -103,7 +103,7 @@ light = {
 
 	cat = {
 		type = point
-		
+
 		position = {
 			x = -1000
 			y = 1100
@@ -125,7 +125,7 @@ material = {
 		k_diffuse = 0.8
 		k_specular = 0.2
 		k_exponent = 128
-	
+
 		diffuse = {
 			r = 0.51
 			g = 0.51
@@ -147,7 +147,7 @@ material = {
 		k_diffuse = 0.7
 		k_specular = 0.3
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 0.934
 			g = 0.945
@@ -163,14 +163,14 @@ material = {
 		reflectance = 0.053
 
 	}
-	
+
 	ball2 = {
 		type = blinn_phong
 
 		k_diffuse = 0.4
 		k_specular = 0.6
 		k_exponent = 560
-	
+
 		diffuse = {
 			r = 0.134
 			g = 0.545
@@ -186,14 +186,14 @@ material = {
 		reflectance = 0.003
 
 	}
-	
+
 	ball3 = {
 		type = blinn_phong
 
 		k_diffuse = 0.7
 		k_specular = 0.3
 		k_exponent = 60
-	
+
 		diffuse = {
 			r = 0.934
 			g = 0.845
@@ -210,13 +210,13 @@ material = {
 
 	}
 
-	plastic2 = {
+	glass = {
 		type = blinn_phong
 
 		k_diffuse = 0
 		k_specular = 1
 		k_exponent = 128
-	
+
 		diffuse = {
 			r = 1
 			g = 1
@@ -229,9 +229,9 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.5
-		transparency = 0.9
-		ior = 1.341714
+		reflectance = 1
+		transparency = 0
+		ior = 1.100
 	}
 }
 
@@ -256,7 +256,7 @@ object = {
 	}
 	sphere2 = {
 		geometry = sphere2
-		material = plastic2
+		material = glass
 	}
 	floor = {
 		geometry = plane

@@ -52,7 +52,7 @@ camera = {
 		}
 
 		# Target.
-		# This is equal to the direction (0, 1, 0) 
+		# This is equal to the direction (0, 1, 0)
 		# as defined in the original data.
 		target = {
 			x = 278.0
@@ -382,7 +382,7 @@ geometry = {
 		type = triangle
 		vecdata = {
 			v0 = {
-				x = 549.6 
+				x = 549.6
 				y = 0.0
 				z = 559.2
 			}

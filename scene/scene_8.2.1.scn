@@ -40,7 +40,7 @@ camera = {
 
 texture = {
 	checker = {
-		source = N/A
+		source = <data>/floor.ppm
 	}
 }
 

@@ -40,7 +40,7 @@ ambient = {
 
 # The scene cameras.
 camera = {
-	
+
 	# The default camera.
 	default = front
 
@@ -57,7 +57,7 @@ camera = {
 		}
 
 		# Target.
-		# This is equal to the direction (0, 1, 0) 
+		# This is equal to the direction (0, 1, 0)
 		# as defined in the original data.
 		target = {
 			x = 278.0
@@ -77,15 +77,15 @@ camera = {
 # The scene lights
 light = {
 
-	# I will use 4 point lights, one per vertex of the original 
+	# I will use 4 point lights, one per vertex of the original
 	# data for the light source ( quad ).
-	# Also the original data sets it to y = 548.8 which is the same 
-	# as the height of the ceiling. I set it much lower to avoid 
-	# numerical errors and compensate for intensity loses due to 
+	# Also the original data sets it to y = 548.8 which is the same
+	# as the height of the ceiling. I set it much lower to avoid
+	# numerical errors and compensate for intensity loses due to
 	# the nature of point lights.
 	light_p0 = {
 		type = point
-		
+
 		position = {
 			x = 343.0
 			y = 438.0
@@ -101,7 +101,7 @@ light = {
 
 	light_p1 = {
 		type = point
-		
+
 		position = {
 			x = 343.0
 			y = 438.0
@@ -117,7 +117,7 @@ light = {
 
 	light_p2 = {
 		type = point
-		
+
 		position = {
 			x = 213.0
 			y = 438.0
@@ -130,10 +130,10 @@ light = {
 			b = 0.1075
 		}
 	}
-	
+
 	light_p3 = {
 		type = point
-		
+
 		position = {
 			x = 213.0
 			y = 438.0
@@ -151,7 +151,7 @@ light = {
 # The scene materials
 material = {
 
-	# The following three colors are RGB approximations to the spectral 
+	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, red, and green paints used in the Cornell Box.
 	white = {
 		type = lambert
@@ -256,7 +256,7 @@ geometry = {
 
 		vecdata = {
 			v0 = {
-				x = 552.8 
+				x = 552.8
 				y = 0.0
 				z = 0.0
 			}
@@ -283,7 +283,7 @@ geometry = {
 				y = 0.0
 				z = 0.0
 			}
-			
+
 			v1 = {
 				x = 0.0
 				y = 0.0
@@ -325,7 +325,7 @@ geometry = {
 
 	ceiling_2 = {
 		type = triangle
-		
+
 		vecdata = {
 			v0 = {
 				x = 556.0
@@ -347,13 +347,13 @@ geometry = {
 		}
 	}
 
-	
+
 	# - Back wall
 	back_wall_1 = {
 		type = triangle
 		vecdata = {
 			v0 = {
-				x = 549.6 
+				x = 549.6
 				y = 0.0
 				z = 559.2
 			}
@@ -371,7 +371,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	back_wall_2 = {
 		type = triangle
 		vecdata = {
@@ -511,7 +511,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	short_block_1_2 = {
 		type = triangle
 		vecdata = {
@@ -557,7 +557,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	short_block_2_2 = {
 		type = triangle
 		vecdata = {
@@ -811,7 +811,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	tall_block_3_1 = {
 		type = triangle
 		vecdata = {
@@ -857,7 +857,7 @@ geometry = {
 			}
 		}
 	}
-	
+
 	tall_block_4_1 = {
 		type = triangle
 		vecdata = {
@@ -957,11 +957,11 @@ object = {
 	light_1 = {
 		geometry = light_1
 		material = light
-	}	
+	}
 
 	light_2 = {
 		geometry = light_2
-		material = light 
+		material = light
 	}
 
 	# Floor
@@ -1007,13 +1007,13 @@ object = {
 		geometry = left_wall_2
 		material = red
 	}
-	
+
 	# Right wall
 	right_wall_1 = {
 		geometry = right_wall_1
 		material = green
 	}
-	
+
 	right_wall_2 = {
 		geometry = right_wall_2
 		material = green
@@ -1024,12 +1024,12 @@ object = {
 		geometry = short_block_1_1
 		material = white
 	}
-	
+
 	short_block_1_2 = {
 		geometry = short_block_1_2
 		material = white
 	}
-		
+
 	short_block_2_1 = {
 		geometry = short_block_2_2
 		material = white
@@ -1039,27 +1039,27 @@ object = {
 		geometry = short_block_2_2
 		material = white
 	}
-		
+
 	short_block_3_1 = {
 		geometry = short_block_3_1
 		material = white
 	}
-	
+
 	short_block_3_2 = {
 		geometry = short_block_3_2
 		material = white
 	}
-		
+
 	short_block_4_1 = {
 		geometry = short_block_4_1
 		material = white
 	}
-	
+
 	short_block_4_2 = {
 		geometry = short_block_4_2
 		material = white
 	}
-			
+
 	short_block_5_1 = {
 		geometry = short_block_5_1
 		material = white
