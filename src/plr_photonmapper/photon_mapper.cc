@@ -12,7 +12,7 @@
 #include <xtcore/log.hpp>
 #include "photon_mapper.h"
 
-#define XTRACER_SETUP_DEFAULT_AA                3
+#define XTRACER_SETUP_DEFAULT_AA                2
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
@@ -20,9 +20,9 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
 #define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
-#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       2       /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     2       /* Default sample count for lights. */
-#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    2       /* Default sample count for reflection. */
+#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1       /* Default sample count for DOF. */
+#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1       /* Default sample count for lights. */
+#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1       /* Default sample count for reflection. */
 
 #define TILESIZE 32
 

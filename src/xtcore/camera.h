@@ -12,7 +12,8 @@ using NMath::Ray;
 
 #define XT_CAM_DEFAULT_FOV        M_PI / 4
 #define XT_CAM_DEFAULT_PROJECTION CAMERA_PROJECTION_PERSPECTIVE
-#define XT_CAM_DEFAULT_EYE        CAMERA_EYE_MONO
+#define XT_CAM_DEFAULT_EYE        CAMERA_EYE_STEREO_RIGHT
+#define XT_CAM_DEFAULT_IPD         6.4f // 6.4 cm
 
 enum CAMERA_EYE {
      CAMERA_EYE_MONO
@@ -34,6 +35,7 @@ class Camera
 		scalar_t          fov;
 		scalar_t          aperture;
 		scalar_t          flength;
+        scalar_t          ipd;
         CAMERA_PROJECTION projection;
         CAMERA_EYE        eye;
 

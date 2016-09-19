@@ -10,13 +10,14 @@ Camera::Camera()
 	, fov(XT_CAM_DEFAULT_FOV)
     , aperture(0)
     , flength(0)
+    , ipd(XT_CAM_DEFAULT_IPD)
     , projection(XT_CAM_DEFAULT_PROJECTION)
     , eye(XT_CAM_DEFAULT_EYE)
 {}
 
 Ray Camera::get_primary_ray(float x, float y, float width, float height)
 {
-    return get_primary_ray_perspective(x, y, width, height);
+    return get_primary_ray_ods(x, y, width, height);
 }
 
 Ray Camera::get_perspective_ray(float x, float y, float width, float height)
@@ -109,5 +110,35 @@ Ray Camera::get_primary_ray_perspective(float x, float y, float width, float hei
 
 Ray Camera::get_primary_ray_ods(float x, float y, float width, float height)
 {
-    return get_perspective_ray(x, y, width, height);
+    Ray ray;
+    float h = (eye == CAMERA_EYE_MONO) ? height / 2 : height;
+
+    if (y > h) y = y - h;
+
+    // Calculate theta & phi angles
+    float theta = (x / width ) * 2.f  * NMath::PI - NMath::PI;
+    float phi   = NMath::PI * .5f - (y/h) * NMath::PI;
+
+    float offset = ipd * .5f;
+    float scale  = 1.f;
+
+    // Shift the ray origin on to the circle, either to the left of the right
+    switch (eye) {
+        case CAMERA_EYE_STEREO_LEFT:
+            scale = -offset;
+            break;
+
+        case CAMERA_EYE_STEREO_RIGHT:
+            scale = offset;
+            break;
+
+        default:
+            scale = offset * ((y < h) ? -1 : 1);
+            break;
+    }
+
+    ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
+    ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), cos(theta) * cos(phi));
+
+    return ray;
 }
