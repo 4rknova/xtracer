@@ -10,9 +10,8 @@
 #include <nimg/luminance.hpp>
 #include <ncf/util.h>
 #include <xtcore/log.hpp>
-#include "photon_mapper.h"
+#include "renderer.h"
 
-#define XTRACER_SETUP_DEFAULT_AA                2
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
 #define XTRACER_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
@@ -20,28 +19,25 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
 #define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
-#define XTRACER_SETUP_DEFAULT_DOF_SAMPLES       1       /* Default sample count for DOF. */
-#define XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES     1       /* Default sample count for lights. */
-#define XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES    1       /* Default sample count for reflection. */
 
 #define TILESIZE 32
 
 using Util::String::path_comp;
 
 Renderer::Renderer()
-	: mFramebuffer(NULL)
-	, mScene(NULL)
+	: m_context(NULL)
 {}
 
-void Renderer::setup(Context &context)
+void Renderer::setup(xtracer::render::context_t &context)
 {
-	mFramebuffer = context.framebuffer;
-	mScene       = context.scene;
+    m_context = &context;
 }
 
 void Renderer::render()
 {
-	if (!mScene || !mFramebuffer) return;
+	if (   !m_context->scene
+        || !m_context->framebuffer) return;
+
 	pass_ptrace();
 	pass_rtrace();
 }
@@ -49,7 +45,6 @@ void Renderer::render()
 void Renderer::pass_ptrace()
 {
 	if (!XTRACER_SETUP_DEFAULT_GI) return;
-	if (!mScene) return;
 
 	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
@@ -63,14 +58,14 @@ void Renderer::pass_ptrace()
 	// In future revisions I should also take the light source's size into consideration.
 	std::vector<unsigned int> light_photons;
 	{
-		unsigned int light_count = mScene->m_lights.size();	// Total light count.
+		unsigned int light_count = m_context->scene->m_lights.size();
 		std::vector<scalar_t> light_contribution;			// Vector with each light's contribution.
 		std::vector<scalar_t> light_luminance;				// Vector with each light's luminance.
 		scalar_t light_total_luminance = 0;					// Total light luminance.
 
 		// Calculate the luminance for each light and the total.
-		std::map<std::string, Light*>::iterator it = mScene->m_lights.begin();
-		std::map<std::string, Light*>::iterator et = mScene->m_lights.end();
+		std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
+		std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
 		for (; it != et; ++it) {
 			scalar_t lum = NImg::Operator::luminance((*it).second->intensity());
 			light_luminance.push_back(lum);
@@ -90,8 +85,8 @@ void Renderer::pass_ptrace()
 	{
 		// Photon tracing.
 		unsigned int light_index = 0;
-		std::map<std::string, Light*>::iterator it = mScene->m_lights.begin();
-		std::map<std::string, Light*>::iterator et = mScene->m_lights.end();
+		std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
+		std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
 		for (; it != et; ++it) {
 			while (light_photons[light_index] > 0) {
 				Ray ray = (*it).second->ray_sample();
@@ -110,8 +105,6 @@ void Renderer::pass_ptrace()
 
 bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
-	if (!mScene) return false;
-
 	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH) return false;
 
 	// Intersect.
@@ -119,11 +112,13 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	memset(&info, 0, sizeof(info));
 	std::string obj;
 
-	if (!mScene->intersection(ray, info, obj)) return false;
+	if (!m_context->scene->intersection(ray, info, obj)) return false;
 
 	// Get the material & texture.
-	Material *mat = mScene->m_materials[mScene->m_objects[obj]->material];
-	std::map<std::string, Texture2D *>::iterator it_tex = mScene->m_textures.find(mScene->m_objects[obj]->texture);
+    std::string &mat_id = m_context->scene->m_objects[obj]->material;
+    std::string &tex_id = m_context->scene->m_objects[obj]->texture;
+	Material *mat = m_context->scene->m_materials[mat_id];
+	std::map<std::string, Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -161,7 +156,7 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 		nray.origin += nray.direction * 0.5;
 
 		ColorRGBf texcol = ColorRGBf(1, 1, 1);
-		if (it_tex != mScene->m_textures.end())
+		if (it_tex != m_context->scene->m_textures.end())
 			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 
 		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
@@ -174,11 +169,9 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 
 void Renderer::pass_rtrace()
 {
-	if (!mFramebuffer) return;
-
 	// precalculate some constants
-	const unsigned int w = mFramebuffer->width();
-	const unsigned int h = mFramebuffer->height();
+	const unsigned int w = m_context->framebuffer->width();
+	const unsigned int h = m_context->framebuffer->height();
 	const unsigned int thread_count = 0;// Environment::handle().threads();
 
 	const unsigned int dxt       = (w % TILESIZE > 0 ? 1 : 0);
@@ -190,14 +183,12 @@ void Renderer::pass_rtrace()
 	float progress = 0;
 
 	// Samples per pixel, offset per sample.
-	unsigned int aa = XTRACER_SETUP_DEFAULT_AA; // Environment::handle().aa();
+	unsigned int aa = m_context->samples_ssaa;
 
-	if (thread_count) {
-		omp_set_num_threads(thread_count);
-	}
+	if (thread_count) omp_set_num_threads(thread_count);
 
-	const unsigned int dof_samples = mScene->camera->flength > 0
-                                   ? XTRACER_SETUP_DEFAULT_DOF_SAMPLES
+	const unsigned int dof_samples = m_context->scene->camera->flength > 0
+                                   ? m_context->samples_dof
                                    : 1.0;
 
 	float one_over_h = 1.f / numtiles;
@@ -206,7 +197,7 @@ void Renderer::pass_rtrace()
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	// Calculate the number of samples per pixel.
-	float sample_scaling = 1.0f / ((mScene->camera->flength > 0 ? dof_samples : 1.0f) * spp);
+	float sample_scaling = 1.0f / ((m_context->scene->camera->flength > 0 ? m_context->samples_dof : 1.0f) * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
     for (unsigned int tile = 0; tile < numtiles; ++tile) {
@@ -232,13 +223,15 @@ void Renderer::pass_rtrace()
 						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
                         for (float dofs = 0; dofs < dof_samples; ++dofs) {
-						    Ray ray = mScene->camera->get_primary_ray(rx , ry, (float)w, (float)h);
-						    color += (trace_ray(ray,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling);
+						    color += trace_ray(
+                                 m_context->scene->camera->get_primary_ray(rx , ry, (float)w, (float)h)
+                                ,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
+                            ) * sample_scaling;
 						}
 					}
 				}
 
-				mFramebuffer->pixel(x, y) = color;
+				m_context->framebuffer->pixel(x, y) = color;
 			}
 		}
 
@@ -266,7 +259,7 @@ ColorRGBf Renderer::trace_ray(const Ray &ray, const unsigned int depth,
 
 	// Check for ray intersection
 	std::string obj; // this will hold the object name
-	if (mScene->intersection(ray, info, obj)) {
+	if (m_context->scene->intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
 
@@ -290,7 +283,8 @@ ColorRGBf Renderer::trace_ray(const Ray &ray, const unsigned int depth,
 					return gi_res;
 			}
 
-			Material *mat = mScene->m_materials[mScene->m_objects[obj]->material];
+            std::string &mat_id = m_context->scene->m_objects[obj]->material;
+            Material *mat = m_context->scene->m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -314,31 +308,32 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 	// check if the depth limit was reached
 	if (!depth)	return color;
 
-	Object *mobj = mScene->m_objects[obj];
-	std::map<std::string, Texture2D *>::iterator it_tex = mScene->m_textures.find(mobj->texture);
-	std::map<std::string, Material  *>::iterator it_mat = mScene->m_materials.find(mobj->material);
+	Object *mobj = m_context->scene->m_objects[obj];
+	std::map<std::string, Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
+	std::map<std::string, Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
-	if (it_mat == mScene->m_materials.end()) return color;
+	if (it_mat == m_context->scene->m_materials.end()) return color;
 
 	// shadows
 	Vector3f n = info.normal;
 	Vector3f p = info.point;
 
-	Material *mat = mScene->m_materials[mScene->m_objects[obj]->material];
+    std::string &mat_id = m_context->scene->m_objects[obj]->material;
+	Material *mat = m_context->scene->m_materials[mat_id];
 
 	// Precalculated roughness.
 	scalar_t roughness = mat->roughness;
 
 	// ambient
-	color = mat->ambient * mScene->ambient();
+	color = mat->ambient * m_context->scene->ambient();
 
-	scalar_t shadow_sample_scaling = 1.0f / XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES;// Environment::handle().samples_light();
+	scalar_t shadow_sample_scaling = 1.0f / m_context->samples_shadow;
 
-	std::map<std::string, Light*>::iterator it = mScene->m_lights.begin();
-	std::map<std::string, Light*>::iterator et = mScene->m_lights.end();
+	std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
+	std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
 
 	for (; it != et; ++it) {
-		unsigned int tlshsamples = ((*it).second->is_area_light() ? XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES : 1);
+		unsigned int tlshsamples = ((*it).second->is_area_light() ? m_context->samples_shadow : 1);
 		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
@@ -347,7 +342,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
-			if (it_tex != mScene->m_textures.end()) {
+			if (it_tex != m_context->scene->m_textures.end()) {
 				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 			}
 
@@ -359,10 +354,10 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 			// if the point is not in shadow for this light
 			std::string obj;
 			IntInfo res;
-			bool test = mScene->intersection(sray, res, obj);
+			bool test = m_context->scene->intersection(sray, res, obj);
 			if (!test || res.t < EPSILON || res.t > distance) {
 				// shade
-				color += mat->shade(mScene->camera, light, texcolor, info) * tlshscaling;
+				color += mat->shade(m_context->scene->camera, light, texcolor, info) * tlshscaling;
 			}
 		}
 	}
@@ -397,7 +392,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 
 		// reflection
 		if(mat->reflectance > 0.0) {
-			unsigned int tlmcsamples = XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES;
+			unsigned int tlmcsamples = m_context->samples_reflection;
 			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;

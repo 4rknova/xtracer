@@ -124,17 +124,9 @@ Ray Camera::get_primary_ray_ods(float x, float y, float width, float height)
 
     // Shift the ray origin on to the circle, either to the left of the right
     switch (eye) {
-        case CAMERA_EYE_STEREO_LEFT:
-            scale = -offset;
-            break;
-
-        case CAMERA_EYE_STEREO_RIGHT:
-            scale = offset;
-            break;
-
-        default:
-            scale = offset * ((y < h) ? -1 : 1);
-            break;
+        case CAMERA_EYE_STEREO_LEFT  : scale = -offset; break;
+        case CAMERA_EYE_STEREO_RIGHT : scale =  offset; break;
+        default                      : scale = offset * ((y < h) ? -1 : 1); break;
     }
 
     ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;

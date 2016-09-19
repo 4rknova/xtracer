@@ -14,15 +14,13 @@
 
 using NImg::ColorRGBf;
 using NImg::Pixmap;
-using XT::Render::IRenderer;
-using XT::Render::Context;
 
-class Renderer : public IRenderer
+class Renderer : public xtracer::render::IRenderer
 {
 	public:
 		Renderer();
 
-		virtual void setup(Context &context);
+		virtual void setup(xtracer::render::context_t &context);
 		virtual void render();
 
 	private:
@@ -33,10 +31,9 @@ class Renderer : public IRenderer
 		ColorRGBf trace_ray    (const Ray &ray, const unsigned int depth, const scalar_t ior_src = 1.0002926, const scalar_t ior_dst = 1.0);
 		ColorRGBf shade        (const Ray &ray, const unsigned int depth, IntInfo &info, std::string &obj, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
-		Pixmap    *mFramebuffer;
-		Scene     *mScene;
-		PhotonMap  m_pm_global;
-		PhotonMap  m_pm_caustic;
+        xtracer::render::context_t *m_context;
+		PhotonMap                   m_pm_global;
+		PhotonMap                   m_pm_caustic;
 };
 
 #endif /* XTRACER_PHOTON_MAPPER_HPP_INCLUDED */

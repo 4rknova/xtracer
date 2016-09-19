@@ -10,8 +10,6 @@ class Environment
 	public:
 		static Environment &handle();
 
-		bool gui() const;
-
 		unsigned int width() const;
 		unsigned int height() const;
 
@@ -65,8 +63,6 @@ class Environment
 
 		Environment();
 		~Environment();
-
-		bool m_gui;
 
 		unsigned int m_aa;
 		unsigned int m_width, m_height;

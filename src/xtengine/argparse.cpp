@@ -9,8 +9,7 @@
 Environment Environment::m_environment;
 
 Environment::Environment()
-	: m_gui(false)
-	, m_aa(XTRACER_SETUP_DEFAULT_AA)
+	: m_aa(XTRACER_SETUP_DEFAULT_AA)
 	, m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH)
 	, m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT)
 
@@ -47,11 +46,6 @@ Environment::~Environment()
 Environment &Environment::handle()
 {
 	return m_environment;
-}
-
-bool Environment::gui() const
-{
-	return m_gui;
 }
 
 unsigned int Environment::width() const
@@ -224,10 +218,6 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-		}
-		// GUI
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GUI)) {
-			m_gui = true;
 		}
 		// Maximum recursion depth
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MAX_RDEPTH)) {

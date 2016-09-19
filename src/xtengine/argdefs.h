@@ -26,4 +26,8 @@
 #define XTRACER_OUTPUT_STR_NUL				"nul"				/* Output driver: dummy */
 #define XTRACER_OUTPUT_STR_PPM				"ppm"				/* Output driver: ppm image */
 
+#define XTRACER_ARGDEFS_STEREO              "-stereo"           /* Stereo mode */
+#define XTRACER_ARGDEFS_STEREO_OPT_LEFT     "left"              /* Stereo mode, Left  */
+#define XTRACER_ARGDEFS_STEREO_OPT_RIGHT    "right"             /* Stereo mode, Right */
+
 #endif /* XTRACER_ARGDEFS_H_INCLUDED */

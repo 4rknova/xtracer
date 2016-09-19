@@ -7,7 +7,7 @@
 #include <nimg/ppm.hpp>
 #include <ncf/util.h>
 
-#include <plr_photonmapper/photon_mapper.h>
+#include <plr_photonmapper/renderer.h>
 
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.hpp>
@@ -82,8 +82,8 @@ int main(int argc, char **argv)
 		scene.set_camera(Environment::handle().active_camera_name());
 
 		// Create the renderer.
-		XT::Render::IRenderer *renderer = new Renderer();
-		XT::Render::Context context;
+		xtracer::render::IRenderer *renderer = new Renderer();
+		xtracer::render::context_t  context;
 		context.scene       = &scene;
 		context.framebuffer = &fb;
 

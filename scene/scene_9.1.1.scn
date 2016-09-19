@@ -1,5 +1,4 @@
-# Xtracer 2
-
+data  = ./data
 title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
@@ -25,8 +24,8 @@ camera = {
 		}
 
 		target = {
-			x = 10
-			y = 6
+			x = 0
+			y = 20
 			z = 1
 		}
 
@@ -67,7 +66,7 @@ texture = {
 geometry = {
 	3dmodel = {
 		type = mesh
-		source = ../media/mesh/sponza.obj
+		source = <data>/sponza.obj
 	}
 }
 

@@ -1,10 +1,10 @@
 #include "renderer.h"
 
-namespace XT {
-	namespace Render {
+namespace xtracer {
+	namespace render {
 
 IRenderer::~IRenderer()
 {}
 
-	}
-}
+	} /* namespace render */
+} /* namespace xtracer */

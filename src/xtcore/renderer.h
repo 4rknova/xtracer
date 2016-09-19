@@ -4,20 +4,20 @@
 #include <nimg/pixmap.h>
 #include "context.h"
 
-namespace XT {
-	namespace Render {
+namespace xtracer {
+	namespace render {
 
 class IRenderer
 {
 	public:
 	virtual ~IRenderer();
 
-	virtual void setup(Context &context) = 0;
+	virtual void setup(context_t &context) = 0;
 	virtual void render() = 0;
 
 };
 
-	}
-}
+	} /* namespace render */
+} /* namespace xtracer  */
 
 #endif /* XTRACER_RENDERER_H_INCLUDED */
