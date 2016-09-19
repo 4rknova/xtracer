@@ -3,7 +3,7 @@
 namespace xtracer {
 	namespace render {
 
-rblock::rblock()
+frame_block_t::frame_block_t()
 	: x        (0)
 	, y        (0)
 	, width    (0)
@@ -11,10 +11,11 @@ rblock::rblock()
 	, priority (0)
 {}
 
-rblock::rblock(unsigned int x,
-		  	   unsigned int y,
-	  	       unsigned int width,
-  			   unsigned int height)
+frame_block_t::frame_block_t(
+               size_t x,
+		  	   size_t y,
+	  	       size_t width,
+  			   size_t height)
 {
 	this->x        = x;
 	this->y        = y;
@@ -23,5 +24,5 @@ rblock::rblock(unsigned int x,
 	this->priority = 0;
 }
 
-	}
-}
+	} /* namespace render */
+} /* namespace xtracer */

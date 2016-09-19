@@ -1,25 +1,21 @@
-#ifndef XTRACER_RBLOCK_H_INCLUDED
-#define XTRACER_RBLOCK_H_INCLUDED
+#ifndef XTRACER_FBLOCK_H_INCLUDED
+#define XTRACER_FBLOCK_H_INCLUDED
+
+#include <cstddef>
 
 namespace xtracer {
-	namespace render {
+    namespace render {
 
-typedef struct rblock {
-	unsigned int x;
-	unsigned int y;
-	unsigned int width;
-	unsigned int height;
-
+struct frame_block_t {
+	size_t x, y, width, height;
 	int priority;
 
-	rblock();
-	rblock(unsigned int x,
-		   unsigned int y,
-		   unsigned int width,
-		   unsigned int height);
-} rblock_t;
+	frame_block_t();
+	frame_block_t(size_t x, size_t y, size_t width, size_t height);
 
-	}
-}
+};
 
-#endif /* XTRACER_RBLOCK_H_INCLUDED */
+    } /* namespace render */
+} /* namespace xtracer */
+
+#endif /* XTRACER_FBLOCK_H_INCLUDED */
