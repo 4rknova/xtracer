@@ -35,7 +35,6 @@ SW_SYMID="`echo $SW_TITLE | tr '[:lower:]' '[:upper:]'`"
 SW_VERSION="`git describe --long`"
 
 # Options
-FLAG_OMPLIB=no
 FLAG_DBGSYM=no
 FLAG_OPTSPD=yes
 

@@ -87,7 +87,9 @@ geometry = {
 
 light = {
 	front = {
-		type = point
+		type = sphere
+
+        radius = 25
 
 		position = {
 			y = 900
@@ -102,7 +104,9 @@ light = {
 	}
 
 	cat = {
-		type = point
+		type = sphere
+
+        radius = 25
 
 		position = {
 			x = -1000
