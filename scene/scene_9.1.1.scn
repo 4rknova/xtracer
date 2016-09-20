@@ -12,9 +12,9 @@ ambient = {
 }
 
 camera = {
-	default = cam1
+	default = {
+        type = thin-lens
 
-	cam0 = {
 		fov = 60
 
 		position = {
@@ -35,6 +35,8 @@ camera = {
 	}
 
 	cam1 = {
+        type = thin-lens
+
 		fov = 60
 
 		position = {

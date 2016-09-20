@@ -9,7 +9,7 @@ using NMath::Vector3f;
 using NMath::Matrix4x4f;
 using NMath::Ray;
 
-Camera::Camera()
+CamPerspective::CamPerspective()
 	: target(Vector3f(0,0,1))
 	, up(Vector3f(0,1,0))
 	, fov(XT_CAM_DEFAULT_FOV)
@@ -17,7 +17,10 @@ Camera::Camera()
     , flength(0)
 {}
 
-Ray Camera::get_primary_ray(float x, float y, float width, float height)
+CamPerspective::~CamPerspective()
+{}
+
+Ray CamPerspective::get_primary_ray(float x, float y, float width, float height)
 {
     // Note that the direction vector of ray is not normalized. 
     // The DoF ray calculation depends on this at the moment.

@@ -13,9 +13,9 @@ ambient = {
 }
 
 camera = {
-	default = cam1
+	default = {
+        type = thin-lens
 
-	cam1 = {
 		fov = 45
 
 		position = {
@@ -36,6 +36,8 @@ camera = {
 	}
 
 	cam2 = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {
@@ -56,6 +58,8 @@ camera = {
 	}
 
 	cam3 = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {
@@ -76,6 +80,8 @@ camera = {
 	}
 
 	cam4 = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {
@@ -96,6 +102,8 @@ camera = {
 	}
 
 	cam5 = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {

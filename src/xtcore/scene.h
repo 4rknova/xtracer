@@ -52,8 +52,10 @@ class Scene
 		const ColorRGBf &ambient();
 		void ambient(const ColorRGBf &ambient);
 
-		ICamera *get_camera(const char *name = NULL);
+		ICamera *get_camera();
+        std::string camera;
 
+		unsigned int create_camera(NCF *p);
 		unsigned int create_light(NCF *p);
 		unsigned int create_material(NCF *p);
 		unsigned int create_texture(NCF *p);

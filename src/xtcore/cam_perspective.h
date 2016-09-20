@@ -9,9 +9,8 @@
 #define XT_CAM_DEFAULT_FOV        M_PI / 4
 #define XT_CAM_DEFAULT_PROJECTION CAM_PERSPECTIVE_PROJECTION_PERSPECTIVE
 #define XT_CAM_DEFAULT_EYE        CAM_PERSPECTIVE_EYE_MONO
-#define XT_CAM_DEFAULT_IPD         6.4f // 6.4 cm
 
-class Camera : public xtracer::assets::ICamera
+class CamPerspective : public xtracer::assets::ICamera
 {
 	public:
 		NMath::Vector3f target;
@@ -20,7 +19,8 @@ class Camera : public xtracer::assets::ICamera
 		NMath::scalar_t aperture;
 		NMath::scalar_t flength;
 
-		Camera();
+		CamPerspective();
+		~CamPerspective();
 
 		NMath::Ray get_primary_ray(float x, float y, float width, float height);
 };

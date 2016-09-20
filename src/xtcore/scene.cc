@@ -166,9 +166,6 @@ void Scene::release()
 	purge(m_textures);
 	purge(m_geometry);
 	purge(m_objects);
-//	Log::handle().log_message("Releasing the camera..");
-	delete camera;
-	camera = NULL;
 }
 
 unsigned int Scene::destroy_camera(const char *name)
@@ -267,7 +264,6 @@ unsigned int Scene::build()
 	std::list<std::string>::iterator et = sections.end();
 
 	for (; it != et; ++it) {
-		// Populate the groups
 		count = m_scene.get_group_by_name((*it).c_str())->count_groups();
 		if (count) {
 			Log::handle().log_message("Processing section: %s", (*it).c_str());
@@ -298,16 +294,19 @@ void Scene::ambient(const ColorRGBf &ambient)
 	m_ambient = ambient;
 }
 
-ICamera *Scene::get_camera(const char *name)
+ICamera *Scene::get_camera()
 {
-    if (name != NULL) {
-        std::map<std::Strinstd::map<m_cameras.find(name) != m_cameras.end())
+    std::map<std::string, ICamera *>::iterator et = m_cameras.end();
+    std::map<std::string, ICamera *>::iterator ft;
+
+    if (camera.empty()) {
+        ft = m_cameras.find(XTPROTO_PROP_DEFAULT);
+        if (ft != et) return ft->second;
     }
     else {
-        if (m_cameras.find(XTPROTO_PROP_DEFAULT) != m_cameras.end())
-        {
-        }
-    } 
+        ft = m_cameras.find(camera);
+        if (ft != et) return ft->second;
+    }
 
 	return 0;
 }
@@ -316,33 +315,33 @@ unsigned int Scene::create_camera(NCF *p)
 {
     if (!p) return 1;
 
-    std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE);
+    std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
     ICamera *camera = NULL;
 
-    if (!type.compare(XTPROTO_LTRL_THINLENS)) {
-	    NMath::Vector3f pos     = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_POSITION));
-    	NMath::Vector3f target  = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_TARGET));
-    	NMath::Vector3f up      = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_UP));
-    	NMath::scalar_t flength = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_FLENGTH));
-    	NMath::scalar_t ap      = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_APERTURE));
-	    NMath::scalar_t fov     = deserialize_numf(node->get_property_by_name(XTPROTO_PROP_FOV))
+    if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) {
+	    NMath::Vector3f pos     = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+    	NMath::Vector3f target  = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TARGET));
+    	NMath::Vector3f up      = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_UP));
+	    NMath::scalar_t fov     = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
+    	NMath::scalar_t flength = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
+    	NMath::scalar_t ap      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
 
-	    camera = new CamPerspective();
-        camera->position = pos;
-        camera->target   = target;
-        camera->up       = up;
-        camera->fov      = fov;
-        camera->aperture = ap;
-        camera->flength  = flength;
+	    camera = new (std::nothrow) CamPerspective();
+        ((CamPerspective *)camera)->position = pos;
+        ((CamPerspective *)camera)->target   = target;
+        ((CamPerspective *)camera)->up       = up;
+        ((CamPerspective *)camera)->fov      = fov;
+        ((CamPerspective *)camera)->flength  = flength;
+        ((CamPerspective *)camera)->aperture = ap;
     }
-    else if (!type.compare(XTPROTO_LTRL_ODS)) {
-	    NMath::Vector3f pos = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_POSITION));
-	    NMath::scalar_t ipd = deserialize_vec3(node->get_group_by_name(XTPROTO_PROP_IPD));
+    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)) {
+	    NMath::Vector3f pos = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+	    NMath::scalar_t ipd = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
 
-        camera = new CamODS();
-        camera->position = pos;
-        camera->ipd      = ipd;
+        camera = new (std::nothrow) CamODS();
+        ((CamODS *)camera)->position = pos;
+        ((CamODS *)camera)->ipd      = ipd;
     }
     else {
 		Log::handle().log_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
@@ -364,7 +363,7 @@ unsigned int Scene::create_light(NCF *p)
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-	Light *light = NULL;
+	ILight *light = NULL;
 
 	if (!type.compare(XTPROTO_LTRL_POINTLIGHT)) {
 		light = new (std::nothrow) PointLight;

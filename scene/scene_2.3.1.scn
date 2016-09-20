@@ -11,9 +11,9 @@ ambient = {
 }
 
 camera = {
-	default = front
+	default = {
+        type = thin-lens
 
-	front = {
 		fov = 45
 
 		position = {
@@ -26,6 +26,8 @@ camera = {
 	}
 
 	back = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {
@@ -43,6 +45,8 @@ camera = {
 	}
 
 	side = {
+        type = thin-lens
+
 		fov = 45
 
 		position = {

@@ -13,6 +13,7 @@ class CamODS : public xtracer::assets::ICamera
     NMath::scalar_t ipd;
 
     CamODS();
+    ~CamODS();
     NMath::Ray get_primary_ray(float x, float y, float width, float height);
 };
 

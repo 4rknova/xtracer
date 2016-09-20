@@ -24,12 +24,9 @@ versn = 0.3
 
 # The scene cameras.
 camera = {
+	default = {
+        type = thin-lens
 
-	# The default camera.
-	default = front
-
-	# The front camera.
-	front = {
 		# Field of view.
 		fov = 38.39
 

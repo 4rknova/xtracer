@@ -4,6 +4,9 @@ CamODS::CamODS()
     : ipd(XT_CAM_DEFAULT_IPD)
 {}
 
+CamODS::~CamODS()
+{}
+
 NMath::Ray CamODS::get_primary_ray(float x, float y, float width, float height)
 {
     NMath::Ray ray;

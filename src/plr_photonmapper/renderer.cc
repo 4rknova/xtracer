@@ -36,7 +36,9 @@ void Renderer::setup(xtracer::render::context_t &context)
 void Renderer::render()
 {
 	if (   !m_context->scene
-        || !m_context->framebuffer) return;
+        || !m_context->framebuffer
+        || !m_context->scene->get_camera()
+    ) return;
 
 	pass_ptrace();
 	pass_rtrace();
@@ -223,8 +225,8 @@ void Renderer::pass_rtrace()
 						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
                         for (float dofs = 0; dofs < dof_samples; ++dofs) {
-						    color += trace_ray(
-                                 m_context->scene->camera->get_primary_ray(rx , ry, (float)w, (float)h)
+                            color += trace_ray(
+                                 m_context->scene->get_camera()->get_primary_ray(rx , ry, (float)w, (float)h)
                                 ,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
                             ) * sample_scaling;
 						}
@@ -357,7 +359,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 			bool test = m_context->scene->intersection(sray, res, obj);
 			if (!test || res.t < EPSILON || res.t > distance) {
 				// shade
-				color += mat->shade(m_context->scene->camera->position, light, texcolor, info) * tlshscaling;
+                color += mat->shade(m_context->scene->get_camera()->position, light, texcolor, info) * tlshscaling;
 			}
 		}
 	}

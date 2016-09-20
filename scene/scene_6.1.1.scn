@@ -13,10 +13,10 @@ ambient = {
 }
 
 camera = {
-	default = cam1
+	default = {
+		type = thin-lens
 
-	cam1 = {
-		fov = 45
+        fov = 45
 
 		position = {
 			x = 100
@@ -108,14 +108,6 @@ geometry = {
 
 		u_scale = 0.001
 		v_scale = 0.001
-	}
-
-	wall = {
-		type = plane
-		normal = {
-			z = 1
-		}
-		distance = 1000000
 	}
 }
 
@@ -339,9 +331,5 @@ object = {
 		geometry = floor
 		material = plane
 		texture = floor
-	}
-	wall = {
-		geometry = wall
-		material = plane
 	}
 }

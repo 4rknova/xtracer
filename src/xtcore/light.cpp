@@ -5,7 +5,7 @@
 using NMath::vec3_t;
 
 /* Light interface */
-ILight::~ILight(const Vector3f &pos, const ColorRGBf &ints)
+ILight::ILight(const Vector3f &pos, const ColorRGBf &ints)
 	: m_position(pos),
 	  m_intensity(ints)
 {}
@@ -28,7 +28,7 @@ const ColorRGBf &ILight::intensity() const
 	return m_intensity;
 }
 
-void iILight::position(const Vector3f &position)
+void ILight::position(const Vector3f &position)
 {
 	m_position = position;
 }

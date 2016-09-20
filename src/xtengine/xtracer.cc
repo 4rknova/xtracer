@@ -78,8 +78,12 @@ int main(int argc, char **argv)
 		// Build the scene data
 		scene.build();
 
-		// set the camera
-		scene.set_camera(Environment::handle().active_camera_name());
+        if (scene.m_cameras.size() == 0) {
+            Log::handle().log_error("no cameras found");
+            return 2;
+        }
+
+        scene.camera = Environment::handle().active_camera_name();
 
 		// Create the renderer.
 		xtracer::render::IRenderer *renderer = new Renderer();

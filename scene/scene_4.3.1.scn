@@ -11,9 +11,9 @@ ambient = {
 }
 
 camera = {
-	default = cam1
+	default = {
+        type = thin-lens
 
-	cam1 = {
 		fov = 60
 
 
