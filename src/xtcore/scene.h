@@ -22,6 +22,7 @@
 #define VALUE_DEFAULT_BOOL false
 
 using NMath::Geometry;
+using xtracer::assets::ICamera;
 
 class Scene
 {
@@ -51,7 +52,7 @@ class Scene
 		const ColorRGBf &ambient();
 		void ambient(const ColorRGBf &ambient);
 
-		unsigned int set_camera(const char *name);
+		ICamera *get_camera(const char *name = NULL);
 
 		unsigned int create_light(NCF *p);
 		unsigned int create_material(NCF *p);
@@ -60,9 +61,6 @@ class Scene
 		unsigned int create_object(NCF *p);
 
 		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
-
-		// The camera
-		Camera *camera;
 
 		// RETURN CODES:
 		//  0. Everything went well.
@@ -75,8 +73,8 @@ class Scene
 		unsigned int destroy_object(const char *name);
 
 		// Maps of the scene entities
-		std::map<std::string, Camera*   > m_cameras;
-		std::map<std::string, Light*    > m_lights;
+		std::map<std::string, ICamera*  > m_cameras;
+		std::map<std::string, ILight*   > m_lights;
 		std::map<std::string, Material* > m_materials;
 		std::map<std::string, Texture2D*> m_textures;
 		std::map<std::string, Geometry* > m_geometry;

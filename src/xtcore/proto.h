@@ -40,6 +40,7 @@
 #define XTPROTO_PROP_REFLC			"reflectance"		/* scalar_t   */			/* Reflectance ratio */
 #define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */			/* Transparency ratio */
 #define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */			/* Index of refraction */
+#define XTPROTO_PROP_IPD			"ipd"				/* scalar_t   */			/* Inter-Pupillary Distance */
 
 #define XTPROTO_LTRL_POINTLIGHT		"point"				/* string     */			/* Point light */
 #define XTPROTO_LTRL_SPHERELIGHT	"sphere"			/* string     */			/* Sphere light */
@@ -81,5 +82,8 @@
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */			/* Resource node */
 #define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */			/* Resource node */
 #define XTPROTO_NODE_OBJECT			"object"			/* N/A        */			/* Resource node */
+
+#define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */            /* Perspective camera */
+#define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */            /* Omni Directional Stereo camera */
 
 #endif /* XTPROTO_H_INCLUDED */

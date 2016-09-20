@@ -64,8 +64,8 @@ void Renderer::pass_ptrace()
 		scalar_t light_total_luminance = 0;					// Total light luminance.
 
 		// Calculate the luminance for each light and the total.
-		std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
-		std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
+		std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
+		std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
 		for (; it != et; ++it) {
 			scalar_t lum = NImg::Operator::luminance((*it).second->intensity());
 			light_luminance.push_back(lum);
@@ -85,8 +85,8 @@ void Renderer::pass_ptrace()
 	{
 		// Photon tracing.
 		unsigned int light_index = 0;
-		std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
-		std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
+		std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
+		std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
 		for (; it != et; ++it) {
 			while (light_photons[light_index] > 0) {
 				Ray ray = (*it).second->ray_sample();
@@ -187,9 +187,9 @@ void Renderer::pass_rtrace()
 
 	if (thread_count) omp_set_num_threads(thread_count);
 
-	const unsigned int dof_samples = m_context->scene->camera->flength > 0
+	const unsigned int dof_samples = 1;/*m_context->scene->camera->flength > 0
                                    ? m_context->samples_dof
-                                   : 1.0;
+                                   : 1.0;*/
 
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
@@ -197,7 +197,7 @@ void Renderer::pass_rtrace()
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	// Calculate the number of samples per pixel.
-	float sample_scaling = 1.0f / ((m_context->scene->camera->flength > 0 ? m_context->samples_dof : 1.0f) * spp);
+	float sample_scaling = 1.0f / (dof_samples * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
     for (unsigned int tile = 0; tile < numtiles; ++tile) {
@@ -329,15 +329,15 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->samples_shadow;
 
-	std::map<std::string, Light*>::iterator it = m_context->scene->m_lights.begin();
-	std::map<std::string, Light*>::iterator et = m_context->scene->m_lights.end();
+	std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
+	std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
 
 	for (; it != et; ++it) {
 		unsigned int tlshsamples = ((*it).second->is_area_light() ? m_context->samples_shadow : 1);
 		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
-			Light *light = (*it).second;
+			ILight *light = (*it).second;
 			Vector3f v = light->point_sample() - p;
 
 			// Texture.
@@ -357,7 +357,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 			bool test = m_context->scene->intersection(sray, res, obj);
 			if (!test || res.t < EPSILON || res.t > distance) {
 				// shade
-				color += mat->shade(m_context->scene->camera, light, texcolor, info) * tlshscaling;
+				color += mat->shade(m_context->scene->camera->position, light, texcolor, info) * tlshscaling;
 			}
 		}
 	}

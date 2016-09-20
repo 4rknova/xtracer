@@ -5,4 +5,5 @@ temp/
 src/*.o
 *.pc
 *.ppm
+*.png
 Makefile

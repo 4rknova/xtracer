@@ -18,7 +18,7 @@ Material::Material()
 Material::~Material()
 {}
 
-ColorRGBf Material::shade(const Camera *cam, const Light *light, ColorRGBf &texcolor, const IntInfo &info)
+ColorRGBf Material::shade(NMath::Vector3f cam_position, const ILight *light, ColorRGBf &texcolor, const IntInfo &info)
 {
 	switch(type)
 	{
@@ -31,7 +31,7 @@ ColorRGBf Material::shade(const Camera *cam, const Light *light, ColorRGBf &texc
 
 		case MATERIAL_PHONG:
 			return phong(
-				cam->position,
+				cam_position,
 				light->point_sample(),
 				&info,
 				light->intensity(),
@@ -41,7 +41,7 @@ ColorRGBf Material::shade(const Camera *cam, const Light *light, ColorRGBf &texc
 
 		case MATERIAL_BLINNPHONG:
 			return blinn(
-				cam->position,
+				cam_position,
 				light->point_sample(),
 				&info,
 				light->intensity(),

@@ -5,35 +5,35 @@
 using NMath::vec3_t;
 
 /* Light interface */
-Light::Light(const Vector3f &pos, const ColorRGBf &ints)
+ILight::~ILight(const Vector3f &pos, const ColorRGBf &ints)
 	: m_position(pos),
 	  m_intensity(ints)
 {}
 
-Light::Light()
+ILight::ILight()
 	: m_position(Vector3f(0, 0, 0)),
 	  m_intensity(ColorRGBf(1, 1, 1))
 {}
 
-Light::~Light()
+ILight::~ILight()
 {}
 
-const Vector3f &Light::position() const
+const Vector3f &ILight::position() const
 {
 	return m_position;
 }
 
-const ColorRGBf &Light::intensity() const
+const ColorRGBf &ILight::intensity() const
 {
 	return m_intensity;
 }
 
-void Light::position(const Vector3f &position)
+void iILight::position(const Vector3f &position)
 {
 	m_position = position;
 }
 
-void Light::intensity(const ColorRGBf &intensity)
+void ILight::intensity(const ColorRGBf &intensity)
 {
 	m_intensity = intensity;
 }

@@ -24,7 +24,7 @@ class Material
 		~Material();
 
 		// shader
-		ColorRGBf shade(const Camera *cam, const Light *light, ColorRGBf &texcolor, const IntInfo &info);
+		ColorRGBf shade(NMath::Vector3f cam_position, const ILight *light, ColorRGBf &texcolor, const IntInfo &info);
 
 		// properties
 		ColorRGBf ambient;		// ambient intensity

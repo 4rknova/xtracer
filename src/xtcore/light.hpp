@@ -12,12 +12,12 @@ using NMath::Ray;
 using NImg::ColorRGBf;
 
 /* Light interface */
-class Light
+class ILight
 {
 	public:
-		Light(const Vector3f &pos, const ColorRGBf &ints);
-		Light();
-		virtual ~Light();
+		ILight(const Vector3f &pos, const ColorRGBf &ints);
+		ILight();
+		virtual ~ILight();
 
 		virtual bool is_area_light() const = 0;
 
@@ -34,7 +34,7 @@ class Light
 		ColorRGBf m_intensity;
 };
 
-class PointLight : public Light
+class PointLight : public ILight
 {
 	public:
 		bool is_area_light() const;
@@ -42,7 +42,7 @@ class PointLight : public Light
 		Ray ray_sample() const;
 };
 
-class SphereLight : public Light
+class SphereLight : public ILight
 {
 	public:
 		SphereLight();
@@ -58,7 +58,7 @@ class SphereLight : public Light
 		scalar_t m_radius;
 };
 
-class BoxLight : public Light
+class BoxLight : public ILight
 {
 	public:
 		BoxLight();
@@ -74,7 +74,7 @@ class BoxLight : public Light
 		Vector3f m_dimensions;
 };
 
-class TriangleLight : public Light
+class TriangleLight : public ILight
 {
 	public:
 		TriangleLight();
