@@ -189,9 +189,7 @@ void Renderer::pass_rtrace()
 
 	if (thread_count) omp_set_num_threads(thread_count);
 
-	const unsigned int dof_samples = 1;/*m_context->scene->camera->flength > 0
-                                   ? m_context->samples_dof
-                                   : 1.0;*/
+	const unsigned int dof_samples = m_context->samples_dof;
 
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
