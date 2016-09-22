@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct {
     vec3_t v;
-    ColorRGBf c;
+    ColorRGBAf c;
 } vertex_t;
 
 typedef struct {
@@ -24,8 +24,8 @@ typedef struct {
 } edge_t;
 
 void draw_line(Pixmap &map,
-          ColorRGBf &c0, float x0, float y0,
-          ColorRGBf &c1, float x1, float y1);
+          ColorRGBAf &c0, float x0, float y0,
+          ColorRGBAf &c1, float x1, float y1);
 
 void draw_triangle(Pixmap &map, triangle_t tri);
 void fill_triangle(Pixmap &map, triangle_t tri);

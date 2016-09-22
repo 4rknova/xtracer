@@ -8,7 +8,8 @@
 namespace NImg {
     namespace Operator {
 
-int diff(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
+int   diff(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
+float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
 
     } /* namespace Operator */
 } /* namespace NImg */

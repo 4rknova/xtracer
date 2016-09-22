@@ -8,8 +8,8 @@ namespace NImg {
     namespace Painter {
 
 void draw_line(Pixmap &map,
-         ColorRGBf &c0, float x0, float y0,
-         ColorRGBf &c1, float x1, float y1)
+         ColorRGBAf &c0, float x0, float y0,
+         ColorRGBAf &c1, float x1, float y1)
 {
 	float xdiff = (x1 - x0);
 	float ydiff = (y1 - y0);
@@ -32,7 +32,7 @@ void draw_line(Pixmap &map,
 		for (float x = xmin; x <= xmax; x += 1.f) {
 			float y = y1 + ((x - x1) * slope);
             float t = (x - x0) / xdiff;
-            ColorRGBf col = c1 * t + c0 * (1.f - t);
+            ColorRGBAf col = c1 * t + c0 * (1.f - t);
 			map.pixel((unsigned int)x, (unsigned int)y) = col;
 		}
 
@@ -49,7 +49,7 @@ void draw_line(Pixmap &map,
 		for (float y = ymin; y <= ymax; y += 1.f) {
 			float x = x0 + ((y - y0) * slope);
             float t = (y - y0) / ydiff;
-			ColorRGBf col = c1 * t + c0 * (1.f - t);
+			ColorRGBAf col = c1 * t + c0 * (1.f - t);
 			map.pixel((unsigned int)x, (unsigned int)y) = col;
 		}
 	}
@@ -65,20 +65,23 @@ void draw_triangle(Pixmap &map, triangle_t tri)
                  , tri.a.c, tri.a.v.x, tri.a.v.y);
 }
 
-void draw_span(Pixmap &map, int x0, int x1, ColorRGBf c0, ColorRGBf c1, int y)
+void draw_span(Pixmap &map, int x0, int x1, ColorRGBAf c0, ColorRGBAf c1, int y)
 {
 	int xdiff = x1 - x0;
 
     if(xdiff == 0) return;
 
-    ColorRGBf colordiff = c1 - c0;
+    ColorRGBAf colordiff = c1 - c0;
 
 	float factor = 0.f;
     float factorStep = 1.f / (float)xdiff;
 
 	// draw each pixel in the span
     for (int x = x0; x < x1; ++x) {
-        map.pixel(x, y) = c0 + colordiff * factor;
+        ColorRGBAf src = map.pixel_ro(x,y);
+        ColorRGBAf res = c0 + colordiff * factor;
+
+        map.pixel(x,y) = ColorRGBf(src) * (1.-res.a()) + ColorRGBf(res) * res.a();
         factor += factorStep;
     }
 }
@@ -99,8 +102,8 @@ void draw_spans(Pixmap &map, edge_t e0, edge_t e1)
     // and colors of the points of the edges
     float e1xdiff = (float)(e0.b.v.x - e0.a.v.x);
     float e2xdiff = (float)(e1.b.v.x - e1.a.v.x);
-    ColorRGBf e1colordiff = e0.b.c - e0.a.c;
-    ColorRGBf e2colordiff = e1.b.c - e1.a.c;
+    ColorRGBAf e1colordiff = e0.b.c - e0.a.c;
+    ColorRGBAf e2colordiff = e1.b.c - e1.a.c;
 
 	// calculate factors to use for interpolation
     // with the edges and the step values to increase
@@ -115,12 +118,12 @@ void draw_spans(Pixmap &map, edge_t e0, edge_t e1)
         // create and draw span
         int x0 = e0.a.v.x + (int)(e1xdiff * factor1);
         int x1 = e1.a.v.x + (int)(e2xdiff * factor2);
-        ColorRGBf c0 = e0.a.c + e1colordiff * factor1;
-        ColorRGBf c1 = e1.a.c + e2colordiff * factor2;
+        ColorRGBAf c0 = e0.a.c + e1colordiff * factor1;
+        ColorRGBAf c1 = e1.a.c + e2colordiff * factor2;
 
         if (x0 > x1) {
             int tv = x0;
-            ColorRGBf tc = c0;
+            ColorRGBAf tc = c0;
 
             x0 = x1;
             x1 = tv;
