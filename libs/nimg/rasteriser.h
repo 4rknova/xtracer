@@ -1,5 +1,5 @@
-#include <float.h>
-#include <stdint.h>
+#ifndef NIMG_RASTERISER_H_INCLUDED
+#define NIMG_RASTERISER_H_INCLUDED
 
 #include "pixmap.h"
 
@@ -32,3 +32,5 @@ void fill_triangle(Pixmap &map, triangle_t tri);
 
     } /* namespace Painter */
 } /* namespace NImg */
+
+#endif /* NIMG_RASTERISER_H_INCLUDED */

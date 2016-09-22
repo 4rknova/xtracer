@@ -1,75 +1,42 @@
 #include <ctime>
 #include <cstdio>
+#include <string>
 #include <cstdlib>
-#include <sstream>
 #include <nimg/pixmap.h>
 #include <nimg/ppm.hpp>
 #include <nimg/diff.h>
 #include <nimg/rasteriser.h>
+#include <nimg/genetic.h>
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) return 1;
-
-    srand(time(NULL));
-
-    int approx = atoi(argv[2]);
-
+    if (argc != 4) return 1;
     NImg::Pixmap src, dst;
-
 	if (NImg::IO::Import::ppm_raw(argv[1], src)) return 2;
-
     dst.init(src.width(), src.height());
+    srand(time(NULL));
+    NImg::Genetic::init_seed(time(NULL));
 
-    float diff = NImg::Operator::diff_euclid(src, dst);
+    float curr   = NImg::Operator::diff_euclid(src, dst);
+    float target = atof(argv[2]);
+    float step   = atof(argv[3]);
+    float iter   = curr;
+    int gen      = 0;
 
-    for (int i = 0 ; diff > approx; ++i) {
-        NImg::Pixmap temp = dst;
+#if (0)
 
-        printf("\rMutation %3d %5.3f", i, diff);
-        fflush(stdout);
+    for (; target < iter; iter -= step ) {
+        gen += NImg::Genetic::tri(src, dst, iter);
+        curr = NImg::Operator::diff_euclid(src, dst);
 
-        float tdiff = diff;
-        while (tdiff >= diff) {
-            temp = dst;
-            NImg::Painter::triangle_t tri;
-
-            NImg::ColorRGBAf c;
-            float l = (rand()%255) / 255.f;
-            float a = (rand()%255) / 255.f;
-
-            c.r(l);
-            c.g(l);
-            c.b(l);
-            c.a(a);
-
-            int w = src.width();
-            int h = src.height();
-            tri.a.v.x = rand()%w;
-            tri.b.v.x = rand()%w;
-            tri.c.v.x = rand()%w;
-            tri.a.v.y = rand()%h;
-            tri.b.v.y = rand()%h;
-            tri.c.v.y = rand()%h;
-
-            tri.a.c = c;
-            tri.b.c = c;
-            tri.c.c = c;
-
-            NImg::Painter::fill_triangle(temp, tri);
-            tdiff = NImg::Operator::diff_euclid(src, temp);
-        }
-
-
-        std::stringstream t;
-        t << i;
-//	    NImg::IO::Export::ppm_raw((t.str().append(".ppm")).c_str(), dst);
-        diff = tdiff;
-        dst = temp;
-        NImg::IO::Export::ppm_raw(std::string(argv[1]).append("_intermediate.ppm").c_str(), dst);
+        printf("\rGen %4d -> %0.3f", gen, curr); fflush(stdout);
     }
-
-	NImg::IO::Export::ppm_raw(std::string(argv[1]).append("_final.ppm").c_str(), dst);
-
+#else
+    std::vector<NImg::Painter::triangle_t> triangles;
+    gen += NImg::Genetic::tri(src, dst, triangles, target, (size_t)step);
+    curr = NImg::Operator::diff_euclid(src, dst);
+    printf("\rGen %4d -> %0.3f %f", gen, curr, target); fflush(stdout);
+#endif
+    NImg::IO::Export::ppm_raw(std::string(argv[1]).append("_res.ppm").c_str(), dst);
     return 0;
 }
