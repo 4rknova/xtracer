@@ -5,6 +5,7 @@
 #include <nmath/prng.h>
 #include <nimg/pixmap.h>
 #include <nimg/ppm.h>
+#include <nimg/img.h>
 #include <ncf/util.h>
 
 #include <plr_photonmapper/renderer.h>
@@ -24,6 +25,11 @@ int main(int argc, char **argv)
 {
 	PLM::load();
 
+    nimg::Pixmap p;
+    nimg::io::load::image("lena.png", p);
+    nimg::io::save::ppm_raw("lena.ppm", p);
+
+    return 0;
 
 	// Display usage information.
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {

@@ -38,8 +38,7 @@ namespace nimg {
 
 int ppm_raw(const char *filename, Pixmap &fb)
 {
-	if (!filename)
-		return 1;
+	if (!filename) return 1;
 
 	FILE* fp = fopen(filename, "rb");
 

@@ -1,13 +1,15 @@
 #ifndef NIMG_IMG_H_INCLUDED
 #define NIMG_IMG_H_INCLUDED
 
+#include "pixmap.h"
+
 namespace nimg {
     namespace io {
-        namespace import {
+        namespace load {
 
 int image(const char *filename, Pixmap &map);
 
-        } /* namespace import */
+        } /* namespace load */
     } /* namespace io */
 } /* namespace nimg */
 
