@@ -1,5 +1,8 @@
-#ifndef BUFFER_HPP_INCLUDED
-#define BUFFER_HPP_INCLUDED
+#ifndef BUFFER_H_INCLUDED
+#define BUFFER_H_INCLUDED
+
+namespace nimg {
+    namespace util {
 
 template <class T>
 class Buffer
@@ -29,6 +32,9 @@ class Buffer
 		T *m_data;
 };
 
+    } /* namespace util */
+} /* namespace nimg */
+
 #include "buffer.tml"
 
-#endif /* BUFFER_HPP_INCLUDED */
+#endif /* BUFFER_H_INCLUDED */

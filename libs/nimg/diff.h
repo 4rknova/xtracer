@@ -5,13 +5,13 @@
 
 #define EPS 0.001
 
-namespace NImg {
-    namespace Operator {
+namespace nimg {
+    namespace eval {
 
 int   diff(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
 float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
 
-    } /* namespace Operator */
-} /* namespace NImg */
+    } /* namespace eval */
+} /* namespace nimg */
 
 #endif /* NIMG_DIFF_H_INCLUDED */

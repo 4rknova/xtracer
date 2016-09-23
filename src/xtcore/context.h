@@ -4,21 +4,23 @@
 #include "nimg/pixmap.h"
 #include "scene.h"
 
+using nimg::Pixmap;
+
 namespace xtracer {
 	namespace render {
 
 struct context_t
 {
 	public:
-	Scene        *scene;
-	NImg::Pixmap *framebuffer;
+	Scene  *scene;
+	Pixmap *framebuffer;
 
-    size_t        threads;
+    size_t threads;
 
-    size_t        samples_ssaa;
-    size_t        samples_reflection;
-    size_t        samples_shadow;
-    size_t        samples_dof;
+    size_t samples_ssaa;
+    size_t samples_reflection;
+    size_t samples_shadow;
+    size_t samples_dof;
 
     context_t();
 };

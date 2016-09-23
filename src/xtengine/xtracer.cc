@@ -4,7 +4,7 @@
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
 #include <nimg/pixmap.h>
-#include <nimg/ppm.hpp>
+#include <nimg/ppm.h>
 #include <ncf/util.h>
 
 #include <plr_photonmapper/renderer.h>
@@ -17,11 +17,10 @@
 #include "argparse.hpp"
 #include "plm.h"
 
-
 using Util::String::to_string;
 using Util::String::path_comp;
 
-int main2(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	PLM::load();
 
@@ -48,17 +47,7 @@ int main2(int argc, char **argv)
 	// Create and initiate the pixmap.
 	Log::handle().log_message("Initiating the pixmap..");
 	Pixmap fb;
-
-	if (Environment::handle().flag_resume()) {
-		if(NImg::IO::Import::ppm_raw(Environment::handle().resume_file(), fb)) {
-			Log::handle().log_error("Failed to load %s", Environment::handle().resume_file());
-			return 1;
-		}
-	}
-	else {
-		fb.init(Environment::handle().width(), Environment::handle().height());
-	}
-
+    fb.init(Environment::handle().width(), Environment::handle().height());
 	Environment::handle().log_info();
 
 	// Export.
@@ -139,7 +128,7 @@ int main2(int argc, char **argv)
 			}
 
 			Log::handle().log_message("Exporting to %s..", file.c_str());
-			if (NImg::IO::Export::ppm_raw(file.c_str(), fb)) {
+			if (nimg::io::save::ppm_raw(file.c_str(), fb)) {
 				Log::handle().log_error("Failed to export image file");
 			}
 		}

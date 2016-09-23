@@ -4,12 +4,12 @@
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 
 using NMath::scalar_t;
 using NMath::Vector3f;
 using NMath::IntInfo;
-using NImg::ColorRGBf;
+using nimg::ColorRGBf;
 
 inline ColorRGBf blinn(const Vector3f &campos, const Vector3f &lightpos,
 					   const IntInfo *info, const ColorRGBf &light,

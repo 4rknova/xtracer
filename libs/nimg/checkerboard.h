@@ -1,10 +1,10 @@
-#ifndef NIMG_CHECKERBOARD_HPP_INCLUDED
-#define NIMG_CHECKERBOARD_HPP_INCLUDED
+#ifndef NIMG_CHECKERBOARD_H_INCLUDED
+#define NIMG_CHECKERBOARD_H_INCLUDED
 
 #include "pixmap.h"
 
-namespace NImg {
-	namespace Generate {
+namespace nimg {
+	namespace generator {
 
 // RETURN CODES:
 // 0. Everything went well.
@@ -13,7 +13,7 @@ namespace NImg {
 int checkerboard(Pixmap &map, const unsigned int width, const unsigned int height,
 				 ColorRGBAf &a, ColorRGBAf &b);
 
-	} /* namespace Generator */
-} /* namespace NImg */
+	} /* namespace generator */
+} /* namespace nimg */
 
-#endif /* NIMG_CHECKERBOARD_HPP_INCLUDED */
+#endif /* NIMG_CHECKERBOARD_H_INCLUDED */

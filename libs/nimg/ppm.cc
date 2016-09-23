@@ -1,40 +1,13 @@
-/*
-
-	This file is part of libnimg.
-
-	ppm.cpp
-	PPM
-
-	Copyright (C) 2012
-	Papadopoulos Nikolaos
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 3 of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU	Lesser General Public License for more details.
-
-	You should have received a copy of the GNU Lesser General
-	Public License along with this program; if not, write to the
-	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-	Boston, MA 02110-1301 USA
-
-*/
-
 #include <string>
 #include <cctype>
 #include <cstring>
 #include <cstdio>
-#include "color.hpp"
-#include "ppm.hpp"
+#include "color.h"
+#include "ppm.h"
 
-namespace NImg {
-	namespace IO {
-		namespace Import {
+namespace nimg {
+	namespace io {
+		namespace load {
 /*
 	FORMAT: PPM
 	TYPE: BINARY
@@ -87,13 +60,13 @@ int ppm_raw(const char *filename, Pixmap &fb)
 				break;
 
 			do {
-				c = getc(fp); 
+				c = getc(fp);
 			} while (c != '\n' && c != EOF);
-			
+
 			if (c == EOF)
 				break;
 		}
-			
+
 		if (c != EOF) {
 			do {
 				header_token[tcount].append(1, c);
@@ -133,7 +106,7 @@ int ppm_raw(const char *filename, Pixmap &fb)
 		for (unsigned int i = 0; i < fb.width(); i++) {
 			unsigned char p[3];
 
-			if (fread(p, 1, 3, fp) != 3) 
+			if (fread(p, 1, 3, fp) != 3)
 			{
 				fclose(fp);
 				return 4;
@@ -152,9 +125,10 @@ int ppm_raw(const char *filename, Pixmap &fb)
 	return 0;
 }
 
-		} /* namespace Import */
+		} /* namespace load */
 
-		namespace Export {
+		namespace save {
+
 int ppm_raw(const char *filename, const Pixmap &fb)
 {
 	if (!filename)
@@ -206,6 +180,6 @@ int ppm_raw(const char *filename, const Pixmap &fb)
 	return 0;
 }
 
-		} /* namespace Export */
-	} /* namespace IO */
-} /* namespace NImg */
+		} /* namespace save */
+	} /* namespace io */
+} /* namespace nimg */

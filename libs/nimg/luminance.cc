@@ -1,7 +1,7 @@
-#include "luminance.hpp"
+#include "luminance.h"
 
-namespace NImg {
-	namespace Operator {
+namespace nimg {
+	namespace eval {
 
 float luminance(const ColorRGBf &color)
 {
@@ -13,5 +13,5 @@ float luminance(const ColorRGBAf &color)
 	return 0.2126 * color.r() + 0.7152 * color.g() + 0.0722 * color.b();
 }
 
-	} /* namespace Operator */
-} /* namespace NImg */
+	} /* namespace eval */
+} /* namespace nimg */

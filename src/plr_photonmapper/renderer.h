@@ -5,15 +5,15 @@
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include <nplatform/timer.h>
 #include <xtcore/scene.h>
 #include <xtcore/renderer.h>
 #include "photonmap.h"
 
-using NImg::ColorRGBf;
-using NImg::Pixmap;
+using nimg::ColorRGBf;
+using nimg::Pixmap;
 
 class Renderer : public xtracer::render::IRenderer
 {

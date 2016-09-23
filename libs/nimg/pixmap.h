@@ -1,10 +1,10 @@
-#ifndef NIMG_PIXMAP_HPP_INCLUDED
-#define NIMG_PIXMAP_HPP_INCLUDED
+#ifndef NIMG_PIXMAP_H_INCLUDED
+#define NIMG_PIXMAP_H_INCLUDED
 
-#include "buffer.hpp"
-#include "color.hpp"
+#include "buffer.h"
+#include "color.h"
 
-namespace NImg {
+namespace nimg {
 
 // For visual studio:
 // Disable "<type> needs to have dll-interface to be used by clients"
@@ -37,11 +37,11 @@ class Pixmap
 
 	private:
 		unsigned int m_width, m_height;
-		mutable Buffer<ColorRGBAf> m_pixels;
+		mutable util::Buffer<ColorRGBAf> m_pixels;
 };
 
 #pragma warning (pop)
 
-} /* namespace NImg */
+} /* namespace nimg */
 
-#endif /* NIMG_TEXTURE_HPP_INCLUDED */
+#endif /* NIMG_TEXTURE_H_INCLUDED */

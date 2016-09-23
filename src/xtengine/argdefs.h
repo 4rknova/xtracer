@@ -12,7 +12,6 @@
 #define XTRACER_ARGDEFS_SAMPLES_DOF			"-s_dof"			/* Number of samples for depth of field. */
 #define XTRACER_ARGDEFS_SAMPLES_REFLEC		"-s_refl"			/* Number of samples for reflections. */
 #define XTRACER_ARGDEFS_ANTIALIASING		"-aa"				/* Antialiasing level. */
-#define XTRACER_ARGDEFS_RESUMEFILE			"-resume"			/* Resume file. */
 #define XTRACER_ARGDEFS_REGION				"-region"			/* Render region. */
 #define XTRACER_ARGDEFS_ACTIVE_CAMERA		"-cam"				/* Active camera name. */
 #define XTRACER_ARGDEFS_OUTDRV				"-outdrv"			/* Output mode. */

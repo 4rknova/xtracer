@@ -1,14 +1,14 @@
 #ifndef XTRACER_MATERIAL_HPP_INCLUDED
 #define XTRACER_MATERIAL_HPP_INCLUDED
 
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 #include <nmath/intinfo.h>
 
 #include "camera.h"
 #include "light.hpp"
 
 using NMath::IntInfo;
-using NImg::ColorRGBf;
+using nimg::ColorRGBf;
 
 enum MATERIAL_TYPE
 {

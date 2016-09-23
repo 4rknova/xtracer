@@ -1,10 +1,10 @@
 #include <cmath>
 #include <vector>
-#include "luminance.hpp"
+#include "luminance.h"
 #include "diff.h"
 
-namespace NImg {
-    namespace Operator {
+namespace nimg {
+    namespace eval {
 
 int diff(const Pixmap &src, const Pixmap &dst, const float threshold)
 {
@@ -69,5 +69,5 @@ float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold)
     return res;  //d(x,y)=sqrt(sum_i((xi-yi)^2))
 }
 
-    } /* namespace Operator */
-} /* namespace NImg */
+    } /* namespace eval */
+} /* namespace nimg */

@@ -1,12 +1,11 @@
-#ifndef NIMG_PPM_HPP_INCLUDED
-#define NIMG_PPM_HPP_INCLUDED
-
+#ifndef NIMG_PPM_H_INCLUDED
+#define NIMG_PPM_H_INCLUDED
 
 #include "pixmap.h"
 
-namespace NImg {
-	namespace IO {
-		namespace Import {
+namespace nimg {
+	namespace io {
+		namespace load {
 //  RESTRICTIONS:
 //  Only images with a pixel component maximum value of
 //  255 are supported. This is the most common format.
@@ -20,9 +19,9 @@ namespace NImg {
 // 5. Failed to initialize the Image.
 int ppm_raw(const char *filename, Pixmap &map);
 
-		} /* namespace Import */
+		} /* namespace load */
 
-		namespace Export {
+		namespace save {
 //  RESTRICTIONS:
 //  Only images with a pixel component maximum value of
 //  255 are supported. This is the most common format.
@@ -34,8 +33,8 @@ int ppm_raw(const char *filename, Pixmap &map);
 // 3. Nothing to export. Width or height is 0.
 int ppm_raw(const char *filename, const Pixmap &map);
 
-		} /* namespace Export */
-	} /* namespace IO */
-} /* namespace NImg */
+		} /* namespace save */
+	} /* namespace io */
+} /* namespace nimg */
 
-#endif /* NIMG_PPM_HPP_INCLUDED */
+#endif /* NIMG_PPM_H_INCLUDED */

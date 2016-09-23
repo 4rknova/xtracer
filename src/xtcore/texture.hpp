@@ -1,11 +1,11 @@
 #ifndef XTRACER_TEXTURE_HPP_INCLUDED
 #define XTRACER_TEXTURE_HPP_INCLUDED
 
-#include "nimg/color.hpp"
+#include "nimg/color.h"
 #include "nimg/pixmap.h"
 
-using NImg::ColorRGBAf;
-using NImg::Pixmap;
+using nimg::ColorRGBAf;
+using nimg::Pixmap;
 
 class Texture2D
 {

@@ -1,11 +1,10 @@
 #ifndef XTCORE_BRDF_H_INCLUDED
 #define XTCORE_BRDF_H_INCLUDED
 
+#include <nimg/color.h>
 #include "brdf_lambert.h"
 #include "brdf_phong.h"
 #include "brdf_blinn.h"
-
-#include <nimg/color.hpp>
 
 namespace XT {
 	namespace Render {
@@ -22,7 +21,7 @@ class BSDF
 	* evaluate the radiant exitance along "outdir", of light coming from "indir"
 	* returns the intensity for each color channel
 	*/
-//	virtual NImg::ColorRGBf evaluate(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const = 0;
+//	virtual nimg::ColorRGBf evaluate(const SurfPoint &pt, const Vector3 &outdir, const Vector3 &indir) const = 0;
 
 	/* evaluate the percentage of incident energy arriving from indir, which
      * ends up reflecting towards outdir (this is just the mean of eval()'s RGB

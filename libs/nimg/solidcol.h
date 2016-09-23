@@ -3,12 +3,12 @@
 
 #include "pixmap.h"
 
-namespace NImg {
-    namespace Generate {
+namespace nimg {
+    namespace generator {
 
 int solid_color(Pixmap &map, const unsigned int width, const unsigned int height, ColorRGBAf &col);
 
-    } /* namespace Generate */
-} /* namespace NImg */
+    } /* namespace generator */
+} /* namespace nimg */
 
 #endif /* NIMG_SOLIDCOL_H_INCLUDED */

@@ -1,12 +1,15 @@
 #ifndef BUFFER_TML_INCLUDED
 #define BUFFER_TML_INCLUDED
 
-#ifndef BUFFER_HPP_INCLUDED
-	#error "buffer.hpp must be included before buffer.tml"
-#endif /* BUFFER_HPP_INCLUDED */
+#ifndef BUFFER_H_INCLUDED
+	#error "buffer.h must be included before buffer.tml"
+#endif /* BUFFER_H_INCLUDED */
 
 #include <new>
 #include <string.h>
+
+namespace nimg {
+    namespace util {
 
 template <class T>
 Buffer<T>::Buffer()
@@ -116,5 +119,8 @@ const T& Buffer<T>::operator[] (const unsigned int idx) const
 
 	return m_data[idx >= count() ? count() - 1 : idx];
 }
+
+    } /* namespace util */
+} /* namespace nimg */
 
 #endif /* BUFFER_TML_INCLUDED */

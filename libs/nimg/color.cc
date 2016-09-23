@@ -1,6 +1,6 @@
-#include "color.hpp"
+#include "color.h"
 
-namespace NImg {
+namespace nimg {
 
 // ColorRGBf
 ColorRGBf::ColorRGBf(const float r, const float g, const float b)
@@ -33,4 +33,4 @@ ColorRGBAf::ColorRGBAf(const ColorRGBAf &rhs)
 	: m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b()), m_a(rhs.a())
 {}
 
-} /* namespace NImg */
+} /* namespace nimg */

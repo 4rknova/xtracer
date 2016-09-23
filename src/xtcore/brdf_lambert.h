@@ -3,9 +3,9 @@
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 
-using NImg::ColorRGBf;
+using nimg::ColorRGBf;
 
 inline ColorRGBf lambert(const Vector3f &lightpos, const IntInfo *info,
 						 const ColorRGBf &light, const ColorRGBf &diffuse);

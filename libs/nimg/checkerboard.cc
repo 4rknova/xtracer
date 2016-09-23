@@ -1,8 +1,8 @@
-#include "color.hpp"
+#include "color.h"
 #include "checkerboard.h"
 
-namespace NImg {
-	namespace Generate {
+namespace nimg {
+	namespace generator {
 
 int checkerboard(Pixmap &map, const unsigned int width, const unsigned int height,
 				 ColorRGBAf &a, ColorRGBAf &b)
@@ -30,5 +30,5 @@ int checkerboard(Pixmap &map, const unsigned int width, const unsigned int heigh
 	return 0;
 }
 
-	} /* namespace Generator */
-} /* namespace NImg */
+	} /* namespace generator */
+} /* namespace nimg */

@@ -1,8 +1,8 @@
-#include "color.hpp"
-#include "xor.hpp"
+#include "color.h"
+#include "xor.h"
 
-namespace NImg {
-	namespace Generate {
+namespace nimg {
+	namespace generator {
 
 int xortex(Pixmap &map, const unsigned int width, const unsigned int height)
 {
@@ -27,5 +27,5 @@ int xortex(Pixmap &map, const unsigned int width, const unsigned int height)
 	return 0;
 }
 
-	} /* namespace Generator */
-} /* namespace NImg */
+	} /* namespace generator */
+} /* namespace nimg */

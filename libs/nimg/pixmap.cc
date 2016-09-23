@@ -1,6 +1,6 @@
 #include "pixmap.h"
 
-namespace NImg {
+namespace nimg {
 
 Pixmap::Pixmap()
 	: m_width(0), m_height(0)
@@ -68,4 +68,4 @@ int Pixmap::init(const unsigned int w, const unsigned int h)
 	return 0;
 }
 
-} /* namespace NImg */
+} /* namespace nimg */

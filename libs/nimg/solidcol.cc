@@ -1,7 +1,7 @@
 #include "solidcol.h"
 
-namespace NImg {
-    namespace Generate {
+namespace nimg {
+    namespace generator {
 
 int solid_color(Pixmap &map, const unsigned int width, const unsigned int height, ColorRGBAf &col)
 {
@@ -23,5 +23,5 @@ int solid_color(Pixmap &map, const unsigned int width, const unsigned int height
     return 0;
 }
 
-    } /* namespace Generate */
-} /* namespace NImg */
+    } /* namespace generator */
+} /* namespace nimg */

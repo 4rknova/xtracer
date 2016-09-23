@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include "rasteriser.h"
 
-namespace NImg {
-    namespace Painter {
+namespace nimg {
+    namespace painter {
 
 void draw_line(Pixmap &map,
          ColorRGBAf &c0, float x0, float y0,
@@ -174,5 +174,5 @@ void fill_triangle(Pixmap &map, triangle_t tri)
     draw_spans(map, edges[longEdge], edges[shortEdge2]);
 }
 
-    } /* namespace Painter */
-} /* namespace NImg */
+    } /* namespace painter */
+} /* namespace nimg */

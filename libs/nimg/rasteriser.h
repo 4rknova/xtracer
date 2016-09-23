@@ -3,8 +3,8 @@
 
 #include "pixmap.h"
 
-namespace NImg {
-    namespace Painter {
+namespace nimg {
+    namespace painter {
 
 typedef struct {
     float x, y, z;
@@ -30,7 +30,7 @@ void draw_line(Pixmap &map,
 void draw_triangle(Pixmap &map, triangle_t tri);
 void fill_triangle(Pixmap &map, triangle_t tri);
 
-    } /* namespace Painter */
-} /* namespace NImg */
+    } /* namespace painter */
+} /* namespace nimg */
 
 #endif /* NIMG_RASTERISER_H_INCLUDED */

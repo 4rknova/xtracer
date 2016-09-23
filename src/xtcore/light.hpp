@@ -4,12 +4,12 @@
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nmath/ray.h>
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 
 using NMath::scalar_t;
 using NMath::Vector3f;
 using NMath::Ray;
-using NImg::ColorRGBf;
+using nimg::ColorRGBf;
 
 /* Light interface */
 class ILight

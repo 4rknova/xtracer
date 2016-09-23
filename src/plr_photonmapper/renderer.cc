@@ -7,7 +7,7 @@
 #include <nmath/prng.h>
 #include <nmath/plane.h>
 #include <nmath/sample.h>
-#include <nimg/luminance.hpp>
+#include <nimg/luminance.h>
 #include <ncf/util.h>
 #include <xtcore/log.hpp>
 #include "renderer.h"
@@ -69,7 +69,7 @@ void Renderer::pass_ptrace()
 		std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
 		std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
 		for (; it != et; ++it) {
-			scalar_t lum = NImg::Operator::luminance((*it).second->intensity());
+			scalar_t lum = nimg::eval::luminance((*it).second->intensity());
 			light_luminance.push_back(lum);
 			light_total_luminance += lum;
 		}

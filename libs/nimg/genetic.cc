@@ -6,8 +6,8 @@
 #include "diff.h"
 #include "genetic.h"
 
-namespace NImg {
-    namespace Genetic {
+namespace nimg {
+    namespace genetic_algorithms {
 
 int init_seed(unsigned int seed)
 {
@@ -23,18 +23,18 @@ int tri(const Pixmap &src, Pixmap &dst, const float threshold)
 
     int mutations = 0;
 
-    float diff =  NImg::Operator::diff_euclid(src, dst);
+    float diff = eval::diff_euclid(src, dst);
 
     for (; diff >= threshold; ++mutations) {
-        NImg::Pixmap temp = dst;
+        Pixmap temp = dst;
 
         float tdiff = diff;
 
         while (tdiff >= diff) {
             temp = dst;
-            NImg::Painter::triangle_t tri;
+            painter::triangle_t tri;
 
-            NImg::ColorRGBAf c;
+            ColorRGBAf c;
             float l = (rand()%255) / 255.f;
             float a = (rand()%255) / 255.f;
 
@@ -56,8 +56,8 @@ int tri(const Pixmap &src, Pixmap &dst, const float threshold)
             tri.b.c = c;
             tri.c.c = c;
 
-            NImg::Painter::fill_triangle(temp, tri);
-            tdiff = NImg::Operator::diff_euclid(src, temp);
+            painter::fill_triangle(temp, tri);
+            tdiff = eval::diff_euclid(src, temp);
         }
 
         diff = tdiff;
@@ -68,7 +68,7 @@ int tri(const Pixmap &src, Pixmap &dst, const float threshold)
 }
 
 int tri(const Pixmap &src, Pixmap &dst
-    , std::vector<Painter::triangle_t> triangles
+    , std::vector<painter::triangle_t> triangles
     , const float threshold
     , const size_t budget)
 {
@@ -78,12 +78,12 @@ int tri(const Pixmap &src, Pixmap &dst
 
     int mutations = 0;
 
-    float diff =  NImg::Operator::diff_euclid(src, dst);
+    float diff =  eval::diff_euclid(src, dst);
 
     for (unsigned int i = 0; i < budget; ++i) {
-            Painter::triangle_t tri;
+            painter::triangle_t tri;
 
-            NImg::ColorRGBAf c;
+            ColorRGBAf c;
             float l = (rand()%255) / 255.f;
             float a = (rand()%255) / 255.f;
 
@@ -112,10 +112,10 @@ printf("\n%f",threshold); fflush(stdout);
     for (; diff >= threshold; ++mutations) {
         float tdiff = diff;
         int idx = rand() % budget;
-        Painter::triangle_t t = triangles[idx];
+        painter::triangle_t t = triangles[idx];
 
         while (tdiff >= diff) {
-            NImg::ColorRGBAf c;
+            ColorRGBAf c;
             float l = (rand()%255) / 255.f;
             float a = (rand()%255) / 255.f;
 
@@ -139,16 +139,16 @@ printf("\n%f",threshold); fflush(stdout);
 
 
             Pixmap temp;
-            for (unsigned int i = 0; i < budget; ++i) NImg::Painter::fill_triangle(temp, triangles[i]);
-            tdiff = NImg::Operator::diff_euclid(src, temp);
+            for (unsigned int i = 0; i < budget; ++i) painter::fill_triangle(temp, triangles[i]);
+            tdiff = eval::diff_euclid(src, temp);
         }
         triangles[idx] = t;
         diff = tdiff;
     }
 
-    for (unsigned int i = 0; i < budget; ++i) NImg::Painter::fill_triangle(dst, triangles[i]);
+    for (unsigned int i = 0; i < budget; ++i) painter::fill_triangle(dst, triangles[i]);
     return mutations;
 }
 
-    } /* namespace Genetic */
-} /* namespace NImg */
+    } /* namespace genetic_algorithms */
+} /* namespace nimg */

@@ -69,16 +69,16 @@ NMath::Vector2f Scene::deserialize_tex2(const NCF *node, const NMath::Vector2f d
 	return res;
 }
 
-NImg::ColorRGBf Scene::deserialize_col3(const NCF *node, const NImg::ColorRGBf def)
+ColorRGBf Scene::deserialize_col3(const NCF *node, const ColorRGBf def)
 {
-	NImg::ColorRGBf res = def;
+	ColorRGBf res = def;
 
 	if (node) {
 		const char *r = node->get_property_by_name(XTPROTO_PROP_COL_R);
 		const char *g = node->get_property_by_name(XTPROTO_PROP_COL_G);
 		const char *b = node->get_property_by_name(XTPROTO_PROP_COL_B);
 
-		res = NImg::ColorRGBf(
+		res = ColorRGBf(
 			r ? (scalar_t)to_double(r) : def.r(),
 			g ? (scalar_t)to_double(g) : def.g(),
 			b ? (scalar_t)to_double(b) : def.b()
@@ -573,10 +573,10 @@ unsigned int Scene::create_texture(NCF *p)
 		Log::handle().log_warning("Failed to load texture [%s->%s]", p->get_name(), source.c_str());
 		Log::handle().log_warning("Replacing with checkerboard..");
 
-		NImg::Pixmap tex;
-		NImg::ColorRGBAf a   = NImg::ColorRGBAf(0.5,0.5,0.5,1);
-		NImg::ColorRGBAf b   = NImg::ColorRGBAf(1,1,1,1);
-		NImg::Generate::checkerboard(tex, 2, 2, a, b);
+		Pixmap tex;
+		ColorRGBAf a   = ColorRGBAf(0.5,0.5,0.5,1);
+		ColorRGBAf b   = ColorRGBAf(1,1,1,1);
+		nimg::generator::checkerboard(tex, 2, 2, a, b);
 
 		texture->load(tex);
 	}

@@ -1,10 +1,10 @@
-#ifndef NIMG_XOR_HPP_INCLUDED
-#define NIMG_XOR_HPP_INCLUDED
+#ifndef NIMG_XOR_H_INCLUDED
+#define NIMG_XOR_H_INCLUDED
 
 #include "pixmap.h"
 
-namespace NImg {
-	namespace Generate {
+namespace nimg {
+	namespace generator {
 
 // RETURN CODES:
 // 0. Everything went well.
@@ -12,7 +12,7 @@ namespace NImg {
 // 2. Failed to initialize the Image.
 int xortex(Pixmap &map, const unsigned int width, const unsigned int height);
 
-	} /* namespace Generator */
-} /* namespace NImg */
+	} /* namespace generator */
+} /* namespace nimg */
 
-#endif /* NIMG_XOR_HPP_INCLUDED */
+#endif /* NIMG_XOR_H_INCLUDED */
