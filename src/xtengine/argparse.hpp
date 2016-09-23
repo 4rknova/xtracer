@@ -3,7 +3,6 @@
 
 #include <string>
 #include <list>
-#include "outdrv.h"
 
 class Environment
 {
@@ -38,10 +37,6 @@ class Environment
 		unsigned int octree_max_depth();
 		unsigned int octree_max_items_per_node();
 
-		XTRACER_OUTPUT_TYPE output() const;
-
-		bool flag_resume() const;
-		const char *resume_file() const;
 		const char *outdir() const;
 		const char *active_camera_name() const;
 
@@ -90,10 +85,6 @@ class Environment
 		unsigned int m_octree_max_depth;
 		unsigned int m_octree_max_items_per_node;
 
-		XTRACER_OUTPUT_TYPE m_output;
-
-		bool m_flag_resume;
-		std::string m_resume_file;
 		std::string m_outdir;
 		std::string m_active_camera_name;
 

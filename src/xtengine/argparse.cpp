@@ -35,9 +35,6 @@ Environment::Environment()
 
 	, m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH)
 	, m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE)
-
-	, m_output(XTRACER_OUTPUT_PPM)
-	, m_flag_resume(false)
 {}
 
 Environment::~Environment()
@@ -138,11 +135,6 @@ bool Environment::flag_giviz() const
 	return m_flag_giviz;
 }
 
-bool Environment::flag_resume() const
-{
-	return m_flag_resume;
-}
-
 unsigned int Environment::octree_max_depth()
 {
 	return m_octree_max_depth;
@@ -153,15 +145,6 @@ unsigned int Environment::octree_max_items_per_node()
 	return m_octree_max_items_per_node;
 }
 
-const char *Environment::resume_file() const
-{
-	return m_resume_file.c_str();
-}
-
-XTRACER_OUTPUT_TYPE Environment::output() const
-{
-	return m_output;
-}
 
 const char *Environment::outdir() const
 {
@@ -344,26 +327,6 @@ unsigned int Environment::setup(int argc, char **argv)
 
 			m_outdir = argv[i];
 		}
-		// Output mode.
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OUTDRV)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (!strcmp(argv[i], XTRACER_OUTPUT_STR_NUL)) {
-				m_output = XTRACER_OUTPUT_NUL;
-			}
-			else if (!strcmp(argv[i], XTRACER_OUTPUT_STR_PPM)) {
-				m_output = XTRACER_OUTPUT_PPM;
-			}
-			else {
-				Log::handle().log_error("Invalid %s value.", argv[i-1]);
-				return 2;
-			}
-		}
 		// Camera id
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_ACTIVE_CAMERA)) {
 			i++;
@@ -473,18 +436,6 @@ unsigned int Environment::setup(int argc, char **argv)
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
 			}
-		}
-		// Resume file.
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_RESUMEFILE)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			m_resume_file = argv[i];
-			m_flag_resume = true;
 		}
 		// Modifier
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MOD)) {

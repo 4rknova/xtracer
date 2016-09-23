@@ -56,11 +56,6 @@ int main(int argc, char **argv)
     fb.init(Environment::handle().width(), Environment::handle().height());
 	Environment::handle().log_info();
 
-	// Export.
-	if (Environment::handle().output() == XTRACER_OUTPUT_NUL) {
-		Log::handle().log_warning("Benchmark mode selected.");
-	}
-
 	// create and initialize the scene
 	Scene scene;
 	if (!scene.load(Environment::handle().scene())) {
@@ -99,44 +94,35 @@ int main(int argc, char **argv)
 
 		print_time_breakdown(timer.get_time_in_mlsec());
 
-		if (Environment::handle().output() == XTRACER_OUTPUT_PPM) {
-			std::string file;
+		std::string file;
 
-			if (Environment::handle().flag_resume()) {
-				file = Environment::handle().resume_file();
-			}
-			else {
-				std::string base, sw, sh, sa, random_token;
+		std::string base, sw, sh, sa, random_token;
+		#ifdef _WIN32
+			const char path_delim = '\\';
+		#else
+			const char path_delim = '/';
+		#endif /* _WIN32 */
 
-				#ifdef _WIN32
-					const char path_delim = '\\';
-				#else
-					const char path_delim = '/';
-				#endif /* _WIN32 */
+		path_comp(Environment::handle().scene(), base, file, path_delim);
+		std::string cam = Environment::handle().active_camera_name();
+		std::string outdir = Environment::handle().outdir();
+		if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
+			outdir.append(1, path_delim);
+		}
 
-				path_comp(Environment::handle().scene(), base, file, path_delim);
+		to_string(random_token, (int)NMath::prng_c(1000000, 9999999));
+		to_string(sw, (int)Environment::handle().width());
+		to_string(sh, (int)Environment::handle().height());
+		to_string(sa, (int)Environment::handle().aa());
+		file = outdir + file + "_cam-" + cam
+					  + "_aa" + sa + "_res"
+					  + sw + "x" + sh
+					  + "_" + random_token
+					  + ".ppm";
 
-				std::string cam = Environment::handle().active_camera_name();
-				std::string outdir = Environment::handle().outdir();
-				if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
-					outdir.append(1, path_delim);
-				}
-
-				to_string(random_token, (int)NMath::prng_c(1000000, 9999999));
-				to_string(sw, (int)Environment::handle().width());
-				to_string(sh, (int)Environment::handle().height());
-				to_string(sa, (int)Environment::handle().aa());
-				file = outdir + file + "_cam-" + cam
-							  + "_aa" + sa + "_res"
-							  + sw + "x" + sh
-							  + "_" + random_token
-							  + ".ppm";
-			}
-
-			Log::handle().log_message("Exporting to %s..", file.c_str());
-			if (nimg::io::save::ppm_raw(file.c_str(), fb)) {
-				Log::handle().log_error("Failed to export image file");
-			}
+		Log::handle().log_message("Exporting to %s..", file.c_str());
+		if (nimg::io::save::ppm_raw(file.c_str(), fb)) {
+			Log::handle().log_error("Failed to export image file");
 		}
 	}
 
