@@ -8,14 +8,15 @@
 #include <nimg/img.h>
 #include <ncf/util.h>
 
+#include <xtcore/scene.h>
+#include <xtcore/timeutil.h>
+#include <xtcore/log.h>
+#include <xtcore/context.h>
+
 #include <plr_photonmapper/renderer.h>
 
-#include <xtcore/scene.h>
-#include <xtcore/timeutil.hpp>
-#include <xtcore/log.hpp>
-#include <xtcore/context.h>
 #include "argdefs.h"
-#include "argparse.hpp"
+#include "argparse.h"
 #include "plm.h"
 
 using Util::String::to_string;
@@ -23,24 +24,13 @@ using Util::String::path_comp;
 
 int main(int argc, char **argv)
 {
-	PLM::load();
-
-    nimg::Pixmap p;
-    nimg::io::load::image("lena.tga", p);
-    nimg::io::save::bmp("lena_4.bmp", p);
-    nimg::io::save::png("lena_4.png", p);
-    nimg::io::save::tga("lena_4.tga", p);
-    nimg::io::save::hdr("lena_4.hdr", p);
-
-    return 0;
-
 	// Display usage information.
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
 		Log::handle().log_message("%s", XTRACER_VERSION);
 		return 1;
 	}
 
-	Log::handle().log_message("XTracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
+	Log::handle().log_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
 
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
 		Log::handle().log_message("Usage: %s [option]... scene_file...", argv[0]);
@@ -48,13 +38,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	// parse the argument list.
-	if (Environment::handle().setup(argc, argv)) {
-		return 1;
-	}
+    PLM::load();
 
-	// Create and initiate the pixmap.
-	Log::handle().log_message("Initiating the pixmap..");
+	if (Environment::handle().setup(argc, argv)) return 1;
+
 	Pixmap fb;
     fb.init(Environment::handle().width(), Environment::handle().height());
 	Environment::handle().log_info();
@@ -62,8 +49,6 @@ int main(int argc, char **argv)
 	// create and initialize the scene
 	Scene scene;
 	if (!scene.load(Environment::handle().scene())) {
-		// apply the modifiers
-		Log::handle().log_message("Applying modifiers..");
 		scene.apply_modifiers();
 
 		Log::handle().log_message("- Name: %s", scene.name());
@@ -77,14 +62,13 @@ int main(int argc, char **argv)
         }
 
         scene.camera = Environment::handle().active_camera_name();
-
-		// Create the renderer.
+        // Create the renderer.
 		xtracer::render::IRenderer *renderer = new Renderer();
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
 		context.framebuffer = &fb;
-
-		renderer->setup(context);
+        renderer->setup(context);
+		Environment::handle().configure(context.params);
 
 		Timer timer;
 

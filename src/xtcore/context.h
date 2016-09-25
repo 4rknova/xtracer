@@ -9,18 +9,21 @@ using nimg::Pixmap;
 namespace xtracer {
 	namespace render {
 
+struct params_t
+{
+    size_t threads; // Number of threads
+    size_t samples; // Number of samples
+    size_t ssaa;    // Level of Screen Space Anti-Aliasing
+    size_t rdepth;  // Maximum recursion depth
+
+    params_t();
+};
+
 struct context_t
 {
-	public:
-	Scene  *scene;
-	Pixmap *framebuffer;
-
-    size_t threads;
-
-    size_t samples_ssaa;
-    size_t samples_reflection;
-    size_t samples_shadow;
-    size_t samples_dof;
+	Scene    *scene;
+	Pixmap   *framebuffer;
+    params_t  params;
 
     context_t();
 };

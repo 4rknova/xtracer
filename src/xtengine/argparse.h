@@ -1,8 +1,11 @@
-#ifndef XTRACER_ARGPARSE_HPP_INCLUDED
-#define XTRACER_ARGPARSE_HPP_INCLUDED
+#ifndef XTRACER_ARGPARSE_H_INCLUDED
+#define XTRACER_ARGPARSE_H_INCLUDED
 
 #include <string>
 #include <list>
+#include <xtcore/context.h>
+
+using xtracer::render::params_t;
 
 class Environment
 {
@@ -16,16 +19,9 @@ class Environment
 
 		unsigned int max_rdepth() const;
 
-		unsigned int samples_dof() const;
-		unsigned int samples_light() const;
-		unsigned int samples_reflection() const;
+		unsigned int samples() const;
 
 		unsigned int aa() const;
-
-		unsigned int region_min_x() const;
-		unsigned int region_min_y() const;
-		unsigned int region_max_x() const;
-		unsigned int region_max_y() const;
 
 		bool flag_gi() const;
 		bool flag_giviz() const;
@@ -34,17 +30,11 @@ class Environment
 		float photon_max_sampling_radius() const;
 		float photon_power_scaling() const;
 
-		unsigned int octree_max_depth();
-		unsigned int octree_max_items_per_node();
-
 		const char *outdir() const;
 		const char *active_camera_name() const;
 
-		// RETURN CODES:
-		//	0. Everything went well.
-		//	1. Code for normal termination.
-		//	*. Invalid parametre.
 		unsigned int setup(int argc, char **argv);
+        void         configure(params_t &params);
 
 		void modifier_push(std::string &modifier);
 		bool modifier_pop(std::string &res);
@@ -66,14 +56,7 @@ class Environment
 
 		unsigned int m_max_rdepth;
 
-		unsigned int m_samples_dof;
-		unsigned int m_samples_light;
-		unsigned int m_samples_reflec;
-
-		unsigned int m_region_min_x;
-		unsigned int m_region_min_y;
-		unsigned int m_region_max_x;
-		unsigned int m_region_max_y;
+		unsigned int m_samples;
 
 		bool m_flag_gi;
 		bool m_flag_giviz;
@@ -82,15 +65,12 @@ class Environment
 		float m_photon_max_sampling_radius;
 		float m_photon_power_scaling;
 
-		unsigned int m_octree_max_depth;
-		unsigned int m_octree_max_items_per_node;
 
 		std::string m_outdir;
 		std::string m_active_camera_name;
-
 		std::list<std::string> m_modifiers;
 
 		std::string mScene;
 };
 
-#endif /* XTRACER_ARGPARSE_HPP_INCLUDED */
+#endif /* XTRACER_ARGPARSE_H_INCLUDED */

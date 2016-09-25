@@ -15,11 +15,10 @@
 #include <nmesh/mesh.h>
 #include <nimg/checkerboard.h>
 #include "proto.h"
-#include "log.hpp"
+#include "log.h"
 #include "scene.h"
 #include "cam_perspective.h"
 #include "cam_ods.h"
-
 
 using NMath::Vector2f;
 using NMath::Vector3f;
@@ -244,7 +243,6 @@ unsigned int Scene::build()
 {
 	Log::handle().log_message("Setting up the scene environment..");
 
-	// Start populating the lists
 	unsigned int count = 0;
 
 	m_ambient  = deserialize_col3(m_scene.get_group_by_name(XTPROTO_PROP_IAMBN))

@@ -9,7 +9,8 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
-#include <xtcore/log.hpp>
+#include <xtcore/log.h>
+
 #include "renderer.h"
 
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
@@ -40,7 +41,7 @@ void Renderer::render()
         || !m_context->scene->get_camera()
     ) return;
 
-	pass_ptrace();
+    pass_ptrace();
 	pass_rtrace();
 }
 
@@ -185,11 +186,11 @@ void Renderer::pass_rtrace()
 	float progress = 0;
 
 	// Samples per pixel, offset per sample.
-	unsigned int aa = m_context->samples_ssaa;
+	unsigned int aa = 1;//m_context->params.ssaa;
 
 	if (thread_count) omp_set_num_threads(thread_count);
 
-	const unsigned int dof_samples = m_context->samples_dof;
+	const unsigned int samples = 1;//m_context->params.samples;
 
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
@@ -197,7 +198,7 @@ void Renderer::pass_rtrace()
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	// Calculate the number of samples per pixel.
-	float sample_scaling = 1.0f / (dof_samples * spp);
+	float sample_scaling = 1.0f / (samples * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
     for (unsigned int tile = 0; tile < numtiles; ++tile) {
@@ -222,7 +223,7 @@ void Renderer::pass_rtrace()
 						float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
 						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
-                        for (float dofs = 0; dofs < dof_samples; ++dofs) {
+                        for (float dofs = 0; dofs < samples; ++dofs) {
                             color += trace_ray(
                                  m_context->scene->get_camera()->get_primary_ray(rx , ry, (float)w, (float)h)
                                 ,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
@@ -327,13 +328,13 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 	// ambient
 	color = mat->ambient * m_context->scene->ambient();
 
-	scalar_t shadow_sample_scaling = 1.0f / m_context->samples_shadow;
+	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
 	std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
 	std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
 
 	for (; it != et; ++it) {
-		unsigned int tlshsamples = ((*it).second->is_area_light() ? m_context->samples_shadow : 1);
+		unsigned int tlshsamples = ((*it).second->is_area_light() ? m_context->params.samples : 1);
 		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
@@ -392,7 +393,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 
 		// reflection
 		if(mat->reflectance > 0.0) {
-			unsigned int tlmcsamples = m_context->samples_reflection;
+			unsigned int tlmcsamples = m_context->params.samples;
 			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;

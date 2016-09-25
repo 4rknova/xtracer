@@ -4,7 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
-#include "log.hpp"
+#include "log.h"
 
 LogEntry::LogEntry()
 	: p_type(LOGENTRY_MESSAGE)

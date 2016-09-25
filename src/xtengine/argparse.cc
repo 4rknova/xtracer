@@ -1,10 +1,10 @@
 #include <cstring>
 #include <cstdio>
 #include <nmath/mutil.h>
+#include <xtcore/log.h>
 #include "setup.h"
 #include "argdefs.h"
-#include <xtcore/log.hpp>
-#include "argparse.hpp"
+#include "argparse.h"
 
 Environment Environment::m_environment;
 
@@ -12,19 +12,9 @@ Environment::Environment()
 	: m_aa(XTRACER_SETUP_DEFAULT_AA)
 	, m_width(XTRACER_SETUP_DEFAULT_FB_WIDTH)
 	, m_height(XTRACER_SETUP_DEFAULT_FB_HEIGHT)
-
 	, m_threads(XTRACER_SETUP_DEFAULT_THREAD_COUNT)
-
-//	, m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH)
-
-//	, m_samples_dof(XTRACER_SETUP_DEFAULT_DOF_SAMPLES)
-//	, m_samples_light(XTRACER_SETUP_DEFAULT_LIGHT_SAMPLES)
-//	, m_samples_reflec(XTRACER_SETUP_DEFAULT_REFLEC_SAMPLES)
-
-	, m_region_min_x(0)
-	, m_region_min_y(0)
-	, m_region_max_x(0)
-	, m_region_max_y(0)
+	, m_max_rdepth(XTRACER_SETUP_DEFAULT_MAX_RDEPTH)
+	, m_samples(XTRACER_SETUP_DEFAULT_SAMPLES)
 
 //	, m_flag_gi(XTRACER_SETUP_DEFAULT_GI)
 //	, m_flag_giviz(XTRACER_SETUP_DEFAULT_GIVIZ)
@@ -33,12 +23,18 @@ Environment::Environment()
 //	, m_photon_max_sampling_radius(XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS)
 //	, m_photon_power_scaling(XTRACER_SETUP_DEFAULT_PHOTON_POWERSC)
 
-	, m_octree_max_depth(XTRACER_SETUP_DEFAULT_OCTREE_MAX_DEPTH)
-	, m_octree_max_items_per_node(XTRACER_SETUP_DEFAULT_OCTREE_MAX_IPNDE)
 {}
 
 Environment::~Environment()
 {}
+
+void Environment::configure(params_t &params)
+{
+    params.threads = m_threads;
+    params.samples = m_samples;
+    params.ssaa    = m_aa;
+    params.rdepth  = m_max_rdepth;
+}
 
 Environment &Environment::handle()
 {
@@ -65,44 +61,14 @@ unsigned int Environment::max_rdepth() const
 	return m_max_rdepth;
 }
 
-unsigned int Environment::samples_dof() const
+unsigned int Environment::samples() const
 {
-	return m_samples_dof;
-}
-
-unsigned int Environment::samples_light() const
-{
-	return m_samples_light;
-}
-
-unsigned int Environment::samples_reflection() const
-{
-	return m_samples_reflec;
+    return m_samples;
 }
 
 unsigned int Environment::aa() const
 {
 	return m_aa < 1 ? 1 : m_aa;
-}
-
-unsigned int Environment::region_min_x() const
-{
-	return m_region_min_x;
-}
-
-unsigned int Environment::region_min_y() const
-{
-	return m_region_min_y;
-}
-
-unsigned int Environment::region_max_x() const
-{
-	return m_region_max_x;
-}
-
-unsigned int Environment::region_max_y() const
-{
-	return m_region_max_y;
 }
 
 unsigned int Environment::photon_count() const
@@ -135,17 +101,6 @@ bool Environment::flag_giviz() const
 	return m_flag_giviz;
 }
 
-unsigned int Environment::octree_max_depth()
-{
-	return m_octree_max_depth;
-}
-
-unsigned int Environment::octree_max_items_per_node()
-{
-	return m_octree_max_items_per_node;
-}
-
-
 const char *Environment::outdir() const
 {
 	return m_outdir.c_str();
@@ -175,12 +130,6 @@ bool Environment::modifier_pop(std::string &res)
 
 unsigned int Environment::setup(int argc, char **argv)
 {
-	// Temporary variables to hold the sample configuration.
-	unsigned int arg_s_mc	 = 0;
-	unsigned int arg_s_light = 0;
-	unsigned int arg_s_refl	 = 0;
-	unsigned int arg_s_dof	 = 0;
-
 	for (unsigned int i = 1; i < (unsigned int)argc; i++) {
 		// Framebuffer resolution.
 		if (!strcmp(argv[i], XTRACER_ARGDEFS_RESOLUTION)) {
@@ -221,8 +170,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 		}
-		// DOF samples
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_DOF)) {
+		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES)) {
 			i++;
 
 			if (!argv[i]) {
@@ -230,69 +178,12 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%u", &arg_s_dof) < 1) {
+			if (sscanf(argv[i], "%u", &m_samples) < 1) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
 
-			if (arg_s_dof < 1) {
-				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
-				return 2;
-			}
-		}
-		// Light samples
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_LIGHT)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%u", &arg_s_light) < 1) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (arg_s_light < 1) {
-				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
-				return 2;
-			}
-		}
-		// Reflection samples
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_REFLEC)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%u", &arg_s_refl) < 1) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (arg_s_refl < 1) {
-				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
-				return 2;
-			}
-		}
-		// Monte carlo samples
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_SAMPLES_GLOBAL)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%u", &arg_s_mc) < 1) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (arg_s_mc < 1) {
+			if (m_samples < 1) {
 				Log::handle().log_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
 				return 2;
 			}
@@ -352,28 +243,7 @@ unsigned int Environment::setup(int argc, char **argv)
 				return 2;
 			}
 		}
-		// Region.
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_REGION)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%ux%u:%ux%u", &m_region_min_x, &m_region_min_y,
-											   &m_region_max_x, &m_region_max_y) < 4) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>x<uint>:<uint>x<uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (    (m_region_min_x > m_region_max_x)
-				 || (m_region_min_y > m_region_max_y)
-				 || (m_region_min_x == m_region_max_x && m_region_min_y == m_region_max_y)) {
-				Log::handle().log_error("Invalid %s value.", argv[i-1]);
-				return 2;
-			}
-		}
+/*
 		// G.I.
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GI)) {
 			i++;
@@ -399,44 +269,6 @@ unsigned int Environment::setup(int argc, char **argv)
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GIVIZ)) {
 			m_flag_giviz = true;
 		}
-		// Octree max depth.
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_DEPTH)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%u", &m_octree_max_depth) < 1) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (m_octree_max_depth < 1) {
-				 Log::handle().log_error("Invalid %s value.", argv[i-1]);
-				 return 2;
-			}
-		}
-		// Octre max items per node.
-		else if (!strcmp(argv[i], XTRACER_ARGDEFS_OCTREE_MAX_IPN)) {
-			i++;
-
-			if (!argv[i]) {
-				Log::handle().log_error("No value was provided for %s", argv[i-1]);
-				return 2;
-			}
-
-			if (sscanf(argv[i], "%u", &m_octree_max_items_per_node) < 1) {
-				Log::handle().log_error("Invalid %s value. Should be <uint>.", argv[i-1]);
-				return 2;
-			}
-
-			if (m_octree_max_items_per_node < 1) {
-				Log::handle().log_error("Invalid %s value.", argv[i-1]);
-				return 2;
-			}
-		}
 		// Modifier
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MOD)) {
 			i++;
@@ -448,6 +280,7 @@ unsigned int Environment::setup(int argc, char **argv)
 
 			m_modifiers.push_back(argv[i]);
 		}
+*/
 		// Invalid argument
 		else if (argv[i][0] == '-') {
 			Log::handle().log_error("Invalid argument: %s", argv[i]);
@@ -464,12 +297,6 @@ unsigned int Environment::setup(int argc, char **argv)
 			}
 		}
 	}
-
-	// Setup the sampling environment
-	m_samples_dof = (arg_s_dof > 0 ? arg_s_dof : (arg_s_mc > 0 ? arg_s_mc : 1));
-	m_samples_light = (arg_s_light > 0 ? arg_s_light : (arg_s_mc > 0 ? arg_s_mc : 1));
-	m_samples_reflec = (arg_s_refl > 0 ? arg_s_refl : (arg_s_mc > 0 ? arg_s_mc : 1));
-
 	if (mScene.empty()) {
 		Log::handle().log_message("No scene was provided. Nothing to do..");
 		return 1;
@@ -486,13 +313,11 @@ const char *Environment::scene()
 void Environment::log_info() const
 {
 	int aspgcd = NMath::gcd(m_width, m_height);
-	Log::handle().log_message("- Output       : Resolution %ix%i, Aspect ratio %i:%i",
-		m_width, m_height, m_width / aspgcd, m_height / aspgcd);
-	Log::handle().log_message("- Antialiasing : Supersampling %ix%i, %i spp",
-		m_aa, m_aa, m_aa * m_aa);
-	Log::handle().log_message("- Recursion    : %i", m_max_rdepth);
-	Log::handle().log_message("- Sampling     : DoF %i, Shading %i, Reflections %i",
-		m_samples_dof, m_samples_light, m_samples_reflec);
+	Log::handle().log_message(" Resolution   : %ix%i ", m_width, m_height);
+    Log::handle().log_message(" Aspect Ratio : %i:%i ", m_width / aspgcd, m_height / aspgcd);
+	Log::handle().log_message(" SSAA         : %i spp", m_aa * m_aa);
+	Log::handle().log_message(" Recursion    : %i", m_max_rdepth);
+	Log::handle().log_message(" Sampling     : %i", m_samples);
 
 	if (m_flag_gi) {
 		Log::handle().log_message("- Photon maps  : Total %i, Per pixel %i, Radius %f",

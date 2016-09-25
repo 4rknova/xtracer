@@ -1,6 +1,6 @@
-CC  = @echo "compiling [c    ]: $<"; gcc
-CXX = @echo "compiling [c++  ]: $<"; g++
-C11 = @echo "compiling [c++11]: $<"; g++
+CC  = @echo "compiling [c  ] $<"; gcc
+CXX = @echo "compiling [c++] $<"; g++
+C11 = @echo "compiling [c++] $<"; g++
 LD  = @echo "linking $@ ..."; g++
 
 LIB_H   = $(wildcard $(PATH_LIB)/*/*.h)
