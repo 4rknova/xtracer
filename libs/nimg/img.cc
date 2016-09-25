@@ -1,5 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "stb_image.h"
+#include "stb_image_write.h"
 #include "img.h"
 
 namespace nimg {
@@ -41,5 +44,149 @@ int image(const char *filename, Pixmap &map)
 }
 
         } /* namespace load */
+
+        namespace save {
+
+int png(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+
+    int w = map.width();
+    int h = map.height();
+
+    int res = 0;
+
+    unsigned char *data = (unsigned char *)malloc(w*h*4);
+
+    if (data != NULL) {
+
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
+                size_t idx = (y*w+x)*4;
+                float r = map.pixel(x,y).r()*255.f;
+                float g = map.pixel(x,y).g()*255.f;
+                float b = map.pixel(x,y).b()*255.f;
+                float a = map.pixel(x,y).a()*255.f;
+
+                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
+                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
+                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
+                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+            }
+        }
+
+        res = stbi_write_png(filename, w, h, 4, data, w*4);
+    }
+
+    free(data);
+
+    return res == 0 ? 1 : 0;
+}
+
+int bmp(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+
+    int w = map.width();
+    int h = map.height();
+
+    int res = 0;
+
+    unsigned char *data = (unsigned char *)malloc(w*h*4);
+
+    if (data != NULL) {
+
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
+                size_t idx = (y*w+x)*4;
+                float r = map.pixel(x,y).r()*255.f;
+                float g = map.pixel(x,y).g()*255.f;
+                float b = map.pixel(x,y).b()*255.f;
+                float a = map.pixel(x,y).a()*255.f;
+
+                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
+                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
+                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
+                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+            }
+        }
+
+        res = stbi_write_bmp(filename, w, h, 4, data);
+    }
+
+    free(data);
+
+    return res == 0 ? 1 : 0;
+}
+
+int tga(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+
+    int w = map.width();
+    int h = map.height();
+
+    int res = 0;
+
+    unsigned char *data = (unsigned char *)malloc(w*h*4);
+
+    if (data != NULL) {
+
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
+                size_t idx = (y*w+x)*4;
+                float r = map.pixel(x,y).r()*255.f;
+                float g = map.pixel(x,y).g()*255.f;
+                float b = map.pixel(x,y).b()*255.f;
+                float a = map.pixel(x,y).a()*255.f;
+
+                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
+                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
+                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
+                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+            }
+        }
+
+        res = stbi_write_tga(filename, w, h, 4, data);
+    }
+
+    free(data);
+
+    return res == 0 ? 1 : 0;
+}
+
+int hdr(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+
+    int w = map.width();
+    int h = map.height();
+
+    int res = 0;
+
+    float *data = (float *)malloc(w*h*4*sizeof(float));
+
+    if (data != NULL) {
+
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
+                size_t idx = (y*w+x)*4;
+                data[idx  ] = map.pixel(x,y).r();
+                data[idx+1] = map.pixel(x,y).g();
+                data[idx+2] = map.pixel(x,y).b();
+                data[idx+3] = map.pixel(x,y).a();
+            }
+        }
+
+        res = stbi_write_hdr(filename, w, h, 4, data);
+    }
+
+    free(data);
+
+    return res == 0 ? 1 : 0;
+}
+
+        } /* namespace save */
+
     } /* namespace io */
 } /* namespace nimg */

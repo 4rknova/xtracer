@@ -26,8 +26,11 @@ int main(int argc, char **argv)
 	PLM::load();
 
     nimg::Pixmap p;
-    nimg::io::load::image("lena.png", p);
-    nimg::io::save::ppm_raw("lena.ppm", p);
+    nimg::io::load::image("lena.tga", p);
+    nimg::io::save::bmp("lena_4.bmp", p);
+    nimg::io::save::png("lena_4.png", p);
+    nimg::io::save::tga("lena_4.tga", p);
+    nimg::io::save::hdr("lena_4.hdr", p);
 
     return 0;
 

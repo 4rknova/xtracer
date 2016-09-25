@@ -10,6 +10,17 @@ namespace nimg {
 int image(const char *filename, Pixmap &map);
 
         } /* namespace load */
+
+
+        namespace save {
+
+int png(const char *filename, Pixmap &map);
+int bmp(const char *filename, Pixmap &map);
+int tga(const char *filename, Pixmap &map);
+int hdr(const char *filename, Pixmap &map);
+
+        } /* namespace save */
+
     } /* namespace io */
 } /* namespace nimg */
 
