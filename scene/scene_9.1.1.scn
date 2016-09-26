@@ -12,7 +12,10 @@ ambient = {
 }
 
 camera = {
-	default = {
+    default = {
+        type = ods
+    }
+	cam0 = {
         type = thin-lens
 
 		fov = 60
@@ -40,14 +43,14 @@ camera = {
 		fov = 60
 
 		position = {
-			x = -13.5
-			y = 7
-			z = 0.8
+			x = -100
+			y = 15
+			z = -10
 		}
 
 		target = {
 			x = 10
-			y = 6
+			y = 60
 			z = 1
 		}
 
@@ -55,8 +58,8 @@ camera = {
 			y = 1
 		}
 
-		aperture = 0.15
-		flength = 20.0
+		aperture = 8
+		flength = 550
 	}
 }
 
