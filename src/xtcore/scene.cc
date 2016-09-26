@@ -159,7 +159,6 @@ unsigned int purge(std::map<std::string, T*> &map, const char *name)
 
 void Scene::release()
 {
-	Log::handle().log_message("Cleaning up..");
 	purge(m_lights);
 	purge(m_materials);
 	purge(m_textures);
@@ -264,7 +263,7 @@ unsigned int Scene::build()
 	for (; it != et; ++it) {
 		count = m_scene.get_group_by_name((*it).c_str())->count_groups();
 		if (count) {
-			Log::handle().log_message("Processing section: %s", (*it).c_str());
+//			Log::handle().log_message("Processing section: %s", (*it).c_str());
 			for (unsigned int i = 0; i < count; ++i) {
 				NCF *lnode = m_scene.get_group_by_name((*it).c_str())->get_group_by_index(i);
 

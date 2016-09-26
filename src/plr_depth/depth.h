@@ -5,26 +5,27 @@
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include <nmath/intinfo.h>
-#include <nimg/color.hpp>
+#include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include <nplatform/timer.h>
 #include <xtcore/scene.h>
 #include <xtcore/renderer.h>
 
-using NImg::ColorRGBf;
-using NImg::Pixmap;
+using nimg::ColorRGBf;
+using nimg::Pixmap;
 
-class DRenderer : public IRenderer
+class DRenderer : public xtracer::render::IRenderer
 {
 	public:
 	DRenderer();
 
-	virtual void setup(Pixmap &fb, Scene &scene);
-	virtual void render(void);
+	virtual void setup(xtracer::render::context_t &context);
+	virtual void render();
 
 	private:
-	Pixmap *mFramebuffer;
-	Scene *mScene;
+
+    virtual void render_depth();
+    xtracer::render::context_t *m_context;
 };
 
 #endif /* XTRACER_DEPTH_HPP_INCLUDED */

@@ -36,8 +36,9 @@ void Renderer::setup(xtracer::render::context_t &context)
 
 void Renderer::render()
 {
-	if (   !m_context->scene
+	if (   !m_context
         || !m_context->framebuffer
+        || !m_context->scene
         || !m_context->scene->get_camera()
     ) return;
 
@@ -173,9 +174,11 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 void Renderer::pass_rtrace()
 {
 	// precalculate some constants
-	const unsigned int w = m_context->framebuffer->width();
-	const unsigned int h = m_context->framebuffer->height();
-	const unsigned int thread_count = 0;// Environment::handle().threads();
+	const unsigned int w       = m_context->framebuffer->width();
+	const unsigned int h       = m_context->framebuffer->height();
+	const unsigned int t       = m_context->params.threads;
+	const unsigned int aa      = m_context->params.ssaa;
+	const unsigned int samples = m_context->params.samples;
 
 	const unsigned int dxt       = (w % TILESIZE > 0 ? 1 : 0);
 	const unsigned int dyt       = (h % TILESIZE > 0 ? 1 : 0);
@@ -184,13 +187,8 @@ void Renderer::pass_rtrace()
 	const unsigned int numtiles  = numxtiles * numytiles;
 
 	float progress = 0;
+	if (t) omp_set_num_threads(t);
 
-	// Samples per pixel, offset per sample.
-	unsigned int aa = 1;//m_context->params.ssaa;
-
-	if (thread_count) omp_set_num_threads(thread_count);
-
-	const unsigned int samples = 1;//m_context->params.samples;
 
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
@@ -225,8 +223,8 @@ void Renderer::pass_rtrace()
 
                         for (float dofs = 0; dofs < samples; ++dofs) {
                             color += trace_ray(
-                                 m_context->scene->get_camera()->get_primary_ray(rx , ry, (float)w, (float)h)
-                                ,XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
+                                  m_context->scene->get_camera()->get_primary_ray(rx , ry, (float)w, (float)h)
+                                , XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
                             ) * sample_scaling;
 						}
 					}
@@ -239,7 +237,6 @@ void Renderer::pass_rtrace()
 		#pragma omp critical
 		{
 			++progress;
-
 			std::cout.setf(std::ios::fixed, std::ios::floatfield);
 			std::cout.setf(std::ios::showpoint);
 			std::cout << "\rRendering "
@@ -322,9 +319,6 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
     std::string &mat_id = m_context->scene->m_objects[obj]->material;
 	Material *mat = m_context->scene->m_materials[mat_id];
 
-	// Precalculated roughness.
-	scalar_t roughness = mat->roughness;
-
 	// ambient
 	color = mat->ambient * m_context->scene->ambient();
 
@@ -398,7 +392,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 				Ray reflray;
 				reflray.origin = p;
-				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : roughness);
+				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : mat->roughness);
 				color += fr * (mat->reflectance * trace_ray(reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}

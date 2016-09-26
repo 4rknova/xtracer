@@ -50,10 +50,6 @@ int main(int argc, char **argv)
 	Scene scene;
 	if (!scene.load(Environment::handle().scene())) {
 		scene.apply_modifiers();
-
-		Log::handle().log_message("- Name: %s", scene.name());
-
-		// Build the scene data
 		scene.build();
 
         if (scene.m_cameras.size() == 0) {
@@ -105,16 +101,13 @@ int main(int argc, char **argv)
 					  + "_aa" + sa + "_res"
 					  + sw + "x" + sh
 					  + "_" + random_token
-					  + ".ppm";
+					  + ".png";
 
 		Log::handle().log_message("Exporting to %s..", file.c_str());
-		if (nimg::io::save::ppm_raw(file.c_str(), fb)) {
+		if (nimg::io::save::png(file.c_str(), fb)) {
 			Log::handle().log_error("Failed to export image file");
 		}
 	}
-
-	// Clean up.
-	Log::handle().log_message("Shutting down.");
 
 	return 0;
 }
