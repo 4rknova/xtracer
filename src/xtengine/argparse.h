@@ -23,6 +23,8 @@ class Environment
 
 		unsigned int aa() const;
 
+        const char *renderer() const;
+
 		bool flag_gi() const;
 		bool flag_giviz() const;
 		unsigned int photon_count() const;
@@ -68,6 +70,7 @@ class Environment
 
 		std::string m_outdir;
 		std::string m_active_camera_name;
+        std::string m_renderer;
 		std::list<std::string> m_modifiers;
 
 		std::string mScene;

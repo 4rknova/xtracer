@@ -41,6 +41,11 @@ Environment &Environment::handle()
 	return m_environment;
 }
 
+const char *Environment::renderer() const
+{
+    return m_renderer.c_str();
+}
+
 unsigned int Environment::width() const
 {
 	return m_width;
@@ -151,9 +156,19 @@ unsigned int Environment::setup(int argc, char **argv)
 			}
 
 		}
+        else if (!strcmp(argv[i], XTRACER_ARGDEFS_RENDERER)) {
+            ++i;
+
+            if (!argv[i]) {
+                Log::handle().log_error("No value was provided for %s", argv[i-1]);
+                return 2;
+            }
+
+            m_renderer = argv[i];
+        }
 		// Maximum recursion depth
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MAX_RDEPTH)) {
-			i++;
+			++i;
 
 			if (!argv[i]) {
 				Log::handle().log_error("No value was provided for %s", argv[i-1]);

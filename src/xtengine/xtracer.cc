@@ -14,6 +14,7 @@
 #include <xtcore/context.h>
 
 #include <plr_photonmapper/renderer.h>
+#include <plr_depth/depth.h>
 
 #include "argdefs.h"
 #include "argparse.h"
@@ -59,7 +60,11 @@ int main(int argc, char **argv)
 
         scene.camera = Environment::handle().active_camera_name();
         // Create the renderer.
-		xtracer::render::IRenderer *renderer = new Renderer();
+
+		xtracer::render::IRenderer *renderer = NULL;
+
+        if (!strcmp(Environment::handle().renderer(), "depth")) renderer = new DRenderer();
+        else renderer = new Renderer();
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
 		context.framebuffer = &fb;
