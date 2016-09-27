@@ -64,8 +64,6 @@ camera = {
 }
 
 texture = {
-	3dtexture = {
-	}
 }
 
 geometry = {

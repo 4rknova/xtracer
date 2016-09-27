@@ -192,10 +192,9 @@ void Renderer::pass_rtrace()
 
 	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
-	double subpixel_size  = 1.0f / (float)(aa);
+	double subpixel_size  = 1.f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
 
-	// Calculate the number of samples per pixel.
 	float sample_scaling = 1.0f / (samples * spp);
 
 	#pragma omp parallel for schedule(dynamic, 1)
@@ -222,10 +221,8 @@ void Renderer::pass_rtrace()
 						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
                         for (float dofs = 0; dofs < samples; ++dofs) {
-                            color += trace_ray(
-                                  m_context->scene->get_camera()->get_primary_ray(rx , ry, (float)w, (float)h)
-                                , XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1
-                            ) * sample_scaling;
+                            Ray primary_ray = m_context->scene->get_camera()->get_primary_ray(rx, ry, (float)w, (float)h);
+                            color += trace_ray(primary_ray, primary_ray, XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling;
 						}
 					}
 				}
@@ -247,7 +244,7 @@ void Renderer::pass_rtrace()
 	}
 }
 
-ColorRGBf Renderer::trace_ray(const Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	IntInfo info;
@@ -290,14 +287,14 @@ ColorRGBf Renderer::trace_ray(const Ray &ray, const unsigned int depth,
 			scalar_t ior_a = dot_normal_dir > 0 ? mat->ior : ior_src;
 			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : mat->ior;
 
-			return gi_res + shade(ray, depth, info, obj, ior_a, ior_b);
+			return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
 		}
 	}
 
 	return ColorRGBf(0, 0, 0);
 }
 
-ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int depth,
 	IntInfo &info, std::string &obj,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
@@ -352,7 +349,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 			bool test = m_context->scene->intersection(sray, res, obj);
 			if (!test || res.t < EPSILON || res.t > distance) {
 				// shade
-                color += mat->shade(m_context->scene->get_camera()->position, light, texcolor, info) * tlshscaling;
+                color += mat->shade(pray.origin, light, texcolor, info) * tlshscaling;
 			}
 		}
 	}
@@ -381,7 +378,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 
 	    		float ft = 1.0 - fr;
     			color *= mat->transparency;
-			    color += ft * mat->transparency * trace_ray(refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+			    color += ft * mat->transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
             }
 		}
 
@@ -393,7 +390,7 @@ ColorRGBf Renderer::shade(const Ray &ray, const unsigned int depth,
 				Ray reflray;
 				reflray.origin = p;
 				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : mat->roughness);
-				color += fr * (mat->reflectance * trace_ray(reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
+				color += fr * (mat->reflectance * trace_ray(pray, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 			}
 		}
 	}
