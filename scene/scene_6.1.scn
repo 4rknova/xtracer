@@ -4,14 +4,6 @@ title = DOF
 descr = Depth of field
 versn = 0.4
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 	default = {
 		type = thin-lens
@@ -149,20 +141,18 @@ material = {
 	plane = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
 		k_exponent = 9350
 
 		diffuse = {
-			r = 1
-			g = 1
-			b = 1
+			r = .6
+			g = .6
+			b = .6
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .4
+			g = .4
+			b = .4
 		}
 
 		reflectance = 0.6
@@ -171,103 +161,93 @@ material = {
 	plastic1 = {
 		type = phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
 		k_exponent = 60
 
 		diffuse = {
-			r = 1
-			g = 0.3431
+			r = .5
+			g = 0.1714
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
-		reflectance = 0.3
+		reflectance = 0.5
 	}
 
 	plastic2 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
 		k_exponent = 60
 
 		diffuse = {
-			r = 1.5
-			g = 1.6470
+			r = .6
+			g = .6
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .4
+			g = .4
+			b = .4
 		}
 
-		reflectance = 0.3
-	}
+		reflectance = 0.4
+    }
 
 	plastic3 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
 		k_exponent = 60
 
 		diffuse = {
-			r = 1
+			r = .6
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .4
+			g = .4
+			b = .4
 		}
 
-		reflectance = 0.3
+		reflectance = 0.4
 	}
 
 	plastic4 = {
 		type = phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
 		k_exponent = 60
 
 		diffuse = {
-			r = 0.51
-			g = 0.61
-			b = 0.81
+			r = 0.25
+			g = 0.3
+			b = 0.4
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
-		reflectance = 0.3
+		reflectance = 0.5
 	}
 
 	plastic5 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
 		k_exponent = 60
 
 		diffuse = {
-			g = 1
-			b = 1
+			g = .5
+			b = .5
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
 		reflectance = 0.3
@@ -276,23 +256,21 @@ material = {
 	plastic6 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
 		k_exponent = 60
 
 		diffuse = {
-			r = 0.1
-			g = 0.6
-			b = 1
+			r = .5
+			g = .5
+			b = .3
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
-		reflectance = 0.3
+		reflectance = 0.5
 	}
 }
 

@@ -1,21 +1,8 @@
-title = Refraction
-descr = A refractive sphere
-versn = 0.4
-
-%include scene_common.scn
-
-ambient = {
-	r = 0.01
-	g = 0.01
-	b = 0.01
-}
-
 camera = {
 	default = {
         type = thin-lens
 
 		fov = 60
-
 
 		position = {
 			x = 450
@@ -24,7 +11,8 @@ camera = {
 		}
 
 		target = {
-			y = 0
+		    x = 0
+            y = 0
 			z = 0
 		}
 
@@ -126,111 +114,77 @@ material = {
 	floor = {
 		type = phong
 
-		k_diffuse = 0.8
-		k_specular = 0.2
-		k_exponent = 128
+		k_exponent = 255
 
 		diffuse = {
-			r = 0.51
-			g = 0.51
-			b = 0.51
+			r = .3
+			g = .3
+			b = .3
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .7
+			g = .7
+			b = .7
 		}
 
-		reflectance = 0.2
+		reflectance = 0.7
 	}
 
 	ball1 = {
 		type = blinn_phong
 
-		k_diffuse = 0.7
-		k_specular = 0.3
 		k_exponent = 60
 
 		diffuse = {
-			r = 0.934
-			g = 0.945
-			b = 0.852
+            r = 0.5
 		}
 
 		specular = {
-			r = 0.934
-			g = 0.945
-			b = 0.852
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 
-		reflectance = 0.053
-
+		reflectance = 0.5
 	}
 
 	ball2 = {
 		type = blinn_phong
 
-		k_diffuse = 0.4
-		k_specular = 0.6
 		k_exponent = 560
 
 		diffuse = {
-			r = 0.134
-			g = 0.545
-			b = 0.952
+			g = 0.5
 		}
 
 		specular = {
-			r = 0.134
-			g = 0.545
-			b = 0.952
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 
-		reflectance = 0.003
+		reflectance = 0.5
 
 	}
 
 	ball3 = {
 		type = blinn_phong
 
-		k_diffuse = 0.7
-		k_specular = 0.3
 		k_exponent = 60
 
 		diffuse = {
-			r = 0.934
-			g = 0.845
-			b = 0.052
+			b = 0.5
 		}
 
 		specular = {
-			r = 0.934
-			g = 0.845
-			b = 0.052
+			r = 0.5
+			g = 0.5
+			b = 0.5
 		}
 
-		reflectance = 0.03
+		reflectance = 0.5
 
-	}
-
-    glass = {
-		type = blinn_phong
-
-		k_diffuse = 0.0
-		k_specular = 1.0
-		k_exponent = 128
-
-		specular = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
-		}
-
-		reflectance = 1
-		transparency = 1
-
-		ior = 1.650
 	}
 }
 
@@ -253,13 +207,9 @@ object = {
 		geometry = sphere10
 		material = ball3
 	}
-	sphere2 = {
-		geometry = sphere2
-		material = glass
-	}
 	floor = {
 		geometry = plane
 		material = floor
-		texture = floor
+		texture  = floor
 	}
 }

@@ -1,5 +1,5 @@
-#ifndef XTRACER_OBJECT_HPP_INCLUDED
-#define XTRACER_OBJECT_HPP_INCLUDED
+#ifndef XTRACER_OBJECT_H_INCLUDED
+#define XTRACER_OBJECT_H_INCLUDED
 
 #include <string>
 
@@ -11,4 +11,4 @@ class Object
 		std::string texture;
 };
 
-#endif /* XTRACER_OBJECT_HPP_INCLUDED */
+#endif /* XTRACER_OBJECT_H_INCLUDED */

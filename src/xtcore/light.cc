@@ -1,6 +1,6 @@
 #include <nmath/prng.h>
 #include <nmath/sample.h>
-#include "light.hpp"
+#include "light.h"
 
 using NMath::vec3_t;
 

@@ -56,25 +56,11 @@ camera = {
 	}
 
 	cam3 = {
-        type = thin-lens
+        type = ods
 
-		fov = 45
-
-		position = {
-			x = -900
-			y = 510
-			z = 900
-		}
-
-		target = {
-			y = 110
-			z = 300
-		}
-
-		up = {
-			x = 0.5
-			y = 1
-		}
+        position = {
+            z = -100
+        }
 	}
 }
 
@@ -141,20 +127,18 @@ material = {
 	floor = {
 		type = blinn_phong
 
-		k_diffuse = 0.8
-		k_specular = 0.2
 		k_exponent = 1350
 
 		diffuse = {
-			r = 0.251
-			g = 0.251
-			b = 0.251
+			r = 0.2
+			g = 0.2
+			b = 0.2
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .8
+			g = .8
+			b = .8
 		}
 
 		reflectance = 0.3
@@ -163,20 +147,18 @@ material = {
 	plastic = {
 		type = phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
 		k_exponent = 60
 
 		diffuse = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .5
+			g = .5
+			b = .5
 		}
 
 		reflectance = 0.053

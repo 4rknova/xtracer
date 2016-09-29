@@ -68,8 +68,6 @@ phong_red = {
 		b = 0
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
 	k_specexp = 60
 }
 
@@ -90,8 +88,6 @@ phong_green = {
 		b = 0
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
 	k_specexp = 60
 }
 
@@ -112,8 +108,6 @@ phong_blue = {
 		b = 1
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
 	k_specexp = 60
 }
 
@@ -134,16 +128,13 @@ phong_white = {
 		b = 1.0
 	}
 
-	k_diffuse = 0.5
-	k_specular = 0.5
 	k_specexp = 260
 }
 
 porcelain = {
 	type = phong
-	k_diffuse = 0.8
-	k_specular = 0.2
-	k_specexp = 60
+
+    reflectance = 0.1
 
 	diffuse = {
 		r = 0.980
@@ -155,7 +146,8 @@ porcelain = {
 		g = 1
 		b = 1
 	}
-	reflectance = 0.1
+
+    k_specexp = 60
 }
 
 # ================================== #
@@ -179,8 +171,6 @@ blinn_phong_red = {
 		b = 1
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
 	k_specexp = 180
 }
 
@@ -201,9 +191,7 @@ blinn_phong_green = {
 		b = 1
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
-	k_specexp = 180
+    k_specexp = 180
 }
 
 # plain blue phong
@@ -223,8 +211,6 @@ blinn_phong_blue = {
 		b = 1
 	}
 
-	k_diffuse = 0.3
-	k_specular = 0.7
 	k_specexp = 180
 }
 
@@ -245,7 +231,5 @@ blinn_phong_white = {
 		b = 1.0
 	}
 
-	k_diffuse = 0.5
-	k_specular = 0.5
 	k_specexp = 180
 }

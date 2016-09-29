@@ -1,16 +1,9 @@
 # Xtracer 2
 
+data = ./data/head/
 title = Head
 descr = Head mesh
 versn = 0.1
-
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
 
 camera = {
 	default = {
@@ -127,7 +120,7 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = ../media/mesh/head.obj
+		source = <data>/head.obj
 	}
 }
 
@@ -169,20 +162,18 @@ material = {
 	head = {
 		type = blinn_phong
 
-		k_diffuse =  0.75
-		k_specular = 0.25
 		k_exponent = 128
 
 		diffuse = {
-			r = 1
-			g = 1
-			b = 1
+			r = .9
+			g = .9
+			b = .9
 		}
 
 		specular = {
-			r = 1
-			g = 1
-			b = 1
+			r = .1
+			g = .1
+			b = .1
 		}
 
 		reflectance = 0.07
@@ -191,7 +182,7 @@ material = {
 
 texture = {
 	head = {
-		source = ../media/texture/head/Map-COL.ppm
+		source = <data>/lambertianf.jpg
 	}
 }
 

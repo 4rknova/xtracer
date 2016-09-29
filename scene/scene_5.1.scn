@@ -30,14 +30,6 @@ title = Cornell box replica (based on the original radiosity dataset)
 descr = <title>. You will normally want to render this scene with a 1:1 aspect ratio.
 versn = 0.1
 
-k_ambient = 0.01
-
-ambient = {
-	r = 0.6
-	g = 0.6
-	b = 0.6
-}
-
 # The scene cameras.
 camera = {
 	# The front camera.

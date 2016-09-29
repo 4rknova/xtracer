@@ -2,14 +2,6 @@ title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 
 	default = {

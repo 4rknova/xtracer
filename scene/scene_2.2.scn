@@ -2,15 +2,8 @@ title = Room
 descr = Three spheres in a room.
 versn = 0.4
 
-k_ambient = 0.001
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
+
 	default = {
         type = thin-lens
 
@@ -62,6 +55,7 @@ camera = {
 }
 
 geometry = {
+
 	red_ball = {
 		type = sphere
 		position = {
@@ -110,19 +104,19 @@ geometry = {
 		}
 		distance = 500
 	}
-	right_wall = {
-		type = plane
-		normal = {
-			x = -1
-		}
-		distance = 500
-	}
 	left_wall = {
 		type = plane
 		normal = {
 			x = 1
 		}
 		distance = -500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
 	}
 	front = {
 		type = plane
@@ -172,15 +166,15 @@ light = {
 object = {
 	red_ball = {
 		geometry = red_ball
-		material = lambert_red
+		material = phong_red
 	}
 	green_ball = {
 		geometry = green_ball
-		material = lambert_green
+		material = phong_green
 	}
 	blue_ball = {
 		geometry = blue_ball
-		material = phong_grey
+		material = phong_blue
 	}
 	floor = {
 		geometry = floor
@@ -192,15 +186,15 @@ object = {
 	}
 	back = {
 		geometry = back
-		material = lambert_grey
+		material = mirror
 	}
 	right_wall = {
 		geometry = right_wall
-		material = lambert_grey
+		material = mirror
 	}
 	left_wall = {
 		geometry = left_wall
-		material = lambert_grey
+		material = mirror
 	}
 	front = {
 		geometry = front
@@ -209,61 +203,63 @@ object = {
 }
 
 material = {
-	lambert_red = {
-		type = lambert
-
-		reflectance = 0.5
-
-		diffuse = {
-			r = 1
-		}
-		specular = {
-			r = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 60
-	}
-
-	lambert_green = {
-		type = lambert
-
-		reflectance = 0.5
-
-		diffuse = {
-			g = 1
-		}
-		specular = {
-			g = 1
-		}
-
-		k_diffuse = 0.3
-		k_specular = 0.7
-		k_exponent = 60
-	}
-
-	phong_grey = {
+	phong_red = {
 		type = phong
 
-		transparency = 0.0
-		reflectance = 1.0
+		reflectance = 0.5
 
 		diffuse = {
-			r = 0.0
-			g = 0.0
-			b = 0.0
+			r = .3
 		}
 		specular = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
+			r = .7
 		}
 
-		k_diffuse  = 0.0
-		k_specular = 1.0
-		k_exponent = 64
-		roughness  = 100.0
+		k_exponent = 60
+	}
+
+	phong_green = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			g = .3
+		}
+		specular = {
+			g = .7
+		}
+
+		k_exponent = 60
+	}
+
+	phong_blue = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			b = .3
+		}
+		specular = {
+			b = .7
+		}
+
+		k_exponent = 60
+	}
+
+	mirror = {
+		type = phong
+
+		reflectance = 1.0
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		k_exponent = 999
 	}
 
 	lambert_grey = {
