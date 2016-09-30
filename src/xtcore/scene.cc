@@ -17,12 +17,8 @@
 #include "proto.h"
 #include "log.h"
 #include "scene.h"
-
 #include "cam_perspective.h"
 #include "cam_ods.h"
-#include "mat_lambert.h"
-#include "mat_phong.h"
-#include "mat_blinnphong.h"
 
 using NMath::Vector2f;
 using NMath::Vector3f;
@@ -522,26 +518,31 @@ unsigned int Scene::create_material(NCF *p)
 {
 	if (!p) return 1;
 
-	IMaterial *material = NULL;
+	Material *material = new (std::nothrow) Material;
+
+	if (!material) return 2;
 
 	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
 
-	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) material = new (std::nothrow) MatLambert();
-	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) material = new (std::nothrow) MatPhong();
-	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) material = new (std::nothrow) MatBlinnPhong();
+	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) material->type = MATERIAL_LAMBERT;
+	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) material->type = MATERIAL_PHONG;
+	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) material->type = MATERIAL_BLINNPHONG;
 	else {
 		Log::handle().log_warning("Unsupported material %s. Skipping..", p->get_name());
+		delete material;
+		return 1;
 	}
 
-    if (!material) return 1;
-
-	material->colors["specular"]      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
-	material->colors["diffuse"]       = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
-	material->scalars["exponent"]     = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
-	material->scalars["roughness"]    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
-	material->scalars["transparency"] = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-	material->scalars["reflectance"]  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
-	material->scalars["ior"]          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+	material->ambient      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IAMBN));
+	material->specular     = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
+	material->diffuse      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
+	material->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
+	material->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
+	material->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
+	material->roughness    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
+	material->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
+	material->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
+	material->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
 
 	unsigned int res = destroy_material(p->get_name());
 	m_materials[p->get_name()] = material;

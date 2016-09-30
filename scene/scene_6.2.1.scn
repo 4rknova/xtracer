@@ -4,6 +4,14 @@ title = DOF
 descr = Depth of field
 versn = 0.4
 
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
 camera = {
 	default = {
         type = thin-lens

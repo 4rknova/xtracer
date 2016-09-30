@@ -2,7 +2,16 @@ title = Room
 descr = Three spheres in a room.
 versn = 0.4
 
+k_ambient = 0.001
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
 camera = {
+
 	default = {
         type = thin-lens
 
@@ -54,6 +63,7 @@ camera = {
 }
 
 geometry = {
+
 	red_ball = {
 		type = sphere
 		position = {
@@ -102,19 +112,19 @@ geometry = {
 		}
 		distance = 500
 	}
-	right_wall = {
-		type = plane
-		normal = {
-			x = -1
-		}
-		distance = 500
-	}
 	left_wall = {
 		type = plane
 		normal = {
 			x = 1
 		}
 		distance = -500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
 	}
 	front = {
 		type = plane
@@ -128,7 +138,7 @@ geometry = {
 light = {
 
 	l0 = {
-		type = sphere
+		type = point
 
 		position = {
 			x = -150
@@ -141,12 +151,10 @@ light = {
 			g = 1
 			b = 1
 		}
-
-        radius = 10
 	}
 
 	l1 = {
-		type = sphere
+		type = point
 
 		position = {
 			x = -100
@@ -159,8 +167,6 @@ light = {
 			g = 0.4
 			b = 0.4
 		}
-
-        radius = 10
 	}
 
 }
@@ -168,91 +174,121 @@ light = {
 object = {
 	red_ball = {
 		geometry = red_ball
-		material = red
+		material = phong_red
 	}
 	green_ball = {
 		geometry = green_ball
-		material = green
+		material = phong_green
 	}
 	blue_ball = {
 		geometry = blue_ball
-		material = phong_grey
+		material = phong_blue
 	}
 	floor = {
 		geometry = floor
-		material = grey
+		material = lambert_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = grey
+		material = lambert_grey
 	}
 	back = {
 		geometry = back
-		material = grey
+		material = phong_grey
 	}
 	right_wall = {
 		geometry = right_wall
-		material = grey
+		material = phong_grey
 	}
 	left_wall = {
 		geometry = left_wall
-		material = grey
+		material = phong_grey
 	}
 	front = {
 		geometry = front
-		material = grey
+		material = lambert_grey
 	}
 }
 
 material = {
-	red = {
-		type = blinn_phong
+	phong_red = {
+		type = phong
 
-		reflectance = 1
+		reflectance = 0.5
 
 		diffuse = {
-			r = 0
+			r = 1
 		}
 		specular = {
 			r = 1
 		}
 
-		k_exponent = 255
+		k_diffuse  = 0.3
+		k_specular = 0.7
+		k_exponent = 60
 	}
 
-	green = {
-		type = blinn_phong
+	phong_green = {
+		type = phong
 
-		reflectance = 1
+		reflectance = 0.5
 
 		diffuse = {
-			g = 0
+			g = 1
 		}
 		specular = {
 			g = 1
 		}
 
-		k_exponent = 255
+		k_diffuse  = 0.3
+		k_specular = 0.7
+		k_exponent = 60
+	}
+
+	phong_blue = {
+		type = phong
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 0.3
+			g = 0.3
+			b = 1
+		}
+		specular = {
+			r = .99
+			g = .99
+			b = 1
+		}
+
+		k_diffuse  = 0.3
+		k_specular = 0.7
+		k_exponent = 60
 	}
 
 	phong_grey = {
-		type = blinn_phong
+		type = phong
 
-		transparency = 0.0
 		reflectance = 1.0
 
-        specular = {
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+		specular = {
 			r = 1
 			g = 1
 			b = 1
 		}
 
-		k_exponent = 255
-		roughness  = 100.0
+		k_diffuse  = 0.0
+		k_specular = 1.0
+		k_exponent = 999
 	}
 
-	grey = {
-		type = blinn_phong
+	lambert_grey = {
+		type = lambert
 
 		diffuse = {
 			r = 0.5

@@ -1,5 +1,5 @@
-#ifndef XTRACER_TEXTURE_H_INCLUDED
-#define XTRACER_TEXTURE_H_INCLUDED
+#ifndef XTRACER_TEXTURE_HPP_INCLUDED
+#define XTRACER_TEXTURE_HPP_INCLUDED
 
 #include "nimg/color.h"
 #include "nimg/pixmap.h"
@@ -22,4 +22,4 @@ class Texture2D
 		Pixmap m_map;
 };
 
-#endif /* XTRACER_TEXTURE_H_INCLUDED */
+#endif /* XTRACER_TEXTURE_HPP_INCLUDED */

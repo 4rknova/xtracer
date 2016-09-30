@@ -67,6 +67,7 @@ dirtree:
 
 $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
 	$(BIN) -res 800x800 $<
+	$(BIN) -res 800x800 -renderer depth $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)

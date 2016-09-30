@@ -1,9 +1,9 @@
-#include <nimg/img.h>
-#include "texture.h"
+#include "nimg/ppm.h"
+#include "texture.hpp"
 
 unsigned int Texture2D::load(const char *file)
 {
-	if (nimg::io::load::image(file, m_map)) {
+	if (nimg::io::load::ppm_raw(file, m_map)) {
 		return 1;
 	}
 

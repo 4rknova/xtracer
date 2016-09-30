@@ -9,10 +9,10 @@
 #include <ncf/ncf.h>
 
 #include <xtcore/camera.h>
-#include <xtcore/light.h>
-#include <xtcore/material.h>
-#include <xtcore/texture.h>
-#include <xtcore/object.h>
+#include <xtcore/light.hpp>
+#include <xtcore/material.hpp>
+#include <xtcore/texture.hpp>
+#include <xtcore/object.hpp>
 
 using nimg::ColorRGBf;
 
@@ -24,9 +24,7 @@ using nimg::ColorRGBf;
 #define VALUE_DEFAULT_BOOL false
 
 using NMath::Geometry;
-using NMath::IntInfo;
 using xtracer::assets::ICamera;
-using xtracer::assets::IMaterial;
 
 class Scene
 {
@@ -81,7 +79,7 @@ class Scene
 		// Maps of the scene entities
 		std::map<std::string, ICamera*  > m_cameras;
 		std::map<std::string, ILight*   > m_lights;
-		std::map<std::string, IMaterial*> m_materials;
+		std::map<std::string, Material* > m_materials;
 		std::map<std::string, Texture2D*> m_textures;
 		std::map<std::string, Geometry* > m_geometry;
 		std::map<std::string, Object*   > m_objects;

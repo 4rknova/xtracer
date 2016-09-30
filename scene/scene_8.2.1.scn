@@ -6,6 +6,14 @@ title = Bunny
 descr = Bunny
 versn = 0.1
 
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
 camera = {
 	default = {
         type = thin-lens
@@ -122,44 +130,72 @@ light = {
 }
 
 material = {
-	m1 = {
+	m0 = {
 		type = blinn_phong
 
-		k_exponent = 128
+		k_diffuse =  0.0
+		k_specular = 1.0
+		k_exponent = 60
 
 		diffuse = {
-			r = .9
-			g = .9
-			b = .9
+			r = 1
+			g = 1
+			b = 1
 		}
 
 		specular = {
-			r = .1
-			g = .1
-			b = .1
+			r = 1
+			g = 1
+			b = 1
 		}
 
-		reflectance = 0.1
+		reflectance = 0.0
+		transparency = 1.0
+		ior = 1.51714
+	}
+
+	m1 = {
+		type = blinn_phong
+
+		k_diffuse =  0.75
+		k_specular = 0.25
+		k_exponent = 128
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.07
 	}
 
 	floor = {
 		type = blinn_phong
 
+		k_diffuse = 0.5
+		k_specular = 0.5
 		k_exponent = 1350
 
 		diffuse = {
-	        r = .3
-            g = .3
-    	    b = .3
+	        r = 0.51
+	        g = 0.51
+    	    b = 0.51
 	    }
 
     	specular = {
-            r = .7
-            g = .7
-            b = .7
+            r = 1
+            g = 1
+            b = 1
         }
 
-        reflectance = 0.7
+        reflectance = 0.3
 	}
 }
 
