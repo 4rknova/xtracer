@@ -76,6 +76,18 @@ camera = {
 			y = 1
 		}
 	}
+
+    ods = {
+        type = ods
+
+        ipd  = 6.4
+
+		position = {
+			x = -90
+			y = 50
+			z = -90
+		}
+    }
 }
 
 geometry = {

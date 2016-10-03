@@ -12,9 +12,12 @@ ambient = {
 }
 
 camera = {
+
     default = {
         type = ods
+        ipd  = 6.4
     }
+
 	cam0 = {
         type = thin-lens
 
@@ -63,9 +66,6 @@ camera = {
 	}
 }
 
-texture = {
-}
-
 geometry = {
 	3dmodel = {
 		type = mesh
@@ -75,97 +75,31 @@ geometry = {
 
 light = {
 	satl = {
-		type = point
+		type = sphere
 
 		position = {
-			x = 0
-			y = 0
-			z = -0.5
+			y = 200
 		}
+
+        radius = 5
 
 		intensity = {
-			r = 0.51
-			g = 0.51
-			b = 0.51
-		}
-	}
-
-	sat2 = {
-		type = point
-
-		position = {
-			x = 1
-			y = 1.5
-			z = -1
-		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
-	}
-
-	sat3 = {
-		type = point
-
-		position = {
-			x = -13.5
-			y = 7
-			z = 0.8
-		}
-
-		intensity = {
-			r = 0.31
-			g = 0.31
-			b = 0.31
+			r = .5
+			g = .5
+			b = .5
 		}
 	}
 }
 
 material = {
 	3dmodel = {
-		type = blinn_phong
-
-		k_diffuse =  0.75
-		k_specular = 0.25
-		k_exponent = 128
+		type = lambert
 
 		diffuse = {
-			r = 0.980
-			g = 0.9215
-			b = 0.8431
-		}
-
-		specular = {
 			r = 1
 			g = 1
-			b = 1
-		}
-
-		reflectance = 0
-	}
-
-	floor = {
-		type = blinn_phong
-
-		k_diffuse = 0.5
-		k_specular = 0.5
-		k_exponent = 1350
-
-		diffuse = {
-	        r = 0.51
-	        g = 0.51
-    	    b = 0.51
-	    }
-
-    	specular = {
-            r = 1
-            g = 1
             b = 1
-        }
-
-        reflectance = 0.3
+		}
 	}
 }
 
