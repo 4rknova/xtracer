@@ -6,5 +6,6 @@ src/*.o
 *.pc
 *.ppm
 *.png
+*.jpg
 *.swp
 Makefile
