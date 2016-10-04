@@ -16,6 +16,12 @@ camera = {
     default = {
         type = ods
         ipd  = 6.4
+
+        position = {
+			x = 200
+			y = 300
+			z = -450
+		}
     }
 
 	cam0 = {
