@@ -10,17 +10,13 @@ CamODS::~CamODS()
 NMath::Ray CamODS::get_primary_ray(float x, float y, float width, float height)
 {
     NMath::Ray ray;
-
     float h = height * .5f;
-
-    float offset = ipd * .5f;
-    float scale  = offset * ((y < h) ? -1 : 1);
+    float scale  = ipd * .5f * ((y < h) ? -1 : 1);
     if (y > h) y = y - h;
 
     // Calculate theta & phi angles
-    float theta = (x / width ) * 2.f  * NMath::PI - NMath::PI;
+    float theta = (x / width) * 2.f  * NMath::PI - NMath::PI;
     float phi   = NMath::PI * .5f - (y/h) * NMath::PI;
-
 
     ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
     ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), cos(theta) * cos(phi));
