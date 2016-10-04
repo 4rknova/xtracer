@@ -1,0 +1,88 @@
+data  = ./data
+title = Conference
+descr = Conference
+versn = 0.1
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+
+    default = {
+        type = ods
+        ipd  = 6.4
+    }
+
+	cam0 = {
+        type = thin-lens
+
+		fov = 60
+
+		position = {
+			x = -500
+			y = 400
+			z = 100
+		}
+
+		target = {
+			x = 0
+			y = 150
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	3dmodel = {
+		type = mesh
+		source = <data>/conference.obj
+	}
+}
+
+light = {
+	satl = {
+		type = sphere
+
+		position = {
+			y = 400
+			x = 0
+			z = 0
+		}
+
+        radius = 5
+
+		intensity = {
+			r = .5
+			g = .5
+			b = .5
+		}
+	}
+}
+
+material = {
+	3dmodel = {
+		type = lambert
+
+		diffuse = {
+			r = 1
+			g = 1
+            b = 1
+		}
+	}
+}
+
+object = {
+	3dmodel = {
+		geometry = 3dmodel
+		material = 3dmodel
+	}
+}

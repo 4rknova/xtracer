@@ -38,6 +38,17 @@ camera = {
 			z = 0
 		}
 	}
+
+    ods = {
+        type = ods
+        ipd  = 6.4
+
+		position = {
+            x = 278.0
+            y = 273.0
+            z = -150.0
+        }
+    }
 }
 
 # The scene lights
