@@ -1,13 +1,9 @@
-#include "nimg/ppm.h"
+#include "nimg/img.h"
 #include "texture.hpp"
 
 unsigned int Texture2D::load(const char *file)
 {
-	if (nimg::io::load::ppm_raw(file, m_map)) {
-		return 1;
-	}
-
-	return 0;
+	return nimg::io::load::image(file, m_map);
 }
 
 unsigned int Texture2D::load(const Pixmap &map)
