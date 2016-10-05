@@ -19,7 +19,7 @@ NMath::Ray CamODS::get_primary_ray(float x, float y, float width, float height)
     float phi   = NMath::PI * .5f - (y/h) * NMath::PI;
 
     ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
-    ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), cos(theta) * cos(phi));
+    ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), -cos(theta) * cos(phi));
 
     return ray;
 }
