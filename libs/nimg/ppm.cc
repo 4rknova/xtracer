@@ -19,16 +19,16 @@ namespace nimg {
 	4. Whitespace.
 	5. A height in ASCII decimal.
 	6. Whitespace (blanks, TABs, CRs, LFs).
-	7. The maximum color value in ASCII decimal. 
+	7. The maximum color value in ASCII decimal.
 	   Must be less than 65536 and more than zero.
 	9. A single whitespace character (usually a newline).
 
 	Pixel data then follows.
 
-	If the PPM magic identifier is "P6" then the image data is stored in byte format, 
-	one byte per colour component (r,g,b). Comments can only occur before the last 
-	field of the header and only one byte may appear after the last header field, 
-	normally a carriage return or line feed. "P6" image files are obviously smaller 
+	If the PPM magic identifier is "P6" then the image data is stored in byte format,
+	one byte per colour component (r,g,b). Comments can only occur before the last
+	field of the header and only one byte may appear after the last header field,
+	normally a carriage return or line feed. "P6" image files are obviously smaller
 	than P3 and much faster to read. Note that P6 PPM files can only be used for single
 	byte colours. Comment start with the character '#' and continue until a new line character.
 
@@ -51,7 +51,7 @@ int ppm_raw(const char *filename, Pixmap &fb)
 	int c = 0;
 	std::string header_token[4];
 
-	for (unsigned int tcount = 0; tcount < 4; tcount++) {
+	for (size_t tcount = 0; tcount < 4; tcount++) {
 		for (;;) {
 			while (isspace(c = getc(fp)));
 
@@ -101,8 +101,8 @@ int ppm_raw(const char *filename, Pixmap &fb)
 	}
 
 	// Read the pixel data.
-	for (unsigned int j = 0; j < fb.height(); j++) {
-		for (unsigned int i = 0; i < fb.width(); i++) {
+	for (size_t j = 0; j < fb.height(); j++) {
+		for (size_t i = 0; i < fb.width(); i++) {
 			unsigned char p[3];
 
 			if (fread(p, 1, 3, fp) != 3)
@@ -142,11 +142,11 @@ int ppm_raw(const char *filename, const Pixmap &fb)
 		return 2;
 
 	// Write the header.
-	fprintf(fp, "P6\n%d %d\n255\n", fb.width(), fb.height());
+	fprintf(fp, "P6\n%lu %lu\n255\n", fb.width(), fb.height());
 
 	// Write the pixel data.
-	for (unsigned int j = 0; j < fb.height(); j++) {
-		for (unsigned int i = 0; i < fb.width(); i++) {
+	for (size_t j = 0; j < fb.height(); j++) {
+		for (size_t i = 0; i < fb.width(); i++) {
 			const ColorRGBAf &pixel = fb.pixel_ro(i, j);
 
 			// Do some basic tone mapping.

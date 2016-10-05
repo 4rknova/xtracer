@@ -1,6 +1,8 @@
 #ifndef BUFFER_H_INCLUDED
 #define BUFFER_H_INCLUDED
 
+#include <cstddef>
+
 namespace nimg {
     namespace util {
 
@@ -13,18 +15,18 @@ class Buffer
 		Buffer &operator =(const Buffer &rhs);
 		virtual ~Buffer();
 
-		int init(const unsigned int count);
+		int init(size_t count);
 		void clear();
 
-		unsigned int count() const;
+		size_t count() const;
 
-		T& operator[] (const unsigned int idx);
-		const T& operator[] (const unsigned int idx) const;
+		T& operator[] (size_t idx);
+		const T& operator[] (size_t idx) const;
 
 	private:
 		void release();
 
-		unsigned int m_count;
+		size_t m_count;
 		// The following is a default value that will be used if
 		// an index based access request is made on an uninitialized 
 		// buffer.

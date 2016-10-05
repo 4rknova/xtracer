@@ -13,21 +13,19 @@ namespace nimg {
 
 template <class T>
 Buffer<T>::Buffer()
-	: m_count(0),
-	  m_data(NULL)
+	: m_count(0)
+	, m_data(NULL)
 {}
 
 template <class T>
 Buffer<T>::Buffer(const Buffer &rhs)
 {
-	if (&rhs == this)
-		return;
+	if (&rhs == this) return;
 
 	release();
-	
-	if(init(rhs.count()))
-		return;
-	
+
+	if(init(rhs.count())) return;
+
 	memcpy(m_data, rhs.m_data, m_count * sizeof(T));
 	m_count = rhs.count();
 }
@@ -35,18 +33,15 @@ Buffer<T>::Buffer(const Buffer &rhs)
 template <class T>
 Buffer<T> &Buffer<T>::operator =(const Buffer<T> &rhs)
 {
-	if (&rhs == this)
-		return *this;
+	if (&rhs == this) return *this;
 
 	release();
-	
+
 	m_data = NULL;
 
-	if(init(rhs.count())) {
-		return *this;
-	}
+	if(init(rhs.count())) return *this;
 
-	memcpy(m_data, rhs.m_data, m_count * sizeof(T));	
+	memcpy(m_data, rhs.m_data, m_count * sizeof(T));
 	m_count = rhs.count();
 
 	return *this;
@@ -59,19 +54,15 @@ Buffer<T>::~Buffer()
 }
 
 template <class T>
-int Buffer<T>::init(const unsigned int count)
+int Buffer<T>::init(size_t count)
 {
-	// Release previously allocated memory
 	release();
 
-	if (!count)
-		return 0;
+	if (!count)	return 0;
 
-	// Allocate new memory
 	m_data = new (std::nothrow) T[count];
-	
-	if(!m_data)
-		return 1; // Something went wrong.
+
+	if(!m_data)	return 1;
 
 	memset(m_data, 0, count * sizeof(T));
 	m_count = count;
@@ -95,28 +86,22 @@ void Buffer<T>::release()
 }
 
 template <class T>
-unsigned int Buffer<T>::count() const
+size_t Buffer<T>::count() const
 {
 	return m_count;
 }
 
 template <class T>
-T& Buffer<T>::operator[] (const unsigned int idx)
+T& Buffer<T>::operator[] (size_t idx)
 {
-	if (!count()) {
-		return m_single_object;
-	}
-
+	if (!count()) return m_single_object;
 	return m_data[idx >= count() ? count() - 1 : idx];
 }
 
 template <class T>
-const T& Buffer<T>::operator[] (const unsigned int idx) const
+const T& Buffer<T>::operator[] (size_t idx) const
 {
-	if (!count()) {
-		return m_single_object;
-	}
-
+	if (!count()) return m_single_object;
 	return m_data[idx >= count() ? count() - 1 : idx];
 }
 

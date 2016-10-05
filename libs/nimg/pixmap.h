@@ -1,6 +1,7 @@
 #ifndef NIMG_PIXMAP_H_INCLUDED
 #define NIMG_PIXMAP_H_INCLUDED
 
+#include <cstddef>
 #include "buffer.h"
 #include "color.h"
 
@@ -27,16 +28,16 @@ class Pixmap
 		// RETURN CODES:
 		//	0. Everything went well.
 		//  1. Failed to initialize pixels.
-		int init(const unsigned int w, const unsigned int h);
+		int init(size_t w, size_t h);
 
-		unsigned int width() const;
-		unsigned int height() const;
+		size_t width()  const;
+		size_t height() const;
 
-		const ColorRGBAf &pixel_ro(const unsigned int x, const unsigned int y) const;
-		ColorRGBAf &pixel(const unsigned int x, const unsigned int y);
+		const ColorRGBAf &pixel_ro(size_t x, size_t y) const;
+		      ColorRGBAf &pixel   (size_t x, size_t y);
 
 	private:
-		unsigned int m_width, m_height;
+		size_t m_width, m_height;
 		mutable util::Buffer<ColorRGBAf> m_pixels;
 };
 
