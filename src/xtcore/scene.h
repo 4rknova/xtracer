@@ -11,7 +11,7 @@
 #include <xtcore/camera.h>
 #include <xtcore/light.hpp>
 #include <xtcore/material.hpp>
-#include <xtcore/texture.hpp>
+#include <xtcore/texture.h>
 #include <xtcore/object.hpp>
 
 using nimg::ColorRGBf;

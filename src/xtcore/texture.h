@@ -1,5 +1,5 @@
-#ifndef XTRACER_TEXTURE_HPP_INCLUDED
-#define XTRACER_TEXTURE_HPP_INCLUDED
+#ifndef XTRACER_TEXTURE_H_INCLUDED
+#define XTRACER_TEXTURE_H_INCLUDED
 
 #include "nimg/color.h"
 #include "nimg/pixmap.h"
@@ -16,10 +16,10 @@ class Texture2D
 		unsigned int load(const char *file);
 		unsigned int load(const Pixmap &map);
 
-		const ColorRGBAf &sample(const float s, const float t) const;
+		const ColorRGBAf sample(const float s, const float t) const;
 
 	private:
 		Pixmap m_map;
 };
 
-#endif /* XTRACER_TEXTURE_HPP_INCLUDED */
+#endif /* XTRACER_TEXTURE_H_INCLUDED */
