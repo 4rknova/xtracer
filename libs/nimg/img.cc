@@ -14,7 +14,7 @@ int image(const char *filename, Pixmap &map)
     if (!filename) return 1;
 
     int w, h, bpp;
-    unsigned char *data = stbi_load(filename, &w, &h, &bpp, STBI_rgb);
+    unsigned char *data = stbi_load(filename, &w, &h, &bpp, 0);
 
     if (data == NULL) return 2;
 
@@ -31,11 +31,28 @@ int image(const char *filename, Pixmap &map)
                 pixel.r(data[i  ] / 255.f);
                 pixel.g(data[i+1] / 255.f);
                 pixel.b(data[i+2] / 255.f);
-
+                pixel.a(1.f);
                 map.pixel(x, y) = pixel;
             }
         }
     }
+    else if (bpp == 4) {
+        for (size_t x = 0; x < (size_t)w; ++x) {
+            for (size_t y = 0; y < (size_t)h; ++y) {
+                size_t i = 4 * (y * w + x);
+
+                ColorRGBAf pixel;
+                pixel.r(data[i  ] / 255.f);
+                pixel.g(data[i+1] / 255.f);
+                pixel.b(data[i+2] / 255.f);
+                pixel.a(data[i+3] / 255.f);
+
+                map.pixel(x, y) = pixel;
+            }
+        }
+
+    }
+
     else  res = -1; // incompatible format
 
     stbi_image_free(data);

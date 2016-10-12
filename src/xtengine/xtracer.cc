@@ -15,7 +15,8 @@
 
 #include <plr_photonmapper/renderer.h>
 #include <plr_depth/depth.h>
-
+#define NIMG_TEST
+#include <nimg/genetic_algo.cc>
 #include "argdefs.h"
 #include "argparse.h"
 #include "plm.h"
