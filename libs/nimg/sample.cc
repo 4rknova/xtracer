@@ -18,23 +18,36 @@ ColorRGBAf linear(const Pixmap &map, double u, double v)
 
 ColorRGBAf bilinear(const Pixmap &map, double u, double v)
 {
-	u = u < 0 ? 0 : (u > 1 ? u - floor(u) : u);
-	v = v < 0 ? 0 : (v > 1 ? v - floor(v) : v);
+	size_t w = map.width();
+	size_t h = map.height();
 
-	u = u * map.width()  - 0.5;
-	v = v * map.height() - 0.5;
+	float fu = u * w;
+	float fv = v * h;
 
-	size_t x = floor(u);
-	size_t y = floor(v);
+    // find which pixels participate
+	int u1 = ((int)fu) % w;
+	int v1 = ((int)fv) % h;
+	int u2 = (u1 + 1)  % w;
+	int v2 = (v1 + 1)  % h;
 
-	double u_ratio = u - x;
-	double v_ratio = v - y;
+	// calculate fractional parts of u and v
+	float fracu = fu - floorf(fu);
+	float fracv = fv - floorf(fv);
 
-	double u_opposite = 1 - u_ratio;
-   	double v_opposite = 1 - v_ratio;
+	// calculate weight factors
+	float w1 = (1 - fracu) * (1 - fracv);
+	float w2 = fracu * (1 - fracv);
+	float w3 = (1 - fracu) * fracv;
+	float w4 = fracu *  fracv;
 
-   	return (map.pixel_ro(x, y  ) * u_opposite  + map.pixel_ro(x+1, y  ) * u_ratio) * v_opposite +
-    	   (map.pixel_ro(x, y+1) * u_opposite  + map.pixel_ro(x+1, y+1) * u_ratio) * v_ratio;
+	// fetch four texels
+	ColorRGBAf c1 = map.pixel_ro(u1, v1);
+	ColorRGBAf c2 = map.pixel_ro(u2, v1);
+	ColorRGBAf c3 = map.pixel_ro(u1, v2);
+	ColorRGBAf c4 = map.pixel_ro(u2, v2);
+
+	// scale and sum the four colors
+	return c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4;
 }
 
     } /* namespace sample */
