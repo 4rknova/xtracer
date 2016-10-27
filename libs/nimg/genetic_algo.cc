@@ -4,11 +4,11 @@
 #include <cstdio>
 #include <string>
 #include <cstdlib>
-#include "pixmap.h"
-#include "png.h"
-#include "diff.h"
-#include "rasteriser.h"
-#include "genetic.h"
+#include <nimg/pixmap.h>
+#include <nimg/img.h>
+#include <nimg/diff.h>
+#include <nimg/rasteriser.h>
+#include <nimg/genetic.h>
 
 int test(int argc, char **argv)
 {

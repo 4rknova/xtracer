@@ -51,7 +51,7 @@ camera = {
 
 texture = {
 	checker = {
-		source = <data>/floor.ppm
+		source = <data>/floor2.jpg
 	}
 }
 
@@ -211,20 +211,20 @@ material = {
 }
 
 object = {
-	m0 = {
-		geometry = m0
-		material = m1
-	}
-
-	m1 = {
-		geometry = m1
-		material = m1
-	}
-
-	m2 = {
-		geometry = m2
-		material = m1
-	}
+#	m0 = {
+#		geometry = m0
+#		material = m1
+#	}
+#
+#	m1 = {
+#		geometry = m1
+#		material = m1
+#	}
+#
+#	m2 = {
+#		geometry = m2
+#		material = m1
+#	}
 
 	floor = {
 		geometry = floor

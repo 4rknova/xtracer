@@ -38,6 +38,7 @@ class Environment
 		unsigned int setup(int argc, char **argv);
         void         configure(params_t &params);
 
+        std::list<std::string> modifiers();
 		void modifier_push(std::string &modifier);
 		bool modifier_pop(std::string &res);
 

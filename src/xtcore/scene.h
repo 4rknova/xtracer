@@ -2,12 +2,12 @@
 #define XTRACER_SCENE_HPP_INCLUDED
 
 #include <string>
+#include <list>
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
 #include <nmath/geometry.h>
 #include <ncf/ncf.h>
-
 #include <xtcore/camera.h>
 #include <xtcore/light.hpp>
 #include <xtcore/material.hpp>
@@ -47,7 +47,7 @@ class Scene
 		const char *name();
 		const char *source();
 
-		unsigned int load(const char *filename);
+		unsigned int load(const char *filename, std::list<std::string> modifiers);
 		void apply_modifiers();
 		unsigned int build();		// Build the scene data according to the scene tree
 
@@ -88,10 +88,8 @@ class Scene
 		ColorRGBf m_ambient;	// intensity
 
 		// The scene's source filepath and filename
-		const std::string m_source;
-
-		// The parser data tree
-		NCF m_scene;
+		std::string m_name;
+		std::string m_source;
 
 		// This will cleanup all the allocated memory
 		void release();

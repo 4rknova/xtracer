@@ -121,6 +121,11 @@ void Environment::modifier_push(std::string &modifier)
 	m_modifiers.push_back(modifier);
 }
 
+std::list<std::string> Environment::modifiers()
+{
+    return m_modifiers;
+}
+
 bool Environment::modifier_pop(std::string &res)
 {
 	if (m_modifiers.empty()) {
@@ -284,6 +289,7 @@ unsigned int Environment::setup(int argc, char **argv)
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_GIVIZ)) {
 			m_flag_giviz = true;
 		}
+*/
 		// Modifier
 		else if (!strcmp(argv[i], XTRACER_ARGDEFS_MOD)) {
 			i++;
@@ -295,7 +301,6 @@ unsigned int Environment::setup(int argc, char **argv)
 
 			m_modifiers.push_back(argv[i]);
 		}
-*/
 		// Invalid argument
 		else if (argv[i][0] == '-') {
 			Log::handle().log_error("Invalid argument: %s", argv[i]);

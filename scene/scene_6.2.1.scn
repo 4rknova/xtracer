@@ -91,22 +91,6 @@ geometry = {
 		u_scale = 0.03
 		v_scale = 0.03
 	}
-
-	ceiling = {
-		type = plane
-		normal = {
-			y = 1
-		}
-		distance = 600
-	}
-
-	wall = {
-		type = plane
-		normal = {
-			z = 1
-		}
-		distance = 500
-	}
 }
 
 light = {
@@ -287,13 +271,5 @@ object = {
 		geometry = floor
 		material = plane
 		texture = floor
-	}
-	ceiling = {
-		geometry = ceiling
-		material = plane
-	}
-	wall = {
-		geometry = wall
-		material = plane
 	}
 }

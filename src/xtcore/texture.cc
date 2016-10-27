@@ -10,7 +10,6 @@ unsigned int Texture2D::load(const char *file)
 unsigned int Texture2D::load(const Pixmap &map)
 {
 	m_map = map;
-
 	return 0;
 }
 

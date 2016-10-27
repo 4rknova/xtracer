@@ -1,4 +1,4 @@
-data  = ./data/sponza
+data  = data/sponza
 title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
@@ -98,15 +98,6 @@ geometry = {
 		type = mesh
 		source = <data>/sponza.obj
 	}
-
-    plane = {
-        type = plane
-        normal = {
-            y = 1
-        }
-
-        distance = .001
-    }
 }
 
 light = {
@@ -137,37 +128,9 @@ material = {
             b = 1
 		}
 	}
-
-    plane = {
-		type = phong
-
-		reflectance = 0.75
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-        diffuse = {
-            r = 1
-            g = 1
-            b = 1
-        }
-
-		k_diffuse  = 0.25
-		k_specular = 0.75
-		k_exponent = 9999999
-        roughness = 0
-   }
 }
 
 object = {
-    plane = {
-        geometry = plane
-        material = plane
-    }
-
 	3dmodel = {
 		geometry = 3dmodel
 		material = 3dmodel

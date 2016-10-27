@@ -124,11 +124,6 @@ std::string Scene::deserialize_cstr(const char *val, const char* def)
 	return val ? val : def;
 }
 
-const char *Scene::name()
-{
-	return m_scene.get_property_by_name(XTPROTO_PROP_TITLE);
-}
-
 const char *Scene::source()
 {
 	return m_source.c_str();
@@ -196,56 +191,51 @@ unsigned int Scene::destroy_object(const char *name)
 	return purge(m_objects, name);
 }
 
-unsigned int Scene::load(const char *filename)
+unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 {
-	Log::handle().log_message("Loading scene [%s]..", filename);
-	m_scene.set_source(filename);
+    if(!filename) return 1;
 
-	if (m_scene.parse())  {
+	Log::handle().log_message("Loading scene [%s]..", filename);
+
+    NCF root;
+    root.set_source(filename);
+
+	if (root.parse())  {
 		Log::handle().log_error("Failed to parse the scene script.");
-		return 1;
+		return 2;
 	}
 
-	return 0;
-}
+    // Mods are of the form: group.group.property:value
+	std::list<std::string>::iterator mod_it = modifiers.begin();
+	std::list<std::string>::iterator mod_et = modifiers.end();
 
-void Scene::apply_modifiers()
-{
-	std::string mod;
-/*
-	while (Environment::handle().modifier_pop(mod)) {
-
-		// Check if there is actually an assignment
+    for (; mod_it != mod_et; ++mod_it) {
+        std::string mod = (*mod_it);
 		if (mod.find_last_of(':') == std::string::npos) {
 			Log::handle().log_warning("Invalid rule: %s", mod.c_str());
 			continue;
 		}
 
-		NCF *node = &m_scene;
-
+		NCF *node = &root;
 		std::string nleft, nright;
-		while((mod.find_first_of('.') != std::string::npos) && (mod.find_first_of(':') > mod.find_first_of('.'))) {
+        while((mod.find_first_of('.') != std::string::npos) && (mod.find_first_of(':') > mod.find_first_of('.'))) {
 			Util::String::split(mod, nleft, nright, '.');
 			mod = nright;
-
-			// move to node
-			node = node->group(nleft.c_str());
+			node = node->get_group_by_name(nleft.c_str());
 		}
 
 		Util::String::split(mod, nleft, nright, ':');
-		node->set(nleft.c_str(), nright.c_str());
+		node->set_property(nleft.c_str(), nright.c_str());
 	}
-*/
-}
 
-unsigned int Scene::build()
-{
 	Log::handle().log_message("Setting up the scene environment..");
 
 	unsigned int count = 0;
 
-	m_ambient  = deserialize_col3(m_scene.get_group_by_name(XTPROTO_PROP_IAMBN))
-			   * deserialize_numf(m_scene.get_property_by_name(XTPROTO_PROP_KAMBN));
+	m_source   = deserialize_cstr(filename);
+	m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
+	m_ambient  = deserialize_col3(root.get_group_by_name(XTPROTO_PROP_IAMBN))
+			   * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN));
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
@@ -261,11 +251,11 @@ unsigned int Scene::build()
 	std::list<std::string>::iterator et = sections.end();
 
 	for (; it != et; ++it) {
-		count = m_scene.get_group_by_name((*it).c_str())->count_groups();
+		count = root.get_group_by_name((*it).c_str())->count_groups();
 		if (count) {
-//			Log::handle().log_message("Processing section: %s", (*it).c_str());
+			Log::handle().log_message("Processing section: %s", (*it).c_str());
 			for (unsigned int i = 0; i < count; ++i) {
-				NCF *lnode = m_scene.get_group_by_name((*it).c_str())->get_group_by_index(i);
+				NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
 				     if (!(*it).compare(XTPROTO_NODE_CAMERA   )) create_camera(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_LIGHT    )) create_light(lnode);
@@ -460,7 +450,7 @@ unsigned int Scene::create_geometry(NCF *p)
 
 		// Open source file from relative path
 		std::string base, file;
-		path_comp(m_scene.get_source(), base, file);
+		path_comp(m_source, base, file);
 		base.append(f);
 
 		Log::handle().log_message("Loading data from %s", base.c_str());
@@ -558,12 +548,10 @@ unsigned int Scene::create_texture(NCF *p)
 
 	if (!texture) return 2;
 
-	std::string source        = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
-	std::string script_source = deserialize_cstr(m_scene.get_source());
 	std::string script_base, script_filename;
-	path_comp(script_source, script_base, script_filename);
+	path_comp(m_source, script_base, script_filename);
 
-	source = script_base + source;
+	std::string source = script_base + source;
 
 	Log::handle().log_message("Loading data from %s", source.c_str());
 	if (texture->load(source.c_str())) {

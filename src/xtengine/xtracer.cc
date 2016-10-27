@@ -50,9 +50,7 @@ int main(int argc, char **argv)
 
 	// create and initialize the scene
 	Scene scene;
-	if (!scene.load(Environment::handle().scene())) {
-		scene.apply_modifiers();
-		scene.build();
+	if (!scene.load(Environment::handle().scene(), Environment::handle().modifiers())) {
 
         if (scene.m_cameras.size() == 0) {
             Log::handle().log_error("no cameras found");
