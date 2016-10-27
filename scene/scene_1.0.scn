@@ -2,8 +2,6 @@ title = Simple sphere
 descr = A sphere on a plane
 versn = 0.3
 
-%include scene_common.scn
-
 k_ambient = 0.001
 
 ambient = {
@@ -197,11 +195,11 @@ material = {
 
 texture = {
 	checker = {
-		source = <texdir>/chbd01.ppm
+		source = chbd01.ppm
 	}
 
 	wood = {
-		source = <texdir>/wood01.ppm
+		source = wood01.ppm
 	}
 }
 

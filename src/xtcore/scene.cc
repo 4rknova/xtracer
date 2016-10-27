@@ -551,7 +551,8 @@ unsigned int Scene::create_texture(NCF *p)
 	std::string script_base, script_filename;
 	path_comp(m_source, script_base, script_filename);
 
-	std::string source = script_base + source;
+    std::string fname = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string source = script_base + fname;
 
 	Log::handle().log_message("Loading data from %s", source.c_str());
 	if (texture->load(source.c_str())) {

@@ -1,6 +1,6 @@
 # Xtracer 2
 
-data  = ./data
+data  = data
 
 title = Bunny
 descr = Bunny
@@ -51,7 +51,7 @@ camera = {
 
 texture = {
 	checker = {
-		source = <data>/floor2.jpg
+		source = <data>/floor.jpg
 	}
 }
 
