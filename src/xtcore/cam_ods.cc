@@ -21,5 +21,9 @@ NMath::Ray CamODS::get_primary_ray(float x, float y, float width, float height)
     ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
     ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), -cos(theta) * cos(phi));
 
+    NMath::Matrix4x4f m;
+    m.rotate(orientation);
+    ray.direction.transform(m);
+
     return ray;
 }

@@ -324,11 +324,13 @@ unsigned int Scene::create_camera(NCF *p)
     }
     else if (!type.compare(XTPROTO_LTRL_CAM_ODS)) {
 	    NMath::Vector3f pos = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+	    NMath::Vector3f orn = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
 	    NMath::scalar_t ipd = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
 
         camera = new (std::nothrow) CamODS();
-        ((CamODS *)camera)->position = pos;
-        ((CamODS *)camera)->ipd      = ipd;
+        ((CamODS *)camera)->position    = pos;
+        ((CamODS *)camera)->orientation = orn;
+        ((CamODS *)camera)->ipd         = ipd;
     }
     else {
 		Log::handle().log_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());

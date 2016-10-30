@@ -11,6 +11,7 @@ class CamODS : public xtracer::assets::ICamera
 {
 	public:
     NMath::scalar_t ipd;
+    NMath::Vector3f orientation;
 
     CamODS();
     ~CamODS();
