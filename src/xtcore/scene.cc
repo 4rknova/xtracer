@@ -19,6 +19,7 @@
 #include "scene.h"
 #include "cam_perspective.h"
 #include "cam_ods.h"
+#include "cam_erp.h"
 
 using NMath::Vector2f;
 using NMath::Vector3f;
@@ -331,6 +332,14 @@ unsigned int Scene::create_camera(NCF *p)
         ((CamODS *)camera)->position    = pos;
         ((CamODS *)camera)->orientation = orn;
         ((CamODS *)camera)->ipd         = ipd;
+    }
+    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)) {
+	    NMath::Vector3f pos = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+	    NMath::Vector3f orn = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
+
+        camera = new (std::nothrow) CamERP();
+        ((CamERP *)camera)->position    = pos;
+        ((CamERP *)camera)->orientation = orn;
     }
     else {
 		Log::handle().log_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());

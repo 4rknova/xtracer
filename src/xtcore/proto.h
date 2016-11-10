@@ -85,5 +85,6 @@
 
 #define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */            /* Perspective camera */
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */            /* Omni Directional Stereo camera */
+#define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */            /* Equirectangular camera */
 
 #endif /* XTPROTO_H_INCLUDED */
