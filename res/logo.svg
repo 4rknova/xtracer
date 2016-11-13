@@ -25,28 +25,28 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="266.10556"
-     inkscape:cy="381.2132"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="102.88021"
+     inkscape:cy="167.2807"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="text3495"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     inkscape:window-width="980"
-     inkscape:window-height="1034"
-     inkscape:window-x="938"
-     inkscape:window-y="15"
+     inkscape:window-width="1920"
+     inkscape:window-height="1080"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      width="298mm">
     <sodipodi:guide
-       position="99.702057,454.66967"
+       position="7.7781713,-101.8235"
        orientation="1,0"
        id="guide3517" />
     <sodipodi:guide
-       position="648.41692,403.75798"
+       position="556.4928,-138.5931"
        orientation="1,0"
-       id="guide3519" />
+       id="guide4163" />
   </sodipodi:namedview>
   <metadata
      id="metadata7">
@@ -56,7 +56,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -171,17 +171,43 @@
            inkscape:connector-curvature="0" />
       </g>
     </g>
-    <text
-       xml:space="preserve"
+    <g
        style="font-style:normal;font-weight:normal;font-size:50px;line-height:125%;font-family:sans-serif;letter-spacing:54.86000061px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="7.9755149"
-       y="1045.6611"
-       id="text3495"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         x="7.9755149"
-         y="1045.6611"
-         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px"
-         id="tspan3499">XTRACER</tspan></text>
+       id="text3495">
+      <path
+         d="m 27.260515,1020.2511 -17.08,-24.11497 3.535,0 q 0.49,0 0.7,0.21 0.245,0.21 0.42,0.49 l 15.05,21.69997 q 0.105,-0.28 0.21,-0.525 0.14,-0.28 0.315,-0.56 l 14.525,-20.57997 q 0.175,-0.315 0.42,-0.525 0.28,-0.21 0.63,-0.21 l 3.43,0 -17.115,23.93997 17.815,25.585 -3.535,0 q -0.49,0 -0.77,-0.28 -0.28,-0.315 -0.455,-0.595 l -15.61,-22.82 q -0.14,0.525 -0.49,1.015 l -15.33,21.805 q -0.245,0.315 -0.525,0.595 -0.245,0.28 -0.665,0.28 l -3.3600001,0 17.8850001,-25.41 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4158" />
+      <path
+         d="m 133.95379,996.13613 0,3.045 -17.395,0 0,46.47997 -3.605,0 0,-46.47997 -17.5,0 0,-3.045 38.5,0 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4160"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 186.67753,1023.2611 0,22.4 -3.605,0 0,-49.52497 12.67,0 q 8.54,0 12.775,3.325 4.27,3.28997 4.27,9.69497 0,2.835 -1.015,5.18 -0.98,2.345 -2.835,4.13 -1.82,1.75 -4.445,2.905 -2.59,1.12 -5.81,1.47 0.84,0.525 1.505,1.4 l 17.045,21.42 -3.08,0 q -0.595,0 -1.015,-0.175 -0.385,-0.21 -0.735,-0.735 l -15.89,-20.09 q -0.28,-0.385 -0.595,-0.665 -0.28,-0.28 -0.665,-0.42 -0.35,-0.175 -0.875,-0.245 -0.49,-0.07 -1.225,-0.07 l -6.475,0 z m 0,-2.66 8.575,0 q 3.29,0 5.88,-0.77 2.625,-0.805 4.41,-2.275 1.82,-1.47 2.765,-3.535 0.945,-2.065 0.945,-4.655 0,-5.285 -3.465,-7.84 -3.43,-2.55497 -10.045,-2.55497 l -9.065,0 0,21.62997 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4162"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 304.10207,1045.6611 -2.765,0 q -0.49,0 -0.805,-0.245 -0.315,-0.28 -0.49,-0.7 l -5.81,-14.385 -24.325,0 -5.81,14.385 q -0.14,0.385 -0.49,0.665 -0.35,0.28 -0.84,0.28 l -2.73,0 20.265,-49.52497 3.535,0 20.265,49.52497 z m -33.145,-17.99 22.19,0 -10.08,-25.025 q -0.525,-1.225 -1.015,-2.93997 -0.245,0.83997 -0.49,1.60997 -0.245,0.77 -0.49,1.365 l -10.115,24.99 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4164"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 387.87079,1037.3311 q 0.35,0 0.595,0.245 l 1.4,1.505 q -1.54,1.645 -3.36,2.975 -1.785,1.295 -3.955,2.24 -2.135,0.91 -4.725,1.4 -2.555,0.525 -5.635,0.525 -5.145,0 -9.45,-1.785 -4.27,-1.82 -7.35,-5.11 -3.08,-3.325 -4.795,-8.015 -1.68,-4.69 -1.68,-10.43 0,-5.635 1.75,-10.29 1.75,-4.655 4.9,-7.98 3.15,-3.35997 7.56,-5.17997 4.41,-1.855 9.73,-1.855 5.075,0 8.995,1.575 3.92,1.575 7.14,4.44497 l -1.085,1.575 q -0.28,0.42 -0.875,0.42 -0.42,0 -1.365,-0.77 -0.945,-0.77 -2.625,-1.68 -1.68,-0.945 -4.2,-1.71497 -2.485,-0.77 -5.985,-0.77 -4.48,0 -8.225,1.53997 -3.71,1.54 -6.405,4.41 -2.66,2.87 -4.165,7 -1.505,4.13 -1.505,9.275 0,5.25 1.505,9.38 1.54,4.13 4.2,7 2.66,2.835 6.265,4.375 3.64,1.505 7.84,1.505 2.66,0 4.725,-0.35 2.1,-0.35 3.85,-1.05 1.75,-0.7 3.255,-1.715 1.505,-1.015 2.975,-2.38 0.175,-0.14 0.35,-0.21 0.175,-0.105 0.35,-0.105 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4166"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 469.97048,996.13613 0,2.975 -26.075,0 0,20.01997 21.7,0 0,2.905 -21.7,0 0,20.65 26.145,0 -0.07,2.975 -29.68,0 0,-49.52497 29.68,0 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4168"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 525.35096,1023.2611 0,22.4 -3.605,0 0,-49.52497 12.67,0 q 8.54,0 12.775,3.325 4.27,3.28997 4.27,9.69497 0,2.835 -1.015,5.18 -0.98,2.345 -2.835,4.13 -1.82,1.75 -4.445,2.905 -2.59,1.12 -5.81,1.47 0.84,0.525 1.505,1.4 l 17.045,21.42 -3.08,0 q -0.595,0 -1.015,-0.175 -0.385,-0.21 -0.735,-0.735 l -15.89,-20.09 q -0.28,-0.385 -0.595,-0.665 -0.28,-0.28 -0.665,-0.42 -0.35,-0.175 -0.875,-0.245 -0.49,-0.07 -1.225,-0.07 l -6.475,0 z m 0,-2.66 8.575,0 q 3.29,0 5.88,-0.77 2.625,-0.805 4.41,-2.275 1.82,-1.47 2.765,-3.535 0.945,-2.065 0.945,-4.655 0,-5.285 -3.465,-7.84 -3.43,-2.55497 -10.045,-2.55497 l -9.065,0 0,21.62997 z"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;line-height:0%;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px;word-spacing:-1.30001116px"
+         id="path4170"
+         inkscape:connector-curvature="0" />
+    </g>
   </g>
 </svg>
