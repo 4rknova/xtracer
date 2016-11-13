@@ -9,9 +9,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 744.09448819 1052.3622047"
+   width="159mm"
+   height="115mm"
+   viewBox="0 0 563.38556 407.48082"
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -25,21 +25,22 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4142136"
-     inkscape:cx="371.46447"
-     inkscape:cy="466.06602"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="266.10556"
+     inkscape:cy="381.2132"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     inkscape:window-width="1173"
+     inkscape:window-width="980"
      inkscape:window-height="1034"
-     inkscape:window-x="745"
+     inkscape:window-x="938"
      inkscape:window-y="15"
-     inkscape:window-maximized="0">
+     inkscape:window-maximized="0"
+     width="298mm">
     <sodipodi:guide
-       position="98.99495,449.71992"
+       position="99.702057,454.66967"
        orientation="1,0"
        id="guide3517" />
     <sodipodi:guide
@@ -62,11 +63,12 @@
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     transform="translate(0,-644.88268)">
     <g
        style="fill:none;stroke:#000000"
        id="g3474"
-       transform="matrix(0.6193221,0,0,0.6193221,91.996356,325.51669)">
+       transform="matrix(0.6193221,0,0,0.6193221,-0.02812915,639.8156)">
       <g
          id="g3430"
          style="stroke-width:2.5">
@@ -172,14 +174,14 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:50px;line-height:125%;font-family:sans-serif;letter-spacing:54.86000061px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="100"
-       y="731.36218"
+       x="7.9755149"
+       y="1045.6611"
        id="text3495"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="100"
-         y="731.36218"
-         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999405px"
+         x="7.9755149"
+         y="1045.6611"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:70px;font-family:lato;-inkscape-font-specification:'lato Light';letter-spacing:40.84999466px"
          id="tspan3499">XTRACER</tspan></text>
   </g>
 </svg>
