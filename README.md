@@ -1,5 +1,4 @@
-XTracer 2
-=========
+![XTracer](https://cdn.rawgit.com/4rknova/xtracer/develop/res/logo.svg)
 
 [![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
