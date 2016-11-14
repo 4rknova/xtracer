@@ -66,6 +66,9 @@ class Sphere: public Geometry
 		bool intersection(const Ray &ray, IntInfo* i_info) const;
 		void calc_aabb();
 
+        Vector3f point_sample() const;
+        Ray ray_sample() const;
+
         Vector3f origin;
         scalar_t radius;
 };

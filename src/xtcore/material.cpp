@@ -1,10 +1,12 @@
-#include "material.hpp"
+#include <nimg/luminance.h>
 #include "brdf.h"
+#include "material.hpp"
 
 Material::Material()
-	: ambient(ColorRGBf(1.0, 1.0, 1.0)),
-	  diffuse(ColorRGBf(1.0, 1.0, 1.0)),
-	  specular(ColorRGBf(1.0, 1.0, 1.0)),
+	: ambient(nimg::ColorRGBf(1, 1, 1)),
+	  diffuse(nimg::ColorRGBf(1, 1, 1)),
+	  specular(nimg::ColorRGBf(1, 1, 1)),
+	  emissive(nimg::ColorRGBf(0, 0, 0)),
 	  kspec(0.0),
 	  kdiff(1.0),
 	  ksexp(60),
@@ -18,23 +20,33 @@ Material::Material()
 Material::~Material()
 {}
 
-ColorRGBf Material::shade(NMath::Vector3f cam_position, const ILight *light, ColorRGBf &texcolor, const IntInfo &info)
+bool Material::is_emissive() const
+{
+    return (type == MATERIAL_EMISSIVE);
+//    return nimg::eval::luminance(emissive) > 0.f;
+}
+
+nimg::ColorRGBf Material::shade(const NMath::Vector3f &cam_position
+                              , const NMath::Vector3f &light_pos
+                              , const nimg::ColorRGBf &light_intensity
+                              , const nimg::ColorRGBf &texcolor
+                              , const NMath::IntInfo &info)
 {
 	switch(type)
 	{
 		case MATERIAL_LAMBERT:
 			return lambert(
-				light->point_sample(),
+				light_pos,
 				&info,
-				light->intensity(),
+				light_intensity,
 				diffuse * texcolor);
 
 		case MATERIAL_PHONG:
 			return phong(
 				cam_position,
-				light->point_sample(),
+				light_pos,
 				&info,
-				light->intensity(),
+				light_intensity,
 				kspec, kdiff, ksexp,
 				diffuse * texcolor,
 				specular);
@@ -42,14 +54,16 @@ ColorRGBf Material::shade(NMath::Vector3f cam_position, const ILight *light, Col
 		case MATERIAL_BLINNPHONG:
 			return blinn(
 				cam_position,
-				light->point_sample(),
+				light_pos,
 				&info,
-				light->intensity(),
+				light_intensity,
 				kspec, kdiff, ksexp,
 				diffuse * texcolor,
 				specular);
+        case MATERIAL_EMISSIVE:
+            return emission(emissive);
 	}
 
 	// This should never happen
-	return ColorRGBf(0, 0, 0);
+	return nimg::ColorRGBf(0, 0, 0);
 }

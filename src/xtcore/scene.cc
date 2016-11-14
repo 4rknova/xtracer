@@ -61,8 +61,8 @@ NMath::Vector2f Scene::deserialize_tex2(const NCF *node, const NMath::Vector2f d
 		const char *v = node->get_property_by_name(XTPROTO_PROP_CRD_V);
 
 		res = NMath::Vector2f(
-			u ? (scalar_t)to_double(u) : def.x,
-			v ? (scalar_t)to_double(v) : def.y
+			u ? (NMath::scalar_t)to_double(u) : def.x,
+			v ? (NMath::scalar_t)to_double(v) : def.y
 		);
 	}
 
@@ -79,13 +79,40 @@ ColorRGBf Scene::deserialize_col3(const NCF *node, const ColorRGBf def)
 		const char *b = node->get_property_by_name(XTPROTO_PROP_COL_B);
 
 		res = ColorRGBf(
-			r ? (scalar_t)to_double(r) : def.r(),
-			g ? (scalar_t)to_double(g) : def.g(),
-			b ? (scalar_t)to_double(b) : def.b()
+			r ? (NMath::scalar_t)to_double(r) : def.r(),
+			g ? (NMath::scalar_t)to_double(g) : def.g(),
+			b ? (NMath::scalar_t)to_double(b) : def.b()
 		);
 	}
 
 	return res;
+}
+
+
+void Scene::get_light_sources(std::vector<light_t> &lights)
+{
+    lights.clear();
+
+    std::map<std::string, Object*>::iterator oit = m_objects.begin();
+    std::map<std::string, Object*>::iterator oet = m_objects.end();
+
+    for(; oit != oet; ++oit) {
+        if (!(*oit).second) continue;
+
+        std::map<std::string, Geometry*>::iterator git = m_geometry.find((*oit).second->geometry);
+        std::map<std::string, Geometry*>::iterator get = m_geometry.end();
+        std::map<std::string, Material*>::iterator mit = m_materials.find((*oit).second->material);
+        std::map<std::string, Material*>::iterator met = m_materials.end();
+
+        if (git != get && mit != met) {
+            if (!(*mit).second->is_emissive()) continue;
+
+            light_t light;
+            light.light    = (*git).second;
+            light.material = (*mit).second;
+            lights.push_back(light);
+        }
+    }
 }
 
 NMath::Vector3f Scene::deserialize_vec3(const NCF *node, const NMath::Vector3f def)
@@ -98,9 +125,9 @@ NMath::Vector3f Scene::deserialize_vec3(const NCF *node, const NMath::Vector3f d
 		const char *z = node->get_property_by_name(XTPROTO_PROP_CRD_Z);
 
 		res = NMath::Vector3f(
-			x ? (scalar_t)to_double(x) : def.x,
-			y ? (scalar_t)to_double(y) : def.y,
-			z ? (scalar_t)to_double(z) : def.z
+			x ? (NMath::scalar_t)to_double(x) : def.x,
+			y ? (NMath::scalar_t)to_double(y) : def.y,
+			z ? (NMath::scalar_t)to_double(z) : def.z
 		);
 	}
 
@@ -109,7 +136,7 @@ NMath::Vector3f Scene::deserialize_vec3(const NCF *node, const NMath::Vector3f d
 
 NMath::scalar_t Scene::deserialize_numf(const char *val, const NMath::scalar_t def)
 {
-	return val ? (scalar_t)to_double(val) : def;
+	return val ? (NMath::scalar_t)to_double(val) : def;
 }
 
 bool Scene::deserialize_bool(const char *val, const bool def)
@@ -155,7 +182,6 @@ unsigned int purge(std::map<std::string, T*> &map, const char *name)
 
 void Scene::release()
 {
-	purge(m_lights);
 	purge(m_materials);
 	purge(m_textures);
 	purge(m_geometry);
@@ -165,11 +191,6 @@ void Scene::release()
 unsigned int Scene::destroy_camera(const char *name)
 {
 	return purge(m_cameras, name);
-}
-
-unsigned int Scene::destroy_light(const char *name)
-{
-	return purge(m_lights, name);
 }
 
 unsigned int Scene::destroy_material(const char *name)
@@ -240,7 +261,6 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
-	sections.push_back(XTPROTO_NODE_LIGHT);
 	sections.push_back(XTPROTO_NODE_MATERIAL);
 	sections.push_back(XTPROTO_NODE_TEXTURE);
 	sections.push_back(XTPROTO_NODE_GEOMETRY);
@@ -259,7 +279,6 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 				NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
 				     if (!(*it).compare(XTPROTO_NODE_CAMERA   )) create_camera(lnode);
-				else if (!(*it).compare(XTPROTO_NODE_LIGHT    )) create_light(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_MATERIAL )) create_material(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_TEXTURE  )) create_texture(lnode);
 				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY )) create_geometry(lnode);
@@ -355,66 +374,6 @@ unsigned int Scene::create_camera(NCF *p)
 	return res ? 0 : 3;
 }
 
-unsigned int Scene::create_light(NCF *p)
-{
-	if (!p)	return 1;
-
-	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
-
-	ILight *light = NULL;
-
-	if (!type.compare(XTPROTO_LTRL_POINTLIGHT)) {
-		light = new (std::nothrow) PointLight;
-
-		if (!light)	return 2;
-	}
-	else if (!type.compare(XTPROTO_LTRL_SPHERELIGHT)) {
-		light = new (std::nothrow) SphereLight;
-		if (!light)	return 2;
-
-		scalar_t radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
-		((SphereLight *)light)->radius(radius);
-	}
-	else if (!type.compare(XTPROTO_LTRL_BOXLIGHT)) {
-		light = new (std::nothrow) BoxLight;
-
-		NMath::Vector3f dimensions = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_DIMENSIONS));
-		((BoxLight *)light)->dimensions(dimensions);
-
-		if (!light)	return 2;
-	}
-	else if (!type.compare(XTPROTO_LTRL_TRIANGLELIGHT)) {
-		light = new (std::nothrow) TriangleLight;
-
-		Vector3f v[3];
-		for (unsigned int i = 0; i < 3; ++i) {
-			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
-			v[i] = deserialize_vec3(vnode);
-		}
-
-		((TriangleLight*)light)->geometry(v[0], v[1], v[2]);
-	}
-	else {
-		Log::handle().log_warning("Unsupported light type %s [%s]. Skipping..", p->get_name(), type.c_str());
-		return 2;
-	}
-
-	// Set the common properties.
-	light->intensity(deserialize_col3(p->get_group_by_name(XTPROTO_PROP_INTST)));
-
-	// Extract the properties.
-	NMath::Vector3f position = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-	light->position(position);
-
-	// Destroy the old instance (if one exists).
-	unsigned int res = destroy_light(p->get_name());
-
-	// Add it to the list.
-	m_lights[p->get_name()] = light;
-
-	return res ? 0 : 3;
-}
-
 unsigned int Scene::create_geometry(NCF *p)
 {
 	if (!p) return 1;
@@ -426,25 +385,31 @@ unsigned int Scene::create_geometry(NCF *p)
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		geometry = new (std::nothrow) Plane;
 
-		if(!geometry) return 2;
+		if (!geometry) return 2;
 
-		// Set the properties.
 		((Plane *)geometry)->normal   = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_NORMAL));
 		((Plane *)geometry)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		geometry = new (std::nothrow) Sphere;
 
-		if(!geometry) return 2;
+		if (!geometry) return 2;
 
-		// set the properties.
 		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
 		((Sphere *)geometry)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
+    else if (!type.compare(XTPROTO_LTRL_POINT)) {
+        geometry = new (std::nothrow) Sphere;
+
+        if (!geometry) return 2;
+
+		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+		((Sphere *)geometry)->radius = 0;
+    }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		geometry = new (std::nothrow) Triangle;
 
-		if(!geometry) return 2;
+		if (!geometry) return 2;
 
 		for (unsigned int i = 0; i < 3; ++i) {
 			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
@@ -523,11 +488,12 @@ unsigned int Scene::create_material(NCF *p)
 
 	if (!material) return 2;
 
-	std::string type = p->get_property_by_name(XTPROTO_PROP_TYPE);
+	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) material->type = MATERIAL_LAMBERT;
 	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) material->type = MATERIAL_PHONG;
 	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) material->type = MATERIAL_BLINNPHONG;
+	else if (!type.compare(XTPROTO_LTRL_EMISSIVE  )) material->type = MATERIAL_EMISSIVE;
 	else {
 		Log::handle().log_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete material;
@@ -537,6 +503,7 @@ unsigned int Scene::create_material(NCF *p)
 	material->ambient      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IAMBN));
 	material->specular     = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
 	material->diffuse      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
+	material->emissive     = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_EMISSIVE));
 	material->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
 	material->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
 	material->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
@@ -638,7 +605,7 @@ unsigned int Scene::create_object(NCF *p)
 	return res ? 0 : 3;
 }
 
-bool Scene::intersection(const Ray &ray, IntInfo &info, std::string &obj)
+bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj)
 {
 	IntInfo test, res;
 

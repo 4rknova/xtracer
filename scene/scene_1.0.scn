@@ -107,28 +107,20 @@ geometry = {
 		u_scale = 0.003
 		v_scale = 0.003
 	}
-}
 
-light = {
-	sat = {
+	light1 = {
 		type = sphere
 
-		radius = 50
+		radius = 25
 
 		position = {
 			x = 200
-			y = 300
+			y = 400
 			z = 100
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
 		}
 	}
 
-	cat = {
+	light2 = {
 		type = sphere
 
 		radius = 20
@@ -137,12 +129,6 @@ light = {
 			x = -200
 			y = 400
 			z = -400
-		}
-
-		intensity = {
-			r = 0.51
-			g = 0.51
-			b = 0.51
 		}
 	}
 }
@@ -191,6 +177,17 @@ material = {
 
 		reflectance = 0.053
 	}
+
+    light = {
+
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 texture = {
@@ -209,9 +206,20 @@ object = {
 		material = plastic
 		texture = wood
 	}
-	plane = {
+
+    plane = {
 		geometry = plane
 		material = floor
 		texture = checker
 	}
+
+    light1 = {
+        geometry = light1
+        material = light
+    }
+
+    light2 = {
+        geometry = light2
+        material = light
+    }
 }

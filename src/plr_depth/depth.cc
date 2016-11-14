@@ -85,15 +85,15 @@ void DRenderer::render_depth()
                         float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
                         float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
 
-			            IntInfo info;
+			            NMath::IntInfo info;
             			memset(&info, 0, sizeof(info));
-            	 		Ray ray = m_context->scene->get_camera()->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
+            	 		NMath::Ray ray = m_context->scene->get_camera()->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
             			std::string obj;
 
                         float depth = 0.f;
 
                         if (m_context->scene->intersection(ray, info, obj)) {
-                            scalar_t  d = (ray.origin - info.point).length();
+                            NMath::scalar_t  d = (ray.origin - info.point).length();
                             depth = 1. / log(d);
                         }
                         color += nimg::ColorRGBAf(depth, depth, depth, 1) * sample_scaling;

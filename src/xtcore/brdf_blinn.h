@@ -6,15 +6,15 @@
 #include <nmath/intinfo.h>
 #include <nimg/color.h>
 
-using NMath::scalar_t;
-using NMath::Vector3f;
-using NMath::IntInfo;
-using nimg::ColorRGBf;
-
-inline ColorRGBf blinn(const Vector3f &campos, const Vector3f &lightpos,
-					   const IntInfo *info, const ColorRGBf &light,
-					   scalar_t ks, scalar_t kd, scalar_t specexp,
-					   const ColorRGBf &diffuse, const ColorRGBf &specular);
+inline nimg::ColorRGBf blinn(const NMath::Vector3f &campos
+                           , const NMath::Vector3f &lightpos
+                           , const NMath::IntInfo *info
+                           , const nimg::ColorRGBf &light
+                           , const NMath::scalar_t ks
+                           , const NMath::scalar_t kd
+                           , const NMath::scalar_t specexp
+                           , const nimg::ColorRGBf &diffuse
+                           , const nimg::ColorRGBf &specular);
 
 #include "brdf_blinn.inl"
 

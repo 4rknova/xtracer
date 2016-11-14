@@ -60,18 +60,21 @@ void Renderer::pass_ptrace()
 	Log::handle().log_message("Distributing photons to light sources..", photon_count);
 	// Calculate each light's contribution by using the intensity luminance.
 	// In future revisions I should also take the light source's size into consideration.
+    std::vector<light_t> lights;
+    m_context->scene->get_light_sources(lights);
+
 	std::vector<unsigned int> light_photons;
 	{
-		unsigned int light_count = m_context->scene->m_lights.size();
+		unsigned int light_count = lights.size();
 		std::vector<scalar_t> light_contribution;			// Vector with each light's contribution.
 		std::vector<scalar_t> light_luminance;				// Vector with each light's luminance.
 		scalar_t light_total_luminance = 0;					// Total light luminance.
 
 		// Calculate the luminance for each light and the total.
-		std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
-		std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
+		std::vector<light_t>::iterator it = lights.begin();
+		std::vector<light_t>::iterator et = lights.end();
 		for (; it != et; ++it) {
-			scalar_t lum = nimg::eval::luminance((*it).second->intensity());
+			NMath::scalar_t lum = nimg::eval::luminance((*it).material->emissive);
 			light_luminance.push_back(lum);
 			light_total_luminance += lum;
 		}
@@ -89,12 +92,12 @@ void Renderer::pass_ptrace()
 	{
 		// Photon tracing.
 		unsigned int light_index = 0;
-		std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
-		std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
+		std::vector<light_t>::iterator it = lights.begin();
+		std::vector<light_t>::iterator et = lights.end();
 		for (; it != et; ++it) {
 			while (light_photons[light_index] > 0) {
-				Ray ray = (*it).second->ray_sample();
-				trace_photon(ray, 0, (*it).second->intensity()
+				Ray ray = (*it).light->ray_sample();
+				trace_photon(ray, 0, (*it).material->emissive
 						* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
 						, light_photons[light_index]);
 			}
@@ -310,10 +313,10 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	if (it_mat == m_context->scene->m_materials.end()) return color;
 
 	// shadows
-	Vector3f n = info.normal;
-	Vector3f p = info.point;
+	NMath::Vector3f n = info.normal;
+	NMath::Vector3f p = info.point;
 
-    std::string &mat_id = m_context->scene->m_objects[obj]->material;
+    std::string &mat_id = mobj->material;
 	Material *mat = m_context->scene->m_materials[mat_id];
 
 	// ambient
@@ -321,16 +324,19 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
-	std::map<std::string, ILight*>::iterator it = m_context->scene->m_lights.begin();
-	std::map<std::string, ILight*>::iterator et = m_context->scene->m_lights.end();
+    std::vector<light_t> lights;
+    m_context->scene->get_light_sources(lights);
+	std::vector<light_t>::iterator it = lights.begin();
+	std::vector<light_t>::iterator et = lights.end();
 
 	for (; it != et; ++it) {
-		unsigned int tlshsamples = ((*it).second->is_area_light() ? m_context->params.samples : 1);
-		scalar_t tlshscaling = ((*it).second->is_area_light() ? shadow_sample_scaling : 1.0);
+
+		unsigned int tlshsamples = m_context->params.samples;
+		scalar_t tlshscaling = shadow_sample_scaling;
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
-			ILight *light = (*it).second;
-			Vector3f v = light->point_sample() - p;
+            NMath::Vector3f light_pos = (*it).light->point_sample();
+			NMath::Vector3f v = light_pos - p;
 
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
@@ -339,17 +345,23 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			}
 
 			Ray sray;
-			sray.origin = p;
 			sray.direction = v.normalized();
+			sray.origin = p;
 			scalar_t distance = v.length();
 
 			// if the point is not in shadow for this light
 			std::string obj;
 			IntInfo res;
 			bool test = m_context->scene->intersection(sray, res, obj);
-			if (!test || res.t < EPSILON || res.t > distance) {
-				// shade
-                color += mat->shade(pray.origin, light, texcolor, info) * tlshscaling;
+
+            std::map<std::string, Geometry*>::iterator git = m_context->scene->m_geometry.find(obj);
+            std::map<std::string, Geometry*>::iterator get = m_context->scene->m_geometry.end();
+
+            bool hits_light_geometry = (git != get && (*it).light == (*git).second);
+
+
+			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
+                color += mat->shade(pray.origin, light_pos, (*it).material->emissive, texcolor, info) * tlshscaling;
 			}
 		}
 	}

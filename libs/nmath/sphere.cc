@@ -1,6 +1,7 @@
 #include <math.h>
 #include "sphere.h"
 #include "intinfo.h"
+#include "sample.h"
 
 namespace NMath {
 
@@ -62,6 +63,24 @@ void Sphere::calc_aabb()
 {
 	aabb.max = origin + Vector3f(radius, radius, radius);
 	aabb.min = origin - Vector3f(radius, radius, radius);
+}
+
+Vector3f Sphere::point_sample() const
+{
+    return Vector3f(Sample::sphere() * radius) + origin;
+}
+
+Ray Sphere::ray_sample() const
+{
+    Ray ray;
+
+    Vector3f sphpoint = Sample::sphere() * radius;
+    Vector3f normal = sphpoint.normalized();
+
+    ray.origin    = sphpoint + origin;
+    ray.direction = Sample::hemisphere(normal, normal);
+
+    return ray;
 }
 
 #endif	/* __cplusplus */

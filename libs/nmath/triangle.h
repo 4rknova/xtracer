@@ -34,6 +34,9 @@ class Triangle: public Geometry
 		Vector3f calc_normal() const;
 		Vector3f calc_barycentric(const Vector3f &p) const;
 
+        Vector3f point_sample() const;
+        Ray ray_sample() const;
+
         Vector3f  v[3]; // position
         Vector3f  n[3]; // normal
 		Vector2f tc[3]; // texcoords

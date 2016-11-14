@@ -30,7 +30,10 @@ class Mesh: public Geometry
 
 		bool intersection(const Ray &ray, IntInfo* i_info) const;
 		void calc_aabb();
-		void build_octree(object_t &object);
+        void build_octree(object_t &object);
+
+        NMath::Vector3f point_sample() const;
+        NMath::Ray ray_sample() const;
 
 	private:
 		Octree<MTriangle> m_octree;

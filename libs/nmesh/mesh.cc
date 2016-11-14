@@ -67,4 +67,19 @@ void Mesh::build_octree(object_t &object)
 	m_octree.build();
 }
 
+NMath::Vector3f Mesh::point_sample() const
+{
+    return NMath::Vector3f(0,0,0);
+}
+
+NMath::Ray Mesh::ray_sample() const
+{
+    Ray ray;
+
+    ray.origin    = NMath::Vector3f(0,0,0);
+    ray.direction = NMath::Vector3f(0,0,0);
+
+    return ray;
+}
+
 } /* namespace NMesh */

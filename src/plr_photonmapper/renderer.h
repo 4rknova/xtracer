@@ -14,6 +14,9 @@
 
 using nimg::ColorRGBf;
 using nimg::Pixmap;
+using NMath::Ray;
+using NMath::IntInfo;
+using NMath::scalar_t;
 
 class Renderer : public xtracer::render::IRenderer
 {

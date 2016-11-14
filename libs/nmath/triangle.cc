@@ -3,6 +3,8 @@
 
 #include "defs.h"
 #include "intinfo.h"
+#include "prng.h"
+#include "sample.h"
 #include "triangle.h"
 
 namespace NMath {
@@ -120,12 +122,41 @@ Vector3f Triangle::calc_barycentric(const Vector3f &p) const
 	scalar_t a0 = fabs(dot(x12, norm)) * 0.5;
 	scalar_t a1 = fabs(dot(x20, norm)) * 0.5;
 	scalar_t a2 = fabs(dot(x01, norm)) * 0.5;
-	
+
 	bc.x = a0 / area;
 	bc.y = a1 / area;
 	bc.z = a2 / area;
 
 	return bc;
+}
+
+Vector3f Triangle::point_sample() const
+{
+    scalar_t b0, b1, b2;
+
+    b0 = prng_c(0, 1);
+    b1 = prng_c(0, 1);
+    b2 = prng_c(0, 1);
+
+    scalar_t bt = b0 + b1 + b2;
+
+    b0 /= bt;
+    b1 /= bt;
+    b2 /= bt;
+
+    return Vector3f(b0 * v[0] + b1 * v[1] + b2 * v[2]);
+}
+
+Ray Triangle::ray_sample() const
+{
+    Ray ray;
+
+    ray.origin = point_sample();
+
+    Vector3f normal = cross(v[1] - v[0], v[2] - v[0]).normalized();
+    ray.direction = Sample::hemisphere(normal, normal);
+
+    return ray;
 }
 
 #endif	/* __cplusplus */

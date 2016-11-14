@@ -72,6 +72,18 @@ void Plane::calc_aabb()
 	aabb.min = -aabb.max;
 }
 
+Vector3f Plane::point_sample() const
+{
+    return Vector3f(0, 0, 0);
+}
+
+Ray Plane::ray_sample() const
+{
+    Ray ray;
+
+    return ray;
+}
+
 #endif	/* __cplusplus */
 
 } /* namespace NMath */

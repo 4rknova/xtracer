@@ -84,7 +84,7 @@ camera = {
 }
 
 # The scene lights
-light = {
+geometry = {
 
 	# I will use 4 point lights, one per vertex of the original
 	# data for the light source ( quad ).
@@ -97,14 +97,8 @@ light = {
 
 		position = {
 			x = 343.0
-			y = 438.0
+			y = 437.999
 			z = 227.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
 		}
 	}
 
@@ -113,14 +107,8 @@ light = {
 
 		position = {
 			x = 343.0
-			y = 438.0
+			y = 437.999
 			z = 332.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
 		}
 	}
 
@@ -129,14 +117,8 @@ light = {
 
 		position = {
 			x = 213.0
-			y = 438.0
+			y = 437.999
 			z = 332.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
 		}
 	}
 
@@ -145,14 +127,8 @@ light = {
 
 		position = {
 			x = 213.0
-			y = 438.0
+			y = 437.999
 			z = 227.0
-		}
-
-		intensity = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
 		}
 	}
 }
@@ -201,6 +177,46 @@ material = {
 			b = 1.0
 		}
 	}
+
+    light_p0 = {
+        type = emissive
+
+		emissive = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+    }
+
+    light_p1 = {
+        type = emissive
+
+		emissive = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+    }
+
+    light_p2 = {
+        type = emissive
+
+		emissive = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+    }
+
+    light_p3 = {
+        type = emissive
+
+		emissive = {
+			r = 0.25
+			g = 0.2125
+			b = 0.1075
+		}
+    }
 }
 
 # The scene geometry
@@ -1129,4 +1145,24 @@ object = {
 		geometry = tall_block_5_2
 		material = white
 	}
+
+    light_p0 = {
+        geometry = light_p0
+        material = light_p0
+    }
+
+    light_p1 = {
+        geometry = light_p1
+        material = light_p1
+    }
+
+    light_p2 = {
+        geometry = light_p2
+        material = light_p2
+    }
+
+    light_p3 = {
+        geometry = light_p3
+        material = light_p3
+    }
 }

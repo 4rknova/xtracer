@@ -102,23 +102,15 @@ geometry = {
 		type = mesh
 		source = <data>/sponza.obj
 	}
-}
 
-light = {
-	satl = {
+	light = {
 		type = sphere
 
 		position = {
 			y = 200
 		}
 
-        radius = 5
-
-		intensity = {
-			r = .5
-			g = .5
-			b = .5
-		}
+        radius = 15
 	}
 }
 
@@ -132,6 +124,16 @@ material = {
             b = 1
 		}
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 object = {
@@ -139,4 +141,9 @@ object = {
 		geometry = 3dmodel
 		material = 3dmodel
 	}
+
+    light = {
+        geometry = light
+        material = light
+    }
 }

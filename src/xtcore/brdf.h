@@ -5,6 +5,7 @@
 #include "brdf_lambert.h"
 #include "brdf_phong.h"
 #include "brdf_blinn.h"
+#include "brdf_emissive.h"
 
 namespace XT {
 	namespace Render {

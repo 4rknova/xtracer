@@ -2,6 +2,7 @@
 #define XTRACER_SCENE_HPP_INCLUDED
 
 #include <string>
+#include <vector>
 #include <list>
 
 #include <nmath/vector.h>
@@ -9,7 +10,6 @@
 #include <nmath/geometry.h>
 #include <ncf/ncf.h>
 #include <xtcore/camera.h>
-#include <xtcore/light.hpp>
 #include <xtcore/material.hpp>
 #include <xtcore/texture.h>
 #include <xtcore/object.hpp>
@@ -26,12 +26,20 @@ using nimg::ColorRGBf;
 using NMath::Geometry;
 using xtracer::assets::ICamera;
 
+struct light_t
+{
+    Geometry *light;
+    Material *material;
+};
+
 class Scene
 {
 	friend class Renderer;
 	private:
 		Scene(const Scene &);
 		Scene &operator =(const Scene &);
+
+        void get_light_sources(std::vector<light_t> &lights);
 
 		ColorRGBf deserialize_col3(const NCF *node, const ColorRGBf def = VALUE_DEFAULT_COL3);
 		NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def = VALUE_DEFAULT_TEX2);
@@ -58,19 +66,17 @@ class Scene
         std::string camera;
 
 		unsigned int create_camera(NCF *p);
-		unsigned int create_light(NCF *p);
 		unsigned int create_material(NCF *p);
 		unsigned int create_texture(NCF *p);
 		unsigned int create_geometry(NCF *p);
 		unsigned int create_object(NCF *p);
 
-		bool intersection(const Ray &ray, IntInfo &info, std::string &obj);
+		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
 		// RETURN CODES:
 		//  0. Everything went well.
 		//  1. The resource was not found.
 		unsigned int destroy_camera(const char *name);
-		unsigned int destroy_light(const char *name);
 		unsigned int destroy_material(const char *name);
 		unsigned int destroy_texture(const char *name);
 		unsigned int destroy_geometry(const char *name);
@@ -78,7 +84,6 @@ class Scene
 
 		// Maps of the scene entities
 		std::map<std::string, ICamera*  > m_cameras;
-		std::map<std::string, ILight*   > m_lights;
 		std::map<std::string, Material* > m_materials;
 		std::map<std::string, Texture2D*> m_textures;
 		std::map<std::string, Geometry* > m_geometry;

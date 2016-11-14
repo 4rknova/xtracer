@@ -5,10 +5,10 @@
 #include <nmath/intinfo.h>
 #include <nimg/color.h>
 
-using nimg::ColorRGBf;
-
-inline ColorRGBf lambert(const Vector3f &lightpos, const IntInfo *info,
-						 const ColorRGBf &light, const ColorRGBf &diffuse);
+inline nimg::ColorRGBf lambert(const NMath::Vector3f &lightpos
+                             , const NMath::IntInfo *info
+				             , const nimg::ColorRGBf &light
+                             , const nimg::ColorRGBf &diffuse);
 
 #include "brdf_lambert.inl"
 

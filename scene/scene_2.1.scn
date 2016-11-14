@@ -107,43 +107,28 @@ geometry = {
 		}
 		distance = 500
 	}
-}
-
-light = {
 
 	l0 = {
 		type = sphere
 
-		radius = 20
+		radius = 50
 
 		position = {
-			x = -150
+			x = -10
 			y = 150
 			z = 200
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
 		}
 	}
 
 	l1 = {
 		type = sphere
 
-		radius = 20
+		radius = 50
 
 		position = {
 			x = -100
 			y = -200
 			z = -300
-		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
 		}
 	}
 }
@@ -181,6 +166,16 @@ object = {
 		geometry = left_wall
 		material = lambert_grey
 	}
+
+    light0 = {
+        geometry = l0
+        material = light
+    }
+
+#    light 1 = {
+#        geometry = l1
+#       material = light
+#    }
 }
 
 material = {
@@ -219,5 +214,15 @@ material = {
 			b = 0.5
 		}
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 

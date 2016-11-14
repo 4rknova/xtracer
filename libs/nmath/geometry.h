@@ -29,14 +29,17 @@ class Geometry
 {
     public:
 		Geometry(XTCORE_GEOMETRY_TYPE t);
-		virtual ~Geometry(); 
+		virtual ~Geometry();
+
 		virtual bool intersection(const Ray &ray, IntInfo* i_info) const = 0;
 		virtual void calc_aabb() = 0;
+
+        virtual Vector3f point_sample() const = 0;
+        virtual Ray ray_sample() const = 0;
 
 		XTCORE_GEOMETRY_TYPE type;
 
 		BoundingBox3 aabb;
-
 		Vector2f uv_scale;
 };
 

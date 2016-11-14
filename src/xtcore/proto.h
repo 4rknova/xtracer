@@ -32,6 +32,7 @@
 #define XTPROTO_PROP_IAMBN			"ambient"			/* ColorRGBf  */			/* Ambient intensity */
 #define XTPROTO_PROP_IDIFF			"diffuse"			/* ColorRGBf  */			/* Diffuse intensity */
 #define XTPROTO_PROP_ISPEC			"specular"			/* ColorRGBf  */			/* Specular intensity */
+#define XTPROTO_PROP_EMISSIVE       "emissive"          /* ColorRGBf  */            /* Emissive intensity */
 #define XTPROTO_PROP_KAMBN			"k_ambient"			/* scalar_t   */			/* Ambient ratio */
 #define XTPROTO_PROP_KDIFF			"k_diffuse"			/* scalar_t   */			/* Diffuse ratio */
 #define XTPROTO_PROP_KSPEC			"k_specular"		/* scalar_t   */			/* Specular ratio */
@@ -42,16 +43,13 @@
 #define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */			/* Index of refraction */
 #define XTPROTO_PROP_IPD			"ipd"				/* scalar_t   */			/* Inter-Pupillary Distance */
 
-#define XTPROTO_LTRL_POINTLIGHT		"point"				/* string     */			/* Point light */
-#define XTPROTO_LTRL_SPHERELIGHT	"sphere"			/* string     */			/* Sphere light */
-#define XTPROTO_LTRL_BOXLIGHT		"box"				/* string     */			/* Box light */
-#define XTPROTO_LTRL_TRIANGLELIGHT	"triangle"			/* string	  */			/* Triangular light */
-
+#define XTPROTO_LTRL_EMISSIVE		"emissive"  		/* string     */			/* BRDF: Emissive */
 #define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */			/* BRDF: Lambert */
 #define XTPROTO_LTRL_PHONG			"phong"				/* string     */			/* BRDF: Phong */
 #define XTPROTO_LTRL_BLINNPHONG		"blinn_phong"		/* string     */			/* BRDF: Blinn Phong */
 #define XTPROTO_LTRL_PLANE			"plane"				/* string     */			/* Plane */
 #define XTPROTO_LTRL_TRIANGLE		"triangle"			/* string     */			/* Triangle */
+#define XTPROTO_LTRL_POINT			"point"	    		/* string     */			/* Point */
 #define XTPROTO_LTRL_SPHERE			"sphere"			/* string     */			/* Sphere */
 #define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */			/* Cylinder */
 #define XTPROTO_LTRL_MESH			"mesh"				/* string     */			/* Mesh */
@@ -77,7 +75,6 @@
 
 #define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A		  */			/* Configuration node */
 #define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */			/* Resource node */
-#define XTPROTO_NODE_LIGHT			"light"				/* N/A        */	        /* Resource node */
 #define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */			/* Resource node */
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */			/* Resource node */
 #define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */			/* Resource node */
