@@ -45,8 +45,8 @@ geometry = {
 	}
 }
 
-light = {
-	satl = {
+geometry = {
+	l0 = {
 		type = sphere
 
 		position = {
@@ -56,15 +56,9 @@ light = {
 		}
 
         radius = 2.5
-
-		intensity = {
-			r = .5
-			g = .5
-			b = .5
-		}
     }
 
-	satl = {
+	l1 = {
 		type = sphere
 
 		position = {
@@ -74,12 +68,6 @@ light = {
 		}
 
         radius = 2.5
-
-		intensity = {
-			r = .75
-			g = .75
-			b = .75
-		}
 	}
 }
 
@@ -93,6 +81,26 @@ material = {
             b = 1
 		}
 	}
+
+    l0 = {
+        type = emissive
+
+        emissive = {
+            r = .5
+            g = .5
+            b = .5
+        }
+    }
+
+    l1 = {
+        type = emissive
+
+        emissive = {
+            r = .75
+            g = .75
+            b = .75
+        }
+    }
 }
 
 object = {
@@ -100,4 +108,14 @@ object = {
 		geometry = 3dmodel
 		material = 3dmodel
 	}
+
+    l0 = {
+        geometry = l0
+        material = l0
+    }
+
+    l1 = {
+        geometry = l1
+        material = l1
+    }
 }

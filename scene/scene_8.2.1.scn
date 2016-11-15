@@ -2,17 +2,9 @@
 
 data  = data
 
-title = Bunny
-descr = Bunny
+title = Stanford models
+descr = Stanford models
 versn = 0.1
-
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
 
 camera = {
 	default = {
@@ -51,7 +43,7 @@ camera = {
 
 texture = {
 	checker = {
-		source = <data>/floor.jpg
+		source = 
 	}
 }
 
@@ -114,28 +106,16 @@ geometry = {
 		u_scale = 0.5
 		v_scale = 0.5
 	}
-}
 
-light = {
-	satl = {
-		type = box
+	l0 = {
+		type = sphere
 
-		dimensions = {
-			x = 1
-			y = 1
-			z = 1
-		}
+        radius = 1
 
 		position = {
 			x = -8
 			y = 15
 			z = -8
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
 		}
 	}
 }
@@ -208,27 +188,42 @@ material = {
 
         reflectance = 0.3
 	}
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 object = {
-#	m0 = {
-#		geometry = m0
-#		material = m1
-#	}
-#
-#	m1 = {
-#		geometry = m1
-#		material = m1
-#	}
-#
-#	m2 = {
-#		geometry = m2
-#		material = m1
-#	}
+	m0 = {
+		geometry = m0
+		material = m1
+	}
+
+	m1 = {
+		geometry = m1
+		material = m1
+	}
+
+	m2 = {
+		geometry = m2
+		material = m1
+	}
 
 	floor = {
 		geometry = floor
 		material = floor
 		texture = checker
 	}
+
+    light_source = {
+        geometry = l0
+        material = light_source
+    }
 }

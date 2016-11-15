@@ -56,7 +56,7 @@ camera = {
 }
 
 # The scene lights
-light = {
+geometry = {
 
 	light1 = {
 		type = triangle
@@ -81,12 +81,6 @@ light = {
 			}
 
 		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
 	}
 
 	light2 = {
@@ -110,12 +104,6 @@ light = {
 				y = 548.7998
 				z = 227.0
 			}
-		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
 		}
 	}
 }
@@ -164,6 +152,16 @@ material = {
 			b = 1.0
 		}
 	}
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = .5
+            g = .5
+            b = .5
+        }
+    }
 }
 
 # The scene geometry
@@ -1092,4 +1090,14 @@ object = {
 		geometry = tall_block_5_2
 		material = white
 	}
+
+    light0 = {
+        geometry = light1
+        material = light_source
+    }
+
+    light1 = {
+        geometry = light2
+        material = light_source
+    }
 }

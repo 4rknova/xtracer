@@ -107,10 +107,11 @@ geometry = {
 		type = sphere
 
 		position = {
-			y = 200
+			y = 300
+            x = 40
 		}
 
-        radius = 15
+        radius = 10
 	}
 }
 
