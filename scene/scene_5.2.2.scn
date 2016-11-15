@@ -24,15 +24,6 @@ title = Cornell box replica (based on the original radiosity dataset)
 descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
 versn = 0.2
 
-k_ambient = 0.01
-
-ambient = {
-	r = 0.6
-	g = 0.6
-	b = 0.6
-}
-
-
 # The scene cameras.
 camera = {
 	# The front camera.
@@ -68,7 +59,7 @@ camera = {
 }
 
 # The scene lights
-light = {
+geometry = {
 
 	light1 = {
 		type = triangle
@@ -91,12 +82,6 @@ light = {
 				y = 548.7998
 				z = 332.0
 			}
-		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
 		}
 	}
 
@@ -121,12 +106,6 @@ light = {
 				y = 548.7998
 				z = 227.0
 			}
-		}
-
-		intensity = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
 		}
 	}
 }
@@ -219,6 +198,16 @@ material = {
 
 		reflectance = 1
 	}
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 # The scene geometry
@@ -760,17 +749,6 @@ geometry = {
 
 # The scene objects
 object = {
-	# Light
-	light_1 = {
-		geometry = light_1
-		material = light
-	}
-
-	light_2 = {
-		geometry = light_2
-		material = light
-	}
-
 	# Floor
 	floor_1 = {
 		geometry = floor_1
@@ -883,4 +861,14 @@ object = {
 		geometry = tall_block_5_2
 		material = mirror
 	}
+
+    light1 = {
+        geometry = light1
+        material = light_source
+    }
+
+    light2 = {
+        geometry = light2
+        material = light_source
+    }
 }

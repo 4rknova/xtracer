@@ -2,14 +2,6 @@ title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 
 	default = {
@@ -114,23 +106,12 @@ geometry = {
 		radius = 50
 
 		position = {
-			x = -10
+			x = 0
 			y = 150
-			z = 200
+			z = -200
 		}
 	}
 
-	l1 = {
-		type = sphere
-
-		radius = 50
-
-		position = {
-			x = -100
-			y = -200
-			z = -300
-		}
-	}
 }
 
 object = {
@@ -146,7 +127,7 @@ object = {
 		geometry = blue_ball
 		material = lambert_blue
 	}
-	floor = {
+    floor = {
 		geometry = floor
 		material = lambert_grey
 	}
@@ -167,15 +148,11 @@ object = {
 		material = lambert_grey
 	}
 
-    light0 = {
+    light = {
         geometry = l0
         material = light
     }
 
-#    light 1 = {
-#        geometry = l1
-#       material = light
-#    }
 }
 
 material = {

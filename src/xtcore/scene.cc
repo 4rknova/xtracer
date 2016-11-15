@@ -261,9 +261,9 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
+	sections.push_back(XTPROTO_NODE_GEOMETRY);
 	sections.push_back(XTPROTO_NODE_MATERIAL);
 	sections.push_back(XTPROTO_NODE_TEXTURE);
-	sections.push_back(XTPROTO_NODE_GEOMETRY);
 	sections.push_back(XTPROTO_NODE_OBJECT);
 
 	Log::handle().log_message("Building the scene objects..");

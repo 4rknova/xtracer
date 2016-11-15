@@ -74,11 +74,11 @@ Ray Sphere::ray_sample() const
 {
     Ray ray;
 
-    Vector3f sphpoint = Sample::sphere() * radius;
+    Vector3f sphpoint = Sample::sphere();
     Vector3f normal = sphpoint.normalized();
 
-    ray.origin    = sphpoint + origin;
-    ray.direction = Sample::hemisphere(normal, normal);
+    ray.origin    = sphpoint * radius + origin;
+    ray.direction = normal;// Sample::hemisphere(normal, normal);
 
     return ray;
 }

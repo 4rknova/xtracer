@@ -51,27 +51,6 @@ camera = {
     }
 }
 
-# The scene lights
-light = {
-	light_p0 = {
-		type = sphere
-
-		radius = 10.
-
-		position = {
-			x = 343.0
-			y = 500.0
-			z = -100.0
-		}
-
-		intensity = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
-		}
-	}
-}
-
 # The scene materials
 material = {
 
@@ -126,64 +105,20 @@ material = {
 			b = 1
 		}
 	}
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 # The scene geometry
 geometry = {
-
-	# The room box
-	# - The light
-	# The light geometry is lowered by a small number to avoid numeric errors
-	# The original height is 548.8
-	light_1 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7999
-				z = 227.0
-			}
-
-			v1 = {
-				x = 343.0
-				y = 548.7999
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7999
-				z = 332.0
-			}
-
-		}
-	}
-
-	light_2 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7999
-				z = 227.0
-			}
-
-			v1 = {
-				x = 213.0
-				y = 548.7999
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7999
-				z = 227.0
-			}
-		}
-	}
-
 	# - Floor
 	floor_1 = {
 		type = triangle
@@ -421,38 +356,34 @@ geometry = {
 		}
 	}
 
-	# Spheres
-	sphere1 = {
+	light_p0 = {
 		type = sphere
 		radius = 50
 
 		position = {
 			x = 100
-			y = 50
+			y =  50
 			z = 100
 		}
 	}
 
-	# Model
 	model = {
 		type   = mesh
 		source = <data>/dragon.obj
-#		smooth = true
+		#smooth = true
 
 		rotation = {
-			x = 0.0
 			y = -0.785398
-			z = 1.5708
 		}
 
 		scale = {
-			x = 250.0
-			y = 250.0
-			z = 250.0
+			x = 400.0
+			y = 400.0
+			z = 400.0
 		}
 
 		translation = {
- 			y = 170.0
+ 			y = 110.0
 			x = 300.0
 			z = 200.0
 		}
@@ -461,17 +392,6 @@ geometry = {
 
 # The scene objects
 object = {
-	# Light
-	light_1 = {
-		geometry = light_1
-		material = light
-	}
-
-	light_2 = {
-		geometry = light_2
-		material = light
-	}
-
 	# Floor
 	floor_1 = {
 		geometry = floor_1
@@ -527,15 +447,13 @@ object = {
 		material = green
 	}
 
-	# Spheres
-	sphere1 = {
-		geometry = sphere1
-		material = matte
-	}
-
-	# Model
 	model = {
 		geometry = model
 		material = matte
 	}
+
+    light_p0 = {
+        geometry = light_p0
+        material = light_source
+    }
 }

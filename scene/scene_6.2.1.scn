@@ -34,9 +34,9 @@ camera = {
 		}
 
 		aperture = 2
-		flength = 80
+		flength = 100
 		# Other lengths to focus on.
-		# 100, 155
+		# 80, 100, 155
 	}
 }
 
@@ -93,8 +93,8 @@ geometry = {
 	}
 }
 
-light = {
-	satl = {
+geometry = {
+	l0 = {
 		type = sphere
 
 		radius = 10
@@ -112,7 +112,7 @@ light = {
 		}
 	}
 
-	sat2 = {
+	l1 = {
 		type = sphere
 
 		radius = 10
@@ -240,6 +240,15 @@ material = {
 
 		reflectance = 0.5
 	}
+
+    light = {
+        type = emissive
+        emissive = {
+            r = .7
+            g = .7
+            b = .7
+        }
+    }
 }
 
 texture = {
@@ -272,4 +281,12 @@ object = {
 		material = plane
 		texture = floor
 	}
+    l0 = {
+        geometry = l0
+        material = light
+    }
+    l1 = {
+        geometry = l1
+        material = light
+    }
 }

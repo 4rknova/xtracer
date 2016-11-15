@@ -83,10 +83,8 @@ geometry = {
 		v_scale = 0.003
 		u_scale = 0.003
 	}
-}
 
-light = {
-	front = {
+    l0 = {
 		type = sphere
 
         radius = 25
@@ -95,15 +93,9 @@ light = {
 			y = 900
 			z = -800
 		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
-		}
 	}
 
-	cat = {
+	l1 = {
 		type = sphere
 
         radius = 25
@@ -112,12 +104,6 @@ light = {
 			x = -1000
 			y = 1100
 			z = 1800
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
 		}
 	}
 }
@@ -237,6 +223,16 @@ material = {
 		transparency = 0
 		ior = 1.100
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 texture = {
@@ -267,4 +263,12 @@ object = {
 		material = floor
 		texture = floor
 	}
+    l0 = {
+        geometry = l0
+        material = light
+    }
+    l1 = {
+        geometry = l1
+        material = light
+    }
 }

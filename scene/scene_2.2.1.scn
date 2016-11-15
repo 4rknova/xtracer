@@ -126,24 +126,16 @@ geometry = {
 		}
 		distance = 500
 	}
-	front = {
-		type = plane
-		normal = {
-			z = 1
-		}
-		distance = -2600
-	}
-}
-
-light = {
 
 	l0 = {
-		type = point
+		type = sphere
+
+        radius = 50
 
 		position = {
-			x = -150
+			x = 0
 			y = 150
-			z = 200
+			z = -400
 		}
 
 		intensity = {
@@ -152,23 +144,6 @@ light = {
 			b = 1
 		}
 	}
-
-	l1 = {
-		type = point
-
-		position = {
-			x = -100
-			y = -200
-			z = -300
-		}
-
-		intensity = {
-			r = 0.4
-			g = 0.4
-			b = 0.4
-		}
-	}
-
 }
 
 object = {
@@ -198,16 +173,16 @@ object = {
 	}
 	right_wall = {
 		geometry = right_wall
-		material = phong_grey
+		material = phong_blue
 	}
 	left_wall = {
 		geometry = left_wall
-		material = phong_grey
+		material = phong_green
 	}
-	front = {
-		geometry = front
-		material = lambert_grey
-	}
+    light0 = {
+        geometry = l0
+        material = light
+    }
 }
 
 material = {
@@ -284,7 +259,7 @@ material = {
 
 		k_diffuse  = 0.0
 		k_specular = 1.0
-		k_exponent = 999
+		k_exponent = 10000
 	}
 
 	lambert_grey = {
@@ -296,4 +271,14 @@ material = {
 			b = 0.5
 		}
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }

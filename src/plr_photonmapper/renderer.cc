@@ -310,7 +310,8 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	std::map<std::string, Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
 	std::map<std::string, Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
-	if (it_mat == m_context->scene->m_materials.end()) return color;
+         if (it_mat == m_context->scene->m_materials.end()) return color;
+    else if ((*it_mat).second->type == MATERIAL_EMISSIVE) return nimg::ColorRGBf(1,1,1);
 
 	// shadows
 	NMath::Vector3f n = info.normal;
@@ -354,7 +355,12 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			IntInfo res;
 			bool test = m_context->scene->intersection(sray, res, obj);
 
-            std::map<std::string, Geometry*>::iterator git = m_context->scene->m_geometry.find(obj);
+            std::map<std::string, Object*>::iterator oit = m_context->scene->m_objects.find(obj);
+            std::map<std::string, Object*>::iterator oet = m_context->scene->m_objects.end();
+
+            if (oit == oet) continue;
+
+            std::map<std::string, Geometry*>::iterator git = m_context->scene->m_geometry.find((*oit).second->geometry);
             std::map<std::string, Geometry*>::iterator get = m_context->scene->m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);

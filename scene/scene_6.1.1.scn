@@ -4,14 +4,6 @@ title = DOF
 descr = Depth of field
 versn = 0.4
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 	default = {
 		type = thin-lens
@@ -109,38 +101,26 @@ geometry = {
 		u_scale = 0.001
 		v_scale = 0.001
 	}
-}
 
-light = {
-	sat = {
-		type = point
+    l0 = {
+		type = sphere
+        radius = 10
 
 		position = {
 			x = 2000
 			y = 3000
 			z = 1000
 		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
-		}
 	}
 
-	cat = {
-		type = point
+	l1 = {
+		type = sphere
+        radius = 10
 
 		position = {
 			x = -2000
 			y = 4000
 			z = -7000
-		}
-
-		intensity = {
-			r = 0.51
-			g = 0.51
-			b = 0.51
 		}
 	}
 }
@@ -294,6 +274,15 @@ material = {
 
 		reflectance = 0.3
 	}
+
+    light = {
+        type = emissive
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 texture = {
@@ -332,4 +321,12 @@ object = {
 		material = plane
 		texture = floor
 	}
+    l0 = {
+        geometry = l0
+        material = light
+    }
+    l1 = {
+        geometry = l1
+        material = light
+    }
 }

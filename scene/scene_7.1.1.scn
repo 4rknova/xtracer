@@ -127,11 +127,11 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = ../media/mesh/head.obj
+		source = data/head/head.obj
 	}
 }
 
-light = {
+geometry = {
 	satl = {
 		type = point
 
@@ -187,11 +187,21 @@ material = {
 
 		reflectance = 0.07
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
 
 texture = {
 	head = {
-		source = ../media/texture/head/Map-COL.ppm
+		source = data/head/lambertian.jpg
 	}
 }
 
@@ -201,4 +211,14 @@ object = {
 		material = head
 		texture = head
 	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+
+    l1 = {
+        geometry = sat2
+        material = light
+    }
 }

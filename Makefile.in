@@ -60,14 +60,18 @@ all: $(BIN)
 .PHONY: test-scenes
 test-scenes: $(BINPPM_SCN)
 
+.PHONY: get-version
+get-version:
+	@echo $(SW_VERSION)
+
 .PHONY: dirtree
 dirtree:
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
 
 $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
-	$(BIN) -res 800x800 $<
-	$(BIN) -res 800x800 -renderer depth $<
+	$(BIN) -res 800x800 -res 800x800 -aa 4 -samples 3 $<
+#	$(BIN) -res 800x800 -renderer depth $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)

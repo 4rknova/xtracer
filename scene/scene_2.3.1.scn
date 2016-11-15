@@ -2,14 +2,6 @@ title = Room
 descr = Three spheres in a room.
 versn = 0.4
 
-k_ambient = 0.001
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 	default = {
         type = thin-lens
@@ -129,44 +121,19 @@ geometry = {
 		normal = {
 			z = 1
 		}
-		distance = -2600
+		distance = -2100
 	}
-}
-
-light = {
 
 	l0 = {
-		type = point
+		type = sphere
+        radius = 49
 
 		position = {
-			x = -150
-			y = 150
-			z = 200
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
+			x = 0
+			y = 50
+			z = -100
 		}
 	}
-
-	l1 = {
-		type = point
-
-		position = {
-			x = -100
-			y = -200
-			z = -300
-		}
-
-		intensity = {
-			r = 0.4
-			g = 0.4
-			b = 0.4
-		}
-	}
-
 }
 
 object = {
@@ -206,6 +173,11 @@ object = {
 		geometry = front
 		material = lambert_grey
 	}
+
+    l0 = {
+        geometry = l0
+        material = light
+    }
 }
 
 material = {
@@ -275,4 +247,14 @@ material = {
 			b = 0.5
 		}
 	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
 }
