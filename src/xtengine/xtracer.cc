@@ -8,6 +8,7 @@
 #include <nimg/img.h>
 #include <ncf/util.h>
 
+#include <xtcore/proto.h>
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/log.h>
@@ -91,21 +92,15 @@ int main(int argc, char **argv)
 		#endif /* _WIN32 */
 
 		path_comp(Environment::handle().scene(), base, file, path_delim);
-		std::string cam = Environment::handle().active_camera_name();
+		std::string cam = context.scene->camera;
+        if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
+
 		std::string outdir = Environment::handle().outdir();
 		if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
 			outdir.append(1, path_delim);
 		}
 
-		to_string(random_token, (int)NMath::prng_c(1000000, 9999999));
-		to_string(sw, (int)Environment::handle().width());
-		to_string(sh, (int)Environment::handle().height());
-		to_string(sa, (int)Environment::handle().aa());
-		file = outdir + file + "_cam-" + cam
-					  + "_aa" + sa + "_res"
-					  + sw + "x" + sh
-					  + "_" + random_token
-					  + ".png";
+		file = outdir + file + "_cam-" + cam  + ".png";
 
 		Log::handle().log_message("Exporting to %s..", file.c_str());
 		if (nimg::io::save::png(file.c_str(), fb)) {
