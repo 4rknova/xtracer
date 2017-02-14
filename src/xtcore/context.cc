@@ -8,6 +8,7 @@ params_t::params_t()
     , samples(1)
     , ssaa(1)
     , rdepth(3)
+    , tile_size(64)
 {}
 
 context_t::context_t()

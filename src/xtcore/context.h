@@ -16,6 +16,8 @@ struct params_t
     size_t ssaa;    // Level of Screen Space Anti-Aliasing
     size_t rdepth;  // Maximum recursion depth
 
+    size_t tile_size;
+
     params_t();
 };
 

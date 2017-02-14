@@ -10,7 +10,7 @@
 #include <nimg/luminance.h>
 #include <ncf/util.h>
 #include <xtcore/log.h>
-
+#include <xtcore/fblock.h>
 #include "renderer.h"
 
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
@@ -20,8 +20,6 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
 #define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
-
-#define TILESIZE 32
 
 using Util::String::path_comp;
 
@@ -182,38 +180,25 @@ void Renderer::pass_rtrace()
 	const unsigned int t       = m_context->params.threads;
 	const unsigned int aa      = m_context->params.ssaa;
 	const unsigned int samples = m_context->params.samples;
-
-	const unsigned int dxt       = (w % TILESIZE > 0 ? 1 : 0);
-	const unsigned int dyt       = (h % TILESIZE > 0 ? 1 : 0);
-    const unsigned int numxtiles = w / TILESIZE + dxt;
-	const unsigned int numytiles = h / TILESIZE + dyt;
-	const unsigned int numtiles  = numxtiles * numytiles;
+    const size_t tile_size     = m_context->params.tile_size;
 
 	float progress = 0;
 	if (t) omp_set_num_threads(t);
 
-
-	float one_over_h = 1.f / numtiles;
 	float spp = (float)(aa * aa);
 	double subpixel_size  = 1.f / (float)(aa);
 	double subpixel_size2 = subpixel_size / 2.0f;
 
 	float sample_scaling = 1.0f / (samples * spp);
 
-	#pragma omp parallel for schedule(dynamic, 1)
-    for (unsigned int tile = 0; tile < numtiles; ++tile) {
-		// tile offset
-        const int ia = TILESIZE*(tile % numxtiles);
-        const int ja = TILESIZE*(tile / numxtiles);
+    std::vector<xtracer::render::frame_block_t> tiles;
+    xtracer::render::segment_framebuffer(tiles, w, h, tile_size);
+	float one_over_h = 1.f / tiles.size();
 
-		// for every pixel in this tile, compute color
-	    for (int j = 0; j < TILESIZE; ++j) {
-			float y = ja + j;
-			if (y > h) continue;
-
-	        for( int i = 0; i < TILESIZE; ++i) {
-				float x = ia + i;
-				if (x > w) continue;
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (size_t tile = 0; tile < tiles.size(); ++tile) {
+	    for (size_t y = tiles[tile].y; y < tiles[tile].height; ++y) {
+	        for (size_t x = tiles[tile].x; x < tiles[tile].width; ++x) {
 
 				ColorRGBf color;
 				// antialiasing loop
