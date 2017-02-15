@@ -62,8 +62,8 @@ void DRenderer::render_depth()
 
 	#pragma omp parallel for schedule(dynamic, 1)
     for (size_t tile = 0; tile < tiles.size(); ++tile) {
-	    for (size_t y = tiles[tile].y; y < tiles[tile].height; ++y) {
-	        for (size_t x = tiles[tile].x; x < tiles[tile].width; ++x) {
+	    for (size_t y = tiles[tile].y0; y <= tiles[tile].y1; ++y) {
+	        for (size_t x = tiles[tile].x0; x <= tiles[tile].x1; ++x) {
 
                 ColorRGBAf color;
 
