@@ -26,13 +26,13 @@ SRC_API = $(LIB_H) $(LIB_HPP) $(LIB_INL) $(LIB_TML) \
 
 BINPPM_SCN = $(SRC_SCN:.scn=.ppm)
 BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_C:.c=.o))) \
-		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C:.c=.o)))
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C:.c=.o)))
 BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CC:.cc=.o))) \
-		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CC:.cc=.o)))
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CC:.cc=.o)))
 BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CPP:.cpp=.o))) \
-		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CPP:.cpp=.o)))
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CPP:.cpp=.o)))
 BINOBJ_C11 = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_C11:.c11.o))) \
-		     $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C11:.c11=.o)))
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C11:.c11=.o)))
 BINOBJ	   = $(sort $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP) $(BINOBJ_C11))
 BINPATHS   = $(sort $(dir $(BINOBJ)))
 
@@ -70,8 +70,8 @@ dirtree:
 	mkdir -p $(BINPATHS)
 
 $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
-	$(BIN) -res 800x800 -res 1024x1024 -aa 2 -samples 3 $<
-	$(BIN) -res 800x800 -renderer depth $<
+	$(BIN) -res 1024x1080 $<
+#  $(BIN) -res 800x800 -renderer depth $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
