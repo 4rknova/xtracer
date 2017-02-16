@@ -13,6 +13,7 @@
 #include <xtcore/timeutil.h>
 #include <xtcore/log.h>
 #include <xtcore/context.h>
+#include <xtcore/broadcast.h>
 
 #include <plr_photonmapper/renderer.h>
 #include <plr_depth/depth.h>
@@ -43,33 +44,52 @@ int main(int argc, char **argv)
 
     PLM::load();
 
-	if (Environment::handle().setup(argc, argv)) return 1;
+    size_t width, height;
+    std::string renderer_name, outdir, scene_path, camera;
+    xtracer::render::params_t params;
+    std::list<std::string> modifiers;
+
+	if (setup(argc, argv
+            , width
+            , height
+            , renderer_name
+            , outdir
+            , scene_path
+            , modifiers
+            , camera
+            , params
+    )) return 1;
 
 	Pixmap fb;
-    fb.init(Environment::handle().width(), Environment::handle().height());
-	Environment::handle().log_info();
+    fb.init(width, height);
+
+    std::string t = "xtracer";
+    t.append(" ");
+    t.append(scene_path);
+
+    xtracer::network::broadcast(t.c_str());
 
 	// create and initialize the scene
 	Scene scene;
-	if (!scene.load(Environment::handle().scene(), Environment::handle().modifiers())) {
+	if (!scene.load(scene_path.c_str(), modifiers)) {
 
         if (scene.m_cameras.size() == 0) {
             Log::handle().log_error("no cameras found");
             return 2;
         }
 
-        scene.camera = Environment::handle().active_camera_name();
+        scene.camera = camera;
         // Create the renderer.
 
 		xtracer::render::IRenderer *renderer = NULL;
 
-        if (!strcmp(Environment::handle().renderer(), "depth")) renderer = new DRenderer();
+        if (!strcmp(renderer_name.c_str(), "depth")) renderer = new DRenderer();
         else renderer = new Renderer();
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
 		context.framebuffer = &fb;
+        context.params      = params;
         renderer->setup(context);
-		Environment::handle().configure(context.params);
 
 		Timer timer;
 
@@ -91,11 +111,10 @@ int main(int argc, char **argv)
 			const char path_delim = '/';
 		#endif /* _WIN32 */
 
-		path_comp(Environment::handle().scene(), base, file, path_delim);
+		path_comp(scene_path, base, file, path_delim);
 		std::string cam = context.scene->camera;
         if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
-		std::string outdir = Environment::handle().outdir();
 		if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
 			outdir.append(1, path_delim);
 		}

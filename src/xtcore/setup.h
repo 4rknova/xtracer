@@ -1,0 +1,6 @@
+#ifndef XTRACER_SETUP_H_INCLUDED
+#define XTRACER_SETUP_H_INCLUDED
+
+struct
+
+#endif /* XTRACER_SETUP_H_INCLUDED */

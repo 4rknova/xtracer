@@ -11,12 +11,11 @@ namespace xtracer {
 
 struct params_t
 {
-    size_t threads; // Number of threads
-    size_t samples; // Number of samples
-    size_t ssaa;    // Level of Screen Space Anti-Aliasing
-    size_t rdepth;  // Maximum recursion depth
-
-    size_t tile_size;
+    size_t threads;   // Number of threads
+    size_t samples;   // Number of samples
+    size_t ssaa;      // Level of Screen Space Anti-Aliasing
+    size_t rdepth;    // Maximum recursion depth
+    size_t tile_size; // Tile size for framebuffers segmentation
 
     params_t();
 };
