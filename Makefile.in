@@ -70,8 +70,8 @@ dirtree:
 	mkdir -p $(BINPATHS)
 
 $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
-	$(BIN) -res 1024x1080 $<
-#  $(BIN) -res 800x800 -renderer depth $<
+	$(BIN) $<
+#    $(BIN) -renderer depth $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)
