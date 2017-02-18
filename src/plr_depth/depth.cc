@@ -29,7 +29,6 @@ void DRenderer::setup(xtracer::render::context_t &context)
 void DRenderer::render(void)
 {
     if (   !m_context
-        || !m_context->framebuffer
         || !m_context->scene
         || !m_context->scene->get_camera()
     ) return;
@@ -37,15 +36,19 @@ void DRenderer::render(void)
     render_depth();
 }
 
+xtracer::render::callback init()
+{
+   Log::handle().log_message("init");
+   return 0;
+}
+
 void DRenderer::render_depth()
 {
 	// precalculate some constants
-	const unsigned int w  = m_context->framebuffer->width();
-	const unsigned int h  = m_context->framebuffer->height();
-    const unsigned int t  = m_context->params.threads;
-    const unsigned int aa = m_context->params.ssaa;
-
-    size_t tile_size = m_context->params.tile_size;
+	const size_t w  = m_context->params.width;
+	const size_t h  = m_context->params.height;
+    const size_t t  = m_context->params.threads;
+    const size_t aa = m_context->params.ssaa;
 
     float progress = 0;
 	if (t) omp_set_num_threads(t);
@@ -55,17 +58,20 @@ void DRenderer::render_depth()
     double subpixel_size2 = subpixel_size / 2.f;
 
     float sample_scaling = 1./ spp;
-
-    std::vector<xtracer::render::frame_block_t> tiles;
-    xtracer::render::segment_framebuffer(tiles, w, h, tile_size);
-	float one_over_h = 1.f / tiles.size();
+    size_t tile_count = m_context->tiles.size();
+	float one_over_h = 1.f / tile_count;
 
 	#pragma omp parallel for schedule(dynamic, 1)
-    for (size_t tile = 0; tile < tiles.size(); ++tile) {
-	    for (size_t y = tiles[tile].y0; y <= tiles[tile].y1; ++y) {
-	        for (size_t x = tiles[tile].x0; x <= tiles[tile].x1; ++x) {
+    for (size_t i = 0; i < tile_count; ++i) {
+        xtracer::render::tile_t *tile = &(m_context->tiles[i]);
 
-                ColorRGBAf color;
+        tile->setup(0, 0);
+        tile->init();
+
+	    for (size_t y = tile->y0(); y <= tile->y1(); ++y) {
+	        for (size_t x = tile->x0(); x <= tile->x1(); ++x) {
+
+                nimg::ColorRGBf color;
 
                 // antialiasing loop
                 for (unsigned int fy = 0; fy < aa; ++fy) {
@@ -85,11 +91,11 @@ void DRenderer::render_depth()
                             NMath::scalar_t  d = (ray.origin - info.point).length();
                             depth = 1. / log(d);
                         }
-                        color += nimg::ColorRGBAf(depth, depth, depth, 1) * sample_scaling;
+                        color += nimg::ColorRGBAf(depth, depth, depth) * sample_scaling;
                     }
                 }
 
-                m_context->framebuffer->pixel(x, y) = color;
+                tile->write(x, y, color);
             }
         }
 

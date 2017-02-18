@@ -12,8 +12,6 @@
 #define IS_PARAM(x) (!strcmp(argv[i],x))
 
 int setup(int argc, char **argv
-                 , size_t                 &width
-                 , size_t                 &height
                  , std::string            &renderer
                  , std::string            &outdir
                  , std::string            &scene
@@ -29,12 +27,12 @@ int setup(int argc, char **argv
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%lux%lu", &width, &height) < 2) {
+			if (sscanf(argv[i], "%lux%lu", &(params.width), &(params.height)) < 2) {
 				Log::handle().log_error("Invalid %s value. Should be <uint>x<uint>.", argv[i-1]);
 				return 2;
 			}
 
-			if ((width == 0) || (height == 0)) {
+			if ((params.width == 0) || (params.height == 0)) {
 				Log::handle().log_error("Invalid %s value.", argv[i-1]);
 				return 2;
 			}

@@ -35,7 +35,6 @@ void Renderer::setup(xtracer::render::context_t &context)
 void Renderer::render()
 {
 	if (   !m_context
-        || !m_context->framebuffer
         || !m_context->scene
         || !m_context->scene->get_camera()
     ) return;
@@ -175,12 +174,12 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 void Renderer::pass_rtrace()
 {
 	// precalculate some constants
-	const unsigned int w       = m_context->framebuffer->width();
-	const unsigned int h       = m_context->framebuffer->height();
-	const unsigned int t       = m_context->params.threads;
-	const unsigned int aa      = m_context->params.ssaa;
-	const unsigned int samples = m_context->params.samples;
-    const size_t tile_size     = m_context->params.tile_size;
+	const size_t w         = m_context->params.width;
+	const size_t h         = m_context->params.height;
+	const size_t t         = m_context->params.threads;
+	const size_t aa        = m_context->params.ssaa;
+	const size_t samples   = m_context->params.samples;
+    const size_t tile_size = m_context->params.tile_size;
 
 	float progress = 0;
 	if (t) omp_set_num_threads(t);
@@ -191,14 +190,20 @@ void Renderer::pass_rtrace()
 
 	float sample_scaling = 1.0f / (samples * spp);
 
-    std::vector<xtracer::render::frame_block_t> tiles;
+    std::vector<xtracer::render::tile_t> tiles;
     xtracer::render::segment_framebuffer(tiles, w, h, tile_size);
-	float one_over_h = 1.f / tiles.size();
+    size_t tile_count = m_context->tiles.size();
+	float one_over_h = 1.f / tile_count;
 
     #pragma omp parallel for schedule(dynamic, 1)
-    for (size_t tile = 0; tile < tiles.size(); ++tile) {
-	    for (size_t y = tiles[tile].y0; y <= tiles[tile].y1; ++y) {
-	        for (size_t x = tiles[tile].x0; x <= tiles[tile].x1; ++x) {
+    for (size_t i = 0; i < tile_count; ++i) {
+        xtracer::render::tile_t *tile = &(m_context->tiles[i]);
+
+        tile->setup(0, 0);
+        tile->init();
+
+	    for (size_t y = tile->y0(); y <= tile->y1(); ++y) {
+	        for (size_t x = tile->x0(); x <= tile->x1(); ++x) {
 
 				ColorRGBf color;
 				// antialiasing loop
@@ -215,7 +220,7 @@ void Renderer::pass_rtrace()
 					}
 				}
 
-				m_context->framebuffer->pixel(x, y) = color;
+				tile->write(x, y, color);
 			}
 		}
 

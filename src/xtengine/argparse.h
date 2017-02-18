@@ -8,8 +8,6 @@
 using xtracer::render::params_t;
 
 int setup(int argc, char** argv
-        , size_t                 &width
-        , size_t                 &height
         , std::string            &renderer
         , std::string            &outdir
         , std::string            &scene

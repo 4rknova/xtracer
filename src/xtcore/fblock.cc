@@ -5,26 +5,56 @@
 namespace xtracer {
 	namespace render {
 
-frame_block_t::frame_block_t()
-	: x0(0)
-	, y0(0)
-	, x1(0)
-	, y1(0)
-{}
-
-frame_block_t::frame_block_t(
+tile_t::tile_t(
                size_t x0
 		  	 , size_t y0
 	  	     , size_t x1
   			 , size_t y1)
 {
-	this->x0 = x0;
-	this->y0 = y0;
-	this->x1 = x1;
-	this->y1 = y1;
+	this->m_x0 = x0;
+	this->m_y0 = y0;
+	this->m_x1 = x1;
+	this->m_y1 = y1;
+
+    this->m_on_init = 0;
+    this->m_on_done = 0;
 }
 
-void segment_framebuffer(std::vector<frame_block_t> &tiles, size_t width, size_t height, size_t tile_size)
+size_t tile_t::x0()     const { return m_x0; }
+size_t tile_t::x1()     const { return m_x1; }
+size_t tile_t::y0()     const { return m_y0; }
+size_t tile_t::y1()     const { return m_y1; }
+size_t tile_t::width()  const { return m_x1 - m_x0; }
+size_t tile_t::height() const { return m_y1 - m_y0; }
+
+void tile_t::setup(callback on_init, callback on_done)
+{
+    this->m_on_init = on_init;
+    this->m_on_done = on_done;
+}
+
+void tile_t::write(size_t x, size_t y, const nimg::ColorRGBf &col)
+{
+    m_data.pixel(x - x0(), y - y0()) = col;
+}
+
+void tile_t::read(size_t x, size_t y, nimg::ColorRGBf &col) const
+{
+    col = m_data.pixel_ro(x - x0(), y - y0());
+}
+
+void tile_t::init()
+{
+    m_data.init(width(), height());
+    if (m_on_init) m_on_init();
+}
+
+void tile_t::submit()
+{
+    if (m_on_done) m_on_done();
+}
+
+void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size)
 {
     tiles.clear();
 
@@ -47,8 +77,8 @@ void segment_framebuffer(std::vector<frame_block_t> &tiles, size_t width, size_t
             if (x1 >  width) x1 = width;
             if (y1 > height) y1 = height;
 
-            frame_block_t block(x0, y0, x1, y1);
-            tiles.push_back(block);
+            tile_t tile(x0, y0, x1, y1);
+            tiles.push_back(tile);
         }
     }
 }

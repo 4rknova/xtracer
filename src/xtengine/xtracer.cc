@@ -44,14 +44,11 @@ int main(int argc, char **argv)
 
     PLM::load();
 
-    size_t width, height;
     std::string renderer_name, outdir, scene_path, camera;
     xtracer::render::params_t params;
     std::list<std::string> modifiers;
 
 	if (setup(argc, argv
-            , width
-            , height
             , renderer_name
             , outdir
             , scene_path
@@ -60,8 +57,6 @@ int main(int argc, char **argv)
             , params
     )) return 1;
 
-	Pixmap fb;
-    fb.init(width, height);
 
     std::string t = "xtracer";
     t.append(" ");
@@ -87,8 +82,9 @@ int main(int argc, char **argv)
         else renderer = new Renderer();
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
-		context.framebuffer = &fb;
         context.params      = params;
+        context.init();
+
         renderer->setup(context);
 
 		Timer timer;
@@ -102,29 +98,31 @@ int main(int argc, char **argv)
 
 		print_time_breakdown(timer.get_time_in_mlsec());
 
-		std::string file;
 
-		std::string base, sw, sh, sa, random_token;
-		#ifdef _WIN32
-			const char path_delim = '\\';
-		#else
-			const char path_delim = '/';
-		#endif /* _WIN32 */
+        // Export the frame
+        {
+		    std::string file, base, sw, sh, sa, random_token;
+    		#ifdef _WIN32
+	    		const char path_delim = '\\';
+		    #else
+			    const char path_delim = '/';
+    		#endif /* _WIN32 */
 
-		path_comp(scene_path, base, file, path_delim);
-		std::string cam = context.scene->camera;
-        if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
+	    	path_comp(scene_path, base, file, path_delim);
+		    std::string cam = context.scene->camera;
+            if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
-		if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
-			outdir.append(1, path_delim);
-		}
+	    	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
+    			outdir.append(1, path_delim);
+    		}
 
-		file = outdir + file + "_cam-" + cam  + ".png";
-
-		Log::handle().log_message("Exporting to %s..", file.c_str());
-		if (nimg::io::save::png(file.c_str(), fb)) {
-			Log::handle().log_error("Failed to export image file");
-		}
+		    file = outdir + file + "_cam-" + cam  + ".png";
+    		Log::handle().log_message("Exporting to %s..", file.c_str());
+            nimg::Pixmap fb;
+            xtracer::render::assemble(fb, context);
+    		int res = nimg::io::save::png(file.c_str(), fb);
+            if (res) Log::handle().log_error("Failed to export image file");
+        }
 	}
 
 	return 0;
