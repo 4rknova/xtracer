@@ -1,0 +1,260 @@
+title = Room
+descr = Three spheres in a room.
+versn = 0.4
+
+camera = {
+	default = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			z = -2000
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	back = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			y = 100
+			z = 480
+		}
+
+		target = {
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	side = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			x = 300
+			y = 300
+			z = -1400
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+	red_ball = {
+		type = sphere
+		position = {
+			x = 80
+			y = -305
+			z = -100
+		}
+		radius = 95
+	}
+	green_ball = {
+		type = sphere
+		position = {
+			x = 350
+			y = -330
+			z = 350
+		}
+		radius = 77
+	}
+	blue_ball = {
+		type = sphere
+		position = {
+			x = -220
+			y = -245
+			z = 80
+		}
+		radius = 155
+	}
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = -400
+	}
+	ceiling = {
+		type = plane
+		normal = {
+			y = -1
+		}
+		distance = 400
+	}
+	back = {
+		type = plane
+		normal = {
+			z = -1
+		}
+		distance = 500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
+	}
+	left_wall = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = -500
+	}
+	front = {
+		type = plane
+		normal = {
+			z = 1
+		}
+		distance = -2100
+	}
+
+	l0 = {
+		type = sphere
+        radius = 49
+
+		position = {
+			x = 0
+			y = 50
+			z = -100
+		}
+	}
+}
+
+object = {
+	red_ball = {
+		geometry = red_ball
+		material = lambert_red
+	}
+	green_ball = {
+		geometry = green_ball
+		material = lambert_green
+	}
+	blue_ball = {
+		geometry = blue_ball
+		material = phong_grey
+	}
+	floor = {
+		geometry = floor
+		material = lambert_grey
+	}
+	ceiling = {
+		geometry = ceiling
+		material = lambert_grey
+	}
+	back = {
+		geometry = back
+		material = lambert_grey
+	}
+	right_wall = {
+		geometry = right_wall
+		material = lambert_grey
+	}
+	left_wall = {
+		geometry = left_wall
+		material = lambert_grey
+	}
+	front = {
+		geometry = front
+		material = lambert_grey
+	}
+
+    l0 = {
+        geometry = l0
+        material = light
+    }
+}
+
+material = {
+	lambert_red = {
+		type = lambert
+
+		reflectance = 0.5
+
+		diffuse = {
+			r = 1
+		}
+		specular = {
+			r = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 60
+	}
+
+	lambert_green = {
+		type = lambert
+
+		reflectance = 0.5
+
+		diffuse = {
+			g = 1
+		}
+		specular = {
+			g = 1
+		}
+
+		k_diffuse = 0.3
+		k_specular = 0.7
+		k_exponent = 60
+	}
+
+	phong_grey = {
+		type = phong
+
+		transparency = 0.0
+		reflectance = 1.0
+
+		diffuse = {
+			r = 0.0
+			g = 0.0
+			b = 0.0
+		}
+		specular = {
+			r = 1.0
+			g = 1.0
+			b = 1.0
+		}
+
+		k_diffuse  = 0.0
+		k_specular = 1.0
+		k_exponent = 64
+		roughness  = 100.0
+	}
+
+	lambert_grey = {
+		type = lambert
+
+		diffuse = {
+			r = 0.5
+			g = 0.5
+			b = 0.5
+		}
+	}
+
+    light = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
+}

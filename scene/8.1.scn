@@ -1,0 +1,229 @@
+# Xtracer 2
+
+data  = data
+
+title = Stanford models
+descr = Stanford models
+versn = 0.1
+
+camera = {
+	default = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			x = -3
+			y = 3.5
+			z = -5
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+    ods = {
+        type = ods
+
+        ipd = 0.064
+        position = {
+            x = 0
+            y = 1.5
+            z = -2
+        }
+    }
+}
+
+texture = {
+	checker = {
+		source = 
+	}
+}
+
+geometry = {
+	m0 = {
+		type = mesh
+		source = <data>/bunny.obj
+
+		rotation = {
+			z = 1.5708
+		}
+
+		scale = {
+			x = .75
+			y = .75
+			z = .75
+		}
+
+		translation = {
+			y = 0.72
+		}
+	}
+
+	m1 = {
+		type = mesh
+		source = <data>/dragon.obj
+
+		rotation = {
+			z = 1.5708
+		}
+
+		translation = {
+			y = 0.7
+			x = 1.5
+		}
+	}
+
+	m2 = {
+		type = mesh
+		source = <data>/happy_buddha.obj
+
+		rotation = {
+			z = 1.5708
+			y = -1.5708
+		}
+
+		translation = {
+			y = 1.00
+			x = -1.5
+		}
+	}
+
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+
+		distance = 0
+		u_scale = 0.5
+		v_scale = 0.5
+	}
+
+	l0 = {
+		type = sphere
+
+        radius = 1
+
+		position = {
+			x = -8
+			y = 15
+			z = -8
+		}
+	}
+}
+
+material = {
+	m0 = {
+		type = blinn_phong
+
+		k_diffuse =  0.0
+		k_specular = 1.0
+		k_exponent = 60
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.0
+		transparency = 1.0
+		ior = 1.51714
+	}
+
+	m1 = {
+		type = blinn_phong
+
+		k_diffuse =  0.75
+		k_specular = 0.25
+		k_exponent = 128
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		reflectance = 0.07
+	}
+
+	floor = {
+		type = blinn_phong
+
+		k_diffuse = 0.5
+		k_specular = 0.5
+		k_exponent = 1350
+
+		diffuse = {
+	        r = 0.51
+	        g = 0.51
+    	    b = 0.51
+	    }
+
+    	specular = {
+            r = 1
+            g = 1
+            b = 1
+        }
+
+        reflectance = 0.3
+	}
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
+}
+
+object = {
+	m0 = {
+		geometry = m0
+		material = m1
+	}
+
+	m1 = {
+		geometry = m1
+		material = m1
+	}
+
+	m2 = {
+		geometry = m2
+		material = m1
+	}
+
+	floor = {
+		geometry = floor
+		material = floor
+		texture = checker
+	}
+
+    light_source = {
+        geometry = l0
+        material = light_source
+    }
+}
