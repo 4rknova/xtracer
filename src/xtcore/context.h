@@ -3,7 +3,7 @@
 
 #include "nimg/pixmap.h"
 #include "scene.h"
-#include "fblock.h"
+#include "tile.h"
 
 namespace xtracer {
 	namespace render {

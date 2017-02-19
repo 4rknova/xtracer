@@ -163,7 +163,7 @@ void purge(std::map<std::string, T*> &map)
 {
 	if(!map.empty()) {
 		for (typename std::map<std::string, T*>::iterator it = map.begin(); it != map.end(); ++it) {
-//			Log::handle().log_message("Releasing %s..", (*it).first.c_str());
+//			Log::handle().post_message("Releasing %s..", (*it).first.c_str());
 			delete (*it).second;
 		}
 		map.clear();
@@ -217,13 +217,13 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 {
     if(!filename) return 1;
 
-	Log::handle().log_message("Loading scene [%s]..", filename);
+	Log::handle().post_message("Loading scene [%s]..", filename);
 
     NCF root;
     root.set_source(filename);
 
 	if (root.parse())  {
-		Log::handle().log_error("Failed to parse the scene script.");
+		Log::handle().post_error("Failed to parse the scene script.");
 		return 2;
 	}
 
@@ -234,7 +234,7 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
     for (; mod_it != mod_et; ++mod_it) {
         std::string mod = (*mod_it);
 		if (mod.find_last_of(':') == std::string::npos) {
-			Log::handle().log_warning("Invalid rule: %s", mod.c_str());
+			Log::handle().post_warning("Invalid rule: %s", mod.c_str());
 			continue;
 		}
 
@@ -250,7 +250,7 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 		node->set_property(nleft.c_str(), nright.c_str());
 	}
 
-	Log::handle().log_message("Setting up the scene environment..");
+	Log::handle().post_message("Setting up the scene environment..");
 
 	unsigned int count = 0;
 
@@ -266,7 +266,7 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 	sections.push_back(XTPROTO_NODE_TEXTURE);
 	sections.push_back(XTPROTO_NODE_OBJECT);
 
-	Log::handle().log_message("Building the scene objects..");
+	Log::handle().post_message("Building the scene objects..");
 
 	std::list<std::string>::iterator it = sections.begin();
 	std::list<std::string>::iterator et = sections.end();
@@ -274,7 +274,7 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 	for (; it != et; ++it) {
 		count = root.get_group_by_name((*it).c_str())->count_groups();
 		if (count) {
-			Log::handle().log_message("Processing section: %s", (*it).c_str());
+			Log::handle().post_message("Processing section: %s", (*it).c_str());
 			for (unsigned int i = 0; i < count; ++i) {
 				NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
@@ -287,7 +287,7 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 		}
 	}
 
-	Log::handle().log_message("Scene loaded.");
+	Log::handle().post_message("Scene loaded.");
 	return 0;
 }
 
@@ -361,7 +361,7 @@ unsigned int Scene::create_camera(NCF *p)
         ((CamERP *)camera)->orientation = orn;
     }
     else {
-		Log::handle().log_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
+		Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 		return 2;
     }
 
@@ -429,13 +429,13 @@ unsigned int Scene::create_geometry(NCF *p)
 		path_comp(m_source, base, file);
 		base.append(f);
 
-		Log::handle().log_message("Loading data from %s", base.c_str());
+		Log::handle().post_message("Loading data from %s", base.c_str());
 
         NMesh::object_t obj;
 
 		if (NMesh::IO::Import::obj(base.c_str(), obj))
 		{
-			Log::handle().log_warning("Failed to load mesh from %s", f.c_str());
+			Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
 			delete geometry;
 			return 1;
 		}
@@ -455,12 +455,12 @@ unsigned int Scene::create_geometry(NCF *p)
 			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
 		}
 
-		Log::handle().log_message("Building octree..");
+		Log::handle().post_message("Building octree..");
 		((NMesh::Mesh *)geometry)->build_octree(obj);
 	}
 	// unknown
 	else {
-		Log::handle().log_warning("Unsupported geometry type %s [%s]. Skipping..", p->get_name(), type.c_str());
+		Log::handle().post_warning("Unsupported geometry type %s [%s]. Skipping..", p->get_name(), type.c_str());
 		return 1;
 	}
 
@@ -495,7 +495,7 @@ unsigned int Scene::create_material(NCF *p)
 	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) material->type = MATERIAL_BLINNPHONG;
 	else if (!type.compare(XTPROTO_LTRL_EMISSIVE  )) material->type = MATERIAL_EMISSIVE;
 	else {
-		Log::handle().log_warning("Unsupported material %s. Skipping..", p->get_name());
+		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete material;
 		return 1;
 	}
@@ -532,10 +532,10 @@ unsigned int Scene::create_texture(NCF *p)
     std::string fname = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
 	std::string source = script_base + fname;
 
-	Log::handle().log_message("Loading data from %s", source.c_str());
+	Log::handle().post_message("Loading data from %s", source.c_str());
 	if (texture->load(source.c_str())) {
-		Log::handle().log_warning("Failed to load texture [%s->%s]", p->get_name(), source.c_str());
-		Log::handle().log_warning("Replacing with checkerboard..");
+		Log::handle().post_warning("Failed to load texture [%s->%s]", p->get_name(), source.c_str());
+		Log::handle().post_warning("Replacing with checkerboard..");
 
 		Pixmap tex;
 		ColorRGBAf a   = ColorRGBAf(0.5,0.5,0.5,1);
@@ -567,7 +567,7 @@ unsigned int Scene::create_object(NCF *p)
 			object->geometry = deserialize_cstr(n);
 		}
 		else {
-			Log::handle().log_warning("At object: %s, geometry %s does not exist.", p->get_name(), n);
+			Log::handle().post_warning("At object: %s, geometry %s does not exist.", p->get_name(), n);
 			delete object;
 			return 5;
 		}
@@ -577,7 +577,7 @@ unsigned int Scene::create_object(NCF *p)
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
 		if (m_materials.find(n) != m_materials.end()) object->material = deserialize_cstr(n);
 		else {
-			Log::handle().log_warning("At object: %s, material %s does not exist.", p->get_name(), n);
+			Log::handle().post_warning("At object: %s, material %s does not exist.", p->get_name(), n);
 			delete object;
 			return 5;
 		}
@@ -589,7 +589,7 @@ unsigned int Scene::create_object(NCF *p)
 		if (n) {
 			if (m_textures.find(n) != m_textures.end()) object->texture = deserialize_cstr(n);
 			else {
-				Log::handle().log_warning("At object: %s, texture %s does not exist.", p->get_name(), n);
+				Log::handle().post_warning("At object: %s, texture %s does not exist.", p->get_name(), n);
 				delete object;
 				return 5;
 			}

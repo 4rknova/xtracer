@@ -1,6 +1,5 @@
-
 #include <cstdio>
-#include "fblock.h"
+#include "tile.h"
 
 namespace xtracer {
 	namespace render {
@@ -67,8 +66,8 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
         for (size_t i = 0; i < tx; ++i) {
             size_t x0 =  i * tile_size;
             size_t y0 =  j * tile_size;
-            size_t x1 = x0 + tile_size - 1;
-            size_t y1 = y0 + tile_size - 1;
+            size_t x1 = x0 + tile_size;
+            size_t y1 = y0 + tile_size;
 
             /* The last tiles on each row and column
             ** might overshoot the boundaries of the

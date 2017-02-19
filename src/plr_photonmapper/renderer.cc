@@ -10,7 +10,8 @@
 #include <nimg/luminance.h>
 #include <ncf/util.h>
 #include <xtcore/log.h>
-#include <xtcore/fblock.h>
+#include <xtcore/tile.h>
+#include <xtcore/aa.h>
 #include "renderer.h"
 
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
@@ -49,12 +50,12 @@ void Renderer::pass_ptrace()
 
 	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
-	Log::handle().log_message("Initiating the photon maps..", photon_count);
-	Log::handle().log_message("Using %i photons..", photon_count);
+	Log::handle().post_message("Initiating the photon maps..", photon_count);
+	Log::handle().post_message("Using %i photons..", photon_count);
 	m_pm_global.init(photon_count);
 	m_pm_caustic.init(photon_count);
 
-	Log::handle().log_message("Distributing photons to light sources..", photon_count);
+	Log::handle().post_message("Distributing photons to light sources..", photon_count);
 	// Calculate each light's contribution by using the intensity luminance.
 	// In future revisions I should also take the light source's size into consideration.
     std::vector<light_t> lights;
@@ -80,12 +81,12 @@ void Renderer::pass_ptrace()
 		for (unsigned int i = 0; i < light_count; ++i) {
 			light_contribution.push_back(light_luminance[i] / light_total_luminance);
 			light_photons.push_back((scalar_t) (photon_count+1) * light_contribution[i]);
-			Log::handle().log_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
+			Log::handle().post_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
 				light_photons[i], light_luminance[i], light_contribution[i] * 100);
 		}
 	}
 
-	Log::handle().log_message("Casting photons..");
+	Log::handle().post_message("Casting photons..");
 	{
 		// Photon tracing.
 		unsigned int light_index = 0;
@@ -103,7 +104,7 @@ void Renderer::pass_ptrace()
 		}
 	}
 
-	Log::handle().log_message("Balancing the photon map..");
+	Log::handle().post_message("Balancing the photon map..");
 	m_pm_global.balance();
 }
 
@@ -174,26 +175,20 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 void Renderer::pass_rtrace()
 {
 	// precalculate some constants
-	const size_t w         = m_context->params.width;
-	const size_t h         = m_context->params.height;
-	const size_t t         = m_context->params.threads;
-	const size_t aa        = m_context->params.ssaa;
-	const size_t samples   = m_context->params.samples;
-    const size_t tile_size = m_context->params.tile_size;
+    const size_t t          = m_context->params.threads;
+    const size_t s          = m_context->params.samples;
+	const size_t w          = m_context->params.width;
+	const size_t h          = m_context->params.height;
+    const size_t tile_count = m_context->tiles.size();
+    const size_t rdepth     = m_context->params.rdepth;
+
+    xtracer::antialiasing::SampleSet samples;
+    xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
+    xtracer::assets::ICamera *cam = m_context->scene->get_camera();
+    float d = 1.f / (s * samples.size());
 
 	float progress = 0;
 	if (t) omp_set_num_threads(t);
-
-	float spp = (float)(aa * aa);
-	double subpixel_size  = 1.f / (float)(aa);
-	double subpixel_size2 = subpixel_size / 2.0f;
-
-	float sample_scaling = 1.0f / (samples * spp);
-
-    std::vector<xtracer::render::tile_t> tiles;
-    xtracer::render::segment_framebuffer(tiles, w, h, tile_size);
-    size_t tile_count = m_context->tiles.size();
-	float one_over_h = 1.f / tile_count;
 
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < tile_count; ++i) {
@@ -202,23 +197,19 @@ void Renderer::pass_rtrace()
         tile->setup(0, 0);
         tile->init();
 
-	    for (size_t y = tile->y0(); y <= tile->y1(); ++y) {
-	        for (size_t x = tile->x0(); x <= tile->x1(); ++x) {
+	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
+	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
 
 				ColorRGBf color;
-				// antialiasing loop
-				for (unsigned int fy = 0; fy < aa; ++fy) {
-					for (unsigned int fx = 0; fx < aa; ++fx) {
+                for (size_t aa = 0; aa < samples.size(); ++aa) {
+                    float rx = (float)x + samples[aa].x;
+					float ry = (float)y + samples[aa].y;
 
-						float rx = (float)x + (float)fx * subpixel_size + subpixel_size2;
-						float ry = (float)y + (float)fy * subpixel_size + subpixel_size2;
-
-                        for (float dofs = 0; dofs < samples; ++dofs) {
-                            Ray primary_ray = m_context->scene->get_camera()->get_primary_ray(rx, ry, (float)w, (float)h);
-                            color += trace_ray(primary_ray, primary_ray, XTRACER_SETUP_DEFAULT_MAX_RDEPTH + 1) * sample_scaling;
-						}
-					}
-				}
+                    for (float dofs = 0; dofs < s; ++dofs) {
+                        Ray primary_ray = cam->get_primary_ray(rx, ry, (float)w, (float)h);
+                        color += trace_ray(primary_ray, primary_ray, rdepth + 1) * d;
+				    }
+                }
 
 				tile->write(x, y, color);
 			}
@@ -231,7 +222,7 @@ void Renderer::pass_rtrace()
 			std::cout.setf(std::ios::showpoint);
 			std::cout << "\rRendering "
                       << std::setw(6) << std::setprecision(2)
-                      << progress * one_over_h * 100.f << "%"
+                      << progress / tile_count * 100.f << "%"
                       << " @ " << omp_get_num_threads() << "T" << std::flush;
 		}
 	}

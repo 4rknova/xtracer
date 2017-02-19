@@ -1,5 +1,5 @@
-#ifndef XTRACER_FBLOCK_H_INCLUDED
-#define XTRACER_FBLOCK_H_INCLUDED
+#ifndef XTRACER_TILE_H_INCLUDED
+#define XTRACER_TILE_H_INCLUDED
 
 #include <vector>
 #include <cstddef>
@@ -51,4 +51,4 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
     } /* namespace render */
 } /* namespace xtracer */
 
-#endif /* XTRACER_FBLOCK_H_INCLUDED */
+#endif /* XTRACER_TILE_H_INCLUDED */

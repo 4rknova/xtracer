@@ -1,9 +1,11 @@
-#include "log.h"
+#include <sstream>
 #include "timeutil.h"
 
-void convert_mlseconds(double mlsecs, unsigned int &days,
-					   unsigned int &hours, unsigned int &mins,
-					   float &secs)
+void convert_mlseconds(double mlsecs
+                     , size_t &days
+					 , size_t &hours
+                     , size_t &mins
+					 , float  &secs)
 {
 	unsigned int total_msec = (unsigned int)(mlsecs);
 	unsigned int total_secs = (unsigned int)(mlsecs / 1000.f);
@@ -14,29 +16,21 @@ void convert_mlseconds(double mlsecs, unsigned int &days,
 	secs  = (float)(total_secs % 60) + (((float)total_msec / 1000.f) - (float)total_secs);
 }
 
-void print_time_breakdown(double mlsecs)
+void print_time_breakdown(std::string &str, double mlsecs)
 {
-    unsigned int days = 0;
-	unsigned int hours = 0;
-	unsigned int mins = 0;
-	float secs = 0;
+    size_t d = 0  // days
+         , h = 0  // hours
+	     , m = 0; // minutes
+	float  s = 0; // seconds
 
-	convert_mlseconds(mlsecs, days, hours, mins, secs);
+	convert_mlseconds(mlsecs, d, h, m, s);
 
-	Log::handle().log_message("Total time:");
+    std::stringstream ss;
 
-	if (days  > 0){
-		Log::handle().set_append();
-		Log::handle().log_message(" %i days,", days);
-	}
-	if (hours  > 0) {
-		Log::handle().set_append();
-		Log::handle().log_message(" %i hours,", hours);
-	}
-	if (mins  > 0) {
-		Log::handle().set_append();
-		Log::handle().log_message(" %i mins,", mins);
-	}
-	Log::handle().set_append();
-	Log::handle().log_message(" %f seconds.", secs);
+	if (d > 0)  ss << d <<    "days ";
+	if (h > 0)  ss << h <<   "hours ";
+	if (m > 0)  ss << m << "minutes ";
+	if (s > 0)  ss << s << "seconds ";
+
+    str = ss.str();
 }

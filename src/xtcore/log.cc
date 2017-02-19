@@ -202,7 +202,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 	}
 }
 
-void Log::log(LOGENTRY_TYPE type, const char * msg, ...)
+void Log::post(LOGENTRY_TYPE type, const char * msg, ...)
 {
 	va_list args;
 	va_start(args, msg);
@@ -210,7 +210,7 @@ void Log::log(LOGENTRY_TYPE type, const char * msg, ...)
 	va_end(args);
 }
 
-void Log::log_message(const char *msg, ...)
+void Log::post_message(const char *msg, ...)
 {
 	va_list args;
 	va_start(args, msg);
@@ -218,7 +218,7 @@ void Log::log_message(const char *msg, ...)
 	va_end(args);
 }
 
-void Log::log_error(const char *msg, ...)
+void Log::post_error(const char *msg, ...)
 {
 	va_list args;
 	va_start(args, msg);
@@ -226,7 +226,7 @@ void Log::log_error(const char *msg, ...)
 	va_end(args);
 }
 
-void Log::log_warning(const char *msg, ...)
+void Log::post_warning(const char *msg, ...)
 {
 	va_list args;
 	va_start(args, msg);

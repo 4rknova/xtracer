@@ -30,15 +30,15 @@ int main(int argc, char **argv)
 {
 	// Display usage information.
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
-		Log::handle().log_message("%s", XTRACER_VERSION);
+		Log::handle().post_message("%s", XTRACER_VERSION);
 		return 1;
 	}
 
-	Log::handle().log_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
+	Log::handle().post_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
 
 	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
-		Log::handle().log_message("Usage: %s [option]... scene_file...", argv[0]);
-		Log::handle().log_message("For a complete list of the available options, refer to the man pages.");
+		Log::handle().post_message("Usage: %s [option]... scene_file...", argv[0]);
+		Log::handle().post_message("For a complete list of the available options, refer to the man pages.");
 		return 1;
 	}
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 	if (!scene.load(scene_path.c_str(), modifiers)) {
 
         if (scene.m_cameras.size() == 0) {
-            Log::handle().log_error("no cameras found");
+            Log::handle().post_error("no cameras found");
             return 2;
         }
 
@@ -96,12 +96,14 @@ int main(int argc, char **argv)
 
 		delete renderer;
 
-		print_time_breakdown(timer.get_time_in_mlsec());
 
+        std::string t;
+		print_time_breakdown(t, timer.get_time_in_mlsec());
+        Log::handle().post_message("Total time: %s", t.c_str());
 
         // Export the frame
         {
-		    std::string file, base, sw, sh, sa, random_token;
+		    std::string file, base, extension, filename, sw, sh, sa, random_token;
     		#ifdef _WIN32
 	    		const char path_delim = '\\';
 		    #else
@@ -109,6 +111,7 @@ int main(int argc, char **argv)
     		#endif /* _WIN32 */
 
 	    	path_comp(scene_path, base, file, path_delim);
+	    	path_comp(file, filename, extension, '.');
 		    std::string cam = context.scene->camera;
             if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
@@ -116,12 +119,12 @@ int main(int argc, char **argv)
     			outdir.append(1, path_delim);
     		}
 
-		    file = outdir + file + "_cam-" + cam  + ".png";
-    		Log::handle().log_message("Exporting to %s..", file.c_str());
+		    file = outdir + filename + cam  + ".png";
+    		Log::handle().post_message("Exporting to %s..", file.c_str());
             nimg::Pixmap fb;
             xtracer::render::assemble(fb, context);
     		int res = nimg::io::save::png(file.c_str(), fb);
-            if (res) Log::handle().log_error("Failed to export image file");
+            if (res) Log::handle().post_error("Failed to export image file");
         }
 	}
 

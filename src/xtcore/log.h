@@ -33,10 +33,10 @@ class Log
 		static Log &handle();
 
 		// Logging functions.
-		void log(LOGENTRY_TYPE type, const char * msg, ...);
-		void log_message(const char *msg, ...);
-		void log_error(const char *msg, ...);
-		void log_warning(const char *msg, ...);
+		void post(LOGENTRY_TYPE type, const char * msg, ...);
+		void post_message(const char *msg, ...);
+		void post_error(const char *msg, ...);
+		void post_warning(const char *msg, ...);
 		void rewind(bool clear = false);
 		void max_size(unsigned int size);
 		void set_append();

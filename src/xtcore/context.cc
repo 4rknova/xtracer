@@ -3,7 +3,6 @@
 #define XTRACER_CONTEXT_DEFAULT_WIDTH  800
 #define XTRACER_CONTEXT_DEFAULT_HEIGHT 800
 
-
 namespace xtracer {
     namespace render {
 
@@ -33,8 +32,8 @@ void assemble(nimg::Pixmap &pixmap, const context_t &context)
 
     for (size_t i = 0; i < context.tiles.size(); ++i) {
         const xtracer::render::tile_t *tile = &(context.tiles[i]);
-        for (size_t y = tile->y0(); y <= tile->y1(); ++y) {
-            for (size_t x = tile->x0(); x <= tile->x1(); ++x) {
+        for (size_t y = tile->y0(); y < tile->y1(); ++y) {
+            for (size_t x = tile->x0(); x < tile->x1(); ++x) {
                 tile->read(x, y, col);
                 pixmap.pixel(x, y) = col;
             }
