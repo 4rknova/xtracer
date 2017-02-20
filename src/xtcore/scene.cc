@@ -58,26 +58,6 @@ const char *Scene::source()
 	return m_source.c_str();
 }
 
-ColorRGBf Scene::deserialize_col3(const NCF *node, const ColorRGBf def)
-{
-	ColorRGBf res = def;
-
-	if (node) {
-		const char *r = node->get_property_by_name(XTPROTO_PROP_COL_R);
-		const char *g = node->get_property_by_name(XTPROTO_PROP_COL_G);
-		const char *b = node->get_property_by_name(XTPROTO_PROP_COL_B);
-
-		res = ColorRGBf(
-			r ? (NMath::scalar_t)to_double(r) : def.r(),
-			g ? (NMath::scalar_t)to_double(g) : def.g(),
-			b ? (NMath::scalar_t)to_double(b) : def.b()
-		);
-	}
-
-	return res;
-}
-
-
 void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
@@ -103,49 +83,6 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
         }
     }
 }
-
-NMath::Vector3f Scene::deserialize_vec3(const NCF *node, const NMath::Vector3f def)
-{
-	NMath::Vector3f res = def;
-
-	if (node) {
-		const char *x = node->get_property_by_name(XTPROTO_PROP_CRD_X);
-		const char *y = node->get_property_by_name(XTPROTO_PROP_CRD_Y);
-		const char *z = node->get_property_by_name(XTPROTO_PROP_CRD_Z);
-
-		res = NMath::Vector3f(
-			x ? (NMath::scalar_t)to_double(x) : def.x,
-			y ? (NMath::scalar_t)to_double(y) : def.y,
-			z ? (NMath::scalar_t)to_double(z) : def.z
-		);
-	}
-
-	return res;
-}
-
-NMath::scalar_t Scene::deserialize_numf(const char *val, const NMath::scalar_t def)
-{
-	return val ? (NMath::scalar_t)to_double(val) : def;
-}
-
-bool Scene::deserialize_bool(const char *val, const bool def)
-{
-	if (!val) return false;
-	std::string s = val;
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-	return ( (s == "yes") || (s == "true") ) ? true : false;
-}
-
-std::string Scene::deserialize_cstr(const char *val, const char* def)
-{
-	return val ? val : def;
-}
-
-const char *Scene::source()
-{
-	return m_source.c_str();
-}
-
 
 template<typename T>
 void purge(std::map<std::string, T*> &map)
@@ -499,8 +436,8 @@ unsigned int Scene::create_texture(NCF *p)
 	std::string script_base, script_filename;
 	path_comp(m_source, script_base, script_filename);
 
-    	std::string fname  = xtracer::io::deserialize(p->get_property_by_name(XTPROTO_PROP_SOURCE));
-	std::string filter = xtracer::io::deserialize(p->get_property_by_name(XTPROTO_PROP_FILTERING));
+    std::string fname  = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string filter = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string source = script_base + fname;
 
 	Log::handle().post_message("Loading data from %s", source.c_str());
@@ -517,7 +454,7 @@ unsigned int Scene::create_texture(NCF *p)
 	}
 
   	if      ( filter.empty()
-       	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { texture->set_filtering(xtracer::assets::textures::FILTERING_NEAREST);  }
+   	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { texture->set_filtering(xtracer::assets::textures::FILTERING_NEAREST);  }
 	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { texture->set_filtering(xtracer::assets::textures::FILTERING_BILINEAR); }
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());

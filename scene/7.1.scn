@@ -34,7 +34,7 @@ camera = {
 			y = 1
 		}
 
-        aperture = 15
+        aperture = 10
         flength = 200
 	}
 }
@@ -105,6 +105,7 @@ material = {
 texture = {
 	head = {
 		source = data/head.jpg
+        filtering = bilinear
 	}
 }
 
