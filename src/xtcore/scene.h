@@ -25,6 +25,7 @@ using nimg::ColorRGBf;
 
 using NMath::Geometry;
 using xtracer::assets::ICamera;
+using xtracer::assets::textures::Texture2D;
 
 struct light_t
 {

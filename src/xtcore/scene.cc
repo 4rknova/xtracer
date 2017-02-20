@@ -529,7 +529,8 @@ unsigned int Scene::create_texture(NCF *p)
 	std::string script_base, script_filename;
 	path_comp(m_source, script_base, script_filename);
 
-    std::string fname = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+    std::string fname  = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string source = script_base + fname;
 
 	Log::handle().post_message("Loading data from %s", source.c_str());
@@ -544,6 +545,15 @@ unsigned int Scene::create_texture(NCF *p)
 
 		texture->load(tex);
 	}
+
+    if      ( filter.empty()
+          || !filter.compare(XTPROTO_LTRL_NEAREST )) { texture->set_filtering(xtracer::assets::textures::FILTERING_NEAREST);  }
+    else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { texture->set_filtering(xtracer::assets::textures::FILTERING_BILINEAR); }
+    else {
+		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
+        delete texture;
+        return 3;
+    }
 
 	// Destroy the old texture from the list if it exists.
 	unsigned int res = destroy_texture(p->get_name());

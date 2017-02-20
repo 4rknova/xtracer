@@ -5,12 +5,12 @@
 namespace nimg {
     namespace sample {
 
-ColorRGBAf linear(const Pixmap &map, double u, double v)
+ColorRGBAf nearest(const Pixmap &map, double u, double v)
 {
 	u = u < 0 ? 0 : (u > 1 ? u - floor(u) : u);
 	v = v < 0 ? 0 : (v > 1 ? v - floor(v) : v);
 
-	size_t x = (size_t)(u * (float)map.width() );
+	size_t x = (size_t)(u * (float)map.width());
 	size_t y = (size_t)(v * (float)map.height());
 
 	return map.pixel_ro(x, y);

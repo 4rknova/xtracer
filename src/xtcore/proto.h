@@ -18,6 +18,13 @@
 #define XTPROTO_PROP_COL_B			"b"					/* scalar_t   */			/* Color's blue component */
 #define XTPROTO_PROP_COL_A			"a"					/* scalar_t   */			/* Color's alpha component */
 
+#define XTPROTO_PROP_TOP            "top"               /* string     */            /* Cubemap face */
+#define XTPROTO_PROP_BOTTOM         "bottom"            /* string     */            /* Cubemap face */
+#define XTPROTO_PROP_LEFT           "left"              /* string     */            /* Cubemap face */
+#define XTPROTO_PROP_RIGHT          "right"             /* string     */            /* Cubemap face */
+#define XTPROTO_PROP_FRONT          "front"             /* string     */            /* Cubemap face */
+#define XTPROTO_PROP_BACK           "back"              /* string     */            /* Cubemap face */
+
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */			/* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */			/* Default value */
 #define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */			/* Translation */
@@ -42,6 +49,10 @@
 #define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */			/* Transparency ratio */
 #define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */			/* Index of refraction */
 #define XTPROTO_PROP_IPD			"ipd"				/* scalar_t   */			/* Inter-Pupillary Distance */
+
+#define XTPROTO_PROP_FILTERING      "filtering"         /* string     */            /* Texture filtering type */
+#define XTPROTO_LTRL_NEAREST        "nearest"           /* string     */            /* Texture filtering, nearest */
+#define XTPROTO_LTRL_BILINEAR       "bilinear"          /* string     */            /* Texture filtering, bilinear */
 
 #define XTPROTO_LTRL_EMISSIVE		"emissive"  		/* string     */			/* BRDF: Emissive */
 #define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */			/* BRDF: Lambert */
@@ -73,7 +84,7 @@
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */			/* Material id */
 #define XTPROTO_PROP_OBJ_TEX		"texture"			/* asset_id_t */			/* Texture id */
 
-#define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A		  */			/* Configuration node */
+#define XTPROTO_NODE_CUBEMAP    	"cubemap"			/* N/A        */			/* Cubemap */
 #define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */			/* Resource node */
 #define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */			/* Resource node */
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */			/* Resource node */

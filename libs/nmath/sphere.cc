@@ -30,7 +30,6 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 	}
 #endif
 
-	// We use the algebraic solution
 	scalar_t b = 2 * dot(ray.origin - origin, ray.direction);
 	scalar_t c = dot(origin, origin) + dot(ray.origin, ray.origin) + 2 * dot(-origin, ray.origin) - radius * radius;
 

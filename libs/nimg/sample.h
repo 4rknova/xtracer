@@ -7,8 +7,8 @@
 namespace nimg {
     namespace sample {
 
-ColorRGBAf   linear(const Pixmap &map, double u, double v);
-ColorRGBAf bilinear(const Pixmap &map, double u, double v);
+ColorRGBAf nearest  (const Pixmap &map, double u, double v);
+ColorRGBAf bilinear (const Pixmap &map, double u, double v);
 
     } /* namespace sample */
 } /* namespace nimg */
