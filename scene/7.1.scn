@@ -20,147 +20,51 @@ camera = {
 
 		position = {
 			x = 0
-			y = 0
-			z = 0.8
+			y = 110
+			z = 250
 		}
 
 		target = {
 			x = 0
-			y = 0
-			z = 0
+			y = 90
+			z = 30
 		}
 
 		up = {
 			y = 1
 		}
-	}
 
-	cam2 = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = -0.35
-			y = 0.1
-			z = 0.65
-		}
-
-		target = {
-			x = 0
-			y = 0
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
-	}
-
-	cam3 = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = 0.35
-			y = 0.1
-			z = 0.65
-		}
-
-		target = {
-			x = 0
-			y = 0
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
-	}
-
-	cam4 = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = 0
-			y = -0.3
-			z = 0.8
-		}
-
-		target = {
-			x = 0
-			y = 0
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
-	}
-
-	cam5 = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = 0
-			y = 0.3
-			z = 0.8
-		}
-
-		target = {
-			x = 0
-			y = 0
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
+        aperture = 15
+        flength = 200
 	}
 }
 
 geometry = {
 	head = {
 		type = mesh
-		source = data/head/head.obj
-	}
-}
+		source = data/head.obj
 
-geometry = {
-	satl = {
-		type = point
+        scale = {
+            x = 300.0
+            y = 300.0
+            z = 300.0
+        }
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 50
 
 		position = {
-			x = 0
-			y = 0
-			z = 80
+    		x = 88
+			y = 15
+			z = 170
 		}
 
 		intensity = {
-			r = .71
-			g = .71
-			b = .71
-		}
-	}
-
-	sat2 = {
-		type = point
-
-		position = {
-			x = -300
-			y = 0
-			z = 150
-		}
-
-		intensity = {
-			r = .51
-			g = .51
-			b = .51
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
 }
@@ -168,10 +72,6 @@ geometry = {
 material = {
 	head = {
 		type = blinn_phong
-
-		k_diffuse =  0.75
-		k_specular = 0.25
-		k_exponent = 128
 
 		diffuse = {
 			r = 1
@@ -185,7 +85,10 @@ material = {
 			b = 1
 		}
 
-		reflectance = 0.07
+		reflectance = 0.1
+		k_diffuse  = 0.9
+		k_specular = 0.1
+		k_exponent = 30
 	}
 
     light = {
@@ -201,7 +104,7 @@ material = {
 
 texture = {
 	head = {
-		source = data/head/lambertian.jpg
+		source = data/head.jpg
 	}
 }
 
@@ -214,11 +117,6 @@ object = {
 
     l0 = {
         geometry = sat1
-        material = light
-    }
-
-    l1 = {
-        geometry = sat2
         material = light
     }
 }

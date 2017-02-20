@@ -15,6 +15,7 @@
 #include <nmesh/mesh.h>
 #include <nimg/checkerboard.h>
 #include "proto.h"
+#include "parseutil.h"
 #include "log.h"
 #include "scene.h"
 #include "cam_perspective.h"
@@ -52,21 +53,9 @@ Scene::~Scene()
 	release();
 }
 
-NMath::Vector2f Scene::deserialize_tex2(const NCF *node, const NMath::Vector2f def)
+const char *Scene::source()
 {
-	NMath::Vector2f res = def;
-
-	if (node) {
-		const char *u = node->get_property_by_name(XTPROTO_PROP_CRD_U);
-		const char *v = node->get_property_by_name(XTPROTO_PROP_CRD_V);
-
-		res = NMath::Vector2f(
-			u ? (NMath::scalar_t)to_double(u) : def.x,
-			v ? (NMath::scalar_t)to_double(v) : def.y
-		);
-	}
-
-	return res;
+	return m_source.c_str();
 }
 
 ColorRGBf Scene::deserialize_col3(const NCF *node, const ColorRGBf def)
@@ -163,7 +152,7 @@ void purge(std::map<std::string, T*> &map)
 {
 	if(!map.empty()) {
 		for (typename std::map<std::string, T*>::iterator it = map.begin(); it != map.end(); ++it) {
-//			Log::handle().post_message("Releasing %s..", (*it).first.c_str());
+			Log::handle().post_debug("Releasing %s..", (*it).first.c_str());
 			delete (*it).second;
 		}
 		map.clear();
@@ -188,30 +177,11 @@ void Scene::release()
 	purge(m_objects);
 }
 
-unsigned int Scene::destroy_camera(const char *name)
-{
-	return purge(m_cameras, name);
-}
-
-unsigned int Scene::destroy_material(const char *name)
-{
-	return purge(m_materials, name);
-}
-
-unsigned int Scene::destroy_texture(const char *name)
-{
-	return purge(m_textures, name);
-}
-
-unsigned int Scene::destroy_geometry(const char *name)
-{
-	return purge(m_geometry, name);
-}
-
-unsigned int Scene::destroy_object(const char *name)
-{
-	return purge(m_objects, name);
-}
+unsigned int Scene::destroy_camera   (const char *name) { return purge(m_cameras  , name); }
+unsigned int Scene::destroy_material (const char *name) { return purge(m_materials, name); }
+unsigned int Scene::destroy_texture  (const char *name) { return purge(m_textures , name); }
+unsigned int Scene::destroy_geometry (const char *name) { return purge(m_geometry , name); }
+unsigned int Scene::destroy_object   (const char *name) { return purge(m_objects  , name); }
 
 unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 {
@@ -254,10 +224,10 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 
 	unsigned int count = 0;
 
-	m_source   = deserialize_cstr(filename);
+	m_source   = xtracer::io::deserialize_cstr(filename);
 	m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
-	m_ambient  = deserialize_col3(root.get_group_by_name(XTPROTO_PROP_IAMBN))
-			   * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN));
+	m_ambient  = xtracer::io::deserialize_col3(root.get_group_by_name(XTPROTO_PROP_IAMBN))
+			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN));
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
@@ -278,11 +248,11 @@ unsigned int Scene::load(const char *filename, std::list<std::string> modifiers)
 			for (unsigned int i = 0; i < count; ++i) {
 				NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
 
-				     if (!(*it).compare(XTPROTO_NODE_CAMERA   )) create_camera(lnode);
-				else if (!(*it).compare(XTPROTO_NODE_MATERIAL )) create_material(lnode);
-				else if (!(*it).compare(XTPROTO_NODE_TEXTURE  )) create_texture(lnode);
-				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY )) create_geometry(lnode);
-			    else if (!(*it).compare(XTPROTO_NODE_OBJECT   )) create_object(lnode);
+				     if (!(*it).compare(XTPROTO_NODE_CAMERA   )) create_camera   (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_MATERIAL )) create_material (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_TEXTURE  )) create_texture  (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY )) create_geometry (lnode);
+			        else if (!(*it).compare(XTPROTO_NODE_OBJECT   )) create_object   (lnode);
 			}
 		}
 	}
@@ -322,17 +292,17 @@ unsigned int Scene::create_camera(NCF *p)
 {
     if (!p) return 1;
 
-    std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+    std::string type = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
     ICamera *camera = NULL;
 
     if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) {
-	    NMath::Vector3f pos     = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-    	NMath::Vector3f target  = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TARGET));
-    	NMath::Vector3f up      = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_UP));
-	    NMath::scalar_t fov     = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
-    	NMath::scalar_t flength = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
-    	NMath::scalar_t ap      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
+	NMath::Vector3f pos     = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+    	NMath::Vector3f target  = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TARGET));
+    	NMath::Vector3f up      = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_UP));
+	NMath::scalar_t fov     = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
+    	NMath::scalar_t flength = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
+    	NMath::scalar_t ap      = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
 
 	    camera = new (std::nothrow) CamPerspective();
         ((CamPerspective *)camera)->position = pos;
@@ -343,9 +313,9 @@ unsigned int Scene::create_camera(NCF *p)
         ((CamPerspective *)camera)->aperture = ap;
     }
     else if (!type.compare(XTPROTO_LTRL_CAM_ODS)) {
-	    NMath::Vector3f pos = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-	    NMath::Vector3f orn = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
-	    NMath::scalar_t ipd = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
+	    NMath::Vector3f pos = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+	    NMath::Vector3f orn = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
+	    NMath::scalar_t ipd = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
 
         camera = new (std::nothrow) CamODS();
         ((CamODS *)camera)->position    = pos;
@@ -353,8 +323,8 @@ unsigned int Scene::create_camera(NCF *p)
         ((CamODS *)camera)->ipd         = ipd;
     }
     else if (!type.compare(XTPROTO_LTRL_CAM_ERP)) {
-	    NMath::Vector3f pos = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-	    NMath::Vector3f orn = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
+	    NMath::Vector3f pos = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+	    NMath::Vector3f orn = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
 
         camera = new (std::nothrow) CamERP();
         ((CamERP *)camera)->position    = pos;
@@ -380,30 +350,30 @@ unsigned int Scene::create_geometry(NCF *p)
 
 	Geometry *geometry = NULL;
 
-	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+	std::string type = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		geometry = new (std::nothrow) Plane;
 
 		if (!geometry) return 2;
 
-		((Plane *)geometry)->normal   = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_NORMAL));
-		((Plane *)geometry)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+		((Plane *)geometry)->normal   = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_NORMAL));
+		((Plane *)geometry)->distance = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		geometry = new (std::nothrow) Sphere;
 
 		if (!geometry) return 2;
 
-		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-		((Sphere *)geometry)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
+		((Sphere *)geometry)->origin = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+		((Sphere *)geometry)->radius = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
     else if (!type.compare(XTPROTO_LTRL_POINT)) {
         geometry = new (std::nothrow) Sphere;
 
         if (!geometry) return 2;
 
-		((Sphere *)geometry)->origin = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+		((Sphere *)geometry)->origin = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
 		((Sphere *)geometry)->radius = 0;
     }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
@@ -413,8 +383,8 @@ unsigned int Scene::create_geometry(NCF *p)
 
 		for (unsigned int i = 0; i < 3; ++i) {
 			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
-			((Triangle *)geometry)->v[i]  = deserialize_vec3(vnode);
-			((Triangle *)geometry)->tc[i] = deserialize_tex2(vnode);
+			((Triangle *)geometry)->v[i]  = xtracer::io::deserialize_vec3(vnode);
+			((Triangle *)geometry)->tc[i] = xtracer::io::deserialize_tex2(vnode);
 		}
 	}
 	// - Mesh
@@ -441,17 +411,17 @@ unsigned int Scene::create_geometry(NCF *p)
 		}
 
 		if (p->query_group(XTPROTO_PROP_ROTATION)) {
-			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ROTATION));
+			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ROTATION));
 			NMesh::Mutator::rotate(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_SCALE)) {
-			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_SCALE));
+			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_SCALE));
 			NMesh::Mutator::scale(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
-			NMath::Vector3f v = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TRANSLATION));
+			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TRANSLATION));
 			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
 		}
 
@@ -465,8 +435,8 @@ unsigned int Scene::create_geometry(NCF *p)
 	}
 
 	geometry->uv_scale = Vector2f(
-		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
-	    deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
+		xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
+		xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
 	);
 
 	geometry->calc_aabb();
@@ -488,7 +458,7 @@ unsigned int Scene::create_material(NCF *p)
 
 	if (!material) return 2;
 
-	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+	std::string type = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) material->type = MATERIAL_LAMBERT;
 	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) material->type = MATERIAL_PHONG;
@@ -500,17 +470,17 @@ unsigned int Scene::create_material(NCF *p)
 		return 1;
 	}
 
-	material->ambient      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IAMBN));
-	material->specular     = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
-	material->diffuse      = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
-	material->emissive     = deserialize_col3(p->get_group_by_name(XTPROTO_PROP_EMISSIVE));
-	material->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
-	material->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
-	material->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
-	material->roughness    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
-	material->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-	material->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
-	material->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+	material->ambient      = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IAMBN));
+	material->specular     = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
+	material->diffuse      = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
+	material->emissive     = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_EMISSIVE));
+	material->kdiff        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
+	material->kspec        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
+	material->ksexp        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
+	material->roughness    = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
+	material->transparency = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
+	material->reflectance  = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
+	material->ior          = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
 
 	unsigned int res = destroy_material(p->get_name());
 	m_materials[p->get_name()] = material;
@@ -529,8 +499,8 @@ unsigned int Scene::create_texture(NCF *p)
 	std::string script_base, script_filename;
 	path_comp(m_source, script_base, script_filename);
 
-    std::string fname  = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
-	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
+    	std::string fname  = xtracer::io::deserialize(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string filter = xtracer::io::deserialize(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string source = script_base + fname;
 
 	Log::handle().post_message("Loading data from %s", source.c_str());
@@ -546,14 +516,14 @@ unsigned int Scene::create_texture(NCF *p)
 		texture->load(tex);
 	}
 
-    if      ( filter.empty()
-          || !filter.compare(XTPROTO_LTRL_NEAREST )) { texture->set_filtering(xtracer::assets::textures::FILTERING_NEAREST);  }
-    else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { texture->set_filtering(xtracer::assets::textures::FILTERING_BILINEAR); }
-    else {
+  	if      ( filter.empty()
+       	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { texture->set_filtering(xtracer::assets::textures::FILTERING_NEAREST);  }
+	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { texture->set_filtering(xtracer::assets::textures::FILTERING_BILINEAR); }
+	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
-        delete texture;
-        return 3;
-    }
+        	delete texture;
+        	return 3;
+	}
 
 	// Destroy the old texture from the list if it exists.
 	unsigned int res = destroy_texture(p->get_name());
@@ -574,7 +544,7 @@ unsigned int Scene::create_object(NCF *p)
 	{
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
 		if (m_geometry.find(n) != m_geometry.end()) {
-			object->geometry = deserialize_cstr(n);
+			object->geometry = xtracer::io::deserialize_cstr(n);
 		}
 		else {
 			Log::handle().post_warning("At object: %s, geometry %s does not exist.", p->get_name(), n);
@@ -585,7 +555,7 @@ unsigned int Scene::create_object(NCF *p)
 
 	{
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
-		if (m_materials.find(n) != m_materials.end()) object->material = deserialize_cstr(n);
+		if (m_materials.find(n) != m_materials.end()) object->material = xtracer::io::deserialize_cstr(n);
 		else {
 			Log::handle().post_warning("At object: %s, material %s does not exist.", p->get_name(), n);
 			delete object;
@@ -597,7 +567,7 @@ unsigned int Scene::create_object(NCF *p)
 		const char *n = p->get_property_by_name(XTPROTO_PROP_OBJ_TEX);
 
 		if (n) {
-			if (m_textures.find(n) != m_textures.end()) object->texture = deserialize_cstr(n);
+			if (m_textures.find(n) != m_textures.end()) object->texture = xtracer::io::deserialize_cstr(n);
 			else {
 				Log::handle().post_warning("At object: %s, texture %s does not exist.", p->get_name(), n);
 				delete object;

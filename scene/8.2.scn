@@ -45,6 +45,10 @@ texture = {
 	checker = {
 		source =
 	}
+
+    dino = {
+        source = <data>/TrexColor01152015.jpg
+    }
 }
 
 geometry = {
@@ -181,6 +185,7 @@ object = {
 	m0 = {
 		geometry = m0
 		material = m1
+        texture = dino
 	}
 
 	floor = {

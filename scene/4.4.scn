@@ -1,0 +1,153 @@
+# Xtracer 2
+
+data  = ./data
+
+title = Cornell box
+descr = <title> variant.
+versn = 0.1
+
+# The scene cameras.
+camera = {
+	# The front camera.
+	default = {
+        type = thin-lens
+
+		# Field of view.
+		fov = 45
+
+		# Camera position.
+		position = {
+			x = 1000.0
+			y = 300.0
+			z = 1000.0
+		}
+
+		# Target.
+		# This is equal to the direction (0, 1, 0)
+		# as defined in the original data.
+		target = {
+			x = 0.0
+			y = 200.0
+			z = 0.0
+		}
+
+		# Up vector.
+		up = {
+			x = 0
+			y = 1
+			z = 0
+		}
+	}
+}
+
+# The scene materials
+material = {
+	matte = {
+        type = phong
+
+        diffuse = {
+            r = 1
+            g = 1
+            b = 1
+        }
+
+        specular = {
+            r = 1
+            g = 1
+            b = 1
+        }
+
+        reflectance = 1
+        k_diffuse = 0.95
+        k_specular = 0.05
+        k_exponent = 5000
+	}
+
+    floor = {
+        type = phong
+
+        diffuse = {
+            r = 0.67843
+            g = 0.917647
+            b = 0.917647
+        }
+
+        specular = {
+            r = 1
+            g = 1
+            b = 1
+        }
+
+        reflectance = 1
+        k_diffuse = 0.5
+        k_specular = 0.5
+        k_exponent = 5000
+    }
+
+    light_source = {
+        type = emissive
+
+        emissive = {
+            r = 1
+            g = 1
+            b = 1
+        }
+    }
+}
+
+# The scene geometry
+geometry = {
+	floor = {
+		type = plane
+
+        normal = {
+            y = 1
+        }
+	}
+
+    light = {
+        type = sphere
+        radius = 50.
+
+        position = {
+            x = 500
+            z = 500
+            y = 500
+        }
+    }
+
+	model = {
+		type   = mesh
+		source = <data>/Dragon_2.obj
+
+		rotation = {
+			z = -2.1
+			x = -1.57079632679
+		}
+
+		scale = {
+			x = 2.5
+			y = 2.5
+			z = 2.5
+		}
+	}
+}
+
+# The scene objects
+object = {
+	# Floor
+	floor = {
+		geometry = floor
+		material = floor
+	}
+
+	model = {
+		geometry = model
+		material = matte
+	}
+
+    light = {
+        geometry = light
+        material = light_source
+    }
+}

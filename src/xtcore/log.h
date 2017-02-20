@@ -13,9 +13,10 @@
 
 enum LOGENTRY_TYPE
 {
-	LOGENTRY_MESSAGE,
-	LOGENTRY_WARNING,
-	LOGENTRY_ERROR
+      LOGENTRY_DEBUG
+    , LOGENTRY_MESSAGE
+	, LOGENTRY_WARNING
+	, LOGENTRY_ERROR
 };
 
 class LogEntry
@@ -34,6 +35,7 @@ class Log
 
 		// Logging functions.
 		void post(LOGENTRY_TYPE type, const char * msg, ...);
+		void post_debug(const char *msg, ...);
 		void post_message(const char *msg, ...);
 		void post_error(const char *msg, ...);
 		void post_warning(const char *msg, ...);
@@ -69,8 +71,9 @@ class Log
 		void pulog(LOGENTRY_TYPE type, const char *msg, va_list args);
 
 		unsigned int m_max_log_size;
-		bool m_flag_echo;
-		bool m_flag_append;
+		bool         m_flag_echo;
+		bool         m_flag_append;
+        size_t       m_level;
 
 		std::vector<LogEntry*> m_log;
 		static Log m_log_manager;

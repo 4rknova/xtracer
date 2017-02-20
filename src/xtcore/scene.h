@@ -16,13 +16,6 @@
 
 using nimg::ColorRGBf;
 
-#define VALUE_DEFAULT_NUMF (0)
-#define VALUE_DEFAULT_TEX2 (NMath::Vector2f(0.f,0.f))
-#define VALUE_DEFAULT_VEC3 (NMath::Vector3f(0.f,0.f,0.f))
-#define VALUE_DEFAULT_COL3 (ColorRGBf(0.f,0.f,0.f))
-#define VALUE_DEFAULT_CSTR ("")
-#define VALUE_DEFAULT_BOOL false
-
 using NMath::Geometry;
 using xtracer::assets::ICamera;
 using xtracer::assets::textures::Texture2D;
@@ -41,13 +34,6 @@ class Scene
 		Scene &operator =(const Scene &);
 
         void get_light_sources(std::vector<light_t> &lights);
-
-		ColorRGBf deserialize_col3(const NCF *node, const ColorRGBf def = VALUE_DEFAULT_COL3);
-		NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def = VALUE_DEFAULT_TEX2);
-		NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def = VALUE_DEFAULT_VEC3);
-		NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = VALUE_DEFAULT_NUMF);
-		std::string     deserialize_cstr(const char *val, const char*           def = VALUE_DEFAULT_CSTR);
-		bool            deserialize_bool(const char *val, const bool            def = VALUE_DEFAULT_BOOL);
 
 	public:
 		Scene();

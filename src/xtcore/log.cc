@@ -13,10 +13,11 @@ LogEntry::LogEntry()
 // Singleton.
 Log Log::m_log_manager;
 
-Log::Log() :
-	m_max_log_size(0),
-	m_flag_echo(true),
-	m_flag_append(false)
+Log::Log()
+	: m_max_log_size(0)
+	, m_flag_echo(true)
+    , m_flag_append(false)
+    , m_level(LOGENTRY_MESSAGE)
 {}
 
 Log::~Log()
@@ -44,29 +45,30 @@ int Log::dump(const char* fpath)
 	std::ofstream file;
 	file.open(fpath);
 
-	if (!file.is_open())
-		return 1;
+	if (!file.is_open()) return 1;
 
 	std::vector<LogEntry *>::iterator it;
 
 	for (it = m_log.begin(); it != m_log.end(); it++) {
-		switch ((*it)->p_type) {
-			case LOGENTRY_MESSAGE:
-				break;
-			case LOGENTRY_WARNING:
-				file << "Warning: ";
-				break;
-			case LOGENTRY_ERROR:
-				file << "Error: ";
-				break;
-		}
+   		switch ((*it)->p_type) {
+            case LOGENTRY_DEBUG:
+                file << "Debug: ";
+                break;
+    		case LOGENTRY_MESSAGE:
+    		    break;
+    		case LOGENTRY_WARNING:
+    			file << "Warning: ";
+    			break;
+    		case LOGENTRY_ERROR:
+    			file << "Error: ";
+    			break;
+    	}
 
-		file << (*it)->p_msg << std::endl;
-		file.flush();
+        file << (*it)->p_msg << std::endl;
+        file.flush();
 	}
 
 	file.close();
-
 	return 0;
 }
 
@@ -94,6 +96,7 @@ bool Log::echo() const
 
 void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 {
+    if (type < m_level) return;
 
 	// Store the length of the passed in string.
 	unsigned int msg_size = strlen(msg);
@@ -182,6 +185,9 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 		}
 
 		switch ((*it)->p_type) {
+			case LOGENTRY_DEBUG:
+                std::cout << "Debug: ";
+                break;
 			case LOGENTRY_MESSAGE:
 				break;
 			case LOGENTRY_WARNING:
@@ -207,6 +213,14 @@ void Log::post(LOGENTRY_TYPE type, const char * msg, ...)
 	va_list args;
 	va_start(args, msg);
 	pulog(type, msg, args);
+	va_end(args);
+}
+
+void Log::post_debug(const char *msg, ...)
+{
+	va_list args;
+	va_start(args, msg);
+	pulog(LOGENTRY_DEBUG, msg, args);
 	va_end(args);
 }
 
