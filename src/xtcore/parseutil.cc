@@ -94,6 +94,32 @@ NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def)
 	return res;
 }
 
+int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubemap &data)
+{
+    if (!p) return 1;
+
+    NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
+
+    std::string posx = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
+    std::string posy = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
+    std::string posz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
+    std::string negx = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
+    std::string negy = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+    std::string negz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+
+    std::string base, file, fsource = source;
+	Util::String::path_comp(fsource, base, file);
+
+    data.load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
+    data.load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
+    data.load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
+    data.load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
+    data.load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
+    data.load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
+
+    return 0;
+}
+
 xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
 {
     if (!p) return 0;

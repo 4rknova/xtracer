@@ -122,8 +122,8 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	// Get the material & texture.
     std::string &mat_id = m_context->scene->m_objects[obj]->material;
     std::string &tex_id = m_context->scene->m_objects[obj]->texture;
-	Material *mat = m_context->scene->m_materials[mat_id];
-	std::map<std::string, Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
+	xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
+	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -263,7 +263,7 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 			}
 
             std::string &mat_id = m_context->scene->m_objects[obj]->material;
-            Material *mat = m_context->scene->m_materials[mat_id];
+            xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -275,7 +275,8 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 		}
 	}
 
-	return ColorRGBf(0, 0, 0);
+	// return ColorRGBf(0, 0, 0);
+    return m_context->scene->sample_cubemap(ray.direction);
 }
 
 ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int depth,
@@ -287,9 +288,10 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// check if the depth limit was reached
 	if (!depth)	return color;
 
-	Object *mobj = m_context->scene->m_objects[obj];
-	std::map<std::string, Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
-	std::map<std::string, Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
+	xtracer::assets::Object *mobj = m_context->scene->m_objects[obj];
+
+	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
+	std::map<std::string, xtracer::assets::Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
          if (it_mat == m_context->scene->m_materials.end()) return color;
     else if ((*it_mat).second->type == xtracer::assets::MATERIAL_EMISSIVE) return nimg::ColorRGBf(1,1,1);
@@ -299,7 +301,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	NMath::Vector3f p = info.point;
 
     std::string &mat_id = mobj->material;
-	Material *mat = m_context->scene->m_materials[mat_id];
+	xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
 
 	// ambient
 	color = mat->ambient * m_context->scene->ambient();
@@ -336,13 +338,13 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			IntInfo res;
 			bool test = m_context->scene->intersection(sray, res, obj);
 
-            std::map<std::string, Object*>::iterator oit = m_context->scene->m_objects.find(obj);
-            std::map<std::string, Object*>::iterator oet = m_context->scene->m_objects.end();
+            std::map<std::string, xtracer::assets::Object*>::iterator oit = m_context->scene->m_objects.find(obj);
+            std::map<std::string, xtracer::assets::Object*>::iterator oet = m_context->scene->m_objects.end();
 
             if (oit == oet) continue;
 
-            std::map<std::string, Geometry*>::iterator git = m_context->scene->m_geometry.find((*oit).second->geometry);
-            std::map<std::string, Geometry*>::iterator get = m_context->scene->m_geometry.end();
+            std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_context->scene->m_geometry.find((*oit).second->geometry);
+            std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_context->scene->m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 

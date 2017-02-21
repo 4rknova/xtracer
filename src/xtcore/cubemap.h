@@ -6,7 +6,6 @@
 
 namespace xtracer {
     namespace assets {
-        namespace textures {
 
 enum CUBEMAP_FACE
 {
@@ -29,7 +28,6 @@ class Cubemap
     Texture2D m_textures[6]; // The 6 faces for the cubemap
 };
 
-        } /* namespace textures */
     } /* namespace assets */
 } /* namespace xtracer */
 

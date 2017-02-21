@@ -1,7 +1,7 @@
 #include "nimg/img.h"
 #include "nimg/sample.h"
 #include "texture.h"
-
+#include <cstdio>
 namespace xtracer {
     namespace assets {
 

@@ -62,16 +62,16 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
 
-    std::map<std::string, Object*>::iterator oit = m_objects.begin();
-    std::map<std::string, Object*>::iterator oet = m_objects.end();
+    std::map<std::string, xtracer::assets::Object*>::iterator oit = m_objects.begin();
+    std::map<std::string, xtracer::assets::Object*>::iterator oet = m_objects.end();
 
     for(; oit != oet; ++oit) {
         if (!(*oit).second) continue;
 
-        std::map<std::string, Geometry*>::iterator git = m_geometry.find((*oit).second->geometry);
-        std::map<std::string, Geometry*>::iterator get = m_geometry.end();
-        std::map<std::string, Material*>::iterator mit = m_materials.find((*oit).second->material);
-        std::map<std::string, Material*>::iterator met = m_materials.end();
+        std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_geometry.find((*oit).second->geometry);
+        std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_geometry.end();
+        std::map<std::string, xtracer::assets::Material*>::iterator mit = m_materials.find((*oit).second->material);
+        std::map<std::string, xtracer::assets::Material*>::iterator met = m_materials.end();
 
         if (git != get && mit != met) {
             if (!(*mit).second->is_emissive()) continue;
@@ -120,6 +120,11 @@ int Scene::destroy_texture  (const char *name) { return purge(m_textures , name)
 int Scene::destroy_geometry (const char *name) { return purge(m_geometry , name); }
 int Scene::destroy_object   (const char *name) { return purge(m_objects  , name); }
 
+nimg::ColorRGBAf Scene::sample_cubemap(const NMath::Vector3f &direction) const
+{
+    return m_cubemap.sample(direction);
+}
+
 int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 {
     if(!filename) return 1;
@@ -164,6 +169,8 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 	m_ambient  = xtracer::io::deserialize_col3(root.get_group_by_name(XTPROTO_PROP_IAMBN))
 			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN));
 
+    xtracer::io::deserialize_cubemap(m_source.c_str(), &root, m_cubemap);
+
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
 	sections.push_back(XTPROTO_NODE_GEOMETRY);
@@ -182,12 +189,13 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 			Log::handle().post_message("Processing section: %s", (*it).c_str());
 			for (size_t i = 0; i < count; ++i) {
 				NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
+                Log::handle().post_debug("Loading: %s", lnode->get_name());
 
-				     if (!(*it).compare(XTPROTO_NODE_CAMERA   )) create_camera   (lnode);
-				else if (!(*it).compare(XTPROTO_NODE_MATERIAL )) create_material (lnode);
-				else if (!(*it).compare(XTPROTO_NODE_TEXTURE  )) create_texture  (lnode);
-				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY )) create_geometry (lnode);
-			    else if (!(*it).compare(XTPROTO_NODE_OBJECT   )) create_object   (lnode);
+				     if (!(*it).compare(XTPROTO_NODE_CAMERA  )) create_camera   (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_MATERIAL)) create_material (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_TEXTURE )) create_texture  (lnode);
+				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY)) create_geometry (lnode);
+			    else if (!(*it).compare(XTPROTO_NODE_OBJECT  )) create_object   (lnode);
 			}
 		}
 	}
@@ -196,10 +204,8 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 	return 0;
 }
 
-
 void Scene::create_camera(NCF *p)
 {
-    Log::handle().post_debug("Loading: %s", p->get_name());
     const char * name = p->get_name();
     xtracer::assets::ICamera *data = xtracer::io::deserialize_camera(m_source.c_str(), p);
     if (!data) {
@@ -212,7 +218,6 @@ void Scene::create_camera(NCF *p)
 
 void Scene::create_material(NCF *p)
 {
-    Log::handle().post_debug("Loading: %s", p->get_name());
     const char * name = p->get_name();
     xtracer::assets::Material *data = xtracer::io::deserialize_material(m_source.c_str(), p);
     if (!data) {
@@ -225,7 +230,6 @@ void Scene::create_material(NCF *p)
 
 void Scene::create_texture(NCF *p)
 {
-    Log::handle().post_debug("Loading: %s", p->get_name());
     const char * name = p->get_name();
     xtracer::assets::Texture2D *data = xtracer::io::deserialize_texture(m_source.c_str(), p);
     if (!data) {
@@ -238,7 +242,6 @@ void Scene::create_texture(NCF *p)
 
 void Scene::create_geometry(NCF *p)
 {
-    Log::handle().post_debug("Loading: %s", p->get_name());
     const char * name = p->get_name();
     xtracer::assets::Geometry *data = xtracer::io::deserialize_geometry(m_source.c_str(), p);
     if (!data) {
@@ -251,7 +254,6 @@ void Scene::create_geometry(NCF *p)
 
 void Scene::create_object(NCF *p)
 {
-    Log::handle().post_debug("Loading: %s", p->get_name());
     const char * name = p->get_name();
     xtracer::assets::Object *data = xtracer::io::deserialize_object(m_source.c_str(), p);
     if (!data) {
@@ -272,10 +274,10 @@ void Scene::ambient(const ColorRGBf &ambient)
 	m_ambient = ambient;
 }
 
-ICamera *Scene::get_camera()
+xtracer::assets::ICamera *Scene::get_camera()
 {
-    std::map<std::string, ICamera *>::iterator et = m_cameras.end();
-    std::map<std::string, ICamera *>::iterator ft;
+    std::map<std::string, xtracer::assets::ICamera *>::iterator et = m_cameras.end();
+    std::map<std::string, xtracer::assets::ICamera *>::iterator ft;
 
     if (camera.empty()) {
         ft = m_cameras.find(XTPROTO_PROP_DEFAULT);
@@ -294,7 +296,7 @@ bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::strin
 {
 	IntInfo test, res;
 
-	std::map<std::string, Object *>::iterator it;
+	std::map<std::string, xtracer::assets::Object *>::iterator it;
 	for (it = m_objects.begin(); it != m_objects.end(); it++) {
 		// test all the objects and find the closest intersection
         xtracer::assets::Geometry *geom = m_geometry[((*it).second)->geometry.c_str()];

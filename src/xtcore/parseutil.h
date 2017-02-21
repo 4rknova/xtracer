@@ -9,6 +9,7 @@
 #include "texture.h"
 #include "geometry.h"
 #include "object.h"
+#include "cubemap.h"
 
 namespace xtracer {
     namespace io {
@@ -33,6 +34,8 @@ xtracer::assets::Material  *deserialize_material (const char *source, const NCF 
 xtracer::assets::Texture2D *deserialize_texture  (const char *source, const NCF *p);
 xtracer::assets::Geometry  *deserialize_geometry (const char *source, const NCF *p);
 xtracer::assets::Object    *deserialize_object   (const char *source, const NCF *p);
+
+int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubemap &data);
 
     } /* namespace io */
 } /* namespace xtracer */

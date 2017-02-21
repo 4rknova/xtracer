@@ -1,6 +1,6 @@
-PATH_TEST = /media/ram/xtracer/
+PATH_TEST = /mnt/ram/
 
-TEST_CONFIG = -outdir $(PATH_TEST) -threads 4
+TEST_CONFIG = -outdir $(PATH_TEST)
 
 CC  = @echo "compiling [c  ] $<"; gcc
 CXX = @echo "compiling [c++] $<"; g++

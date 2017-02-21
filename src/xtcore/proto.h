@@ -18,13 +18,6 @@
 #define XTPROTO_PROP_COL_B			"b"					/* scalar_t   */			/* Color's blue component */
 #define XTPROTO_PROP_COL_A			"a"					/* scalar_t   */			/* Color's alpha component */
 
-#define XTPROTO_PROP_TOP            "top"               /* string     */            /* Cubemap face */
-#define XTPROTO_PROP_BOTTOM         "bottom"            /* string     */            /* Cubemap face */
-#define XTPROTO_PROP_LEFT           "left"              /* string     */            /* Cubemap face */
-#define XTPROTO_PROP_RIGHT          "right"             /* string     */            /* Cubemap face */
-#define XTPROTO_PROP_FRONT          "front"             /* string     */            /* Cubemap face */
-#define XTPROTO_PROP_BACK           "back"              /* string     */            /* Cubemap face */
-
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */			/* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */			/* Default value */
 #define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */			/* Translation */
@@ -53,6 +46,13 @@
 #define XTPROTO_PROP_FILTERING      "filtering"         /* string     */            /* Texture filtering type */
 #define XTPROTO_LTRL_NEAREST        "nearest"           /* string     */            /* Texture filtering, nearest */
 #define XTPROTO_LTRL_BILINEAR       "bilinear"          /* string     */            /* Texture filtering, bilinear */
+
+#define XTPROTO_LTRL_POSX           "posx"              /* string     */            /* Cubemap face */
+#define XTPROTO_LTRL_POSY           "posy"              /* string     */            /* Cubemap face */
+#define XTPROTO_LTRL_POSZ           "posz"              /* string     */            /* Cubemap face */
+#define XTPROTO_LTRL_NEGX           "negx"              /* string     */            /* Cubemap face */
+#define XTPROTO_LTRL_NEGY           "negy"              /* string     */            /* Cubemap face */
+#define XTPROTO_LTRL_NEGZ           "negz"              /* string     */            /* Cubemap face */
 
 #define XTPROTO_LTRL_EMISSIVE		"emissive"  		/* string     */			/* BRDF: Emissive */
 #define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */			/* BRDF: Lambert */
