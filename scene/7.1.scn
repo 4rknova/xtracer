@@ -4,6 +4,8 @@ title = Head
 descr = Head mesh
 versn = 0.1
 
+data = data
+
 k_ambient = 0.01
 
 ambient = {
@@ -42,7 +44,7 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = data/head.obj
+		source = <data>/head/OBJ/Male_Head_L4.OBJ
 
         scale = {
             x = 300.0
@@ -104,7 +106,7 @@ material = {
 
 texture = {
 	head = {
-		source = data/head.jpg
+		source = <data>/head/Textures/Male_Colour.jpg
         filtering = bilinear
 	}
 }
