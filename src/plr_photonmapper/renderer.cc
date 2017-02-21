@@ -292,7 +292,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	std::map<std::string, Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
          if (it_mat == m_context->scene->m_materials.end()) return color;
-    else if ((*it_mat).second->type == MATERIAL_EMISSIVE) return nimg::ColorRGBf(1,1,1);
+    else if ((*it_mat).second->type == xtracer::assets::MATERIAL_EMISSIVE) return nimg::ColorRGBf(1,1,1);
 
 	// shadows
 	NMath::Vector3f n = info.normal;
@@ -356,7 +356,8 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// Fresnel
 	float fr = 1.0;
 
-	if ((mat->type == MATERIAL_PHONG) || (mat->type == MATERIAL_BLINNPHONG)) {
+	if (   (mat->type == xtracer::assets::MATERIAL_PHONG)
+        || (mat->type == xtracer::assets::MATERIAL_BLINNPHONG)) {
 		// refraction
 		if(mat->transparency > 0.0) {
 			Ray refrray;

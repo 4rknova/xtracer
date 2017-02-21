@@ -1,3 +1,7 @@
+PATH_TEST = /media/ram/xtracer/
+
+TEST_CONFIG = -outdir $(PATH_TEST) -threads 4
+
 CC  = @echo "compiling [c  ] $<"; gcc
 CXX = @echo "compiling [c++] $<"; g++
 C11 = @echo "compiling [c++] $<"; g++
@@ -68,10 +72,10 @@ get-version:
 dirtree:
 	mkdir -p $(PATH_BIN)
 	mkdir -p $(BINPATHS)
+	mkdir -p $(PATH_TEST)
 
 $(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
-	$(BIN) $<
-#    $(BIN) -renderer depth $<
+	$(BIN) $(TEST_CONFIG) $<
 
 $(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
 	$(CC) -c $(FLAGS_CC) -o $@ $< $(DEP_DLIB)

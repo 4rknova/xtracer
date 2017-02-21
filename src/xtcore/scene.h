@@ -7,18 +7,21 @@
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
-#include <nmath/geometry.h>
 #include <ncf/ncf.h>
-#include <xtcore/camera.h>
-#include <xtcore/material.hpp>
-#include <xtcore/texture.h>
-#include <xtcore/object.hpp>
+
+#include "camera.h"
+#include "material.h"
+#include "texture.h"
+#include "geometry.h"
+#include "object.h"
 
 using nimg::ColorRGBf;
 
-using NMath::Geometry;
+using xtracer::assets::Geometry;
 using xtracer::assets::ICamera;
-using xtracer::assets::textures::Texture2D;
+using xtracer::assets::Material;
+using xtracer::assets::Object;
+using xtracer::assets::Texture2D;
 
 struct light_t
 {
@@ -42,9 +45,9 @@ class Scene
 		const char *name();
 		const char *source();
 
-		unsigned int load(const char *filename, std::list<std::string> modifiers);
+		int load(const char *filename, const std::list<std::string> &modifiers);
 		void apply_modifiers();
-		unsigned int build();		// Build the scene data according to the scene tree
+		unsigned int build();
 
 		const ColorRGBf &ambient();
 		void ambient(const ColorRGBf &ambient);
@@ -52,22 +55,19 @@ class Scene
 		ICamera *get_camera();
         std::string camera;
 
-		unsigned int create_camera(NCF *p);
-		unsigned int create_material(NCF *p);
-		unsigned int create_texture(NCF *p);
-		unsigned int create_geometry(NCF *p);
-		unsigned int create_object(NCF *p);
-
 		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
-		// RETURN CODES:
-		//  0. Everything went well.
-		//  1. The resource was not found.
-		unsigned int destroy_camera(const char *name);
-		unsigned int destroy_material(const char *name);
-		unsigned int destroy_texture(const char *name);
-		unsigned int destroy_geometry(const char *name);
-		unsigned int destroy_object(const char *name);
+		void create_camera   (NCF *p);
+		void create_material (NCF *p);
+		void create_texture  (NCF *p);
+		void create_geometry (NCF *p);
+		void create_object   (NCF *p);
+
+		int destroy_camera   (const char *name);
+		int destroy_material (const char *name);
+		int destroy_texture  (const char *name);
+		int destroy_geometry (const char *name);
+		int destroy_object   (const char *name);
 
 		// Maps of the scene entities
 		std::map<std::string, ICamera*  > m_cameras;

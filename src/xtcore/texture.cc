@@ -4,7 +4,6 @@
 
 namespace xtracer {
     namespace assets {
-        namespace textures {
 
 Texture2D::Texture2D()
     : m_filtering(FILTERING_NEAREST)
@@ -36,7 +35,6 @@ ColorRGBAf Texture2D::sample(const float s, const float t) const
     return nimg::ColorRGBAf(0,0,0,1);
 }
 
-        } /* namespace textures */
     } /* namespace assets */
 } /* namespace xtracer */
 

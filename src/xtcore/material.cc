@@ -1,6 +1,9 @@
 #include <nimg/luminance.h>
 #include "brdf.h"
-#include "material.hpp"
+#include "material.h"
+
+namespace xtracer {
+    namespace assets {
 
 Material::Material()
 	: ambient(nimg::ColorRGBf(1, 1, 1)),
@@ -67,3 +70,6 @@ nimg::ColorRGBf Material::shade(const NMath::Vector3f &cam_position
 	// This should never happen
 	return nimg::ColorRGBf(0, 0, 0);
 }
+
+    } /* namespace assets */
+} /* namespace xtracer */

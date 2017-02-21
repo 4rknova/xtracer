@@ -1,9 +1,14 @@
 #ifndef XTRACER_PARSEUTIL_H_INCLUDED
 #define XTRACER_PARSEUTIL_H_INCLUDED
 
-#include <ncf/ncf.h>
 #include <nmath/vector.h>
 #include <nimg/color.h>
+#include <ncf/ncf.h>
+#include "camera.h"
+#include "material.h"
+#include "texture.h"
+#include "geometry.h"
+#include "object.h"
 
 namespace xtracer {
     namespace io {
@@ -22,6 +27,12 @@ std::string     deserialize_cstr(const char *val, const char*           def = DE
 NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def = DEFVAL_TEX2);
 NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def = DEFVAL_VEC3);
 nimg::ColorRGBf deserialize_col3(const NCF *node, const nimg::ColorRGBf def = DEFVAL_COL3);
+
+xtracer::assets::ICamera   *deserialize_camera   (const char *source, const NCF *p);
+xtracer::assets::Material  *deserialize_material (const char *source, const NCF *p);
+xtracer::assets::Texture2D *deserialize_texture  (const char *source, const NCF *p);
+xtracer::assets::Geometry  *deserialize_geometry (const char *source, const NCF *p);
+xtracer::assets::Object    *deserialize_object   (const char *source, const NCF *p);
 
     } /* namespace io */
 } /* namespace xtracer */

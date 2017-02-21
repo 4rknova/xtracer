@@ -9,7 +9,6 @@ using nimg::Pixmap;
 
 namespace xtracer {
     namespace assets {
-        namespace textures {
 
 enum FILTERING
 {
@@ -34,7 +33,6 @@ class Texture2D
   	Pixmap    m_map;
 };
 
-        } /* namespace textures */
     } /* namespace assets */
 } /* namespace xtracer */
 

@@ -1,9 +1,12 @@
-#ifndef XTRACER_MATERIAL_HPP_INCLUDED
-#define XTRACER_MATERIAL_HPP_INCLUDED
+#ifndef XTRACER_MATERIAL_H_INCLUDED
+#define XTRACER_MATERIAL_H_INCLUDED
 
 #include <nimg/color.h>
 #include <nmath/intinfo.h>
 #include "camera.h"
+
+namespace xtracer {
+    namespace assets {
 
 enum MATERIAL_TYPE
 {
@@ -46,4 +49,7 @@ class Material
         bool is_emissive() const;
 };
 
-#endif /* XTRACER_MATERIAL_HPP_INCLUDED */
+    } /* namespace assets */
+} /* namespace xtracer */
+
+#endif /* XTRACER_MATERIAL_H_INCLUDED */

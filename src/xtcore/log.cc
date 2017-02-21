@@ -7,7 +7,7 @@
 #include "log.h"
 
 LogEntry::LogEntry()
-	: p_type(LOGENTRY_MESSAGE)
+	: p_type(LOGENTRY_DEBUG)
 {}
 
 // Singleton.
