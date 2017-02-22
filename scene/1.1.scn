@@ -5,24 +5,59 @@ versn = 0.3
 data = data/cubemap
 
 camera = {
-
 	default = {
-        type = thin-lens
-
-		fov =45
-
-		position = {
-			z = -2000
-		}
-
-		up = {
-			y = 1
-		}
+        type = ods
+		ipd = 1
 	}
 
-	ods = {
-        type = ods
-		ipd = 0.64
+    secondary = {
+        type = thin-lens
+
+        up = {
+            y = 1
+        }
+
+        position = {
+       I    z = -0.1
+        }
+
+        target = {
+        }
+
+        fov = 45
+    }
+}
+
+geometry = {
+    ball = {
+        type = sphere
+        radius = 50
+        position = {
+            z = 350
+        }
+    }
+}
+
+material = {
+	ball = {
+		type = phong
+
+		reflectance = 1
+
+		diffuse = {
+			r = 1
+			g = 1
+			b = 1
+		}
+		specular = {
+			r = 1
+			g = 1
+			b = 1
+		}
+
+		k_diffuse  = 0.1
+		k_specular = 0.9
+		k_exponent = 94096
 	}
 }
 
@@ -33,4 +68,11 @@ cubemap = {
     posx = <data>/posx.jpg
     posz = <data>/posz.jpg
     negz = <data>/negz.jpg
+}
+
+object = {
+    ball = {
+        geometry = ball
+        material = ball
+    }
 }

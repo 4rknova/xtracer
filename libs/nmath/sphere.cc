@@ -2,6 +2,7 @@
 #include "sphere.h"
 #include "intinfo.h"
 #include "sample.h"
+#include "quadratic.h"
 
 namespace NMath {
 
@@ -30,6 +31,7 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 	}
 #endif
 
+#if 1
 	scalar_t b = 2 * dot(ray.origin - origin, ray.direction);
 	scalar_t c = dot(origin, origin) + dot(ray.origin, ray.origin) + 2 * dot(-origin, ray.origin) - radius * radius;
 
@@ -46,7 +48,7 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 		{
 			i_info->t = t;
 			i_info->point = ray.origin + ray.direction * t;
-			i_info->normal = (i_info->point - origin) / radius;
+			i_info->normal = (i_info->point - origin) / radius * (t1*t2 > 0. ? 1. : -1);
 			i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / PI + 0.5), 
 								(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / PI + 0.5));
 			i_info->geometry = this;
@@ -56,6 +58,32 @@ bool Sphere::intersection(const Ray &ray, IntInfo* i_info) const
 	}
 
 	return false;
+#else
+    scalar_t t0, t1;
+
+    Vector3f L = ray.origin - origin;
+    scalar_t a = dot(ray.direction, ray.direction);
+    scalar_t b = 2.f * dot(ray.direction, L);
+    scalar_t c = dot(L, L) - (radius*radius);
+
+    if (!solve_quadratic(a, b, c, t0, t1)) return false;
+
+    if (t0 > t1) std::swap(t0,t1);
+
+    if (t0 < 0.f) {
+        t0 = t1;
+        if (t0 < 0.f) return false;
+    }
+
+    i_info->t = t0;
+	i_info->point = ray.origin + ray.direction * t0;
+	i_info->normal = (i_info->point - origin) / radius;
+	i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / PI + 0.5),
+	    						(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / PI + 0.5));
+	i_info->geometry = this;
+
+    return true;
+#endif
 }
 
 void Sphere::calc_aabb()

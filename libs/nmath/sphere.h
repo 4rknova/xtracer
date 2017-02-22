@@ -36,6 +36,8 @@
 #include "geometry.h"
 #include "ray.h"
 
+#define NMATH_USE_BBOX_INTERSECTION
+
 namespace NMath {
 
 #ifdef __cplusplus

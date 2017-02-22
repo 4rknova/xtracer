@@ -16,6 +16,7 @@
 #include <xtcore/broadcast.h>
 
 #include <plr_photonmapper/renderer.h>
+#include <plr_stencil/renderer.h>
 #include <plr_depth/depth.h>
 #define NIMG_TEST
 #include <nimg/genetic_algo.cc>
@@ -78,7 +79,8 @@ int main(int argc, char **argv)
 
 		xtracer::render::IRenderer *renderer = NULL;
 
-        if (!strcmp(renderer_name.c_str(), "depth")) renderer = new DRenderer();
+        if      (!strcmp(renderer_name.c_str(), "depth")) renderer = new DRenderer();
+        else if (!strcmp(renderer_name.c_str(), "stencil")) renderer = new xtracer::renderer::stencil::Renderer();
         else renderer = new Renderer();
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
