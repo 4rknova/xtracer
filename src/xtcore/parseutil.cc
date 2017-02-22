@@ -105,7 +105,7 @@ int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubem
     std::string posz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
     std::string negx = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
     std::string negy = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
-    std::string negz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+    std::string negz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
 
     std::string base, file, fsource = source;
 	Util::String::path_comp(fsource, base, file);

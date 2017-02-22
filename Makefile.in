@@ -1,4 +1,4 @@
-PATH_TEST = /mnt/ram/
+PATH_TEST = ./test/
 
 TEST_CONFIG = -outdir $(PATH_TEST)
 
