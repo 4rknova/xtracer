@@ -7,14 +7,14 @@ data = data/cubemap
 camera = {
 	ods = {
         type = ods
-		ipd  = 1
+		ipd  = 1.5
     }
 
     default = {
         type     = thin-lens
         up       = vec3(0,1,0)
         position = vec3(0,100,-1)
-        target   = vec3(0,0,100)
+        target   = vec3(0,0,-100)
         fov      = 90
     }
 }
@@ -23,7 +23,7 @@ geometry = {
     ball = {
         type     = sphere
         radius   = 50
-        position = vec3(0,0,100)
+        position = vec3(0,0,-100)
     }
 }
 
