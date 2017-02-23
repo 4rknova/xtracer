@@ -5,17 +5,10 @@ versn = 0.3
 camera = {
 
 	default = {
-        type = thin-lens
-
-		fov =45
-
-		position = {
-			z = -2000
-		}
-
-		up = {
-			y = 1
-		}
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,0,-2000)
+		up       = vec3(0,1,0)
 	}
 
 	side = {

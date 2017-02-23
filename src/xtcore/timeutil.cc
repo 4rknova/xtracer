@@ -27,10 +27,10 @@ void print_time_breakdown(std::string &str, double mlsecs)
 
     std::stringstream ss;
 
-	if (d > 0)  ss << d <<    "days ";
-	if (h > 0)  ss << h <<   "hours ";
-	if (m > 0)  ss << m << "minutes ";
-	if (s > 0)  ss << s << "seconds ";
+	if (d > 0)  ss << d <<    " days ";
+	if (h > 0)  ss << h <<   " hours ";
+	if (m > 0)  ss << m << " minutes ";
+	if (s > 0)  ss << s << " seconds ";
 
     str = ss.str();
 }

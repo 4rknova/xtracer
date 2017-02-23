@@ -11,6 +11,27 @@
 // therefore can be safely ignored.
 #pragma warning (disable : 4251)
 
+namespace ncf {
+
+enum ERROR_CODE
+{
+      ERROR_CODE_OK
+    , ERROR_CODE_NOT_ASCII_FILE
+    , ERROR_CODE_IO
+    , ERROR_CODE_SYNTAX
+    , ERROR_CODE_UNBALANCED_GROUPS
+    , ERROR_CODE_AMBIGUOUS_GROUP
+    , ERROR_CODE_AMBIGUOUS_PROPERTY
+    , ERROR_CODE_EXTERNAL_FILE
+};
+
+struct error_t
+{
+    ERROR_CODE  code;
+    const char *message;
+    size_t      line;
+};
+
 class DECLSPEC NCF
 {
 	public:
@@ -22,14 +43,7 @@ class DECLSPEC NCF
 
 		void purge();
 
-		/* RETURN CODES:
-		** 0 : Everything went well.
-		** 1 : Not an ASCII file.
-		** 2 : File I/O error.
-		** 3 : Syntax error.
-		** 4 : Unbalanced groups.
-		*/
-		int parse();
+		int parse(error_t *error = 0);
 
 		/* RETURN CODES:
 		** 0 : Everything went well.
@@ -66,6 +80,8 @@ class DECLSPEC NCF
 		std::string m_p_filepath;								// Source path.
 		unsigned int m_p_level;									// Node level.
 };
+
+} /* namespace ncf */
 
 #pragma warning (pop)
 

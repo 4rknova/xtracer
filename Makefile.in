@@ -54,7 +54,7 @@ FLAGS_PREPRC = -D'$(SW_SYMID)_YEAR="$(YEAR)"' -D'$(SW_SYMID)_VERSION="$(SW_VERSI
 FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
 FLAGS_LD  = -lgomp -ldl -lGL -lglut
 FLAGS_CC  = $(FLAGS_COMMON) -std=c89 -Wall
-FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic -Wno-misleading-indentation
+FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
 FLAGS_C11 = $(FLAGS_CXX) -std=c++11
 
 # TARGETS

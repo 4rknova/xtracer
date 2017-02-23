@@ -129,7 +129,7 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 {
     if(!filename) return 1;
 
-	Log::handle().post_message("Loading script [%s]..", filename);
+	Log::handle().post_message("Loading scene [%s]..", filename);
 
     ncf::NCF root;
     root.set_source(filename);
@@ -164,15 +164,12 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 		node->set_property(nleft.c_str(), nright.c_str());
 	}
 
-    Log::handle().post_message("Building the scene..");
-
-
 	size_t count = 0;
 
 	m_source   = xtracer::io::deserialize_cstr(filename);
 	m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
 	m_ambient  = xtracer::io::deserialize_col3(&root, XTPROTO_PROP_IAMBN)
-			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
+			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN));
 
     xtracer::io::deserialize_cubemap(m_source.c_str(), &root, m_cubemap);
 
@@ -183,12 +180,15 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 	sections.push_back(XTPROTO_NODE_TEXTURE);
 	sections.push_back(XTPROTO_NODE_OBJECT);
 
+	Log::handle().post_message("Building the scene..");
+
 	std::list<std::string>::iterator it = sections.begin();
 	std::list<std::string>::iterator et = sections.end();
 
 	for (; it != et; ++it) {
 		count = root.get_group_by_name((*it).c_str())->count_groups();
 		if (count) {
+			Log::handle().post_message("Processing section: %s", (*it).c_str());
 			for (size_t i = 0; i < count; ++i) {
 				ncf::NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
                 Log::handle().post_debug("Loading: %s", lnode->get_name());

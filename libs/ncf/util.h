@@ -10,8 +10,8 @@
 #define CONFIG_DELIM_PATH '/'
 #endif /* _WIN32 */
 
-namespace Util {
-	namespace String {
+namespace ncf {
+	namespace util {
 
 DECLSPEC void   to_lower_case(std::string &s);           // Convert to lower case.
 DECLSPEC void   to_upper_case(std::string &s);           // Convert to upper case.
@@ -39,7 +39,7 @@ DECLSPEC void path_comp(const std::string &s, std::string &base, std::string &fi
 // Replace a matched substring p with r.
 DECLSPEC void replace_first_of(std::string &s, const std::string &p, const std::string &r);
 
-	} /* namespace String */
-} /* namespace Util */
+	} /* namespace util */
+} /* namespace ncf */
 
 #endif /* LIBNCF_UTIL_H_INCLUDED */

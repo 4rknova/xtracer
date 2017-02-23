@@ -24,9 +24,6 @@
 #include "argparse.h"
 #include "plm.h"
 
-using Util::String::to_string;
-using Util::String::path_comp;
-
 int main(int argc, char **argv)
 {
 	// Display usage information.
@@ -63,7 +60,7 @@ int main(int argc, char **argv)
     t.append(" ");
     t.append(scene_path);
 
-    xtracer::network::broadcast(t.c_str());
+//    xtracer::network::broadcast(t.c_str());
 
 	// create and initialize the scene
 	Scene scene;
@@ -112,8 +109,8 @@ int main(int argc, char **argv)
 			    const char path_delim = '/';
     		#endif /* _WIN32 */
 
-	    	path_comp(scene_path, base, file, path_delim);
-	    	path_comp(file, filename, extension, '.');
+	    	ncf::util::path_comp(scene_path, base, file, path_delim);
+	    	ncf::util::path_comp(file, filename, extension, '.');
 		    std::string cam = context.scene->camera;
             if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
@@ -129,6 +126,7 @@ int main(int argc, char **argv)
             if (res) Log::handle().post_error("Failed to export image file");
         }
 	}
+    else return 1;
 
 	return 0;
 }

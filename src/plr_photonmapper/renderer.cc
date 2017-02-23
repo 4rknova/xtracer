@@ -22,7 +22,7 @@
 #define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
 #define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
 
-using Util::String::path_comp;
+using ncf::util::path_comp;
 
 Renderer::Renderer()
 	: m_context(NULL)

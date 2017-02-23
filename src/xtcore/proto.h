@@ -4,6 +4,10 @@
 /*
 **	SYMBOLIC NAME					LITERAL				TYPE						DESCRIPTION
 */
+#define XTPROTO_FORMAT_VEC3         "vec3(%f,%f,%f)"    /* string     */            /* Format for vec3 */
+#define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */            /* Format for col3 */
+#define XTPROTO_FORMAT_TEX2         "tex2(%f,%f)"       /* string     */            /* Format for tex2 */
+
 #define XTPROTO_PROP_TITLE			"title"				/* string     */			/* Scene title */
 #define XTPROTO_PROP_DESCR			"descr"				/* string     */			/* Scene description */
 #define XTPROTO_PROP_VERSN			"versn"				/* string     */			/* Scene version */
@@ -17,6 +21,9 @@
 #define XTPROTO_PROP_COL_G			"g"					/* scalar_t   */			/* Color's green component */
 #define XTPROTO_PROP_COL_B			"b"					/* scalar_t   */			/* Color's blue component */
 #define XTPROTO_PROP_COL_A			"a"					/* scalar_t   */			/* Color's alpha component */
+#define XTPROTO_PROP_VRT_0			"v0"				/* vector     */			/* Vector coordinates */
+#define XTPROTO_PROP_VRT_1			"v1"				/* vector     */			/* Vector coordinates */
+#define XTPROTO_PROP_VRT_2			"v2"				/* vector     */			/* Vector coordinates */
 
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */			/* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */			/* Default value */
@@ -62,6 +69,7 @@
 #define XTPROTO_LTRL_TRIANGLE		"triangle"			/* string     */			/* Triangle */
 #define XTPROTO_LTRL_POINT			"point"	    		/* string     */			/* Point */
 #define XTPROTO_LTRL_SPHERE			"sphere"			/* string     */			/* Sphere */
+#define XTPROTO_LTRL_HULL			"hull"  			/* string     */			/* Hull */
 #define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */			/* Cylinder */
 #define XTPROTO_LTRL_MESH			"mesh"				/* string     */			/* Mesh */
 #define XTPROTO_PROP_UP				"up"	            /* Vector3f   */            /* Up vector */

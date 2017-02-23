@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <algorithm>
 
 #include <ncf/util.h>
@@ -31,7 +32,7 @@ bool deserialize_bool(const char *val, const bool def)
 
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def)
 {
-	return val ? (NMath::scalar_t)Util::String::to_double(val) : def;
+	return val ? (NMath::scalar_t)ncf::util::to_double(val) : def;
 }
 
 std::string deserialize_cstr(const char *val, const char* def)
@@ -39,76 +40,109 @@ std::string deserialize_cstr(const char *val, const char* def)
 	return val ? val : def;
 }
 
-NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def)
+NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const NMath::Vector2f def)
 {
 	NMath::Vector2f res = def;
 
 	if (node) {
-		const char *u = node->get_property_by_name(XTPROTO_PROP_CRD_U);
-		const char *v = node->get_property_by_name(XTPROTO_PROP_CRD_V);
+        bool has_property = node->query_property(name);
+        bool has_group    = node->query_group(name);
 
-		res = NMath::Vector2f(
-			u ? (NMath::scalar_t)Util::String::to_double(u) : def.x,
-			v ? (NMath::scalar_t)Util::String::to_double(v) : def.y
-		);
+        if (has_group) {
+            ncf::NCF *group = node->get_group_by_name(name);
+            const char *u = group->get_property_by_name(XTPROTO_PROP_CRD_U);
+            const char *v = group->get_property_by_name(XTPROTO_PROP_CRD_V);
+
+    		res = NMath::Vector2f(
+	    		u ? (NMath::scalar_t)ncf::util::to_double(u) : def.x,
+		    	v ? (NMath::scalar_t)ncf::util::to_double(v) : def.y
+    		);
+        }
+        else if (has_property) {
+            float u, v;
+            std::string val = node->get_property_by_name(name);
+            if (2 == sscanf(val.c_str(), XTPROTO_FORMAT_TEX2, &u, &v)) res = NMath::Vector2f(u, v);
+        }
 	}
 
 	return res;
 }
 
-nimg::ColorRGBf deserialize_col3(const NCF *node, const nimg::ColorRGBf def)
+nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def)
 {
-	nimg::ColorRGBf res = def;
+    nimg::ColorRGBf res = def;
 
-	if (node) {
-		const char *r = node->get_property_by_name(XTPROTO_PROP_COL_R);
-		const char *g = node->get_property_by_name(XTPROTO_PROP_COL_G);
-		const char *b = node->get_property_by_name(XTPROTO_PROP_COL_B);
+    if (node) {
+        bool has_property = node->query_property(name);
+        bool has_group    = node->query_group(name);
 
-		res = nimg::ColorRGBf(
-			r ? (NMath::scalar_t)Util::String::to_double(r) : def.r(),
-			g ? (NMath::scalar_t)Util::String::to_double(g) : def.g(),
-			b ? (NMath::scalar_t)Util::String::to_double(b) : def.b()
-		);
-	}
+        if (has_group) {
+            ncf::NCF *group = node->get_group_by_name(name);
+            const char *r = group->get_property_by_name(XTPROTO_PROP_COL_R);
+    		const char *g = group->get_property_by_name(XTPROTO_PROP_COL_G);
+	    	const char *b = group->get_property_by_name(XTPROTO_PROP_COL_B);
 
-	return res;
+		    res = nimg::ColorRGBf(
+			    r ? (NMath::scalar_t)ncf::util::to_double(r) : def.r(),
+    			g ? (NMath::scalar_t)ncf::util::to_double(g) : def.g(),
+	    		b ? (NMath::scalar_t)ncf::util::to_double(b) : def.b()
+    		);
+        }
+        else if (has_property) {
+            float r, g, b;
+            std::string val = node->get_property_by_name(name);
+            if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_COL3, &r, &g, &b)) res = nimg::ColorRGBf(r, g, b);
+        }
+    }
+
+    return res;
 }
 
-NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def)
+NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def)
 {
 	NMath::Vector3f res = def;
 
 	if (node) {
-		const char *x = node->get_property_by_name(XTPROTO_PROP_CRD_X);
-		const char *y = node->get_property_by_name(XTPROTO_PROP_CRD_Y);
-		const char *z = node->get_property_by_name(XTPROTO_PROP_CRD_Z);
+        bool has_property = node->query_property(name);
+        bool has_group    = node->query_group(name);
 
-		res = NMath::Vector3f(
-			x ? (NMath::scalar_t)Util::String::to_double(x) : def.x,
-			y ? (NMath::scalar_t)Util::String::to_double(y) : def.y,
-			z ? (NMath::scalar_t)Util::String::to_double(z) : def.z
-		);
+        if (has_group) {
+            ncf::NCF *group = node->get_group_by_name(name);
+    		const char *x = group->get_property_by_name(XTPROTO_PROP_CRD_X);
+	    	const char *y = group->get_property_by_name(XTPROTO_PROP_CRD_Y);
+		    const char *z = group->get_property_by_name(XTPROTO_PROP_CRD_Z);
+
+            res = NMath::Vector3f(
+                x ? (NMath::scalar_t)ncf::util::to_double(x) : def.x,
+                y ? (NMath::scalar_t)ncf::util::to_double(y) : def.y,
+                z ? (NMath::scalar_t)ncf::util::to_double(z) : def.z
+            );
+        }
+        else if (has_property) {
+            float x, y, z;
+            std::string val = node->get_property_by_name(name);
+            if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_VEC3, &x, &y, &z)) res = NMath::Vector3f(x, y, z);
+        }
 	}
 
 	return res;
 }
 
-int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubemap &data)
+int deserialize_cubemap(const char *source, const ncf::NCF *p, xtracer::assets::Cubemap &data)
 {
     if (!p) return 1;
 
-    NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
+    ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
 
-    std::string posx = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
-    std::string posy = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
-    std::string posz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
-    std::string negx = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
-    std::string negy = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
-    std::string negz = xtracer::io::deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
+    std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
+    std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
+    std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
+    std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
+    std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+    std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
 
     std::string base, file, fsource = source;
-	Util::String::path_comp(fsource, base, file);
+	ncf::util::path_comp(fsource, base, file);
 
     data.load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
     data.load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
@@ -120,7 +154,7 @@ int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubem
     return 0;
 }
 
-xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
+xtracer::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -129,9 +163,9 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
     if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) {
-    	NMath::Vector3f pos     = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-    	NMath::Vector3f target  = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TARGET));
-    	NMath::Vector3f up      = deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_UP));
+    	NMath::Vector3f pos     = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    	NMath::Vector3f target  = deserialize_vec3(p, XTPROTO_PROP_TARGET);
+    	NMath::Vector3f up      = deserialize_vec3(p, XTPROTO_PROP_UP);
        	NMath::scalar_t fov     = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
     	NMath::scalar_t flength = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
     	NMath::scalar_t ap      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
@@ -145,9 +179,9 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
         ((CamPerspective *)data)->aperture = ap;
     }
     else if (!type.compare(XTPROTO_LTRL_CAM_ODS)) {
-	    NMath::Vector3f pos = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-	    NMath::Vector3f orn = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
-	    NMath::scalar_t ipd = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
+	    NMath::Vector3f pos = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+	    NMath::Vector3f orn = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
+	    NMath::scalar_t ipd = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
 
         data = new (std::nothrow) CamODS();
         ((CamODS *)data)->position    = pos;
@@ -155,8 +189,8 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
         ((CamODS *)data)->ipd         = ipd;
     }
     else if (!type.compare(XTPROTO_LTRL_CAM_ERP)) {
-	    NMath::Vector3f pos = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-	    NMath::Vector3f orn = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ORIENTATION));
+	    NMath::Vector3f pos = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+	    NMath::Vector3f orn = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
 
         data = new (std::nothrow) CamERP();
         ((CamERP *)data)->position    = pos;
@@ -169,35 +203,41 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const NCF *p)
 	return data;
 }
 
-xtracer::assets::Geometry *deserialize_geometry(const char *source, const NCF *p)
+xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
     xtracer::assets::Geometry *data = 0;
 
-	std::string type = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		data = new (std::nothrow) NMath::Plane;
-		((NMath::Plane *)data)->normal   = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_NORMAL));
-		((NMath::Plane *)data)->distance = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+		((NMath::Plane *)data)->normal   = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
+		((NMath::Plane *)data)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		data = new (std::nothrow) NMath::Sphere;
-		((NMath::Sphere *)data)->origin = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
-		((NMath::Sphere *)data)->radius = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
+		((NMath::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+		((NMath::Sphere *)data)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
     else if (!type.compare(XTPROTO_LTRL_POINT)) {
         data = new (std::nothrow) NMath::Sphere;
-		((NMath::Sphere *)data)->origin = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_POSITION));
+		((NMath::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
 		((NMath::Sphere *)data)->radius = 0;
     }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		data = new (std::nothrow) NMath::Triangle;
 		for (size_t i = 0; i < 3; ++i) {
-			NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA)->get_group_by_index(i);
-			((NMath::Triangle *)data)->v[i]  = xtracer::io::deserialize_vec3(vnode);
-			((NMath::Triangle *)data)->tc[i] = xtracer::io::deserialize_tex2(vnode);
+			ncf::NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA);
+
+			((NMath::Triangle *)data)->v[0]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_0);
+			((NMath::Triangle *)data)->v[1]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_1);
+			((NMath::Triangle *)data)->v[2]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_2);
+
+			((NMath::Triangle *)data)->tc[0]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_0);
+			((NMath::Triangle *)data)->tc[1]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_1);
+			((NMath::Triangle *)data)->tc[2]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_2);
 		}
 	}
 	// - Mesh
@@ -209,7 +249,7 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const NCF *p
 
 		// Open source file from relative path
 		std::string base, file, fsource = source;
-		Util::String::path_comp(fsource, base, file);
+		ncf::util::path_comp(fsource, base, file);
 		base.append(f);
 
 		Log::handle().post_message("Loading data from %s", base.c_str());
@@ -224,17 +264,17 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const NCF *p
 		}
 
 		if (p->query_group(XTPROTO_PROP_ROTATION)) {
-			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_ROTATION));
+			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_ROTATION);
 			NMesh::Mutator::rotate(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_SCALE)) {
-			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_SCALE));
+			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_SCALE);
 			NMesh::Mutator::scale(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
-			NMath::Vector3f v = xtracer::io::deserialize_vec3(p->get_group_by_name(XTPROTO_PROP_TRANSLATION));
+			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION);
 			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
 		}
 
@@ -248,8 +288,8 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const NCF *p
 	}
 
 	data->uv_scale = NMath::Vector2f(
-		xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
-		xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
+		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
+		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
 	);
 
 	data->calc_aabb();
@@ -257,13 +297,13 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const NCF *p
 	return data;
 }
 
-xtracer::assets::Material *deserialize_material(const char *source, const NCF *p)
+xtracer::assets::Material *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
     xtracer::assets::Material *data = new (std::nothrow) xtracer::assets::Material;
 
-	std::string type = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) data->type = xtracer::assets::MATERIAL_LAMBERT;
 	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data->type = xtracer::assets::MATERIAL_PHONG;
@@ -275,32 +315,32 @@ xtracer::assets::Material *deserialize_material(const char *source, const NCF *p
 		return 0;
 	}
 
-	data->ambient      = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IAMBN));
-	data->specular     = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_ISPEC));
-	data->diffuse      = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_IDIFF));
-	data->emissive     = xtracer::io::deserialize_col3(p->get_group_by_name(XTPROTO_PROP_EMISSIVE));
-	data->kdiff        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
-	data->kspec        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
-	data->ksexp        = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
-	data->roughness    = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
-	data->transparency = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-	data->reflectance  = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
-	data->ior          = xtracer::io::deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+	data->ambient      = deserialize_col3(p, XTPROTO_PROP_IAMBN);
+	data->specular     = deserialize_col3(p, XTPROTO_PROP_ISPEC);
+	data->diffuse      = deserialize_col3(p, XTPROTO_PROP_IDIFF);
+	data->emissive     = deserialize_col3(p, XTPROTO_PROP_EMISSIVE);
+	data->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
+	data->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
+	data->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
+	data->roughness    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
+	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
+	data->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
+	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
 
 	return data;
 }
 
-xtracer::assets::Texture2D *deserialize_texture(const char *source, const NCF *p)
+xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
 	xtracer::assets::Texture2D *data = new (std::nothrow) xtracer::assets::Texture2D;
 
 	std::string script_base, script_filename, fsource = source;
-	Util::String::path_comp(fsource, script_base, script_filename);
+	ncf::util::path_comp(fsource, script_base, script_filename);
 
-    std::string fname  = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
-	std::string filter = xtracer::io::deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
+    std::string fname  = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string path = script_base + fname;
 
 	Log::handle().post_message("Loading data from %s", path.c_str());
@@ -309,8 +349,8 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const NCF *p
 		Log::handle().post_warning("Replacing with checkerboard..");
 
 		Pixmap tex;
-		ColorRGBAf a   = ColorRGBAf(0.5,0.5,0.5,1);
-		ColorRGBAf b   = ColorRGBAf(1,1,1,1);
+		ColorRGBAf a = ColorRGBAf(0.5,0.5,0.5,1);
+		ColorRGBAf b = ColorRGBAf(1,1,1,1);
 		nimg::generator::checkerboard(tex, 2, 2, a, b);
 
 		data->load(tex);
@@ -326,7 +366,7 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const NCF *p
     return data;
 }
 
-xtracer::assets::Object *deserialize_object(const char *source, const NCF *p)
+xtracer::assets::Object *deserialize_object(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
@@ -336,9 +376,9 @@ xtracer::assets::Object *deserialize_object(const char *source, const NCF *p)
 	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
 	const char *t = p->get_property_by_name(XTPROTO_PROP_OBJ_TEX);
 
-	data->geometry = xtracer::io::deserialize_cstr(g);
-	data->material = xtracer::io::deserialize_cstr(m);
-	data->texture  = xtracer::io::deserialize_cstr(t);
+	data->geometry = deserialize_cstr(g);
+	data->material = deserialize_cstr(m);
+	data->texture  = deserialize_cstr(t);
 
 	return data;
 }

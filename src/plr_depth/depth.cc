@@ -16,8 +16,6 @@
 
 #include "depth.h"
 
-using Util::String::path_comp;
-
 DRenderer::DRenderer()
 	: m_context(NULL)
 {}

@@ -25,17 +25,18 @@ namespace xtracer {
 bool            deserialize_bool(const char *val, const bool            def = DEFVAL_BOOL);
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = DEFVAL_NUMF);
 std::string     deserialize_cstr(const char *val, const char*           def = DEFVAL_CSTR);
-NMath::Vector2f deserialize_tex2(const NCF *node, const NMath::Vector2f def = DEFVAL_TEX2);
-NMath::Vector3f deserialize_vec3(const NCF *node, const NMath::Vector3f def = DEFVAL_VEC3);
-nimg::ColorRGBf deserialize_col3(const NCF *node, const nimg::ColorRGBf def = DEFVAL_COL3);
 
-xtracer::assets::ICamera   *deserialize_camera   (const char *source, const NCF *p);
-xtracer::assets::Material  *deserialize_material (const char *source, const NCF *p);
-xtracer::assets::Texture2D *deserialize_texture  (const char *source, const NCF *p);
-xtracer::assets::Geometry  *deserialize_geometry (const char *source, const NCF *p);
-xtracer::assets::Object    *deserialize_object   (const char *source, const NCF *p);
+NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const NMath::Vector2f def = DEFVAL_TEX2);
+NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def = DEFVAL_VEC3);
+nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
 
-int deserialize_cubemap(const char *source, const NCF *p, xtracer::assets::Cubemap &data);
+xtracer::assets::ICamera   *deserialize_camera   (const char *source, const ncf::NCF *p);
+xtracer::assets::Material  *deserialize_material (const char *source, const ncf::NCF *p);
+xtracer::assets::Texture2D *deserialize_texture  (const char *source, const ncf::NCF *p);
+xtracer::assets::Geometry  *deserialize_geometry (const char *source, const ncf::NCF *p);
+xtracer::assets::Object    *deserialize_object   (const char *source, const ncf::NCF *p);
+
+int deserialize_cubemap(const char *source, const ncf::NCF *p, xtracer::assets::Cubemap &data);
 
     } /* namespace io */
 } /* namespace xtracer */

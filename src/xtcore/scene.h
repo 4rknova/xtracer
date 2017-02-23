@@ -52,12 +52,12 @@ class Scene
 
 		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
-		void create_cubemap  (NCF *p);
-		void create_camera   (NCF *p);
-		void create_material (NCF *p);
-		void create_texture  (NCF *p);
-		void create_geometry (NCF *p);
-		void create_object   (NCF *p);
+		int create_cubemap  (ncf::NCF *p);
+		int create_camera   (ncf::NCF *p);
+		int create_material (ncf::NCF *p);
+		int create_texture  (ncf::NCF *p);
+		int create_geometry (ncf::NCF *p);
+		int create_object   (ncf::NCF *p);
 
 		int destroy_camera   (const char *name);
 		int destroy_material (const char *name);

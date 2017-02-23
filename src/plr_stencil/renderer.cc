@@ -19,7 +19,7 @@ namespace xtracer {
     namespace renderer {
         namespace stencil {
 
-using Util::String::path_comp;
+using ncf::util::path_comp;
 
 Renderer::Renderer()
 	: m_context(NULL)

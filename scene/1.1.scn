@@ -5,59 +5,37 @@ versn = 0.3
 data = data/cubemap
 
 camera = {
-	default = {
+	ods = {
         type = ods
-		ipd = 1
-	}
+		ipd  = 1
+    }
 
-    secondary = {
-        type = thin-lens
-
-        up = {
-            y = 1
-        }
-
-        position = {
-       I    z = -0.1
-        }
-
-        target = {
-        }
-
-        fov = 45
+    default = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(0,100,-1)
+        target   = vec3(0,0,100)
+        fov      = 90
     }
 }
 
 geometry = {
     ball = {
-        type = sphere
-        radius = 50
-        position = {
-            z = 350
-        }
+        type     = sphere
+        radius   = 50
+        position = vec3(0,0,100)
     }
 }
 
 material = {
 	ball = {
-		type = phong
-
-		reflectance = 1
-
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		k_diffuse  = 0.1
-		k_specular = 0.9
-		k_exponent = 94096
+		type         = phong
+		reflectance  = 1
+		diffuse      = col3(1,1,1)
+		specular     = col3(1,1,1)
+		k_diffuse    = 0.1
+		k_specular   = 0.9
+		k_exponent   = 94096
 	}
 }
 

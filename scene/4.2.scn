@@ -2,8 +2,6 @@ title = Refraction
 descr = A refractive sphere
 versn = 0.4
 
-%include scene_common.scn
-
 camera = {
 	default = {
         type = thin-lens

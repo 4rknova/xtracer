@@ -4,6 +4,30 @@
 #include "util.h"
 #include "ncf.h"
 
+namespace ncf {
+
+// ERROR MESSAGES
+const char* g_error_messages[] = {
+      "ok"
+    , "not an ascii file"
+    , "io error"
+    , "syntax error"
+    , "unbalanced groups (missing bracket)"
+    , "group of the same name as the property already exists"
+    , "property of the same name as the group already exists"
+    , "error in external file"
+};
+
+int err(error_t *error, ERROR_CODE code, size_t line)
+{
+    if (error) {
+        error->code    = code;
+        error->message = g_error_messages[code];
+        error->line    = line;
+    }
+    return code;
+}
+
 NCF::NCF()
 	: m_p_level(0)
 {}
@@ -62,22 +86,20 @@ void NCF::release()
 	m_p_symbols.clear();
 }
 
-int NCF::parse()
+int NCF::parse(error_t *error)
 {
 	// Sanity check
 	{
 		int c;
 		std::ifstream in(m_p_filepath.c_str());
 
-		if (!in.good())
-			return 2;
+		if (!in.good()) return err(error, ERROR_CODE_IO, 0);
 
 		while((c = in.get()) != EOF && c <= 127);
 
 		in.close();
 
-		if(c != EOF)
-			return 1;
+		if (c != EOF) return err(error, ERROR_CODE_NOT_ASCII_FILE, 0);
 	}
 
 	// Stack of groups for parsing.
@@ -88,7 +110,7 @@ int NCF::parse()
 	// Process file.
 	std::fstream in(m_p_filepath.c_str(), std::ios::in);
 
-	if (!in.good()) return 2;
+	if (!in.good()) return err(error, ERROR_CODE_IO, 0);
 
 	int linep = 0;
 	int sectionp = 0;
@@ -96,26 +118,56 @@ int NCF::parse()
 	std::string input;
 	while (getline(in, input))
 	{
-		linep++;
+		++linep;
 
 		std::string line, comment;
 
-		Util::String::split(input, line, comment, '#'); // Strip comments.
-		Util::String::trim(line); // Trim spaces and unused characters.
+		util::split(input, line, comment, '#'); // Strip comments.
+		util::trim(line); // Trim spaces and unused characters.
 
 		if (!line.length())
 		{
 			// Empty line - do nothing.
 		}
+		else if((line.length() > 1) && (line.find('%') != std::string::npos))
+		{
+			// get the identifier and its value.
+			std::string com;
+			std::string value;
+			util::split(line, com, value, ' ');
+			// Trim the com and its value from unused characters and spaces.
+			util::trim(com);
+			util::trim(value);
+
+			if (!com.compare("%include"))
+			{
+				std::string base, file;
+				// Extract base path and file name of the active script.
+				util::path_comp(m_p_filepath, base, file);
+
+				// Append the inclusion value to the base.
+				base.append(value);
+
+				group_stack.front()->m_p_filepath = base;
+
+				if (group_stack.front()->parse()) {
+                    return err(error, ERROR_CODE_EXTERNAL_FILE, linep);
+                }
+			}
+			else
+			{
+                return err(error, ERROR_CODE_SYNTAX, linep);
+			}
+		}
 		else if (line.length() > 2 && (line.find('=') != std::string::npos))
 		{
 			// Get the identifier and its value.
 			std::string name, value;
-			Util::String::split(line, name, value, '=');
+			util::split(line, name, value, '=');
 
 			// Trim the name and its value from unused characters and spaces.
-			Util::String::trim(name);
-			Util::String::trim(value);
+			util::trim(name);
+			util::trim(value);
 
 			// If this is a section start.
 			if (value == "{")
@@ -138,6 +190,7 @@ int NCF::parse()
 				}
 
 				// Make it the active node.
+                if (group_stack.front()->query_property(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_GROUP, linep);
 				group_stack.push_front(group_stack.front()->m_p_groups[name]);
 			}
 			// If this is a regular assignment.
@@ -148,7 +201,8 @@ int NCF::parse()
 					(*it)->expand_symbol(m_p_symbols, value);
 				}
 
-				group_stack.front()->m_p_symbols[name] = value;
+                if (group_stack.front()->query_group(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_PROPERTY, linep);
+                group_stack.front()->m_p_symbols[name] = value;
 			}
 		}
 		// If this is a section end.
@@ -157,66 +211,22 @@ int NCF::parse()
 			--sectionp;
 
 			// Check for unbalanced sections.
-			if (sectionp < 0)
-			{
-				fprintf(stderr, "Syntax error: Unbalanced sections at line: %i.\n", linep);
-				return 1;
-			}
+			if (sectionp < 0) return err(error, ERROR_CODE_UNBALANCED_GROUPS, linep);
 
 			group_stack.pop_front();
 		}
-		else if((line.length() > 1) && (line.find('%') != std::string::npos))
-		{
-			// get the identifier and its value.
-			std::string com;
-			std::string value;
-			Util::String::split(line, com, value, ' ');
-			// Trim the com and its value from unused characters and spaces.
-			Util::String::trim(com);
-			Util::String::trim(value);
-
-			if (!com.compare("%include"))
-			{
-				std::string base, file;
-				// Extract base path and file name of the active script.
-				Util::String::path_comp(m_p_filepath, base, file);
-
-				// Append the inclusion value to the base.
-				base.append(value);
-
-#ifdef CONFIG_DEBUG
-				printf("NCF inline %s\n", base.c_str());
-#endif /* CONFIG_DEBUG */
-
-				group_stack.front()->m_p_filepath = base;
-				group_stack.front()->parse();
-			}
-			else
-			{
-#ifdef CONFIG_DEBUG
-				printf("Syntax error: Invalid modifier [ %s ] at line:%i\n", com.c_str(), linep);
-#endif /* CONFIG_DEBUG */
-			}
-		}
 		else
 		{
-			fprintf(stderr, "Syntax error: Invalid entry at line: %i\n", linep);
-			return 3;
+			return err(error, ERROR_CODE_SYNTAX, linep);
 		}
 	}
 
 	in.close();
 
 	// Check for unbalanced sections.
-	if(sectionp)
-	{
-#ifdef CONFIG_DEBUG
-		fprint("Syntax error: Final unbalanced sections [ %i ].\n", linep);
-#endif /* CONFIG_DEBUG */
-		return 4;
-	}
+	if(sectionp) return err(error, ERROR_CODE_UNBALANCED_GROUPS, linep);
 
-	return 0;
+	return err(error, ERROR_CODE_OK, 0);
 }
 
 void NCF::expand_symbol(std::map<std::string, std::string> &symbols, std::string &s)
@@ -233,7 +243,7 @@ void NCF::expand_symbol(std::map<std::string, std::string> &symbols, std::string
 		std::string search;
 
 		// Extract reference.
-		Util::String::extract(source,search,'<','>');
+		util::extract(source,search,'<','>');
 
 		// If there is no valid pattern, return.
 		if (search.length() < 3) return;
@@ -251,7 +261,7 @@ void NCF::expand_symbol(std::map<std::string, std::string> &symbols, std::string
 			size_t pos = psearch.compare(it->first);
 			if (!pos)
 			{
-				Util::String::replace_first_of(s, search, it->second);
+				util::replace_first_of(s, search, it->second);
 #ifdef CONFIG_DEBUG
 				printf("NCF parser: Matched! %s\n", s.c_str());
 #endif /* CONFIG_DEBUG */
@@ -399,3 +409,5 @@ int NCF::dump(const char *file, int create) const
 	 out.close();
 	 return 0;
 }
+
+} /* namespace ncf */

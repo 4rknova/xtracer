@@ -2,8 +2,8 @@
 #include <algorithm>
 #include "util.h"
 
-namespace Util {
-	namespace String {
+namespace ncf {
+	namespace util {
 
 void to_lower_case(std::string &s)
 {
@@ -202,5 +202,5 @@ void replace_first_of(std::string &s, const std::string &p, const std::string &r
 	s.append(tail);
 }
 
-	} /* namespace String */
-} /* namespace Util */
+	} /* namespace util */
+} /* namespace ncf */
