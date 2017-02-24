@@ -1,0 +1,71 @@
+title = Room
+descr = Three spheres in a room (sphere lights).
+versn = 0.3
+
+data = data/cubemap
+
+camera = {
+	ods = {
+        type = ods
+		ipd  = 1.5
+    }
+
+    default = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(0,0,-40)
+        target   = vec3(0,0,0)
+        fov      = 45
+    }
+}
+
+geometry = {
+    ball = {
+        type   = mesh
+        source = gen(icosahedron)
+        scale  = vec3(5,5,5)
+    }
+
+    light = {
+        type     = sphere
+        position = vec3(0,0,0)
+        radius   = 1
+    }
+}
+
+material = {
+	ball = {
+		type     = phong
+		diffuse  = col3(1,1,1)
+		specular = col3(1,1,1)
+        k_specular = 0.9
+        k_diffuse  = 0.1
+        reflectance = 1.
+        k_exponent  = 900000
+	}
+
+    light = {
+       type     = emissive
+       emissive = col3(1,1,1)
+    }
+}
+
+cubemap = {
+    posy = <data>/posy.jpg
+    negy = <data>/negy.jpg
+    negx = <data>/negx.jpg
+    posx = <data>/posx.jpg
+    posz = <data>/posz.jpg
+    negz = <data>/negz.jpg
+}
+
+object = {
+    ball = {
+        geometry = ball
+        material = ball
+    }
+#    light = {
+ #       geometry = light
+  #      material = light
+   # }
+}

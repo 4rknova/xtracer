@@ -292,7 +292,6 @@ xtracer::assets::ICamera *Scene::get_camera()
 	return 0;
 }
 
-
 bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj)
 {
 	IntInfo test, res;

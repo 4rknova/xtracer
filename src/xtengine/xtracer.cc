@@ -76,9 +76,10 @@ int main(int argc, char **argv)
 
 		xtracer::render::IRenderer *renderer = NULL;
 
-        if      (!strcmp(renderer_name.c_str(), "depth")) renderer = new DRenderer();
+        if      (!strcmp(renderer_name.c_str(), "depth"))   renderer = new DRenderer();
         else if (!strcmp(renderer_name.c_str(), "stencil")) renderer = new xtracer::renderer::stencil::Renderer();
         else renderer = new Renderer();
+
 		xtracer::render::context_t  context;
 		context.scene       = &scene;
         context.params      = params;

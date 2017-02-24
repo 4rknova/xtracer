@@ -45,7 +45,7 @@ void Mesh::build_octree(object_t &object)
 
     		MTriangle p;
 
-            p.material_id = (*it).mesh.materials[i];
+            //p.material_id = (*it).mesh.materials[i];
 
             if (a_v != -1) p.v[0]  = NMath::Vector3f(d->v[3*a_v], d->v[3*a_v+1], d->v[3*a_v+2]);
 		    if (b_v != -1) p.v[1]  = NMath::Vector3f(d->v[3*b_v], d->v[3*b_v+1], d->v[3*b_v+2]);

@@ -223,7 +223,13 @@ void Renderer::pass_rtrace()
 			std::cout << "\rRendering "
                       << std::setw(6) << std::setprecision(2)
                       << progress / tile_count * 100.f << "%"
-                      << " @ " << omp_get_num_threads() << "T" << std::flush;
+                      << " @ " << omp_get_num_threads() << "T"
+                      << " [ " << m_context->params.width << "x" << m_context->params.height
+                      << "-" << m_context->params.tile_size
+                      << " | " << m_context->params.ssaa << " ssaa"
+                      << " | " << m_context->params.samples << " spp"
+                      << " ]"
+                      << std::flush;
 		}
 	}
 }

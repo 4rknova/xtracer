@@ -9,6 +9,8 @@
 #include <nmesh/mesh.h>
 #include <nmesh/transform.h>
 #include <nmesh/obj.h>
+#include <nmesh/invnormals.h>
+#include <nmesh/icosahedron.h>
 #include <nimg/checkerboard.h>
 
 #include "proto.h"
@@ -244,39 +246,49 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 	else if (!type.compare(XTPROTO_LTRL_MESH)) {
 		data = new (std::nothrow) nmesh::Mesh;
 
-		// Data source
-		std::string f = p->get_property_by_name(XTPROTO_PROP_SOURCE);
-
-		// Open source file from relative path
-		std::string base, file, fsource = source;
-		ncf::util::path_comp(fsource, base, file);
-		base.append(f);
-
-		Log::handle().post_message("Loading data from %s", base.c_str());
-
         nmesh::object_t obj;
 
-		if (nmesh::io::import::obj(base.c_str(), obj))
-		{
-			Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
-			delete data;
-            return 0;
-		}
+		// Data source
+		std::string f = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
 
-		if (p->query_group(XTPROTO_PROP_ROTATION)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_ROTATION);
-			nmesh::mutator::rotate(obj, v.x, v.y, v.z);
-		}
+        std::string token;
+        void* buffer = malloc(200 * sizeof(char));
+        memset(buffer, 0, 200 * sizeof(char));
+        int res = sscanf(f.c_str(), XTPROTO_FORMAT_GENERATE, (char*)buffer);
+        if (buffer && *((char*)buffer)) token = (char*)buffer;
+        free(buffer);
 
-		if (p->query_group(XTPROTO_PROP_SCALE)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_SCALE);
-			nmesh::mutator::scale(obj, v.x, v.y, v.z);
-		}
+        if (res > 0) {
+            if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
+                nmesh::generator::icosahedron(&obj);
+            }
+            else
+            {
+                Log::handle().post_message("Invalid mesh generator: %s", token.c_str());
+            }
+        }
+        else {
+    		// Open source file from relative path
+	    	std::string base, file, fsource = source;
+		    ncf::util::path_comp(fsource, base, file);
+    		base.append(f);
 
-		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION);
-			nmesh::mutator::translate(obj, v.x, v.y, v.z);
-		}
+	    	Log::handle().post_message("Loading data from %s", base.c_str());
+
+	    	if (nmesh::io::import::obj(base.c_str(), obj))
+    		{
+    			Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
+	    		delete data;
+                return 0;
+		    }
+        }
+
+		NMath::Vector3f xform_rot = deserialize_vec3(p, XTPROTO_PROP_ROTATION    , NMath::Vector3f(0,0,0));
+		NMath::Vector3f xform_scl = deserialize_vec3(p, XTPROTO_PROP_SCALE       , NMath::Vector3f(1,1,1));
+		NMath::Vector3f xform_tsl = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
+		nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
+		nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
+		nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
 
 		Log::handle().post_message("Building octree..");
 		((nmesh::Mesh *)data)->build_octree(obj);
