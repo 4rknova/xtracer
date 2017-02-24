@@ -4,9 +4,9 @@
 #include "tiny_obj_loader.h"
 #include "obj.h"
 
-namespace NMesh {
-	namespace IO {
-		namespace Import {
+namespace nmesh {
+	namespace io {
+		namespace import {
 
 int obj(const char* filename, object_t &obj)
 {
@@ -127,6 +127,6 @@ int obj(const char* filename, object_t &obj)
 	return 0;
 }
 
-		} /* namespace Import */
-	} /* namespace IO */
-} /* namespace NMesh */
+		} /* namespace import */
+	} /* namespace io */
+} /* namespace nmesh */

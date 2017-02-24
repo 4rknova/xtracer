@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-namespace NMesh {
+namespace nmesh {
 
 typedef struct {
   std::string name;
@@ -75,6 +75,6 @@ typedef struct {
     std::vector<material_t> materials;
 } object_t;
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
 #endif /* NMESH_MESH_HPP_INCLUDED */

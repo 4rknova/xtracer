@@ -3,7 +3,7 @@
 
 #include <nmath/precision.h>
 
-namespace NMesh {
+namespace nmesh {
 
 #ifdef __cplusplus
 	extern "C" {
@@ -38,6 +38,6 @@ typedef unsigned int index_t;
 	} /* extern */
 #endif /* __cplusplus */
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
 #endif /* NMESH_VERTEX_H_INCLUDED */

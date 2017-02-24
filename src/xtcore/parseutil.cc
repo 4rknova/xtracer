@@ -242,7 +242,7 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 	}
 	// - Mesh
 	else if (!type.compare(XTPROTO_LTRL_MESH)) {
-		data = new (std::nothrow) NMesh::Mesh;
+		data = new (std::nothrow) nmesh::Mesh;
 
 		// Data source
 		std::string f = p->get_property_by_name(XTPROTO_PROP_SOURCE);
@@ -254,9 +254,9 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 
 		Log::handle().post_message("Loading data from %s", base.c_str());
 
-        NMesh::object_t obj;
+        nmesh::object_t obj;
 
-		if (NMesh::IO::Import::obj(base.c_str(), obj))
+		if (nmesh::io::import::obj(base.c_str(), obj))
 		{
 			Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
 			delete data;
@@ -265,21 +265,21 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 
 		if (p->query_group(XTPROTO_PROP_ROTATION)) {
 			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_ROTATION);
-			NMesh::Mutator::rotate(obj, v.x, v.y, v.z);
+			nmesh::mutator::rotate(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_SCALE)) {
 			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_SCALE);
-			NMesh::Mutator::scale(obj, v.x, v.y, v.z);
+			nmesh::mutator::scale(obj, v.x, v.y, v.z);
 		}
 
 		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
 			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION);
-			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
+			nmesh::mutator::translate(obj, v.x, v.y, v.z);
 		}
 
 		Log::handle().post_message("Building octree..");
-		((NMesh::Mesh *)data)->build_octree(obj);
+		((nmesh::Mesh *)data)->build_octree(obj);
 	}
 	// unknown
 	else {

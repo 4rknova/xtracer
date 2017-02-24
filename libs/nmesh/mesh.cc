@@ -3,7 +3,7 @@
 #include <nmath/intinfo.h>
 #include "mesh.h"
 
-namespace NMesh {
+namespace nmesh {
 
 MTriangle::~MTriangle()
 {}
@@ -82,4 +82,4 @@ NMath::Ray Mesh::ray_sample() const
     return ray;
 }
 
-} /* namespace NMesh */
+} /* namespace nmesh */

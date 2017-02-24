@@ -2,8 +2,8 @@
 #include <nmath/matrix.h>
 #include "transform.h"
 
-namespace NMesh {
-	namespace Mutator {
+namespace nmesh {
+	namespace mutator {
 
 void translate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
 {
@@ -53,5 +53,5 @@ void rotate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scala
 	}
 }
 
-		} /* namespace Mutator */
-} /* namespace NMesh */
+		} /* namespace mutator */
+} /* namespace nmesh */

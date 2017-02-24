@@ -13,7 +13,7 @@
 using NMath::Ray;
 using NMath::Geometry;
 
-namespace NMesh {
+namespace nmesh {
 
 class MTriangle : public NMath::Triangle
 {
@@ -39,6 +39,6 @@ class Mesh: public Geometry
 		Octree<MTriangle> m_octree;
 };
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
 #endif /* LIBNMESH_MESH_H_INCLUDED */
