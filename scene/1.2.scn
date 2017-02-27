@@ -24,6 +24,19 @@ geometry = {
         type   = mesh
         source = gen(icosahedron)
         scale  = vec3(5,5,5)
+
+        modifiers = {
+            tesselate    = 5
+            flip_normals = true
+            extrude = {
+                posy = <data>/posy.jpg
+                negy = <data>/negy.jpg
+                negx = <data>/negx.jpg
+                posx = <data>/posx.jpg
+                posz = <data>/posz.jpg
+                negz = <data>/negz.jpg
+            }
+        }
     }
 
     light = {
@@ -35,6 +48,9 @@ geometry = {
 
 material = {
 	ball = {
+        type     = env_reflector # this material should sample the environment map
+                                 # based on normal derived by vertex.
+
 		type     = phong
 		diffuse  = col3(1,1,1)
 		specular = col3(1,1,1)

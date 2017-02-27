@@ -39,6 +39,12 @@ camera = {
         aperture = 10
         flength = 200
 	}
+
+    ods = {
+        type     = ods
+        ipd      = 1
+        position = vec3(0, 50,100)
+    }
 }
 
 geometry = {
