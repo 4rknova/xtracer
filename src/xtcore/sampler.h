@@ -12,7 +12,6 @@ enum FILTERING
     , FILTERING_BILINEAR
 };
 
-
 class ISampler
 {
     public:
