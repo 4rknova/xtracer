@@ -31,7 +31,7 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
 
 xtracer::assets::ICamera   *deserialize_camera   (const char *source, const ncf::NCF *p);
-xtracer::assets::Material  *deserialize_material (const char *source, const ncf::NCF *p);
+xtracer::assets::IMaterial *deserialize_material (const char *source, const ncf::NCF *p);
 xtracer::assets::Texture2D *deserialize_texture  (const char *source, const ncf::NCF *p);
 xtracer::assets::Geometry  *deserialize_geometry (const char *source, const ncf::NCF *p);
 xtracer::assets::Object    *deserialize_object   (const char *source, const ncf::NCF *p);

@@ -20,8 +20,8 @@ using nimg::ColorRGBf;
 
 struct light_t
 {
-    xtracer::assets::Geometry *light;
-    xtracer::assets::Material *material;
+    xtracer::assets::Geometry  *light;
+    xtracer::assets::IMaterial *material;
 };
 
 class Scene
@@ -69,7 +69,7 @@ class Scene
 
 		// Maps of the scene entities
 		std::map<std::string, xtracer::assets::ICamera*  > m_cameras;
-		std::map<std::string, xtracer::assets::Material* > m_materials;
+		std::map<std::string, xtracer::assets::IMaterial*> m_materials;
 		std::map<std::string, xtracer::assets::Texture2D*> m_textures;
 		std::map<std::string, xtracer::assets::Geometry* > m_geometry;
 		std::map<std::string, xtracer::assets::Object*   > m_objects;

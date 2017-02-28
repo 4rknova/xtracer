@@ -16,6 +16,7 @@ enum FILTERING
     , FILTERING_BILINEAR
 };
 
+
 class Texture2D
 {
 	public:

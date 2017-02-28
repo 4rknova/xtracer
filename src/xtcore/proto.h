@@ -7,6 +7,7 @@
 #define XTPROTO_FORMAT_VEC3         "vec3(%f,%f,%f)"    /* string     */ /* Format for vec3 */
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */
 #define XTPROTO_FORMAT_TEX2         "tex2(%f,%f)"       /* string     */ /* Format for tex2 */
+#define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
 #define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
 
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
@@ -27,6 +28,11 @@
 #define XTPROTO_PROP_VRT_0			"v0"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_1			"v1"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_2			"v2"				/* vector     */ /* Vector coordinates */
+
+#define XTPROTO_PROP_PROPERTIES     "properties"        /* string     */ /* properties */
+#define XTPROTO_PROP_SCALARS        "scalars"           /* string     */ /* scalar properties */
+#define XTPROTO_PROP_COLORS         "colors"            /* string     */ /* color properties */
+#define XTPROTO_PROP_TEXTURES       "textures"          /* string     */ /* texture properties */
 
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */ /* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */ /* Default value */
@@ -93,7 +99,8 @@
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
-#define XTPROTO_PROP_OBJ_TEX		"texture"			/* asset_id_t */ /* Texture id */
+
+#define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
 
 #define XTPROTO_NODE_CUBEMAP    	"cubemap"			/* N/A        */ /* Cubemap */
 #define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */ /* Resource node */
@@ -105,5 +112,12 @@
 #define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */ /* Perspective camera */
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */ /* Omni Directional Stereo camera */
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */
+
+#define XTPROTO_TEXTURE        "texture"
+#define XTPROTO_CUBEMAP        "cubemap"
+#define XTPROTO_COLOR          "color"
+#define XTPROTO_PROPERTIES     "properties"
+#define XTPROTO_SAMPLERS       "samplers"
+#define XTPROTO_SCALARS        "scalars"
 
 #endif /* XTPROTO_H_INCLUDED */

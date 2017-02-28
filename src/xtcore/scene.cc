@@ -68,14 +68,13 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
     for(; oit != oet; ++oit) {
         if (!(*oit).second) continue;
 
-        std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_geometry.find((*oit).second->geometry);
-        std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_geometry.end();
-        std::map<std::string, xtracer::assets::Material*>::iterator mit = m_materials.find((*oit).second->material);
-        std::map<std::string, xtracer::assets::Material*>::iterator met = m_materials.end();
+        std::map<std::string, xtracer::assets::Geometry* >::iterator git = m_geometry.find((*oit).second->geometry);
+        std::map<std::string, xtracer::assets::Geometry* >::iterator get = m_geometry.end();
+        std::map<std::string, xtracer::assets::IMaterial*>::iterator mit = m_materials.find((*oit).second->material);
+        std::map<std::string, xtracer::assets::IMaterial*>::iterator met = m_materials.end();
 
         if (git != get && mit != met) {
             if (!(*mit).second->is_emissive()) continue;
-
             light_t light;
             light.light    = (*git).second;
             light.material = (*mit).second;
@@ -228,7 +227,7 @@ int Scene::create_camera(ncf::NCF *p)
 int Scene::create_material(ncf::NCF *p)
 {
     const char * name = p->get_name();
-    xtracer::assets::Material *data = xtracer::io::deserialize_material(m_source.c_str(), p);
+    xtracer::assets::IMaterial *data = xtracer::io::deserialize_material(m_source.c_str(), p);
     if (!data) return 1;
     destroy_material(name);
     m_materials[name] = data;

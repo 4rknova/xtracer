@@ -11,7 +11,6 @@ class Object
 	public:
 		std::string geometry;
 		std::string material;
-		std::string texture;
 };
 
     } /* namespace assets */

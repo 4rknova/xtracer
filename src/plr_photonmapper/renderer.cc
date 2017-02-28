@@ -121,9 +121,9 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 
 	// Get the material & texture.
     std::string &mat_id = m_context->scene->m_objects[obj]->material;
-    std::string &tex_id = m_context->scene->m_objects[obj]->texture;
-	xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
-	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
+//    std::string &tex_id = m_context->scene->m_objects[obj]->texture;
+	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
+//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -161,8 +161,8 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 		nray.origin += nray.direction * 0.5;
 
 		ColorRGBf texcol = ColorRGBf(1, 1, 1);
-		if (it_tex != m_context->scene->m_textures.end())
-			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
+//		if (it_tex != m_context->scene->m_textures.end())
+//			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 
 		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
 
@@ -269,7 +269,7 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 			}
 
             std::string &mat_id = m_context->scene->m_objects[obj]->material;
-            xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
+            xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -296,20 +296,18 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 	xtracer::assets::Object *mobj = m_context->scene->m_objects[obj];
 
-	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
-	std::map<std::string, xtracer::assets::Material  *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
+//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
+	std::map<std::string, xtracer::assets::IMaterial *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
-         if (it_mat == m_context->scene->m_materials.end()) return color;
-    else if ((*it_mat).second->type == xtracer::assets::MATERIAL_EMISSIVE) return nimg::ColorRGBf(1,1,1);
+    if (it_mat == m_context->scene->m_materials.end()) return color;
 
 	// shadows
 	NMath::Vector3f n = info.normal;
 	NMath::Vector3f p = info.point;
 
     std::string &mat_id = mobj->material;
-	xtracer::assets::Material *mat = m_context->scene->m_materials[mat_id];
+	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 
-	// ambient
 	color = mat->ambient * m_context->scene->ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
@@ -330,9 +328,9 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 			// Texture.
 			ColorRGBf texcolor = ColorRGBf(1,1,1);
-			if (it_tex != m_context->scene->m_textures.end()) {
-				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
-			}
+//			if (it_tex != m_context->scene->m_textures.end()) {
+//				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
+//			}
 
 			Ray sray;
 			sray.direction = v.normalized();
@@ -364,42 +362,39 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// Fresnel
 	float fr = 1.0;
 
-	if (   (mat->type == xtracer::assets::MATERIAL_PHONG)
-        || (mat->type == xtracer::assets::MATERIAL_BLINNPHONG)) {
-		// refraction
-		if(mat->transparency > 0.0) {
-			Ray refrray;
-			refrray.origin    = p;
-			refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
+	// refraction
+	if(mat->transparency > 0.0) {
+		Ray refrray;
+		refrray.origin    = p;
+		refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
 
-            if (dot(n, refrray.direction) > 0.) fr = 1.;
-            else {
-                float ci = 1. - dot( n, ray.direction);
-                float ct = dot(-n, refrray.direction);
-    	    	float f1 = ior_src * ci;
-       		    float f2 = ior_dst * ct;
-                float f3 = ior_dst * ci;
-                float f4 = ior_src * ct;
-   		    	float fra = pow((f1 - f2) / (f1 + f2), 2.0);
- 			    float frb = pow((f3 - f4) / (f3 + f4), 2.0);
-                fr  = (fra + frb) * .5;
+        if (dot(n, refrray.direction) > 0.) fr = 1.;
+        else {
+            float ci = 1. - dot( n, ray.direction);
+            float ct = dot(-n, refrray.direction);
+	    	float f1 = ior_src * ci;
+   		    float f2 = ior_dst * ct;
+            float f3 = ior_dst * ci;
+            float f4 = ior_src * ct;
+	    	float fra = pow((f1 - f2) / (f1 + f2), 2.0);
+		    float frb = pow((f3 - f4) / (f3 + f4), 2.0);
+            fr  = (fra + frb) * .5;
 
-	    		float ft = 1.0 - fr;
-    			color *= mat->transparency;
-			    color += ft * mat->transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
-            }
-		}
+    		float ft = 1.0 - fr;
+			color *= mat->transparency;
+		    color += ft * mat->transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+        }
+	}
 
-		// reflection
-		if(mat->reflectance > 0.0) {
-			unsigned int tlmcsamples = m_context->params.samples;
-			scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
-			for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
-				Ray reflray;
-				reflray.origin = p;
-				reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : mat->roughness);
-				color += fr * (mat->reflectance * trace_ray(pray, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
-			}
+	// reflection
+	if (mat->reflectance > 0) {
+		unsigned int tlmcsamples = m_context->params.samples;
+		scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
+		for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
+			Ray reflray;
+			reflray.origin = p;
+			reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : mat->roughness);
+			color += fr * (mat->reflectance * trace_ray(pray, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
 		}
 	}
 

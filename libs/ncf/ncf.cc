@@ -278,23 +278,23 @@ const char* NCF::get_property_by_name(const char *name) const
 			: it->second.c_str();
 }
 
-const char* NCF::get_property_by_index(unsigned int index) const
+const char* NCF::get_property_by_index(size_t index) const
 {
 	if (count_properties() == 0) return NULL;
 
 	std::map<std::string, std::string>::iterator it = m_p_symbols.begin();
 	std::map<std::string, std::string>::iterator et = m_p_symbols.end();
-	for (unsigned int i = 0; (it != et) && (index != i++); ++it);
+	for (size_t i = 0; (it != et) && (index != i++); ++it);
 	return it->second.c_str();
 }
 
-const char* NCF::get_property_name_by_index(unsigned int index) const
+const char* NCF::get_property_name_by_index(size_t index) const
 {
 	if (count_properties() == 0) return NULL;
 
 	std::map<std::string, std::string>::iterator it = m_p_symbols.begin();
 	std::map<std::string, std::string>::iterator et = m_p_symbols.end();
-	for (unsigned int i = 0; (it != et) && (index != i++); ++it);
+	for (size_t i = 0; (it != et) && (index != i++); ++it);
 	return it->first.c_str();
 }
 
@@ -321,22 +321,27 @@ NCF* NCF::get_group_by_name(const char *name) const
 	return m_p_groups[name];
 }
 
-NCF* NCF::get_group_by_index(unsigned int index) const
+NCF* NCF::get_group_by_index(size_t index) const
 {
 	if (count_groups() == 0) return NULL;
 
 	std::map<std::string, NCF*>::iterator it = m_p_groups.begin();
 	std::map<std::string, NCF*>::iterator et = m_p_groups.end();
-	for (unsigned int i = 0; (it != et) && (index != i++); ++it);
+	for (size_t i = 0; (it != et) && (index != i++); ++it);
 	return it->second;
 }
 
-unsigned int NCF::count_groups() const
+size_t NCF::count_entries() const
+{
+    return m_p_groups.size() + m_p_symbols.size();
+}
+
+size_t NCF::count_groups() const
 {
 	return m_p_groups.size();
 }
 
-unsigned int NCF::count_properties() const
+size_t NCF::count_properties() const
 {
 	return m_p_symbols.size();
 }
@@ -373,7 +378,7 @@ int NCF::dump(const char *file, int create) const
 	if (create) out << "# CF1 dump\n";
 
 	std::string ident;
-	for (unsigned int i = 0; i < m_p_level; i++) ident.append("\t");
+	for (size_t i = 0; i < m_p_level; i++) ident.append("\t");
 
 	std::map<std::string, std::string>::iterator pit = m_p_symbols.begin();
 	std::map<std::string, std::string>::iterator pet = m_p_symbols.end();
