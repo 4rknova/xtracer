@@ -200,7 +200,7 @@ material = {
 	}
 
     light_source = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = 1

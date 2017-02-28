@@ -2,14 +2,6 @@ title = Room
 descr = Three spheres in a room.
 versn = 0.4
 
-k_ambient = 0.001
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 
 	default = {
@@ -161,11 +153,11 @@ object = {
 	}
 	floor = {
 		geometry = floor
-		material = lambert_grey
+		material = phong_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_grey
+		material = phong_grey
 	}
 	back = {
 		geometry = back
@@ -200,7 +192,7 @@ material = {
 
 		k_diffuse  = 0.3
 		k_specular = 0.7
-		k_exponent = 60
+		k_exponent = 1024
 	}
 
 	phong_green = {
@@ -217,8 +209,8 @@ material = {
 
 		k_diffuse  = 0.3
 		k_specular = 0.7
-		k_exponent = 60
-	}
+		k_exponent = 1024
+    }
 
 	phong_blue = {
 		type = phong
@@ -238,7 +230,7 @@ material = {
 
 		k_diffuse  = 0.3
 		k_specular = 0.7
-		k_exponent = 60
+		k_exponent = 1024
 	}
 
 	phong_grey = {
@@ -273,12 +265,7 @@ material = {
 	}
 
     light = {
-        type = emissive
-
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
-        }
+        type = lambert
+        emissive = col3(1,1,1)
     }
 }

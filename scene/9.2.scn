@@ -83,7 +83,7 @@ material = {
 	}
 
     l0 = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = .5
@@ -93,7 +93,7 @@ material = {
     }
 
     l1 = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = .75

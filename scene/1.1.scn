@@ -30,11 +30,11 @@ geometry = {
 material = {
 	ball = {
 		type         = phong
-		reflectance  = 1
-		diffuse      = col3(1,1,1)
+		diffuse      = col3(0,0,0)
 		specular     = col3(1,1,1)
-		k_diffuse    = 0.1
-		k_specular   = 0.9
+		k_diffuse    = 0
+		k_specular   = 1
+        reflectance  = 1
 		k_exponent   = 94096
 	}
 }

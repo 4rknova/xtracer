@@ -242,7 +242,7 @@ material = {
 	}
 
     light = {
-        type = emissive
+        type = lambert
         emissive = {
             r = .7
             g = .7

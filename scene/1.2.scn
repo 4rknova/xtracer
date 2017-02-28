@@ -56,14 +56,9 @@ material = {
 		specular = col3(1,1,1)
         k_specular = 0.9
         k_diffuse  = 0.1
-        reflectance = 1.
+        reflectance = 1
         k_exponent  = 900000
 	}
-
-    light = {
-       type     = emissive
-       emissive = col3(1,1,1)
-    }
 }
 
 cubemap = {
@@ -80,8 +75,4 @@ object = {
         geometry = ball
         material = ball
     }
-#    light = {
- #       geometry = light
-  #      material = light
-   # }
 }

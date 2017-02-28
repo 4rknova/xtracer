@@ -171,7 +171,7 @@ material = {
 	}
 
     light_source = {
-        type = emissive
+        type = lambert
 
 		emissive = {
 			r = 0.25
@@ -948,6 +948,16 @@ object = {
 
 	light_2 = {
 		geometry = light_2
+		material = light
+	}
+
+    light_3 = {
+		geometry = light_3
+		material = light
+	}
+
+	light_4 = {
+		geometry = light_4
 		material = light
 	}
 

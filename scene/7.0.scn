@@ -4,7 +4,7 @@ title = Head
 descr = Head mesh
 versn = 0.1
 
-data = data
+data = data/head
 
 k_ambient = 0.01
 
@@ -50,7 +50,7 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = <data>/head/OBJ/Male_Head_L4.OBJ
+		source = <data>/OBJ/Male_Head_L4.OBJ
 
         scale = {
             x = 300.0
@@ -79,28 +79,26 @@ geometry = {
 
 material = {
 	head = {
-		type = blinn_phong
+		type = lambert
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+            		source    = <data>/Textures/Male_Colour.jpg
+                    filtering = bilinear
+                }
+            }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
+            scalars = {
+            }
+        }
 
-		reflectance = 0.1
-		k_diffuse  = 0.9
-		k_specular = 0.1
-		k_exponent = 30
+		diffuse = col3(1,1,1)
 	}
 
     light = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = 1
@@ -110,18 +108,10 @@ material = {
     }
 }
 
-texture = {
-	head = {
-		source = <data>/head/Textures/Male_Colour.jpg
-        filtering = bilinear
-	}
-}
-
 object = {
 	head = {
 		geometry = head
 		material = head
-		texture = head
 	}
 
     l0 = {

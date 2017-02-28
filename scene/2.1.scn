@@ -2,8 +2,9 @@ title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
 
-camera = {
+ambient = col3(.2,.2,.2)
 
+camera = {
 	default = {
         type     = thin-lens
 		fov      = 45
@@ -12,99 +13,67 @@ camera = {
 	}
 
 	side = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = 300
-			y = 300
-			z = -1400
-		}
-
-		up = {
-			y = 1
-		}
+        type     = thin-lens
+		fov      = 45
+		position = vec3(300,300,-1400)
+		up       = vec3(0,1,0)
 	}
 }
 
 geometry = {
-
 	red_ball = {
-		type = sphere
-		position = {
-			x = 80
-			y = -305
-			z = -100
-		}
-		radius = 95
+		type     = sphere
+		position = vec3(80,-305,-100)
+		radius   = 95
 	}
+
 	green_ball = {
-		type = sphere
-		position = {
-			x = 350
-			y = -330
-			z = 350
-		}
-		radius = 77
+		type     = sphere
+		position = vec3(350,-330,350)
+       	radius   = 77
 	}
+
 	blue_ball = {
-		type = sphere
-		position = {
-			x = -220
-			y = -245
-			z = 80
-		}
-		radius = 155
+		type     = sphere
+		position = vec3(-220, -245, 80)
+		radius   = 155
 	}
+
 	floor = {
-		type = plane
-		normal = {
-			y = 1
-		}
+		type     = plane
+		normal   = vec3(0,1,0){
 		distance = -400
 	}
+
 	ceiling = {
-		type = plane
-		normal = {
-			y = -1
-		}
+		type     = plane
+		normal   = vec3(0,-1,0)
 		distance = 400
 	}
+
 	back = {
-		type = plane
-		normal = {
-			z = -1
-		}
+		type     = plane
+		normal   = vec3(0,0,-1)
 		distance = 500
 	}
+
 	left_wall = {
-		type = plane
-		normal = {
-			x = 1
-		}
+		type     = plane
+		normal   = vec3(1,0,0)
 		distance = -500
 	}
+
 	right_wall = {
-		type = plane
-		normal = {
-			x = -1
-		}
+		type     = plane
+		normal   = vec3(-1,0,0)
 		distance = 500
 	}
 
 	l0 = {
-		type = sphere
-
-		radius = 50
-
-		position = {
-			x = 0
-			y = 150
-			z = -200
-		}
+		type     = sphere
+		radius   = 50
+		position = vec3(0,150,-200)
 	}
-
 }
 
 object = {
@@ -150,49 +119,32 @@ object = {
 
 material = {
 	lambert_red = {
-		type = lambert
-		diffuse = {
-			r = 1
-			g = 0
-			b = 0
-		}
+		type    = lambert
+		diffuse = col3(1,0,0)
+		ambient = col3(1,0,0)
 	}
 
 	lambert_green = {
-		type = lambert
-		diffuse = {
-			r = 0
-			g = 1
-			b = 0
-		}
+		type    = lambert
+		diffuse = col3(0,1,0)
+		ambient = col3(0,1,0)
 	}
 
 	lambert_blue = {
-		type = lambert
-		diffuse = {
-			r = 0
-			g = 0
-			b = 1
-		}
+		type    = lambert
+		diffuse = col3(0,0,1)
+		ambient = col3(0,0,1)
 	}
 
 	lambert_grey = {
-		type = lambert
-		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
+		type    = lambert
+		diffuse = col3(.5,.5,.5)
+		ambient = col3(.5,.5,.5)
 	}
 
     light = {
-        type = emissive
-
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
-        }
+        type     = lambert
+        emissive = col3(1,1,1)
     }
 }
 
