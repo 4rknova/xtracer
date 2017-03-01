@@ -9,12 +9,12 @@ namespace xtracer {
 class SolidColor : public ISampler
 {
     public:
-    void set(nimg::ColorRGBAf &color);
+    void set(nimg::ColorRGBf color);
 
-    nimg::ColorRGBAf sample(const NMath::Vector3f &tc) const;
+    nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
 
     private:
-    nimg::ColorRGBAf m_color;
+    nimg::ColorRGBf m_color;
 };
 
     } /* namespace assets */

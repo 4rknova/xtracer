@@ -72,7 +72,7 @@ void Renderer::pass_ptrace()
 		std::vector<light_t>::iterator it = lights.begin();
 		std::vector<light_t>::iterator et = lights.end();
 		for (; it != et; ++it) {
-			NMath::scalar_t lum = nimg::eval::luminance((*it).material->emissive);
+			NMath::scalar_t lum = 1;//nimg::eval::luminance((*it).material->emissive);
 			light_luminance.push_back(lum);
 			light_total_luminance += lum;
 		}
@@ -95,9 +95,9 @@ void Renderer::pass_ptrace()
 		for (; it != et; ++it) {
 			while (light_photons[light_index] > 0) {
 				Ray ray = (*it).light->ray_sample();
-				trace_photon(ray, 0, (*it).material->emissive
-						* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
-						, light_photons[light_index]);
+//				trace_photon(ray, 0, (*it).material->emissive
+//						* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
+//						, light_photons[light_index]);
 			}
 
 			light_index++;
@@ -120,9 +120,9 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	if (!m_context->scene->intersection(ray, info, obj)) return false;
 
 	// Get the material & texture.
-    std::string &mat_id = m_context->scene->m_objects[obj]->material;
+ //   std::string &mat_id = m_context->scene->m_objects[obj]->material;
 //    std::string &tex_id = m_context->scene->m_objects[obj]->texture;
-	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
+//	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 //	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
@@ -148,26 +148,26 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	}
 
 	// Russian rulette.
-	scalar_t avg_diff = (mat->diffuse.r() + mat->diffuse.g() + mat->diffuse.b()) / 3;
-	scalar_t avg_spec = (mat->specular.r() + mat->specular.g() + mat->specular.b()) / 3;
-	scalar_t avg_range = NMath::clamp_max(avg_diff + avg_spec, 1);
-	scalar_t event = NMath::prng_c(0.0, avg_range);
+//	scalar_t avg_diff = (mat->get_sample(MAT_SAMPLER_DIFFUSE, ).r() + mat->diffuse.g() + mat->diffuse.b()) / 3;
+//	scalar_t avg_spec = (mat->specular.r() + mat->specular.g() + mat->specular.b()) / 3;
+//	scalar_t avg_range = NMath::clamp_max(avg_diff + avg_spec, 1);
+//	scalar_t event = NMath::prng_c(0.0, avg_range);
 
 	Ray nray;
 	nray.origin = info.point;
 
-	if (event < avg_diff) { // Interdiffuse.
-		nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
-		nray.origin += nray.direction * 0.5;
-
-		ColorRGBf texcol = ColorRGBf(1, 1, 1);
+//	if (event < avg_diff) { // Interdiffuse.
+//		nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
+//		nray.origin += nray.direction * 0.5;
+//
+//		ColorRGBf texcol = ColorRGBf(1, 1, 1);
 //		if (it_tex != m_context->scene->m_textures.end())
 //			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
+//
+//		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
 
-		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
-
-		return true;
-	}
+//		return true;
+//	}
 
 	return false;
 }
@@ -296,7 +296,6 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 	xtracer::assets::Object *mobj = m_context->scene->m_objects[obj];
 
-//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(mobj->texture);
 	std::map<std::string, xtracer::assets::IMaterial *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
 
     if (it_mat == m_context->scene->m_materials.end()) return color;
@@ -308,7 +307,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
     std::string &mat_id = mobj->material;
 	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 
-	color = mat->ambient * m_context->scene->ambient();
+	color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene->ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
@@ -318,19 +317,12 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	std::vector<light_t>::iterator et = lights.end();
 
 	for (; it != et; ++it) {
-
 		unsigned int tlshsamples = m_context->params.samples;
 		scalar_t tlshscaling = shadow_sample_scaling;
 
 		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
             NMath::Vector3f light_pos = (*it).light->point_sample();
 			NMath::Vector3f v = light_pos - p;
-
-			// Texture.
-			ColorRGBf texcolor = ColorRGBf(1,1,1);
-//			if (it_tex != m_context->scene->m_textures.end()) {
-//				texcolor = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
-//			}
 
 			Ray sray;
 			sray.direction = v.normalized();
@@ -352,9 +344,8 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
-
 			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
-                color += mat->shade(pray.origin, light_pos, (*it).material->emissive, texcolor, info) * tlshscaling;
+                color += mat->shade(pray.origin, light_pos, (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0)), info) * tlshscaling;
 			}
 		}
 	}

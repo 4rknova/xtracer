@@ -125,9 +125,9 @@ int Scene::destroy_texture  (const char *name) { return purge(m_textures , name)
 int Scene::destroy_geometry (const char *name) { return purge(m_geometry , name); }
 int Scene::destroy_object   (const char *name) { return purge(m_objects  , name); }
 
-nimg::ColorRGBAf Scene::sample_cubemap(const NMath::Vector3f &direction) const
+nimg::ColorRGBf Scene::sample_cubemap(const NMath::Vector3f &direction) const
 {
-    return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBAf(0,0,0,1);
+    return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBf(0,0,0);
 }
 
 int Scene::load(const char *filename, const std::list<std::string> &modifiers)

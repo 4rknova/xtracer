@@ -15,8 +15,7 @@ class MaterialPhong : public IMaterial
     nimg::ColorRGBf shade(const NMath::Vector3f &cam_position
                         , const NMath::Vector3f &light_position
                         , const nimg::ColorRGBf &light_intensity
-                        , const nimg::ColorRGBf &texcolor
-                        , const NMath::IntInfo &info) const;
+                        , const NMath::IntInfo  &info) const;
 };
 
     } /* namespace assets */

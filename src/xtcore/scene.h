@@ -50,7 +50,7 @@ class Scene
 		xtracer::assets::ICamera *get_camera();
         std::string camera;
 
-        nimg::ColorRGBAf sample_cubemap(const NMath::Vector3f &direction) const;
+        nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
 		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
 		int create_cubemap  (ncf::NCF *p);

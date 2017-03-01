@@ -14,7 +14,7 @@ class IntInfo
 
 		Vector3f normal;
 		Vector3f point;
-		Vector2f texcoord;
+		Vector3f texcoord;
 		scalar_t t;
 		const Geometry* geometry;
 };

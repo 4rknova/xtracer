@@ -7,8 +7,7 @@ nimg::ColorRGBf MaterialPhong::shade(
        const NMath::Vector3f &cam_position
      , const NMath::Vector3f &light_position
      , const nimg::ColorRGBf &light_intensity
-     , const nimg::ColorRGBf &texcolor
-     , const NMath::IntInfo &info) const
+     , const NMath::IntInfo  &info) const
 {
     NMath::Vector3f light_dir = light_position - info.point;
     light_dir.normalize();
@@ -27,7 +26,11 @@ nimg::ColorRGBf MaterialPhong::shade(
 
     if (rmv < 0) rmv = 0;
 
-    return emissive + ((kdiff * d * diffuse) + (kspec * specular * pow((long double)rmv, (long double)ksexp)) * light_intensity);
+    nimg::ColorRGBf res = light_intensity;
+    res *=    (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
+            + (kspec * get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)ksexp));
+    res +=     get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
+    return res;
 }
 
     } /* namespace assets */

@@ -7,6 +7,7 @@
 #include "sampler.h"
 #include "texture.h"
 #include "camera.h"
+#include "matdefs.h"
 
 namespace xtracer {
     namespace assets {
@@ -23,11 +24,10 @@ class IMaterial
           const NMath::Vector3f &cam_position
         , const NMath::Vector3f &light_pos
         , const nimg::ColorRGBf &light_intensity
-        , const nimg::ColorRGBf &texcolor
-        , const NMath::IntInfo &info) const = 0;
+        , const NMath::IntInfo  &info) const = 0;
 
-    NMath::scalar_t  get_scalar  (const char *name);
-    nimg::ColorRGBAf get_sampler (const char *name, NMath::Vector3f uvw);
+    NMath::scalar_t get_scalar(const char *name) const;
+    nimg::ColorRGBf get_sample(const char *name, const NMath::Vector3f &tc) const;
 
     int add_sampler   (const char *name, ISampler *sampler);
     int add_scalar    (const char *name, NMath::scalar_t scalar);
@@ -39,10 +39,7 @@ class IMaterial
     std::map<std::string, ISampler*>       m_samplers;
 
 public:
-	nimg::ColorRGBf ambient;		// ambient intensity
-	nimg::ColorRGBf diffuse;		// diffuse intensity
 	nimg::ColorRGBf specular;		// specular intensity
-	nimg::ColorRGBf emissive;		// emissive intensity
 
 	NMath::scalar_t kspec;			// specular constant
 	NMath::scalar_t kdiff;			// diffuse constant

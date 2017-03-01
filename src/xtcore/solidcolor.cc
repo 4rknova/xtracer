@@ -3,12 +3,12 @@
 namespace xtracer {
     namespace assets {
 
-void SolidColor::set(nimg::ColorRGBAf &color)
+void SolidColor::set(nimg::ColorRGBf color)
 {
     m_color = color;
 }
 
-nimg::ColorRGBAf SolidColor::sample(const NMath::Vector3f &tc) const
+nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &tc) const
 {
     return m_color;
 }

@@ -94,7 +94,7 @@ void DRenderer::render_depth()
                             NMath::scalar_t  d = (ray.origin - info.point).length();
                             depth = 1. / log(d);
                         }
-                        color += nimg::ColorRGBAf(depth, depth, depth) * d;
+                        color += nimg::ColorRGBf(depth, depth, depth) * d;
                     }
                 }
 

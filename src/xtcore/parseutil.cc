@@ -355,7 +355,9 @@ xtracer::assets::IMaterial *deserialize_material_blinnphong(const char *source, 
 
 xtracer::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
 {
-    return 0;
+    xtracer::assets::SolidColor *sampler = new (std::nothrow) xtracer::assets::SolidColor();
+    ((xtracer::assets::SolidColor *)sampler)->set(deserialize_col3(p, XTPROTO_VALUE));
+    return sampler;
 }
 
 xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
@@ -389,6 +391,7 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
             else if (!type.compare(XTPROTO_CUBEMAP)) sampler = deserialize_cubemap(source, entry);
             else if (!type.compare(XTPROTO_COLOR  )) sampler = deserialize_rgba   (source, entry);
 
+Log::handle().post_message("Adding sampler: %s->%s", p->get_name(), entry->get_name());
             data->add_sampler(entry->get_name(), sampler);
         }
 
@@ -398,10 +401,6 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
             data->add_scalar(name.c_str(), value);
         }
 
-    	data->ambient      = deserialize_col3(p, XTPROTO_PROP_IAMBN);
-	    data->specular     = deserialize_col3(p, XTPROTO_PROP_ISPEC);
-    	data->diffuse      = deserialize_col3(p, XTPROTO_PROP_IDIFF);
-    	data->emissive     = deserialize_col3(p, XTPROTO_PROP_EMISSIVE);
     	data->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
     	data->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
     	data->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);

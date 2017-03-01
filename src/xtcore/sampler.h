@@ -17,7 +17,7 @@ class ISampler
 {
     public:
     virtual ~ISampler();
-    virtual nimg::ColorRGBAf sample(const NMath::Vector3f &uvw) const = 0;
+    virtual nimg::ColorRGBf sample(const NMath::Vector3f &uvw) const = 0;
 
     private:
     FILTERING m_filtering;

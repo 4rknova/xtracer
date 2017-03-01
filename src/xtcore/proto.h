@@ -1,5 +1,5 @@
-#ifndef XTPROTO_H_INCLUDED
-#define XTPROTO_H_INCLUDED
+#ifndef XTRACER_PROTO_H_INCLUDED
+#define XTRACER_PROTO_H_INCLUDED
 
 /*
 **	SYMBOLIC NAME					LITERAL				TYPE			 DESCRIPTION
@@ -119,5 +119,6 @@
 #define XTPROTO_PROPERTIES     "properties"
 #define XTPROTO_SAMPLERS       "samplers"
 #define XTPROTO_SCALARS        "scalars"
+#define XTPROTO_VALUE          "value"
 
-#endif /* XTPROTO_H_INCLUDED */
+#endif /* XTRACER_PROTO_H_INCLUDED */

@@ -11,7 +11,7 @@ int Cubemap::load(const char *file, CUBEMAP_FACE face)
     return m_textures[face].load(file);
 }
 
-nimg::ColorRGBAf Cubemap::sample(const NMath::Vector3f &tc) const
+nimg::ColorRGBf Cubemap::sample(const NMath::Vector3f &tc) const
 {
     NMath::Vector3f dir = tc.normalized();
 

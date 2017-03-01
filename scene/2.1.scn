@@ -2,7 +2,7 @@ title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
 
-ambient = col3(.2,.2,.2)
+ambient = col3(0,0,0)
 
 camera = {
 	default = {
@@ -119,32 +119,88 @@ object = {
 
 material = {
 	lambert_red = {
-		type    = lambert
-		diffuse = col3(1,0,0)
-		ambient = col3(1,0,0)
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(1,0,0)
+                }
+
+                diffuse = {
+                    type = color
+                    value = col3(1,0,0)
+                }
+            }
+        }
 	}
 
 	lambert_green = {
-		type    = lambert
-		diffuse = col3(0,1,0)
-		ambient = col3(0,1,0)
+		type = lambert
+
+        properties = {
+            samplers = {
+
+                diffuse = {
+                    type = color
+                    value = col3(0,1,0)
+                }
+                ambient = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+            }
+        }
 	}
 
 	lambert_blue = {
-		type    = lambert
-		diffuse = col3(0,0,1)
-		ambient = col3(0,0,1)
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(0,0,1)
+                }
+
+                diffuse = {
+                    type = color
+                    value = col3(0,0,1)
+                }
+            }
+        }
 	}
 
 	lambert_grey = {
-		type    = lambert
-		diffuse = col3(.5,.5,.5)
-		ambient = col3(.5,.5,.5)
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+
+                diffuse = {
+                    type = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
 	}
 
     light = {
-        type     = lambert
-        emissive = col3(1,1,1)
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
     }
 }
 

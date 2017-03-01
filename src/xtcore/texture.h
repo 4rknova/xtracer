@@ -17,7 +17,7 @@ class Texture2D : public ISampler
 
     void set_filtering(FILTERING filtering);
 
-	nimg::ColorRGBAf sample(const NMath::Vector3f &tc) const;
+	nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
 
     Texture2D();
 
