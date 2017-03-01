@@ -46,6 +46,7 @@ Scene &Scene::operator =(const Scene &)
 }
 
 Scene::Scene()
+    : m_cubemap(0)
 {}
 
 Scene::~Scene()
@@ -107,6 +108,11 @@ int purge(std::map<std::string, T*> &map, const char *name)
 
 void Scene::release()
 {
+    if (m_cubemap) {
+        delete m_cubemap;
+        m_cubemap = 0;
+    }
+
 	purge(m_materials);
 	purge(m_textures);
 	purge(m_geometry);
@@ -121,7 +127,7 @@ int Scene::destroy_object   (const char *name) { return purge(m_objects  , name)
 
 nimg::ColorRGBAf Scene::sample_cubemap(const NMath::Vector3f &direction) const
 {
-    return m_cubemap.sample(direction);
+    return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBAf(0,0,0,1);
 }
 
 int Scene::load(const char *filename, const std::list<std::string> &modifiers)
@@ -173,7 +179,7 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 	m_ambient  = xtracer::io::deserialize_col3(&root, XTPROTO_PROP_IAMBN)
 			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
 
-    xtracer::io::deserialize_cubemap(m_source.c_str(), &root, m_cubemap);
+    m_cubemap = xtracer::io::deserialize_cubemap(m_source.c_str(), &root);
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);

@@ -5,6 +5,7 @@
 #include <nimg/color.h>
 
 namespace xtracer {
+    namespace assets {
 
 enum FILTERING
 {
@@ -16,14 +17,13 @@ class ISampler
 {
     public:
     virtual ~ISampler();
-    virtual nimg::ColorRGBf sample(NMath::Vector3f &uvw) const = 0;
-
-    void set_filtering(FILTERING filtering);
+    virtual nimg::ColorRGBAf sample(const NMath::Vector3f &uvw) const = 0;
 
     private:
     FILTERING m_filtering;
 };
 
+    } /* namespace assets */
 } /* namespace xtracer */
 
 

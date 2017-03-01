@@ -7,6 +7,7 @@
 #include "camera.h"
 #include "material.h"
 #include "texture.h"
+#include "solidcolor.h"
 #include "geometry.h"
 #include "object.h"
 #include "cubemap.h"
@@ -30,13 +31,13 @@ NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const N
 NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def = DEFVAL_VEC3);
 nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
 
-xtracer::assets::ICamera   *deserialize_camera   (const char *source, const ncf::NCF *p);
-xtracer::assets::IMaterial *deserialize_material (const char *source, const ncf::NCF *p);
-xtracer::assets::Texture2D *deserialize_texture  (const char *source, const ncf::NCF *p);
-xtracer::assets::Geometry  *deserialize_geometry (const char *source, const ncf::NCF *p);
-xtracer::assets::Object    *deserialize_object   (const char *source, const ncf::NCF *p);
-
-int deserialize_cubemap(const char *source, const ncf::NCF *p, xtracer::assets::Cubemap &data);
+xtracer::assets::ICamera    *deserialize_camera   (const char *source, const ncf::NCF *p);
+xtracer::assets::IMaterial  *deserialize_material (const char *source, const ncf::NCF *p);
+xtracer::assets::Texture2D  *deserialize_texture  (const char *source, const ncf::NCF *p);
+xtracer::assets::Geometry   *deserialize_geometry (const char *source, const ncf::NCF *p);
+xtracer::assets::Object     *deserialize_object   (const char *source, const ncf::NCF *p);
+xtracer::assets::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
+xtracer::assets::SolidColor *deserialize_rgba     (const char *source, const ncf::NCF *p);
 
     } /* namespace io */
 } /* namespace xtracer */

@@ -1,7 +1,8 @@
-#include "nimg/img.h"
-#include "nimg/sample.h"
+#include <nimg/img.h>
+#include <nimg/sample.h>
 #include "texture.h"
 #include <cstdio>
+
 namespace xtracer {
     namespace assets {
 
@@ -19,17 +20,17 @@ int Texture2D::load(const char *file)
 	return nimg::io::load::image(file, m_map);
 }
 
-int Texture2D::load(const Pixmap &map)
+int Texture2D::load(const nimg::Pixmap &map)
 {
 	m_map = map;
 	return 0;
 }
 
-ColorRGBAf Texture2D::sample(const float s, const float t) const
+nimg::ColorRGBAf Texture2D::sample(const NMath::Vector3f &tc) const
 {
     switch (m_filtering) {
-        case FILTERING_NEAREST  : return nimg::sample::nearest(m_map, s, t);
-        case FILTERING_BILINEAR : return nimg::sample::bilinear(m_map, s, t);
+        case FILTERING_NEAREST  : return nimg::sample::nearest  (m_map, tc.x, tc.y);
+        case FILTERING_BILINEAR : return nimg::sample::bilinear (m_map, tc.x, tc.y);
     }
 
     return nimg::ColorRGBAf(0,0,0,1);
@@ -37,4 +38,3 @@ ColorRGBAf Texture2D::sample(const float s, const float t) const
 
     } /* namespace assets */
 } /* namespace xtracer */
-

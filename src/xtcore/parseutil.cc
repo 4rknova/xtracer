@@ -133,30 +133,33 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
-int deserialize_cubemap(const char *source, const ncf::NCF *p, xtracer::assets::Cubemap &data)
+xtracer::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
 {
-    if (!p) return 1;
+    if (!p) return 0;
+
+    xtracer::assets::Cubemap *data = new xtracer::assets::Cubemap;
 
     ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
 
-    std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
-    std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
-    std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
-    std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
-    std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
-    std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
+    if (data) {
+        std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
+        std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
+        std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
+        std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
+        std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+        std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
 
-    std::string base, file, fsource = source;
-	ncf::util::path_comp(fsource, base, file);
+        std::string base, file, fsource = source;
+    	ncf::util::path_comp(fsource, base, file);
 
-    data.load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
-    data.load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
-    data.load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
-    data.load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
-    data.load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
-    data.load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
-
-    return 0;
+        data->load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
+        data->load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
+        data->load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
+        data->load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
+        data->load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
+        data->load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
+    }
+    return data;
 }
 
 
@@ -350,6 +353,11 @@ xtracer::assets::IMaterial *deserialize_material_blinnphong(const char *source, 
     return new (std::nothrow) xtracer::assets::MaterialBlinnPhong();
 }
 
+xtracer::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
+{
+    return 0;
+}
+
 xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
@@ -374,14 +382,20 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
         for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
             ncf::NCF *entry = gsamplers->get_group_by_index(i);
 
-            xtracer::ISampler *sampler = 0;
+            xtracer::assets::ISampler *sampler = 0;
             std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
+                 if (!type.compare(XTPROTO_TEXTURE)) sampler = deserialize_texture(source, entry);
+            else if (!type.compare(XTPROTO_CUBEMAP)) sampler = deserialize_cubemap(source, entry);
+            else if (!type.compare(XTPROTO_COLOR  )) sampler = deserialize_rgba   (source, entry);
 
+            data->add_sampler(entry->get_name(), sampler);
+        }
 
-//                 if (!type.compare(XTPROTO_LTRL_TEXTURE) sampler = deserialize_sampler_texture(source, p);
-//            else if (!type.compare(XTPROTO_LTRL_CUBEMAP) sampler = deserialize_sampler_cubemap(source, p);
-//            else if (!type.compare(XTPROTO_LTRL_COLOR  ) sampler = deserialize_sampler_color  (source, p);
+        for (size_t i = 0; i < gscalars->count_properties(); ++i) {
+            std::string     name  = deserialize_cstr(gsamplers->get_property_name_by_index(i));
+            NMath::scalar_t value = deserialize_numf(gsamplers->get_property_by_index(i));
+            data->add_scalar(name.c_str(), value);
         }
 
     	data->ambient      = deserialize_col3(p, XTPROTO_PROP_IAMBN);
@@ -395,6 +409,7 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
     	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
     	data->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
     	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+
     }
 
 	return data;

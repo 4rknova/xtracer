@@ -26,12 +26,17 @@ class IMaterial
         , const nimg::ColorRGBf &texcolor
         , const NMath::IntInfo &info) const = 0;
 
-    NMath::scalar_t get_scalar (const char *name, NMath::Vector3f uvw);
-    nimg::ColorRGBf get_color  (const char *name, NMath::Vector3f uvw);
+    NMath::scalar_t  get_scalar  (const char *name);
+    nimg::ColorRGBAf get_sampler (const char *name, NMath::Vector3f uvw);
+
+    int add_sampler   (const char *name, ISampler *sampler);
+    int add_scalar    (const char *name, NMath::scalar_t scalar);
+    int purge_sampler (const char *name);
+    int purge_scalar  (const char *name);
 
     private:
-    std::map<std::string, NMath::scalar_t>   m_scalars;
-    std::map<std::string, ISampler*>         m_samplers;
+    std::map<std::string, NMath::scalar_t> m_scalars;
+    std::map<std::string, ISampler*>       m_samplers;
 
 public:
 	nimg::ColorRGBf ambient;		// ambient intensity

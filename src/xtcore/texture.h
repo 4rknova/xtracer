@@ -1,37 +1,29 @@
 #ifndef XTRACER_TEXTURE_H_INCLUDED
 #define XTRACER_TEXTURE_H_INCLUDED
 
-#include "nimg/color.h"
-#include "nimg/pixmap.h"
-
-using nimg::ColorRGBAf;
-using nimg::Pixmap;
+#include <nmath/vector.h>
+#include <nimg/color.h>
+#include <nimg/pixmap.h>
+#include "sampler.h"
 
 namespace xtracer {
     namespace assets {
 
-enum FILTERING
-{
-      FILTERING_NEAREST
-    , FILTERING_BILINEAR
-};
-
-
-class Texture2D
+class Texture2D : public ISampler
 {
 	public:
 	int load(const char *file);
-	int load(const Pixmap &map);
+	int load(const nimg::Pixmap &map);
 
     void set_filtering(FILTERING filtering);
 
-	ColorRGBAf sample(const float s, const float t) const;
+	nimg::ColorRGBAf sample(const NMath::Vector3f &tc) const;
 
     Texture2D();
 
 	private:
-    FILTERING m_filtering;
-  	Pixmap    m_map;
+    FILTERING    m_filtering;
+  	nimg::Pixmap m_map;
 };
 
     } /* namespace assets */

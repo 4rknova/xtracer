@@ -50,6 +50,7 @@ class Scene
 		xtracer::assets::ICamera *get_camera();
         std::string camera;
 
+        nimg::ColorRGBAf sample_cubemap(const NMath::Vector3f &direction) const;
 		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
 		int create_cubemap  (ncf::NCF *p);
@@ -65,8 +66,6 @@ class Scene
 		int destroy_geometry (const char *name);
 		int destroy_object   (const char *name);
 
-        nimg::ColorRGBAf sample_cubemap(const NMath::Vector3f &direction) const;
-
 		// Maps of the scene entities
 		std::map<std::string, xtracer::assets::ICamera*  > m_cameras;
 		std::map<std::string, xtracer::assets::IMaterial*> m_materials;
@@ -80,7 +79,7 @@ class Scene
 		// The scene's source filepath and filename
 		std::string m_name;
 		std::string m_source;
-        xtracer::assets::Cubemap m_cubemap;
+        xtracer::assets::Cubemap *m_cubemap;
 
 		// This will cleanup all the allocated memory
 		void release();
