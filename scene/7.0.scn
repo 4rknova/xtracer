@@ -79,7 +79,7 @@ geometry = {
 
 material = {
 	head = {
-		type = lambert
+		type = phong
 
         properties = {
             samplers = {
@@ -88,9 +88,15 @@ material = {
             		source    = <data>/Textures/Male_Colour.jpg
                     filtering = bilinear
                 }
+
+                specular = {
+                    type      = texture
+                    source    = <data>/Textures/Male_Ref_Amount.jpg
+                }
             }
 
             scalars = {
+                reflectance = 0
             }
         }
 
@@ -100,10 +106,13 @@ material = {
     light = {
         type = lambert
 
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
 }

@@ -26,10 +26,12 @@ nimg::ColorRGBf MaterialPhong::shade(
 
     if (rmv < 0) rmv = 0;
 
-    nimg::ColorRGBf res = light_intensity;
-    res *=    (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
-            + (kspec * get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)ksexp));
-    res +=     get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
+    nimg::ColorRGBf res = get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
+
+    res +=  light_intensity *
+            (   (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
+              + (get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)))
+            );
     return res;
 }
 

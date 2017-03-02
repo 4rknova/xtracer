@@ -13,7 +13,7 @@ camera = {
     default = {
         type     = thin-lens
         up       = vec3(0,1,0)
-        position = vec3(0,0,-40)
+        position = vec3(10,-15,-30)
         target   = vec3(0,0,0)
         fov      = 45
     }
@@ -48,16 +48,25 @@ geometry = {
 
 material = {
 	ball = {
-        type     = env_reflector # this material should sample the environment map
-                                 # based on normal derived by vertex.
+		type = phong
+        properties = {
+            samplers = {
+        		diffuse  = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
 
-		type     = phong
-		diffuse  = col3(1,1,1)
-		specular = col3(1,1,1)
-        k_specular = 0.9
-        k_diffuse  = 0.1
-        reflectance = 1
-        k_exponent  = 900000
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+
+            scalars = {
+                reflectance = 1
+                exponent    = 90000
+            }
+        }
 	}
 }
 

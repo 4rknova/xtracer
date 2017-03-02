@@ -71,8 +71,8 @@ geometry = {
 
 	l0 = {
 		type     = sphere
-		radius   = 50
-		position = vec3(0,150,-200)
+		radius   = 25
+		position = vec3(0,150,-400)
 	}
 }
 
@@ -103,11 +103,11 @@ object = {
 	}
 	right_wall = {
 		geometry = right_wall
-		material = lambert_grey
+		material = lambert_blue
 	}
 	left_wall = {
 		geometry = left_wall
-		material = lambert_grey
+		material = lambert_green
 	}
 
     light = {
@@ -129,7 +129,7 @@ material = {
                 }
 
                 diffuse = {
-                    type = color
+                    type  = color
                     value = col3(1,0,0)
                 }
             }
@@ -141,13 +141,12 @@ material = {
 
         properties = {
             samplers = {
-
-                diffuse = {
-                    type = color
-                    value = col3(0,1,0)
-                }
                 ambient = {
                     type  = color
+                    value = col3(0,1,0)
+                }
+                diffuse = {
+                    type = color
                     value = col3(0,1,0)
                 }
             }
@@ -161,12 +160,11 @@ material = {
             samplers = {
                 ambient = {
                     type  = color
-                    value = col3(0,0,1)
+                    value = col3(0.2,0.4,1)
                 }
-
                 diffuse = {
                     type = color
-                    value = col3(0,0,1)
+                    value = col3(0.2,0.4,1)
                 }
             }
         }
@@ -181,7 +179,6 @@ material = {
                     type  = color
                     value = col3(.5,.5,.5)
                 }
-
                 diffuse = {
                     type = color
                     value = col3(.5,.5,.5)

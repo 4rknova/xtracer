@@ -353,8 +353,13 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// Fresnel
 	float fr = 1.0;
 
-	// refraction
-	if(mat->transparency > 0.0) {
+    NMath::scalar_t reflectance  = mat->get_scalar(MAT_SCALART_REFLECTANCE);
+    NMath::scalar_t transparency = mat->get_scalar(MAT_SCALART_TRANSPARENCY);
+    NMath::scalar_t exponent     = mat->get_scalar(MAT_SCALART_EXPONENT);
+    nimg::ColorRGBf specular     = mat->get_sample(MAT_SAMPLER_SPECULAR, info.texcoord);
+
+    // refraction
+	if (transparency > 0) {
 		Ray refrray;
 		refrray.origin    = p;
 		refrray.direction = (ray.direction).refracted(n, ior_src, ior_dst);
@@ -372,20 +377,22 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
             fr  = (fra + frb) * .5;
 
     		float ft = 1.0 - fr;
-			color *= mat->transparency;
-		    color += ft * mat->transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * mat->specular * mat->kspec;
+			color *= transparency;
+		    color += ft * transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * specular * exponent;
         }
 	}
 
 	// reflection
-	if (mat->reflectance > 0) {
+
+	if (reflectance > 0) {
+
 		unsigned int tlmcsamples = m_context->params.samples;
 		scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
 		for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 			Ray reflray;
 			reflray.origin = p;
-			reflray.direction = NMath::Sample::lobe(n, -ray.direction, mat->roughness == 0 ? mat->ksexp : mat->roughness);
-			color += fr * (mat->reflectance * trace_ray(pray, reflray, depth-1) * mat->specular * mat->kspec * tlmcscaling);
+			reflray.direction = NMath::Sample::lobe(n, -ray.direction, exponent);
+			color += fr * (reflectance * trace_ray(pray, reflray, depth-1) * specular * tlmcscaling);
 		}
 	}
 

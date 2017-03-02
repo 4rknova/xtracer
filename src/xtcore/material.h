@@ -39,14 +39,6 @@ class IMaterial
     std::map<std::string, ISampler*>       m_samplers;
 
 public:
-	nimg::ColorRGBf specular;		// specular intensity
-
-	NMath::scalar_t kspec;			// specular constant
-	NMath::scalar_t kdiff;			// diffuse constant
-	NMath::scalar_t ksexp;			// specular exponential
-	NMath::scalar_t roughness;		// roughness (Ideally equal to exponent)
-
-	NMath::scalar_t reflectance;	// reflectance
 	NMath::scalar_t transparency;	// transparency
 	NMath::scalar_t ior;			// index of refraction
 

@@ -391,24 +391,17 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
             else if (!type.compare(XTPROTO_CUBEMAP)) sampler = deserialize_cubemap(source, entry);
             else if (!type.compare(XTPROTO_COLOR  )) sampler = deserialize_rgba   (source, entry);
 
-Log::handle().post_message("Adding sampler: %s->%s", p->get_name(), entry->get_name());
             data->add_sampler(entry->get_name(), sampler);
         }
 
         for (size_t i = 0; i < gscalars->count_properties(); ++i) {
-            std::string     name  = deserialize_cstr(gsamplers->get_property_name_by_index(i));
-            NMath::scalar_t value = deserialize_numf(gsamplers->get_property_by_index(i));
+            std::string     name  = deserialize_cstr(gscalars->get_property_name_by_index(i));
+            NMath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
             data->add_scalar(name.c_str(), value);
         }
 
-    	data->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
-    	data->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
-    	data->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
-    	data->roughness    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
     	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-    	data->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
     	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
-
     }
 
 	return data;
