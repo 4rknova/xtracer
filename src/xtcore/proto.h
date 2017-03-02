@@ -113,12 +113,16 @@
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */ /* Omni Directional Stereo camera */
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */
 
-#define XTPROTO_TEXTURE        "texture"
-#define XTPROTO_CUBEMAP        "cubemap"
-#define XTPROTO_COLOR          "color"
-#define XTPROTO_PROPERTIES     "properties"
-#define XTPROTO_SAMPLERS       "samplers"
-#define XTPROTO_SCALARS        "scalars"
-#define XTPROTO_VALUE          "value"
+#define XTPROTO_TEXTURE         "texture"
+#define XTPROTO_CUBEMAP         "cubemap"
+#define XTPROTO_COLOR           "color"
+#define XTPROTO_PROPERTIES      "properties"
+#define XTPROTO_SAMPLERS        "samplers"
+#define XTPROTO_SCALARS         "scalars"
+#define XTPROTO_VALUE           "value"
+#define XTPROTO_DIRECTIONAL_UVS "directional_uvs"
+#define XTPROTO_FLIP_NORMALS    "flip_normals"
+#define XTPROTO_MODIFIERS       "modifiers"
+#define XTPROTO_EXTRUDE         "extrude"
 
 #endif /* XTRACER_PROTO_H_INCLUDED */

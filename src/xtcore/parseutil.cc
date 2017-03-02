@@ -14,7 +14,6 @@
 #include <nimg/checkerboard.h>
 
 #include "proto.h"
-#include "parseutil.h"
 
 #include "log.h"
 #include "cam_perspective.h"
@@ -23,6 +22,10 @@
 #include "mat_lambert.h"
 #include "mat_phong.h"
 #include "mat_blinnphong.h"
+
+#include "extrude.h"
+
+#include "parseutil.h"
 
 namespace xtracer {
     namespace io {
@@ -262,19 +265,29 @@ xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const n
 		}
     }
 
-	NMath::Vector3f xform_rot = deserialize_vec3(p, XTPROTO_PROP_ROTATION    , NMath::Vector3f(0,0,0));
-	NMath::Vector3f xform_scl = deserialize_vec3(p, XTPROTO_PROP_SCALE       , NMath::Vector3f(1,1,1));
-	NMath::Vector3f xform_tsl = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
-	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
-	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
-	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
-/*
-    if (p->query_property(XTPROTO_PROP_FLIP_NORMALS)) {
-        bool flip = deserialize_bool(p->get_property_by_name(XTPROTO_PROP_FLIP_NORMALS));
-        Log::handle().post_message("Flipping normals..");
-        if (flip) nmesh::mutator::invert_normals(&obj);
+    if (p->query_group(XTPROTO_MODIFIERS)) {
+        ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
+
+    	NMath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , NMath::Vector3f(0,0,0));
+    	NMath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE       , NMath::Vector3f(1,1,1));
+    	NMath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
+    	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
+    	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
+    	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
+
+        if (mods->query_property(XTPROTO_FLIP_NORMALS)) {
+            bool flag = deserialize_bool(mods->get_property_by_name(XTPROTO_FLIP_NORMALS));
+            Log::handle().post_message("Applying modifier: flip normals..");
+            if (flag) nmesh::mutator::invert_normals(&obj);
+        }
+
+        if (mods->query_group(XTPROTO_EXTRUDE)) {
+            xtracer::assets::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
+            Log::handle().post_message("Applying modifier: extrude..");
+            xtracer::auxiliary::extrude(&obj, cb);
+        }
     }
-*/
+
     Log::handle().post_message("Building octree..");
 	((nmesh::Mesh *)data)->build_octree(obj);
 
@@ -448,6 +461,12 @@ xtracer::assets::Object *deserialize_object(const char *source, const ncf::NCF *
 
 	data->geometry = deserialize_cstr(g);
 	data->material = deserialize_cstr(m);
+
+    if (p->query_property(XTPROTO_DIRECTIONAL_UVS)) {
+        bool flag = deserialize_bool(p->get_property_by_name(XTPROTO_DIRECTIONAL_UVS));
+        Log::handle().post_message("Using directional uvs..");
+        if (flag) data->flag_directional_uvs = flag;
+    }
 
 	return data;
 }

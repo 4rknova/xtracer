@@ -1,5 +1,5 @@
-#ifndef NMESH_MESH_HPP_INCLUDED
-#define NMESH_MESH_HPP_INCLUDED
+#ifndef NMESH_STRUCTS_H_INCLUDED
+#define NMESH_STRUCTS_H_INCLUDED
 
 #include <string>
 #include <vector>
@@ -77,4 +77,4 @@ typedef struct {
 
 } /* namespace nmesh */
 
-#endif /* NMESH_MESH_HPP_INCLUDED */
+#endif /* NMESH_STRUCTS_H_INCLUDED */

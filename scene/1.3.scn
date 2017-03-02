@@ -3,14 +3,19 @@ descr = ODS hull scene
 versn = 0.1
 
 # render with -mod data:path_to_data to change the cubemap data
+# the directory structure should much the one below
 
 ambient = col3(1,1,1)
-data = data/cubemap
+
+data = data/ods
+cubemap_depth = <data>/cubemap/depth
+cubemap_color = <data>/cubemap/color
+obj           = <data>/geometry
 
 camera = {
 	ods = {
         type = ods
-		ipd  = 1.5
+		ipd  = 0.64
     }
 
     default = {
@@ -25,19 +30,19 @@ camera = {
 geometry = {
     hull = {
         type   = mesh
-        source = gen(icosahedron)
-        scale  = vec3(5,5,5)
+        source = <obj>/subdividedIcosahedron.obj # gen(icosahedron)
 
         modifiers = {
+            scale  = vec3(10,10,10)
             tesselate = 5               # Not yet supported
-            extrude = {                 # Not yet supported
-                posy = <data>/posy.jpg
-                negy = <data>/negy.jpg
-                negx = <data>/negx.jpg
-                posx = <data>/posx.jpg
-                posz = <data>/posz.jpg
-                negz = <data>/negz.jpg
-            }
+     #       extrude = {
+      #          posy = <cubemap_depth>/posy.jpg
+       #         negy = <cubemap_depth>/negy.jpg
+        #        negx = <cubemap_depth>/negx.jpg
+         #       posx = <cubemap_depth>/posx.jpg
+          #      posz = <cubemap_depth>/posz.jpg
+           #     negz = <cubemap_depth>/negz.jpg
+            #}
         }
     }
 
@@ -50,28 +55,20 @@ geometry = {
 
 material = {
 	hull = {
-		type = phong
+		type = lambert
         properties = {
             samplers = {
-        		diffuse  = {
-                    type  = color
-                    value = col3(0,1,0)
-                }
-
-                specular = {
-                    type  = color
-                    value = col3(1,1,1)
-                }
-
                 ambient = {
                     type  = cubemap
 
-                    posy = <data>/posy.jpg
-                    negy = <data>/negy.jpg
-                    negx = <data>/negx.jpg
-                    posx = <data>/posx.jpg
-                    posz = <data>/posz.jpg
-                    negz = <data>/negz.jpg
+                    cubemap = {
+                        posy = <cubemap_color>/posy.jpg
+                        negy = <cubemap_color>/negy.jpg
+                        negx = <cubemap_color>/negx.jpg
+                        posx = <cubemap_color>/posx.jpg
+                        posz = <cubemap_color>/posz.jpg
+                        negz = <cubemap_color>/negz.jpg
+                    }
                 }
             }
 
@@ -94,7 +91,8 @@ material = {
 
 object = {
     ball = {
-        geometry = hull
-        material = hull
+        geometry        = hull
+        material        = hull
+        directional_uvs = true
     }
 }

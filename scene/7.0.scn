@@ -52,10 +52,12 @@ geometry = {
 		type = mesh
 		source = <data>/OBJ/Male_Head_L4.OBJ
 
-        scale = {
-            x = 300.0
-            y = 300.0
-            z = 300.0
+        modifiers = {
+            scale = {
+                x = 300.0
+                y = 300.0
+                z = 300.0
+            }
         }
 	}
 
@@ -91,7 +93,7 @@ material = {
 
                 specular = {
                     type      = texture
-                    source    = <data>/Textures/Male_Ref_Amount.jpg
+                    source    = <data>/Textures/Male_Spec_Amount.jpg
                 }
             }
 

@@ -307,7 +307,8 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
     std::string &mat_id = mobj->material;
 	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 
-	color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene->ambient();
+    if (mobj->flag_directional_uvs) info.texcoord = info.point;
+    color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene->ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
@@ -345,6 +346,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
 			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
+                if ((*oit).second->flag_directional_uvs) info.texcoord = info.point;
                 color += mat->shade(pray.origin, light_pos, (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0)), info) * tlshscaling;
 			}
 		}
