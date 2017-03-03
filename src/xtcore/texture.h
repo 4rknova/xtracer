@@ -16,6 +16,7 @@ class Texture2D : public ISampler
 	int load(const nimg::Pixmap &map);
 
     void set_filtering(FILTERING filtering);
+    void applu_multiplier(float multiplier);
 
 	nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
 

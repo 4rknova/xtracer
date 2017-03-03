@@ -1,7 +1,5 @@
-# Xtracer 2
-
-title = Head
-descr = Head mesh
+title = Scanned Face
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
 
 data = data/head
@@ -92,8 +90,9 @@ material = {
                 }
 
                 specular = {
-                    type      = texture
-                    source    = <data>/Textures/Male_Spec_Amount.jpg
+                    type       = texture
+                    multiplier = .25
+                    source     = <data>/Textures/Male_Spec_Amount.jpg
                 }
             }
 

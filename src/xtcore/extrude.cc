@@ -15,15 +15,14 @@ void extrude(nmesh::object_t *obj, xtracer::assets::Cubemap *cb)
                           , obj->attributes.v[i+1]
                           , obj->attributes.v[i+2]);
 
-        pos.normalize();
-
+        NMath::Vector3f dir = pos.normalized();
         nimg::ColorRGBf c = cb->sample(pos);
+printf("%f %f %f\n",c.r(), c.g(), c.b());
+        NMath::Vector3f p = pos + 10. * dir * c.g();
 
-        pos = pos * c.r();
-
-        obj->attributes.v[i  ] = pos.x;
-        obj->attributes.v[i+1] = pos.y;
-        obj->attributes.v[i+2] = pos.z;
+        obj->attributes.v[i  ] = p.x;
+        obj->attributes.v[i+1] = p.y;
+        obj->attributes.v[i+2] = p.z;
     }
     printf("\n done");
 }

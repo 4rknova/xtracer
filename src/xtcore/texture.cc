@@ -26,6 +26,15 @@ int Texture2D::load(const nimg::Pixmap &map)
 	return 0;
 }
 
+void Texture2D::applu_multiplier(float multiplier)
+{
+    for (size_t x = 0; x < m_map.width(); ++x) {
+        for (size_t y = 0; y < m_map.height(); ++y) {
+            m_map.pixel(x,y) = multiplier * m_map.pixel_ro(x,y);
+        }
+    }
+}
+
 nimg::ColorRGBf Texture2D::sample(const NMath::Vector3f &tc) const
 {
     switch (m_filtering) {
@@ -33,7 +42,7 @@ nimg::ColorRGBf Texture2D::sample(const NMath::Vector3f &tc) const
         case FILTERING_BILINEAR : return nimg::sample::bilinear (m_map, tc.x, tc.y);
     }
 
-    return nimg::ColorRGBAf(0,0,0,1);
+    return nimg::ColorRGBf(0,0,0);
 }
 
     } /* namespace assets */

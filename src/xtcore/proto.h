@@ -124,5 +124,6 @@
 #define XTPROTO_FLIP_NORMALS    "flip_normals"
 #define XTPROTO_MODIFIERS       "modifiers"
 #define XTPROTO_EXTRUDE         "extrude"
+#define XTPROTO_MULTIPLIER      "multiplier"
 
 #endif /* XTRACER_PROTO_H_INCLUDED */

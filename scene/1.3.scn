@@ -15,13 +15,13 @@ obj           = <data>/geometry
 camera = {
 	ods = {
         type = ods
-		ipd  = 0.64
+		ipd  = 1.64
     }
 
     default = {
         type     = thin-lens
         up       = vec3(0,1,0)
-        position = vec3(0,-15,-30)
+        position = vec3(0,-15,-40)
         target   = vec3(0,0,0)
         fov      = 45
     }
@@ -35,14 +35,16 @@ geometry = {
         modifiers = {
             scale  = vec3(10,10,10)
             tesselate = 5               # Not yet supported
-     #       extrude = {
-      #          posy = <cubemap_depth>/posy.jpg
-       #         negy = <cubemap_depth>/negy.jpg
-        #        negx = <cubemap_depth>/negx.jpg
-         #       posx = <cubemap_depth>/posx.jpg
-          #      posz = <cubemap_depth>/posz.jpg
-           #     negz = <cubemap_depth>/negz.jpg
-            #}
+            extrude = {
+                cubemap = {
+                    posy = <cubemap_depth>/py.jpg
+                    negy = <cubemap_depth>/ny.jpg
+                    negx = <cubemap_depth>/nx.jpg
+                    posx = <cubemap_depth>/px.jpg
+                    posz = <cubemap_depth>/pz.jpg
+                    negz = <cubemap_depth>/nz.jpg
+                }
+            }
         }
     }
 
@@ -62,12 +64,12 @@ material = {
                     type  = cubemap
 
                     cubemap = {
-                        posy = <cubemap_color>/posy.jpg
-                        negy = <cubemap_color>/negy.jpg
-                        negx = <cubemap_color>/negx.jpg
-                        posx = <cubemap_color>/posx.jpg
-                        posz = <cubemap_color>/posz.jpg
-                        negz = <cubemap_color>/negz.jpg
+                        posy = <cubemap_color>/py.jpg
+                        negy = <cubemap_color>/ny.jpg
+                        negx = <cubemap_color>/nx.jpg
+                        posx = <cubemap_color>/px.jpg
+                        posz = <cubemap_color>/pz.jpg
+                        negz = <cubemap_color>/nz.jpg
                     }
                 }
             }
