@@ -1,4 +1,4 @@
-<img alt="xtracer" src="https://cdn.rawgit.com/4rknova/xtracer/develop/res/logo.svg" width="250">
+[![logo](https://cdn.rawgit.com/4rknova/xtracer/develop/res/logo.svg)]()
 
 Copyright 2010 - 2017 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
@@ -12,10 +12,10 @@ XTracer is a raytracer written in c and c++.
 
 Samples
 -------
-[![xtracer sample render](src="http://www.4rknova.com/xtracer/image/samples/0001.png")](http://www.4rknova.com/xtracer/image/samples/0001.png)
-<img alt="xtracer sampler render" src="http://www.4rknova.com/xtracer/image/samples/gi_4.png" >
-<img alt="xtracer sampler render" src="http://www.4rknova.com/xtracer/image/samples/gi_2.png" >
-<img alt="xtracer sampler render" src="http://www.4rknova.com/xtracer/image/samples/gi_5.png" >
+[![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/0001.png)]()
+[![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_2.png)]()
+[![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_4.png)]()
+[![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_5.png)]()
 
 Features
 --------
