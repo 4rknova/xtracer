@@ -1,0 +1,32 @@
+# Toolchain
+CC    = @echo "compiling [c    ] $<"; gcc
+CXX   = @echo "compiling [c++  ] $<"; g++
+C11   = @echo "compiling [c++11] $<"; g++
+LD    = @echo "linking $@"; g++
+MKDIR = mkdir -p
+
+# Paths
+PATH_TEST = ./test/
+
+# Filenames
+MAN  = $(PATH_MAN)/$(SW_TITLE).$(MAN_SECTION)
+
+# Configuration
+YEAR = $(shell date +"%Y")
+TEST_CONFIG = -outdir $(PATH_TEST)
+
+
+SRC_SCN = $(wildcard $(PATH_SCN)/*.scn)
+
+.PHONY: dirtree_common
+.PHONY: all
+.PHONY: man_preview
+
+all:
+
+dirtree_common:
+	$(MKDIR) $(PATH_BIN)
+	$(MKDIR) $(PATH_MAN)
+
+man_preview:
+	clear && nroff -Tascii -man "$(MAN)" | col -x | less -c

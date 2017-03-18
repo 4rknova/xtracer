@@ -223,7 +223,7 @@ material = {
 	}
 
     light = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = 1
@@ -231,12 +231,6 @@ material = {
             b = 1
         }
     }
-}
-
-texture = {
-	floor = {
-		source = <texdir>/wood01.ppm
-	}
 }
 
 object = {
@@ -259,7 +253,6 @@ object = {
 	floor = {
 		geometry = plane
 		material = floor
-		texture = floor
 	}
     l0 = {
         geometry = l0

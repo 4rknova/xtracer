@@ -29,13 +29,25 @@ geometry = {
 
 material = {
 	ball = {
-		type         = phong
-		reflectance  = 1
-		diffuse      = col3(1,1,1)
-		specular     = col3(1,1,1)
-		k_diffuse    = 0.1
-		k_specular   = 0.9
-		k_exponent   = 94096
+		type = phong
+        properties = {
+            samplers = {
+        		diffuse  = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+
+            scalars = {
+                reflectance = 1
+                exponent    = 90000
+            }
+        }
 	}
 }
 

@@ -1,52 +1,47 @@
 #ifndef XTRACER_MATERIAL_H_INCLUDED
 #define XTRACER_MATERIAL_H_INCLUDED
 
+#include <map>
 #include <nimg/color.h>
 #include <nmath/intinfo.h>
+#include "sampler.h"
+#include "texture.h"
 #include "camera.h"
+#include "matdefs.h"
 
 namespace xtracer {
     namespace assets {
 
-enum MATERIAL_TYPE
-{
-	  MATERIAL_LAMBERT		// Lambert
-	, MATERIAL_PHONG    	// Phong
-	, MATERIAL_BLINNPHONG	// Blinn-Phong
-	, MATERIAL_EMISSIVE		// Emissive
-};
-
-class Material
+class IMaterial
 {
 	public:
-		Material();
-		~Material();
+	IMaterial();
+	virtual ~IMaterial();
 
-		// shader
-		nimg::ColorRGBf shade(const NMath::Vector3f &cam_position
-                            , const NMath::Vector3f &light_pos
-                            , const nimg::ColorRGBf &light_intensity
-                            , const nimg::ColorRGBf &texcolor
-                            , const NMath::IntInfo &info);
+    bool is_emissive() const;
 
-		// properties
-		nimg::ColorRGBf ambient;		// ambient intensity
-		nimg::ColorRGBf diffuse;		// diffuse intensity
-		nimg::ColorRGBf specular;		// specular intensity
-		nimg::ColorRGBf emissive;		// emissive intensity
+	virtual nimg::ColorRGBf shade(
+          const NMath::Vector3f &cam_position
+        , const NMath::Vector3f &light_pos
+        , const nimg::ColorRGBf &light_intensity
+        , const NMath::IntInfo  &info) const = 0;
 
-		NMath::scalar_t kspec;			// specular constant
-		NMath::scalar_t kdiff;			// diffuse constant
-		NMath::scalar_t ksexp;			// specular exponential
-		NMath::scalar_t roughness;		// roughness (Ideally equal to exponent)
+    NMath::scalar_t get_scalar(const char *name) const;
+    nimg::ColorRGBf get_sample(const char *name, const NMath::Vector3f &tc) const;
 
-		NMath::scalar_t reflectance;	// reflectance
-		NMath::scalar_t transparency;	// transparency
-		NMath::scalar_t ior;			// index of refraction
+    int add_sampler   (const char *name, ISampler *sampler);
+    int add_scalar    (const char *name, NMath::scalar_t scalar);
+    int purge_sampler (const char *name);
+    int purge_scalar  (const char *name);
 
-		MATERIAL_TYPE type;
+    private:
+    std::map<std::string, NMath::scalar_t> m_scalars;
+    std::map<std::string, ISampler*>       m_samplers;
 
-        bool is_emissive() const;
+public:
+	NMath::scalar_t transparency;	// transparency
+	NMath::scalar_t ior;			// index of refraction
+
 };
 
     } /* namespace assets */

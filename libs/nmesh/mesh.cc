@@ -3,10 +3,7 @@
 #include <nmath/intinfo.h>
 #include "mesh.h"
 
-namespace NMesh {
-
-MTriangle::~MTriangle()
-{}
+namespace nmesh {
 
 Mesh::Mesh()
 	: Geometry(NMath::GEOMETRY_MESH)
@@ -43,9 +40,7 @@ void Mesh::build_octree(object_t &object)
 
             attrib_t *d = &(object.attributes);
 
-    		MTriangle p;
-
-            p.material_id = (*it).mesh.materials[i];
+    		NMath::Triangle p;
 
             if (a_v != -1) p.v[0]  = NMath::Vector3f(d->v[3*a_v], d->v[3*a_v+1], d->v[3*a_v+2]);
 		    if (b_v != -1) p.v[1]  = NMath::Vector3f(d->v[3*b_v], d->v[3*b_v+1], d->v[3*b_v+2]);
@@ -82,4 +77,4 @@ NMath::Ray Mesh::ray_sample() const
     return ray;
 }
 
-} /* namespace NMesh */
+} /* namespace nmesh */

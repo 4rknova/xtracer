@@ -49,79 +49,27 @@ static __inline__ void uint32_swap_endian(uint32_t *val)
 }
 
 /*
-    Functions to convert data in correct endian
-
-    Notes
-    -------
-    These functions are to be used when we read/write a uint16_t or a uint32_t from/to a stream
-    and need to impose a specific endianness.
-
-    Examples
-
-        A file format specifies that a value inside the file is stored in big endian format and 
-		we want to switch an value to save it in the file
-        A file format specifies that a value inside the file is stored in big endian format and 
-		we want to switch an value after reading it from a file
+** Functions to convert data in correct endian
+**
+** These functions are to be used when we read/write a uint16_t or a uint32_t from/to a stream
+** and need to impose a specific endianness.
+**
+** Example
+** A file format specifies that a value inside the file is stored in big endian format and 
+** we want to switch an value to save it in the file
+** A file format specifies that a value inside the file is stored in big endian format and 
+** we want to switch an value after reading it from a file
 */
 
-/*
-    To x_endian
-    val refers to a value generated in local endianess
-*/
-
-static __inline__ void uint16_to_big_endian(uint16_t *val)
-{
-    if(endian()!= ENDIAN_BIG)
-        uint16_swap_endian(val);
-}
-
-static __inline__ void uint32_to_big_endian(uint32_t *val)
-{
-    if(endian()!= ENDIAN_BIG)
-        uint32_swap_endian(val);
-}
-
-static __inline__ void uint16_to_lil_endian(uint16_t *val)
-{
-    if(endian()!= ENDIAN_LITTLE)
-        uint16_swap_endian(val);
-}
-
-static __inline__ void uint32_to_lil_endian(uint32_t *val)
-{
-    if(endian()!= ENDIAN_LITTLE)
-        uint32_swap_endian(val);
-}
-
-/*
-    From x_endian
-    val refers to a value generated in known endianess
-*/
-
-static __inline__ void uint16_from_big_endian(uint16_t *val)
-{
-    if(endian()!= ENDIAN_BIG)
-        uint16_swap_endian(val);
-}
-
-static __inline__ void uint32_from_big_endian(uint32_t *val)
-{
-    if(endian()!= ENDIAN_BIG)
-        uint32_swap_endian(val);
-}
-
-static __inline__ void uint16_from_lil_endian(uint16_t *val)
-{
-    if(endian()!= ENDIAN_LITTLE)
-        uint16_swap_endian(val);
-}
-
-static __inline__ void uint32_from_lil_endian(uint32_t *val)
-{
-    if(endian()!= ENDIAN_LITTLE)
-        uint32_swap_endian(val);
-}
-
+/* val refers to a value generated in local endianess */
+static __inline__ void uint16_to_big_endian(uint16_t *val)   { if (endian()!= ENDIAN_BIG   ) uint16_swap_endian(val); }
+static __inline__ void uint32_to_big_endian(uint32_t *val)   { if (endian()!= ENDIAN_BIG   ) uint32_swap_endian(val); }
+static __inline__ void uint16_to_lil_endian(uint16_t *val)   { if (endian()!= ENDIAN_LITTLE) uint16_swap_endian(val); }
+static __inline__ void uint32_to_lil_endian(uint32_t *val)   { if (endian()!= ENDIAN_LITTLE) uint32_swap_endian(val); }
+static __inline__ void uint16_from_big_endian(uint16_t *val) { if (endian()!= ENDIAN_BIG   ) uint16_swap_endian(val); }
+static __inline__ void uint32_from_big_endian(uint32_t *val) { if (endian()!= ENDIAN_BIG   ) uint32_swap_endian(val); }
+static __inline__ void uint16_from_lil_endian(uint16_t *val) { if (endian()!= ENDIAN_LITTLE) uint16_swap_endian(val); }
+static __inline__ void uint32_from_lil_endian(uint32_t *val) { if (endian()!= ENDIAN_LITTLE) uint32_swap_endian(val); }
 
 #ifdef __cplusplus
 } /* __cplusplus */

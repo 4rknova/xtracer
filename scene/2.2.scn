@@ -2,14 +2,6 @@ title = Room
 descr = Three spheres in a room.
 versn = 0.4
 
-k_ambient = 0.001
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
-
 camera = {
 
 	default = {
@@ -130,7 +122,7 @@ geometry = {
 	l0 = {
 		type = sphere
 
-        radius = 50
+        radius = 25
 
 		position = {
 			x = 0
@@ -161,11 +153,11 @@ object = {
 	}
 	floor = {
 		geometry = floor
-		material = lambert_grey
+		material = phong_grey
 	}
 	ceiling = {
 		geometry = ceiling
-		material = lambert_grey
+		material = phong_grey
 	}
 	back = {
 		geometry = back
@@ -189,96 +181,114 @@ material = {
 	phong_red = {
 		type = phong
 
-		reflectance = 0.5
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.5,0,0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.5,0,0)
+                }
+            }
 
-		diffuse = {
-			r = 1
-		}
-		specular = {
-			r = 1
-		}
-
-		k_diffuse  = 0.3
-		k_specular = 0.7
-		k_exponent = 60
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
 	}
 
 	phong_green = {
 		type = phong
 
-		reflectance = 0.5
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0,0.5,0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0,0.5,0)
+                }
+            }
 
-		diffuse = {
-			g = 1
-		}
-		specular = {
-			g = 1
-		}
-
-		k_diffuse  = 0.3
-		k_specular = 0.7
-		k_exponent = 60
-	}
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+    }
 
 	phong_blue = {
 		type = phong
 
-		reflectance = 0.5
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.1,0.2,0.5)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.1,0.2,0.5)
+                }
+            }
 
-		diffuse = {
-			r = 0.3
-			g = 0.3
-			b = 1
-		}
-		specular = {
-			r = .99
-			g = .99
-			b = 1
-		}
-
-		k_diffuse  = 0.3
-		k_specular = 0.7
-		k_exponent = 60
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
 	}
 
 	phong_grey = {
 		type = phong
 
-		reflectance = 0.5
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.5,0.5,0.5)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+            }
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		k_diffuse  = 0.2
-		k_specular = 0.8
-		k_exponent = 60
+            scalars = {
+                reflectance = 0.5
+                exponent    = 60
+            }
+        }
 	}
 
 	lambert_grey = {
 		type = lambert
 
-		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+	        	}
+            }
+        }
 	}
 
     light = {
-        type = emissive
+        type = lambert
 
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
 }

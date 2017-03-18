@@ -10,6 +10,7 @@ namespace PLM {
 
 void list(const char *file)
 {
+/*
 	std::string fpath = PLUGIN_PATH;
 	fpath.append("/");
 	fpath.append(file);
@@ -25,11 +26,14 @@ void list(const char *file)
 	printf("Checking plugin\n");
 
 	free_library(lib);
+*/
 }
 
 void load()
 {
+/*
 	scan_directory(PLUGIN_PATH, list);
+*/
 }
 
 } /* namespace PLM */

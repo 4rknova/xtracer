@@ -1,8 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include "ext/stb_image.h"
+#include "ext/stb_image_write.h"
 #include "img.h"
 
 namespace nimg {

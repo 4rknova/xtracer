@@ -4,25 +4,15 @@
 #include <nmath/ray.h>
 #include <nmath/geometry.h>
 #include <nmath/triangle.h>
-#include <nmath/octree.hpp>
+#include <nsps/octree.h>
 #include "structs.h"
 
 #define LIMITS_MAX_ITEMS_PER_NODE 10
-#define LIMITS_MAX_DEPTH          10
+#define LIMITS_MAX_DEPTH          5
 
-using NMath::Ray;
-using NMath::Geometry;
+namespace nmesh {
 
-namespace NMesh {
-
-class MTriangle : public NMath::Triangle
-{
-	public:
-		virtual ~MTriangle();
-		int material_id;
-};
-
-class Mesh: public Geometry
+class Mesh: public NMath::Geometry
 {
 	public:
 		Mesh();
@@ -36,9 +26,9 @@ class Mesh: public Geometry
         NMath::Ray ray_sample() const;
 
 	private:
-		Octree<MTriangle> m_octree;
+		nsps::Octree<NMath::Triangle> m_octree;
 };
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
 #endif /* LIBNMESH_MESH_H_INCLUDED */

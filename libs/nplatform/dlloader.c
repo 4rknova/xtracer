@@ -17,43 +17,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int scan_directory(const char *path, void(*f)(const char*))
-{
-#if defined(_MSC_VER)
-	WIN32_FIND_DATA fdFile;
-    HANDLE hFind = NULL;
-
-	if((hFind = FindFirstFile(sPath, &fdFile)) != INVALID_HANDLE_VALUE) {
-		do {
-	        if (   strcmp(fdFile.cFileName, "." ) != 0
-				&& strcmp(fdFile.cFileName, "..") != 0) {
-				f(sPath);
-        	}
-    	}
-	    while (FindNextFile(hFind, &fdFile));
-	    FindClose(hFind);
-		return 0;
-	}
-
-#elif defined(__GNUC__)
-	DIR           *d;
-	struct dirent *dir;
-	d = opendir(path);
-	if (d) {
-	    while ((dir = readdir(d)) != NULL) {
-	        if (   strcmp(dir->d_name, "." ) != 0
-				&& strcmp(dir->d_name, "..") != 0) {
-				f(dir->d_name);
-			}
-	    }
-		closedir(d);
-		return 0;
-	}
-#endif
-
-	return 1;
-}
-
 void* load_library(const char *dlpath)
 {
 #if defined(_MSC_VER)

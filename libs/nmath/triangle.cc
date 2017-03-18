@@ -23,8 +23,7 @@ Triangle::Triangle()
 bool Triangle::intersection(const Ray &ray, IntInfo* i_info) const
 {
 	Vector3f normal = calc_normal();
-
-	double n_dot_dir = dot(normal, ray.direction);
+	scalar_t n_dot_dir = dot(normal, ray.direction);
 
 	if (fabs(n_dot_dir) < EPSILON) return false; // parallel to the plane
 
@@ -44,10 +43,7 @@ bool Triangle::intersection(const Ray &ray, IntInfo* i_info) const
 	scalar_t bc_sum = bc.x + bc.y + bc.z;
 
 	// check for triangle boundaries
-	if (bc_sum < 1.0 - EPSILON || bc_sum > 1.0 + EPSILON)
-	{
-		return false;
-	}
+	if (bc_sum < 1.0 - EPSILON || bc_sum > 1.0 + EPSILON) return false;
 
 	if (i_info)
 	{

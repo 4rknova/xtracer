@@ -1,0 +1,237 @@
+title = Refraction
+descr = A refractive sphere
+versn = 0.4
+
+data  = data
+cbdir = <data>/cubemap
+
+cubemap = {
+    posy = <cbdir>/posy.jpg
+    negy = <cbdir>/negy.jpg
+    negx = <cbdir>/negx.jpg
+    posx = <cbdir>/posx.jpg
+    posz = <cbdir>/posz.jpg
+    negz = <cbdir>/negz.jpg
+}
+
+camera = {
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(700,500,-1500)
+		target   = vec3(0,0,0)
+		up       = vec3(0,1,0)
+        flength  = 1100
+        aperture = 15
+	}
+}
+
+size = 2000
+
+geometry = {
+
+	floor_1 = {
+		type = triangle
+		vecdata = {
+			v0 = vec3(-<size>,0,-<size>)
+			v1 = vec3(-<size>,0, <size>)
+			v2 = vec3( <size>,0, <size>)
+		}
+	}
+
+	floor_2 = {
+		type = triangle
+		vecdata = {
+            v0 = vec3( <size>,0, <size>)
+            v1 = vec3( <size>,0,-<size>)
+            v2 = vec3(-<size>,0,-<size>)
+		}
+	}
+
+	sphere10 = {
+		type     = sphere
+		position = vec3(475,100,-410)
+		radius   = 100
+	}
+
+	sphere11 = {
+		type     = sphere
+		position = vec3(-150,135,100)
+		radius   = 135
+	}
+
+	sphere12 = {
+		type     = sphere
+		position = vec3(-350,105,-150)
+		radius   = 105
+	}
+
+	sphere20 = {
+		type     = sphere
+		position = vec3(300,175,-80)
+		radius   = 175
+	}
+
+    sphere21 = {
+		type     = sphere
+		position = vec3(40,130,-450)
+		radius   = 130
+	}
+
+	l1 = {
+		type     = sphere
+        radius   = 5
+		position = vec3(-1000,110000,1800)
+	}
+}
+
+material = {
+	floor = {
+		type       = phong
+        properties = {
+            samplers = {
+        		specular = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+                diffuse = {
+                    type  = color
+                    value = col3(0.05,0.05,0.05)
+                }
+            }
+            scalars = {
+    		    exponent     = 1000
+        		reflectance  = .5
+        		transparency = 0
+            }
+        }
+	}
+
+	ball1 = {
+		type        = blinn_phong
+		k_diffuse   = 0.2
+		k_specular  = 0.8
+		k_exponent  = 60
+		diffuse     = col3(0.934,0.945,0.852)
+		specular    = col3(0.934,0.945,0.852)
+		reflectance = 0.51
+        properties = {
+            samplers = {
+        		specular = {
+                    type  = color
+                    value = col3(0.2,0.3,0.9)
+                }
+                diffuse = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+    		    exponent     = 1000
+        		reflectance  = .5
+            }
+       }
+	}
+
+	ball2 = {
+		type        = blinn_phong
+		properties = {
+            samplers = {
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+            scalars = {
+                reflectance = 1
+                exponent    = 64
+            }
+        }
+	}
+
+	glass01 = {
+		type       = blinn_phong
+        properties = {
+            samplers = {
+        		specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+            scalars = {
+    		    exponent     = 1000
+        		reflectance  = 1
+        		transparency = 0
+    	    	ior          = 1.1
+            }
+        }
+	}
+
+    glass02 = {
+		type       = blinn_phong
+        properties = {
+            samplers = {
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+            scalars = {
+		        exponent     = 1000
+                reflectance  = 1
+            	transparency = 1
+            	ior          = 1.5
+            }
+        }
+	}
+
+    light = {
+        type       = lambert
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+
+            }
+        }
+    }
+}
+
+object = {
+	sphere11 = {
+		geometry = sphere11
+		material = ball1
+	}
+
+	sphere12 = {
+		geometry = sphere12
+		material = ball2
+	}
+
+	sphere20 = {
+		geometry = sphere20
+		material = glass01
+	}
+
+	sphere21 = {
+		geometry = sphere21
+		material = glass02
+	}
+
+    floor_2 = {
+        geometry = floor_2
+        material = floor
+    }
+
+    floor_1 = {
+        geometry = floor_1
+        material = floor
+    }
+
+    l1 = {
+        geometry = l1
+        material = light
+    }
+}

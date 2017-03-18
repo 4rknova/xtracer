@@ -66,6 +66,24 @@ int setup(int argc, char **argv
 				return 2;
 			}
 		}
+        else if (IS_PARAM(XTRACER_ARGDEFS_TILESIZE)) {
+            i++;
+
+            if (!argv[i]) {
+				Log::handle().post_error("No value was provided for %s", argv[i-1]);
+				return 2;
+            }
+
+            if (sscanf(argv[i], "%lu", &(params.tile_size)) < 1) {
+				Log::handle().post_error("Invalid %s value. Should be <uint>.", argv[i-1]);
+				return 2;
+			}
+
+			if (params.samples < 1) {
+				Log::handle().post_error("Invalid %s value. Must be 1 or greater.", argv[i-1]);
+				return 2;
+			}
+        }
        	else if (IS_PARAM(XTRACER_ARGDEFS_SAMPLES)) {
 			i++;
 

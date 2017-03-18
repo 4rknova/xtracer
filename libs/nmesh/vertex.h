@@ -3,12 +3,12 @@
 
 #include <nmath/precision.h>
 
-namespace NMesh {
+namespace nmesh {
 
 #ifdef __cplusplus
 	extern "C" {
 #endif /* __cplusplus */
-
+/*
 struct vertex_t
 {
 	vertex_t()
@@ -21,23 +21,23 @@ struct vertex_t
 		, mat(0)
 	{}
 
-	NMath::scalar_t px, py, pz;	/* Position            */
-	NMath::scalar_t nx, ny, nz;	/* Normal              */
-	NMath::scalar_t bx, by, bz;	/* Binormal            */
-	NMath::scalar_t tx, ty, tz;	/* Tangent             */
-	NMath::scalar_t u, v;		/* Texture coordinates */
-	NMath::scalar_t r, g, b, a;	/* Color               */
-	int             mat;        /* Material ID         */
+	NMath::scalar_t px, py, pz;	// Position
+	NMath::scalar_t nx, ny, nz;	// Normal
+	NMath::scalar_t bx, by, bz;	// Binormal
+	NMath::scalar_t tx, ty, tz;	// Tangent
+	NMath::scalar_t u, v;		// Texture coordinates
+	NMath::scalar_t r, g, b, a;	// Color
+	int             mat;        // Material ID
 };
 
 typedef struct vertex_t vertex_t;
 
 typedef unsigned int index_t;
-
+*/
 #ifdef __cplusplus
 	} /* extern */
 #endif /* __cplusplus */
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
 #endif /* NMESH_VERTEX_H_INCLUDED */

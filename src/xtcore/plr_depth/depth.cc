@@ -16,16 +16,20 @@
 
 #include "depth.h"
 
-DRenderer::DRenderer()
+namespace xtracer {
+    namespace renderer {
+        namespace depth {
+
+Renderer::Renderer()
 	: m_context(NULL)
 {}
 
-void DRenderer::setup(xtracer::render::context_t &context)
+void Renderer::setup(xtracer::render::context_t &context)
 {
 	m_context = &context;
 }
 
-void DRenderer::render(void)
+void Renderer::render(void)
 {
     if (   !m_context
         || !m_context->scene
@@ -48,7 +52,7 @@ int done()
 }
 
 
-void DRenderer::render_depth()
+void Renderer::render_depth()
 {
 	// precalculate some constants
 	const size_t w          = m_context->params.width;
@@ -94,7 +98,7 @@ void DRenderer::render_depth()
                             NMath::scalar_t  d = (ray.origin - info.point).length();
                             depth = 1. / log(d);
                         }
-                        color += nimg::ColorRGBAf(depth, depth, depth) * d;
+                        color += nimg::ColorRGBf(depth, depth, depth) * d;
                     }
                 }
 
@@ -115,3 +119,7 @@ void DRenderer::render_depth()
 
     }
 }
+
+        } /* namespace depth */
+    } /* namespace renderer */
+} /* namespace xtracer */

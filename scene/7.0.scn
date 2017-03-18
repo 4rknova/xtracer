@@ -1,0 +1,131 @@
+title = Scanned Face
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.1
+
+data = data/head
+
+k_ambient = 0.01
+
+ambient = {
+	r = 1
+	g = 1
+	b = 1
+}
+
+camera = {
+	default = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			x = 0
+			y = 110
+			z = 250
+		}
+
+		target = {
+			x = 0
+			y = 90
+			z = 30
+		}
+
+		up = {
+			y = 1
+		}
+
+        aperture = 10
+        flength = 200
+	}
+
+    ods = {
+        type     = ods
+        ipd      = 1
+        position = vec3(0, 50,100)
+    }
+}
+
+geometry = {
+	head = {
+		type = mesh
+		source = <data>/OBJ/Male_Head_L4.OBJ
+
+        modifiers = {
+            scale = {
+                x = 300.0
+                y = 300.0
+                z = 300.0
+            }
+        }
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = 170
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	head = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+            		source    = <data>/Textures/Male_Colour.jpg
+                    filtering = bilinear
+                }
+
+                specular = {
+                    type       = texture
+                    multiplier = .25
+                    source     = <data>/Textures/Male_Spec_Amount.jpg
+                }
+            }
+
+            scalars = {
+                reflectance = 0
+            }
+        }
+
+		diffuse = col3(1,1,1)
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	head = {
+		geometry = head
+		material = head
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

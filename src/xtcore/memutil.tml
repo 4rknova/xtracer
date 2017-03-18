@@ -1,0 +1,16 @@
+#ifndef XTCORE_MEMORY_TML_INCLUDED
+#define XTCORE_MEMORY_TML_INCLUDED
+
+namespace xtracer {
+	namespace memory {
+
+template<typename T>
+void safe_delete(T*p) {
+	delete p;
+	p = NULL;
+}
+
+	}
+}
+
+#endif /* XTCORE_MEMORY_TML_INCLUDED */

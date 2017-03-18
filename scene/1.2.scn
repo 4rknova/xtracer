@@ -1,0 +1,76 @@
+title = Icosahedron
+descr = An icosahedron
+versn = 0.1
+
+data = data/cubemap
+
+camera = {
+	ods = {
+        type = ods
+		ipd  = 1.5
+    }
+
+    default = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(10,-15,-40)
+        target   = vec3(0,0,0)
+        fov      = 45
+    }
+}
+
+geometry = {
+    ball = {
+        type   = mesh
+        source = gen(icosahedron)
+        modifiers = {
+            scale  = vec3(10,10,10)
+        }
+    }
+
+    light = {
+        type     = sphere
+        position = vec3(0,0,0)
+        radius   = 1
+    }
+}
+
+material = {
+	ball = {
+		type = phong
+        properties = {
+            samplers = {
+        		diffuse  = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+
+            scalars = {
+                reflectance = 1
+                exponent    = 90000
+            }
+        }
+	}
+}
+
+cubemap = {
+    posy = <data>/posy.jpg
+    negy = <data>/negy.jpg
+    negx = <data>/negx.jpg
+    posx = <data>/posx.jpg
+    posz = <data>/posz.jpg
+    negz = <data>/negz.jpg
+}
+
+object = {
+    ball = {
+        geometry = ball
+        material = ball
+    }
+}

@@ -1,6 +1,8 @@
 #ifndef BUFFER_HPP_INCLUDED
 #define BUFFER_HPP_INCLUDED
 
+namespace nmesh {
+
 template <class T>
 class Buffer
 {
@@ -28,6 +30,8 @@ class Buffer
 		T m_single_object;
 		T *m_data;
 };
+
+} /* namespace nmesh */
 
 #include "buffer.tml"
 

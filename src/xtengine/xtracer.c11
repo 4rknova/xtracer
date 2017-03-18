@@ -15,14 +15,16 @@
 #include <xtcore/context.h>
 #include <xtcore/broadcast.h>
 
-#include <plr_photonmapper/renderer.h>
-#include <plr_stencil/renderer.h>
-#include <plr_depth/depth.h>
+#include <xtcore/plr_photonmapper/renderer.h>
+#include <xtcore/plr_stencil/renderer.h>
+#include <xtcore/plr_depth/depth.h>
 #define NIMG_TEST
 #include <nimg/genetic_algo.cc>
 #include "argdefs.h"
 #include "argparse.h"
-#include "plm.h"
+#include "gui.h"
+
+#define RENDERER(x) (!strcmp(renderer_name.c_str(), x))
 
 int main(int argc, char **argv)
 {
@@ -40,8 +42,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-    PLM::load();
-
     std::string renderer_name, outdir, scene_path, camera;
     xtracer::render::params_t params;
     std::list<std::string> modifiers;
@@ -55,14 +55,6 @@ int main(int argc, char **argv)
             , params
     )) return 1;
 
-
-    std::string t = "xtracer";
-    t.append(" ");
-    t.append(scene_path);
-
-//    xtracer::network::broadcast(t.c_str());
-
-	// create and initialize the scene
 	Scene scene;
 	if (!scene.load(scene_path.c_str(), modifiers)) {
 
@@ -76,17 +68,20 @@ int main(int argc, char **argv)
 
 		xtracer::render::IRenderer *renderer = NULL;
 
-        if      (!strcmp(renderer_name.c_str(), "depth")) renderer = new DRenderer();
-        else if (!strcmp(renderer_name.c_str(), "stencil")) renderer = new xtracer::renderer::stencil::Renderer();
+        if      (RENDERER("depth"))   renderer = new xtracer::renderer::depth::Renderer();
+        else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
         else renderer = new Renderer();
+
 		xtracer::render::context_t  context;
-		context.scene       = &scene;
-        context.params      = params;
+		context.scene  = &scene;
+        context.params = params;
         context.init();
 
         renderer->setup(context);
 
 		Timer timer;
+
+gui(&context);
 
 		// Render.
 		timer.start();

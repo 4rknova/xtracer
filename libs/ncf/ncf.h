@@ -1,6 +1,7 @@
 #ifndef LIBNCF_NCF_H_INCLUDED
 #define LIBNCF_NCF_H_INCLUDED
 
+#include <cstdlib>
 #include <string>
 #include <map>
 #include "declspec.h"
@@ -54,15 +55,16 @@ class DECLSPEC NCF
 		bool query_property(const char* name) const;
 		bool query_group(const char *name) const;
 
-		unsigned int count_properties() const;
-		unsigned int count_groups() const;
+		size_t count_entries() const;
+		size_t count_properties() const;
+		size_t count_groups() const;
 
 		void        set_property(const char *name, const char *value);
 		const char* get_property_by_name(const char *name) const;
-		const char* get_property_by_index(unsigned int index) const;
-		const char* get_property_name_by_index(unsigned int index) const;
+		const char* get_property_by_index(size_t index) const;
+		const char* get_property_name_by_index(size_t index) const;
 		NCF*		get_group_by_name(const char *name) const;
-		NCF*		get_group_by_index(unsigned int index) const;
+		NCF*		get_group_by_index(size_t index) const;
 
 		const char *get_name() const;
 
@@ -78,7 +80,7 @@ class DECLSPEC NCF
 		mutable std::map<std::string, NCF*> m_p_groups;			// Sub-node map.
 		mutable std::map<std::string, std::string> m_p_symbols; // Symbol map.
 		std::string m_p_filepath;								// Source path.
-		unsigned int m_p_level;									// Node level.
+		size_t m_p_level;   									// Node level.
 };
 
 } /* namespace ncf */

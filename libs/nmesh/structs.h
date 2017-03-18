@@ -1,11 +1,11 @@
-#ifndef NMESH_MESH_HPP_INCLUDED
-#define NMESH_MESH_HPP_INCLUDED
+#ifndef NMESH_STRUCTS_H_INCLUDED
+#define NMESH_STRUCTS_H_INCLUDED
 
 #include <string>
 #include <vector>
 #include <map>
 
-namespace NMesh {
+namespace nmesh {
 
 typedef struct {
   std::string name;
@@ -75,6 +75,6 @@ typedef struct {
     std::vector<material_t> materials;
 } object_t;
 
-} /* namespace NMesh */
+} /* namespace nmesh */
 
-#endif /* NMESH_MESH_HPP_INCLUDED */
+#endif /* NMESH_STRUCTS_H_INCLUDED */

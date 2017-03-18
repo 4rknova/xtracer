@@ -170,7 +170,7 @@ material = {
 	light = {
 		type = lambert
 
-		diffuse = {
+		emissive = {
 			r = 1.0
 			g = 1.0
 			b = 1.0
@@ -200,7 +200,7 @@ material = {
 	}
 
     light_source = {
-        type = emissive
+        type = lambert
 
         emissive = {
             r = 1

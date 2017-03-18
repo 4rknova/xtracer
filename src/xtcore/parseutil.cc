@@ -9,15 +9,23 @@
 #include <nmesh/mesh.h>
 #include <nmesh/transform.h>
 #include <nmesh/obj.h>
+#include <nmesh/invnormals.h>
+#include <nmesh/icosahedron.h>
 #include <nimg/checkerboard.h>
 
 #include "proto.h"
-#include "parseutil.h"
 
 #include "log.h"
 #include "cam_perspective.h"
 #include "cam_ods.h"
 #include "cam_erp.h"
+#include "mat_lambert.h"
+#include "mat_phong.h"
+#include "mat_blinnphong.h"
+
+#include "extrude.h"
+
+#include "parseutil.h"
 
 namespace xtracer {
     namespace io {
@@ -128,30 +136,78 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
-int deserialize_cubemap(const char *source, const ncf::NCF *p, xtracer::assets::Cubemap &data)
+xtracer::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
 {
-    if (!p) return 1;
+    if (!p) return 0;
+
+    xtracer::assets::Cubemap *data = new xtracer::assets::Cubemap;
 
     ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
 
-    std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
-    std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
-    std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
-    std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
-    std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
-    std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
+    if (data) {
+        std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
+        std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
+        std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
+        std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
+        std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
+        std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
 
-    std::string base, file, fsource = source;
-	ncf::util::path_comp(fsource, base, file);
+        std::string base, file, fsource = source;
+    	ncf::util::path_comp(fsource, base, file);
 
-    data.load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
-    data.load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
-    data.load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
-    data.load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
-    data.load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
-    data.load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
+        data->load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
+        data->load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
+        data->load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
+        data->load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
+        data->load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
+        data->load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
+    }
+    return data;
+}
 
-    return 0;
+
+xtracer::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    assets::ICamera *data = new (std::nothrow) CamPerspective();
+
+    CamPerspective *cam = (CamPerspective *)data;
+    cam->position = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    cam->target   = deserialize_vec3(p, XTPROTO_PROP_TARGET);
+    cam->up       = deserialize_vec3(p, XTPROTO_PROP_UP);
+    cam->fov      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
+    cam->flength  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
+    cam->aperture = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
+
+    return data;
+}
+
+xtracer::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    assets::ICamera *data = new (std::nothrow) CamODS();
+
+    CamODS *cam = (CamODS *)data;
+    cam->position    = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    cam->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
+    cam->ipd         = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
+
+    return data;
+}
+
+xtracer::assets::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    assets::ICamera *data = new (std::nothrow) CamERP();
+
+    CamERP *cam = (CamERP *)data;
+    cam->position    = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    cam->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
+
+    return data;
 }
 
 xtracer::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
@@ -162,45 +218,81 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF 
 
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-    if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) {
-    	NMath::Vector3f pos     = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-    	NMath::Vector3f target  = deserialize_vec3(p, XTPROTO_PROP_TARGET);
-    	NMath::Vector3f up      = deserialize_vec3(p, XTPROTO_PROP_UP);
-       	NMath::scalar_t fov     = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
-    	NMath::scalar_t flength = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
-    	NMath::scalar_t ap      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
-
-	    data = new (std::nothrow) CamPerspective();
-        ((CamPerspective *)data)->position = pos;
-        ((CamPerspective *)data)->target   = target;
-        ((CamPerspective *)data)->up       = up;
-        ((CamPerspective *)data)->fov      = fov;
-        ((CamPerspective *)data)->flength  = flength;
-        ((CamPerspective *)data)->aperture = ap;
-    }
-    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)) {
-	    NMath::Vector3f pos = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-	    NMath::Vector3f orn = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
-	    NMath::scalar_t ipd = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
-
-        data = new (std::nothrow) CamODS();
-        ((CamODS *)data)->position    = pos;
-        ((CamODS *)data)->orientation = orn;
-        ((CamODS *)data)->ipd         = ipd;
-    }
-    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)) {
-	    NMath::Vector3f pos = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-	    NMath::Vector3f orn = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
-
-        data = new (std::nothrow) CamERP();
-        ((CamERP *)data)->position    = pos;
-        ((CamERP *)data)->orientation = orn;
-    }
-    else {
-		Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
-    }
+         if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) data = deserialize_camera_tlp(source, p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)     ) data = deserialize_camera_ods(source, p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)     ) data = deserialize_camera_erp(source, p);
+    else Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 
 	return data;
+}
+
+xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const ncf::NCF *p)
+{
+	if (!p) return 0;
+
+    xtracer::assets::Geometry *data = new (std::nothrow) nmesh::Mesh;
+
+    nmesh::object_t obj;
+
+    std::string f = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+
+    std::string token;
+    void* buffer = malloc(200 * sizeof(char));
+    memset(buffer, 0, 200 * sizeof(char));
+    int res = sscanf(f.c_str(), XTPROTO_FORMAT_GENERATE, (char*)buffer);
+    if (buffer && *((char*)buffer)) token = (char*)buffer;
+    free(buffer);
+
+    // Procedural meshes
+    if (res > 0) {
+        if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) nmesh::generator::icosahedron(&obj);
+        else Log::handle().post_message("Invalid mesh generator: %s", token.c_str());
+    }
+    // External sources
+    else {
+        // Open source file from relative path
+	    std::string base, file, fsource = source;
+		ncf::util::path_comp(fsource, base, file);
+    	base.append(f);
+
+	    Log::handle().post_message("Loading data from %s", base.c_str());
+
+	    if (nmesh::io::import::obj(base.c_str(), obj))
+    	{
+    		Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
+	    	delete data;
+            return 0;
+		}
+    }
+
+    if (p->query_group(XTPROTO_MODIFIERS)) {
+        ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
+
+    	NMath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , NMath::Vector3f(0,0,0));
+    	NMath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE       , NMath::Vector3f(1,1,1));
+    	NMath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
+    	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
+    	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
+    	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
+
+        if (mods->query_property(XTPROTO_FLIP_NORMALS)) {
+            bool flag = deserialize_bool(mods->get_property_by_name(XTPROTO_FLIP_NORMALS));
+            Log::handle().post_message("Applying modifier: flip normals..");
+            if (flag) nmesh::mutator::invert_normals(&obj);
+        }
+
+        if (mods->query_group(XTPROTO_EXTRUDE)) {
+            xtracer::assets::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
+            Log::handle().post_message("Applying modifier: extrude..");
+            xtracer::auxiliary::extrude(&obj, cb);
+        }
+    }
+
+    Log::handle().post_message("Building octree..");
+	((nmesh::Mesh *)data)->build_octree(obj);
+    fflush(stdout);
+
+    return data;
 }
 
 xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::NCF *p)
@@ -241,91 +333,90 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 		}
 	}
 	// - Mesh
-	else if (!type.compare(XTPROTO_LTRL_MESH)) {
-		data = new (std::nothrow) NMesh::Mesh;
-
-		// Data source
-		std::string f = p->get_property_by_name(XTPROTO_PROP_SOURCE);
-
-		// Open source file from relative path
-		std::string base, file, fsource = source;
-		ncf::util::path_comp(fsource, base, file);
-		base.append(f);
-
-		Log::handle().post_message("Loading data from %s", base.c_str());
-
-        NMesh::object_t obj;
-
-		if (NMesh::IO::Import::obj(base.c_str(), obj))
-		{
-			Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
-			delete data;
-            return 0;
-		}
-
-		if (p->query_group(XTPROTO_PROP_ROTATION)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_ROTATION);
-			NMesh::Mutator::rotate(obj, v.x, v.y, v.z);
-		}
-
-		if (p->query_group(XTPROTO_PROP_SCALE)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_SCALE);
-			NMesh::Mutator::scale(obj, v.x, v.y, v.z);
-		}
-
-		if (p->query_group(XTPROTO_PROP_TRANSLATION)) {
-			NMath::Vector3f v = deserialize_vec3(p, XTPROTO_PROP_TRANSLATION);
-			NMesh::Mutator::translate(obj, v.x, v.y, v.z);
-		}
-
-		Log::handle().post_message("Building octree..");
-		((NMesh::Mesh *)data)->build_octree(obj);
-	}
+	else if (!type.compare(XTPROTO_LTRL_MESH)) data = deserialize_geometry_mesh(source, p);
 	// unknown
 	else {
 		Log::handle().post_warning("Unsupported geometry type %s [%s]. Skipping..", p->get_name(), type.c_str());
 		return 0;
 	}
 
-	data->uv_scale = NMath::Vector2f(
-		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
-		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
-	);
+    if (data) {
+    	data->uv_scale = NMath::Vector2f(
+    		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
+	    	deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
+    	);
 
-	data->calc_aabb();
+        data->calc_aabb();
+    }
 
 	return data;
 }
 
-xtracer::assets::Material *deserialize_material(const char *source, const ncf::NCF *p)
+xtracer::assets::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
+{
+    return new (std::nothrow) xtracer::assets::MaterialLambert();
+}
+
+xtracer::assets::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
+{
+    return new (std::nothrow) xtracer::assets::MaterialPhong();
+}
+
+xtracer::assets::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
+{
+    return new (std::nothrow) xtracer::assets::MaterialBlinnPhong();
+}
+
+xtracer::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
+{
+    xtracer::assets::SolidColor *sampler = new (std::nothrow) xtracer::assets::SolidColor();
+    ((xtracer::assets::SolidColor *)sampler)->set(deserialize_col3(p, XTPROTO_VALUE));
+    return sampler;
+}
+
+xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtracer::assets::Material *data = new (std::nothrow) xtracer::assets::Material;
+    xtracer::assets::IMaterial *data = 0;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) data->type = xtracer::assets::MATERIAL_LAMBERT;
-	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data->type = xtracer::assets::MATERIAL_PHONG;
-	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data->type = xtracer::assets::MATERIAL_BLINNPHONG;
-	else if (!type.compare(XTPROTO_LTRL_EMISSIVE  )) data->type = xtracer::assets::MATERIAL_EMISSIVE;
+	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) data = deserialize_material_lambert(source, p);
+	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data = deserialize_material_phong(source, p);
+	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = deserialize_material_blinnphong(source, p);
 	else {
 		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete data;
 		return 0;
 	}
 
-	data->ambient      = deserialize_col3(p, XTPROTO_PROP_IAMBN);
-	data->specular     = deserialize_col3(p, XTPROTO_PROP_ISPEC);
-	data->diffuse      = deserialize_col3(p, XTPROTO_PROP_IDIFF);
-	data->emissive     = deserialize_col3(p, XTPROTO_PROP_EMISSIVE);
-	data->kdiff        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KDIFF), 1.f);
-	data->kspec        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KSPEC), 0.f);
-	data->ksexp        = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_KEXPN), 0.f);
-	data->roughness    = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ROUGH), 0.f);
-	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-	data->reflectance  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_REFLC), 0.f);
-	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+    if (data) {
+        ncf::NCF *gsamplers = p->get_group_by_name(XTPROTO_PROPERTIES)->get_group_by_name(XTPROTO_SAMPLERS);
+        ncf::NCF *gscalars  = p->get_group_by_name(XTPROTO_PROPERTIES)->get_group_by_name(XTPROTO_SCALARS);
+
+        for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
+            ncf::NCF *entry = gsamplers->get_group_by_index(i);
+
+            xtracer::assets::ISampler *sampler = 0;
+            std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
+
+                 if (!type.compare(XTPROTO_TEXTURE)) sampler = deserialize_texture(source, entry);
+            else if (!type.compare(XTPROTO_CUBEMAP)) sampler = deserialize_cubemap(source, entry);
+            else if (!type.compare(XTPROTO_COLOR  )) sampler = deserialize_rgba   (source, entry);
+
+            data->add_sampler(entry->get_name(), sampler);
+        }
+
+        for (size_t i = 0; i < gscalars->count_properties(); ++i) {
+            std::string     name  = deserialize_cstr(gscalars->get_property_name_by_index(i));
+            NMath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
+            data->add_scalar(name.c_str(), value);
+        }
+
+    	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
+    	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
+    }
 
 	return data;
 }
@@ -343,17 +434,11 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::N
 	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string path = script_base + fname;
 
-	Log::handle().post_message("Loading data from %s", path.c_str());
+	Log::handle().post_message("Loading texture: %s", path.c_str());
 	if (data->load(path.c_str())) {
-		Log::handle().post_warning("Failed to load texture [%s->%s]", p->get_name(), path.c_str());
-		Log::handle().post_warning("Replacing with checkerboard..");
-
-		Pixmap tex;
-		ColorRGBAf a = ColorRGBAf(0.5,0.5,0.5,1);
-		ColorRGBAf b = ColorRGBAf(1,1,1,1);
-		nimg::generator::checkerboard(tex, 2, 2, a, b);
-
-		data->load(tex);
+	    Log::handle().post_error("Failed to texture: %s", path.c_str());
+        delete data;
+        return 0;
 	}
 
   	if      ( filter.empty()
@@ -362,6 +447,10 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::N
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
 	}
+
+    if (p->query_property(XTPROTO_MULTIPLIER)) {
+        data->applu_multiplier(deserialize_numf(p->get_property_by_name(XTPROTO_MULTIPLIER)));
+    }
 
     return data;
 }
@@ -374,11 +463,15 @@ xtracer::assets::Object *deserialize_object(const char *source, const ncf::NCF *
 
 	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
 	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
-	const char *t = p->get_property_by_name(XTPROTO_PROP_OBJ_TEX);
 
 	data->geometry = deserialize_cstr(g);
 	data->material = deserialize_cstr(m);
-	data->texture  = deserialize_cstr(t);
+
+    if (p->query_property(XTPROTO_DIRECTIONAL_UVS)) {
+        bool flag = deserialize_bool(p->get_property_by_name(XTPROTO_DIRECTIONAL_UVS));
+        Log::handle().post_message("Using directional uvs..");
+        if (flag) data->flag_directional_uvs = flag;
+    }
 
 	return data;
 }

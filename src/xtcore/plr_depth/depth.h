@@ -1,5 +1,5 @@
-#ifndef XTRACER_DEPTH_HPP_INCLUDED
-#define XTRACER_DEPTH_HPP_INCLUDED
+#ifndef XTRACER_DEPTH_H_INCLUDED
+#define XTRACER_DEPTH_H_INCLUDED
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
@@ -14,10 +14,14 @@
 using nimg::ColorRGBf;
 using nimg::Pixmap;
 
-class DRenderer : public xtracer::render::IRenderer
+namespace xtracer {
+    namespace renderer {
+        namespace depth {
+
+class Renderer : public xtracer::render::IRenderer
 {
 	public:
-	DRenderer();
+	Renderer();
 
 	virtual void setup(xtracer::render::context_t &context);
 	virtual void render();
@@ -28,4 +32,8 @@ class DRenderer : public xtracer::render::IRenderer
     xtracer::render::context_t *m_context;
 };
 
-#endif /* XTRACER_DEPTH_HPP_INCLUDED */
+        } /* namespace depth */
+    } /* namespace renderer */
+} /* namespace xtracer */
+
+#endif /* XTRACER_DEPTH_H_INCLUDED */

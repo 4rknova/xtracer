@@ -1,0 +1,117 @@
+PATH_TEST = ./test/
+
+TEST_CONFIG = -outdir $(PATH_TEST)
+
+CC  = @echo "compiling [c    ] $<"; gcc
+CXX = @echo "compiling [c++  ] $<"; g++
+C11 = @echo "compiling [c++11] $<"; g++
+LD  = @echo "linking $@ ..."; g++
+
+LIB_H   = $(wildcard $(PATH_LIB)/*/*.h)
+LIB_HPP = $(wildcard $(PATH_LIB)/*/*.hpp)
+LIB_INL = $(wildcard $(PATH_LIB)/*/*.inl)
+LIB_TML = $(wildcard $(PATH_LIB)/*/*.tml)
+LIB_C   = $(wildcard $(PATH_LIB)/*/*.c)
+LIB_CC  = $(wildcard $(PATH_LIB)/*/*.cc)
+LIB_CPP = $(wildcard $(PATH_LIB)/*/*.cpp)
+LIB_CXX = $(wildcard $(PATH_LIB)/*/*.cxx)
+SRC_H   = $(wildcard $(PATH_SRC)/*.h)   $(wildcard $(PATH_SRC)/*/*.h)    $(wildcard $(PATH_SRC)/*/*/*.h)
+SRC_HPP = $(wildcard $(PATH_SRC)/*.hpp) $(wildcard $(PATH_SRC)/*/*.hpp)  $(wildcard $(PATH_SRC)/*/*/*.hpp)
+SRC_INL = $(wildcard $(PATH_SRC)/*.inl) $(wildcard $(PATH_SRC)/*/*.inl)  $(wildcard $(PATH_SRC)/*/*/*.inl)
+SRC_TML = $(wildcard $(PATH_SRC)/*.tml) $(wildcard $(PATH_SRC)/*/*.tml)  $(wildcard $(PATH_SRC)/*/*/*.tml)
+SRC_C   = $(wildcard $(PATH_SRC)/*.c)   $(wildcard $(PATH_SRC)/*/*.c)    $(wildcard $(PATH_SRC)/*/*/*.c)
+SRC_CC  = $(wildcard $(PATH_SRC)/*.cc)  $(wildcard $(PATH_SRC)/*/*.cc)   $(wildcard $(PATH_SRC)/*/*/*.cc)
+SRC_CPP = $(wildcard $(PATH_SRC)/*.cpp) $(wildcard $(PATH_SRC)/*/*.cpp)  $(wildcard $(PATH_SRC)/*/*/*.cpp)
+SRC_C11 = $(wildcard $(PATH_SRC)/*.c11) $(wildcard $(PATH_SRC)/*/*.c11)  $(wildcard $(PATH_SRC)/*/*/*.c11)
+
+SRC_API = $(LIB_H) $(LIB_HPP) $(LIB_INL) $(LIB_TML) \
+		  $(SRC_H) $(SRC_HPP) $(SRC_INL) $(SRC_TML)
+
+BINPPM_SCN = $(SRC_SCN:.scn=.ppm)
+BINOBJ_C   = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_C:.c=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C:.c=.o)))
+BINOBJ_CC  = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CC:.cc=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CC:.cc=.o)))
+BINOBJ_CPP = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_CPP:.cpp=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_CPP:.cpp=.o)))
+BINOBJ_C11 = $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_SRC)/%,%,$(SRC_C11:.c11=.o))) \
+			 $(addprefix $(PATH_OBJ)/, $(patsubst $(PATH_LIB)/%,%,$(LIB_C11:.c11=.o)))
+BINOBJ	   = $(sort $(BINOBJ_C) $(BINOBJ_CC) $(BINOBJ_CPP) $(BINOBJ_C11))
+BINPATHS   = $(sort $(dir $(BINOBJ)))
+
+BIN = $(PATH_BIN)/$(SW_PACKAGE)
+LIB_STATIC = $(BIN).$(EXT_STATIC)
+LIB_DYNAMIC= $(BIN).$(EXT_DYNAMIC)
+
+FLAGS_WARNLV = -Wall
+FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC) -I$(PATH_LIB)
+FLAGS_PREPRC = -D'$(SW_SYMID)_YEAR="$(YEAR)"' -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
+FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) $(FLAGS_PREPRC) $(FLAGS_XTR)
+FLAGS_LD  = -lgomp -ldl
+FLAGS_CC  = $(FLAGS_COMMON) -std=c89
+FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
+FLAGS_C11 = $(FLAGS_COMMON) -std=c++11 -pedantic -x c++
+
+# TARGETS
+all: $(BIN)
+
+.PHONY: test-scenes
+test-scenes: $(BINPPM_SCN)
+
+.PHONY: get-version
+get-version:
+	@echo $(SW_VERSION)
+
+
+$(PATH_SCN)/%.ppm: $(PATH_SCN)/%.scn $(BIN)
+	$(BIN) $(TEST_CONFIG) $<
+
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.c
+	$(CC) -c $(FLAGS_CC) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.c
+	$(CC) -c $(FLAGS_CC) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.cc
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.cc
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.cpp
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_LIB)/%.cpp
+	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/%.o: $(PATH_SRC)/%.c11
+	$(C11) -c $(FLAGS_C11) -o $@ $<
+
+.PHONY: dirtree_xtcore
+dirtree_xtcore:
+	$(MKDIR) $(BINPATHS)
+
+$(BIN): dirtree_common dirtree_xtcore $(BINOBJ)
+	$(LD) $(BINOBJ) $(DEP_DLIB) $(FLAGS_LD) -o $@
+
+.PHONY: install
+install: all
+	install -m 755 $(BIN) $(PATH_PREFIX)/$(BIN)
+	if test -f $(MAN); then install -D -c -m 444 $(MAN) $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(PATH_PREFIX)/$(BIN)
+	if test -f man; then rm -f $(PATH_PREFIX)/share/man/man$(MAN_SECTION)/$(SW_TITLE).$(MAN_SECTION); fi
+
+.PHONY: test
+test:
+
+.PHONY: clean
+clean:
+	rm -rf $(BINOBJ)
+
+.PHONY: clean-all
+clean-all: clean
+	rm -f Makefile $(SW_TITLE).pc $(BIN)
+	rm -rf $(PATH_BIN)

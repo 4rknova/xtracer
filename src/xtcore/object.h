@@ -9,9 +9,11 @@ namespace xtracer {
 class Object
 {
 	public:
-		std::string geometry;
-		std::string material;
-		std::string texture;
+	std::string geometry;
+	std::string material;
+    bool        flag_directional_uvs;
+
+    Object();
 };
 
     } /* namespace assets */
