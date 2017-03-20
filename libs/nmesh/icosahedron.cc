@@ -119,12 +119,12 @@ for (int i = 0; i < recursionLevel; i++)
         Point3D point1 = this.geometry.Positions[p1];
         Point3D point2 = this.geometry.Positions[p2];
         Point3D middle = new Point3D(
-            (point1.X + point2.X) / 2.0, 
-            (point1.Y + point2.Y) / 2.0, 
+            (point1.X + point2.X) / 2.0,
+            (point1.Y + point2.Y) / 2.0,
             (point1.Z + point2.Z) / 2.0);
 
         // add vertex makes sure point is on unit sphere
-        int i = addVertex(middle); 
+        int i = addVertex(middle);
 
         // store it, return index
         this.middlePointIndexCache.Add(key, i);

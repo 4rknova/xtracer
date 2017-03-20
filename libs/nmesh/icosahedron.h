@@ -6,7 +6,7 @@
 namespace nmesh {
     namespace generator {
 
-void icosahedron(NMesh::object_t *obj);
+void icosahedron(object_t *obj);
 
     } /* namespace generator */
 } /* namespace nmesh */

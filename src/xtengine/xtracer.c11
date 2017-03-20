@@ -26,6 +26,8 @@
 
 #define RENDERER(x) (!strcmp(renderer_name.c_str(), x))
 
+int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, std::string &scene_path, std::string &outdir);
+
 int main(int argc, char **argv)
 {
 	// Display usage information.
@@ -57,7 +59,6 @@ int main(int argc, char **argv)
 
 	Scene scene;
 	if (!scene.load(scene_path.c_str(), modifiers)) {
-
         if (scene.m_cameras.size() == 0) {
             Log::handle().post_error("no cameras found");
             return 2;
@@ -65,63 +66,66 @@ int main(int argc, char **argv)
 
         scene.camera = camera;
         // Create the renderer.
+    } else return 1;
 
-		xtracer::render::IRenderer *renderer = NULL;
+	xtracer::render::IRenderer *renderer = NULL;
 
-        if      (RENDERER("depth"))   renderer = new xtracer::renderer::depth::Renderer();
-        else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
-        else renderer = new Renderer();
+    if      (RENDERER("depth"))   renderer = new xtracer::renderer::depth::Renderer();
+    else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
+    else renderer = new Renderer();
 
-		xtracer::render::context_t  context;
-		context.scene  = &scene;
-        context.params = params;
-        context.init();
+	xtracer::render::context_t  context;
+	context.scene  = &scene;
+    context.params = params;
+    context.init();
 
-        renderer->setup(context);
+    renderer->setup(context);
 
-		Timer timer;
+    if (context.params.gui) gui(context, renderer);
+    else                    cli(context, renderer, scene_path, outdir);
 
-gui(&context);
+	delete renderer;
 
-		// Render.
-		timer.start();
-		renderer->render();
-		timer.stop();
+    return 0;
+}
 
-		delete renderer;
+int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, std::string &scene_path, std::string &outdir)
+{
+  	// Render.
+	Timer timer;
+	timer.start();
+	renderer->render();
+	timer.stop();
 
+    std::string t;
+	print_time_breakdown(t, timer.get_time_in_mlsec());
+    Log::handle().post_message("Total time: %s", t.c_str());
 
-        std::string t;
-		print_time_breakdown(t, timer.get_time_in_mlsec());
-        Log::handle().post_message("Total time: %s", t.c_str());
+    // Export the frame
+    {
+	    std::string file, base, extension, filename, sw, sh, sa, random_token;
+		#ifdef _WIN32
+    		const char path_delim = '\\';
+	    #else
+		    const char path_delim = '/';
+		#endif /* _WIN32 */
 
-        // Export the frame
-        {
-		    std::string file, base, extension, filename, sw, sh, sa, random_token;
-    		#ifdef _WIN32
-	    		const char path_delim = '\\';
-		    #else
-			    const char path_delim = '/';
-    		#endif /* _WIN32 */
+    	ncf::util::path_comp(scene_path, base, file, path_delim);
+    	ncf::util::path_comp(file, filename, extension, '.');
+	    std::string cam = ctx.scene->camera;
+        if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
-	    	ncf::util::path_comp(scene_path, base, file, path_delim);
-	    	ncf::util::path_comp(file, filename, extension, '.');
-		    std::string cam = context.scene->camera;
-            if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
+    	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
+			outdir.append(1, path_delim);
+		}
 
-	    	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
-    			outdir.append(1, path_delim);
-    		}
-
-		    file = outdir + filename + cam  + ".png";
-    		Log::handle().post_message("Exporting to %s..", file.c_str());
-            nimg::Pixmap fb;
-            xtracer::render::assemble(fb, context);
-    		int res = nimg::io::save::png(file.c_str(), fb);
-            if (res) Log::handle().post_error("Failed to export image file");
-        }
-	}
-    else return 1;
+	    file = outdir + filename + cam  + ".png";
+		Log::handle().post_message("Exporting to %s..", file.c_str());
+        nimg::Pixmap fb;
+        xtracer::render::assemble(fb, ctx);
+		int res = nimg::io::save::png(file.c_str(), fb);
+        if (res) Log::handle().post_error("Failed to export image file");
+    }
 
 	return 0;
 }

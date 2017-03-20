@@ -38,7 +38,8 @@ SW_VERSION="`git describe --long`"
 FLAG_DBGSYM=no
 FLAG_OPTSPD=yes
 
-for arg; do
+for arg in "$@"
+do
 	case "$arg" in
 		--prefix=*)
 			value = `echo $arg | sed 's/--prefix = //'`
@@ -46,17 +47,17 @@ for arg; do
 			;;
 
         --enable-opt)
-			FLAG_OPTSPD = yes
+			FLAG_OPTSPD=yes
 			;;
         --disable-opt)
-			FLAG_OPTSPD = no
+			FLAG_OPTSPD=no
 			;;
 
 		--enable-debug)
-			FLAG_DBGSYM = yes
+			FLAG_DBGSYM=yes
 			;;
 		--disable-debug)
-			FLAG_DBGSYM = no
+			FLAG_DBGSYM=no
 			;;
 
 		--help)

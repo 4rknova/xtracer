@@ -104,14 +104,13 @@ static void keydown(unsigned char key, int x, int y)
 	}
 }
 
-int gui(xtracer::render::context_t *ctx, int argc, char **argv)
+int gui(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer)
 {
-    if (!ctx) return 1;
-
     // Initialization stuff
-    glutInit(&argc, argv);
+    int argc = 0;
+    glutInit(&argc, 0);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-    glutInitWindowSize(ctx->params.width, ctx->params.height);
+    glutInitWindowSize(ctx.params.width, ctx.params.height);
 
     // Create  window main
     window = glutCreateWindow("xtracer");
@@ -126,8 +125,8 @@ int gui(xtracer::render::context_t *ctx, int argc, char **argv)
 	postprg = new Program;
 	postsdr->set_source(postsdr_source);
 	postprg->add_shader(postsdr);
-    NMath::Vector2f ts((float)(ctx->params.tile_size), (float)(ctx->params.tile_size));
-    NMath::Vector2f sz((float)(ctx->params.width), (float)(ctx->params.height));
+    NMath::Vector2f ts((float)(ctx.params.tile_size), (float)(ctx.params.tile_size));
+    NMath::Vector2f sz((float)(ctx.params.width    ), (float)(ctx.params.height   ));
     postprg->set_uniform("iTileSize", ts);
     postprg->set_uniform("iRenderResolution", sz);
 
@@ -138,4 +137,3 @@ int gui(xtracer::render::context_t *ctx, int argc, char **argv)
     glutMainLoop();
 	return 0;
 }
-

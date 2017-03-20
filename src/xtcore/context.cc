@@ -14,6 +14,7 @@ params_t::params_t()
     , ssaa(1)
     , rdepth(3)
     , tile_size(64)
+    , gui(false)
 {}
 
 void context_t::init()

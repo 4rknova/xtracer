@@ -17,5 +17,6 @@
 #define XTRACER_ARGDEFS_ACTIVE_CAMERA	XTRACER_ARGDEFS_PREFIX "cam"	   /* Active camera name. */
 #define XTRACER_ARGDEFS_OUTDIR			XTRACER_ARGDEFS_PREFIX "outdir"    /* Output directory. */
 #define XTRACER_ARGDEFS_MOD				XTRACER_ARGDEFS_PREFIX "mod"	   /* Apply a modifier */
+#define XTRACER_ARGDEFS_GUI             XTRACER_ARGDEFS_PREFIX "gui"       /* GUI mode */
 
 #endif /* XTRACER_ARGDEFS_H_INCLUDED */

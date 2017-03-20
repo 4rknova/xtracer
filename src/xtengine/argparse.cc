@@ -163,6 +163,9 @@ int setup(int argc, char **argv
 
 			modifiers.push_back(argv[i]);
 		}
+        else if (IS_PARAM(XTRACER_ARGDEFS_GUI)) {
+            params.gui = true;
+        }
 		// Invalid argument
 		else if (argv[i][0] == '-') {
 			Log::handle().post_error("Invalid argument: %s", argv[i]);
