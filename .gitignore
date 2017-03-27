@@ -2,7 +2,7 @@ scene/data
 bin/
 media/
 temp/
-src/*.o
+*.o
 *.pc
 *.ppm
 *.png

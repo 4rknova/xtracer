@@ -3,7 +3,7 @@
 #include <vector>
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "ext/tiny_obj_loader.h"
+#include <tiny_obj_loader.h>
 
 #include "obj.h"
 

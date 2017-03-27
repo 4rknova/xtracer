@@ -18,8 +18,6 @@ struct params_t
     size_t rdepth;    // Maximum recursion depth
     size_t tile_size; // Tile size for framebuffers segmentation
 
-    bool   gui;       // GUI mode
-
     params_t();
 };
 

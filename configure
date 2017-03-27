@@ -9,12 +9,6 @@ SW_DESCRIPTION="Photorealistic Renderer"
 MAN_SECTION=""
 
 PATH_PREFIX=/usr/local
-PATH_SRC=src
-PATH_LIB=libs
-PATH_SCN=scene
-PATH_BIN=bin
-PATH_OBJ=$PATH_BIN/obj
-PATH_MAN=man
 
 FLAGS_XTR="-fopenmp -Wall -Wno-unknown-pragmas -ffast-math -funsafe-math-optimizations"
 DEP_DLIB="-lX11 -lGL -lglut -lGLEW"
@@ -24,10 +18,6 @@ DEP_DLIB="-lX11 -lGL -lglut -lGLEW"
 if [ -z "$MAN_SECTION" ]; then MAN_SECTION="1"; fi
 
 PATH_PREFIX="`echo $PATH_PREFIX | sed -e 's/ /_/g'`"
-PATH_SRC="`echo $PATH_SRC | sed -e 's/ /_/g'`"
-PATH_BIN="`echo $PATH_BIN | sed -e 's/ /_/g'`"
-PATH_OBJ="`echo $PATH_OBJ | sed -e 's/ /_/g'`"
-PATH_MAN="`echo $PATH_MAN | sed -e 's/ /_/g'`"
 
 SW_TITLE="`echo $SW_TITLE | sed -e 's/ /_/g'`"
 SW_PACKAGE="`echo $SW_PACKAGE | sed -e 's/ /_/g'`"
@@ -91,12 +81,6 @@ echo "SW_VERSION = $SW_VERSION" >> Makefile
 echo >> Makefile
 
 echo "PATH_PREFIX = $PATH_PREFIX" >> Makefile
-echo "PATH_SCN = $PATH_SCN" >> Makefile
-echo "PATH_SRC = $PATH_SRC" >> Makefile
-echo "PATH_LIB = $PATH_LIB" >> Makefile
-echo "PATH_BIN = $PATH_BIN" >> Makefile
-echo "PATH_OBJ = $PATH_OBJ" >> Makefile
-echo "PATH_MAN = $PATH_MAN" >> Makefile
 echo >> Makefile
 
 echo "MAN_SECTION = $MAN_SECTION" >> Makefile
@@ -112,7 +96,8 @@ fi
 
 echo >> Makefile
 
-echo 'EXT_STATIC = a' >> Makefile
+echo 'EXT_STATIC  = a'  >> Makefile
+echo 'EXT_DYNAMIC = so' >> Makefile
 
 echo >> Makefile
 
@@ -124,6 +109,9 @@ echo >> Makefile
 
 cat Makefile.common.in >> Makefile
 cat Makefile.xtcore.in >> Makefile
+cat Makefile.xtfcli.in >> Makefile
+cat Makefile.xtfgui.in >> Makefile
+cat Makefile.test.in   >> Makefile
 
 echo 'Creating pkg-config file ...'
 

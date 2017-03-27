@@ -20,7 +20,7 @@ int setup(int argc, char **argv
                  , params_t               &params)
 {
 	for (size_t i = 1; i < (size_t)argc; ++i) {
-		if (IS_PARAM(XTRACER_ARGDEFS_RESOLUTION)) {
+		if (IS_PARAM(XT_ARG_RESOLUTION)) {
             ++i;
 			if (!argv[i]) {
 				Log::handle().post_error("No value was provided for %s", argv[i-1]);
@@ -38,7 +38,7 @@ int setup(int argc, char **argv
 			}
 
 		}
-        else if (IS_PARAM(XTRACER_ARGDEFS_RENDERER)) {
+        else if (IS_PARAM(XT_ARG_RENDERER)) {
             ++i;
 
             if (!argv[i]) {
@@ -48,7 +48,7 @@ int setup(int argc, char **argv
 
             renderer = argv[i];
         }
-		else if (IS_PARAM(XTRACER_ARGDEFS_MAX_RDEPTH)) {
+		else if (IS_PARAM(XT_ARG_MAX_RDEPTH)) {
 			++i;
 
 			if (!argv[i]) {
@@ -66,7 +66,7 @@ int setup(int argc, char **argv
 				return 2;
 			}
 		}
-        else if (IS_PARAM(XTRACER_ARGDEFS_TILESIZE)) {
+        else if (IS_PARAM(XT_ARG_TILESIZE)) {
             i++;
 
             if (!argv[i]) {
@@ -84,7 +84,7 @@ int setup(int argc, char **argv
 				return 2;
 			}
         }
-       	else if (IS_PARAM(XTRACER_ARGDEFS_SAMPLES)) {
+       	else if (IS_PARAM(XT_ARG_SAMPLES)) {
 			i++;
 
 			if (!argv[i]) {
@@ -102,7 +102,7 @@ int setup(int argc, char **argv
 				return 2;
 			}
 		}
-		else if (IS_PARAM(XTRACER_ARGDEFS_ANTIALIASING)) {
+		else if (IS_PARAM(XT_ARG_ANTIALIASING)) {
 			i++;
 
 			if (!argv[i]) {
@@ -120,7 +120,7 @@ int setup(int argc, char **argv
 				return 2;
 			}
 		}
-		else if (IS_PARAM(XTRACER_ARGDEFS_OUTDIR)) {
+		else if (IS_PARAM(XT_ARG_OUTDIR)) {
 			i++;
 
 			if (!argv[i]) {
@@ -130,7 +130,7 @@ int setup(int argc, char **argv
 
 			outdir = argv[i];
 		}
-		else if (IS_PARAM(XTRACER_ARGDEFS_ACTIVE_CAMERA)) {
+		else if (IS_PARAM(XT_ARG_ACTIVE_CAMERA)) {
 			i++;
 
 			if (!argv[i]) {
@@ -140,7 +140,7 @@ int setup(int argc, char **argv
 
 			camera = argv[i];
 		}
-		else if (IS_PARAM(XTRACER_ARGDEFS_THREADS))	{
+		else if (IS_PARAM(XT_ARG_THREADS))	{
 			i++;
 
 			if (!argv[i]) {
@@ -153,7 +153,7 @@ int setup(int argc, char **argv
 				return 2;
 			}
 		}
-		else if (IS_PARAM(XTRACER_ARGDEFS_MOD)) {
+		else if (IS_PARAM(XT_ARG_MOD)) {
 			i++;
 
 			if (!argv[i]) {
@@ -163,9 +163,6 @@ int setup(int argc, char **argv
 
 			modifiers.push_back(argv[i]);
 		}
-        else if (IS_PARAM(XTRACER_ARGDEFS_GUI)) {
-            params.gui = true;
-        }
 		// Invalid argument
 		else if (argv[i][0] == '-') {
 			Log::handle().post_error("Invalid argument: %s", argv[i]);

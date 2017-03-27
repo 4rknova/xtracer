@@ -1,0 +1,15 @@
+.PHONY: test
+.PHONY: test-scenes
+
+PATH_TEST   = ./test/
+
+CONF_TEST = -outdir $(PATH_TEST)
+
+SAMPLE_SCENES = $(SRC_SCN:.scn=.png)
+
+test:
+
+test-scenes: $(SAMPLE_SCENES)
+
+$(PATH_SCN)/%.png: $(PATH_SCN)/%.scn $(BIN)
+	$(BIN_FRONTEND_CLI) $(CONF_TEST) $<

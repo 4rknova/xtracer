@@ -20,9 +20,8 @@
 #include <xtcore/plr_depth/depth.h>
 #define NIMG_TEST
 #include <nimg/genetic_algo.cc>
-#include "argdefs.h"
-#include "argparse.h"
-#include "gui.h"
+#include <xtcore/argdefs.h>
+#include <xtcore/argparse.h>
 
 #define RENDERER(x) (!strcmp(renderer_name.c_str(), x))
 
@@ -31,14 +30,14 @@ int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, s
 int main(int argc, char **argv)
 {
 	// Display usage information.
-	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_VERSION)) {
+	if (argc == 2 && !strcmp(argv[1], XT_ARG_VERSION)) {
 		Log::handle().post_message("%s", XTRACER_VERSION);
 		return 1;
 	}
 
 	Log::handle().post_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
 
-	if (argc == 2 && !strcmp(argv[1], XTRACER_ARGDEFS_HELP)) {
+	if (argc == 2 && !strcmp(argv[1], XT_ARG_HELP)) {
 		Log::handle().post_message("Usage: %s [option]... scene_file...", argv[0]);
 		Log::handle().post_message("For a complete list of the available options, refer to the man pages.");
 		return 1;
@@ -81,8 +80,7 @@ int main(int argc, char **argv)
 
     renderer->setup(context);
 
-    if (context.params.gui) gui(context, renderer);
-    else                    cli(context, renderer, scene_path, outdir);
+    cli(context, renderer, scene_path, outdir);
 
 	delete renderer;
 
