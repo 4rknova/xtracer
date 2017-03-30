@@ -36,15 +36,15 @@ XTCORE_BINPATHS   = $(sort $(dir $(XTCORE_BINOBJ)))
 XTCORE_LIB_STATIC  = $(PATH_BIN)/$(SW_TITLE).$(EXT_STATIC)
 XTCORE_LIB_DYNAMIC = $(PATH_BIN)/$(SW_TITLE).$(EXT_DYNAMIC)
 
-FLAGS_WARNLV = -Wall
-FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC) -I$(PATH_LIB) -I$(PATH_EXT)
-FLAGS_PREPRC = -D'$(SW_SYMID)_YEAR="$(YEAR)"' -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
-FLAGS_COMMON = $(FLAGS_OPT) $(FLAGS_DBG) $(FLAGS_WARNLV) $(FLAGS_INCLSN) \
-			   $(FLAGS_PREPRC) $(FLAGS_XTR) $(FLAGS_PROF) -fPIC
-FLAGS_LD  = $(FLAGS_PROF) -lgomp -ldl
-FLAGS_CC  = $(FLAGS_COMMON) -std=c89
-FLAGS_CXX = $(FLAGS_COMMON) -ansi -pedantic
-FLAGS_C11 = $(FLAGS_COMMON) -std=c++11 -pedantic -x c++
+XTCORE_FLAGS_WARNLV = -Wall
+XTCORE_FLAGS_INCLSN = -I/usr/local/include  -I$(PATH_SRC) -I$(PATH_LIB) -I$(PATH_EXT)
+XTCORE_FLAGS_PREPRC = -D'$(SW_SYMID)_YEAR="$(YEAR)"' -D'$(SW_SYMID)_VERSION="$(SW_VERSION)"'
+XTCORE_FLAGS_COMMON = $(XTCORE_FLAGS_OPT) $(XTCORE_FLAGS_DBG) $(XTCORE_FLAGS_WARNLV) $(XTCORE_FLAGS_INCLSN) \
+			          $(FLAGS_PREPRC) $(FLAGS_XTR) $(FLAGS_PROF) -fPIC
+XTCORE_FLAGS_LD  = $(XTCORE_FLAGS_PROF) -lgomp -ldl
+XTCORE_FLAGS_CC  = $(XTCORE_FLAGS_COMMON) -std=c89
+XTCORE_FLAGS_CXX = $(XTCORE_FLAGS_COMMON) -ansi -pedantic
+XTCORE_FLAGS_C11 = $(XTCORE_FLAGS_COMMON) -std=c++11 -pedantic -x c++
 
 # TARGETS
 all: $(XTCORE_LIB_STATIC) $(XTCORE_LIB_DYNAMIC)
@@ -54,25 +54,25 @@ get-version:
 	@echo $(SW_VERSION)
 
 $(PATH_OBJ)/$(PATH_SRC_XTCORE)/%.o: $(PATH_SRC_XTCORE)/%.c
-	$(CC) -c $(FLAGS_CC) -o $@ $<
-
-$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.c
-	$(CC) -c $(FLAGS_CC) -o $@ $<
+	$(CC) -c $(XTCORE_FLAGS_CC) -o $@ $<
 
 $(PATH_OBJ)/$(PATH_SRC_XTCORE)/%.o: $(PATH_SRC_XTCORE)/%.cc
-	$(CXX) -c $(FLAGS_CXX) -o $@ $<
-
-$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.cc
-	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+	$(CXX) -c $(XTCORE_FLAGS_CXX) -o $@ $<
 
 $(PATH_OBJ)/$(PATH_SRC_XTCORE)/%.o: $(PATH_SRC_XTCORE)/%.cpp
-	$(CXX) -c $(FLAGS_CXX) -o $@ $<
-
-$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.cpp
-	$(CXX) -c $(FLAGS_CXX) -o $@ $<
+	$(CXX) -c $(XTCORE_FLAGS_CXX) -o $@ $<
 
 $(PATH_OBJ)/$(PATH_SRC_XTCORE)/%.o: $(PATH_SRC_XTCORE)/%.c11
-	$(C11) -c $(FLAGS_C11) -o $@ $<
+	$(C11) -c $(XTCORE_FLAGS_C11) -o $@ $<
+
+$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.c
+	$(CC)  -c $(XTCORE_FLAGS_CC) -o $@ $<
+
+$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.cc
+	$(CXX) -c $(XTCORE_FLAGS_CXX) -o $@ $<
+
+$(PATH_OBJ)/$(PATH_LIB)/%.o: $(PATH_LIB)/%.cpp
+	$(CXX) -c $(XTCORE_FLAGS_CXX) -o $@ $<
 
 .PHONY: dirtree_xtcore
 dirtree_xtcore:
@@ -82,7 +82,7 @@ $(XTCORE_LIB_STATIC): dirtree_common dirtree_xtcore $(XTCORE_BINOBJ)
 	$(AR) $@ $(XTCORE_BINOBJ)
 
 $(XTCORE_LIB_DYNAMIC): dirtree_common dirtree_xtcore $(XTCORE_BINOBJ)
-	$(LD) -shared $(XTCORE_BINOBJ) $(DEP_DLIB) $(FLAGS_LD) -o $@
+	$(LD) -shared $(XTCORE_BINOBJ) $(XTCORE_FLAGS_LD) -o $@
 
 .PHONY: install
 install: all
