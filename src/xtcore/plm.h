@@ -1,7 +1,7 @@
 #ifndef XTRACER_PLM_H_INCLUDED
 #define XTRACER_PLM_H_INCLUDED
 
-#include <xtcore/plugin.h>
+#include "plugin.h"
 
 #define PLUGIN_PATH "plugins"
 

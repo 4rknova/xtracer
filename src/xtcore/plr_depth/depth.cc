@@ -10,9 +10,9 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
-#include <xtcore/log.h>
-#include <xtcore/tile.h>
-#include <xtcore/aa.h>
+#include "../log.h"
+#include "../tile.h"
+#include "../aa.h"
 
 #include "depth.h"
 
