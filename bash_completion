@@ -1,4 +1,4 @@
-_xtracer()
+xtracer_cli()
 {
     local cur prev opts
     COMPREPLY=()
