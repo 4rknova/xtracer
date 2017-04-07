@@ -8,4 +8,6 @@ temp/
 *.png
 *.jpg
 *.swp
+CMakeCache.txt
+CMakeFiles/
 Makefile

@@ -137,3 +137,11 @@ int gui(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer)
     glutMainLoop();
 	return 0;
 }
+
+int main(int argc, char **argv)
+{
+    xtracer::render::context_t ctx;
+    xtracer::render::IRenderer *renderer = 0;
+
+    gui(ctx, renderer);
+}
