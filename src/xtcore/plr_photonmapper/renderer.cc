@@ -40,14 +40,12 @@ void Renderer::render()
         || !m_context->scene->get_camera()
     ) return;
 
-    pass_ptrace();
+//    pass_ptrace();
 	pass_rtrace();
 }
 
 void Renderer::pass_ptrace()
 {
-	if (!XTRACER_SETUP_DEFAULT_GI) return;
-
 	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
 	Log::handle().post_message("Initiating the photon maps..", photon_count);
@@ -184,12 +182,14 @@ void Renderer::pass_rtrace()
 
     xtracer::antialiasing::SampleSet samples;
     xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
+    size_t samples_size = samples.size();
     xtracer::assets::ICamera *cam = m_context->scene->get_camera();
-    float d = 1.f / (s * samples.size());
+    float d = 1.f / (s * samples_size);
 
 	float progress = 0;
 	if (t) omp_set_num_threads(t);
 
+    Log::handle().post_message("Rendering...");
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < tile_count; ++i) {
         xtracer::render::tile_t *tile = &(m_context->tiles[i]);
@@ -199,9 +199,8 @@ void Renderer::pass_rtrace()
 
 	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
 	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
-
 				ColorRGBf color;
-                for (size_t aa = 0; aa < samples.size(); ++aa) {
+                for (size_t aa = 0; aa < samples_size; ++aa) {
                     float rx = (float)x + samples[aa].x;
 					float ry = (float)y + samples[aa].y;
 
@@ -220,7 +219,7 @@ void Renderer::pass_rtrace()
 			++progress;
 			std::cout.setf(std::ios::fixed, std::ios::floatfield);
 			std::cout.setf(std::ios::showpoint);
-			std::cout << "\rRendering "
+			std::cout << "\r"
                       << std::setw(6) << std::setprecision(2)
                       << progress / tile_count * 100.f << "%"
                       << " @ " << omp_get_num_threads() << "T"
@@ -247,8 +246,8 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 	if (m_context->scene->intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
-
-			if (XTRACER_SETUP_DEFAULT_GI) { // Environment::handle().flag_gi()) {
+/*
+			if (XTRACER_SETUP_DEFAULT_GI) {
 				float irad[3] = {0,0,0};
 				float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
 
@@ -267,16 +266,20 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 				if (XTRACER_SETUP_DEFAULT_GIVIZ)
 					return gi_res;
 			}
+*/
 
             std::string &mat_id = m_context->scene->m_objects[obj]->material;
             xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
-			if (mat->transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
-			scalar_t ior_a = dot_normal_dir > 0 ? mat->ior : ior_src;
-			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : mat->ior;
 
+            NMath::scalar_t transparency = mat->get_scalar(MAT_SCALART_TRANSPARENCY);
+            NMath::scalar_t ior          = mat->get_scalar(MAT_SCALART_IOR);
+
+			if (transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
+			scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
+			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
 			return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
 		}
 	}

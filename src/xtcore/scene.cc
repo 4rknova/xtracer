@@ -91,6 +91,7 @@ void purge(std::map<std::string, T*> &map)
 		for (typename std::map<std::string, T*>::iterator it = map.begin(); it != map.end(); ++it) {
 			Log::handle().post_debug("Releasing %s..", (*it).first.c_str());
 			delete (*it).second;
+            (*it).second = 0;
 		}
 		map.clear();
 	}

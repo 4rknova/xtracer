@@ -41,12 +41,6 @@ camera = {
     }
 }
 
-texture = {
-	checker = {
-		source = 
-	}
-}
-
 geometry = {
 	m0 = {
 		type = mesh
@@ -124,78 +118,112 @@ material = {
 	m0 = {
 		type = blinn_phong
 
-		k_diffuse =  0.0
-		k_specular = 1.0
-		k_exponent = 60
+        properties = {
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
+            samplers = {
+        		diffuse = {
+                    type = color
+                    value = {
+            			r = 1
+            			g = 1
+		            	b = 1
+                    }
+        		}
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
+        		specular = {
+                    type = color
+                    value = {
+            			r = 1
+            			g = 1
+            			b = 1
+                    }
+		        }
+            }
 
-		reflectance = 0.0
-		transparency = 1.0
-		ior = 1.51714
+            scalars = {
+                exponent     = 60
+	    	    reflectance  = 0.0
+		        transparency = 1.0
+		        ior          = 1.51714
+            }
+        }
 	}
 
 	m1 = {
 		type = blinn_phong
 
-		k_diffuse =  0.75
-		k_specular = 0.25
-		k_exponent = 128
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type = color
+                    value = {
+    		        	r = 1
+            			g = 1
+            			b = 1
+                    }
+        		}
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.07
+        		specular = {
+                    type = color
+                    value = {
+            			r = 1
+        		    	g = 1
+        	    		b = 1
+                    }
+        		}
+            }
+            scalars = {
+                exponent    = 128
+        		reflectance = 0.07
+            }
+        }
 	}
 
 	floor = {
 		type = blinn_phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
-		k_exponent = 1350
+        properties = {
+            samplers = {
+            	diffuse = {
+                    type = color
+                    value = {
+                        r = 0.51
+               	        g = 0.51
+                  	    b = 0.51
+                    }
+           	    }
 
-		diffuse = {
-	        r = 0.51
-	        g = 0.51
-    	    b = 0.51
-	    }
+               	specular = {
+                    type = color
+                    value = {
+                        r = 1
+                        g = 1
+                        b = 1
+                    }
+                }
+            }
 
-    	specular = {
-            r = 1
-            g = 1
-            b = 1
+            scalars = {
+                exponent    = 1350
+                reflectance = 0.3
+            }
         }
-
-        reflectance = 0.3
 	}
 
     light_source = {
         type = lambert
 
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        properties = {
+            samplers = {
+                emissive = {
+                    type = color
+                    value = {
+                        r = 1
+                        g = 1
+                        b = 1
+                    }
+                }
+            }
         }
     }
 }
@@ -219,7 +247,6 @@ object = {
 	floor = {
 		geometry = floor
 		material = floor
-		texture = checker
 	}
 
     light_source = {

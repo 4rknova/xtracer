@@ -38,10 +38,6 @@ class IMaterial
     std::map<std::string, NMath::scalar_t> m_scalars;
     std::map<std::string, ISampler*>       m_samplers;
 
-public:
-	NMath::scalar_t transparency;	// transparency
-	NMath::scalar_t ior;			// index of refraction
-
 };
 
     } /* namespace assets */

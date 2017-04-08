@@ -290,7 +290,6 @@ xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const n
 
     Log::handle().post_message("Building octree..");
 	((nmesh::Mesh *)data)->build_octree(obj);
-    fflush(stdout);
 
     return data;
 }
@@ -320,16 +319,20 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
     }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		data = new (std::nothrow) NMath::Triangle;
+
+        NMath::Triangle *tri = (NMath::Triangle *)data;
+
 		for (size_t i = 0; i < 3; ++i) {
 			ncf::NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA);
 
-			((NMath::Triangle *)data)->v[0]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_0);
-			((NMath::Triangle *)data)->v[1]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_1);
-			((NMath::Triangle *)data)->v[2]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_2);
+			tri->v[0]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_0);
+			tri->v[1]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_1);
+			tri->v[2]   = deserialize_vec3(vnode, XTPROTO_PROP_VRT_2);
+			tri->tc[0]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_0);
+			tri->tc[1]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_1);
+			tri->tc[2]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_2);
 
-			((NMath::Triangle *)data)->tc[0]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_0);
-			((NMath::Triangle *)data)->tc[1]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_1);
-			((NMath::Triangle *)data)->tc[2]  = deserialize_tex2(vnode, XTPROTO_PROP_VRT_2);
+            tri->calc_aabb();
 		}
 	}
 	// - Mesh
@@ -413,9 +416,6 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
             NMath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
             data->add_scalar(name.c_str(), value);
         }
-
-    	data->transparency = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TRSPC), 0.f);
-    	data->ior          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IOR  ), 1.f);
     }
 
 	return data;
