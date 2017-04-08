@@ -7,7 +7,7 @@ find_package(GLUT REQUIRED)
 find_package(OpenMP REQUIRED)
 
 execute_process(
-    COMMAND shell date + "%Y"
+    COMMAND date +"%Y"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE DEF_YEAR
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -103,4 +103,4 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
-target_compile_definitions(xtracer_cli PRIVATE XTRACER_YEAR="${DEF_YEAR}" XTRACER_VERSION="${DEF_VERSION}")
+target_compile_definitions(xtracer_cli PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
