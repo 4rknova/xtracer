@@ -56,7 +56,8 @@ geometry = {
 	# numerical errors and compensate for intensity loses due to
 	# the nature of point lights.
 	light_p0 = {
-		type = point
+		type = sphere
+        radius = 0.005
 
 		position = {
 			x = 343.0
@@ -66,7 +67,8 @@ geometry = {
 	}
 
 	light_p1 = {
-		type = point
+		type = sphere
+        radius = 0.005
 
 		position = {
 			x = 343.0
@@ -76,7 +78,8 @@ geometry = {
 	}
 
 	light_p2 = {
-		type = point
+		type = sphere
+        radius = 0.005
 
 		position = {
 			x = 213.0
@@ -86,7 +89,8 @@ geometry = {
 	}
 
 	light_p3 = {
-		type = point
+		type = sphere
+        radius = 0.001
 
 		position = {
 			x = 213.0
@@ -104,51 +108,86 @@ material = {
 	white = {
 		type = lambert
 
-		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
-	}
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type = color
+                    value = {
+              			r = 0.5
+            			g = 0.5
+    	        		b = 0.5
+                    }
+        		}
+	        }
+        }
+    }
 
 	red = {
 		type = lambert
 
-		diffuse = {
-			r = 0.63
-			g = 0.06
-			b = 0.04
-		}
-	}
+        properties = {
+            samplers = {
+		        diffuse = {
+                    type = color
+                    value = {
+            			r = 0.63
+                		g = 0.06
+        	    		b = 0.04
+                    }
+		        }
+        	}
+        }
+    }
 
 	green = {
 		type = lambert
 
-		diffuse = {
-			r = 0.15
-			g = 0.48
-			b = 0.09
-		}
-	}
+        properties = {
+            samplers = {
+	    	    diffuse = {
+                    type = color
+                    value = {
+    	    	    	r = 0.15
+            			g = 0.48
+	        	    	b = 0.09
+                    }
+		        }
+        	}
+        }
+    }
 
 	light = {
 		type = lambert
 
-		diffuse = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
-		}
-	}
+        properties = {
+            samplers = {
+	        	diffuse = {
+                    type = color
+                    value = {
+            			r = 1.0
+            			g = 1.0
+            			b = 1.0
+                    }
+        		}
+        	}
+        }
+    }
 
     light_source = {
         type = lambert
 
-		emissive = {
-			r = 0.25
-			g = 0.2125
-			b = 0.1075
-		}
+        properties = {
+            samplers = {
+	        	emissive = {
+                    type = color
+                    value = {
+        		    	r = 0.25
+        			    g = 0.2125
+        			    b = 0.1075
+                    }
+    	    	}
+            }
+        }
     }
 }
 
