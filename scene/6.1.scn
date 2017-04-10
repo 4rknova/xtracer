@@ -1,54 +1,30 @@
-# Xtracer 2
-
 title = DOF
 descr = Depth of field
 versn = 0.4
 
 camera = {
 	default = {
-		type = thin-lens
-
-        fov = 45
-
-		position = {
-			x = 100
-			y = 490
-			z = -7500
-		}
-
-		target = {
-			y = 355
-			z = -6500
-		}
-
-		up = {
-			y = 1
-		}
-
+		type     = thin-lens
+        fov      = 45
+		position = vec3(100,490,-7500)
+		target   = vec3(0,355,-6500)
+		up       = vec3(0,1,0)
 		aperture = 50
-		flength = 2800
+		flength  = 2800
 	}
 }
 
 geometry = {
 	sphere1 = {
-		type = sphere
-		position = {
-			x = -2050
-			y = 250
-			z = 0
-		}
-		radius = 250
+		type     = sphere
+		position = vec3(-2050,250,0)
+		radius   = 250
 	}
 
 	sphere2 = {
-		type = sphere
-		position = {
-			x = -450
-			y = 250
-			z = -4500
-		}
-		radius = 250
+		type     = sphere
+		position = vec3(-450,250,-4500)
+		radius   = 250
 	}
 
 	sphere3 = {

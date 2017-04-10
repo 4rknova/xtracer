@@ -3,13 +3,7 @@ title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
-}
+ambient = col3(1,1,1)
 
 camera = {
     default = {
@@ -26,61 +20,29 @@ camera = {
 	}
 
 	cam1 = {
-        type = thin-lens
-
-		fov = 60
-
-		position = {
-			x = -100
-			y = 15
-			z = -10
-		}
-
-		target = {
-			x = 10
-			y = 60
-			z = 1
-		}
-
-		up = {
-			y = 1
-		}
-
+        type     = thin-lens
+		fov      = 60
+		position = vec3(-100,15,-10)
+		target   = vec3(10,60,1)
+		upi      = vec3(0,1,0)
 		aperture = 8
-		flength = 550
+		flength  = 550
 	}
 
     cam2 = {
-        type = thin-lens
-
-        fov = 60
-
-        position = {
-            x = -300
-            y = 1
-            z = 0
-        }
-
-        target =  {
-            x = 500
-            y = 0
-            z = 0
-        }
-
-        up = {
-            x = 0
-            y = 1
-            z = 0
-        }
-
+        type     = thin-lens
+        fov      = 60
+        position = vec3(-300,1,0)
+        target   = vec3(500,0,0)
+        up       = vec3(0,1,0)
         aperture = 0
-        flength = 0
+        flength  = 0
     }
 }
 
 geometry = {
 	3dmodel = {
-		type = mesh
+		type   = mesh
 		source = <data>/sponza.obj
 	}
 

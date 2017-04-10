@@ -10,5 +10,7 @@ temp/
 *.swp
 CMakeCache.txt
 CMakeFiles/
+Testing/
 cmake_install.cmake
+CTestTestfile.cmake
 Makefile

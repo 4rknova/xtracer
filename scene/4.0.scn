@@ -18,11 +18,11 @@ camera = {
 	default = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(700,500,-1500)
-		target   = vec3(0,0,0)
+		position = vec3(700,600,-1000)
+		target   = vec3(0,100,0)
 		up       = vec3(0,1,0)
         flength  = 1100
-        aperture = 15
+        aperture = 5
 	}
 }
 
@@ -74,14 +74,14 @@ geometry = {
 
     sphere21 = {
 		type     = sphere
-		position = vec3(40,130,-450)
-		radius   = 130
+		position = vec3(50,100,-300)
+		radius   = 100
 	}
 
 	l1 = {
 		type     = sphere
-        radius   = 5
-		position = vec3(-1000,110000,1800)
+        radius   = 25
+		position = vec3(-100,1100,180)
 	}
 }
 
@@ -100,8 +100,8 @@ material = {
                 }
             }
             scalars = {
-    		    exponent     = 1000
-        		reflectance  = .5
+    		    exponent     = 100000
+        		reflectance  = .1
         		transparency = 0
             }
         }
@@ -109,28 +109,22 @@ material = {
 
 	ball1 = {
 		type        = blinn_phong
-		k_diffuse   = 0.2
-		k_specular  = 0.8
-		k_exponent  = 60
-		diffuse     = col3(0.934,0.945,0.852)
-		specular    = col3(0.934,0.945,0.852)
-		reflectance = 0.51
         properties = {
             samplers = {
         		specular = {
                     type  = color
-                    value = col3(0.2,0.3,0.9)
+                    value = col3(1,1,1)
                 }
                 diffuse = {
                     type  = color
-                    value = col3(1.0,1.0,1.0)
+                    value = col3(1,1,1)
                 }
             }
             scalars = {
     		    exponent     = 1000
         		reflectance  = .5
             }
-       }
+        }
 	}
 
 	ball2 = {
@@ -159,7 +153,7 @@ material = {
                 }
             }
             scalars = {
-    		    exponent     = 1000
+    		    exponent     = 12000
         		reflectance  = 1
         		transparency = 0
     	    	ior          = 1.1
@@ -177,8 +171,7 @@ material = {
                 }
             }
             scalars = {
-		        exponent     = 1000
-                reflectance  = 1
+                exponent     = 1000
             	transparency = 1
             	ior          = 1.5
             }

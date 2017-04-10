@@ -25,6 +25,11 @@ set(PATH_SRC  ${PATH_ROOT}/src)
 set(PATH_BIN  ${PATH_ROOT}/bin)
 set(PATH_LIB  ${PATH_ROOT}/lib)
 set(PATH_EXT  ${PATH_ROOT}/ext)
+set(PATH_TEST ${PATH_BIN}/test)
+
+set(OUT_LIB     xtcore)
+set(OUT_EXE_CLI xtracer_cli)
+set(OUT_EXE_GUI xtracer_gui)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -78,29 +83,40 @@ target_include_directories(xtcore_dynamic PUBLIC
     ${PATH_EXT}
 )
 
-add_executable(xtracer_cli ${SRC_FRONTEND_CLI})
-add_executable(xtracer_gui ${SRC_FRONTEND_GUI})
+add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
+add_executable(${OUT_EXE_GUI} ${SRC_FRONTEND_GUI})
 
-target_include_directories(xtracer_cli PUBLIC
+target_include_directories(${OUT_EXE_CLI} PUBLIC
     ${PATH_LIB}
     ${PATH_EXT}
     ${PATH_SRC}
 )
 
-target_include_directories(xtracer_gui PUBLIC
+target_include_directories(${OUT_EXE_GUI} PUBLIC
     ${PATH_LIB}
     ${PATH_EXT}
     ${PATH_SRC}
 )
 
-target_link_libraries(xtracer_cli PRIVATE "${PATH_BIN}/libxtcore.a")
+target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a")
 
 SET(LIBRARIES ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${GLEW_LIBRARY} ${OpenMP_LIBRARY} ${CMAKE_DL_LIBS})
 
-target_link_libraries(xtracer_gui PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
 target_compile_definitions(xtracer_cli PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
+
+enable_testing()
+file(MAKE_DIRECTORY ${PATH_TEST})
+file(GLOB files "scene/*.scn")
+foreach(file ${files})
+    get_filename_component(fname ${file} NAME)
+    add_test(
+        NAME render_scene_${fname}
+        COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST}
+    )
+endforeach()

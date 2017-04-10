@@ -383,7 +383,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
     		float ft = 1.0 - fr;
 			color *= transparency;
-		    color += ft * transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * specular * exponent;
+		    color += ft * transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * specular;
         }
 	}
 

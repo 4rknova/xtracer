@@ -1,73 +1,36 @@
-data  = ./data
-title = Conference
-descr = Conference
-versn = 0.1
+data  = data
+title = conference room
+descr = conference room
+versn = 0.3
+
+ambient = col3(1,1,1)
 
 camera = {
     default = {
-        type = ods
-        ipd  = 3.2
-
-        position = {
-			x = 200
-			y = 300
-			z = -450
-		}
+        type     = ods
+        ipd      = 3.2
+        position = vec3(200,300,-450)
     }
 
 	cam0 = {
-        type = thin-lens
-
-		fov = 60
-
-		position = {
-			x = -500
-			y = 400
-			z = 100
-		}
-
-		target = {
-			x = 0
-			y = 150
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
+        type     = thin-lens
+		fov      = 60
+		position = vec3(-500,400,100)
+		target   = vec3(0,150,0)
+		up       = vec3(0,1,0)
 	}
 }
 
 geometry = {
 	3dmodel = {
-		type = mesh
+		type   = mesh
 		source = <data>/conference.obj
 	}
-}
 
-geometry = {
-	l0 = {
-		type = sphere
-
-		position = {
-			y = 400
-			x = -200
-			z = 0
-		}
-
-        radius = 2.5
-    }
-
-	l1 = {
-		type = sphere
-
-		position = {
-			y = 400
-			x = 400
-			z = 0
-		}
-
-        radius = 2.5
+	light = {
+		type     = sphere
+		position = vec3(400,400,0)
+        radius   = 2.5
 	}
 }
 
@@ -75,30 +38,26 @@ material = {
 	3dmodel = {
 		type = lambert
 
-		diffuse = {
-			r = 1
-			g = 1
-            b = 1
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
 		}
 	}
 
-    l0 = {
+    light = {
         type = lambert
 
-        emissive = {
-            r = .5
-            g = .5
-            b = .5
-        }
-    }
-
-    l1 = {
-        type = lambert
-
-        emissive = {
-            r = .75
-            g = .75
-            b = .75
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
 }
@@ -109,13 +68,8 @@ object = {
 		material = 3dmodel
 	}
 
-    l0 = {
-        geometry = l0
-        material = l0
-    }
-
-    l1 = {
-        geometry = l1
-        material = l1
+    light = {
+        geometry = light
+        material = light
     }
 }
