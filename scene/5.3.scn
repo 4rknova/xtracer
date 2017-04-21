@@ -58,154 +58,89 @@ camera = {
 	}
 }
 
-# The scene lights
-geometry = {
-
-	light1 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7998
-				z = 227.0
-			}
-
-			v1 = {
-				x = 343.0
-				y = 548.7998
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7998
-				z = 332.0
-			}
-		}
-	}
-
-	light2 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7998
-				z = 227.0
-			}
-
-			v1 = {
-				x = 213.0
-				y = 548.7998
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7998
-				z = 227.0
-			}
-		}
-	}
-}
-
-# The scene materials
 material = {
-
 	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, col1, and col2 paints used in the Cornell Box.
 	white = {
-		type = lambert
-
-		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
+		type       = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+            }
 		}
 	}
 
 	mirror = {
-		type = blinn_phong
+		type       = blinn_phong
+        properties = {
+            scalars = {
+		        exponent    = 16000000
+		        reflectance = 1
+            }
 
-		k_diffuse  = 0.0
-		k_specular = 1
-		k_exponent = 16000000
-
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 1
+            samplers = {
+		        specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
 	}
 
 	col1 = {
-		type = lambert
-
-		diffuse = {
-			r = 0.33
-			g = 0.46
-			b = 1.00
+		type       = lambert
+        properties = {
+            samplers = {
+        		diffuse = {
+		            type  = color
+                    value = col3(0.33,0.46,1)
+                }
+            }
 		}
 	}
 
 	col2 = {
-		type = lambert
-
-		diffuse = {
-			r = 0.74
-			g = 0.94
-			b = 0.09
+		type       = lambert
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type  = color
+                    value = col3(0.74,0.94,0.09)
+                }
+            }
 		}
 	}
 
 	light = {
-		type = lambert
-
-		emissive = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
+		type       = lambert
+        properties = {
+            samplers = {
+        		emissive = {
+                    type = color
+                    value = col3(1,1,1)
+                }
+            }
 		}
 	}
 
 	glossy = {
-		type = blinn_phong
+		type       = blinn_phong
+        properties = {
+            scalars = {
+                exponent    = 160
+		        reflectance = 1
+            }
 
-		k_diffuse  = 0.0
-		k_specular = 1
-		k_exponent = 160
+            samplers = {
+		        specular = {
+                    type  = color
+                    value = col3(1,1,1)
+        		}
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 1
-	}
-
-    light_source = {
-        type = lambert
-
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+	        }
         }
     }
 }
@@ -813,7 +748,7 @@ object = {
 
 	# Tall box
 	tall_block_1_1 = {
-		geometry = tall_block_1_1
+    	geometry = tall_block_1_1
 		material = mirror
 	}
 
@@ -862,13 +797,13 @@ object = {
 		material = mirror
 	}
 
-    light1 = {
-        geometry = light1
-        material = light_source
+    light_1 = {
+        geometry = light_1
+        material = light
     }
 
-    light2 = {
-        geometry = light2
-        material = light_source
+    light_2 = {
+        geometry = light_2
+        material = light
     }
 }

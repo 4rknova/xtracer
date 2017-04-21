@@ -16,28 +16,25 @@ ambient = {
 
 camera = {
 	default = {
-        type = ods
+        type = thin-lens
 
 		fov = 45
 
 		position = {
 			x = 0
-			y = 110
-			z = 250
+			y = 2
+			z = -5
 		}
 
 		target = {
 			x = 0
-			y = 90
-			z = 30
+			y = 0
+			z = 0
 		}
 
 		up = {
 			y = 1
 		}
-
-        aperture = 10
-        flength = 200
 	}
 }
 
@@ -60,7 +57,7 @@ geometry = {
 		position = {
     		x = 88
 			y = 15
-			z = 170
+			z = -170
 		}
 
 		intensity = {
@@ -73,49 +70,44 @@ geometry = {
 
 material = {
 	head = {
-		type = blinn_phong
+		type       = blinn_phong
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type      = texture
+		            source    = <data>/head2/Colour.jpg
+                    filtering = bilinear
+                }
+                specular = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
+            }
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.1
-		k_diffuse  = 0.9
-		k_specular = 0.1
-		k_exponent = 30
+            scalars = {
+        		reflectance = 0.1
+		        exponent    = 30
+            }
+        }
 	}
 
     light = {
-        type = emissive
-
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        type       = lambert
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
-}
-
-texture = {
-	head = {
-		source = <data>/head/Textures/Colour.jpg
-        filtering = bilinear
-	}
 }
 
 object = {
 	head = {
 		geometry = head
 		material = head
-		texture = head
 	}
 
     l0 = {

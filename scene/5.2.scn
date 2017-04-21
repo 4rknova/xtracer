@@ -20,148 +20,68 @@
 
 title = Cornell box replica (based on the original radiosity dataset)
 descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
-versn = 0.3
+versn = 0.4
 
-# The scene cameras.
 camera = {
 	default = {
-        type = thin-lens
-
-		# Field of view.
-		fov = 38.39
-
-		# Camera position.
-		position = {
-			x = 278.0
-			y = 273.0
-			z = -800.0
-		}
-
-		# Target.
-		# This is equal to the direction (0, 1, 0)
-		# as defined in the original data.
-		target = {
-			x = 278.0
-			y = 273.0
-			z = -799.0
-		}
-
-		# Up vector.
-		up = {
-			x = 0
-			y = 1
-			z = 0
-		}
+        type     = thin-lens
+		fov      = 38.39
+		position = vec3(278,273,-800)
+		target   = vec3(278,273,-799)
+		up       = vec3(0,1,0)
 	}
 }
 
-# The scene lights
-geometry = {
-
-	light1 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7998
-				z = 227.0
-			}
-
-			v1 = {
-				x = 343.0
-				y = 548.7998
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7998
-				z = 332.0
-			}
-
-		}
-	}
-
-	light2 = {
-		type = triangle
-
-		vecdata = {
-			v0 = {
-				x = 343.0
-				y = 548.7998
-				z = 227.0
-			}
-
-			v1 = {
-				x = 213.0
-				y = 548.7998
-				z = 332.0
-			}
-
-			v2 = {
-				x = 213.0
-				y = 548.7998
-				z = 227.0
-			}
-		}
-	}
-}
-
-# The scene materials
 material = {
-
 	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, red, and green paints used in the Cornell Box.
 	white = {
-		type = lambert
-
-		diffuse = {
-			r = 0.5
-			g = 0.5
-			b = 0.5
-		}
+		type       = lambert
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
 	}
 
 	red = {
-		type = lambert
-
-		diffuse = {
-			r = 0.63
-			g = 0.06
-			b = 0.04
-		}
+		type       = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.63,0.06,0.04)
+                }
+            }
+        }
 	}
 
 	green = {
-		type = lambert
-
-		diffuse = {
-			r = 0.15
-			g = 0.48
-			b = 0.09
-		}
+		type       = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.15,0.48,0.09)
+            	}
+            }
+        }
 	}
 
 	light = {
-		type = lambert
-
-		diffuse = {
-			r = 1.0
-			g = 1.0
-			b = 1.0
-		}
-	}
-
-    light_source = {
-        type = lambert
-
-        emissive = {
-            r = .5
-            g = .5
-            b = .5
+		type       = lambert
+        properties = {
+            samplers = {
+    		    emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
-    }
+	}
 }
 
 # The scene geometry
@@ -177,19 +97,19 @@ geometry = {
 		vecdata = {
 			v0 = {
 				x = 343.0
-				y = 548.7999
+				y = 548.79
 				z = 227.0
 			}
 
 			v1 = {
 				x = 343.0
-				y = 548.7999
+				y = 548.79
 				z = 332.0
 			}
 
 			v2 = {
 				x = 213.0
-				y = 548.7999
+				y = 548.79
 				z = 332.0
 			}
 
@@ -202,19 +122,19 @@ geometry = {
 		vecdata = {
 			v0 = {
 				x = 343.0
-				y = 548.7999
+				y = 548.79
 				z = 227.0
 			}
 
 			v1 = {
 				x = 213.0
-				y = 548.7999
+				y = 548.79
 				z = 332.0
 			}
 
 			v2 = {
 				x = 213.0
-				y = 548.7999
+				y = 548.79
 				z = 227.0
 			}
 		}
@@ -1090,14 +1010,4 @@ object = {
 		geometry = tall_block_5_2
 		material = white
 	}
-
-    light0 = {
-        geometry = light1
-        material = light_source
-    }
-
-    light1 = {
-        geometry = light2
-        material = light_source
-    }
 }
