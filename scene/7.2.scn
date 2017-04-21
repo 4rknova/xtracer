@@ -22,13 +22,13 @@ camera = {
 
 		position = {
 			x = 0
-			y = 2
+			y = 5
 			z = -5
 		}
 
 		target = {
 			x = 0
-			y = 0
+			y = 2
 			z = 0
 		}
 
