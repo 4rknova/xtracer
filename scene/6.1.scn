@@ -105,153 +105,173 @@ material = {
 	plane = {
 		type = phong
 
-		k_specular = 0.9
-        k_diffuse  = 0.1
-        k_exponent = 256
-        diffuse = col3(1,1,1)
+        properties = {
+            scalars = {
+                exponent    = 256
+                reflectance = 1
+            }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
 
-		reflectance = 1
+		        specular = {
+                    type  = color
+                    value = col3(.9,.9,.9)
+                }
+            }
+        }
 	}
 
 	plastic1 = {
 		type = phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
-		k_exponent = 60
+        properties = {
+            scalars = {
+                exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 1
-			g = 0.3431
-		}
+            samplers = {
+    		    diffuse = {
+                    type  = color
+                    value = col3(1,0,0)
+	    	    }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+        		specular = {
+                    type  = color
+                    value = col3(1,0,0)
+                }
+            }
+        }
 	}
 
 	plastic2 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 1.5
-			g = 1.6470
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,0)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+                specular = {
+                    type  = color
+                    value = col3(1,1,0)
+                }
+            }
+        }
 	}
 
 	plastic3 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 1
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+                specular = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+            }
+        }
 	}
 
 	plastic4 = {
 		type = phong
 
-		k_diffuse = 0.5
-		k_specular = 0.5
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 0.51
-			g = 0.61
-			b = 0.81
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0,0,1)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+                specular = {
+                    type  = color
+                    value = col3(0,0,1)
+                }
+            }
+        }
 	}
 
 	plastic5 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			g = 1
-			b = 1
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,0,1)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+                specular = {
+                    type  = color
+                    value = col3(1,0,1)
+                }
+            }
+        }
 	}
 
 	plastic6 = {
 		type = phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 60
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 0.1
-			g = 0.6
-			b = 1
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
 	}
 
     light = {
-        type = lambert
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        type       = lambert
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
 }

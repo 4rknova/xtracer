@@ -14,27 +14,13 @@ ambient = {
 
 camera = {
 	default = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = -10
-			y = 35
-			z = -155
-		}
-
-		target = {
-			y = 12
-			z = 0
-		}
-
-		up = {
-			y = 1
-		}
-
+        type     = thin-lens
+		position = vec3(-10,35,-155)
+		target   = vec3(0,12,0)
+		up       = vec3(0,1,0)
 		aperture = 2
-		flength = 100
+		fov      = 45
+		flength  = 100
 		# Other lengths to focus on.
 		# 80, 100, 155
 	}
@@ -43,91 +29,32 @@ camera = {
 geometry = {
 	sphere1 = {
 		type = sphere
-		position = {
-			x = 0
-			y = 15
-			z = -10
-		}
+		position = vec3(0,15,-10)
 		radius = 15
 	}
 
 	sphere2 = {
 		type = sphere
-		position = {
-			x = -13
-			y = 7
-			z = -80
-		}
-		radius = 7
+		position = vec3(-13,3,-80)
+		radius = 3
 	}
 
 	sphere3 = {
 		type = sphere
-		position = {
-			x = 25
-			y = 15
-			z = -60
-		}
+		position = vec3(25,15,-60)
 		radius = 15
 	}
 
 	sphere4 = {
 		type = sphere
-		position = {
-			x = -40
-			y = 15
-			z = 40
-		}
-		radius = 15
+		position = vec3(-40,5,40)
+		radius = 5
 	}
 
 	floor = {
 		type = plane
-		normal = {
-			y = 1
-		}
+		normal = vec3(0,1,0)
 		distance = 0
-
-		u_scale = 0.03
-		v_scale = 0.03
-	}
-}
-
-geometry = {
-	l0 = {
-		type = sphere
-
-		radius = 10
-
-		position = {
-			x = 0
-			y = 300
-			z = 80
-		}
-
-		intensity = {
-			r = .5
-			g = .5
-			b = .5
-		}
-	}
-
-	l1 = {
-		type = sphere
-
-		radius = 10
-
-		position = {
-			x = -500
-			y = 499
-			z = -10
-		}
-
-		intensity = {
-			r = .31
-			g = .31
-			b = .31
-		}
 	}
 }
 
@@ -135,114 +62,84 @@ material = {
 	plane = {
 		type = blinn_phong
 
-		k_specular = 0.9
-        k_diffuse  = 0.1
-        k_exponent = 256
-        diffuse = col3(1,1,1)
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
+        properties = {
+            scalars = {
+		        exponent    = 32
+                reflectance = 0.3
+            }
 
-		reflectance = 1
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(.9,.9,.9)
+                }
+            }
+        }
 	}
 
 	plastic1 = {
 		type = blinn_phong
 
-		k_diffuse = 0.8
-		k_specular = 0.2
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 256
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 1
-			g = 0.294905
-			b = 0.62549
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.4
+                specular = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
 	}
 
 	plastic2 = {
 		type = blinn_phong
 
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 60
+        properties = {
+            scalars = {
+		        exponent    = 256
+                reflectance = 0.3
+            }
 
-		diffuse = {
-			r = 1.5
-			g = 1.6470
-		}
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
 
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.3
-	}
-
-	plastic3 = {
-		type = blinn_phong
-
-		k_diffuse = 0.6
-		k_specular = 0.4
-		k_exponent = 160
-
-		diffuse = {
-			r = 0.392156
-			g = 0.584313
-			b = 0.929711
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.25
-	}
-
-	plastic4 = {
-		type = blinn_phong
-
-		k_diffuse = 0.2
-		k_specular = 0.8
-		k_exponent = 60
-
-		diffuse = {
-			r = 0.51
-			g = 1
-			b = 0.91
-		}
-
-		specular = {
-			r = 1
-			g = 1
-			b = 1
-		}
-
-		reflectance = 0.5
+                specular = {
+                    type  = color
+                    value = col3(.9,.9,.9)
+                }
+            }
+        }
 	}
 
     light = {
         type = lambert
-        emissive = {
-            r = .7
-            g = .7
-            b = .7
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
-    }
+	}
 }
 
 object = {
@@ -252,15 +149,15 @@ object = {
 	}
 	sphere2 = {
 		geometry = sphere2
-		material = plastic2
+		material = light
 	}
 	sphere3 = {
 		geometry = sphere3
-		material = plastic3
+		material = plastic2
 	}
 	sphere4 = {
 		geometry = sphere4
-		material = plastic4
+		material = light
 	}
 
 	# planes
@@ -268,12 +165,4 @@ object = {
 		geometry = floor
 		material = plane
 	}
-    l0 = {
-        geometry = l0
-        material = light
-    }
-    l1 = {
-        geometry = l1
-        material = light
-    }
 }

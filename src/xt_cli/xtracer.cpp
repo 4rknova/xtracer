@@ -17,13 +17,10 @@
 #include <xtcore/plr_stencil/renderer.h>
 #include <xtcore/plr_depth/depth.h>
 
-
 #define ARG_CLI_VERSION "version" /* Display version and exit */
 
 #define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
 #define ARGUMENT(i,x) (!strcmp(argv[i], x))
-
-int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, std::string &scene_path, std::string &outdir);
 
 int main(int argc, char **argv)
 {
