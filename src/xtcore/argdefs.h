@@ -5,8 +5,6 @@
 
 #define XT_ARG_PREFIX "-"
 
-#define XT_ARG_VERSION		 XT_ARG_PREFIX "version"   /* Display version. */
-#define XT_ARG_HELP			 XT_ARG_PREFIX "help"	   /* Display usage information. */
 #define XT_ARG_RENDERER      XT_ARG_PREFIX "renderer"  /* Select renderer */
 #define XT_ARG_THREADS		 XT_ARG_PREFIX "threads"   /* Number of threads to use. */
 #define XT_ARG_RESOLUTION	 XT_ARG_PREFIX "res"	   /* Framebuffer resolution. */

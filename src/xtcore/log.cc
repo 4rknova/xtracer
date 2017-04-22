@@ -16,7 +16,6 @@ Log Log::m_log_manager;
 Log::Log()
 	: m_max_log_size(0)
 	, m_flag_echo(true)
-    , m_flag_append(false)
     , m_level(LOGENTRY_MESSAGE)
 {}
 
@@ -158,47 +157,25 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 		}
 	}
 
-	if(m_flag_append) {
-		m_log.back()->p_type = type;
-		m_log.back()->p_msg.append(str.str());
-	}
-	else {
-		LogEntry *entry = new (std::nothrow) LogEntry();
+	LogEntry *entry = new (std::nothrow) LogEntry();
 
-		if (!entry)
-			return;
+	if (!entry)	return;
 
-		entry->p_type = type;
-		entry->p_msg = str.str();
-		m_log.push_back(entry);
-	}
+	entry->p_type = type;
+	entry->p_msg = str.str();
+	m_log.push_back(entry);
 
 	std::vector<LogEntry *>::reverse_iterator it = m_log.rbegin();
 
-	if(m_flag_echo) {
-		if (!m_flag_append && m_log.size() != 1) {
-			std::cout << std::endl;
-		}
-		else {
-			std::cout << '\r';
-			m_flag_append = false;
-		}
+	if (m_flag_echo) {
+   		switch ((*it)->p_type) {
+		    case LOGENTRY_MESSAGE:                           break;
+   			case LOGENTRY_DEBUG  : std::cout << "Debug   :"; break;
+       		case LOGENTRY_WARNING: std::cout << "Warning :"; break;
+   			case LOGENTRY_ERROR  : std::cout << "Error   :"; break;
+   		}
 
-		switch ((*it)->p_type) {
-			case LOGENTRY_DEBUG:
-                std::cout << "Debug: ";
-                break;
-			case LOGENTRY_MESSAGE:
-				break;
-			case LOGENTRY_WARNING:
-				std::cout << "Warning: ";
-				break;
-			case LOGENTRY_ERROR:
-				std::cout << "Error: ";
-				break;
-		}
-
-		std::cout << (*it)->p_msg;
+		std::cout << (*it)->p_msg << std::endl;
 	}
 
 	if (m_max_log_size) {
@@ -248,29 +225,9 @@ void Log::post_warning(const char *msg, ...)
 	va_end(args);
 }
 
-void Log::rewind(bool clear)
-{
-	set_append();
-
-	if (m_flag_echo) {
-		if (clear) {
-			std::cout << std::setw(m_log.back()->p_msg.length()) << ' ' << std::flush;
-		}
-
-		std::cout << '\r' << std::flush;
-	}
-
-	m_log.back()->p_msg.clear();
-}
-
 void Log::max_size(unsigned int size)
 {
 	m_max_log_size = size;
-}
-
-void Log::set_append()
-{
-	m_flag_append = true;
 }
 
 void Log::pop_back()

@@ -39,9 +39,7 @@ class Log
 		void post_message(const char *msg, ...);
 		void post_error(const char *msg, ...);
 		void post_warning(const char *msg, ...);
-		void rewind(bool clear = false);
 		void max_size(unsigned int size);
-		void set_append();
 		void pop_back();
 		void pop_front();
 
@@ -72,7 +70,6 @@ class Log
 
 		unsigned int m_max_log_size;
 		bool         m_flag_echo;
-		bool         m_flag_append;
         size_t       m_level;
 
 		std::vector<LogEntry*> m_log;

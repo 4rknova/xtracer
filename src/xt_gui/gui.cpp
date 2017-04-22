@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
+#include <list>
 #include <queue>
 #include <mutex>
 
@@ -13,6 +14,9 @@
 #endif
 
 #include <xtcore/tile.h>
+#include <xtcore/argparse.h>
+#include <xtcore/log.h>
+#include <xtcore/plr_photonmapper/renderer.h>
 
 #include "shader.h"
 #include "gui.h"
@@ -104,15 +108,39 @@ static void keydown(unsigned char key, int x, int y)
 	}
 }
 
-int gui(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer)
+int main(int argc, char **argv)
 {
-    // Initialization stuff
-    int argc = 0;
-    glutInit(&argc, 0);
+    std::list<std::string>modifiers;
+    xtracer::render::params_t params;
+    xtracer::render::context_t ctx;
+
+    std::string renderer_name, outdir, scene_path, camera;
+
+    if (setup(argc, argv
+        , renderer_name
+        , outdir
+        , scene_path
+        , modifiers
+        , camera
+        , params
+    )) return 1;
+
+    Scene scene;
+    if (!scene.load(scene_path.c_str(), modifiers)) {
+        if (scene.m_cameras.size() == 0) {
+            Log::handle().post_error("no cameras found");
+            return 2;
+        }
+        scene.camera = camera;
+    } else return 1;
+
+    xtracer::render::IRenderer *renderer = new Renderer();
+
+    int zero = 0;
+    glutInit(&zero, 0);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     glutInitWindowSize(ctx.params.width, ctx.params.height);
 
-    // Create  window main
     window = glutCreateWindow("xtracer");
     glutDisplayFunc(display);
     glutIdleFunc(display);
@@ -133,15 +161,7 @@ int gui(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer)
     if(!postprg->link()) return 1;
 	bind_program(postprg);
 
-    // Enter Glut Main Loop and wait for events
     glutMainLoop();
+
 	return 0;
-}
-
-int main(int argc, char **argv)
-{
-    xtracer::render::context_t ctx;
-    xtracer::render::IRenderer *renderer = 0;
-
-    gui(ctx, renderer);
 }

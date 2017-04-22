@@ -961,16 +961,6 @@ object = {
 		material = light
 	}
 
-    light_3 = {
-		geometry = light_3
-		material = light
-	}
-
-	light_4 = {
-		geometry = light_4
-		material = light
-	}
-
 	# Floor
 	floor_1 = {
 		geometry = floor_1

@@ -18,7 +18,7 @@ camera = {
 	default = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(700,600,-1000)
+		position = vec3(700,400,-1000)
 		target   = vec3(0,100,0)
 		up       = vec3(0,1,0)
         flength  = 1100
@@ -100,9 +100,10 @@ material = {
                 }
             }
             scalars = {
-    		    exponent     = 100000
+    		    exponent     = 1000
         		reflectance  = .1
-        		transparency = 0
+        		transparency = .9
+                ior          = 1
             }
         }
 	}

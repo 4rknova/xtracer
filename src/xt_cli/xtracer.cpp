@@ -1,10 +1,8 @@
 #include <string>
-#include <sstream>
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
 #include <nimg/pixmap.h>
-#include <nimg/ppm.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
 
@@ -13,35 +11,28 @@
 #include <xtcore/timeutil.h>
 #include <xtcore/log.h>
 #include <xtcore/context.h>
-#include <xtcore/broadcast.h>
+#include <xtcore/argparse.h>
 
 #include <xtcore/plr_photonmapper/renderer.h>
 #include <xtcore/plr_stencil/renderer.h>
 #include <xtcore/plr_depth/depth.h>
-#define NIMG_TEST
-#include <nimg/genetic_algo.cc>
-#include <xtcore/argdefs.h>
-#include <xtcore/argparse.h>
 
-#define RENDERER(x) (!strcmp(renderer_name.c_str(), x))
+
+#define ARG_CLI_VERSION "version" /* Display version and exit */
+
+#define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
+#define ARGUMENT(i,x) (!strcmp(argv[i], x))
 
 int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, std::string &scene_path, std::string &outdir);
 
 int main(int argc, char **argv)
 {
-	// Display usage information.
-	if (argc == 2 && !strcmp(argv[1], XT_ARG_VERSION)) {
+	if (argc == 2 && ARGUMENT(1, ARG_CLI_VERSION)) {
 		Log::handle().post_message("%s", XTRACER_VERSION);
 		return 1;
 	}
 
 	Log::handle().post_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
-
-	if (argc == 2 && !strcmp(argv[1], XT_ARG_HELP)) {
-		Log::handle().post_message("Usage: %s [option]... scene_file...", argv[0]);
-		Log::handle().post_message("For a complete list of the available options, refer to the man pages.");
-		return 1;
-	}
 
     std::string renderer_name, outdir, scene_path, camera;
     xtracer::render::params_t params;
@@ -62,16 +53,14 @@ int main(int argc, char **argv)
             Log::handle().post_error("no cameras found");
             return 2;
         }
-
         scene.camera = camera;
-        // Create the renderer.
     } else return 1;
 
 	xtracer::render::IRenderer *renderer = NULL;
 
-    if      (RENDERER("depth"))   renderer = new xtracer::renderer::depth::Renderer();
+    if      (RENDERER("depth")  ) renderer = new xtracer::renderer::depth::Renderer();
     else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
-    else renderer = new Renderer();
+    else                          renderer = new Renderer();
 
 	xtracer::render::context_t  context;
 	context.scene  = &scene;
@@ -80,16 +69,6 @@ int main(int argc, char **argv)
 
     renderer->setup(context);
 
-    cli(context, renderer, scene_path, outdir);
-
-	delete renderer;
-
-    return 0;
-}
-
-int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, std::string &scene_path, std::string &outdir)
-{
-  	// Render.
 	Timer timer;
 	timer.start();
 	renderer->render();
@@ -110,20 +89,22 @@ int cli(xtracer::render::context_t &ctx, xtracer::render::IRenderer *renderer, s
 
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
-	    std::string cam = ctx.scene->camera;
+	    std::string cam = context.scene->camera;
+
         if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
     	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
 			outdir.append(1, path_delim);
 		}
 
-	    file = outdir + filename + cam  + ".png";
-		Log::handle().post_message("Exporting to %s..", file.c_str());
+	    file = outdir + filename + cam  + "_" + renderer_name + ".png";
         nimg::Pixmap fb;
-        xtracer::render::assemble(fb, ctx);
+        xtracer::render::assemble(fb, context);
+		Log::handle().post_message("Exporting to %s..", file.c_str());
 		int res = nimg::io::save::png(file.c_str(), fb);
         if (res) Log::handle().post_error("Failed to export image file");
     }
 
-	return 0;
+	delete renderer;
+    return 0;
 }

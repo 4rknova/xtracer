@@ -116,7 +116,15 @@ file(GLOB files "scene/*.scn")
 foreach(file ${files})
     get_filename_component(fname ${file} NAME)
     add_test(
-        NAME render_scene_${fname}
+        NAME render::${fname}-stencil
+        COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST} -renderer stencil
+    )
+    add_test(
+        NAME render::${fname}-depth
+        COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST} -renderer depth
+    )
+    add_test(
+        NAME render::${fname}
         COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST}
     )
 endforeach()
