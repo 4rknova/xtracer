@@ -44,14 +44,26 @@ int window = 0;
  * the mutex, shoves he dirty areas into a list, and notifies glut
  * to redisplay.
  */
-static std::queue<xtracer::render::tile_t> dirty_areas;
-static std::mutex dirty_mutex;
+static std::queue<xtracer::render::tile_t*> dirty_areas;
+static std::mutex mut0, mut1;
 
-static void block_done(const xtracer::render::tile_t &blk)
+static int block_begin(void *blk)
 {
-	dirty_mutex.lock();
-	dirty_areas.push(blk);
-	dirty_mutex.unlock();
+    mut0.lock();
+    xtracer::render::tile_t *t = (xtracer::render::tile_t *)blk;
+    printf("Rendering %lux%lu -> %lux%lu \n", t->x0(), t->y0(), t->x1(), t->y1());
+    mut0.unlock();
+    return 0;
+}
+
+static int block_done(void *blk)
+{
+	mut1.lock();
+	dirty_areas.push((xtracer::render::tile_t*)blk);
+    xtracer::render::tile_t *t = (xtracer::render::tile_t *)blk;
+    printf("Rendered %lux%lu -> %lux%lu \n", t->x0(), t->y0(), t->x1(), t->y1());
+	mut1.unlock();
+    return 0;
 }
 
 void display(void)
@@ -63,17 +75,17 @@ void display(void)
     // update dirty areas of the output texture
 	if (dirty_areas.size() > 0) {
 		while(dirty_count > 0) {
-			dirty_mutex.lock();
+			mut0.lock();
 			FrameBlock blk = dirty_areas.front();
 			dirty_areas.pop();
 			dirty_count--;
-			dirty_mutex.unlock();
+			mut0.unlock();
 
 			float *pix = ctx.framebuf->pixels + (blk.y * ctx.framebuf->width + blk.x) * 3;
 
 			for(int i=0; i<blk.height; i++) {
 				glTexSubImage2D(GL_TEXTURE_2D, 0, blk.x, blk.y + i, blk.width, 1, GL_RGB, GL_FLOAT, pix);
-				pix += ctx.framebuf->width * 3;
+				pix += ctx.framebuf->width * 3
 			}
 		}
 		glutPostRedisplay();
@@ -136,12 +148,25 @@ int main(int argc, char **argv)
 
     xtracer::render::IRenderer *renderer = new Renderer();
 
+    ctx.scene  = &scene;
+    ctx.params = params;
+    ctx.init();
+
+    renderer->setup(ctx);
+
+    xtracer::render::Tileset::iterator it = ctx.tiles.begin();
+    xtracer::render::Tileset::iterator et = ctx.tiles.end();
+    for (; it != et; ++it) (*it).setup(block_begin, 0);
+    renderer->render();
+
+return 0;
+
     int zero = 0;
     glutInit(&zero, 0);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     glutInitWindowSize(ctx.params.width, ctx.params.height);
 
-    window = glutCreateWindow("xtracer");
+    window = glutCreateWindow(argv[0]);
     glutDisplayFunc(display);
     glutIdleFunc(display);
     glutReshapeFunc(reshape);

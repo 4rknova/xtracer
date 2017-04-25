@@ -45,12 +45,12 @@ void tile_t::read(size_t x, size_t y, nimg::ColorRGBf &col) const
 void tile_t::init()
 {
     m_data.init(width(), height());
-    if (m_on_init) m_on_init();
+    if (m_on_init) m_on_init(this);
 }
 
 void tile_t::submit()
 {
-    if (m_on_done) m_on_done();
+    if (m_on_done) m_on_done(this);
 }
 
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size)

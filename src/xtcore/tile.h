@@ -8,10 +8,9 @@
 namespace xtracer {
     namespace render {
 
-typedef int (*callback) (void);
+typedef int (*callback) (void*);
 
 struct tile_t {
-
     size_t x0()     const;
     size_t x1()     const;
     size_t y0()     const;

@@ -1,4 +1,5 @@
 #include <string>
+#include <mutex>
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
@@ -21,6 +22,30 @@
 
 #define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
 #define ARGUMENT(i,x) (!strcmp(argv[i], x))
+
+static std::mutex mut0, mut1;
+
+size_t workers   = 0;
+size_t completed = 0;
+size_t total     = 0;
+
+static int block_begin(void *blk)
+{
+    mut0.lock();
+    ++workers;
+    mut0.unlock();
+    return 0;
+}
+
+static int block_done(void *blk)
+{
+	mut1.lock();
+    ++completed;
+    printf("\r%3.1f% @ %lu", (float)completed/total * 100.f, workers); fflush(stdout);
+    --workers;
+	mut1.unlock();
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -64,7 +89,12 @@ int main(int argc, char **argv)
     context.params = params;
     context.init();
 
+    xtracer::render::Tileset::iterator it = context.tiles.begin();
+    xtracer::render::Tileset::iterator et = context.tiles.end();
+    for (; it != et; ++it) (*it).setup(block_begin, block_done);
+
     renderer->setup(context);
+    total =  context.tiles.size();
 
 	Timer timer;
 	timer.start();
