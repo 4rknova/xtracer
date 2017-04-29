@@ -1,5 +1,5 @@
-[![logo](https://cdn.rawgit.com/4rknova/xtracer/develop/res/logo.svg)]()
-
+XTRACER
+-------
 Copyright 2010 - 2017 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
 [![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
