@@ -16,6 +16,7 @@ Log Log::m_log_manager;
 Log::Log()
 	: m_max_log_size(0)
 	, m_flag_echo(true)
+	, m_flag_rewind(false)
     , m_level(LOGENTRY_MESSAGE)
 {}
 
@@ -93,6 +94,11 @@ bool Log::echo() const
 	return m_flag_echo;
 }
 
+void Log::rewind()
+{
+    m_flag_rewind = true;
+}
+
 void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 {
     if (type < m_level) return;
@@ -110,7 +116,6 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 
     std::stringstream str;
 
-	// The va_arg internal casting is inherently not safe here.
 	for(unsigned int x = 0; x < msg_size; x++) {
 		if(msg[x] == delim)	{
 			// If there is a next character, and it is not a delim,
@@ -123,6 +128,7 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 					x++;
 				}
 
+                // Character
 				else if (msg[x + 1] == 'c') {
 					char temp = va_arg(args, int);
 					str << temp;
@@ -139,6 +145,12 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 				// Float
 				else if (msg[x + 1] == 'f') {
 					double temp = va_arg(args, double);
+					str << std::setprecision(3) << temp;
+					x++;
+				}
+				// size_t
+                else if (msg[x + 1] == 'l') {
+					double temp = va_arg(args, size_t);
 					str << temp;
 					x++;
 				}
@@ -163,6 +175,9 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 
 	entry->p_type = type;
 	entry->p_msg = str.str();
+
+    if (m_flag_rewind) m_log.pop_back();
+
 	m_log.push_back(entry);
 
 	std::vector<LogEntry *>::reverse_iterator it = m_log.rbegin();
@@ -175,7 +190,15 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
    			case LOGENTRY_ERROR  : std::cout << "Error   :"; break;
    		}
 
-		std::cout << (*it)->p_msg << std::endl;
+		std::cout << (*it)->p_msg;
+
+        if (m_flag_rewind) {
+            std::cout << "\r" << std::flush;
+            m_flag_rewind = false;
+        }
+        else {
+            std::cout << std::endl;
+        }
 	}
 
 	if (m_max_log_size) {

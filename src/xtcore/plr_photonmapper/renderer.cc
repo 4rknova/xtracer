@@ -9,7 +9,6 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
-#include "../log.h"
 #include "../tile.h"
 #include "../aa.h"
 #include "renderer.h"
@@ -48,12 +47,12 @@ void Renderer::pass_ptrace()
 {
 	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
-	Log::handle().post_message("Initiating the photon maps..", photon_count);
-	Log::handle().post_message("Using %i photons..", photon_count);
+	//Log::handle().post_message("Initiating the photon maps..", photon_count);
+	//Log::handle().post_message("Using %i photons..", photon_count);
 	m_pm_global.init(photon_count);
 	m_pm_caustic.init(photon_count);
 
-	Log::handle().post_message("Distributing photons to light sources..", photon_count);
+	//Log::handle().post_message("Distributing photons to light sources..", photon_count);
 	// Calculate each light's contribution by using the intensity luminance.
 	// In future revisions I should also take the light source's size into consideration.
     std::vector<light_t> lights;
@@ -79,12 +78,12 @@ void Renderer::pass_ptrace()
 		for (unsigned int i = 0; i < light_count; ++i) {
 			light_contribution.push_back(light_luminance[i] / light_total_luminance);
 			light_photons.push_back((scalar_t) (photon_count+1) * light_contribution[i]);
-			Log::handle().post_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
-				light_photons[i], light_luminance[i], light_contribution[i] * 100);
+			//Log::handle().post_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
+			//	light_photons[i], light_luminance[i], light_contribution[i] * 100);
 		}
 	}
 
-	Log::handle().post_message("Casting photons..");
+	//Log::handle().post_message("Casting photons..");
 	{
 		// Photon tracing.
 		unsigned int light_index = 0;
@@ -102,7 +101,7 @@ void Renderer::pass_ptrace()
 		}
 	}
 
-	Log::handle().post_message("Balancing the photon map..");
+	//Log::handle().post_message("Balancing the photon map..");
 	m_pm_global.balance();
 }
 
@@ -189,7 +188,6 @@ void Renderer::pass_rtrace()
 	float progress = 0;
 	if (t) omp_set_num_threads(t);
 
-    Log::handle().post_message("Rendering...");
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < tile_count; ++i) {
         xtracer::render::tile_t *tile = &(m_context->tiles[i]);

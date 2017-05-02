@@ -18,6 +18,8 @@
 #include <xtcore/plr_stencil/renderer.h>
 #include <xtcore/plr_depth/depth.h>
 
+#define PROGRESS_BAR_LENGTH (15)
+
 #define ARG_CLI_VERSION "version" /* Display version and exit */
 
 #define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
@@ -41,7 +43,8 @@ static int block_done(void *blk)
 {
 	mut1.lock();
     ++completed;
-    printf("\r%3.1f% @ %lu", (float)completed/total * 100.f, workers); fflush(stdout);
+    Log::handle().rewind();
+    Log::handle().post_message("Rendering.. %f%% @ %i", (float)completed/total * 100.f, workers);
     --workers;
 	mut1.unlock();
     return 0;
@@ -98,6 +101,7 @@ int main(int argc, char **argv)
 
 	Timer timer;
 	timer.start();
+    printf("Rendering..");
 	renderer->render();
 	timer.stop();
 

@@ -4,6 +4,7 @@
 #include <list>
 #include <queue>
 #include <mutex>
+#include <thread>
 
 #include <GL/glew.h>
 
@@ -13,6 +14,7 @@
 #include <GLUT/glut.h>
 #endif
 
+#include <nmath/vector.h>
 #include <xtcore/tile.h>
 #include <xtcore/argparse.h>
 #include <xtcore/log.h>
@@ -21,6 +23,8 @@
 #include "shader.h"
 #include "gui.h"
 
+xtracer::render::IRenderer *renderer = 0;
+
 static Shader  *postsdr;
 static Program *postprg;
 
@@ -28,13 +32,21 @@ static const char *postsdr_source =
 	"uniform sampler2D tex;\n"
 	"uniform vec2 iWindowResolution;\n"
 	"uniform vec2 iRenderResolution;\n"
+	"uniform vec4 iActiveRegion;\n"
 	"uniform vec2 iTileSize;\n"
 	"void main()\n"
 	"{\n"
 	"    vec3 col = texture2D(tex, gl_TexCoord[0].st).xyz;\n"
-    "    vec2 uv = floor(gl_FragCoord.xy / iWindowResolution.xy * (iRenderResolution.xy / iTileSize.xy));\n"
-    "    col = vec3(mod(uv.x + uv.y, 2.));\n"
-	"    gl_FragColor = vec4(col, 1.0);\n"
+    "    vec2 uv = gl_FragCoord.xy / iWindowResolution.xy;\n"
+    "    vec2 fc = floor(uv * (iRenderResolution.xy / iTileSize.xy));\n"
+    "    col = vec3(mod(fc.x + fc.y, 2.));\n"
+    "    if (gl_FragCoord.x > iActiveRegion.x \n"
+    "     && gl_FragCoord.y > iActiveRegion.y \n"
+    "     && gl_FragCoord.x < iActiveRegion.z \n"
+    "     && gl_FragCoord.y < iActiveRegion.w){ col = vec3(0,1,0);\n"
+	"    gl_FragColor = vec4(col, 1);\n"
+    "    return;}\n"
+    "    gl_FragColor = vec4(0,0,0,1);\n"
 	"}\n";
 
 int window = 0;
@@ -50,8 +62,6 @@ static std::mutex mut0, mut1;
 static int block_begin(void *blk)
 {
     mut0.lock();
-    xtracer::render::tile_t *t = (xtracer::render::tile_t *)blk;
-    printf("Rendering %lux%lu -> %lux%lu \n", t->x0(), t->y0(), t->x1(), t->y1());
     mut0.unlock();
     return 0;
 }
@@ -62,6 +72,9 @@ static int block_done(void *blk)
 	dirty_areas.push((xtracer::render::tile_t*)blk);
     xtracer::render::tile_t *t = (xtracer::render::tile_t *)blk;
     printf("Rendered %lux%lu -> %lux%lu \n", t->x0(), t->y0(), t->x1(), t->y1());
+    postprg->set_uniform("iActiveRegion", NMath::Vector4f(t->x0(), t->y0(), t->x1(), t->y1()));
+    printf("%i %i %i %i\n",t->x0(), t->y0(), t->x1(), t->y1());
+    glutPostRedisplay();
 	mut1.unlock();
     return 0;
 }
@@ -113,10 +126,23 @@ void reshape(int w, int h)
     glutPostRedisplay();
 }
 
+void task_render()
+{
+    if (renderer) {
+        Log::handle().post_message("Starting rendering thread..");
+        renderer->render();
+    }
+}
+
 static void keydown(unsigned char key, int x, int y)
 {
-	if(key == 27) {
-		exit(0);
+    switch (key) {
+        case 27 :  exit(0);
+        case 'r': case 'R': {
+            std::thread t1(task_render);
+            t1.detach();
+            break;
+        }
 	}
 }
 
@@ -146,7 +172,7 @@ int main(int argc, char **argv)
         scene.camera = camera;
     } else return 1;
 
-    xtracer::render::IRenderer *renderer = new Renderer();
+    renderer = new Renderer();
 
     ctx.scene  = &scene;
     ctx.params = params;
@@ -156,10 +182,7 @@ int main(int argc, char **argv)
 
     xtracer::render::Tileset::iterator it = ctx.tiles.begin();
     xtracer::render::Tileset::iterator et = ctx.tiles.end();
-    for (; it != et; ++it) (*it).setup(block_begin, 0);
-    renderer->render();
-
-return 0;
+    for (; it != et; ++it) (*it).setup(block_begin, block_done);
 
     int zero = 0;
     glutInit(&zero, 0);
