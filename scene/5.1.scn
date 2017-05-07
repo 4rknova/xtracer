@@ -57,44 +57,44 @@ geometry = {
 	# the nature of point lights.
 	light_p0 = {
 		type = sphere
-        radius = 0.005
+        radius = 0.01
 
 		position = {
 			x = 343.0
-			y = 438.0
+			y = 530.5
 			z = 227.0
 		}
 	}
 
 	light_p1 = {
 		type = sphere
-        radius = 0.005
+        radius = 0.01
 
 		position = {
 			x = 343.0
-			y = 438.0
+			y = 530.0
 			z = 332.0
 		}
 	}
 
 	light_p2 = {
 		type = sphere
-        radius = 0.005
+        radius = 0.01
 
 		position = {
 			x = 213.0
-			y = 438.0
+			y = 530.0
 			z = 332.0
 		}
 	}
 
 	light_p3 = {
 		type = sphere
-        radius = 0.001
+        radius = 0.01
 
 		position = {
 			x = 213.0
-			y = 438.0
+			y = 530.0
 			z = 227.0
 		}
 	}
