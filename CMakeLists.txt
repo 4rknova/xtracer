@@ -66,6 +66,7 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.c
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
+    ${PATH_SRC_FRONTEND_GUI}/ext/*.cpp
 )
 
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
@@ -100,7 +101,7 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
 
 target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a")
 
-SET(LIBRARIES ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${GLEW_LIBRARY} ${OpenMP_LIBRARY} ${CMAKE_DL_LIBS})
+SET(LIBRARIES ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
 target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
 

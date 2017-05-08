@@ -6,7 +6,7 @@
 #else
 #include <alloca.h>
 #endif
-#include <GL/glew.h>
+#include "opengl.h"
 #include "shader.h"
 
 Shader::Shader(unsigned int type)
