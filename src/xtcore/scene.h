@@ -18,6 +18,11 @@
 
 using nimg::ColorRGBf;
 
+typedef std::map<std::string, xtracer::assets::ICamera   *> CamCollection;
+typedef std::map<std::string, xtracer::assets::IMaterial *> MatCollection;
+typedef std::map<std::string, xtracer::assets::Geometry  *> GeoCollection;
+typedef std::map<std::string, xtracer::assets::Object    *> ObjCollection;
+
 struct light_t
 {
     xtracer::assets::Geometry  *light;
@@ -56,22 +61,19 @@ class Scene
 		int create_cubemap  (ncf::NCF *p);
 		int create_camera   (ncf::NCF *p);
 		int create_material (ncf::NCF *p);
-		int create_texture  (ncf::NCF *p);
 		int create_geometry (ncf::NCF *p);
 		int create_object   (ncf::NCF *p);
 
 		int destroy_camera   (const char *name);
 		int destroy_material (const char *name);
-		int destroy_texture  (const char *name);
 		int destroy_geometry (const char *name);
 		int destroy_object   (const char *name);
 
 		// Maps of the scene entities
-		std::map<std::string, xtracer::assets::ICamera*  > m_cameras;
-		std::map<std::string, xtracer::assets::IMaterial*> m_materials;
-		std::map<std::string, xtracer::assets::Texture2D*> m_textures;
-		std::map<std::string, xtracer::assets::Geometry* > m_geometry;
-		std::map<std::string, xtracer::assets::Object*   > m_objects;
+	    CamCollection m_cameras;
+		MatCollection m_materials;
+		GeoCollection m_geometry;
+		ObjCollection m_objects;
 
 		// Ambient
 		nimg::ColorRGBf m_ambient;	// intensity

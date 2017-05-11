@@ -115,14 +115,12 @@ void Scene::release()
     }
 
 	purge(m_materials);
-	purge(m_textures);
 	purge(m_geometry);
 	purge(m_objects);
 }
 
 int Scene::destroy_camera   (const char *name) { return purge(m_cameras  , name); }
 int Scene::destroy_material (const char *name) { return purge(m_materials, name); }
-int Scene::destroy_texture  (const char *name) { return purge(m_textures , name); }
 int Scene::destroy_geometry (const char *name) { return purge(m_geometry , name); }
 int Scene::destroy_object   (const char *name) { return purge(m_objects  , name); }
 
@@ -203,7 +201,6 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 
 				     if (!(*it).compare(XTPROTO_NODE_CAMERA  )) res = create_camera   (lnode);
 				else if (!(*it).compare(XTPROTO_NODE_MATERIAL)) res = create_material (lnode);
-				else if (!(*it).compare(XTPROTO_NODE_TEXTURE )) res = create_texture  (lnode);
 				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY)) res = create_geometry (lnode);
 			    else if (!(*it).compare(XTPROTO_NODE_OBJECT  )) res = create_object   (lnode);
 
@@ -238,16 +235,6 @@ int Scene::create_material(ncf::NCF *p)
     if (!data) return 1;
     destroy_material(name);
     m_materials[name] = data;
-    return 0;
-}
-
-int Scene::create_texture(ncf::NCF *p)
-{
-    const char * name = p->get_name();
-    xtracer::assets::Texture2D *data = xtracer::io::deserialize_texture(m_source.c_str(), p);
-    if (!data) return 1;
-    destroy_texture(name);
-    m_textures[name] = data;
     return 0;
 }
 

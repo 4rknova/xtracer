@@ -11,7 +11,7 @@ class Object
 	public:
 	std::string geometry;
 	std::string material;
-    bool        flag_directional_uvs;
+    bool flag_directional_uvs;
 
     Object();
 };

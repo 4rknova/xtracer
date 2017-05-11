@@ -19,21 +19,14 @@ static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplGLUT_RenderDrawLists(ImDrawData* draw_data)
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    ImGuiIO& io = ImGui::GetIO();
-    int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
-    if (fb_width == 0 || fb_height == 0)
-        return;
+    ImGuiIO& io { ImGui::GetIO() };
+    int fb_width { (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x) };
+    int fb_height { (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y) };
+
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
-    // We are using the OpenGL fixed pipeline to make the example code simpler to read!
-    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
@@ -91,7 +84,7 @@ void ImGui_ImplGLUT_RenderDrawLists(ImDrawData* draw_data)
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-    glBindTexture(GL_TEXTURE_2D, (GLuint)last_texture);
+    glBindTexture(GL_TEXTURE_2D, last_texture);
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -102,7 +95,6 @@ void ImGui_ImplGLUT_RenderDrawLists(ImDrawData* draw_data)
 
 static const char* ImGui_ImplGLUT_GetClipboardText(void *)
 {
-	std::cerr << "ImGui_ImplGLUT_GetClipboardText not implemented\n";
 	return "";
 }
 
@@ -183,8 +175,7 @@ void ImGui_ImplGLUT_Shutdown()
 
 void ImGui_ImplGLUT_NewFrame(int w, int h)
 {
-	if (!g_FontTexture)
-		ImGui_ImplGLUT_CreateDeviceObjects();
+	if (!g_FontTexture) ImGui_ImplGLUT_CreateDeviceObjects();
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -194,8 +185,8 @@ void ImGui_ImplGLUT_NewFrame(int w, int h)
 	// Setup time step
     int timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
     float deltaTime = (timeSinceStart - oldTimeSinceStart)/1000.0f;
-    
-	io.DeltaTime = deltaTime > 0.0 ? deltaTime : (float)(1.0f / 60.0f);
+
+    io.DeltaTime = deltaTime > 0.0 ? deltaTime : (float)(1.0f / 60.0f);
     oldTimeSinceStart = timeSinceStart;
 
 	// Start the frame
