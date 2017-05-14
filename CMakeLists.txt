@@ -3,7 +3,7 @@ project(xtracer)
 
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(GLUT REQUIRED)
+find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 
 execute_process(
@@ -101,7 +101,7 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
 
 target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a")
 
-SET(LIBRARIES ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
+SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
 target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
 
