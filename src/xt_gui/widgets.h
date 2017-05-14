@@ -17,8 +17,7 @@ enum ACTION
 };
 
 void init(state_t *state);
-ACTION get_action();
-void handle_io_kb(unsigned char key);
+void handle_io_kb(int key);
 void handle_io_ms(int x, int y, bool button_event = false
                     , bool left   = false
                     , bool right  = false

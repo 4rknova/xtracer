@@ -1,5 +1,5 @@
-title = Room
-descr = Three spheres in a room (sphere lights).
+title = Cubemap
+descr = Cubemap example
 versn = 0.3
 
 data = data/cubemap

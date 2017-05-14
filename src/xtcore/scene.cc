@@ -129,7 +129,7 @@ nimg::ColorRGBf Scene::sample_cubemap(const NMath::Vector3f &direction) const
     return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBf(0,0,0);
 }
 
-int Scene::load(const char *filename, const std::list<std::string> &modifiers)
+int Scene::load(const char *filename, const std::list<std::string> *modifiers)
 {
     if(!filename) return 1;
 
@@ -146,26 +146,29 @@ int Scene::load(const char *filename, const std::list<std::string> &modifiers)
 	}
 
     // Mods are of the form: group.group.property:value
-	std::list<std::string>::const_iterator mod_it = modifiers.begin();
-	std::list<std::string>::const_iterator mod_et = modifiers.end();
+    if (modifiers) {
+    	std::list<std::string>::const_iterator mod_it = modifiers->begin();
+    	std::list<std::string>::const_iterator mod_et = modifiers->end();
 
-    for (; mod_it != mod_et; ++mod_it) {
-        std::string mod = (*mod_it);
-		if (mod.find_last_of(':') == std::string::npos) {
-			Log::handle().post_warning("Invalid rule: %s", mod.c_str());
-			continue;
-		}
+        for (; mod_it != mod_et; ++mod_it) {
+            std::string mod = (*mod_it);
+    		if (mod.find_last_of(':') == std::string::npos) {
+    			Log::handle().post_warning("Invalid rule: %s", mod.c_str());
+    			continue;
+    		}
 
-		ncf::NCF *node = &root;
-		std::string nleft, nright;
-        while((mod.find_first_of('.') != std::string::npos) && (mod.find_first_of(':') > mod.find_first_of('.'))) {
-			ncf::util::split(mod, nleft, nright, '.');
-			mod = nright;
-			node = node->get_group_by_name(nleft.c_str());
-		}
+	    	ncf::NCF *node = &root;
+    		std::string nleft, nright;
+            while((mod.find_first_of('.') != std::string::npos)
+               && (mod.find_first_of(':') > mod.find_first_of('.'))) {
+    			ncf::util::split(mod, nleft, nright, '.');
+	    		mod = nright;
+		    	node = node->get_group_by_name(nleft.c_str());
+    		}
 
-		ncf::util::split(mod, nleft, nright, ':');
-		node->set_property(nleft.c_str(), nright.c_str());
+		    ncf::util::split(mod, nleft, nright, ':');
+    		node->set_property(nleft.c_str(), nright.c_str());
+        }
 	}
 
     Log::handle().post_message("Building the scene..");

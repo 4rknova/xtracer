@@ -18,11 +18,11 @@ params_t::params_t()
 
 void context_t::init()
 {
+    tiles.clear();
     segment_framebuffer(tiles, params.width, params.height, params.tile_size);
 }
 
 context_t::context_t()
-    : scene(0)
 {}
 
 void assemble(nimg::Pixmap &pixmap, const context_t &context)

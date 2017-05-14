@@ -72,13 +72,13 @@ int main(int argc, char **argv)
             , params
     )) return 1;
 
-	Scene scene;
-	if (!scene.load(scene_path.c_str(), modifiers)) {
-        if (scene.m_cameras.size() == 0) {
+	xtracer::render::context_t context;
+	if (!context.scene.load(scene_path.c_str(), &modifiers)) {
+        if (context.scene.m_cameras.size() == 0) {
             Log::handle().post_error("no cameras found");
             return 2;
         }
-        scene.camera = camera;
+        context.scene.camera = camera;
     } else return 1;
 
 	xtracer::render::IRenderer *renderer = NULL;
@@ -87,8 +87,6 @@ int main(int argc, char **argv)
     else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
     else                          renderer = new Renderer();
 
-	xtracer::render::context_t  context;
-	context.scene  = &scene;
     context.params = params;
     context.init();
 
@@ -120,7 +118,7 @@ int main(int argc, char **argv)
 
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
-	    std::string cam = context.scene->camera;
+	    std::string cam = context.scene.camera;
 
         if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 

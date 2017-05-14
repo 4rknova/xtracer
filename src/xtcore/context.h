@@ -23,7 +23,7 @@ struct params_t
 
 struct context_t
 {
-	Scene     *scene;
+	Scene     scene;
 	Tileset   tiles;
     params_t  params;
 

@@ -34,10 +34,7 @@ void Renderer::setup(xtracer::render::context_t &context)
 
 void Renderer::render()
 {
-	if (   !m_context
-        || !m_context->scene
-        || !m_context->scene->get_camera()
-    ) return;
+	if (!m_context) return;
 
 //    pass_ptrace();
 	pass_rtrace();
@@ -56,7 +53,7 @@ void Renderer::pass_ptrace()
 	// Calculate each light's contribution by using the intensity luminance.
 	// In future revisions I should also take the light source's size into consideration.
     std::vector<light_t> lights;
-    m_context->scene->get_light_sources(lights);
+    m_context->scene.get_light_sources(lights);
 
 	std::vector<unsigned int> light_photons;
 	{
@@ -114,13 +111,13 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	memset(&info, 0, sizeof(info));
 	std::string obj;
 
-	if (!m_context->scene->intersection(ray, info, obj)) return false;
+	if (!m_context->scene.intersection(ray, info, obj)) return false;
 
 	// Get the material & texture.
- //   std::string &mat_id = m_context->scene->m_objects[obj]->material;
-//    std::string &tex_id = m_context->scene->m_objects[obj]->texture;
-//	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
-//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene->m_textures.find(tex_id);
+ //   std::string &mat_id = m_context->scene.m_objects[obj]->material;
+//    std::string &tex_id = m_context->scene.m_objects[obj]->texture;
+//	xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
+//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene.m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -158,7 +155,7 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 //		nray.origin += nray.direction * 0.5;
 //
 //		ColorRGBf texcol = ColorRGBf(1, 1, 1);
-//		if (it_tex != m_context->scene->m_textures.end())
+//		if (it_tex != m_context->scene.m_textures.end())
 //			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
 //
 //		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
@@ -182,7 +179,8 @@ void Renderer::pass_rtrace()
     xtracer::antialiasing::SampleSet samples;
     xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
     size_t samples_size = samples.size();
-    xtracer::assets::ICamera *cam = m_context->scene->get_camera();
+    xtracer::assets::ICamera *cam = m_context->scene.get_camera();
+    if (!cam) return;
     float d = 1.f / (s * samples_size);
 
 	float progress = 0;
@@ -243,7 +241,7 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 
 	// Check for ray intersection
 	std::string obj; // this will hold the object name
-	if (m_context->scene->intersection(ray, info, obj)) {
+	if (m_context->scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
 /*
@@ -268,8 +266,8 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 			}
 */
 
-            std::string &mat_id = m_context->scene->m_objects[obj]->material;
-            xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
+            std::string &mat_id = m_context->scene.m_objects[obj]->material;
+            xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -285,7 +283,7 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 	}
 
 	// return ColorRGBf(0, 0, 0);
-    return m_context->scene->sample_cubemap(ray.direction);
+    return m_context->scene.sample_cubemap(ray.direction);
 }
 
 ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int depth,
@@ -297,26 +295,26 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// check if the depth limit was reached
 	if (!depth)	return color;
 
-	xtracer::assets::Object *mobj = m_context->scene->m_objects[obj];
+	xtracer::assets::Object *mobj = m_context->scene.m_objects[obj];
 
-	std::map<std::string, xtracer::assets::IMaterial *>::iterator it_mat = m_context->scene->m_materials.find(mobj->material);
+	std::map<std::string, xtracer::assets::IMaterial *>::iterator it_mat = m_context->scene.m_materials.find(mobj->material);
 
-    if (it_mat == m_context->scene->m_materials.end()) return color;
+    if (it_mat == m_context->scene.m_materials.end()) return color;
 
 	// shadows
 	NMath::Vector3f n = info.normal;
 	NMath::Vector3f p = info.point;
 
     std::string &mat_id = mobj->material;
-	xtracer::assets::IMaterial *mat = m_context->scene->m_materials[mat_id];
+	xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
     if (mobj->flag_directional_uvs) info.texcoord = info.point;
-    color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene->ambient();
+    color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene.ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
     std::vector<light_t> lights;
-    m_context->scene->get_light_sources(lights);
+    m_context->scene.get_light_sources(lights);
 	std::vector<light_t>::iterator it = lights.begin();
 	std::vector<light_t>::iterator et = lights.end();
 
@@ -336,15 +334,15 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			// if the point is not in shadow for this light
 			std::string obj;
 			IntInfo res;
-			bool test = m_context->scene->intersection(sray, res, obj);
+			bool test = m_context->scene.intersection(sray, res, obj);
 
-            std::map<std::string, xtracer::assets::Object*>::iterator oit = m_context->scene->m_objects.find(obj);
-            std::map<std::string, xtracer::assets::Object*>::iterator oet = m_context->scene->m_objects.end();
+            std::map<std::string, xtracer::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj);
+            std::map<std::string, xtracer::assets::Object*>::iterator oet = m_context->scene.m_objects.end();
 
             if (oit == oet) continue;
 
-            std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_context->scene->m_geometry.find((*oit).second->geometry);
-            std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_context->scene->m_geometry.end();
+            std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry);
+            std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_context->scene.m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 

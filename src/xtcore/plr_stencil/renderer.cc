@@ -32,10 +32,7 @@ void Renderer::setup(xtracer::render::context_t &context)
 
 void Renderer::render(void)
 {
-    if (   !m_context
-        || !m_context->scene
-        || !m_context->scene->get_camera()
-    ) return;
+    if (!m_context) return;
 
 	// precalculate some constants
 	const size_t w          = m_context->params.width;
@@ -46,7 +43,8 @@ void Renderer::render(void)
 
     xtracer::antialiasing::SampleSet samples;
     xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    xtracer::assets::ICamera *cam = m_context->scene->get_camera();
+    xtracer::assets::ICamera *cam = m_context->scene.get_camera();
+    if (!cam) return;
     float d = 1.f / (s * samples.size());
 
     float progress = 0;
@@ -71,7 +69,7 @@ void Renderer::render(void)
                     std::string obj;
                     for (float dofs = 0; dofs < s; ++dofs) {
                   	 	NMath::Ray ray = cam->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
-                        float res = m_context->scene->intersection(ray, info, obj) ? 1. : 0.;
+                        float res = m_context->scene.intersection(ray, info, obj) ? 1. : 0.;
                         color += nimg::ColorRGBAf(res, res, res) * d;
                     }
                 }

@@ -1,8 +1,6 @@
 #ifndef XTRACER_GUI_STATE_H
 #define XTRACER_GUI_STATE_H
 
-#include <xtcore/context.h>
-#include <xtcore/renderer.h>
 #include "opengl.h"
 
 #define WINDOW_DEFAULT_WIDTH  (1920)
@@ -23,8 +21,8 @@ struct textures_t
 
 struct window_t
 {
-    size_t width;
-    size_t height;
+    int width;
+    int height;
 
     window_t()
         : width(WINDOW_DEFAULT_WIDTH)
@@ -32,45 +30,10 @@ struct window_t
     {}
 };
 
-struct flags_t
-{
-    bool rendering;
-
-    flags_t()
-        : rendering(false)
-    {}
-};
-
-
-struct widget_t
-{
-   bool open;
-
-   widget_t() {
-        open = false;
-   }
-};
-
-struct widgets_t
-{
-    widget_t main;
-    widget_t about;
-    widget_t scene_explorer;
-    widget_t render;
-};
-
 struct state_t
 {
-    widgets_t  widgets;
     textures_t textures;
     window_t   window;
-    flags_t    flags;
-    xtracer::render::IRenderer *renderer;
-    xtracer::render::context_t ctx;
-
-    state_t()
-        : renderer(0)
-    {}
 };
 
 } /* namespace gui */

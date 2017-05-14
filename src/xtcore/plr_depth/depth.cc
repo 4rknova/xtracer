@@ -31,12 +31,7 @@ void Renderer::setup(xtracer::render::context_t &context)
 
 void Renderer::render(void)
 {
-    if (   !m_context
-        || !m_context->scene
-        || !m_context->scene->get_camera()
-    ) return;
-
-    render_depth();
+    if (m_context) render_depth();
 }
 
 int init()
@@ -63,7 +58,8 @@ void Renderer::render_depth()
 
     xtracer::antialiasing::SampleSet samples;
     xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    xtracer::assets::ICamera *cam = m_context->scene->get_camera();
+    xtracer::assets::ICamera *cam = m_context->scene.get_camera();
+    if (!cam) return;
     float d = 1.f / (s * samples.size());
 
     float progress = 0;
@@ -94,7 +90,7 @@ void Renderer::render_depth()
                   		std::string obj;
                         float depth = 0.f;
 
-                        if (m_context->scene->intersection(ray, info, obj)) {
+                        if (m_context->scene.intersection(ray, info, obj)) {
                             NMath::scalar_t  d = (ray.origin - info.point).length();
                             depth = 1. / log(d);
                         }
