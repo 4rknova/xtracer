@@ -25,30 +25,38 @@
 #define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
 #define ARGUMENT(i,x) (!strcmp(argv[i], x))
 
-static std::mutex mut0, mut1;
+static std::mutex mut;
 
 size_t workers   = 0;
 size_t completed = 0;
 size_t total     = 0;
 
-static int block_begin(void *blk)
-{
-    mut0.lock();
-    ++workers;
-    mut0.unlock();
-    return 0;
-}
 
-static int block_done(void *blk)
+struct ws_handler_init_t : public xtracer::render::tile_event_handler_t
 {
-	mut1.lock();
-    ++completed;
-    Log::handle().rewind();
-    Log::handle().post_message("Rendering.. %f%% @ %i", (float)completed/total * 100.f, workers);
-    --workers;
-	mut1.unlock();
-    return 0;
-}
+    void handle_event(xtracer::render::tile_t *tile)
+    {
+        mut.lock();
+        ++workers;
+        mut.unlock();
+    }
+};
+
+struct ws_handler_done_t : public xtracer::render::tile_event_handler_t
+{
+    void handle_event(xtracer::render::tile_t *tile)
+    {
+       mut.lock();
+       ++completed;
+       printf("\rRendering.. %5.2f%% @ %i", (float)completed/total * 100.f, workers);
+       fflush(stdout);
+       --workers;
+       mut.unlock();
+    }
+};
+
+ws_handler_done_t handler_done;
+ws_handler_init_t handler_init;
 
 int main(int argc, char **argv)
 {
@@ -92,7 +100,10 @@ int main(int argc, char **argv)
 
     xtracer::render::Tileset::iterator it = context.tiles.begin();
     xtracer::render::Tileset::iterator et = context.tiles.end();
-    for (; it != et; ++it) (*it).setup(block_begin, block_done);
+    for (; it != et; ++it) {
+        (*it).setup_handler_on_init(&handler_init);
+        (*it).setup_handler_on_done(&handler_done);
+    }
 
     renderer->setup(context);
     total =  context.tiles.size();
@@ -105,6 +116,7 @@ int main(int argc, char **argv)
 
     std::string t;
 	print_time_breakdown(t, timer.get_time_in_mlsec());
+    printf("%c[2K\r", 27);
     Log::handle().post_message("Total time: %s", t.c_str());
 
     // Export the frame

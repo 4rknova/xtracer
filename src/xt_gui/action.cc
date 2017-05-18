@@ -8,6 +8,7 @@ void task_render(workspace_t *ws)
 {
     if (ws && ws->renderer) {
         ws->context.init();
+        ws->setup_callbacks();
         ws->renderer->setup(ws->context);
         ws->renderer->render();
     }

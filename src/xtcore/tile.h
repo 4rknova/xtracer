@@ -8,7 +8,12 @@
 namespace xtracer {
     namespace render {
 
-typedef int (*callback) (void*);
+struct tile_t;  // Forward Declaration
+
+struct tile_event_handler_t
+{
+	virtual void handle_event(tile_t *tile) = 0;
+};
 
 struct tile_t {
     size_t x0()     const;
@@ -18,7 +23,9 @@ struct tile_t {
     size_t width()  const;
     size_t height() const;
 
-    void setup(callback on_init, callback on_done);
+    void setup_handler_on_init(tile_event_handler_t *h);
+    void setup_handler_on_done(tile_event_handler_t *h);
+
     void write(size_t x, size_t y, const nimg::ColorRGBf &col);
     void read(size_t x, size_t y, nimg::ColorRGBf &col) const;
     void init();
@@ -32,8 +39,9 @@ struct tile_t {
     size_t       m_y0;
     size_t       m_x1;
     size_t       m_y1;
-    callback     m_on_init;
-    callback     m_on_done;
+
+    tile_event_handler_t *m_on_init;
+    tile_event_handler_t *m_on_done;
 };
 
 typedef std::vector<tile_t> Tileset;

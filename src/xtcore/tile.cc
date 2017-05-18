@@ -26,10 +26,14 @@ size_t tile_t::y1()     const { return m_y1; }
 size_t tile_t::width()  const { return m_x1 - m_x0; }
 size_t tile_t::height() const { return m_y1 - m_y0; }
 
-void tile_t::setup(callback on_init, callback on_done)
+void tile_t::setup_handler_on_init(tile_event_handler_t *h)
 {
-    this->m_on_init = on_init;
-    this->m_on_done = on_done;
+    this->m_on_init = h;
+}
+
+void tile_t::setup_handler_on_done(tile_event_handler_t *h)
+{
+    this->m_on_done = h;
 }
 
 void tile_t::write(size_t x, size_t y, const nimg::ColorRGBf &col)
@@ -45,12 +49,12 @@ void tile_t::read(size_t x, size_t y, nimg::ColorRGBf &col) const
 void tile_t::init()
 {
     m_data.init(width(), height());
-    if (m_on_init) m_on_init(this);
+    if (m_on_init) m_on_init->handle_event(this);
 }
 
 void tile_t::submit()
 {
-    if (m_on_done) m_on_done(this);
+    if (m_on_done) m_on_done->handle_event(this);
 }
 
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size)

@@ -69,7 +69,6 @@ void Renderer::render_depth()
     for (size_t i = 0; i < tile_count; ++i) {
         xtracer::render::tile_t *tile = &(m_context->tiles[i]);
 
-        tile->setup(0,0);
         tile->init();
 
 	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {

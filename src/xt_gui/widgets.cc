@@ -127,6 +127,7 @@ void render_main_menu(state_t *state)
 			workspace_t *ws = new workspace_t;
 			ws->renderer = new Renderer();
 			ws->source_file = filepath;
+            ws->init();
 			if (!action::load(ws)) workspaces.push_back(ws);
 			ImGui::CloseCurrentPopup();
 			_win_load = false;
@@ -169,16 +170,18 @@ void render_workspace_explorer(state_t *state)
 
 void render_workspaces(state_t *state)
 {
-	for (auto i : workspaces) {
+	for (auto& i : workspaces) {
 		workspace_t *ws = i;
 
 		if (!ws || !(ws->is_visible)) continue;
+
+        ws->update();
 
 		int flags = ImGuiWindowFlags_NoCollapse;
 
 		std::string name = i->source_file.c_str();
 		ImGui::Begin(name.c_str(), &(ws->is_visible), ImVec2(0,0), 0.9f, flags);
-/*
+
 	    if (ImGui::BeginMenuBar()) {
 			if (ImGui::BeginMenu("Zoom")) {
 				if (ImGui::MenuItem(" 50%", NULL, false, true)) { ws->zoom_multiplier = 0.5f; }
@@ -186,12 +189,9 @@ void render_workspaces(state_t *state)
 				if (ImGui::MenuItem("200%", NULL, false, true)) { ws->zoom_multiplier = 2.0f; }
 		        ImGui::EndMenu();
 			}
-			if (ImGui::BeginMenu("Process")) {
-		        ImGui::EndMenu();
-			}
 	    	ImGui::EndMenuBar();
 		}
-*/
+
 		ImGui::BeginChildFrame(0, ImVec2(200,250));
 		ImGui::Text("Configuration");
 		ImGui::Separator();
@@ -255,7 +255,7 @@ void render_workspaces(state_t *state)
 	    }
 		ImGui::EndChildFrame();
 
-		ImGui::Image((void*)(uintptr_t)(state->textures.render), ImVec2(ws->zoom_multiplier * ws->context.params.width
+		ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(ws->zoom_multiplier * ws->context.params.width
                                                                       , ws->zoom_multiplier * ws->context.params.height));
 		ImGui::End();
 	}
