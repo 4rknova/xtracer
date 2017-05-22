@@ -42,9 +42,6 @@ class Scene
 		Scene();
 		~Scene();
 
-		const char *name();
-		const char *source();
-
 		int load(const char *filename, const std::list<std::string> *modifiers);
 		void apply_modifiers();
 		unsigned int build();

@@ -14,8 +14,12 @@
 
 #include <xtcore/plr_photonmapper/renderer.h>
 
-#define WORKSPACE_EXPLORER_WIDTH (320)
+#define WORKSPACE_PROPERTY_WIDTH (500)
+#define WORKSPACE_PROP_CONF_HEIGHT (300)
+#define WORKSPACE_PROP_CONT_HEIGHT (100)
 
+#define MIN(a,b) (a>b?b:a)
+#define MAX(a,b) (a>b?a:b)
 
 namespace gui {
 
@@ -112,6 +116,16 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit" , ""      )) { action::quit();   }
             ImGui::EndMenu();
         }
+        if (workspaces.size() > 0 && ImGui::BeginMenu("Workspaces")) {
+    	    for (auto& i : workspaces) {
+        		std::string name = i->source_file.c_str();
+            	if (ImGui::MenuItem(name.c_str())) {
+                    for (auto& j : workspaces) j->is_visible = false;
+                    i->is_visible = true;
+                }
+    	    }
+            ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
     }
 
@@ -142,33 +156,21 @@ void render_main_menu(state_t *state)
 	}
 }
 
-void render_workspace_explorer(state_t *state)
+void slider_float(const char *name, float &val, float a, float b)
 {
-    int flags = ImGuiWindowFlags_NoCollapse
-			  | ImGuiWindowFlags_NoTitleBar
-			  | ImGuiWindowFlags_NoResize
-			  | ImGuiWindowFlags_NoMove;
-
-	bool open;
-	ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
-	ImGui::Begin("Workspace explorer", &(open), ImVec2(0,0), 0.5f, flags);
-	ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-	ImGui::Text("v%s", xtcore::get_version());
-	ImGui::NewLine();
-    ImVec2 res = ImVec2(WORKSPACE_EXPLORER_WIDTH,(float)state->window.height - 22);
-    ImGui::SetWindowSize(res);
-
-	ImGui::NewLine();
-	ImGui::Text("Workspaces");
-	ImGui::Separator();
-	for (auto& i : workspaces) {
-		std::string name = i->source_file.c_str();
-    	if (ImGui::Button(name.c_str(), ImVec2(WORKSPACE_EXPLORER_WIDTH-20,20))) { i->is_visible = true; }
-	}
-	ImGui::End();
+    float tmp = val;
+    ImGui::SliderFloat(name, &tmp, a, b);
+    val = tmp;
 }
 
-void render_workspaces(state_t *state)
+void slider_int(const char *name, size_t &val, size_t a, size_t b)
+{
+    int tmp = val;
+    ImGui::SliderInt(name, &tmp, a, b);
+    val = tmp;
+}
+
+void render_workspace(state_t *state)
 {
 	for (auto& i : workspaces) {
 		workspace_t *ws = i;
@@ -177,35 +179,59 @@ void render_workspaces(state_t *state)
 
         ws->update();
 
-		int flags = ImGuiWindowFlags_NoCollapse;
+		int flags = ImGuiWindowFlags_NoCollapse
+                  | ImGuiWindowFlags_NoTitleBar
+                  | ImGuiWindowFlags_NoResize
+                  | ImGuiWindowFlags_NoMove;
 
 		std::string name = i->source_file.c_str();
-		ImGui::Begin(name.c_str(), &(ws->is_visible), ImVec2(0,0), 0.9f, flags);
+	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
+		ImGui::Begin(name.c_str(), &(ws->is_visible), ImVec2(0,0), 0.5f, flags);
 
-	    if (ImGui::BeginMenuBar()) {
-			if (ImGui::BeginMenu("Zoom")) {
-				if (ImGui::MenuItem(" 50%", NULL, false, true)) { ws->zoom_multiplier = 0.5f; }
-				if (ImGui::MenuItem("100%", NULL, false, true)) { ws->zoom_multiplier = 1.0f; }
-				if (ImGui::MenuItem("200%", NULL, false, true)) { ws->zoom_multiplier = 2.0f; }
-		        ImGui::EndMenu();
-			}
-	    	ImGui::EndMenuBar();
-		}
+        ImVec2 res = ImVec2(state->window.width - 2,(float)state->window.height - 22);
+        ImGui::SetWindowSize(res);
 
-		ImGui::BeginChildFrame(0, ImVec2(200,250));
+//	    if (ImGui::BeginMenuBar()) {
+//			if (ImGui::BeginMenu("")) {
+//		        ImGui::EndMenu();
+//			}
+//	    	ImGui::EndMenuBar();
+//		}
+
+	    ImGui::BeginGroup();
+		ImGui::BeginChildFrame(0, ImVec2(WORKSPACE_PROPERTY_WIDTH, 300));
+        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0.16f, 0.16f, 0.16f, 1.00f));
+	    ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
+    	ImGui::Text("v%s", xtcore::get_version());
+        ImGui::NewLine();
+		ImGui::Text("%s", name.c_str());
+
+        ImGui::NewLine();
 		ImGui::Text("Configuration");
 		ImGui::Separator();
 		ImGui::Text("Resolution    %lux%lu", ws->context.params.width, ws->context.params.height);
-		ImGui::Text("Sypersampling %lu", ws->context.params.ssaa);
-		ImGui::Text("Samples       %lu", ws->context.params.samples);
-		ImGui::Text("Threads       %lu", ws->context.params.threads);
-		ImGui::Text("R.Depth       %lu", ws->context.params.rdepth);
-		ImGui::Text("Tile size     %lu", ws->context.params.tile_size);
+        slider_int("Supersampling"  , ws->context.params.ssaa     , 1, 10);
+        slider_int("Recursion Depth", ws->context.params.rdepth   , 1, 10);
+        slider_int("Tile Size"      , ws->context.params.tile_size, 1, MIN(ws->context.params.width, ws->context.params.height));
+        slider_int("Samples"        , ws->context.params.samples  , 1, 32);
+        slider_int("Threads"        , ws->context.params.threads  , 1, 32);
 		ImGui::NewLine();
-	    if (ImGui::Button("Render", ImVec2(120,0))) { action::render(ws); }
+        ImGui::PopStyleColor();
 		ImGui::EndChildFrame();
-		ImGui::SameLine();
-		ImGui::BeginChildFrame(1, ImVec2(200,250));
+
+		ImGui::BeginChildFrame(1,  ImVec2(WORKSPACE_PROPERTY_WIDTH, 100));
+		ImGui::Text("Controls");
+		ImGui::Separator();
+	    if (ImGui::Button("x0.5", ImVec2(75,0))) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
+	    if (ImGui::Button("x1.0", ImVec2(75,0))) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
+	    if (ImGui::Button("x2.0", ImVec2(75,0))) { ws->zoom_multiplier = 2.0f; } ImGui::SameLine();
+	    if (ImGui::Button("x4.0", ImVec2(75,0))) { ws->zoom_multiplier = 4.0f; }
+        slider_float("Zoom"  , ws->zoom_multiplier , 0.5, 10.0);
+	    if (ImGui::Button("Render", ImVec2(120,0))) { action::render(ws); }
+
+        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 75 - 8;
+		ImGui::EndChildFrame();
+		ImGui::BeginChildFrame(2, ImVec2(WORKSPACE_PROPERTY_WIDTH, sh));
 		ImGui::Text("Scene tree");
 		ImGui::Separator();
 		if (ImGui::TreeNode("root")) {
@@ -254,105 +280,24 @@ void render_workspaces(state_t *state)
 	        ImGui::TreePop();
 	    }
 		ImGui::EndChildFrame();
+	    ImGui::EndGroup();
 
-		ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(ws->zoom_multiplier * ws->context.params.width
-                                                                      , ws->zoom_multiplier * ws->context.params.height));
+        ImGui::SameLine();
+
+
+        float rx = state->window.width - WORKSPACE_PROPERTY_WIDTH - 20;
+        float ry = state->window.height - 75;
+        float zx = ws->zoom_multiplier * ws->context.params.width;
+        float zy = ws->zoom_multiplier * ws->context.params.height;
+		ImGui::BeginChildFrame(3, ImVec2(rx,ry), ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::SetCursorPos(ImVec2((rx - zx) * 0.5f, (ry - zy) * 0.5f));
+		ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(ws->zoom_multiplier * ws->context.params.width,
+		                                                     ws->zoom_multiplier * ws->context.params.height));
+		ImGui::EndChildFrame();
+
 		ImGui::End();
 	}
 }
-
-
-/*
-void widget_main(state_t *state)
-{
-    int flags = ImGuiWindowFlags_NoTitleBar
-              | ImGuiWindowFlags_NoSavedSettings
-              | ImGuiWindowFlags_NoResize
-              | ImGuiWindowFlags_NoMove;
-
-	ImGui::Begin("Main", &(state->widgets.main.open), ImVec2(320,state->window.height), 0.5f, flags);
-
-    ImVec2 res = ImVec2(320,(float)state->window.height);
-    ImGui::SetWindowSize(res);
-
-    ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-    ImGui::NewLine();
-
-	ImGui::Text("Scene: %s", state->context.scene.m_name.c_str());
-    ImGui::Separator();
-    ImGui::NewLine();
-
-    ImGui::BeginGroup();
-    {
-    	if (ImGui::Button("Load", ImVec2(120,20))) {state->widgets.render.open = true; action_queue.push(ACTION_RENDER);}
-        ImGui::SameLine();
-    	if (ImGui::Button("Export", ImVec2(120,20))) {state->widgets.render.open = true; action_queue.push(ACTION_RENDER);}
-
-    	if (ImGui::Button("Render", ImVec2(248,20))) {state->widgets.render.open = true; action_queue.push(ACTION_RENDER);}
-	    if (ImGui::Button("Scene Explorer", ImVec2(248,20))) {state->widgets.scene_explorer.open  = true;                }
-	    if (ImGui::Button("About", ImVec2(248,20))) {state->widgets.about.open  = true;                                  }
-		ImGui::EndGroup();
-	}
-	ImGui::End();
-}
-void widget_explorer(state_t *state)
-{
-    if (!(state->widgets.scene_explorer.open)) return;
-
-    int flags = ImGuiWindowFlags_NoCollapse;
-
-	ImGui::Begin("Scene Explorer", &(state->widgets.scene_explorer.open), flags);
-	ImGui::End();
-}
-
-void widget_render(state_t *state)
-{
-    static float multiplier = 1.f;
-
-    int flags = ImGuiWindowFlags_AlwaysAutoResize
-			  | ImGuiWindowFlags_MenuBar;
-
-    if (!(state->widgets.render.open)) return;
-	ImGui::Begin("Render", &(state->widgets.render.open), flags);
-
-//    if (ImGui::BeginMenu("About")) { state->widgets.about.open = true; }
-    if (ImGui::BeginMenuBar()) {
-		if (ImGui::BeginMenu("Zoom")) {
-			if (ImGui::MenuItem(" 50%", NULL, false, true)) { multiplier = 0.5f; }
-			if (ImGui::MenuItem("100%", NULL, false, true)) { multiplier = 1.0f; }
-			if (ImGui::MenuItem("200%", NULL, false, true)) { multiplier = 2.0f; }
-	        ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu("Process")) {
-	        ImGui::EndMenu();
-		}
-	    ImGui::EndMenuBar();
-	}
-
-
-    ImGui::Text("Resolution    %lux%lu", state->context.params.width, state->context.params.height);
-    ImGui::Text("Sypersampling %lu", state->context.params.ssaa);
-    ImGui::Text("Samples       %lu", state->context.params.samples);
-    ImGui::Text("Threads       %lu", state->context.params.threads);
-    ImGui::Text("R.Depth       %lu", state->context.params.rdepth);
-    ImGui::Text("Tile size     %lu", state->context.params.tile_size);
-    ImGui::NewLine();
-    ImGui::Image((void*)(uintptr_t)(state->textures.render), ImVec2(multiplier * state->context.params.width
-                                                                  , multiplier * state->context.params.height));
-    ImGui::End();
-}
-
-void widget_about(state_t *state)
-{
-    if (!state->widgets.about.open) return;
-
-    int flags = ImGuiWindowFlags_AlwaysAutoResize
-			  | ImGuiWindowFlags_NoCollapse;
-
-	ImGui::Begin("About", &(state->widgets.about.open), flags);
-    ImGui::End();
-}
-*/
 
 void handle_io_kb(int key)
 {
@@ -376,8 +321,7 @@ void draw_widgets(state_t *state)
 {
     render_background(state);
     render_main_menu(state);
-    render_workspace_explorer(state);
-    render_workspaces(state);
+    render_workspace(state);
 
     ImGui::Render();
 }

@@ -54,11 +54,6 @@ Scene::~Scene()
 	release();
 }
 
-const char *Scene::source()
-{
-	return m_source.c_str();
-}
-
 void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
