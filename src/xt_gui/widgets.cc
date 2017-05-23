@@ -14,7 +14,7 @@
 
 #include <xtcore/plr_photonmapper/renderer.h>
 
-#define WORKSPACE_PROPERTY_WIDTH (500)
+#define GUI_SIDEPANEL_WIDTH   (500)
 #define WORKSPACE_PROP_CONF_HEIGHT (300)
 #define WORKSPACE_PROP_CONT_HEIGHT (100)
 
@@ -48,6 +48,7 @@ static const char *postsdr_source_frag =
 
 	"}\n";
 
+size_t                    active_workspace = 0;
 std::vector<workspace_t*> workspaces;
 
 void init(state_t *state)
@@ -119,10 +120,7 @@ void render_main_menu(state_t *state)
         if (workspaces.size() > 0 && ImGui::BeginMenu("Workspaces")) {
     	    for (auto& i : workspaces) {
         		std::string name = i->source_file.c_str();
-            	if (ImGui::MenuItem(name.c_str())) {
-                    for (auto& j : workspaces) j->is_visible = false;
-                    i->is_visible = true;
-                }
+            	if (ImGui::MenuItem(name.c_str())) state->workspace = i;
     	    }
             ImGui::EndMenu();
         }
@@ -142,7 +140,11 @@ void render_main_menu(state_t *state)
 			ws->renderer = new Renderer();
 			ws->source_file = filepath;
             ws->init();
-			if (!action::load(ws)) workspaces.push_back(ws);
+			if (!action::load(ws)) {
+                workspaces.push_back(ws);
+                state->workspace = ws;
+            }
+
 			ImGui::CloseCurrentPopup();
 			_win_load = false;
 		}
@@ -172,10 +174,9 @@ void slider_int(const char *name, size_t &val, size_t a, size_t b)
 
 void render_workspace(state_t *state)
 {
-	for (auto& i : workspaces) {
-		workspace_t *ws = i;
+        workspace_t *ws = state->workspace;
 
-		if (!ws || !(ws->is_visible)) continue;
+		if (!ws) return;
 
         ws->update();
 
@@ -184,28 +185,22 @@ void render_workspace(state_t *state)
                   | ImGuiWindowFlags_NoResize
                   | ImGuiWindowFlags_NoMove;
 
-		std::string name = i->source_file.c_str();
+		std::string name = ws->source_file.c_str();
 	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
-		ImGui::Begin(name.c_str(), &(ws->is_visible), ImVec2(0,0), 0.5f, flags);
+        bool dummy;
+		ImGui::Begin(name.c_str(), &(dummy), ImVec2(0,0), 0.3f, flags);
 
-        ImVec2 res = ImVec2(state->window.width - 2,(float)state->window.height - 22);
+        ImVec2 res = ImVec2(GUI_SIDEPANEL_WIDTH,(float)state->window.height - 22);
         ImGui::SetWindowSize(res);
 
-//	    if (ImGui::BeginMenuBar()) {
-//			if (ImGui::BeginMenu("")) {
-//		        ImGui::EndMenu();
-//			}
-//	    	ImGui::EndMenuBar();
-//		}
 
 	    ImGui::BeginGroup();
-		ImGui::BeginChildFrame(0, ImVec2(WORKSPACE_PROPERTY_WIDTH, 300));
-        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0.16f, 0.16f, 0.16f, 1.00f));
 	    ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
     	ImGui::Text("v%s", xtcore::get_version());
         ImGui::NewLine();
 		ImGui::Text("%s", name.c_str());
 
+        ImGui::NewLine();
         ImGui::NewLine();
 		ImGui::Text("Configuration");
 		ImGui::Separator();
@@ -215,11 +210,9 @@ void render_workspace(state_t *state)
         slider_int("Tile Size"      , ws->context.params.tile_size, 1, MIN(ws->context.params.width, ws->context.params.height));
         slider_int("Samples"        , ws->context.params.samples  , 1, 32);
         slider_int("Threads"        , ws->context.params.threads  , 1, 32);
-		ImGui::NewLine();
-        ImGui::PopStyleColor();
-		ImGui::EndChildFrame();
 
-		ImGui::BeginChildFrame(1,  ImVec2(WORKSPACE_PROPERTY_WIDTH, 100));
+        ImGui::NewLine();
+        ImGui::NewLine();
 		ImGui::Text("Controls");
 		ImGui::Separator();
 	    if (ImGui::Button("x0.5", ImVec2(75,0))) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
@@ -229,15 +222,15 @@ void render_workspace(state_t *state)
         slider_float("Zoom"  , ws->zoom_multiplier , 0.5, 10.0);
 	    if (ImGui::Button("Render", ImVec2(120,0))) { action::render(ws); }
 
-        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 75 - 8;
-		ImGui::EndChildFrame();
-		ImGui::BeginChildFrame(2, ImVec2(WORKSPACE_PROPERTY_WIDTH, sh));
-		ImGui::Text("Scene tree");
+        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
+        ImGui::NewLine();
+        ImGui::NewLine();
+		ImGui::Text("Scene");
 		ImGui::Separator();
 		if (ImGui::TreeNode("root")) {
 			if (ImGui::TreeNode("Cameras")) {
-				CamCollection::iterator it = i->context.scene.m_cameras.begin();
-				CamCollection::iterator et = i->context.scene.m_cameras.end();
+				CamCollection::iterator it = ws->context.scene.m_cameras.begin();
+				CamCollection::iterator et = ws->context.scene.m_cameras.end();
 				for (; it!=et; ++it) {
 					if (ImGui::TreeNode((*it).first.c_str())) {
 						ImGui::TreePop();
@@ -246,8 +239,8 @@ void render_workspace(state_t *state)
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNode("Geometry")) {
-				GeoCollection::iterator it = i->context.scene.m_geometry.begin();
-				GeoCollection::iterator et = i->context.scene.m_geometry.end();
+				GeoCollection::iterator it = ws->context.scene.m_geometry.begin();
+				GeoCollection::iterator et = ws->context.scene.m_geometry.end();
 				for (; it!=et; ++it) {
 					if (ImGui::TreeNode((*it).first.c_str())) {
 						ImGui::TreePop();
@@ -256,8 +249,8 @@ void render_workspace(state_t *state)
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNode("Materials")) {
-				MatCollection::iterator it = i->context.scene.m_materials.begin();
-				MatCollection::iterator et = i->context.scene.m_materials.end();
+				MatCollection::iterator it = ws->context.scene.m_materials.begin();
+				MatCollection::iterator et = ws->context.scene.m_materials.end();
 				for (; it!=et; ++it) {
 					if (ImGui::TreeNode((*it).first.c_str())) {
 						ImGui::TreePop();
@@ -266,8 +259,8 @@ void render_workspace(state_t *state)
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNode("Objects")) {
-				ObjCollection::iterator it = i->context.scene.m_objects.begin();
-				ObjCollection::iterator et = i->context.scene.m_objects.end();
+				ObjCollection::iterator it = ws->context.scene.m_objects.begin();
+				ObjCollection::iterator et = ws->context.scene.m_objects.end();
 				for (; it!=et; ++it) {
 					if (ImGui::TreeNode((*it).first.c_str())) {
 						ImGui::Text("Geometry : %s", (*it).second->geometry.c_str());
@@ -279,24 +272,23 @@ void render_workspace(state_t *state)
 			}
 	        ImGui::TreePop();
 	    }
-		ImGui::EndChildFrame();
 	    ImGui::EndGroup();
 
-        ImGui::SameLine();
+        ImGui::End();
 
 
-        float rx = state->window.width - WORKSPACE_PROPERTY_WIDTH - 20;
-        float ry = state->window.height - 75;
+	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,(float)21), ImGuiSetCond_Appearing);
+		ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.3f, flags | ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::SetWindowSize(ImVec2(state->window.width - GUI_SIDEPANEL_WIDTH - 4, state->window.height - 22));
+        float rx = state->window.width - GUI_SIDEPANEL_WIDTH - 20;
+        float ry = state->window.height - 50;
         float zx = ws->zoom_multiplier * ws->context.params.width;
         float zy = ws->zoom_multiplier * ws->context.params.height;
-		ImGui::BeginChildFrame(3, ImVec2(rx,ry), ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::SetCursorPos(ImVec2((rx - zx) * 0.5f, (ry - zy) * 0.5f));
 		ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(ws->zoom_multiplier * ws->context.params.width,
 		                                                     ws->zoom_multiplier * ws->context.params.height));
-		ImGui::EndChildFrame();
 
 		ImGui::End();
-	}
 }
 
 void handle_io_kb(int key)

@@ -1,22 +1,24 @@
 #include "workspace.h"
 
+ws_handler_t::ws_handler_t(std::mutex *m)
+    : mut(m)
+{}
+
 void ws_handler_t::handle_event(xtracer::render::tile_t *tile)
 {
-	m.lock();
+	mut->lock();
 	tiles.push(tile);
-    m.unlock();
+    mut->unlock();
 }
 
 xtracer::render::tile_t *ws_handler_t::pop()
 {
     xtracer::render::tile_t *t = nullptr;
 
-    m.lock();
     if (tiles.size() > 0) {
         t = tiles.front();
         tiles.pop();
     }
-    m.unlock();
 
     return t;
 }
@@ -55,6 +57,7 @@ void workspace_t::update()
 {
     glBindTexture(GL_TEXTURE_2D, texture);
 
+    m.lock();
 	while(1) {
         xtracer::render::tile_t *t = handler_init.pop();
 
@@ -84,4 +87,5 @@ void workspace_t::update()
             }
 		}
 	}
+    m.unlock();
 }

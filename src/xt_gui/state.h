@@ -2,6 +2,7 @@
 #define XTRACER_GUI_STATE_H
 
 #include "opengl.h"
+#include "workspace.h"
 
 #define WINDOW_DEFAULT_WIDTH  (1920)
 #define WINDOW_DEFAULT_HEIGHT (1080)
@@ -32,8 +33,11 @@ struct window_t
 
 struct state_t
 {
-    textures_t textures;
-    window_t   window;
+    state_t();
+
+    textures_t   textures;
+    window_t     window;
+    workspace_t *workspace;
 };
 
 } /* namespace gui */

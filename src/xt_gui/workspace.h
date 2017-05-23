@@ -11,8 +11,9 @@
 
 struct ws_handler_t : public xtracer::render::tile_event_handler_t
 {
+    ws_handler_t(std::mutex *m);
     std::queue<xtracer::render::tile_t*> tiles;
-    std::mutex m;
+    std::mutex *mut;
     void handle_event(xtracer::render::tile_t *tile);
     xtracer::render::tile_t *pop();
 };
@@ -20,7 +21,6 @@ struct ws_handler_t : public xtracer::render::tile_event_handler_t
 struct workspace_t
 {
     GLuint                      texture;
-    bool                        is_visible;
     float                       zoom_multiplier;
     std::string                 source_file;
     xtracer::render::IRenderer *renderer;
@@ -37,11 +37,14 @@ struct workspace_t
     ws_handler_t handler_init;
     ws_handler_t handler_done;
 
+    std::mutex m;
+
     workspace_t()
         : texture(0)
-        , is_visible(false)
         , zoom_multiplier(1.f)
         , renderer(0)
+        , handler_init(&m)
+        , handler_done(&m)
     {}
 };
 
