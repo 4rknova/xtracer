@@ -1,5 +1,5 @@
-#ifndef XTRACER_GUI_ACTION_H_INCLUDED
-#define XTRACER_GUI_ACTION_H_INCLUDED
+#ifndef XTGUI_GUI_ACTION_H_INCLUDED
+#define XTGUI_GUI_ACTION_H_INCLUDED
 
 #include "workspace.h"
 
@@ -16,4 +16,4 @@ void not_yet_implemented();
 
 } /* namespace action */
 
-#endif /* XTRACER_GUI_ACTION_H_INCLUDED */
+#endif /* XTGUI_GUI_ACTION_H_INCLUDED */

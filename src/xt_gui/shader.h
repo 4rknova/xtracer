@@ -1,5 +1,5 @@
-#ifndef XTRACER_SHADER_H_INCLUDED
-#define XTRACER_SHADER_H_INCLUDED
+#ifndef XTGUI_SHADER_H_INCLUDED
+#define XTGUI_SHADER_H_INCLUDED
 
 #include <vector>
 #include <nmath/vector.h>
@@ -58,4 +58,4 @@ class Program {
 
 bool bind_program(const Program *prog);
 
-#endif	/* XTRACER_SHADER_H_INCLUDED */
+#endif	/* XTGUI_SHADER_H_INCLUDED */

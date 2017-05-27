@@ -1,5 +1,5 @@
-#ifndef QUASAR_GUI_WIDGERS_H
-#define QUASAR_GUI_WIDGETS_H
+#ifndef XTGUI_GUI_WIDGERS_H
+#define XTGUI_GUI_WIDGETS_H
 
 #include <queue>
 #include <xtcore/context.h>
@@ -27,4 +27,4 @@ void draw_widgets(state_t *state);
 
 } /* namespace gui */
 
-#endif /* QUASAR_GUI_WIDGETS_H */
+#endif /* XTGUI_GUI_WIDGETS_H */

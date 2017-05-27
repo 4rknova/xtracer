@@ -78,6 +78,8 @@ void Renderer::render(void)
             }
         }
 
+        tile->submit();
+
 		#pragma omp critical
 		{
 			++progress;

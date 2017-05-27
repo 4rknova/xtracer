@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include "ext/imgui.h"
 #include "ext/imgui_impl_glfw_gl3.h"
+#include "config.h"
 #include "state.h"
 #include "widgets.h"
 

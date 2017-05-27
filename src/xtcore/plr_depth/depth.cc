@@ -101,6 +101,8 @@ void Renderer::render_depth()
             }
         }
 
+        tile->submit();
+
 		#pragma omp critical
 		{
 			++progress;

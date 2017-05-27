@@ -1,4 +1,4 @@
-data  = data
+data  = data/conference
 title = conference room
 descr = conference room
 versn = 0.3

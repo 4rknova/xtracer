@@ -10,8 +10,14 @@ void task_render(workspace_t *ws)
         ws->context.init();
         ws->setup_callbacks();
         ws->renderer->setup(ws->context);
+        ws->setup_callbacks();
         ws->renderer->render();
     }
+}
+
+void task_load(workspace_t *ws)
+{
+    ws->context.scene.load(ws->source_file.c_str(), nullptr);
 }
 
 int render(workspace_t *ws)
@@ -23,7 +29,9 @@ int render(workspace_t *ws)
 
 int load(workspace_t *ws)
 {
-    return ws->context.scene.load(ws->source_file.c_str(), nullptr);
+    std::thread t(task_load, ws);
+    t.detach();
+    return 0;
 }
 
 int save(workspace_t *ws)

@@ -1,5 +1,5 @@
-#ifndef XTRACER_GUI_WORKSPACE_H_INCLUDED
-#define XTRACER_GUI_WORKSPACE_H_INCLUDED
+#ifndef XTGUI_GUI_WORKSPACE_H_INCLUDED
+#define XTGUI_GUI_WORKSPACE_H_INCLUDED
 
 #include <string>
 #include <queue>
@@ -48,4 +48,4 @@ struct workspace_t
     {}
 };
 
-#endif /* XTRACER_GUI_WORKSPACE_H_INCLUDED */
+#endif /* XTGUI_GUI_WORKSPACE_H_INCLUDED */

@@ -26,7 +26,7 @@ xtracer::render::tile_t *ws_handler_t::pop()
 void workspace_t::init()
 {
     deinit();
-
+    glDeleteTextures(1, &texture);
     glGenTextures(1, &texture);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture);
