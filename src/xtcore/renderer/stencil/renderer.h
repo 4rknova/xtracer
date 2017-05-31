@@ -8,8 +8,8 @@
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include <nplatform/timer.h>
-#include "../scene.h"
-#include "../renderer.h"
+#include <xtcore/scene.h>
+#include <xtcore/renderer.h>
 
 using nimg::ColorRGBf;
 using nimg::Pixmap;

@@ -3,7 +3,7 @@
 
 #include <string>
 #include <list>
-#include "context.h"
+#include <xtcore/context.h>
 
 using xtracer::render::params_t;
 

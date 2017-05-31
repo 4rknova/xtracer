@@ -2,19 +2,17 @@
 #include <string>
 #include <queue>
 #include <vector>
-#include <xtcore/config.h>
 #include <xtcore/log.h>
 #include "ext/imgui.h"
 #include "ext/stb_image.h"
+#include "config.h"
 #include "shader.h"
 #include "state.h"
 #include "action.h"
 #include "logo.h"
 #include "widgets.h"
 
-#include <xtcore/plr_photonmapper/renderer.h>
-#include <xtcore/plr_depth/depth.h>
-#include <xtcore/plr_stencil/renderer.h>
+#include "mainmenu.h"
 
 #define GUI_SIDEPANEL_WIDTH        (325)
 #define WORKSPACE_PROP_CONF_HEIGHT (300)
@@ -22,16 +20,7 @@
 
 #define MIN(a,b) (a>b?b:a)
 #define MAX(a,b) (a>b?a:b)
-
-
-#define WIN_FLAGS_SET_0 ( ImGuiWindowFlags_NoCollapse \
-                        | ImGuiWindowFlags_NoTitleBar \
-                        | ImGuiWindowFlags_NoResize   \
-                        | ImGuiWindowFlags_NoMove)
-
-#define WIN_FLAGS_SET_1 WIN_FLAGS_SET_0 \
-                        | ImGuiWindowFlags_HorizontalScrollbar
-
+#define STRLEN_MAX (512)
 
 namespace gui {
 
@@ -60,8 +49,6 @@ static const char *postsdr_source_frag =
 
 	"}\n";
 
-size_t                    active_workspace = 0;
-std::vector<workspace_t*> workspaces;
 
 void slider_float(const char *name, float &val, float a, float b)
 {
@@ -75,14 +62,6 @@ void slider_int(const char *name, size_t &val, size_t a, size_t b)
     int tmp = val;
     ImGui::SliderInt(name, &tmp, a, b);
     val = tmp;
-}
-
-void draw_group_logo(state_t *state)
-{
-    ImGui::BeginGroup();
-    ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-   	ImGui::Text("v%s", xtcore::get_version());
-    ImGui::EndGroup();
 }
 
 void draw_group_render_controls(workspace_t *ws)
@@ -109,6 +88,26 @@ void draw_group_render_config(workspace_t *ws)
     slider_int("Samples"        , ws->context.params.samples  , 1, 32);
     slider_int("Threads"        , ws->context.params.threads  , 1, 32);
     ImGui::EndGroup();
+}
+
+void draw_edit_str(const char *label, std::string &value)
+{
+    static char _temp[STRLEN_MAX];
+    memset(_temp, 0, STRLEN_MAX);
+    strncpy(_temp, value.c_str(), STRLEN_MAX);
+	ImGui::PushItemWidth(100);
+    ImGui::InputText(label, _temp, STRLEN_MAX, ImGuiInputTextFlags_EnterReturnsTrue);
+	ImGui::PopItemWidth();
+}
+
+void draw_edit_float(const char *label, float value)
+{
+    static float _temp = value;
+	ImGui::PushItemWidth(100);
+    if (ImGui::InputFloat(label, &_temp, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsDecimal)) {
+		value = _temp;
+	}
+	ImGui::PopItemWidth();
 }
 
 void draw_render_scenegraph(workspace_t *ws)
@@ -142,6 +141,18 @@ void draw_render_scenegraph(workspace_t *ws)
 			MatCollection::iterator et = ws->context.scene.m_materials.end();
 			for (; it!=et; ++it) {
 				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+					for (size_t s = 0; s < (*it).second->get_scalar_count(); ++s) {
+						std::string _temp;
+						float val = (*it).second->get_scalar_by_index(s,&_temp);
+						draw_edit_float(_temp.c_str(), val);
+					}
+					for (size_t s = 0; s < (*it).second->get_sampler_count(); ++s) {
+						std::string _temp;
+						(*it).second->get_sampler_by_index(s,&_temp);
+						if (ImGui::TreeNodeEx(_temp.c_str())) {
+							ImGui::TreePop();
+						}
+					}
 					ImGui::TreePop();
 				}
 			}
@@ -152,8 +163,8 @@ void draw_render_scenegraph(workspace_t *ws)
 			ObjCollection::iterator et = ws->context.scene.m_objects.end();
 			for (; it!=et; ++it) {
 				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-					ImGui::Text("Geometry : %s", (*it).second->geometry.c_str());
-					ImGui::Text("Material : %s", (*it).second->material.c_str());
+                    draw_edit_str("Geometry", (*it).second->geometry);
+                    draw_edit_str("Material", (*it).second->material);
 					ImGui::TreePop();
 				}
 			}
@@ -219,83 +230,6 @@ void render_background(state_t *state)
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
-
-void render(workspace_t *ws, xtracer::render::IRenderer *r)
-{
-    delete ws->renderer;
-    ws->renderer = r;
-    action::render(ws);
-}
-
-void render_main_menu(state_t *state)
-{
-	static bool _flag_popup_win_load  = false;
-	static bool _flag_popup_win_about = false;
-
-    if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open"  , "")) { _flag_popup_win_load  = true; }
-            if (ImGui::MenuItem("About" , "")) { _flag_popup_win_about = true; }
-            if (ImGui::MenuItem("Exit"  , "")) { action::quit();              }
-            ImGui::EndMenu();
-        }
-        if (workspaces.size() > 0) {
-            if  (ImGui::BeginMenu("Workspaces")) {
-                for (auto& i : workspaces) {
-            	    std::string name = i->source_file.c_str();
-                   	if (ImGui::MenuItem(name.c_str())) state->workspace = i;
-                }
-                ImGui::EndMenu();
-            }
-            if  (ImGui::BeginMenu("Render")) {
-                if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtracer::renderer::depth::Renderer()); }
-                if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtracer::renderer::stencil::Renderer()); }
-                if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
-                ImGui::EndMenu();
-            }
-        }
-        ImGui::EndMainMenuBar();
-    }
-
-	if (_flag_popup_win_load ) { ImGui::OpenPopup("Load");  }
-	if (_flag_popup_win_about) { ImGui::OpenPopup("About"); }
-
-    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
-	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0))
-	{
-		static char filepath[256];
-		ImGui::InputText("File", filepath, 256);
-
-        size_t path_given = (strlen(filepath) > 0);
-        const char *text_button = (path_given > 0 ? "OK" : "Cancel");
-
-	    if (ImGui::Button(text_button, ImVec2(300,0)))
-		{
-            if (path_given) {
-    			workspace_t *ws = new workspace_t;
-		    	ws->source_file = filepath;
-                ws->init();
-    			action::load(ws);
-                workspaces.push_back(ws);
-                state->workspace = ws;
-            }
-			ImGui::CloseCurrentPopup();
-			_flag_popup_win_load = false;
-		}
-	    ImGui::EndPopup();
-	}
-	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_0))
-    {
-        draw_group_logo(state);
-        ImGui::NewLine();
-	    if (ImGui::Button("OK", ImVec2(300,0))){
-			ImGui::CloseCurrentPopup();
-            _flag_popup_win_about = false;
-        }
-	    ImGui::EndPopup();
-    }
-}
-
 
 void render_workspace(state_t *state)
 {

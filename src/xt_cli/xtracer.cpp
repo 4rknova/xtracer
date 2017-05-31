@@ -6,17 +6,16 @@
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
-
+#include <xtcore/config.h>
 #include <xtcore/proto.h>
 #include <xtcore/scene.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/log.h>
 #include <xtcore/context.h>
-#include <xtcore/argparse.h>
-
-#include <xtcore/plr_photonmapper/renderer.h>
-#include <xtcore/plr_stencil/renderer.h>
-#include <xtcore/plr_depth/depth.h>
+#include <xtcore/renderer/photon_mapper/renderer.h>
+#include <xtcore/renderer/stencil/renderer.h>
+#include <xtcore/renderer/depth/renderer.h>
+#include "argparse.h"
 
 #define PROGRESS_BAR_LENGTH (15)
 
@@ -48,7 +47,7 @@ struct ws_handler_done_t : public xtracer::render::tile_event_handler_t
     {
        mut.lock();
        ++completed;
-       printf("\rRendering.. %5.2f%% @ %i", (float)completed/total * 100.f, workers);
+       printf("\rRendering.. %5.2f%% @ %lu", (float)completed/total * 100.f, workers);
        fflush(stdout);
        --workers;
        mut.unlock();
@@ -61,11 +60,11 @@ ws_handler_init_t handler_init;
 int main(int argc, char **argv)
 {
 	if (argc == 2 && ARGUMENT(1, ARG_CLI_VERSION)) {
-		Log::handle().post_message("%s", XTRACER_VERSION);
+		Log::handle().post_message("%s", xtcore::get_version());
 		return 1;
 	}
 
-	Log::handle().post_message("xtracer %s (C) 2010-%s Nikos Papadopoulos", XTRACER_VERSION, XTRACER_YEAR);
+	Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
     std::string renderer_name, outdir, scene_path, camera;
     xtracer::render::params_t params;

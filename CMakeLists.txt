@@ -7,13 +7,6 @@ find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 
 execute_process(
-    COMMAND date +"%Y"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE DEF_YEAR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-execute_process(
     COMMAND git describe --long
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE DEF_VERSION
@@ -51,9 +44,9 @@ file(GLOB SRC_XTCORE
     ${PATH_SRC_XTCORE}/*.c
     ${PATH_SRC_XTCORE}/*.cc
     ${PATH_SRC_XTCORE}/*.cpp
-    ${PATH_SRC_XTCORE}/*/*.c
-    ${PATH_SRC_XTCORE}/*/*.cc
-    ${PATH_SRC_XTCORE}/*/*.cpp
+    ${PATH_SRC_XTCORE}/*/*/*.c
+    ${PATH_SRC_XTCORE}/*/*/*.cc
+    ${PATH_SRC_XTCORE}/*/*/*.cpp
 )
 
 file(GLOB SRC_FRONTEND_CLI
@@ -77,11 +70,13 @@ set_target_properties(xtcore_dynamic PROPERTIES OUTPUT_NAME xtcore)
 target_include_directories(xtcore_static PUBLIC
     ${PATH_LIB}
     ${PATH_EXT}
+    ${PATH_SRC}
 )
 
 target_include_directories(xtcore_dynamic PUBLIC
     ${PATH_LIB}
     ${PATH_EXT}
+    ${PATH_SRC}
 )
 
 add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
@@ -106,13 +101,15 @@ SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
-target_compile_definitions(xtcore_static  PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
-target_compile_definitions(xtcore_dynamic PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
-target_compile_definitions(xtracer_cli PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
-target_compile_definitions(xtracer_gui PRIVATE XTRACER_YEAR=""${DEF_YEAR}"" XTRACER_VERSION="${DEF_VERSION}")
+set(DEFS XTRACER_VERSION="${DEF_VERSION}")
+
+MESSAGE( STATUS ${DEFS})
+
+target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
+target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
 
 enable_testing()
 file(MAKE_DIRECTORY ${PATH_TEST})

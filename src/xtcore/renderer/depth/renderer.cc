@@ -10,16 +10,14 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
-#include "../tile.h"
-#include "../aa.h"
+#include <xtcore/tile.h>
+#include <xtcore/aa.h>
 
 #include "renderer.h"
 
 namespace xtracer {
     namespace renderer {
-        namespace stencil {
-
-using ncf::util::path_comp;
+        namespace depth {
 
 Renderer::Renderer()
 	: m_context(NULL)
@@ -32,8 +30,11 @@ void Renderer::setup(xtracer::render::context_t &context)
 
 void Renderer::render(void)
 {
-    if (!m_context) return;
+    if (m_context) render_depth();
+}
 
+void Renderer::render_depth()
+{
 	// precalculate some constants
 	const size_t w          = m_context->params.width;
 	const size_t h          = m_context->params.height;
@@ -59,18 +60,26 @@ void Renderer::render(void)
 	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
 	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
 
-                ColorRGBf color;
+                nimg::ColorRGBf color;
 
+                // antialiasing loop
                 for (size_t aa = 0; aa < samples.size(); ++aa) {
                     float rx = (float)x + samples[aa].x;
                     float ry = (float)y + samples[aa].y;
 
 			        NMath::IntInfo info;
-                    std::string obj;
+            		memset(&info, 0, sizeof(info));
+
                     for (float dofs = 0; dofs < s; ++dofs) {
                   	 	NMath::Ray ray = cam->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
-                        float res = m_context->scene.intersection(ray, info, obj) ? 1. : 0.;
-                        color += nimg::ColorRGBAf(res, res, res) * d;
+                  		std::string obj;
+                        float depth = 0.f;
+
+                        if (m_context->scene.intersection(ray, info, obj)) {
+                            NMath::scalar_t  d = (ray.origin - info.point).length();
+                            depth = 1. / log(d);
+                        }
+                        color += nimg::ColorRGBf(depth, depth, depth) * d;
                     }
                 }
 
@@ -79,20 +88,9 @@ void Renderer::render(void)
         }
 
         tile->submit();
-
-		#pragma omp critical
-		{
-			++progress;
-			std::cout.setf(std::ios::fixed, std::ios::floatfield);
-			std::cout.setf(std::ios::showpoint);
-			std::cout << "\rRendering "
-                      << std::setw(6) << std::setprecision(2)
-                      << progress / tile_count * 100.f << "%"
-                      << " @ " << omp_get_num_threads() << "T" << std::flush;
-		}
     }
 }
 
-        } /* namespace stencil */
+        } /* namespace depth */
     } /* namespace renderer */
 } /* namespace xtracer */

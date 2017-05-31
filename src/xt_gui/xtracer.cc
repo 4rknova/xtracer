@@ -32,6 +32,12 @@ int main(int argc, char** argv)
                                         , argv[0]
                                         , NULL, NULL);
     glfwMakeContextCurrent(window);
+
+    /* The following line is required for outdated versions
+    ** of libglew and is introduced as a fix for Ubuntu builds.
+    */
+    glewExperimental = GL_TRUE;
+
     glewInit();
     ImGui_ImplGlfwGL3_Init(window, true);
     gui::init(&state);

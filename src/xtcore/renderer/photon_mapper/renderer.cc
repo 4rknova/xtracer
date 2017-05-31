@@ -9,8 +9,8 @@
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
-#include "../tile.h"
-#include "../aa.h"
+#include <xtcore/tile.h>
+#include <xtcore/aa.h>
 #include "renderer.h"
 
 #define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */

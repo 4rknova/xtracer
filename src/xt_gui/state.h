@@ -1,6 +1,7 @@
 #ifndef XTGUI_GUI_STATE_H
 #define XTGUI_GUI_STATE_H
 
+#include <vector>
 #include "opengl.h"
 #include "workspace.h"
 
@@ -28,6 +29,7 @@ struct state_t
     window_t     window;
     workspace_t *workspace;
 
+    std::vector<workspace_t*> workspaces;
     state_t();
 };
 

@@ -66,6 +66,49 @@ nimg::ColorRGBf IMaterial::get_sample(const char *name, const NMath::Vector3f &t
     return (*it).second->sample(tc);
 }
 
+NMath::scalar_t IMaterial::get_scalar_by_index(size_t idx, std::string *name)
+{
+    std::map<std::string, NMath::scalar_t>::iterator it = m_scalars.begin();
+    std::map<std::string, NMath::scalar_t>::iterator et = m_scalars.end();
+
+    size_t counter = 0;
+    for (; (it != et) && (++counter <= idx); ++it);
+
+    if (name != 0) {
+        name->clear();
+        name->append((*it).first);
+    }
+
+    return (*it).second;
+}
+
+ISampler *IMaterial::get_sampler_by_index(size_t idx, std::string *name)
+{
+    std::map<std::string, ISampler*>::iterator it = m_samplers.begin();
+    std::map<std::string, ISampler*>::iterator et = m_samplers.end();
+
+    size_t counter = 0;
+    for (; (it != et) && (++counter <= idx); ++it);
+
+    if (name != 0) {
+        name->clear();
+        name->append((*it).first);
+    }
+
+    return (*it).second;
+}
+
+size_t IMaterial::get_scalar_count() const
+{
+    return m_scalars.size();
+}
+
+size_t IMaterial::get_sampler_count() const
+{
+    return m_samplers.size();
+}
+
+
 int IMaterial::purge_sampler(const char *name)
 {
     return purge(m_samplers, name);
