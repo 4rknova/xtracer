@@ -1,10 +1,10 @@
 #include "sampler.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 ISampler::~ISampler()
 {}
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

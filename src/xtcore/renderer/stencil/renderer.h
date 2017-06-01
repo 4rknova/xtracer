@@ -1,5 +1,5 @@
-#ifndef XTRACER_RENDERER_HPP_INCLUDED
-#define XTRACER_RENDERER_HPP_INCLUDED
+#ifndef XTPLUGIN_RENDERER_STENCIL_H_INCLUDED
+#define XTPLUGIN_RENDERER_STENCIL_H_INCLUDED
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
@@ -14,24 +14,24 @@
 using nimg::ColorRGBf;
 using nimg::Pixmap;
 
-namespace xtracer {
+namespace xtcore {
     namespace renderer {
         namespace stencil {
 
-class Renderer : public xtracer::render::IRenderer
+class Renderer : public xtcore::render::IRenderer
 {
 	public:
 	Renderer();
 
-	virtual void setup(xtracer::render::context_t &context);
+	virtual void setup(xtcore::render::context_t &context);
 	virtual void render();
 
 	private:
-    xtracer::render::context_t *m_context;
+    xtcore::render::context_t *m_context;
 };
 
         } /* namespace stencil */
     } /* namespace renderer */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_RENDERER_HPP_INCLUDED */
+#endif /* XTPLUGIN_RENDERER_STENCIL_H_INCLUDED */

@@ -3,10 +3,10 @@
 #include <nimg/color.h>
 #include "extrude.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace auxiliary {
 
-void extrude(nmesh::object_t *obj, xtracer::assets::Cubemap *cb)
+void extrude(nmesh::object_t *obj, xtcore::assets::Cubemap *cb)
 {
     if (!obj || !cb) return;
 

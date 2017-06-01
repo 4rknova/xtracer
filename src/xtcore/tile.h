@@ -1,11 +1,11 @@
-#ifndef XTRACER_TILE_H_INCLUDED
-#define XTRACER_TILE_H_INCLUDED
+#ifndef XTCORE_TILE_H_INCLUDED
+#define XTCORE_TILE_H_INCLUDED
 
 #include <vector>
 #include <cstddef>
 #include <nimg/pixmap.h>
 
-namespace xtracer {
+namespace xtcore {
     namespace render {
 
 struct tile_t;  // Forward Declaration
@@ -56,6 +56,6 @@ typedef std::vector<tile_t> Tileset;
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size);
 
     } /* namespace render */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_TILE_H_INCLUDED */
+#endif /* XTCORE_TILE_H_INCLUDED */

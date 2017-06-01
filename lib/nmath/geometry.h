@@ -1,5 +1,5 @@
-#ifndef XTCORE_GEOMETRY_H_INCLUDED
-#define XTCORE_GEOMETRY_H_INCLUDED
+#ifndef NMATH_GEOMETRY_H_INCLUDED
+#define NMATH_GEOMETRY_H_INCLUDED
 
 #include "vector.h"
 #include "aabb.h"

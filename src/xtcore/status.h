@@ -1,5 +1,5 @@
-#ifndef XTRACER_STATUS_H_INCLUDED
-#define XTRACER_STATUS_H_INCLUDED
+#ifndef XTCORE_STATUS_H_INCLUDED
+#define XTCORE_STATUS_H_INCLUDED
 
 typedef enum STATUS
 {
@@ -8,4 +8,4 @@ typedef enum STATUS
 
 } Status;
 
-#endif /* XTRACER_STATUS_H_INCLUDED */
+#endif /* XTCORE_STATUS_H_INCLUDED */

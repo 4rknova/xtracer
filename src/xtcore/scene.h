@@ -1,5 +1,5 @@
-#ifndef XTRACER_SCENE_HPP_INCLUDED
-#define XTRACER_SCENE_HPP_INCLUDED
+#ifndef XTCORE_SCENE_HPP_INCLUDED
+#define XTCORE_SCENE_HPP_INCLUDED
 
 #include <string>
 #include <vector>
@@ -11,22 +11,22 @@
 
 #include "camera.h"
 #include "material.h"
-#include "texture.h"
+#include "sampler_tex.h"
 #include "geometry.h"
 #include "object.h"
 #include "cubemap.h"
 
 using nimg::ColorRGBf;
 
-typedef std::map<std::string, xtracer::assets::ICamera   *> CamCollection;
-typedef std::map<std::string, xtracer::assets::IMaterial *> MatCollection;
-typedef std::map<std::string, xtracer::assets::Geometry  *> GeoCollection;
-typedef std::map<std::string, xtracer::assets::Object    *> ObjCollection;
+typedef std::map<std::string, xtcore::assets::ICamera   *> CamCollection;
+typedef std::map<std::string, xtcore::assets::IMaterial *> MatCollection;
+typedef std::map<std::string, xtcore::assets::Geometry  *> GeoCollection;
+typedef std::map<std::string, xtcore::assets::Object    *> ObjCollection;
 
 struct light_t
 {
-    xtracer::assets::Geometry  *light;
-    xtracer::assets::IMaterial *material;
+    xtcore::assets::Geometry  *light;
+    xtcore::assets::IMaterial *material;
 };
 
 class Scene
@@ -49,7 +49,7 @@ class Scene
 		const ColorRGBf &ambient();
 		void ambient(const ColorRGBf &ambient);
 
-		xtracer::assets::ICamera *get_camera();
+		xtcore::assets::ICamera *get_camera();
         std::string camera;
 
         nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
@@ -78,10 +78,10 @@ class Scene
 		// The scene's source filepath and filename
 		std::string m_name;
 		std::string m_source;
-        xtracer::assets::Cubemap *m_cubemap;
+        xtcore::assets::Cubemap *m_cubemap;
 
 		// This will cleanup all the allocated memory
 		void release();
 };
 
-#endif /* XTRACER_SCENE_HPP_INCLUDED */
+#endif /* XTCORE_SCENE_HPP_INCLUDED */

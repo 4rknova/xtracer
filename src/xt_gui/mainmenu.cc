@@ -12,19 +12,11 @@
 
 namespace gui {
 
-void render(workspace_t *ws, xtracer::render::IRenderer *r)
+void render(workspace_t *ws, xtcore::render::IRenderer *r)
 {
     delete ws->renderer;
     ws->renderer = r;
     action::render(ws);
-}
-
-void draw_group_logo(state_t *state)
-{
-    ImGui::BeginGroup();
-    ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-   	ImGui::Text("v%s", xtcore::get_version());
-    ImGui::EndGroup();
 }
 
 void render_main_menu(state_t *state)
@@ -47,8 +39,8 @@ void render_main_menu(state_t *state)
                 ImGui::EndMenu();
             }
             if  (ImGui::BeginMenu("Render")) {
-                if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtracer::renderer::depth::Renderer()); }
-                if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtracer::renderer::stencil::Renderer()); }
+                if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
+                if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }
                 if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
                 ImGui::EndMenu();
             }
@@ -89,9 +81,19 @@ void render_main_menu(state_t *state)
 	}
 	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_0))
     {
-        draw_group_logo(state);
+        ImGui::SameLine(ImGui::GetWindowWidth() - 425);
+        ImGui::BeginGroup();
         ImGui::NewLine();
-	    if (ImGui::Button("OK", ImVec2(300,0))){
+        ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
+        ImGui::Text("v%s", xtcore::get_version());
+        ImGui::NewLine();
+        ImGui::EndGroup();
+        ImGui::NewLine();
+        ImGui::Text(xtcore::get_license());
+        ImGui::NewLine();
+        ImGui::NewLine();
+        ImGui::SameLine(ImGui::GetWindowWidth() - 100);
+	    if (ImGui::Button("OK", ImVec2(100,0))){
 			ImGui::CloseCurrentPopup();
             _flag_popup_win_about = false;
         }

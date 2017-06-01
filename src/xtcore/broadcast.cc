@@ -8,7 +8,7 @@
 #define IP   "255.255.255.255"
 #define PORT 8080
 
-namespace xtracer {
+namespace xtcore {
     namespace network {
 
 int broadcast(const char *message)
@@ -47,4 +47,4 @@ int broadcast(const char *message)
 }
 
     } /* namespace network */
-} /* namespace xtracer */
+} /* namespace xtcore */

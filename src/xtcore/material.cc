@@ -2,7 +2,7 @@
 #include "log.h"
 #include "material.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 IMaterial::IMaterial()
@@ -135,4 +135,4 @@ int IMaterial::add_sampler(const char *name, ISampler *sampler)
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

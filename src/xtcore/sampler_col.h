@@ -1,9 +1,9 @@
-#ifndef XTRACER_SAMPLER_COLOR_H_INCLUDED
-#define XTRACER_SAMPLER_COLOR_H_INCLUDED
+#ifndef XTCORE_SAMPLER_COLOR_H_INCLUDED
+#define XTCORE_SAMPLER_COLOR_H_INCLUDED
 
 #include "sampler.h"
 
-namespace xtracer {
+namespace xtcore {
 
 class SamplerColor
 {
@@ -16,6 +16,6 @@ class SamplerColor
     nimg::ColorRGBf m_color;
 };
 
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_SAMPLER_COLOR_H_INCLUDED */
+#endif /* XTCORE_SAMPLER_COLOR_H_INCLUDED */

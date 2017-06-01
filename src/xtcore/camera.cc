@@ -1,10 +1,10 @@
 #include "camera.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 ICamera::~ICamera()
 {}
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

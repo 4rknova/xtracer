@@ -14,7 +14,7 @@ Shader::Shader(unsigned int type)
 	shader = glCreateShader(type);
 	compiled = false;
 
-	assert(glGetError() == GL_NO_ERROR);
+//	assert(glGetError() == GL_NO_ERROR);
 }
 
 Shader::~Shader()
@@ -27,7 +27,7 @@ void Shader::set_source(const char *src)
 	glShaderSource(shader, 1, &src, 0);
 	compiled = false;
 
-	assert(glGetError() == GL_NO_ERROR);
+//	assert(glGetError() == GL_NO_ERROR);
 }
 
 bool Shader::compile()
@@ -110,7 +110,7 @@ Program::Program()
 {
 	prog = glCreateProgram();
 	linked = false;
-	assert(glGetError() == GL_NO_ERROR);
+//	assert(glGetError() == GL_NO_ERROR);
 }
 
 Program::~Program()
@@ -122,7 +122,7 @@ void Program::add_shader(Shader *shader)
 {
 	if(shader->compile()) {
 		glAttachShader(prog, shader->shader);
-		assert(glGetError() == GL_NO_ERROR);
+//		assert(glGetError() == GL_NO_ERROR);
 
 		shaders.push_back(shader);
 		linked = false;
@@ -139,7 +139,7 @@ bool Program::link()
 	if(len) {
 		char *buf = (char*)alloca(len + 1);
 		glGetProgramInfoLog(prog, len, &len, buf);
-		assert(glGetError() == GL_NO_ERROR);
+//		assert(glGetError() == GL_NO_ERROR);
 		fprintf(stderr, "linker: %s\n", buf);
 	}
 

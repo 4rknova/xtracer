@@ -1,11 +1,11 @@
-#ifndef XTRACER_CONTEXT_H_INCLUDED
-#define XTRACER_CONTEXT_H_INCLUDED
+#ifndef XTCORE_CONTEXT_H_INCLUDED
+#define XTCORE_CONTEXT_H_INCLUDED
 
 #include "nimg/pixmap.h"
 #include "scene.h"
 #include "tile.h"
 
-namespace xtracer {
+namespace xtcore {
 	namespace render {
 
 struct params_t
@@ -45,6 +45,6 @@ struct context_t
 void assemble(nimg::Pixmap &pixmap, const context_t &context);
 
 	} /* namespace render */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_CONTEXT_H_INCLUDED */
+#endif /* XTCORE_CONTEXT_H_INCLUDED */

@@ -1,9 +1,9 @@
-#ifndef XTRACER_OBJECT_H_INCLUDED
-#define XTRACER_OBJECT_H_INCLUDED
+#ifndef XTCORE_OBJECT_H_INCLUDED
+#define XTCORE_OBJECT_H_INCLUDED
 
 #include <string>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class Object
@@ -11,12 +11,11 @@ class Object
 	public:
 	std::string geometry;
 	std::string material;
-    bool flag_directional_uvs;
 
     Object();
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_OBJECT_H_INCLUDED */
+#endif /* XTCORE_OBJECT_H_INCLUDED */

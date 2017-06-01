@@ -4,6 +4,7 @@
 namespace xtcore {
 
 const char *get_version();
+const char *get_license();
 
 } /* namespace xtcore */
 

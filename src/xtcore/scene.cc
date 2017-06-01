@@ -58,16 +58,16 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
 
-    std::map<std::string, xtracer::assets::Object*>::iterator oit = m_objects.begin();
-    std::map<std::string, xtracer::assets::Object*>::iterator oet = m_objects.end();
+    std::map<std::string, xtcore::assets::Object*>::iterator oit = m_objects.begin();
+    std::map<std::string, xtcore::assets::Object*>::iterator oet = m_objects.end();
 
     for(; oit != oet; ++oit) {
         if (!(*oit).second) continue;
 
-        std::map<std::string, xtracer::assets::Geometry* >::iterator git = m_geometry.find((*oit).second->geometry);
-        std::map<std::string, xtracer::assets::Geometry* >::iterator get = m_geometry.end();
-        std::map<std::string, xtracer::assets::IMaterial*>::iterator mit = m_materials.find((*oit).second->material);
-        std::map<std::string, xtracer::assets::IMaterial*>::iterator met = m_materials.end();
+        std::map<std::string, xtcore::assets::Geometry* >::iterator git = m_geometry.find((*oit).second->geometry);
+        std::map<std::string, xtcore::assets::Geometry* >::iterator get = m_geometry.end();
+        std::map<std::string, xtcore::assets::IMaterial*>::iterator mit = m_materials.find((*oit).second->material);
+        std::map<std::string, xtcore::assets::IMaterial*>::iterator met = m_materials.end();
 
         if (git != get && mit != met) {
             if (!(*mit).second->is_emissive()) continue;
@@ -171,12 +171,12 @@ int Scene::load(const char *filename, const std::list<std::string> *modifiers)
 
 	size_t count = 0;
 
-	m_source   = xtracer::io::deserialize_cstr(filename);
+	m_source   = xtcore::io::deserialize_cstr(filename);
 	m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
-	m_ambient  = xtracer::io::deserialize_col3(&root, XTPROTO_PROP_IAMBN)
-			   * xtracer::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
+	m_ambient  = xtcore::io::deserialize_col3(&root, XTPROTO_PROP_IAMBN)
+			   * xtcore::io::deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
 
-    m_cubemap = xtracer::io::deserialize_cubemap(m_source.c_str(), &root);
+    m_cubemap = xtcore::io::deserialize_cubemap(m_source.c_str(), &root);
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
@@ -219,7 +219,7 @@ int Scene::load(const char *filename, const std::list<std::string> *modifiers)
 int Scene::create_camera(ncf::NCF *p)
 {
     const char * name = p->get_name();
-    xtracer::assets::ICamera *data = xtracer::io::deserialize_camera(m_source.c_str(), p);
+    xtcore::assets::ICamera *data = xtcore::io::deserialize_camera(m_source.c_str(), p);
     if (!data) return 1;
     destroy_camera(name);
     m_cameras[name] = data;
@@ -229,7 +229,7 @@ int Scene::create_camera(ncf::NCF *p)
 int Scene::create_material(ncf::NCF *p)
 {
     const char * name = p->get_name();
-    xtracer::assets::IMaterial *data = xtracer::io::deserialize_material(m_source.c_str(), p);
+    xtcore::assets::IMaterial *data = xtcore::io::deserialize_material(m_source.c_str(), p);
     if (!data) return 1;
     destroy_material(name);
     m_materials[name] = data;
@@ -239,7 +239,7 @@ int Scene::create_material(ncf::NCF *p)
 int Scene::create_geometry(ncf::NCF *p)
 {
     const char * name = p->get_name();
-    xtracer::assets::Geometry *data = xtracer::io::deserialize_geometry(m_source.c_str(), p);
+    xtcore::assets::Geometry *data = xtcore::io::deserialize_geometry(m_source.c_str(), p);
     if (!data) return 1;
     destroy_geometry(name);
     m_geometry[name] = data;
@@ -249,7 +249,7 @@ int Scene::create_geometry(ncf::NCF *p)
 int Scene::create_object(ncf::NCF *p)
 {
     const char * name = p->get_name();
-    xtracer::assets::Object *data = xtracer::io::deserialize_object(m_source.c_str(), p);
+    xtcore::assets::Object *data = xtcore::io::deserialize_object(m_source.c_str(), p);
     if (!data) return 1;
     destroy_object(name);
     m_objects[name] = data;
@@ -266,10 +266,10 @@ void Scene::ambient(const ColorRGBf &ambient)
 	m_ambient = ambient;
 }
 
-xtracer::assets::ICamera *Scene::get_camera()
+xtcore::assets::ICamera *Scene::get_camera()
 {
-    std::map<std::string, xtracer::assets::ICamera *>::iterator et = m_cameras.end();
-    std::map<std::string, xtracer::assets::ICamera *>::iterator ft;
+    std::map<std::string, xtcore::assets::ICamera *>::iterator et = m_cameras.end();
+    std::map<std::string, xtcore::assets::ICamera *>::iterator ft;
 
     if (camera.empty()) {
         ft = m_cameras.find(XTPROTO_PROP_DEFAULT);
@@ -287,10 +287,10 @@ bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::strin
 {
 	IntInfo test, res;
 
-	std::map<std::string, xtracer::assets::Object *>::iterator it;
+	std::map<std::string, xtcore::assets::Object *>::iterator it;
 	for (it = m_objects.begin(); it != m_objects.end(); it++) {
 		// test all the objects and find the closest intersection
-        xtracer::assets::Geometry *geom = m_geometry[((*it).second)->geometry.c_str()];
+        xtcore::assets::Geometry *geom = m_geometry[((*it).second)->geometry.c_str()];
 
 		if (geom && geom->intersection(ray, &test)) {
 			if(res.t > test.t) {

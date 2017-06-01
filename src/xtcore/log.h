@@ -1,5 +1,5 @@
-#ifndef XTRACER_LOG_HPP_INCLUDED
-#define XTRACER_LOG_HPP_INCLUDED
+#ifndef XTCORE_LOG_HPP_INCLUDED
+#define XTCORE_LOG_HPP_INCLUDED
 
 #include <string>
 #include <vector>
@@ -80,4 +80,4 @@ class Log
 
 #pragma warning (pop)
 
-#endif /* XTRACER_LOG_HPP_INCLUDED */
+#endif /* XTCORE_LOG_HPP_INCLUDED */

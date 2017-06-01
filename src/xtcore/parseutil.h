@@ -1,18 +1,18 @@
-#ifndef XTRACER_PARSEUTIL_H_INCLUDED
-#define XTRACER_PARSEUTIL_H_INCLUDED
+#ifndef XTCORE_PARSEUTIL_H_INCLUDED
+#define XTCORE_PARSEUTIL_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <ncf/ncf.h>
+#include "geometry.h"
 #include "camera.h"
 #include "material.h"
-#include "texture.h"
+#include "sampler_tex.h"
 #include "solidcolor.h"
-#include "geometry.h"
 #include "object.h"
 #include "cubemap.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace io {
 
 /* Default Values */
@@ -31,15 +31,15 @@ NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const N
 NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def = DEFVAL_VEC3);
 nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
 
-xtracer::assets::ICamera    *deserialize_camera   (const char *source, const ncf::NCF *p);
-xtracer::assets::IMaterial  *deserialize_material (const char *source, const ncf::NCF *p);
-xtracer::assets::Texture2D  *deserialize_texture  (const char *source, const ncf::NCF *p);
-xtracer::assets::Geometry   *deserialize_geometry (const char *source, const ncf::NCF *p);
-xtracer::assets::Object     *deserialize_object   (const char *source, const ncf::NCF *p);
-xtracer::assets::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
-xtracer::assets::SolidColor *deserialize_rgba     (const char *source, const ncf::NCF *p);
+xtcore::assets::ICamera    *deserialize_camera   (const char *source, const ncf::NCF *p);
+xtcore::assets::IMaterial  *deserialize_material (const char *source, const ncf::NCF *p);
+xtcore::assets::Texture2D  *deserialize_texture  (const char *source, const ncf::NCF *p);
+xtcore::assets::Geometry   *deserialize_geometry (const char *source, const ncf::NCF *p);
+xtcore::assets::Object     *deserialize_object   (const char *source, const ncf::NCF *p);
+xtcore::assets::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
+xtcore::assets::SolidColor *deserialize_rgba     (const char *source, const ncf::NCF *p);
 
     } /* namespace io */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_PARSEUTIL_H_INCLUDED */
+#endif /* XTCORE_PARSEUTIL_H_INCLUDED */

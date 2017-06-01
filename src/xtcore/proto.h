@@ -1,5 +1,5 @@
-#ifndef XTRACER_PROTO_H_INCLUDED
-#define XTRACER_PROTO_H_INCLUDED
+#ifndef XTCORE_PROTO_H_INCLUDED
+#define XTCORE_PROTO_H_INCLUDED
 
 /*
 **	SYMBOLIC NAME					LITERAL				TYPE			 DESCRIPTION
@@ -120,10 +120,9 @@
 #define XTPROTO_SAMPLERS        "samplers"
 #define XTPROTO_SCALARS         "scalars"
 #define XTPROTO_VALUE           "value"
-#define XTPROTO_DIRECTIONAL_UVS "directional_uvs"
 #define XTPROTO_FLIP_NORMALS    "flip_normals"
 #define XTPROTO_MODIFIERS       "modifiers"
 #define XTPROTO_EXTRUDE         "extrude"
 #define XTPROTO_MULTIPLIER      "multiplier"
 
-#endif /* XTRACER_PROTO_H_INCLUDED */
+#endif /* XTCORE_PROTO_H_INCLUDED */

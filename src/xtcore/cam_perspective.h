@@ -1,5 +1,5 @@
-#ifndef XTRACER_CAM_PERSPECTIVE_H_INCLUDED
-#define XTRACER_CAM_PERSPECTIVE_H_INCLUDED
+#ifndef XTCORE_CAM_PERSPECTIVE_H_INCLUDED
+#define XTCORE_CAM_PERSPECTIVE_H_INCLUDED
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
@@ -10,7 +10,7 @@
 #define XT_CAM_DEFAULT_PROJECTION CAM_PERSPECTIVE_PROJECTION_PERSPECTIVE
 #define XT_CAM_DEFAULT_EYE        CAM_PERSPECTIVE_EYE_MONO
 
-class CamPerspective : public xtracer::assets::ICamera
+class CamPerspective : public xtcore::assets::ICamera
 {
 	public:
 		NMath::Vector3f target;
@@ -25,4 +25,4 @@ class CamPerspective : public xtracer::assets::ICamera
 		NMath::Ray get_primary_ray(float x, float y, float width, float height);
 };
 
-#endif /* XTRACER_CAM_PERSPECTIVE_H_INCLUDED */
+#endif /* XTCORE_CAM_PERSPECTIVE_H_INCLUDED */

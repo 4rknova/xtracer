@@ -15,3 +15,6 @@ cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 imgui.ini
+
+# procedurally generated source code
+src/xtcore/license.h

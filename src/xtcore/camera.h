@@ -1,9 +1,9 @@
-#ifndef XTRACER_CAMERA_H_INCLUDED
-#define XTRACER_CAMERA_H_INCLUDED
+#ifndef XTCORE_CAMERA_H_INCLUDED
+#define XTCORE_CAMERA_H_INCLUDED
 
 #include <nmath/ray.h>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class ICamera
@@ -16,6 +16,6 @@ class ICamera
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_CAMERA_H_INCLUDED */
+#endif /* XTCORE_CAMERA_H_INCLUDED */

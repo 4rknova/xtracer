@@ -31,9 +31,9 @@ size_t completed = 0;
 size_t total     = 0;
 
 
-struct ws_handler_init_t : public xtracer::render::tile_event_handler_t
+struct ws_handler_init_t : public xtcore::render::tile_event_handler_t
 {
-    void handle_event(xtracer::render::tile_t *tile)
+    void handle_event(xtcore::render::tile_t *tile)
     {
         mut.lock();
         ++workers;
@@ -41,9 +41,9 @@ struct ws_handler_init_t : public xtracer::render::tile_event_handler_t
     }
 };
 
-struct ws_handler_done_t : public xtracer::render::tile_event_handler_t
+struct ws_handler_done_t : public xtcore::render::tile_event_handler_t
 {
-    void handle_event(xtracer::render::tile_t *tile)
+    void handle_event(xtcore::render::tile_t *tile)
     {
        mut.lock();
        ++completed;
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 	Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
     std::string renderer_name, outdir, scene_path, camera;
-    xtracer::render::params_t params;
+    xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
 	if (setup(argc, argv
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
             , params
     )) return 1;
 
-	xtracer::render::context_t context;
+	xtcore::render::context_t context;
 	if (!context.scene.load(scene_path.c_str(), &modifiers)) {
         if (context.scene.m_cameras.size() == 0) {
             Log::handle().post_error("no cameras found");
@@ -88,17 +88,17 @@ int main(int argc, char **argv)
         context.scene.camera = camera;
     } else return 1;
 
-	xtracer::render::IRenderer *renderer = NULL;
+	xtcore::render::IRenderer *renderer = NULL;
 
-    if      (RENDERER("depth")  ) renderer = new xtracer::renderer::depth::Renderer();
-    else if (RENDERER("stencil")) renderer = new xtracer::renderer::stencil::Renderer();
+    if      (RENDERER("depth")  ) renderer = new xtcore::renderer::depth::Renderer();
+    else if (RENDERER("stencil")) renderer = new xtcore::renderer::stencil::Renderer();
     else                          renderer = new Renderer();
 
     context.params = params;
     context.init();
 
-    xtracer::render::Tileset::iterator it = context.tiles.begin();
-    xtracer::render::Tileset::iterator et = context.tiles.end();
+    xtcore::render::Tileset::iterator it = context.tiles.begin();
+    xtcore::render::Tileset::iterator et = context.tiles.end();
     for (; it != et; ++it) {
         (*it).setup_handler_on_init(&handler_init);
         (*it).setup_handler_on_done(&handler_done);
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 
 	    file = outdir + filename + cam  + "_" + renderer_name + ".png";
         nimg::Pixmap fb;
-        xtracer::render::assemble(fb, context);
+        xtcore::render::assemble(fb, context);
 		Log::handle().post_message("Exporting to %s..", file.c_str());
 		int res = nimg::io::save::png(file.c_str(), fb);
         if (res) Log::handle().post_error("Failed to export image file");

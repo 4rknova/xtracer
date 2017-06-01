@@ -1,6 +1,6 @@
 #include "solidcolor.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 void SolidColor::set(nimg::ColorRGBf color)
@@ -14,4 +14,4 @@ nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &tc) const
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

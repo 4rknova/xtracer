@@ -1,10 +1,10 @@
-#ifndef XTRACER_RENDERER_H_INCLUDED
-#define XTRACER_RENDERER_H_INCLUDED
+#ifndef XTCORE_RENDERER_H_INCLUDED
+#define XTCORE_RENDERER_H_INCLUDED
 
 #include <nimg/pixmap.h>
 #include "context.h"
 
-namespace xtracer {
+namespace xtcore {
 	namespace render {
 
 class IRenderer
@@ -18,6 +18,6 @@ class IRenderer
 };
 
 	} /* namespace render */
-} /* namespace xtracer  */
+} /* namespace xtcore  */
 
-#endif /* XTRACER_RENDERER_H_INCLUDED */
+#endif /* XTCORE_RENDERER_H_INCLUDED */

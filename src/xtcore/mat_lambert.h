@@ -1,12 +1,12 @@
-#ifndef XTRACER_MAT_LAMBERT_H_INCLUDED
-#define XTRACER_MAT_LAMBERT_H_INCLUDED
+#ifndef XTCORE_MAT_LAMBERT_H_INCLUDED
+#define XTCORE_MAT_LAMBERT_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
 #include <nimg/color.h>
 #include "material.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class MaterialLambert : public IMaterial
@@ -20,6 +20,6 @@ class MaterialLambert : public IMaterial
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_MAT_LAMBERT_H_INCLUDED */
+#endif /* XTCORE_MAT_LAMBERT_H_INCLUDED */

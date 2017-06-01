@@ -1,7 +1,7 @@
 #include <nmath/prng.h>
 #include "aa.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace antialiasing {
 
 void gen_samples_noaa(SampleSet &samples, size_t level)
@@ -47,4 +47,4 @@ void gen_samples_msaa(SampleSet &samples, size_t level)
 }
 
     } /* namespace antialiasing */
-} /* namespace xtracer */
+} /* namespace xtcore */

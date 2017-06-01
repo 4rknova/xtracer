@@ -4,16 +4,16 @@ ws_handler_t::ws_handler_t(std::mutex *m)
     : mut(m)
 {}
 
-void ws_handler_t::handle_event(xtracer::render::tile_t *tile)
+void ws_handler_t::handle_event(xtcore::render::tile_t *tile)
 {
 	mut->lock();
 	tiles.push(tile);
     mut->unlock();
 }
 
-xtracer::render::tile_t *ws_handler_t::pop()
+xtcore::render::tile_t *ws_handler_t::pop()
 {
-    xtracer::render::tile_t *t = nullptr;
+    xtcore::render::tile_t *t = nullptr;
 
     if (tiles.size() > 0) {
         t = tiles.front();
@@ -59,7 +59,7 @@ void workspace_t::update()
 
     m.lock();
 	while(1) {
-        xtracer::render::tile_t *t = handler_init.pop();
+        xtcore::render::tile_t *t = handler_init.pop();
 
         if (!t) break;
 
@@ -74,7 +74,7 @@ void workspace_t::update()
 	}
 
     while(1) {
-        xtracer::render::tile_t *t = handler_done.pop();
+        xtcore::render::tile_t *t = handler_done.pop();
 
         if (!t) break;
 

@@ -1,14 +1,14 @@
-#ifndef XTRACER_GEOMETRY_H_INCLUDED
-#define XTRACER_GEOMETRY_H_INCLUDED
+#ifndef XTCORE_GEOMETRY_H_INCLUDED
+#define XTCORE_GEOMETRY_H_INCLUDED
 
 #include <nmath/geometry.h>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 typedef NMath::Geometry Geometry;
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_GEOMETRY_H_INCLUDED */
+#endif /* XTCORE_GEOMETRY_H_INCLUDED */

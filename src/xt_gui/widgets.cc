@@ -11,7 +11,7 @@
 #include "action.h"
 #include "logo.h"
 #include "widgets.h"
-
+#include "theme.h"
 #include "mainmenu.h"
 
 #define GUI_SIDEPANEL_WIDTH        (325)
@@ -96,7 +96,10 @@ void draw_edit_str(const char *label, std::string &value)
     memset(_temp, 0, STRLEN_MAX);
     strncpy(_temp, value.c_str(), STRLEN_MAX);
 	ImGui::PushItemWidth(100);
-    ImGui::InputText(label, _temp, STRLEN_MAX, ImGuiInputTextFlags_EnterReturnsTrue);
+    if (ImGui::InputText(label, _temp, STRLEN_MAX, ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        value = _temp;
+    }
 	ImGui::PopItemWidth();
 }
 
@@ -114,6 +117,10 @@ void draw_render_scenegraph(workspace_t *ws)
 {
     ImGui::BeginGroup();
     ImGui::Text("%s", ws->source_file.c_str());
+    ImGui::SameLine(ImGui::GetWindowWidth()-125);
+    if(ImGui::Button("save"  , ImVec2(50,20))) { printf("close"); }
+    ImGui::SameLine();
+    if(ImGui::Button("close" , ImVec2(50,20))) { printf("close"); }
 	ImGui::Separator();
 	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::TreeNodeEx("Cameras", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -188,6 +195,8 @@ void init(state_t *state)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     stbi_image_free(image);
+
+    apply_theme();
 }
 
 void render_background(state_t *state)

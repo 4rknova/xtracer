@@ -9,13 +9,13 @@
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
 
-struct ws_handler_t : public xtracer::render::tile_event_handler_t
+struct ws_handler_t : public xtcore::render::tile_event_handler_t
 {
     ws_handler_t(std::mutex *m);
-    std::queue<xtracer::render::tile_t*> tiles;
+    std::queue<xtcore::render::tile_t*> tiles;
     std::mutex *mut;
-    void handle_event(xtracer::render::tile_t *tile);
-    xtracer::render::tile_t *pop();
+    void handle_event(xtcore::render::tile_t *tile);
+    xtcore::render::tile_t *pop();
 };
 
 struct workspace_t
@@ -23,8 +23,8 @@ struct workspace_t
     GLuint                      texture;
     float                       zoom_multiplier;
     std::string                 source_file;
-    xtracer::render::IRenderer *renderer;
-    xtracer::render::context_t  context;
+    xtcore::render::IRenderer *renderer;
+    xtcore::render::context_t  context;
 
     void init();
     void deinit();

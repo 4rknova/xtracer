@@ -15,7 +15,7 @@
 
 #include "renderer.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace renderer {
         namespace stencil {
 
@@ -25,7 +25,7 @@ Renderer::Renderer()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtracer::render::context_t &context)
+void Renderer::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
 }
@@ -41,9 +41,9 @@ void Renderer::render(void)
     const size_t s          = m_context->params.samples;
     const size_t tile_count = m_context->tiles.size();
 
-    xtracer::antialiasing::SampleSet samples;
-    xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    xtracer::assets::ICamera *cam = m_context->scene.get_camera();
+    xtcore::antialiasing::SampleSet samples;
+    xtcore::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
+    xtcore::assets::ICamera *cam = m_context->scene.get_camera();
     if (!cam) return;
     float d = 1.f / (s * samples.size());
 
@@ -52,7 +52,7 @@ void Renderer::render(void)
 
 	#pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < tile_count; ++i) {
-        xtracer::render::tile_t *tile = &(m_context->tiles[i]);
+        xtcore::render::tile_t *tile = &(m_context->tiles[i]);
 
         tile->init();
 
@@ -84,4 +84,4 @@ void Renderer::render(void)
 
         } /* namespace stencil */
     } /* namespace renderer */
-} /* namespace xtracer */
+} /* namespace xtcore */

@@ -1,10 +1,10 @@
-#ifndef XTRACER_SAMPLER_H_INCLUDED
-#define XTRACER_SAMPLER_H_INCLUDED
+#ifndef XTCORE_SAMPLER_H_INCLUDED
+#define XTCORE_SAMPLER_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 enum FILTERING
@@ -24,7 +24,7 @@ class ISampler
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
 
-#endif /* XTRACER_SAMPLER_H_INCLUDED */
+#endif /* XTCORE_SAMPLER_H_INCLUDED */

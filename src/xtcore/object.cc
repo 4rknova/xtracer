@@ -1,11 +1,10 @@
 #include "object.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 Object::Object()
-    : flag_directional_uvs(false)
 {}
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

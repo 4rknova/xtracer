@@ -27,7 +27,7 @@
 
 #include "parseutil.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace io {
 
 bool deserialize_bool(const char *val, const bool def)
@@ -136,11 +136,11 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
-xtracer::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
+xtcore::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    xtracer::assets::Cubemap *data = new xtracer::assets::Cubemap;
+    xtcore::assets::Cubemap *data = new xtcore::assets::Cubemap;
 
     ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
 
@@ -155,18 +155,18 @@ xtracer::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF
         std::string base, file, fsource = source;
     	ncf::util::path_comp(fsource, base, file);
 
-        data->load((base + posx).c_str(), xtracer::assets::CUBEMAP_FACE_RIGHT);
-        data->load((base + posy).c_str(), xtracer::assets::CUBEMAP_FACE_TOP);
-        data->load((base + posz).c_str(), xtracer::assets::CUBEMAP_FACE_FRONT);
-        data->load((base + negx).c_str(), xtracer::assets::CUBEMAP_FACE_LEFT);
-        data->load((base + negy).c_str(), xtracer::assets::CUBEMAP_FACE_BOTTOM);
-        data->load((base + negz).c_str(), xtracer::assets::CUBEMAP_FACE_BACK);
+        data->load((base + posx).c_str(), xtcore::assets::CUBEMAP_FACE_RIGHT);
+        data->load((base + posy).c_str(), xtcore::assets::CUBEMAP_FACE_TOP);
+        data->load((base + posz).c_str(), xtcore::assets::CUBEMAP_FACE_FRONT);
+        data->load((base + negx).c_str(), xtcore::assets::CUBEMAP_FACE_LEFT);
+        data->load((base + negy).c_str(), xtcore::assets::CUBEMAP_FACE_BOTTOM);
+        data->load((base + negz).c_str(), xtcore::assets::CUBEMAP_FACE_BACK);
     }
     return data;
 }
 
 
-xtracer::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
+xtcore::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -183,7 +183,7 @@ xtracer::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::
     return data;
 }
 
-xtracer::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
+xtcore::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -197,7 +197,7 @@ xtracer::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::
     return data;
 }
 
-xtracer::assets::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
+xtcore::assets::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -210,11 +210,11 @@ xtracer::assets::ICamera *deserialize_camera_erp(const char *source, const ncf::
     return data;
 }
 
-xtracer::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
+xtcore::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    xtracer::assets::ICamera *data = 0;
+    xtcore::assets::ICamera *data = 0;
 
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -226,11 +226,11 @@ xtracer::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF 
 	return data;
 }
 
-xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const ncf::NCF *p)
+xtcore::assets::Geometry *deserialize_geometry_mesh(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtracer::assets::Geometry *data = new (std::nothrow) nmesh::Mesh;
+    xtcore::assets::Geometry *data = new (std::nothrow) nmesh::Mesh;
 
     nmesh::object_t obj;
 
@@ -282,9 +282,9 @@ xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const n
         }
 
         if (mods->query_group(XTPROTO_EXTRUDE)) {
-            xtracer::assets::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
+            xtcore::assets::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
             Log::handle().post_message("Applying modifier: extrude..");
-            xtracer::auxiliary::extrude(&obj, cb);
+            xtcore::auxiliary::extrude(&obj, cb);
         }
     }
 
@@ -294,11 +294,11 @@ xtracer::assets::Geometry *deserialize_geometry_mesh(const char *source, const n
     return data;
 }
 
-xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::NCF *p)
+xtcore::assets::Geometry *deserialize_geometry(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtracer::assets::Geometry *data = 0;
+    xtcore::assets::Geometry *data = 0;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -355,33 +355,33 @@ xtracer::assets::Geometry *deserialize_geometry(const char *source, const ncf::N
 	return data;
 }
 
-xtracer::assets::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
+xtcore::assets::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtracer::assets::MaterialLambert();
+    return new (std::nothrow) xtcore::assets::MaterialLambert();
 }
 
-xtracer::assets::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
+xtcore::assets::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtracer::assets::MaterialPhong();
+    return new (std::nothrow) xtcore::assets::MaterialPhong();
 }
 
-xtracer::assets::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
+xtcore::assets::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtracer::assets::MaterialBlinnPhong();
+    return new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
 }
 
-xtracer::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
+xtcore::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
 {
-    xtracer::assets::SolidColor *sampler = new (std::nothrow) xtracer::assets::SolidColor();
-    ((xtracer::assets::SolidColor *)sampler)->set(deserialize_col3(p, XTPROTO_VALUE));
+    xtcore::assets::SolidColor *sampler = new (std::nothrow) xtcore::assets::SolidColor();
+    ((xtcore::assets::SolidColor *)sampler)->set(deserialize_col3(p, XTPROTO_VALUE));
     return sampler;
 }
 
-xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
+xtcore::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtracer::assets::IMaterial *data = 0;
+    xtcore::assets::IMaterial *data = 0;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -401,7 +401,7 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
         for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
             ncf::NCF *entry = gsamplers->get_group_by_index(i);
 
-            xtracer::assets::ISampler *sampler = 0;
+            xtcore::assets::ISampler *sampler = 0;
             std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
                  if (!type.compare(XTPROTO_TEXTURE)) sampler = deserialize_texture(source, entry);
@@ -421,11 +421,11 @@ xtracer::assets::IMaterial *deserialize_material(const char *source, const ncf::
 	return data;
 }
 
-xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p)
+xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
-	xtracer::assets::Texture2D *data = new (std::nothrow) xtracer::assets::Texture2D;
+	xtcore::assets::Texture2D *data = new (std::nothrow) xtcore::assets::Texture2D;
 
 	std::string script_base, script_filename, fsource = source;
 	ncf::util::path_comp(fsource, script_base, script_filename);
@@ -442,8 +442,8 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::N
 	}
 
   	if      ( filter.empty()
-   	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtracer::assets::FILTERING_NEAREST);  }
-	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtracer::assets::FILTERING_BILINEAR); }
+   	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::assets::FILTERING_NEAREST);  }
+	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtcore::assets::FILTERING_BILINEAR); }
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
 	}
@@ -455,11 +455,11 @@ xtracer::assets::Texture2D *deserialize_texture(const char *source, const ncf::N
     return data;
 }
 
-xtracer::assets::Object *deserialize_object(const char *source, const ncf::NCF *p)
+xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
-    xtracer::assets::Object *data = new (std::nothrow) xtracer::assets::Object;
+    xtcore::assets::Object *data = new (std::nothrow) xtcore::assets::Object;
 
 	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
 	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
@@ -467,14 +467,8 @@ xtracer::assets::Object *deserialize_object(const char *source, const ncf::NCF *
 	data->geometry = deserialize_cstr(g);
 	data->material = deserialize_cstr(m);
 
-    if (p->query_property(XTPROTO_DIRECTIONAL_UVS)) {
-        bool flag = deserialize_bool(p->get_property_by_name(XTPROTO_DIRECTIONAL_UVS));
-        Log::handle().post_message("Using directional uvs..");
-        if (flag) data->flag_directional_uvs = flag;
-    }
-
 	return data;
 }
 
     } /* namespace io */
-} /* namespace xtracer */
+} /* namespace xtcore */

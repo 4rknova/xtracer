@@ -1,11 +1,11 @@
-#ifndef XTRACER_CAM_ERP_H_INCLUDED
-#define XTRACER_CAM_ERP_H_INCLUDED
+#ifndef XTCORE_CAM_ERP_H_INCLUDED
+#define XTCORE_CAM_ERP_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nmath/ray.h>
 #include "camera.h"
 
-class CamERP : public xtracer::assets::ICamera
+class CamERP : public xtcore::assets::ICamera
 {
 	public:
     NMath::Vector3f orientation;
@@ -15,4 +15,4 @@ class CamERP : public xtracer::assets::ICamera
     NMath::Ray get_primary_ray(float x, float y, float width, float height);
 };
 
-#endif /* XTRACER_CAM_ERP_H_INCLUDED */
+#endif /* XTCORE_CAM_ERP_H_INCLUDED */

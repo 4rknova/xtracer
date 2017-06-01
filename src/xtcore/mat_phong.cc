@@ -1,6 +1,6 @@
 #include "mat_phong.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 nimg::ColorRGBf MaterialPhong::shade(
@@ -36,4 +36,4 @@ nimg::ColorRGBf MaterialPhong::shade(
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

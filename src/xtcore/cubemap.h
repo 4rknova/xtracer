@@ -1,11 +1,11 @@
-#ifndef XTRACER_CUBEMAP_H_INCLUDED
-#define XTRACER_CUBEMAP_H_INCLUDED
+#ifndef XTCORE_CUBEMAP_H_INCLUDED
+#define XTCORE_CUBEMAP_H_INCLUDED
 
 #include <nmath/vector.h>
-#include "texture.h"
+#include "sampler_tex.h"
 #include "sampler.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 enum CUBEMAP_FACE
@@ -30,6 +30,6 @@ class Cubemap : public ISampler
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_CUBEMAP_H_INCLUDED */
+#endif /* XTCORE_CUBEMAP_H_INCLUDED */

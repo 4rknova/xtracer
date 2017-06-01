@@ -1,5 +1,5 @@
-#ifndef XTRACER_PLUGIN_H_INCLUDED
-#define XTRACER_PLUGIN_H_INCLUDED
+#ifndef XTCORE_PLUGIN_H_INCLUDED
+#define XTCORE_PLUGIN_H_INCLUDED
 
 #include <stdint.h>
 #include <vector>
@@ -46,4 +46,4 @@ class Exporter;
 typedef Plugin<Renderer> PluginRenderer;
 typedef Plugin<Exporter> PluginExporter;
 
-#endif /* XTRACER_PLUGIN_H_INCLUDED */
+#endif /* XTCORE_PLUGIN_H_INCLUDED */

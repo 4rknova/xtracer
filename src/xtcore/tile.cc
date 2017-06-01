@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "tile.h"
 
-namespace xtracer {
+namespace xtcore {
 	namespace render {
 
 tile_t::tile_t(
@@ -87,4 +87,4 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
 }
 
 	} /* namespace render */
-} /* namespace xtracer */
+} /* namespace xtcore */

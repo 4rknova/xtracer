@@ -1,14 +1,14 @@
 #include "context.h"
 
-#define XTRACER_CONTEXT_DEFAULT_WIDTH  800
-#define XTRACER_CONTEXT_DEFAULT_HEIGHT 800
+#define XTCORE_CONTEXT_DEFAULT_WIDTH  800
+#define XTCORE_CONTEXT_DEFAULT_HEIGHT 800
 
-namespace xtracer {
+namespace xtcore {
     namespace render {
 
 params_t::params_t()
-    : width(XTRACER_CONTEXT_DEFAULT_WIDTH)
-    , height(XTRACER_CONTEXT_DEFAULT_HEIGHT)
+    : width(XTCORE_CONTEXT_DEFAULT_WIDTH)
+    , height(XTCORE_CONTEXT_DEFAULT_HEIGHT)
     , threads(0)
     , samples(1)
     , ssaa(1)
@@ -31,7 +31,7 @@ void assemble(nimg::Pixmap &pixmap, const context_t &context)
     nimg::ColorRGBf col;
 
     for (size_t i = 0; i < context.tiles.size(); ++i) {
-        const xtracer::render::tile_t *tile = &(context.tiles[i]);
+        const xtcore::render::tile_t *tile = &(context.tiles[i]);
         for (size_t y = tile->y0(); y < tile->y1(); ++y) {
             for (size_t x = tile->x0(); x < tile->x1(); ++x) {
                 tile->read(x, y, col);
@@ -42,4 +42,4 @@ void assemble(nimg::Pixmap &pixmap, const context_t &context)
 }
 
     } /* namespace render */
-} /* namespace xtracer */
+} /* namespace xtcore */

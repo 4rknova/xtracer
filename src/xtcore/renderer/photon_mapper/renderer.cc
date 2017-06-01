@@ -13,13 +13,13 @@
 #include <xtcore/aa.h>
 #include "renderer.h"
 
-#define XTRACER_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
-#define XTRACER_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES    1000    /* Default photon samples. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
-#define XTRACER_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
-#define XTRACER_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
+#define XTCORE_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
+#define XTCORE_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_SAMPLES    1000    /* Default photon samples. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
+#define XTCORE_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
 
 using ncf::util::path_comp;
 
@@ -27,7 +27,7 @@ Renderer::Renderer()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtracer::render::context_t &context)
+void Renderer::setup(xtcore::render::context_t &context)
 {
     m_context = &context;
 }
@@ -42,7 +42,7 @@ void Renderer::render()
 
 void Renderer::pass_ptrace()
 {
-	unsigned int photon_count = XTRACER_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
+	unsigned int photon_count = XTCORE_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
 
 	//Log::handle().post_message("Initiating the photon maps..", photon_count);
 	//Log::handle().post_message("Using %i photons..", photon_count);
@@ -90,7 +90,7 @@ void Renderer::pass_ptrace()
 			while (light_photons[light_index] > 0) {
 				Ray ray = (*it).light->ray_sample();
 //				trace_photon(ray, 0, (*it).material->emissive
-//						* XTRACER_SETUP_DEFAULT_PHOTON_POWERSC
+//						* XTCORE_SETUP_DEFAULT_PHOTON_POWERSC
 //						, light_photons[light_index]);
 			}
 
@@ -104,7 +104,7 @@ void Renderer::pass_ptrace()
 
 bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
 {
-	if (depth > XTRACER_SETUP_DEFAULT_MAX_RDEPTH) return false;
+	if (depth > XTCORE_SETUP_DEFAULT_MAX_RDEPTH) return false;
 
 	// Intersect.
 	IntInfo info;
@@ -116,8 +116,8 @@ bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const Colo
 	// Get the material & texture.
  //   std::string &mat_id = m_context->scene.m_objects[obj]->material;
 //    std::string &tex_id = m_context->scene.m_objects[obj]->texture;
-//	xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
-//	std::map<std::string, xtracer::assets::Texture2D *>::iterator it_tex = m_context->scene.m_textures.find(tex_id);
+//	xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
+//	std::map<std::string, xtcore::assets::Texture2D *>::iterator it_tex = m_context->scene.m_textures.find(tex_id);
 
 	// Check if there are photons left to consume.
 	if (depth > 0 &&  map_capacity > 0) {
@@ -176,10 +176,10 @@ void Renderer::pass_rtrace()
     const size_t tile_count = m_context->tiles.size();
     const size_t rdepth     = m_context->params.rdepth;
 
-    xtracer::antialiasing::SampleSet samples;
-    xtracer::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
+    xtcore::antialiasing::SampleSet samples;
+    xtcore::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
     size_t samples_size = samples.size();
-    xtracer::assets::ICamera *cam = m_context->scene.get_camera();
+    xtcore::assets::ICamera *cam = m_context->scene.get_camera();
     if (!cam) return;
     float d = 1.f / (s * samples_size);
 
@@ -188,7 +188,7 @@ void Renderer::pass_rtrace()
 
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < tile_count; ++i) {
-        xtracer::render::tile_t *tile = &(m_context->tiles[i]);
+        xtcore::render::tile_t *tile = &(m_context->tiles[i]);
 
         tile->init();
 
@@ -245,7 +245,7 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 		// get a pointer to the material
 		if (!obj.empty()) {
 /*
-			if (XTRACER_SETUP_DEFAULT_GI) {
+			if (XTCORE_SETUP_DEFAULT_GI) {
 				float irad[3] = {0,0,0};
 				float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
 
@@ -255,19 +255,19 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 				norm[2] = (float)info.normal.z;
 
 				m_pm_global.irradiance_estimate(irad, posi, norm,
-					XTRACER_SETUP_DEFAULT_PHOTON_SRADIUS,
-					XTRACER_SETUP_DEFAULT_PHOTON_SAMPLES
+					XTCORE_SETUP_DEFAULT_PHOTON_SRADIUS,
+					XTCORE_SETUP_DEFAULT_PHOTON_SAMPLES
 				);
 
 				gi_res = ColorRGBf(irad[0], irad[1], irad[2]);
 
-				if (XTRACER_SETUP_DEFAULT_GIVIZ)
+				if (XTCORE_SETUP_DEFAULT_GIVIZ)
 					return gi_res;
 			}
 */
 
             std::string &mat_id = m_context->scene.m_objects[obj]->material;
-            xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
+            xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
 			// if the ray starts inside the geometry
 			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
@@ -295,9 +295,9 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	// check if the depth limit was reached
 	if (!depth)	return color;
 
-	xtracer::assets::Object *mobj = m_context->scene.m_objects[obj];
+	xtcore::assets::Object *mobj = m_context->scene.m_objects[obj];
 
-	std::map<std::string, xtracer::assets::IMaterial *>::iterator it_mat = m_context->scene.m_materials.find(mobj->material);
+	std::map<std::string, xtcore::assets::IMaterial *>::iterator it_mat = m_context->scene.m_materials.find(mobj->material);
 
     if (it_mat == m_context->scene.m_materials.end()) return color;
 
@@ -306,9 +306,8 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	NMath::Vector3f p = info.point;
 
     std::string &mat_id = mobj->material;
-	xtracer::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
+	xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
-    if (mobj->flag_directional_uvs) info.texcoord = info.point;
     color = mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene.ambient();
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
@@ -336,18 +335,17 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			IntInfo res;
 			bool test = m_context->scene.intersection(sray, res, obj);
 
-            std::map<std::string, xtracer::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj);
-            std::map<std::string, xtracer::assets::Object*>::iterator oet = m_context->scene.m_objects.end();
+            std::map<std::string, xtcore::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj);
+            std::map<std::string, xtcore::assets::Object*>::iterator oet = m_context->scene.m_objects.end();
 
             if (oit == oet) continue;
 
-            std::map<std::string, xtracer::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry);
-            std::map<std::string, xtracer::assets::Geometry*>::iterator get = m_context->scene.m_geometry.end();
+            std::map<std::string, xtcore::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry);
+            std::map<std::string, xtcore::assets::Geometry*>::iterator get = m_context->scene.m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
 			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
-                if ((*oit).second->flag_directional_uvs) info.texcoord = info.point;
                 color += mat->shade(pray.origin, light_pos, (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0)), info) * tlshscaling;
 			}
 		}

@@ -1,7 +1,7 @@
 #include "mat_lambert.h"
 #include "log.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 nimg::ColorRGBf MaterialLambert::shade(
@@ -25,4 +25,4 @@ nimg::ColorRGBf MaterialLambert::shade(
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

@@ -1,9 +1,9 @@
 #include <nimg/img.h>
 #include <nimg/sample.h>
-#include "texture.h"
+#include "sampler_tex.h"
 #include <cstdio>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 Texture2D::Texture2D()
@@ -46,4 +46,4 @@ nimg::ColorRGBf Texture2D::sample(const NMath::Vector3f &tc) const
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

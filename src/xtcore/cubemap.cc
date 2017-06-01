@@ -3,7 +3,7 @@
 #include <nmath/precision.h>
 #include <nimg/color.h>
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 int Cubemap::load(const char *file, CUBEMAP_FACE face)
@@ -36,5 +36,5 @@ nimg::ColorRGBf Cubemap::sample(const NMath::Vector3f &tc) const
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 

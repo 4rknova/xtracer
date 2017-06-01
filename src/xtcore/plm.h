@@ -1,5 +1,5 @@
-#ifndef XTRACER_PLM_H_INCLUDED
-#define XTRACER_PLM_H_INCLUDED
+#ifndef XTCORE_PLM_H_INCLUDED
+#define XTCORE_PLM_H_INCLUDED
 
 #include "plugin.h"
 
@@ -10,4 +10,4 @@ namespace PLM
 	void load();
 }
 
-#endif /* XTRACER_PLM_H_INCLUDED */
+#endif /* XTCORE_PLM_H_INCLUDED */

@@ -1,9 +1,9 @@
-#ifndef XTRACER_SOLIDCOLOR_H_INCLUDED
-#define XTRACER_SOLIDCOLOR_H_INCLUDED
+#ifndef XTCORE_SOLIDCOLOR_H_INCLUDED
+#define XTCORE_SOLIDCOLOR_H_INCLUDED
 
 #include "sampler.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class SolidColor : public ISampler
@@ -18,6 +18,6 @@ class SolidColor : public ISampler
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_SOLIDCOLOR_H_INCLUDED */
+#endif /* XTCORE_SOLIDCOLOR_H_INCLUDED */

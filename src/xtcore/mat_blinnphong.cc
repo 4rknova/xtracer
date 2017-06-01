@@ -1,6 +1,6 @@
 #include "mat_blinnphong.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 nimg::ColorRGBf MaterialBlinnPhong::shade(
@@ -34,4 +34,4 @@ nimg::ColorRGBf MaterialBlinnPhong::shade(
 }
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */

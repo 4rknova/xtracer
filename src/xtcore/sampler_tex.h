@@ -1,12 +1,12 @@
-#ifndef XTRACER_TEXTURE_H_INCLUDED
-#define XTRACER_TEXTURE_H_INCLUDED
+#ifndef XTCORE_SAMPLER_TEX_H_INCLUDED
+#define XTCORE_SAMPLER_TEX_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include "sampler.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class Texture2D : public ISampler
@@ -28,6 +28,6 @@ class Texture2D : public ISampler
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_TEXTURE_H_INCLUDED */
+#endif /* XTCORE_SAMPLER_TEX_H_INCLUDED */

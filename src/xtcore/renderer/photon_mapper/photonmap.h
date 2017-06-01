@@ -4,8 +4,8 @@
 	as presented in his book: Realistic Image Synthesis Using Photon Mapping.
 */
 
-#ifndef XTRACER_PHOTONMAP_H_INCLUDED
-#define XTRACER_PHOTONMAP_H_INCLUDED
+#ifndef XTCORE_PHOTONMAP_H_INCLUDED
+#define XTCORE_PHOTONMAP_H_INCLUDED
 
 
 /*
@@ -108,4 +108,4 @@ class PhotonMap
 		float m_cosphi[256];
 };
 
-#endif /* XTRACER_PHOTONMAP_H_INCLUDED */
+#endif /* XTCORE_PHOTONMAP_H_INCLUDED */

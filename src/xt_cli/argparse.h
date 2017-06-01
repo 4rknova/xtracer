@@ -5,7 +5,7 @@
 #include <list>
 #include <xtcore/context.h>
 
-using xtracer::render::params_t;
+using xtcore::render::params_t;
 
 int setup(int argc, char** argv
         , std::string            &renderer

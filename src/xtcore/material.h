@@ -1,15 +1,14 @@
-#ifndef XTRACER_MATERIAL_H_INCLUDED
-#define XTRACER_MATERIAL_H_INCLUDED
+#ifndef XTCORE_MATERIAL_H_INCLUDED
+#define XTCORE_MATERIAL_H_INCLUDED
 
 #include <map>
 #include <nimg/color.h>
 #include <nmath/intinfo.h>
 #include "sampler.h"
-#include "texture.h"
 #include "camera.h"
 #include "matdefs.h"
 
-namespace xtracer {
+namespace xtcore {
     namespace assets {
 
 class IMaterial
@@ -29,8 +28,8 @@ class IMaterial
     NMath::scalar_t get_scalar(const char *name) const;
     nimg::ColorRGBf get_sample(const char *name, const NMath::Vector3f &tc) const;
 
-    NMath::scalar_t get_scalar_by_index(size_t idx, std::string *name=0);
-    ISampler* get_sampler_by_index(size_t idx, std::string *name=0);
+    NMath::scalar_t get_scalar_by_index  (size_t idx, std::string *name=0);
+    ISampler*       get_sampler_by_index (size_t idx, std::string *name=0);
 
     size_t get_scalar_count()  const;
     size_t get_sampler_count() const;
@@ -47,6 +46,6 @@ class IMaterial
 };
 
     } /* namespace assets */
-} /* namespace xtracer */
+} /* namespace xtcore */
 
-#endif /* XTRACER_MATERIAL_H_INCLUDED */
+#endif /* XTCORE_MATERIAL_H_INCLUDED */
