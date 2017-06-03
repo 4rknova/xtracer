@@ -7,7 +7,7 @@ namespace xtcore {
 template<typename T>
 void safe_delete(T*p) {
 	delete p;
-	p = NULL;
+	p = 0;
 }
 
 	} /* namespace memory */

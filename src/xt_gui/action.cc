@@ -6,12 +6,14 @@ namespace action {
 
 void task_render(workspace_t *ws)
 {
-    if (ws && ws->renderer) {
+    if (ws) {
         ws->context.init();
         ws->setup_callbacks();
         ws->renderer->setup(ws->context);
         ws->setup_callbacks();
         ws->renderer->render();
+        delete ws->renderer;
+        ws->renderer = 0;
     }
 }
 

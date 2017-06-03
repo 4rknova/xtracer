@@ -14,7 +14,6 @@ namespace gui {
 
 void render(workspace_t *ws, xtcore::render::IRenderer *r)
 {
-    delete ws->renderer;
     ws->renderer = r;
     action::render(ws);
 }
@@ -30,7 +29,7 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit"  , "")) { action::quit();               }
             ImGui::EndMenu();
         }
-        if (state->workspaces.size() > 0) {
+        if (state->workspace) {
             if  (ImGui::BeginMenu("Workspaces")) {
                 for (auto& i : state->workspaces) {
             	    std::string name = i->source_file.c_str();
@@ -38,10 +37,14 @@ void render_main_menu(state_t *state)
                 }
                 ImGui::EndMenu();
             }
-            if  (ImGui::BeginMenu("Render")) {
-                if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
-                if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }
-                if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
+            if (ImGui::BeginMenu("Render")) {
+                if (state->workspace->renderer) {
+                    ImGui::Text("Rendering..");
+                } else {
+                    if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
+                    if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }
+                    if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
+                }
                 ImGui::EndMenu();
             }
         }
@@ -79,7 +82,7 @@ void render_main_menu(state_t *state)
 		}
 	    ImGui::EndPopup();
 	}
-	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_0))
+	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_2))
     {
         ImGui::SameLine(ImGui::GetWindowWidth() - 425);
         ImGui::BeginGroup();
@@ -93,10 +96,11 @@ void render_main_menu(state_t *state)
         ImGui::NewLine();
         ImGui::NewLine();
         ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-	    if (ImGui::Button("OK", ImVec2(100,0))){
+	    if (ImGui::Button("OK", ImVec2(75,0))) {
 			ImGui::CloseCurrentPopup();
             _flag_popup_win_about = false;
         }
+        ImGui::NewLine();
 	    ImGui::EndPopup();
     }
 }

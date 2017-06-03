@@ -12,5 +12,7 @@
 #define WIN_FLAGS_SET_1 WIN_FLAGS_SET_0 \
                         | ImGuiWindowFlags_HorizontalScrollbar
 
+#define WIN_FLAGS_SET_2 ( ImGuiWindowFlags_NoCollapse \
+                        | ImGuiWindowFlags_NoResize)
 
 #endif /* XTGUI_CONFIG_H_INCLUDED */
