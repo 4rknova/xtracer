@@ -113,14 +113,32 @@ void draw_edit_float(const char *label, float value)
 	ImGui::PopItemWidth();
 }
 
-void draw_render_scenegraph(workspace_t *ws)
+void draw_render_scenegraph(state_t *state)
 {
+
+    workspace_t *ws = state->workspace;
+
     ImGui::BeginGroup();
+    if (state->workspace->progress > 0.0001f
+     && state->workspace->progress < 0.9999f
+    ) {
+        ImGui::ProgressBar(state->workspace->progress, ImVec2(ImGui::GetWindowWidth() - 80, 0));
+    }
+    ImGui::SameLine(ImGui::GetWindowWidth()-65);
+    if (ImGui::Button("close" , ImVec2(50,20)))
+    {
+        std::vector<workspace_t*>::iterator it = state->workspaces.begin();
+        std::vector<workspace_t*>::iterator et = state->workspaces.end();
+        for (; it != et; ++it) {
+            if ((*it) == state->workspace) {
+                state->workspaces.erase(it);
+                delete state->workspace;
+                state->workspace = 0;
+                break;
+            }
+        }
+    }
     ImGui::Text("%s", ws->source_file.c_str());
-    ImGui::SameLine(ImGui::GetWindowWidth()-125);
-    if(ImGui::Button("save"  , ImVec2(50,20))) { printf("close"); }
-    ImGui::SameLine();
-    if(ImGui::Button("close" , ImVec2(50,20))) { printf("close"); }
 	ImGui::Separator();
 	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::TreeNodeEx("Cameras", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -260,7 +278,7 @@ void render_workspace(state_t *state)
 	    ImGui::BeginGroup();
 
         float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
-        draw_render_scenegraph(ws);
+        draw_render_scenegraph(state);
         ImGui::EndGroup();
         ImGui::End();
 

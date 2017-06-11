@@ -210,24 +210,6 @@ void Renderer::pass_rtrace()
 		}
 
         tile->submit();
-        /*
-		#pragma omp critical
-		{
-			++progress;
-			std::cout.setf(std::ios::fixed, std::ios::floatfield);
-			std::cout.setf(std::ios::showpoint);
-			std::cout << "\r"
-                      << std::setw(6) << std::setprecision(2)
-                      << progress / tile_count * 100.f << "%"
-                      << " @ " << omp_get_num_threads() << "T"
-                      << " [ " << m_context->params.width << "x" << m_context->params.height
-                      << "-" << m_context->params.tile_size
-                      << " | " << m_context->params.ssaa << " ssaa"
-                      << " | " << m_context->params.samples << " spp"
-                      << " ]"
-                      << std::flush;
-		}
-        */
 	}
 }
 
@@ -282,7 +264,6 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 		}
 	}
 
-	// return ColorRGBf(0, 0, 0);
     return m_context->scene.sample_cubemap(ray.direction);
 }
 
@@ -382,8 +363,6 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 		    color += ft * transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * specular;
         }
 	}
-
-	// reflection
 
 	if (reflectance > 0) {
 

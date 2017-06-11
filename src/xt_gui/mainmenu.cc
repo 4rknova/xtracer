@@ -29,7 +29,7 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit"  , "")) { action::quit();               }
             ImGui::EndMenu();
         }
-        if (state->workspace) {
+        if (state->workspaces.size() > 0) {
             if  (ImGui::BeginMenu("Workspaces")) {
                 for (auto& i : state->workspaces) {
             	    std::string name = i->source_file.c_str();
@@ -37,9 +37,12 @@ void render_main_menu(state_t *state)
                 }
                 ImGui::EndMenu();
             }
+        }
+        if (state->workspace) {
             if (ImGui::BeginMenu("Render")) {
                 if (state->workspace->renderer) {
                     ImGui::Text("Rendering..");
+                    ImGui::ProgressBar(state->workspace->progress);
                 } else {
                     if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
                     if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }

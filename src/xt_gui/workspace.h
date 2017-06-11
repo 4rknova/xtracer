@@ -31,6 +31,8 @@ struct workspace_t
     void update();
     void setup_callbacks();
 
+    float progress;
+
     int block_begin(void *p);
     int block_done(void *p);
 

@@ -25,6 +25,7 @@ xtcore::render::tile_t *ws_handler_t::pop()
 
 void workspace_t::init()
 {
+    progress = 0.f;
     deinit();
     glDeleteTextures(1, &texture);
     glGenTextures(1, &texture);
@@ -42,6 +43,7 @@ void workspace_t::init()
 
 void workspace_t::setup_callbacks()
 {
+    progress = 0.f;
     for (auto& i : context.tiles) {
         i.setup_handler_on_init(&handler_init);
         i.setup_handler_on_done(&handler_done);
@@ -71,6 +73,8 @@ void workspace_t::update()
                 glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);
             }
 		}
+
+        progress += 1.f/context.tiles.size();
 	}
 
     while(1) {
