@@ -1,3 +1,4 @@
+#include <thread>
 #include "opengl.h"
 #include "ext/imgui.h"
 #include <xtcore/config.h>
@@ -6,6 +7,8 @@
 #include <xtcore/renderer/depth/renderer.h>
 #include <xtcore/renderer/photon_mapper/renderer.h>
 #include <xtcore/renderer.h>
+#include "imgui_extra.h"
+#include "util.h"
 #include "config.h"
 #include "action.h"
 #include "mainmenu.h"
@@ -16,6 +19,19 @@ void render(workspace_t *ws, xtcore::render::IRenderer *r)
 {
     ws->renderer = r;
     action::render(ws);
+}
+
+void wdg_config(workspace_t *ws)
+{
+    textedit_int("Width"          , ws->context.params.width , 1);
+    textedit_int("Height"         , ws->context.params.height, 1);
+    ImGui::NewLine();
+    textedit_int("Tile Size"      , ws->context.params.tile_size, 1
+        , MIN(ws->context.params.width, ws->context.params.height));
+    textedit_int("Supersampling"  , ws->context.params.ssaa   , 1);
+    textedit_int("Recursion Depth", ws->context.params.rdepth , 1);
+    textedit_int("Samples"        , ws->context.params.samples, 1);
+    textedit_int("Threads"        , ws->context.params.threads, 1);
 }
 
 void render_main_menu(state_t *state)
@@ -44,9 +60,16 @@ void render_main_menu(state_t *state)
                     ImGui::Text("Rendering..");
                     ImGui::ProgressBar(state->workspace->progress);
                 } else {
-                    if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
-                    if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }
-                    if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
+                    if (ImGui::BeginMenu("Configuration")) {
+                        wdg_config(state->workspace);
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Renderer")) {
+                        if (ImGui::MenuItem("Depth"         , "")) { render(state->workspace, new xtcore::renderer::depth::Renderer()); }
+                        if (ImGui::MenuItem("Stencil"       , "")) { render(state->workspace, new xtcore::renderer::stencil::Renderer()); }
+                        if (ImGui::MenuItem("Photon Mapper" , "")) { render(state->workspace, new Renderer()); }
+                        ImGui::EndMenu();
+                    }
                 }
                 ImGui::EndMenu();
             }

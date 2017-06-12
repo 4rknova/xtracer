@@ -13,56 +13,35 @@
 #include "widgets.h"
 #include "theme.h"
 #include "mainmenu.h"
+#include "imgui_extra.h"
 
 #define GUI_SIDEPANEL_WIDTH        (325)
 #define WORKSPACE_PROP_CONF_HEIGHT (300)
 #define WORKSPACE_PROP_CONT_HEIGHT (100)
 
-#define MIN(a,b) (a>b?b:a)
-#define MAX(a,b) (a>b?a:b)
 #define STRLEN_MAX (512)
 
 namespace gui {
 
 static const char *postsdr_source_frag =
     "#version 130\n"
-	"uniform sampler2D tex;\n"
-	"uniform vec2 iWindowResolution;\n"
-	"uniform vec2 iRenderResolution;\n"
-	"uniform vec2 iTileSize;\n"
-    "out vec4 Color;\n"
-	"void main()\n"
-	"{\n"
-    "    vec2 uv = gl_FragCoord.xy / iWindowResolution.xy;\n"
-    "float d = distance(vec2(iWindowResolution.x / 2., iWindowResolution.y / 1.2)\n"
-	"                      , iWindowResolution - gl_FragCoord.xy) * (1./iWindowResolution.x-.03)*0.01;\n"
-    "vec3 white = vec3(1);"
-    "vec3 eightWhite = vec3(0.8, 0.8, 0.8);"
-    "vec3 pink = vec3(0.11, 0.41, 0.91);"
-    "vec3 blue = vec3(0.34, 0.36, 0.60);"
-    "vec3 color = mix("
-    "    mix(white, eightWhite, uv.x),"
-    "    mix(pink, blue, uv.y),"
-    "   	d"
-    ");"
+	"uniform sampler2D tex;"
+	"uniform vec2 iWindowResolution;"
+	"uniform vec2 iRenderResolution;"
+	"uniform vec2 iTileSize;"
+    "out vec4 Color;"
+	"void main() {"
+    "vec2 uv = gl_FragCoord.xy / iWindowResolution.xy;"
+    "float f = distance(vec2(iWindowResolution.x / 2., iWindowResolution.y / 3.)"
+	"                      , iWindowResolution - gl_FragCoord.xy) * (1./iWindowResolution.x-.03)*0.02;"
+    "vec3 a = vec3(1);"
+    "vec3 b = vec3(0.8, 0.8, 0.8);"
+    "vec3 c = vec3(0.11, 0.41, 0.91);"
+    "vec3 d = vec3(0.34, 0.36, 0.90);"
+    "vec3 color = mix(mix(a,b,uv.y),mix(c,d,uv.x),f);"
     "Color = vec4(.35*color, 1.);"
+	"}";
 
-	"}\n";
-
-
-void slider_float(const char *name, float &val, float a, float b)
-{
-    float tmp = val;
-    ImGui::SliderFloat(name, &tmp, a, b);
-    val = tmp;
-}
-
-void slider_int(const char *name, size_t &val, size_t a, size_t b)
-{
-    int tmp = val;
-    ImGui::SliderInt(name, &tmp, a, b);
-    val = tmp;
-}
 
 void draw_group_render_controls(workspace_t *ws)
 {
@@ -73,20 +52,6 @@ void draw_group_render_controls(workspace_t *ws)
     if (ImGui::Button("x1.0", btn_sz_zoom)) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
     if (ImGui::Button("x2.0", btn_sz_zoom)) { ws->zoom_multiplier = 2.0f; }
     slider_float("Zoom"  , ws->zoom_multiplier , 0.5, 10.0);
-    ImGui::EndGroup();
-}
-
-void draw_group_render_config(workspace_t *ws)
-{
-    ImGui::BeginGroup();
-	ImGui::Text("Configuration");
-	ImGui::Separator();
-	ImGui::Text("Resolution    %lux%lu", ws->context.params.width, ws->context.params.height);
-    slider_int("Supersampling"  , ws->context.params.ssaa     , 1, 10);
-    slider_int("Recursion Depth", ws->context.params.rdepth   , 1, 10);
-    slider_int("Tile Size"      , ws->context.params.tile_size, 1, MIN(ws->context.params.width, ws->context.params.height));
-    slider_int("Samples"        , ws->context.params.samples  , 1, 32);
-    slider_int("Threads"        , ws->context.params.threads  , 1, 32);
     ImGui::EndGroup();
 }
 
@@ -115,7 +80,6 @@ void draw_edit_float(const char *label, float value)
 
 void draw_render_scenegraph(state_t *state)
 {
-
     workspace_t *ws = state->workspace;
 
     ImGui::BeginGroup();
@@ -132,6 +96,7 @@ void draw_render_scenegraph(state_t *state)
         for (; it != et; ++it) {
             if ((*it) == state->workspace) {
                 state->workspaces.erase(it);
+                state->workspace->deinit();
                 delete state->workspace;
                 state->workspace = 0;
                 break;
@@ -287,7 +252,6 @@ void render_workspace(state_t *state)
 		ImGui::Begin("Render Controls", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_0);
         float rhs_w = state->window.width - GUI_SIDEPANEL_WIDTH - 4;
         ImGui::SetWindowSize(ImVec2(rhs_w, 250));
-        draw_group_render_config(ws);
         ImGui::NewLine();
         draw_group_render_controls(ws);
 		ImGui::End();

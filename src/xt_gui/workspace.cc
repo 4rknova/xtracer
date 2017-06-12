@@ -26,15 +26,20 @@ xtcore::render::tile_t *ws_handler_t::pop()
 void workspace_t::init()
 {
     progress = 0.f;
-    deinit();
-    glDeleteTextures(1, &texture);
-    glGenTextures(1, &texture);
-    glEnable(GL_TEXTURE_2D);
+}
+
+void workspace_t::init_texture()
+{
+    if (!texture) {
+        glGenTextures(1, &texture);
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     float *data = new float[context.params.width * context.params.height*4];
     memset(data, 0, sizeof(float) * 4 * context.params.width * context.params.height);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context.params.width, context.params.height, 0, GL_RGBA, GL_FLOAT, data);
@@ -57,9 +62,9 @@ void workspace_t::deinit()
 
 void workspace_t::update()
 {
-    glBindTexture(GL_TEXTURE_2D, texture);
-
     m.lock();
+
+    glBindTexture(GL_TEXTURE_2D, texture);
 	while(1) {
         xtcore::render::tile_t *t = handler_init.pop();
 

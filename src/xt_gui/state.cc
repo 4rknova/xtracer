@@ -5,7 +5,6 @@ namespace gui {
 
 textures_t::textures_t()
     : logo(0)
-    , render(0)
 {}
 
 window_t::window_t()

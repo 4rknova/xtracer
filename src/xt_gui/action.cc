@@ -7,6 +7,7 @@ namespace action {
 void task_render(workspace_t *ws)
 {
     if (ws) {
+        ws->init();
         ws->context.init();
         ws->setup_callbacks();
         ws->renderer->setup(ws->context);
@@ -24,6 +25,7 @@ void task_load(workspace_t *ws)
 
 int render(workspace_t *ws)
 {
+    ws->init_texture();
     std::thread t(task_render, ws);
     t.detach();
     return 0;

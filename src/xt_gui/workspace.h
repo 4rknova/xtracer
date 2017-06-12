@@ -27,6 +27,7 @@ struct workspace_t
     xtcore::render::context_t  context;
 
     void init();
+    void init_texture();
     void deinit();
     void update();
     void setup_callbacks();
