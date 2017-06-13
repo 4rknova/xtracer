@@ -2,7 +2,6 @@
 #include <string>
 #include <queue>
 #include <vector>
-#include <xtcore/log.h>
 #include "ext/imgui.h"
 #include "ext/stb_image.h"
 #include "config.h"
@@ -25,21 +24,19 @@ namespace gui {
 
 static const char *postsdr_source_frag =
     "#version 130\n"
-	"uniform sampler2D tex;"
 	"uniform vec2 iWindowResolution;"
 	"uniform vec2 iRenderResolution;"
-	"uniform vec2 iTileSize;"
     "out vec4 Color;"
 	"void main() {"
     "vec2 uv = gl_FragCoord.xy / iWindowResolution.xy;"
     "float f = distance(vec2(iWindowResolution.x / 2., iWindowResolution.y / 3.)"
-	"                      , iWindowResolution - gl_FragCoord.xy) * (1./iWindowResolution.x-.03)*0.02;"
-    "vec3 a = vec3(1);"
-    "vec3 b = vec3(0.8, 0.8, 0.8);"
-    "vec3 c = vec3(0.11, 0.41, 0.91);"
-    "vec3 d = vec3(0.34, 0.36, 0.90);"
-    "vec3 color = mix(mix(a,b,uv.y),mix(c,d,uv.x),f);"
-    "Color = vec4(.35*color, 1.);"
+	"                      , iWindowResolution - gl_FragCoord.xy) * (1./iWindowResolution.x-.02)*0.01;"
+    "vec3 a = vec3(1)"
+    "   , b = vec3(0.8, 0.8, 0.8)"
+    "   , c = vec3(0.11, 0.41, 0.91)"
+    "   , d = vec3(0.34, 0.36, 0.90);"
+    "vec3 color = 0.35 * mix(mix(a,b,uv.y),mix(c,d,uv.x),f);"
+    "Color = vec4(color, 1);"
 	"}";
 
 
@@ -48,10 +45,6 @@ void draw_group_render_controls(workspace_t *ws)
     static const ImVec2 btn_sz_zoom = ImVec2(50.f, 0.f);
 
     ImGui::BeginGroup();
-    if (ImGui::Button("x0.5", btn_sz_zoom)) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
-    if (ImGui::Button("x1.0", btn_sz_zoom)) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
-    if (ImGui::Button("x2.0", btn_sz_zoom)) { ws->zoom_multiplier = 2.0f; }
-    slider_float("Zoom"  , ws->zoom_multiplier , 0.5, 10.0);
     ImGui::EndGroup();
 }
 
@@ -247,18 +240,10 @@ void render_workspace(state_t *state)
         ImGui::EndGroup();
         ImGui::End();
 
-
-	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,(float)21), ImGuiSetCond_Appearing);
-		ImGui::Begin("Render Controls", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_0);
         float rhs_w = state->window.width - GUI_SIDEPANEL_WIDTH - 4;
-        ImGui::SetWindowSize(ImVec2(rhs_w, 250));
-        ImGui::NewLine();
-        draw_group_render_controls(ws);
-		ImGui::End();
-
-	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,(float)272), ImGuiSetCond_Appearing);
+	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,22), ImGuiSetCond_Appearing);
 		ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_1);
-        float ry = state->window.height - 273;
+        float ry = state->window.height - 23;
         float zx = ws->zoom_multiplier * ws->context.params.width;
         float zy = ws->zoom_multiplier * ws->context.params.height;
         ImGui::SetWindowSize(ImVec2(rhs_w, ry));

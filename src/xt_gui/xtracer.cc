@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <xtcore/log.h>
 #include "ext/imgui.h"
 #include "ext/imgui_impl_glfw_gl3.h"
 #include "config.h"
@@ -32,6 +33,8 @@ int main(int argc, char** argv)
                                         , argv[0]
                                         , NULL, NULL);
     glfwMakeContextCurrent(window);
+
+    Log::handle().echo(false);
 
     /* The following line is required for outdated versions
     ** of libglew and is introduced as a fix for Ubuntu builds.

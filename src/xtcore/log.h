@@ -19,13 +19,11 @@ enum LOGENTRY_TYPE
 	, LOGENTRY_ERROR
 };
 
-class LogEntry
+struct log_entry_t
 {
-	friend class Log;
-	protected:
-		LogEntry();
-		LOGENTRY_TYPE p_type;
-		std::string p_msg;
+	log_entry_t();
+	LOGENTRY_TYPE type;
+	std::string message;
 };
 
 class Log
@@ -60,7 +58,8 @@ class Log
 		//	1: I/O error.
 		int dump(const char* fpath);
 
-		std::string get_log_entry(const unsigned int idx) const;
+		log_entry_t get_entry(size_t idx) const;
+        size_t      get_size() const;
 
 	private:
 		Log();
@@ -74,7 +73,7 @@ class Log
 		bool         m_flag_rewind;
         size_t       m_level;
 
-		std::vector<LogEntry*> m_log;
+		std::vector<log_entry_t*> m_log;
 		static Log m_log_manager;
 };
 

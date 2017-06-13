@@ -6,8 +6,8 @@
 #include <iomanip>
 #include "log.h"
 
-LogEntry::LogEntry()
-	: p_type(LOGENTRY_DEBUG)
+log_entry_t::log_entry_t()
+	: type(LOGENTRY_DEBUG)
 {}
 
 // Singleton.
@@ -31,7 +31,7 @@ Log::~Log()
 
 void Log::clear()
 {
-	std::vector<LogEntry *>::iterator it;
+	std::vector<log_entry_t *>::iterator it;
 
 	for (it = m_log.begin(); it != m_log.end(); it++) {
 		delete (*it);
@@ -47,10 +47,10 @@ int Log::dump(const char* fpath)
 
 	if (!file.is_open()) return 1;
 
-	std::vector<LogEntry *>::iterator it;
+	std::vector<log_entry_t *>::iterator it;
 
 	for (it = m_log.begin(); it != m_log.end(); it++) {
-   		switch ((*it)->p_type) {
+   		switch ((*it)->type) {
             case LOGENTRY_DEBUG:
                 file << "Debug: ";
                 break;
@@ -64,7 +64,7 @@ int Log::dump(const char* fpath)
     			break;
     	}
 
-        file << (*it)->p_msg << std::endl;
+        file << (*it)->message << std::endl;
         file.flush();
 	}
 
@@ -72,11 +72,15 @@ int Log::dump(const char* fpath)
 	return 0;
 }
 
-std::string Log::get_log_entry(const unsigned int idx) const{
+log_entry_t Log::get_entry(size_t idx) const
+{
+	if (idx < m_log.size()) return *(m_log[m_log.size()-1-idx]);
+	return log_entry_t();
+}
 
-	if (idx < m_log.size())
-		return m_log[m_log.size()-1-idx]->p_msg;
-	return std::string("");
+size_t Log::get_size() const
+{
+    return m_log.size();
 }
 
 Log &Log::handle()
@@ -169,28 +173,28 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 		}
 	}
 
-	LogEntry *entry = new (std::nothrow) LogEntry();
+	log_entry_t *entry = new (std::nothrow) log_entry_t();
 
 	if (!entry)	return;
 
-	entry->p_type = type;
-	entry->p_msg = str.str();
+	entry->type = type;
+	entry->message = str.str();
 
     if (m_flag_rewind) m_log.pop_back();
 
 	m_log.push_back(entry);
 
-	std::vector<LogEntry *>::reverse_iterator it = m_log.rbegin();
+	std::vector<log_entry_t *>::reverse_iterator it = m_log.rbegin();
 
 	if (m_flag_echo) {
-   		switch ((*it)->p_type) {
+   		switch ((*it)->type) {
 		    case LOGENTRY_MESSAGE:                           break;
    			case LOGENTRY_DEBUG  : std::cout << "Debug   :"; break;
        		case LOGENTRY_WARNING: std::cout << "Warning :"; break;
    			case LOGENTRY_ERROR  : std::cout << "Error   :"; break;
    		}
 
-		std::cout << (*it)->p_msg;
+		std::cout << (*it)->message;
 
         if (m_flag_rewind) {
             std::cout << "\r" << std::flush;
@@ -260,7 +264,7 @@ void Log::pop_back()
 
 void Log::pop_front()
 {
-	std::vector<LogEntry*>::iterator it = m_log.begin();
+	std::vector<log_entry_t*>::iterator it = m_log.begin();
 	m_log.erase(it);
 }
 
