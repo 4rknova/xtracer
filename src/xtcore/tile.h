@@ -26,8 +26,8 @@ struct tile_t {
     void setup_handler_on_init(tile_event_handler_t *h);
     void setup_handler_on_done(tile_event_handler_t *h);
 
-    void write(size_t x, size_t y, const nimg::ColorRGBf &col);
-    void read(size_t x, size_t y, nimg::ColorRGBf &col) const;
+    void write(size_t x, size_t y, const nimg::ColorRGBAf &col);
+    void read(size_t x, size_t y, nimg::ColorRGBAf &col) const;
     void init();
     void submit();
 

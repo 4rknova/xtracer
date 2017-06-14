@@ -1,4 +1,5 @@
 #include <thread>
+#include <string>
 #include <nimg/img.h>
 #include <xtcore/context.h>
 #include <xtcore/log.h>
@@ -50,32 +51,52 @@ void quit()
     exit(0);
 }
 
-int export_hdr(workspace_t *ws)
+int close(gui::state_t *state, workspace_t *ws)
 {
-    nimg::Pixmap fb;
-    xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::hdr("out.png", fb);
+    auto it = state->workspaces.begin()
+       , et = state->workspaces.end();
+
+    for (; it != et; ++it) {
+        if ((*it) == ws) {
+            state->workspaces.erase(it);
+            if (state->workspace == ws) state->workspace = 0;
+            ws->deinit();
+            delete ws;
+            break;
+        }
+    }
 }
 
-int export_png(workspace_t *ws)
+int export_hdr(const char *filepath, workspace_t *ws)
 {
+    std::string fp = std::string(filepath) + ".hdr";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::png("out.png", fb);
+    return nimg::io::save::hdr(fp.c_str(), fb);
 }
 
-int export_tga(workspace_t *ws)
+int export_png(const char *filepath, workspace_t *ws)
 {
+    std::string fp = std::string(filepath) + ".png";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::tga("out.png", fb);
+    return nimg::io::save::png(fp.c_str(), fb);
 }
 
-int export_bmp(workspace_t *ws)
+int export_tga(const char *filepath, workspace_t *ws)
 {
+    std::string fp = std::string(filepath) + ".tga";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::bmp("out.png", fb);
+    return nimg::io::save::tga(fp.c_str(), fb);
+}
+
+int export_bmp(const char *filepath, workspace_t *ws)
+{
+    std::string fp = std::string(filepath) + ".bmp";
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+    return nimg::io::save::bmp(fp.c_str(), fb);
 }
 
 void not_yet_implemented()

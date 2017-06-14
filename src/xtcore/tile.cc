@@ -36,12 +36,12 @@ void tile_t::setup_handler_on_done(tile_event_handler_t *h)
     this->m_on_done = h;
 }
 
-void tile_t::write(size_t x, size_t y, const nimg::ColorRGBf &col)
+void tile_t::write(size_t x, size_t y, const nimg::ColorRGBAf &col)
 {
     m_data.pixel(x - x0(), y - y0()) = col;
 }
 
-void tile_t::read(size_t x, size_t y, nimg::ColorRGBf &col) const
+void tile_t::read(size_t x, size_t y, nimg::ColorRGBAf &col) const
 {
     col = m_data.pixel_ro(x - x0(), y - y0());
 }

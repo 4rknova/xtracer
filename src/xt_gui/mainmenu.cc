@@ -1,4 +1,5 @@
 #include <thread>
+#include <string>
 #include "opengl.h"
 #include "ext/imgui.h"
 #include <xtcore/config.h>
@@ -19,24 +20,18 @@
 
 namespace gui {
 
-void render(workspace_t *ws, xtcore::render::IRenderer *r)
-{
-    ws->renderer = r;
-    action::render(ws);
-}
-
 void wdg_log(bool &visible)
 {
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
 	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
         ImGui::SetWindowSize(ImVec2(600, 500));
-        if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
-        ImGui::SameLine();
     	if (ImGui::Button("close", ImVec2(100,0)))
     	{
     		ImGui::CloseCurrentPopup();
             visible = false;
     	}
+        ImGui::SameLine();
+        if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
         for (int i = MIN(LOG_HISTORY_SIZE, Log::handle().get_size()-1); i >= 0; --i) {
             log_entry_t l = Log::handle().get_entry(i);
             ImVec4 col;
@@ -54,41 +49,94 @@ void wdg_log(bool &visible)
 
 void wdg_config(workspace_t *ws)
 {
-    textedit_int("Width"          , ws->context.params.width , 1, 1);
-    textedit_int("Height"         , ws->context.params.height, 1, 1);
+    xtcore::render::params_t *p = &(ws->context.params);
+    ImVec2 bd(100,0);
+    ImGui::Text("Resolution");ImGui::Separator();
+    if (ImGui::Button("320x240", bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
+    if (ImGui::Button("640x480", bd)) { p->width =  640; p->height =  480; } ImGui::SameLine();
+    if (ImGui::Button("800x600", bd)) { p->width =  800; p->height =  600; }
+    if (ImGui::Button("1k"     , bd)) { p->width = 1024; p->height = 1024; } ImGui::SameLine();
+    if (ImGui::Button("2k"     , bd)) { p->width = 2048; p->height = 2048; } ImGui::SameLine();
+    if (ImGui::Button("4k"     , bd)) { p->width = 4096; p->height = 4096; }
+    if (ImGui::Button("720p"   , bd)) { p->width = 1280; p->height =  720; } ImGui::SameLine();
+    if (ImGui::Button("1080p"  , bd)) { p->width = 1920; p->height = 1080; } ImGui::SameLine();
+    if (ImGui::Button("1440p"  , bd)) { p->width = 2560; p->height = 1440; }
+    textedit_int("Width"          , p->width , 1, 1);
+    textedit_int("Height"         , p->height, 1, 1);
     ImGui::NewLine();
-    textedit_int("Tile Size"      , ws->context.params.tile_size, 1, 1
-        , MIN(ws->context.params.width, ws->context.params.height));
-    textedit_int("Supersampling"  , ws->context.params.ssaa   , 1, 1);
-    textedit_int("Recursion Depth", ws->context.params.rdepth , 1, 1);
-    textedit_int("Samples"        , ws->context.params.samples, 1, 1);
+    ImGui::Text("Sampling");ImGui::Separator();
+    textedit_int("Antialiasing"   , p->ssaa   , 1, 1);
+    textedit_int("Recursion Depth", p->rdepth , 1, 1);
+    textedit_int("Samples"        , p->samples, 1, 1);
+    ImGui::NewLine();
+    ImGui::Text("Concurrency");ImGui::Separator();
+    textedit_int("Tile Size"      , p->tile_size, 1, 1, MIN(p->width, p->height));
     textedit_int("Threads"        , ws->context.params.threads, 1, 1);
 }
 
 void wdg_zoom(workspace_t *ws)
 {
+    ImGui::Text("Zoom");
+    ImGui::Separator();
+    if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.2f; } ImGui::SameLine();
     if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
     if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
     if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.0f; } ImGui::SameLine();
-    if (ImGui::Button("x3.0")) { ws->zoom_multiplier = 3.0f; } ImGui::SameLine();
-    if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.0f; } ImGui::SameLine();
-    if (ImGui::Button("x5.0")) { ws->zoom_multiplier = 5.0f; }
+    if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.0f; }
     textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
 }
 
-void wdg_workspaces(state_t *state)
+void menu_workspaces(state_t *state)
 {
+    size_t idx = 0;
     for (auto& i : state->workspaces) {
-	    std::string name = i->source_file.c_str();
-       	if (ImGui::MenuItem(name.c_str())) state->workspace = i;
+	    std::string name = std::to_string(++idx) + ". " + i->source_file.c_str();
+            if (ImGui::BeginMenu(name.c_str())) {
+                bool busy = (i->renderer);
+
+                if (busy) {
+                    ImGui::ProgressBar(i->progress);
+                }
+                
+                if (ImGui::MenuItem("Display")) state->workspace = i;
+                
+                
+                if (!busy) {
+                    if (ImGui::BeginMenu("Configure")) {
+                        wdg_config(i);
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Render")) {
+                        bool render = false;
+                        if (ImGui::MenuItem("Depth"        )) { render = true; i->renderer = new xtcore::renderer::depth::Renderer(); }
+                        if (ImGui::MenuItem("Stencil"      )) { render = true; i->renderer = new xtcore::renderer::stencil::Renderer(); }
+                        if (ImGui::MenuItem("Photon Mapper")) { render = true; i->renderer = new Renderer(); }
+                        if (render) action::render(i);
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Export")) {
+                		static char filepath[256];
+                		ImGui::InputText("File", filepath, 256);
+                        if (strlen(filepath) > 0) {
+                            ImVec2 bd(52,0);
+                            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, i); ImGui::SameLine();
+                            if (ImGui::Button("PNG", bd)) action::export_png(filepath, i); ImGui::SameLine();
+                            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, i); ImGui::SameLine();
+                            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, i);
+                        }
+
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::MenuItem("Close")) action::close(state, i);
+                }
+                ImGui::EndMenu();
+            }
+
     }
 }
 
 void wdg_render(workspace_t *ws)
 {
-    if (ImGui::MenuItem("Depth"        , "")) render(ws, new xtcore::renderer::depth::Renderer());
-    if (ImGui::MenuItem("Stencil"      , "")) render(ws, new xtcore::renderer::stencil::Renderer());
-    if (ImGui::MenuItem("Photon Mapper", "")) render(ws, new Renderer());
 }
 
 void render_main_menu(state_t *state)
@@ -99,52 +147,26 @@ void render_main_menu(state_t *state)
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open")) { _flag_popup_win_load  = true; }
-            if (ImGui::MenuItem("Exit")) { action::quit();               }
+            if (ImGui::MenuItem("Create")) { _flag_popup_win_load  = true; }
+            if (ImGui::MenuItem("Exit"  )) { action::quit();               }
             ImGui::EndMenu();
         }
         if (state->workspaces.size() > 0) {
             if  (ImGui::BeginMenu("Workspaces")) {
-                wdg_workspaces(state);
+                menu_workspaces(state);
                 ImGui::EndMenu();
             }
         }
         if (state->workspace) {
-            if (ImGui::BeginMenu("Process")) {
-                if (state->workspace->renderer) {
-                    ImGui::Text("Rendering ");
-                    ImGui::ProgressBar(state->workspace->progress);
-                } else {
-                    if (ImGui::BeginMenu("Configure")) {
-                        wdg_config(state->workspace);
-                        ImGui::EndMenu();
-                    }
-                    if (ImGui::BeginMenu("Render")) {
-                        wdg_render(state->workspace);
-                        ImGui::EndMenu();
-                    }
-                    if (ImGui::BeginMenu("Export")) {
-                        if (ImGui::MenuItem("HDR")) { action::export_hdr(state->workspace); }
-                        if (ImGui::MenuItem("PNG")) { action::export_png(state->workspace); }
-                        if (ImGui::MenuItem("TGA")) { action::export_tga(state->workspace); }
-                        if (ImGui::MenuItem("BMP")) { action::export_png(state->workspace); }
-                        ImGui::EndMenu();
-                    }
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("View")) {
-                if (ImGui::BeginMenu("Zoom")) {
+            if (ImGui::BeginMenu("Window")) {
+                if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
+                if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
+                if (ImGui::BeginMenu("Preview")) {
                     wdg_zoom(state->workspace);
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-        }
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
-            if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
-            ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
@@ -160,7 +182,6 @@ void render_main_menu(state_t *state)
 	{
 		static char filepath[256];
 		ImGui::InputText("File", filepath, 256);
-
         size_t path_given = (strlen(filepath) > 0);
         const char *text_button = (path_given > 0 ? "OK" : "Cancel");
 

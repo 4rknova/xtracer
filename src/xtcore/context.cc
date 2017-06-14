@@ -28,7 +28,7 @@ context_t::context_t()
 void assemble(nimg::Pixmap &pixmap, const context_t &context)
 {
     pixmap.init(context.params.width, context.params.height);
-    nimg::ColorRGBf col;
+    nimg::ColorRGBAf col;
 
     for (size_t i = 0; i < context.tiles.size(); ++i) {
         const xtcore::render::tile_t *tile = &(context.tiles[i]);

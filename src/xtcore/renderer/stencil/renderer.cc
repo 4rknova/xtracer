@@ -59,7 +59,7 @@ void Renderer::render(void)
 	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
 	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
 
-                ColorRGBf color;
+                nimg::ColorRGBAf color(0,0,0,0);
 
                 for (size_t aa = 0; aa < samples.size(); ++aa) {
                     float rx = (float)x + samples[aa].x;
@@ -69,8 +69,9 @@ void Renderer::render(void)
                     std::string obj;
                     for (float dofs = 0; dofs < s; ++dofs) {
                   	 	NMath::Ray ray = cam->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
-                        float res = m_context->scene.intersection(ray, info, obj) ? 1. : 0.;
+                        float res = (m_context->scene.intersection(ray, info, obj) ? 1. : 0.);
                         color += nimg::ColorRGBAf(res, res, res) * d;
+                        color.a(color.a() + res *d);
                     }
                 }
 

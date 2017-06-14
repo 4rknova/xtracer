@@ -81,21 +81,6 @@ void draw_render_scenegraph(state_t *state)
     ) {
         ImGui::ProgressBar(state->workspace->progress, ImVec2(ImGui::GetWindowWidth() - 80, 0));
     }
-    ImGui::SameLine(ImGui::GetWindowWidth()-65);
-    if (ImGui::Button("close" , ImVec2(50,20)))
-    {
-        std::vector<workspace_t*>::iterator it = state->workspaces.begin();
-        std::vector<workspace_t*>::iterator et = state->workspaces.end();
-        for (; it != et; ++it) {
-            if ((*it) == state->workspace) {
-                state->workspaces.erase(it);
-                state->workspace->deinit();
-                delete state->workspace;
-                state->workspace = 0;
-                break;
-            }
-        }
-    }
     ImGui::Text("%s", ws->source_file.c_str());
 	ImGui::Separator();
 	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
