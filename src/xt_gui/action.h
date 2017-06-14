@@ -10,9 +10,13 @@ int render(workspace_t *ws);
 int load(workspace_t *ws);
 int save(workspace_t *ws);
 
-void quit();
+int export_hdr(workspace_t *ws);
+int export_png(workspace_t *ws);
+int export_bmp(workspace_t *ws);
+int export_tga(workspace_t *ws);
 
 void not_yet_implemented();
+void quit();
 
 } /* namespace action */
 

@@ -9,6 +9,8 @@
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
 
+#define DEFAULT_GAMMA (2.2)
+
 struct ws_handler_t : public xtcore::render::tile_event_handler_t
 {
     ws_handler_t(std::mutex *m);
@@ -20,9 +22,9 @@ struct ws_handler_t : public xtcore::render::tile_event_handler_t
 
 struct workspace_t
 {
-    GLuint                      texture;
-    float                       zoom_multiplier;
-    std::string                 source_file;
+    GLuint                     texture;
+    float                      zoom_multiplier;
+    std::string                source_file;
     xtcore::render::IRenderer *renderer;
     xtcore::render::context_t  context;
 
@@ -42,12 +44,15 @@ struct workspace_t
 
     std::mutex m;
 
+    float gamma;
+
     workspace_t()
         : texture(0)
         , zoom_multiplier(1.f)
         , renderer(0)
         , handler_init(&m)
         , handler_done(&m)
+        , gamma(DEFAULT_GAMMA)
     {}
 };
 

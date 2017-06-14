@@ -1,4 +1,6 @@
 #include <thread>
+#include <nimg/img.h>
+#include <xtcore/context.h>
 #include <xtcore/log.h>
 #include "action.h"
 
@@ -46,6 +48,34 @@ int save(workspace_t *ws)
 void quit()
 {
     exit(0);
+}
+
+int export_hdr(workspace_t *ws)
+{
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+    return nimg::io::save::hdr("out.png", fb);
+}
+
+int export_png(workspace_t *ws)
+{
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+    return nimg::io::save::png("out.png", fb);
+}
+
+int export_tga(workspace_t *ws)
+{
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+    return nimg::io::save::tga("out.png", fb);
+}
+
+int export_bmp(workspace_t *ws)
+{
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+    return nimg::io::save::bmp("out.png", fb);
 }
 
 void not_yet_implemented()

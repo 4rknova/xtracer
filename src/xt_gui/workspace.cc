@@ -92,6 +92,10 @@ void workspace_t::update()
                 nimg::ColorRGBf col;
                 t->read(x, y, col);
                 float data[4] = {col.r(), col.g(), col.b(), 1};
+                // Apply gamma correction
+                nmath_pow(data[0], gamma);
+                nmath_pow(data[1], gamma);
+                nmath_pow(data[2], gamma);
                 glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);
             }
 		}

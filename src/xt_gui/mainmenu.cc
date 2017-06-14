@@ -110,17 +110,24 @@ void render_main_menu(state_t *state)
             }
         }
         if (state->workspace) {
-            if (ImGui::BeginMenu("Render")) {
+            if (ImGui::BeginMenu("Process")) {
                 if (state->workspace->renderer) {
-                    ImGui::Text("Rendering..");
+                    ImGui::Text("Rendering ");
                     ImGui::ProgressBar(state->workspace->progress);
                 } else {
-                    if (ImGui::BeginMenu("Configuration")) {
+                    if (ImGui::BeginMenu("Configure")) {
                         wdg_config(state->workspace);
                         ImGui::EndMenu();
                     }
-                    if (ImGui::BeginMenu("Renderer")) {
+                    if (ImGui::BeginMenu("Render")) {
                         wdg_render(state->workspace);
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Export")) {
+                        if (ImGui::MenuItem("HDR")) { action::export_hdr(state->workspace); }
+                        if (ImGui::MenuItem("PNG")) { action::export_png(state->workspace); }
+                        if (ImGui::MenuItem("TGA")) { action::export_tga(state->workspace); }
+                        if (ImGui::MenuItem("BMP")) { action::export_png(state->workspace); }
                         ImGui::EndMenu();
                     }
                 }
@@ -182,7 +189,7 @@ void render_main_menu(state_t *state)
         ImGui::NewLine();
         ImGui::EndGroup();
         ImGui::NewLine();
-        ImGui::Text(xtcore::get_license());
+        ImGui::Text("%s",xtcore::get_license());
         ImGui::NewLine();
         ImGui::NewLine();
         ImGui::SameLine(ImGui::GetWindowWidth() - 100);
