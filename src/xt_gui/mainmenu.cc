@@ -47,9 +47,36 @@ void wdg_log(bool &visible)
     }
 }
 
+
+bool Picker(void* data, int n, const char** name)
+{
+	workspace_t *ws = (workspace_t*)data;
+	auto it = ws->context.scene.m_cameras.begin();
+	auto et = ws->context.scene.m_cameras.end();
+	for (; it != et && n--!=0; ++it);
+	*name = (*it).first.c_str();
+  	return n < (int)(ws->context.scene.m_cameras.size());
+}
+
 void wdg_config(workspace_t *ws)
 {
     xtcore::render::params_t *p = &(ws->context.params);
+
+    ImGui::Text("Camera");ImGui::Separator();
+
+	static int selected = -1;
+	if (ImGui::ListBox("Symbols", &selected, Picker, ws, (int)(ws->context.scene.m_cameras.size()))) {
+		auto it = ws->context.scene.m_cameras.begin();
+		auto et = ws->context.scene.m_cameras.end();
+		int tmp = selected;
+		for (; it != et && tmp-->0; ++it);
+		ws->context.params.camera = (*it).first;
+		printf("%i\n",selected);
+	}
+
+
+
+    ImGui::NewLine();
     ImVec2 bd(100,0);
     ImGui::Text("Resolution");ImGui::Separator();
     if (ImGui::Button("320x240", bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
@@ -158,15 +185,15 @@ void render_main_menu(state_t *state)
             }
         }
         if (state->workspace) {
-            if (ImGui::BeginMenu("Window")) {
-                if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
-                if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
-                if (ImGui::BeginMenu("Preview")) {
-                    wdg_zoom(state->workspace);
-                    ImGui::EndMenu();
-                }
+            if (ImGui::BeginMenu("View")) {
+                wdg_zoom(state->workspace);
                 ImGui::EndMenu();
             }
+        }
+        if (ImGui::BeginMenu("Window")) {
+            if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
+            if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
+            ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }

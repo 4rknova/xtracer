@@ -43,7 +43,7 @@ void Renderer::render(void)
 
     xtcore::antialiasing::SampleSet samples;
     xtcore::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    xtcore::assets::ICamera *cam = m_context->scene.get_camera();
+    xtcore::assets::ICamera *cam = m_context->scene.get_camera(m_context->params.camera.c_str());
     if (!cam) return;
     float d = 1.f / (s * samples.size());
 

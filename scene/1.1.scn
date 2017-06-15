@@ -5,12 +5,12 @@ versn = 0.3
 data = data/cubemap
 
 camera = {
-	ods = {
+	default = {
         type = ods
 		ipd  = 1.5
     }
 
-    default = {
+    2default = {
         type     = thin-lens
         up       = vec3(0,1,0)
         position = vec3(0,100,-1)

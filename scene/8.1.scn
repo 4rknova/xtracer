@@ -43,74 +43,45 @@ camera = {
 
 geometry = {
 	m0 = {
-		type = mesh
+		type   = mesh
 		source = <data>/bunny.obj
-
-		rotation = {
-			z = 1.5708
-		}
-
-		scale = {
-			x = .75
-			y = .75
-			z = .75
-		}
-
-		translation = {
-			y = 0.72
-		}
-	}
+        modifiers = {
+    		rotation    = vec3(0,0,1.5708)
+    		scale       = vec3(.75,.75,.75)
+	    	translation = vec3(0,.72,0)
+	    }
+    }
 
 	m1 = {
-		type = mesh
+		type   = mesh
 		source = <data>/dragon.obj
-
-		rotation = {
-			z = 1.5708
-		}
-
-		translation = {
-			y = 0.7
-			x = 1.5
-		}
+        modifiers = {
+    		rotation    = vec3(0,0,1.5708)
+            translation = vec3(1.5,.7,0)
+        }
 	}
 
 	m2 = {
-		type = mesh
+		type   = mesh
 		source = <data>/happy_buddha.obj
-
-		rotation = {
-			z = 1.5708
-			y = -1.5708
-		}
-
-		translation = {
-			y = 1.00
-			x = -1.5
-		}
+        modifiers = {
+    		rotation    = vec3(0,-1.5708,1.5708)
+    		translation = vec3(-1.5,1,0)
+        }
 	}
 
 	floor = {
-		type = plane
-		normal = {
-			y = 1
-		}
-
+		type     = plane
+		normal   = vec3(0,1,0)
 		distance = 0
-		u_scale = 0.5
-		v_scale = 0.5
+		u_scale  = 0.5
+		v_scale  = 0.5
 	}
 
 	l0 = {
-		type = sphere
-
-        radius = 1
-
-		position = {
-			x = -8
-			y = 15
-			z = -8
-		}
+		type     = sphere
+        radius   = 1
+		position = vec3(-8,15,-8)
 	}
 }
 

@@ -49,8 +49,7 @@ class Scene
 		const ColorRGBf &ambient();
 		void ambient(const ColorRGBf &ambient);
 
-		xtcore::assets::ICamera *get_camera();
-        std::string camera;
+		xtcore::assets::ICamera *get_camera(const char *name);
 
         nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
 		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);

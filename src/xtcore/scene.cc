@@ -266,17 +266,17 @@ void Scene::ambient(const ColorRGBf &ambient)
 	m_ambient = ambient;
 }
 
-xtcore::assets::ICamera *Scene::get_camera()
+xtcore::assets::ICamera *Scene::get_camera(const char *name)
 {
     std::map<std::string, xtcore::assets::ICamera *>::iterator et = m_cameras.end();
     std::map<std::string, xtcore::assets::ICamera *>::iterator ft;
 
-    if (camera.empty()) {
+    if (!name || strlen(name) == 0) {
         ft = m_cameras.find(XTPROTO_PROP_DEFAULT);
         if (ft != et) return ft->second;
     }
     else {
-        ft = m_cameras.find(camera);
+        ft = m_cameras.find(name);
         if (ft != et) return ft->second;
     }
 

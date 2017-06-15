@@ -85,7 +85,7 @@ int main(int argc, char **argv)
             Log::handle().post_error("no cameras found");
             return 2;
         }
-        context.scene.camera = camera;
+        context.params.camera = camera;
     } else return 1;
 
 	xtcore::render::IRenderer *renderer = NULL;
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
-	    std::string cam = context.scene.camera;
+	    std::string cam = context.params.camera;
 
         if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
 
