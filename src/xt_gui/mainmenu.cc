@@ -58,59 +58,78 @@ bool Picker(void* data, int n, const char** name)
   	return n < (int)(ws->context.scene.m_cameras.size());
 }
 
-void wdg_config(workspace_t *ws)
+void wdg_conf(workspace_t *ws)
 {
-    xtcore::render::params_t *p = &(ws->context.params);
+    if (ws->renderer) return;
 
-    ImGui::Text("Camera");ImGui::Separator();
+    if (ImGui::BeginMenu("Configuration")) {
+        xtcore::render::params_t *p = &(ws->context.params);
 
-	static int selected = -1;
-	if (ImGui::ListBox("Symbols", &selected, Picker, ws, (int)(ws->context.scene.m_cameras.size()))) {
-		auto it = ws->context.scene.m_cameras.begin();
-		auto et = ws->context.scene.m_cameras.end();
-		int tmp = selected;
-		for (; it != et && tmp-->0; ++it);
-		ws->context.params.camera = (*it).first;
-		printf("%i\n",selected);
-	}
+        ImGui::Text("Camera");ImGui::Separator();
+        static int selected = -1;
+        if (ImGui::ListBox("Symbols", &selected, Picker, ws, (int)(ws->context.scene.m_cameras.size()))) {
+            auto it = ws->context.scene.m_cameras.begin();
+            auto et = ws->context.scene.m_cameras.end();
+            int tmp = selected;
+            for (; it != et && tmp-->0; ++it);
+            ws->context.params.camera = (*it).first;
+        }
+        ImGui::NewLine();
+        ImVec2 bd(100,0);
+        ImGui::Text("Resolution");ImGui::Separator();
+        if (ImGui::Button("320x240", bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
+        if (ImGui::Button("640x480", bd)) { p->width =  640; p->height =  480; } ImGui::SameLine();
+        if (ImGui::Button("800x600", bd)) { p->width =  800; p->height =  600; }
+        if (ImGui::Button("1k"     , bd)) { p->width = 1024; p->height = 1024; } ImGui::SameLine();
+        if (ImGui::Button("2k"     , bd)) { p->width = 2048; p->height = 2048; } ImGui::SameLine();
+        if (ImGui::Button("4k"     , bd)) { p->width = 4096; p->height = 4096; }
+        if (ImGui::Button("720p"   , bd)) { p->width = 1280; p->height =  720; } ImGui::SameLine();
+        if (ImGui::Button("1080p"  , bd)) { p->width = 1920; p->height = 1080; } ImGui::SameLine();
+        if (ImGui::Button("1440p"  , bd)) { p->width = 2560; p->height = 1440; }
+        textedit_int("Width"          , p->width , 1, 1);
+        textedit_int("Height"         , p->height, 1, 1);
+        ImGui::NewLine();
+        ImGui::Text("Sampling");ImGui::Separator();
+        textedit_int("Antialiasing"   , p->ssaa   , 1, 1);
+        textedit_int("Recursion Depth", p->rdepth , 1, 1);
+        textedit_int("Samples"        , p->samples, 1, 1);
+        ImGui::NewLine();
+        ImGui::Text("Concurrency");ImGui::Separator();
+        textedit_int("Tile Size"      , p->tile_size, 1, 1, MIN(p->width, p->height));
+        textedit_int("Threads"        , ws->context.params.threads, 1, 1);
+        ImGui::EndMenu();
+    }
+}
 
+void wdg_renderer(workspace_t *ws)
+{
+    if (ws->renderer) return;
 
-
-    ImGui::NewLine();
-    ImVec2 bd(100,0);
-    ImGui::Text("Resolution");ImGui::Separator();
-    if (ImGui::Button("320x240", bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
-    if (ImGui::Button("640x480", bd)) { p->width =  640; p->height =  480; } ImGui::SameLine();
-    if (ImGui::Button("800x600", bd)) { p->width =  800; p->height =  600; }
-    if (ImGui::Button("1k"     , bd)) { p->width = 1024; p->height = 1024; } ImGui::SameLine();
-    if (ImGui::Button("2k"     , bd)) { p->width = 2048; p->height = 2048; } ImGui::SameLine();
-    if (ImGui::Button("4k"     , bd)) { p->width = 4096; p->height = 4096; }
-    if (ImGui::Button("720p"   , bd)) { p->width = 1280; p->height =  720; } ImGui::SameLine();
-    if (ImGui::Button("1080p"  , bd)) { p->width = 1920; p->height = 1080; } ImGui::SameLine();
-    if (ImGui::Button("1440p"  , bd)) { p->width = 2560; p->height = 1440; }
-    textedit_int("Width"          , p->width , 1, 1);
-    textedit_int("Height"         , p->height, 1, 1);
-    ImGui::NewLine();
-    ImGui::Text("Sampling");ImGui::Separator();
-    textedit_int("Antialiasing"   , p->ssaa   , 1, 1);
-    textedit_int("Recursion Depth", p->rdepth , 1, 1);
-    textedit_int("Samples"        , p->samples, 1, 1);
-    ImGui::NewLine();
-    ImGui::Text("Concurrency");ImGui::Separator();
-    textedit_int("Tile Size"      , p->tile_size, 1, 1, MIN(p->width, p->height));
-    textedit_int("Threads"        , ws->context.params.threads, 1, 1);
+    if (ImGui::BeginMenu("Render")) {
+        bool render = false;
+        if (ImGui::MenuItem("Depth"        )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer(); }
+        if (ImGui::MenuItem("Stencil"      )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer(); }
+        if (ImGui::MenuItem("Photon Mapper")) { render = true; ws->renderer = new Renderer(); }
+        if (render) action::render(ws);
+        ImGui::EndMenu();
+    }
 }
 
 void wdg_zoom(workspace_t *ws)
 {
-    ImGui::Text("Zoom");
-    ImGui::Separator();
-    if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.2f; } ImGui::SameLine();
-    if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
-    if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
-    if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.0f; } ImGui::SameLine();
-    if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.0f; }
-    textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
+    if (!ws) return;
+
+    if (ImGui::BeginMenu("View")) {
+        ImGui::Text("Zoom");
+        ImGui::Separator();
+        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.2f; } ImGui::SameLine();
+        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
+        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
+        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.0f; } ImGui::SameLine();
+        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.0f; }
+        textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
+        ImGui::EndMenu();
+    }
 }
 
 void menu_workspaces(state_t *state)
@@ -118,52 +137,33 @@ void menu_workspaces(state_t *state)
     size_t idx = 0;
     for (auto& i : state->workspaces) {
 	    std::string name = std::to_string(++idx) + ". " + i->source_file.c_str();
-            if (ImGui::BeginMenu(name.c_str())) {
-                bool busy = (i->renderer);
+        if (ImGui::BeginMenu(name.c_str())) {
+            bool busy = (i->renderer);
 
-                if (busy) {
-                    ImGui::ProgressBar(i->progress);
-                }
-                
-                if (ImGui::MenuItem("Display")) state->workspace = i;
-                
-                
-                if (!busy) {
-                    if (ImGui::BeginMenu("Configure")) {
-                        wdg_config(i);
-                        ImGui::EndMenu();
-                    }
-                    if (ImGui::BeginMenu("Render")) {
-                        bool render = false;
-                        if (ImGui::MenuItem("Depth"        )) { render = true; i->renderer = new xtcore::renderer::depth::Renderer(); }
-                        if (ImGui::MenuItem("Stencil"      )) { render = true; i->renderer = new xtcore::renderer::stencil::Renderer(); }
-                        if (ImGui::MenuItem("Photon Mapper")) { render = true; i->renderer = new Renderer(); }
-                        if (render) action::render(i);
-                        ImGui::EndMenu();
-                    }
-                    if (ImGui::BeginMenu("Export")) {
-                		static char filepath[256];
-                		ImGui::InputText("File", filepath, 256);
-                        if (strlen(filepath) > 0) {
-                            ImVec2 bd(52,0);
-                            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, i); ImGui::SameLine();
-                            if (ImGui::Button("PNG", bd)) action::export_png(filepath, i); ImGui::SameLine();
-                            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, i); ImGui::SameLine();
-                            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, i);
-                        }
-
-                        ImGui::EndMenu();
-                    }
-                    if (ImGui::MenuItem("Close")) action::close(state, i);
-                }
-                ImGui::EndMenu();
+            if (busy) {
+                ImGui::ProgressBar(i->progress);
             }
-
+            if (ImGui::MenuItem("Display")) state->workspace = i;
+            if (ImGui::MenuItem("Close")  ) action::close(state, i);
+            ImGui::EndMenu();
+        }
     }
 }
 
-void wdg_render(workspace_t *ws)
+
+void wdg_export(workspace_t *ws)
 {
+    if (ws->renderer) return;
+
+	static char filepath[256];
+	ImGui::InputText("File", filepath, 256);
+    if (strlen(filepath) > 0) {
+        ImVec2 bd(52,0);
+        if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
+        if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
+        if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
+        if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+    }
 }
 
 void render_main_menu(state_t *state)
@@ -184,12 +184,18 @@ void render_main_menu(state_t *state)
                 ImGui::EndMenu();
             }
         }
-        if (state->workspace) {
-            if (ImGui::BeginMenu("View")) {
+            if (state->workspace && ImGui::BeginMenu("Workspace")) {
                 wdg_zoom(state->workspace);
+                wdg_conf(state->workspace);
+                wdg_renderer(state->workspace);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Export")) {
+                    wdg_export(state->workspace);
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
-        }
         if (ImGui::BeginMenu("Window")) {
             if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
             if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
