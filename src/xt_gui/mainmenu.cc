@@ -155,14 +155,17 @@ void wdg_export(workspace_t *ws)
 {
     if (ws->renderer) return;
 
-	static char filepath[256];
-	ImGui::InputText("File", filepath, 256);
-    if (strlen(filepath) > 0) {
-        ImVec2 bd(52,0);
-        if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
-        if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
-        if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
-        if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+    if (ImGui::BeginMenu("Export")) {
+    	static char filepath[256];
+	    ImGui::InputText("File", filepath, 256);
+        if (strlen(filepath) > 0) {
+            ImVec2 bd(52,0);
+            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+        }
+        ImGui::EndMenu();
     }
 }
 
@@ -188,11 +191,7 @@ void render_main_menu(state_t *state)
                 wdg_zoom(state->workspace);
                 wdg_conf(state->workspace);
                 wdg_renderer(state->workspace);
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Export")) {
                     wdg_export(state->workspace);
-                    ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
