@@ -9,6 +9,7 @@
 #include <xtcore/renderer/photon_mapper/renderer.h>
 #include <xtcore/renderer.h>
 #include <xtcore/log.h>
+#include <xtcore/timeutil.h>
 #include "imgui_extra.h"
 #include "util.h"
 #include "config.h"
@@ -140,24 +141,31 @@ void menu_workspaces(state_t *state)
         if (ImGui::BeginMenu(name.c_str())) {
             bool busy = (i->renderer);
 
+            if (ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) {
                 ImGui::ProgressBar(i->progress);
             }
-            if (ImGui::MenuItem("Display")) state->workspace = i;
-            if (ImGui::MenuItem("Close")  ) action::close(state, i);
+            if (!(i->renderer) && ImGui::MenuItem("Close")  ) action::close(state, i);
             ImGui::EndMenu();
         }
     }
 }
-
 
 void wdg_export(workspace_t *ws)
 {
     if (ws->renderer) return;
 
     if (ImGui::BeginMenu("Export")) {
+        if (ws->time > 0.0) {
+            std::string timestr;
+            print_time_breakdown(timestr, ws->time);
+            ImGui::Text("Render time: %s", timestr.c_str());
+            ImGui::NewLine();
+        }
+
     	static char filepath[256];
 	    ImGui::InputText("File", filepath, 256);
+
         if (strlen(filepath) > 0) {
             ImVec2 bd(52,0);
             if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
@@ -177,24 +185,23 @@ void render_main_menu(state_t *state)
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Create")) { _flag_popup_win_load  = true; }
+            if (ImGui::MenuItem("Open")) { _flag_popup_win_load  = true; }
+            if (state->workspaces.size() > 0) {
+                if  (ImGui::BeginMenu("Workspaces")) {
+                    menu_workspaces(state);
+                    ImGui::EndMenu();
+                }
+            }
             if (ImGui::MenuItem("Exit"  )) { action::quit();               }
             ImGui::EndMenu();
         }
-        if (state->workspaces.size() > 0) {
-            if  (ImGui::BeginMenu("Workspaces")) {
-                menu_workspaces(state);
-                ImGui::EndMenu();
-            }
+        if (state->workspace && ImGui::BeginMenu("Workspace")) {
+            wdg_zoom(state->workspace);
+            wdg_conf(state->workspace);
+            wdg_renderer(state->workspace);
+            wdg_export(state->workspace);
+            ImGui::EndMenu();
         }
-            if (state->workspace && ImGui::BeginMenu("Workspace")) {
-                wdg_zoom(state->workspace);
-                wdg_conf(state->workspace);
-                wdg_renderer(state->workspace);
-                    wdg_export(state->workspace);
-                }
-                ImGui::EndMenu();
-            }
         if (ImGui::BeginMenu("Window")) {
             if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
             if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }

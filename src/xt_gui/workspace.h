@@ -46,6 +46,8 @@ struct workspace_t
 
     float gamma;
 
+    double time;
+
     workspace_t()
         : texture(0)
         , zoom_multiplier(1.f)
@@ -53,6 +55,7 @@ struct workspace_t
         , handler_init(&m)
         , handler_done(&m)
         , gamma(DEFAULT_GAMMA)
+        , time(0.0)
     {}
 };
 

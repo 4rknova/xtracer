@@ -76,11 +76,6 @@ void draw_render_scenegraph(state_t *state)
     workspace_t *ws = state->workspace;
 
     ImGui::BeginGroup();
-    if (state->workspace->progress > 0.0001f
-     && state->workspace->progress < 0.9999f
-    ) {
-        ImGui::ProgressBar(state->workspace->progress, ImVec2(ImGui::GetWindowWidth() - 80, 0));
-    }
     ImGui::Text("%s", ws->source_file.c_str());
 	ImGui::Separator();
 	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
