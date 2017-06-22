@@ -63,9 +63,9 @@ Ray CamPerspective::get_primary_ray(float x, float y, float width, float height)
 	ry.normalize();
 
 	Matrix4x4f mat(rx.x, ry.x, rz.x, 0,
-				          rx.y, ry.y, rz.y, 0,
-        			      rx.z, ry.z, rz.z, 0,
-		        		  0, 0, 0, 1);
+		           rx.y, ry.y, rz.y, 0,
+        		   rx.z, ry.z, rz.z, 0,
+		              0,    0,    0, 1);
 
 
 	// Calculate the deviated ray direction for DoF

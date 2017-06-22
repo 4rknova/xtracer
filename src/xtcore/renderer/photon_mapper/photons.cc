@@ -5,12 +5,23 @@
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
+#include <nmath/plane.h>
 #include <nmath/sample.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
 #include "renderer.h"
+
+#define XTCORE_SETUP_DEFAULT_GI                false   /* Default gi flag value. */
+#define XTCORE_SETUP_DEFAULT_GIVIZ             false   /* Default giviz flag value. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_COUNT      1000000 /* Default photon count for gi. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_SAMPLES    1000    /* Default photon samples. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_SRADIUS    25.0    /* Default photon sampling radius. */
+#define XTCORE_SETUP_DEFAULT_PHOTON_POWERSC    1.25    /* Default photon power scaling factor. */
+#define XTCORE_SETUP_DEFAULT_MAX_RDEPTH        4       /* Default maximum recursion depth. */
+
+using ncf::util::path_comp;
 
 Renderer::Renderer()
 	: m_context(NULL)
@@ -25,6 +36,139 @@ void Renderer::render()
 {
 	if (!m_context) return;
 
+//    pass_ptrace();
+	pass_rtrace();
+}
+
+void Renderer::pass_ptrace()
+{
+	unsigned int photon_count = XTCORE_SETUP_DEFAULT_PHOTON_COUNT; // Environment::handle().photon_count();
+
+	//Log::handle().post_message("Initiating the photon maps..", photon_count);
+	//Log::handle().post_message("Using %i photons..", photon_count);
+	m_pm_global.init(photon_count);
+	m_pm_caustic.init(photon_count);
+
+	//Log::handle().post_message("Distributing photons to light sources..", photon_count);
+	// Calculate each light's contribution by using the intensity luminance.
+	// In future revisions I should also take the light source's size into consideration.
+    std::vector<light_t> lights;
+    m_context->scene.get_light_sources(lights);
+
+	std::vector<unsigned int> light_photons;
+	{
+		unsigned int light_count = lights.size();
+		std::vector<scalar_t> light_contribution;			// Vector with each light's contribution.
+		std::vector<scalar_t> light_luminance;				// Vector with each light's luminance.
+		scalar_t light_total_luminance = 0;					// Total light luminance.
+
+		// Calculate the luminance for each light and the total.
+		std::vector<light_t>::iterator it = lights.begin();
+		std::vector<light_t>::iterator et = lights.end();
+		for (; it != et; ++it) {
+			NMath::scalar_t lum = 1;//nimg::eval::luminance((*it).material->emissive);
+			light_luminance.push_back(lum);
+			light_total_luminance += lum;
+		}
+
+		// Calculate the contributions and number of photons per light.
+		for (unsigned int i = 0; i < light_count; ++i) {
+			light_contribution.push_back(light_luminance[i] / light_total_luminance);
+			light_photons.push_back((scalar_t) (photon_count+1) * light_contribution[i]);
+			//Log::handle().post_message("- Light %i: %i photons, Luminance: %f, %f%% contribution", i,
+			//	light_photons[i], light_luminance[i], light_contribution[i] * 100);
+		}
+	}
+
+	//Log::handle().post_message("Casting photons..");
+	{
+		// Photon tracing.
+		unsigned int light_index = 0;
+		std::vector<light_t>::iterator it = lights.begin();
+		std::vector<light_t>::iterator et = lights.end();
+		for (; it != et; ++it) {
+			while (light_photons[light_index] > 0) {
+				Ray ray = (*it).light->ray_sample();
+//				trace_photon(ray, 0, (*it).material->emissive
+//						* XTCORE_SETUP_DEFAULT_PHOTON_POWERSC
+//						, light_photons[light_index]);
+			}
+
+			light_index++;
+		}
+	}
+
+	//Log::handle().post_message("Balancing the photon map..");
+	m_pm_global.balance();
+}
+
+bool Renderer::trace_photon(const Ray &ray, const unsigned int depth, const ColorRGBf power, unsigned int &map_capacity)
+{
+	if (depth > XTCORE_SETUP_DEFAULT_MAX_RDEPTH) return false;
+
+	// Intersect.
+	IntInfo info;
+	memset(&info, 0, sizeof(info));
+	std::string obj;
+
+	if (!m_context->scene.intersection(ray, info, obj)) return false;
+
+	// Get the material & texture.
+ //   std::string &mat_id = m_context->scene.m_objects[obj]->material;
+//    std::string &tex_id = m_context->scene.m_objects[obj]->texture;
+//	xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
+//	std::map<std::string, xtcore::assets::Texture2D *>::iterator it_tex = m_context->scene.m_textures.find(tex_id);
+
+	// Check if there are photons left to consume.
+	if (depth > 0 &&  map_capacity > 0) {
+		// Store the photon.
+		float pos[3]; // Photon position.
+		float pwr[3]; // Photon intensity.
+		float dir[3]; // Photon direction.
+
+		pwr[0] = power.r();
+		pwr[1] = power.g();
+		pwr[2] = power.b();
+		pos[0] = ray.origin.x;
+		pos[1] = ray.origin.y;
+		pos[2] = ray.origin.z;
+		dir[0] = -ray.direction.x;
+		dir[1] = -ray.direction.y;
+		dir[2] = -ray.direction.z;
+
+		m_pm_global.store(pos, pwr, dir);
+		map_capacity--;
+		std::cout << "\rCasting photons.. " << std::setw(12) << map_capacity << std::flush;
+	}
+
+	// Russian rulette.
+//	scalar_t avg_diff = (mat->get_sample(MAT_SAMPLER_DIFFUSE, ).r() + mat->diffuse.g() + mat->diffuse.b()) / 3;
+//	scalar_t avg_spec = (mat->specular.r() + mat->specular.g() + mat->specular.b()) / 3;
+//	scalar_t avg_range = NMath::clamp_max(avg_diff + avg_spec, 1);
+//	scalar_t event = NMath::prng_c(0.0, avg_range);
+
+	Ray nray;
+	nray.origin = info.point;
+
+//	if (event < avg_diff) { // Interdiffuse.
+//		nray.direction = NMath::Sample::hemisphere(info.normal, -ray.direction);
+//		nray.origin += nray.direction * 0.5;
+//
+//		ColorRGBf texcol = ColorRGBf(1, 1, 1);
+//		if (it_tex != m_context->scene.m_textures.end())
+//			texcol = ColorRGBf((*it_tex).second->sample((float)info.texcoord.x, (float)info.texcoord.y));
+//
+//		trace_photon(nray, depth + 1, power * texcol * mat->diffuse, map_capacity);
+
+//		return true;
+//	}
+
+	return false;
+}
+
+void Renderer::pass_rtrace()
+{
+	// precalculate some constants
     const size_t t          = m_context->params.threads;
     const size_t s          = m_context->params.samples;
 	const size_t w          = m_context->params.width;
@@ -60,9 +204,11 @@ void Renderer::render()
                         color += trace_ray(primary_ray, primary_ray, rdepth + 1) * d;
 				    }
                 }
+
 				tile->write(x, y, color);
 			}
 		}
+
         tile->submit();
 	}
 }
@@ -80,6 +226,28 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 	if (m_context->scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
 		if (!obj.empty()) {
+/*
+			if (XTCORE_SETUP_DEFAULT_GI) {
+				float irad[3] = {0,0,0};
+				float posi[3] = {(float)info.point.x, (float)info.point.y, (float)info.point.z};
+
+				float norm[3];
+				norm[0] = (float)info.normal.x;
+				norm[1] = (float)info.normal.y;
+				norm[2] = (float)info.normal.z;
+
+				m_pm_global.irradiance_estimate(irad, posi, norm,
+					XTCORE_SETUP_DEFAULT_PHOTON_SRADIUS,
+					XTCORE_SETUP_DEFAULT_PHOTON_SAMPLES
+				);
+
+				gi_res = ColorRGBf(irad[0], irad[1], irad[2]);
+
+				if (XTCORE_SETUP_DEFAULT_GIVIZ)
+					return gi_res;
+			}
+*/
+
             std::string &mat_id = m_context->scene.m_objects[obj]->material;
             xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 

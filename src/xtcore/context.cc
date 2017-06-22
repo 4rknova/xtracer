@@ -13,7 +13,7 @@ params_t::params_t()
     , samples(1)
     , ssaa(1)
     , rdepth(3)
-    , tile_size(64)
+    , tile_size(8)
 {}
 
 void context_t::init()

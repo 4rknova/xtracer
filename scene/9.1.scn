@@ -1,4 +1,4 @@
-data  = data/dabrovic_sponza
+data  = data
 title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
@@ -6,9 +6,14 @@ versn = 0.1
 ambient = col3(1,1,1)
 
 camera = {
-    default = {
+    ods = {
         type = ods
         ipd  = 6.4
+    }
+
+    default = {
+        type     = cubemap
+        position = vec3(0,15,0)
     }
 
 	cam0 = {

@@ -19,6 +19,7 @@
 #include "cam_perspective.h"
 #include "cam_ods.h"
 #include "cam_erp.h"
+#include "cam_cubemap.h"
 #include "mat_lambert.h"
 #include "mat_phong.h"
 #include "mat_blinnphong.h"
@@ -183,6 +184,18 @@ xtcore::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::N
     return data;
 }
 
+xtcore::assets::ICamera *deserialize_camera_cbm(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    assets::ICamera *data = new (std::nothrow) CamCubemap();
+
+    CamCubemap *cam = (CamCubemap *)data;
+    cam->position = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+
+    return data;
+}
+
 xtcore::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
@@ -221,6 +234,7 @@ xtcore::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *
          if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) data = deserialize_camera_tlp(source, p);
     else if (!type.compare(XTPROTO_LTRL_CAM_ODS)     ) data = deserialize_camera_ods(source, p);
     else if (!type.compare(XTPROTO_LTRL_CAM_ERP)     ) data = deserialize_camera_erp(source, p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP) ) data = deserialize_camera_cbm(source, p);
     else Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 
 	return data;

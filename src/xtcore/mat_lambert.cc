@@ -15,12 +15,12 @@ nimg::ColorRGBf MaterialLambert::shade(
 
     NMath::scalar_t d = dot(light_dir, info.normal);
 
-    nimg::ColorRGBf res = get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
+    nimg::ColorRGBf res;
 
     if (d < 0) return res;
 
-    res +=  light_intensity *
-            d * get_sample(MAT_SAMPLER_DIFFUSE , info.texcoord);
+    res += light_intensity *
+           d * get_sample(MAT_SAMPLER_DIFFUSE , info.texcoord);
     return res;
 }
 

@@ -26,7 +26,7 @@ nimg::ColorRGBf MaterialPhong::shade(
 
     if (rmv < 0) rmv = 0;
 
-    nimg::ColorRGBf res = get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
+    nimg::ColorRGBf res;
 
     res +=  light_intensity *
             (   (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))

@@ -1,0 +1,123 @@
+title = DOF
+descr = Depth of field
+versn = 0.4
+
+data = data
+
+camera = {
+	default = {
+		type     = thin-lens
+        fov      = 45
+		position = vec3(2.5,5,-15)
+		target   = vec3(0,0,0)
+		up       = vec3(0,1,0)
+		aperture = 1
+		flength  = 11
+	}
+}
+
+geometry = {
+    geo = {
+        type   = mesh
+        source = <data>/stereographic_projection/fixed.obj
+
+        modifiers = {
+            rotation = vec3(-1.57079632679,0,0)
+            translation = vec3(0,2,0)
+        }
+    }
+
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 0
+	}
+
+    l0 = {
+		type = sphere
+        radius = 0.15
+
+		position = {
+			x = 0
+			y = 4
+			z = 0
+		}
+	}
+}
+
+material = {
+	plane = {
+		type = phong
+
+        properties = {
+            scalars = {
+                exponent    = 256
+                reflectance = 1
+            }
+
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+
+		        specular = {
+                    type  = color
+                    value = col3(0,0,0)
+                }
+            }
+        }
+	}
+
+	plastic6 = {
+		type = phong
+
+        properties = {
+            scalars = {
+		        exponent    = 0
+                reflectance = 0
+            }
+
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+	}
+
+    light = {
+        type       = lambert
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	geo = {
+		geometry = geo
+		material = plastic6
+	}
+	floor = {
+		geometry = floor
+		material = plane
+	}
+    l0 = {
+        geometry = l0
+        material = light
+    }
+}

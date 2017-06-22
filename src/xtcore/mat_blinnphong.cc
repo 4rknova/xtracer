@@ -29,7 +29,6 @@ nimg::ColorRGBf MaterialBlinnPhong::shade(
     nimg::ColorRGBf res = light_intensity;
     res *=    (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
             + (get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)));
-    res +=     get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord);
     return res;
 }
 

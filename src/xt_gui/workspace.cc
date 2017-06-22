@@ -50,8 +50,8 @@ void workspace_t::setup_callbacks()
 {
     progress = 0.f;
     for (auto& i : context.tiles) {
-        i.setup_handler_on_init(&handler_init);
-        i.setup_handler_on_done(&handler_done);
+        i.setup_handler_on_init   (&handler_init);
+        i.setup_handler_on_done   (&handler_done);
     }
 }
 
@@ -67,7 +67,7 @@ void workspace_t::update()
     m.lock();
 
     glBindTexture(GL_TEXTURE_2D, texture);
-	while(1) {
+	while (1) {
         xtcore::render::tile_t *t = handler_init.pop();
 
         if (!t) break;
@@ -82,7 +82,7 @@ void workspace_t::update()
 		}
 	}
 
-    while(1) {
+    while (1) {
         xtcore::render::tile_t *t = handler_done.pop();
 
         if (!t) break;
