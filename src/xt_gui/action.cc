@@ -76,7 +76,10 @@ int export_hdr(const char *filepath, workspace_t *ws)
     std::string fp = std::string(filepath) + ".hdr";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::hdr(fp.c_str(), fb);
+    Log::handle().post_message("Exporting %s..", fp.c_str());
+    int res = nimg::io::save::hdr(fp.c_str(), fb);
+    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
+    return res;
 }
 
 int export_png(const char *filepath, workspace_t *ws)
@@ -84,7 +87,10 @@ int export_png(const char *filepath, workspace_t *ws)
     std::string fp = std::string(filepath) + ".png";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::png(fp.c_str(), fb);
+    Log::handle().post_message("Exporting %s..", fp.c_str());
+    int res = nimg::io::save::png(fp.c_str(), fb);
+    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
+    return res;
 }
 
 int export_tga(const char *filepath, workspace_t *ws)
@@ -92,7 +98,10 @@ int export_tga(const char *filepath, workspace_t *ws)
     std::string fp = std::string(filepath) + ".tga";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::tga(fp.c_str(), fb);
+    Log::handle().post_message("Exporting %s..", fp.c_str());
+    int res = nimg::io::save::tga(fp.c_str(), fb);
+    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
+    return res;
 }
 
 int export_bmp(const char *filepath, workspace_t *ws)
@@ -100,7 +109,10 @@ int export_bmp(const char *filepath, workspace_t *ws)
     std::string fp = std::string(filepath) + ".bmp";
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    return nimg::io::save::bmp(fp.c_str(), fb);
+    Log::handle().post_message("Exporting %s..", fp.c_str());
+    int res = nimg::io::save::bmp(fp.c_str(), fb);
+    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
+    return res;
 }
 
 void not_yet_implemented()

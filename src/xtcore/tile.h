@@ -57,6 +57,7 @@ typedef std::vector<tile_t> Tileset;
 ** tile_size : the horizontal and vertical size of each tile
 */
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size);
+void randomise_tileset(Tileset &tiles);
 
     } /* namespace render */
 } /* namespace xtcore */

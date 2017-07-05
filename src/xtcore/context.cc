@@ -20,6 +20,7 @@ void context_t::init()
 {
     tiles.clear();
     segment_framebuffer(tiles, params.width, params.height, params.tile_size);
+    randomise_tileset(tiles);
 }
 
 context_t::context_t()

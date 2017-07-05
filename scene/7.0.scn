@@ -2,41 +2,37 @@ title = Scanned Face
 descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
 
-data = data/head
+data = data
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
+cubemap = {
+    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
 }
 
 camera = {
 	default = {
-        type = thin-lens
-
-		fov = 45
-
-		position = {
-			x = 0
-			y = 110
-			z = 250
-		}
-
-		target = {
-			x = 0
-			y = 90
-			z = 30
-		}
-
-		up = {
-			y = 1
-		}
-
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,110,250)
+		target   = vec3(0,90,30)
+		up       = vec3(0,1,0)
         aperture = 10
-        flength = 200
+        flength  = 200
 	}
+
+    close = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,110,200)
+		target   = vec3(0,90,30)
+		up       = vec3(0,1,0)
+        aperture = 10
+        flength  = 150
+    }
 
     ods = {
         type     = ods
@@ -48,7 +44,7 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = <data>/OBJ/Male_Head_L4.OBJ
+		source = <data>/head/OBJ/Male_Head_L4.OBJ
 
         modifiers = {
             scale = {
@@ -85,14 +81,14 @@ material = {
             samplers = {
                 diffuse = {
                     type      = texture
-            		source    = <data>/Textures/Male_Colour.jpg
+            		source    = <data>/head/Textures/Male_Colour.jpg
                     filtering = bilinear
                 }
 
                 specular = {
                     type       = texture
                     multiplier = .25
-                    source     = <data>/Textures/Male_Spec_Amount.jpg
+                    source     = <data>/head/Textures/Male_Spec_Amount.jpg
                 }
             }
 

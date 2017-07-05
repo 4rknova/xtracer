@@ -6,113 +6,100 @@ title = Cornell box
 descr = <title> variant.
 versn = 0.1
 
-# The scene cameras.
 camera = {
-	# The front camera.
 	default = {
-        type = thin-lens
-
-		# Field of view.
-		fov = 38.39
-
-		# Camera position.
-		position = {
-			x = 278.0
-			y = 273.0
-			z = -800.0
-		}
-
-		# Target.
-		# This is equal to the direction (0, 1, 0)
-		# as defined in the original data.
-		target = {
-			x = 278.0
-			y = 273.0
-			z = -799.0
-		}
-
-		# Up vector.
-		up = {
-			x = 0
-			y = 1
-			z = 0
-		}
+        type     = thin-lens
+		fov      = 38.39
+		position = vec3(278.0,273.0,-800.0)
+		target   = vec3(278.0,273.0,-799.0)
+		up       = vec3(0,1,0)
 	}
 
     ods = {
-        type = ods
-        ipd  = 6.4
-
-		position = {
-            x = 278.0
-            y = 273.0
-            z = -150.0
-        }
+        type     = ods
+        ipd      = 6.4
+		position = vec3(278.0,273.0,-150.0)
     }
 }
 
-# The scene materials
 material = {
-
 	# The following three colors are RGB approximations to the spectral
 	# measurements of the white, red, and green paints used in the Cornell Box.
 	white = {
 		type = lambert
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
-		}
-	}
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
 
 	matte = {
 		type = lambert
 
-		diffuse = {
-			r = 0.980
-			g = 0.9215
-			b = 0.8431
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.980,0.9215,0.8431)
+                }
+            }
 		}
 	}
 
 	red = {
 		type = lambert
 
-		diffuse = {
-			r = 0.63
-			g = 0.06
-			b = 0.04
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.63,0.06,0.04)
+                }
+            }
 		}
 	}
 
 	green = {
 		type = lambert
 
-		diffuse = {
-			r = 0.15
-			g = 0.48
-			b = 0.09
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.15,0.48,0.09)
+                }
+            }
 		}
 	}
 
 	light = {
 		type = lambert
 
-		diffuse = {
-			r = 1
-			g = 1
-			b = 1
+        properties = {
+            samplers = {
+		        diffuse = {
+                    type = color
+                    value = col3(1,1,1)
+                }
+            }
 		}
 	}
 
     light_source = {
         type = lambert
 
-        emissive = {
-            r = 1
-            g = 1
-            b = 1
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
         }
     }
 }
@@ -368,27 +355,27 @@ geometry = {
 	}
 
 	model = {
-		type   = mesh
+	    type   = mesh
 		source = <data>/dragon.obj
 		#smooth = true
 
-		rotation = {
-			y = -0.785398
-            z = 1.5708
-		}
-
-		scale = {
-			x = 200.0
-			y = 200.0
-			z = 200.0
-		}
-
-		translation = {
- 			y = 140.0
-			x = 300.0
-			z = 200.0
-		}
-	}
+        modifiers = {
+    		rotation = {
+    			y = -0.785398
+                z = 1.5708
+    		}
+    		scale = {
+    			x = 200.0
+    			y = 200.0
+    			z = 200.0
+    		}
+    		translation = {
+     			y = 140.0
+    			x = 300.0
+    			z = 200.0
+    	    }
+        }
+    }
 }
 
 # The scene objects
@@ -407,12 +394,12 @@ object = {
 	# Ceiling
 	ceiling_1 = {
 		geometry = ceiling_1
-		material = white
+		material = light
 	}
 
 	ceiling_2 = {
 		geometry = ceiling_2
-		material = white
+		material = light
 	}
 
 	# Back wall

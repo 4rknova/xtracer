@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <algorithm>
 #include "tile.h"
 
 namespace xtcore {
@@ -84,6 +85,11 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
             tiles.push_back(tile);
         }
     }
+}
+
+void randomise_tileset(Tileset &tiles)
+{
+    std::random_shuffle(tiles.begin(), tiles.end());
 }
 
 	} /* namespace render */

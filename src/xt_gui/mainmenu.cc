@@ -17,15 +17,15 @@
 #include "mainmenu.h"
 
 
-#define LOG_HISTORY_SIZE (20)
+#define LOG_HISTORY_SIZE (200)
 
 namespace gui {
 
-void wdg_log(bool &visible)
+void wdg_log(bool &visible, state_t *state)
 {
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
 	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
-        ImGui::SetWindowSize(ImVec2(600, 500));
+        ImGui::SetWindowSize(ImVec2(state->window.width - 2., state->window.height - 23.));
     	if (ImGui::Button("close", ImVec2(100,0)))
     	{
     		ImGui::CloseCurrentPopup();
@@ -141,7 +141,8 @@ void menu_workspaces(state_t *state)
         if (ImGui::BeginMenu(name.c_str())) {
             bool busy = (i->renderer);
 
-            if (ImGui::MenuItem("Switch to this")) state->workspace = i;
+            if ((state->workspace != i)
+                && ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) {
                 ImGui::ProgressBar(i->progress);
             }
@@ -215,7 +216,7 @@ void render_main_menu(state_t *state)
 	if (_flag_popup_win_about) { ImGui::OpenPopup("About"); }
     if (_flag_popup_win_log  ) { ImGui::OpenPopup("Log");   }
 
-    wdg_log(_flag_popup_win_log);
+    wdg_log(_flag_popup_win_log, state);
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
 	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0))
 	{

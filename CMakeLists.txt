@@ -28,9 +28,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
-set(CMAKE_CACHEFILE_DIR ${PATH_BIN})
+set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
 
-set(PATH_SRC_XTCORE ${PATH_SRC}/xtcore)
+set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/xt_cli)
 set(PATH_SRC_FRONTEND_GUI ${PATH_SRC}/xt_gui)
 
@@ -110,6 +110,8 @@ MESSAGE( STATUS ${DEFS})
 
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
+add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic)
+add_dependencies (${OUT_EXE_GUI} xtcore_static xtcore_dynamic)
 
 enable_testing()
 file(MAKE_DIRECTORY ${PATH_TEST})
