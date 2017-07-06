@@ -1,4 +1,4 @@
-data  = data/conference
+data  = data/graphics.cs.williams.edu/conference
 title = conference room
 descr = conference room
 versn = 0.3

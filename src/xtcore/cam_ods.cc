@@ -15,7 +15,7 @@ NMath::Ray CamODS::get_primary_ray(float x, float y, float width, float height)
     if (y > h) y = y - h;
 
     // Calculate theta & phi angles
-    float theta = (x / width) * 2.f  * NMath::PI - NMath::PI;
+    float theta = (x / width) * 2.f * NMath::PI;
     float phi   = NMath::PI * .5f - (y/h) * NMath::PI;
 
     ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;

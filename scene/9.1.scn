@@ -1,48 +1,37 @@
-data  = data
+data   = data/graphics.cs.williams.edu/dabrovic_sponza
+datacb = data/cubemap
 title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
 
-ambient = col3(1,1,1)
+cubemap = {
+    posy = <datacb>/posy.jpg
+    negy = <datacb>/negy.jpg
+    negx = <datacb>/negx.jpg
+    posx = <datacb>/posx.jpg
+    posz = <datacb>/posz.jpg
+    negz = <datacb>/negz.jpg
+}
 
 camera = {
     ods = {
         type = ods
-        ipd  = 6.4
+        ipd  = 1.
+        position = vec3(0,10,0)
     }
 
     default = {
         type     = cubemap
-        position = vec3(0,15,0)
+        position = vec3(0,10,0)
     }
 
 	cam0 = {
         type     = thin-lens
 		fov      = 60
-		position = vec3(0.9,10,0.8)
-		target   = vec3(0,20,1)
+		position = vec3(-5,5,0)
+		target   = vec3( 5,7,0)
 		up       = vec3(0,1,0)
 	}
-
-	cam1 = {
-        type     = thin-lens
-		fov      = 60
-		position = vec3(-100,15,-10)
-		target   = vec3(10,60,1)
-		upi      = vec3(0,1,0)
-		aperture = 8
-		flength  = 550
-	}
-
-    cam2 = {
-        type     = thin-lens
-        fov      = 60
-        position = vec3(-300,1,0)
-        target   = vec3(500,0,0)
-        up       = vec3(0,1,0)
-        aperture = 0
-        flength  = 0
-    }
 }
 
 geometry = {
@@ -53,8 +42,8 @@ geometry = {
 
 	light = {
 		type     = sphere
-		position = vec3(40,300,0)
-        radius   = 10
+		position = vec3(0,10,0)
+        radius   = .1
 	}
 }
 

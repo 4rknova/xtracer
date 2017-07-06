@@ -8,6 +8,7 @@ camera = {
 	ods = {
         type = ods
 		ipd  = 1.5
+        position = vec3(0,0,-75)
     }
 
     default = {

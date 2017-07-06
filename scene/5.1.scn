@@ -31,7 +31,7 @@ descr = <title>. You will normally want to render this scene with a 1:1 aspect r
 versn = 0.1
 
 camera = {
-	defaults = {
+	default = {
         type     = thin-lens
 		fov      = 38.39
 		position = vec3(278,273,-800)
@@ -39,7 +39,7 @@ camera = {
         up       = vec3(0,1,0)
 	}
 
-    default = {
+    cubemap = {
         type     = cubemap
         position = vec3(278,273,0)
     }
