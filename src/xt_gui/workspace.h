@@ -5,6 +5,7 @@
 #include <queue>
 #include <mutex>
 #include <GL/gl.h>
+#include <nplatform/timer.h>
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
@@ -46,7 +47,7 @@ struct workspace_t
 
     float gamma;
 
-    double time;
+    Timer timer;
 
     workspace_t()
         : texture(0)
@@ -55,7 +56,6 @@ struct workspace_t
         , handler_init(&m)
         , handler_done(&m)
         , gamma(DEFAULT_GAMMA)
-        , time(0.0)
     {}
 };
 

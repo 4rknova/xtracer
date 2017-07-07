@@ -1,6 +1,5 @@
 #include <thread>
 #include <string>
-#include <nplatform/timer.h>
 #include <nimg/img.h>
 #include <xtcore/context.h>
 #include <xtcore/log.h>
@@ -16,10 +15,8 @@ void task_render(workspace_t *ws)
         ws->setup_callbacks();
         ws->renderer->setup(ws->context);
         ws->setup_callbacks();
-        Timer timer;
-        timer.start();
+        ws->timer.start();
         ws->renderer->render();
-        ws->time = timer.get_time_in_mlsec();
         delete ws->renderer;
         ws->renderer = 0;
     }

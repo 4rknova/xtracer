@@ -78,15 +78,18 @@ void wdg_conf(workspace_t *ws)
         ImGui::NewLine();
         ImVec2 bd(100,0);
         ImGui::Text("Resolution");ImGui::Separator();
-        if (ImGui::Button("320x240", bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
-        if (ImGui::Button("640x480", bd)) { p->width =  640; p->height =  480; } ImGui::SameLine();
-        if (ImGui::Button("800x600", bd)) { p->width =  800; p->height =  600; }
-        if (ImGui::Button("1k"     , bd)) { p->width = 1024; p->height = 1024; } ImGui::SameLine();
-        if (ImGui::Button("2k"     , bd)) { p->width = 2048; p->height = 2048; } ImGui::SameLine();
-        if (ImGui::Button("4k"     , bd)) { p->width = 4096; p->height = 4096; }
-        if (ImGui::Button("720p"   , bd)) { p->width = 1280; p->height =  720; } ImGui::SameLine();
-        if (ImGui::Button("1080p"  , bd)) { p->width = 1920; p->height = 1080; } ImGui::SameLine();
-        if (ImGui::Button("1440p"  , bd)) { p->width = 2560; p->height = 1440; }
+        if (ImGui::Button("128x768"   , bd)) { p->width =  128; p->height =  768; } ImGui::SameLine();
+        if (ImGui::Button("512x3072"  , bd)) { p->width =  512; p->height = 3072; } ImGui::SameLine();
+        if (ImGui::Button("1024x6144" , bd)) { p->width = 1024; p->height = 6144; }
+        if (ImGui::Button("320x240"   , bd)) { p->width =  320; p->height =  240; } ImGui::SameLine();
+        if (ImGui::Button("640x480"   , bd)) { p->width =  640; p->height =  480; } ImGui::SameLine();
+        if (ImGui::Button("800x600"   , bd)) { p->width =  800; p->height =  600; }
+        if (ImGui::Button("1k"        , bd)) { p->width = 1024; p->height = 1024; } ImGui::SameLine();
+        if (ImGui::Button("2k"        , bd)) { p->width = 2048; p->height = 2048; } ImGui::SameLine();
+        if (ImGui::Button("4k"        , bd)) { p->width = 4096; p->height = 4096; }
+        if (ImGui::Button("720p"      , bd)) { p->width = 1280; p->height =  720; } ImGui::SameLine();
+        if (ImGui::Button("1080p"     , bd)) { p->width = 1920; p->height = 1080; } ImGui::SameLine();
+        if (ImGui::Button("1440p"     , bd)) { p->width = 2560; p->height = 1440; }
         textedit_int("Width"          , p->width , 1, 1);
         textedit_int("Height"         , p->height, 1, 1);
         ImGui::NewLine();
@@ -144,6 +147,12 @@ void menu_workspaces(state_t *state)
             if ((state->workspace != i)
                 && ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) {
+                ImGui::Text("Rendering.. ");
+                if (state->workspace->timer.get_time_in_sec() > 0.0) {
+                    std::string timestr;
+                    print_time_breakdown(timestr, state->workspace->timer.get_time_in_mlsec());
+                    ImGui::Text("%s", timestr.c_str());
+                }
                 ImGui::ProgressBar(i->progress);
             }
             if (!(i->renderer) && ImGui::MenuItem("Close")  ) action::close(state, i);
@@ -157,13 +166,6 @@ void wdg_export(workspace_t *ws)
     if (ws->renderer) return;
 
     if (ImGui::BeginMenu("Export")) {
-        if (ws->time > 0.0) {
-            std::string timestr;
-            print_time_breakdown(timestr, ws->time);
-            ImGui::Text("Render time: %s", timestr.c_str());
-            ImGui::NewLine();
-        }
-
     	static char filepath[256];
 	    ImGui::InputText("File", filepath, 256);
 

@@ -1,0 +1,29 @@
+title = Cubemap
+descr = Cubemap example
+versn = 0.3
+
+data = data/cbtest
+
+camera = {
+	default = {
+        type = ods
+		ipd  = 1.5
+    }
+
+    front = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(0,0,0)
+        target   = vec3(0,-10,10)
+        fov      = 90
+    }
+}
+
+cubemap = {
+    posx = <data>/cb0.jpg
+    negx = <data>/cb1.jpg
+    posy = <data>/cb2.jpg
+    negy = <data>/cb3.jpg
+    posz = <data>/cb4.jpg
+    negz = <data>/cb5.jpg
+}

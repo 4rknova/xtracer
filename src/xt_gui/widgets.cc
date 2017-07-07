@@ -172,13 +172,13 @@ void render_background(state_t *state)
 
 	if (!vbo) {
 		GLfloat verts[] = {
-                -1,-1, 0,
-                 1,-1, 0,
-                 1, 1, 0,
-                -1,-1, 0,
-                -1, 1, 0,
-                 1, 1, 0,
-		 };
+           -1,-1, 0,
+            1,-1, 0,
+            1, 1, 0,
+           -1,-1, 0,
+           -1, 1, 0,
+            1, 1, 0,
+		};
 
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
@@ -189,8 +189,9 @@ void render_background(state_t *state)
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
 	}
 
-    postprg->set_uniform("iWindowResolution", NMath::Vector2f((float)state->window.width
-                                                            , (float)state->window.height));
+    postprg->set_uniform("iWindowResolution"
+        , NMath::Vector2f((float)state->window.width
+                        , (float)state->window.height));
 
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);

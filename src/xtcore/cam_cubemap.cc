@@ -25,12 +25,12 @@ NMath::Ray CamCubemap::get_primary_ray(float x, float y, float width, float heig
     Vector3f rx, ry, rz, up, camdir;
 
     switch(face) {
-        case 0: camdir = Vector3f(-1, 0, 0); up = Vector3f(0,1,0); break;
-        case 1: camdir = Vector3f( 1, 0, 0); up = Vector3f(0,1,0); break;
-        case 2: camdir = Vector3f( 0,-1, 0); up = Vector3f(0,0,1); break;
-        case 3: camdir = Vector3f( 0, 1, 0); up = Vector3f(0,0,1); break;
-        case 4: camdir = Vector3f( 0, 0,-1); up = Vector3f(0,1,0); break;
-        case 5: camdir = Vector3f( 0, 0, 1); up = Vector3f(0,1,0); break;
+        case 0: camdir = Vector3f( 1, 0, 0); up = Vector3f(0, 1, 0); break;
+        case 1: camdir = Vector3f(-1, 0, 0); up = Vector3f(0, 1, 0); break;
+        case 2: camdir = Vector3f( 0, 1, 0); up = Vector3f(0, 0,-1); break;
+        case 3: camdir = Vector3f( 0,-1, 0); up = Vector3f(0, 0, 1); break;
+        case 4: camdir = Vector3f( 0, 0, 1); up = Vector3f(0, 1, 0); break;
+        case 5: camdir = Vector3f( 0, 0,-1); up = Vector3f(0, 1, 0); break;
     }
 
     y -= (float)(face * face_size);
