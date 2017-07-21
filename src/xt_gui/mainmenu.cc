@@ -11,6 +11,10 @@
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include "imgui_extra.h"
+
+// Main menu modules
+#include "mm_create.h"
+
 #include "util.h"
 #include "config.h"
 #include "action.h"
@@ -67,14 +71,18 @@ void wdg_conf(workspace_t *ws)
         xtcore::render::params_t *p = &(ws->context.params);
 
         ImGui::Text("Camera");ImGui::Separator();
-        static int selected = -1;
-        if (ImGui::ListBox("Symbols", &selected, Picker, ws, (int)(ws->context.scene.m_cameras.size()))) {
-            auto it = ws->context.scene.m_cameras.begin();
-            auto et = ws->context.scene.m_cameras.end();
-            int tmp = selected;
-            for (; it != et && tmp-->0; ++it);
-            ws->context.params.camera = (*it).first;
+
+        static int e = 0;
+        auto it = ws->context.scene.m_cameras.begin();
+        auto et = ws->context.scene.m_cameras.end();
+        for (int cam_idx = 0; it != et; ++it) {
+            if (ImGui::RadioButton((*it).first.c_str(), &e, ++cam_idx)) {
+                ws->context.params.camera = (*it).first;
+            }
+            if (cam_idx % 2 > 0) ImGui::SameLine();
         }
+        ImGui::NewLine();
+
         ImGui::NewLine();
         ImVec2 bd(100,0);
         ImGui::Text("Resolution");ImGui::Separator();
@@ -198,6 +206,9 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit"  )) { action::quit();               }
             ImGui::EndMenu();
         }
+
+        mm_create(state->workspace);
+
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             wdg_zoom(state->workspace);
             wdg_conf(state->workspace);

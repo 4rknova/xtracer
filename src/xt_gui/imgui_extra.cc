@@ -32,3 +32,8 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
         val = tmp;
     }
 }
+
+void not_yet_implemented()
+{
+    ImGui::Text("Not yet implemented");
+}
