@@ -87,9 +87,53 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
     }
 }
 
-void randomise_tileset(Tileset &tiles)
+void order(Tileset &tiles, TILE_ORDER order)
+{
+    switch (order) {
+        case TILE_ORDER_RANDOM     : order_random(tiles);        break;
+        case TILE_ORDER_RADIAL_IN  : order_radial(tiles, false); break;
+        case TILE_ORDER_RADIAL_OUT : order_radial(tiles, true ); break;
+    }
+}
+
+void order_random(Tileset &tiles)
 {
     std::random_shuffle(tiles.begin(), tiles.end());
+}
+
+void order_radial(Tileset &tiles, bool outwards)
+{
+    auto it = tiles.begin();
+    auto et = tiles.end();
+
+    // Get the dimensions
+    size_t w = 0, h = 0;
+    for (; it != et; ++it) {
+        size_t x = (*it).x1();
+        size_t y = (*it).y1();
+        if (w < x) w = x;
+        if (h < y) h = y;
+    }
+
+    int dw = w / 2;
+    int dh = h / 2;
+
+    std::sort (tiles.begin(), tiles.end(),
+        [outwards, dw, dh](const tile_t &a, const tile_t &b) -> bool
+        {
+            int ax = a.x0() + a.width()  / 2 - dw;
+            int ay = a.y0() + a.height() / 2 - dh;
+            int ar = ax * ax + ay * ay;
+
+            int bx = b.x0() + b.width()  / 2 - dw;
+            int by = b.y0() + b.height() / 2 - dh;
+            int br = bx * bx + by * by;
+
+            bool res = ar < br;
+
+            return (outwards ? res : !res);
+        }
+    );
 }
 
 	} /* namespace render */

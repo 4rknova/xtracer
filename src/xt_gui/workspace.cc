@@ -39,11 +39,15 @@ void workspace_t::init_texture()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
+
     glBindTexture(GL_TEXTURE_2D, texture);
-    float *data = new float[context.params.width * context.params.height*4];
-    memset(data, 0, sizeof(float) * 4 * context.params.width * context.params.height);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context.params.width, context.params.height, 0, GL_RGBA, GL_FLOAT, data);
-    delete data;
+
+    if (clear_buffer) {
+        float *data = new float[context.params.width * context.params.height*4];
+        memset(data, 0, sizeof(float) * 4 * context.params.width * context.params.height);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context.params.width, context.params.height, 0, GL_RGBA, GL_FLOAT, data);
+        delete data;
+    }
 }
 
 void workspace_t::setup_callbacks()

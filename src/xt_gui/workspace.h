@@ -10,7 +10,8 @@
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
 
-#define DEFAULT_GAMMA (2.2)
+#define DEFAULT_GAMMA       (2.2)
+#define DEFAULT_PROGRESSIVE (false)
 
 struct ws_handler_t : public xtcore::render::tile_event_handler_t
 {
@@ -49,13 +50,18 @@ struct workspace_t
 
     Timer timer;
 
+    xtcore::render::TILE_ORDER tile_order;
+    bool clear_buffer;
+
     workspace_t()
         : texture(0)
-        , zoom_multiplier(1.f)
+        , zoom_multiplier(1.001f)
         , renderer(0)
         , handler_init(&m)
         , handler_done(&m)
         , gamma(DEFAULT_GAMMA)
+        , tile_order(xtcore::render::TILE_ORDER_UNCHANGED)
+        , clear_buffer(true)
     {}
 };
 

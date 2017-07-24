@@ -203,7 +203,7 @@ void render_workspace(state_t *state)
 
 		if (!ws) return;
 
-        ws->update();
+        for (auto i : state->workspaces) i->update();
 
 		std::string name = ws->source_file.c_str();
 	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);

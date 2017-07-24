@@ -57,7 +57,19 @@ typedef std::vector<tile_t> Tileset;
 ** tile_size : the horizontal and vertical size of each tile
 */
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size);
-void randomise_tileset(Tileset &tiles);
+
+
+enum TILE_ORDER
+{
+      TILE_ORDER_UNCHANGED
+    , TILE_ORDER_RANDOM
+    , TILE_ORDER_RADIAL_IN
+    , TILE_ORDER_RADIAL_OUT
+};
+
+void order(Tileset &tiles, TILE_ORDER order);
+void order_random(Tileset &tiles);
+void order_radial(Tileset &tiles, bool outwards = true);
 
     } /* namespace render */
 } /* namespace xtcore */

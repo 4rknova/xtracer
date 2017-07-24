@@ -13,8 +13,7 @@
 #include "imgui_extra.h"
 
 // Main menu modules
-#include "mm_create.h"
-
+#include "gui.h"
 #include "util.h"
 #include "config.h"
 #include "action.h"
@@ -46,21 +45,10 @@ void wdg_log(bool &visible, state_t *state)
                 case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); break;
                 case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); break;
             }
-            ImGui::TextColored(col, "%s", l.message.c_str());
+           ImGui::TextColored(col, "%s", l.message.c_str());
         }
     	ImGui::EndPopup();
     }
-}
-
-
-bool Picker(void* data, int n, const char** name)
-{
-	workspace_t *ws = (workspace_t*)data;
-	auto it = ws->context.scene.m_cameras.begin();
-	auto et = ws->context.scene.m_cameras.end();
-	for (; it != et && n--!=0; ++it);
-	*name = (*it).first.c_str();
-  	return n < (int)(ws->context.scene.m_cameras.size());
 }
 
 void wdg_conf(workspace_t *ws)
@@ -75,15 +63,18 @@ void wdg_conf(workspace_t *ws)
         static int e = 0;
         auto it = ws->context.scene.m_cameras.begin();
         auto et = ws->context.scene.m_cameras.end();
+        ImGui::Columns(3, 0, false);
         for (int cam_idx = 0; it != et; ++it) {
             if (ImGui::RadioButton((*it).first.c_str(), &e, ++cam_idx)) {
                 ws->context.params.camera = (*it).first;
             }
-            if (cam_idx % 2 > 0) ImGui::SameLine();
+            ImGui::NextColumn();
         }
+        ImGui::Columns(1);
         ImGui::NewLine();
 
-        ImGui::NewLine();
+        mm_tileorder(ws);
+
         ImVec2 bd(100,0);
         ImGui::Text("Resolution");ImGui::Separator();
         if (ImGui::Button("128x768"   , bd)) { p->width =  128; p->height =  768; } ImGui::SameLine();
@@ -109,6 +100,9 @@ void wdg_conf(workspace_t *ws)
         ImGui::Text("Concurrency");ImGui::Separator();
         textedit_int("Tile Size"      , p->tile_size, 1, 1, MIN(p->width, p->height));
         textedit_int("Threads"        , ws->context.params.threads, 1, 1);
+        ImGui::NewLine();
+        ImGui::Text("Miscellaneous");ImGui::Separator();
+        ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
         ImGui::EndMenu();
     }
 }
@@ -134,11 +128,11 @@ void wdg_zoom(workspace_t *ws)
     if (ImGui::BeginMenu("View")) {
         ImGui::Text("Zoom");
         ImGui::Separator();
-        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.2f; } ImGui::SameLine();
-        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.5f; } ImGui::SameLine();
-        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.0f; } ImGui::SameLine();
-        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.0f; } ImGui::SameLine();
-        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.0f; }
+        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
+        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
+        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.001f; } ImGui::SameLine();
+        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
+        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
         textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
     }
@@ -151,6 +145,8 @@ void menu_workspaces(state_t *state)
 	    std::string name = std::to_string(++idx) + ". " + i->source_file.c_str();
         if (ImGui::BeginMenu(name.c_str())) {
             bool busy = (i->renderer);
+
+            ImGui::Image((ImTextureID)(i->texture), ImVec2(128, 128 * i->context.params.height / i->context.params.width));
 
             if ((state->workspace != i)
                 && ImGui::MenuItem("Switch to this")) state->workspace = i;

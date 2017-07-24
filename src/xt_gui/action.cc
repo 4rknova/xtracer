@@ -15,6 +15,7 @@ void task_render(workspace_t *ws)
         ws->setup_callbacks();
         ws->renderer->setup(ws->context);
         ws->setup_callbacks();
+        xtcore::render::order(ws->context.tiles, ws->tile_order);
         ws->timer.start();
         ws->renderer->render();
         delete ws->renderer;
