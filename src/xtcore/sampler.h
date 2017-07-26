@@ -16,11 +16,11 @@ enum FILTERING
 class ISampler
 {
     public:
+             ISampler();
     virtual ~ISampler();
     virtual nimg::ColorRGBf sample(const NMath::Vector3f &uvw) const = 0;
 
-    private:
-    FILTERING m_filtering;
+    FILTERING filtering;
 };
 
     } /* namespace assets */

@@ -33,7 +33,7 @@ void Log::clear()
 {
 	std::vector<log_entry_t *>::iterator it;
 
-	for (it = m_log.begin(); it != m_log.end(); it++) {
+	for (it = m_log.begin(); it != m_log.end(); ++it) {
 		delete (*it);
 	}
 
@@ -49,7 +49,7 @@ int Log::dump(const char* fpath)
 
 	std::vector<log_entry_t *>::iterator it;
 
-	for (it = m_log.begin(); it != m_log.end(); it++) {
+	for (it = m_log.begin(); it != m_log.end(); ++it) {
    		switch ((*it)->type) {
             case LOGENTRY_DEBUG:
                 file << "Debug: ";

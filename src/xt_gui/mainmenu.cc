@@ -165,6 +165,32 @@ void menu_workspaces(state_t *state)
     }
 }
 
+#include <xtcore/yuv4mpeg2.h>
+void export_video(const char *filepath, workspace_t *ws)
+{
+    size_t w = ws->context.params.width;
+    size_t h = ws->context.params.height;
+
+    start_video(filepath, w, h, 25);
+
+    nimg::Pixmap fb;
+    xtcore::render::assemble(fb, ws->context);
+
+    std::vector<float> rgb;
+    for (size_t x = 0; x < w; ++x) {
+        for (size_t y = 0; y < h; ++y) {
+            nimg::ColorRGBAf pixel = fb.pixel(x,y);
+            rgb.push_back(pixel.r());
+            rgb.push_back(pixel.g());
+            rgb.push_back(pixel.b());
+        }
+    }
+
+    for (size_t i = 0; i < 60; ++i) {
+        write_frame(filepath, w, h, &rgb[0]);
+    }
+}
+
 void wdg_export(workspace_t *ws)
 {
     if (ws->renderer) return;
@@ -179,6 +205,7 @@ void wdg_export(workspace_t *ws)
             if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
             if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
             if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+            if (ImGui::Button("Y4M", bd)) export_video(filepath, ws);
         }
         ImGui::EndMenu();
     }

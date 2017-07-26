@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 
     // Export the frame
     {
-	    std::string file, base, extension, filename, sw, sh, sa, random_token;
+	    std::string file, base, extension, filename, random_token;
 		#ifdef _WIN32
     		const char path_delim = '\\';
 	    #else

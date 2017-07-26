@@ -168,9 +168,6 @@ int Scene::load(const char *filename, const std::list<std::string> *modifiers)
 
     Log::handle().post_message("Building the scene..");
 
-
-	size_t count = 0;
-
 	m_source   = xtcore::io::deserialize_cstr(filename);
 	m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
 	m_ambient  = xtcore::io::deserialize_col3(&root, XTPROTO_PROP_IAMBN)
@@ -189,7 +186,8 @@ int Scene::load(const char *filename, const std::list<std::string> *modifiers)
 	std::list<std::string>::iterator et = sections.end();
 
 	for (; it != et; ++it) {
-		count = root.get_group_by_name((*it).c_str())->count_groups();
+    	size_t count = root.get_group_by_name((*it).c_str())->count_groups();
+
 		if (count) {
 			for (size_t i = 0; i < count; ++i) {
 				ncf::NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
@@ -288,7 +286,7 @@ bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::strin
 	IntInfo test, res;
 
 	std::map<std::string, xtcore::assets::Object *>::iterator it;
-	for (it = m_objects.begin(); it != m_objects.end(); it++) {
+	for (it = m_objects.begin(); it != m_objects.end(); ++it) {
 		// test all the objects and find the closest intersection
         xtcore::assets::Geometry *geom = m_geometry[((*it).second)->geometry.c_str()];
 
