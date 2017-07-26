@@ -32,9 +32,7 @@ void write_frame(const char *file, int width, int height, float *rgb)
     int sz = width * height * 3;
 
     for (int i = 0; i < sz; i+=3) {
-        float r = rgb[i+0]
-            , g = rgb[i+1]
-            , b = rgb[i+2]
+        float r = rgb[i+0], g = rgb[i+1], b = rgb[i+2]
             , y = 0, cb = 0, cr = 0;
 
         rgb_to_ycbcr(r, g, b, &y, &cb, &cr);
@@ -43,11 +41,31 @@ void write_frame(const char *file, int width, int height, float *rgb)
         if (cb > 1.) cb = 1.;
         if (cr > 1.) cr = 1.;
 
-        fprintf(f, "%c%c%c"
-             , (unsigned char)(y  *  255.)
-             , (unsigned char)(cb *  255.)
-             , (unsigned char)(cr *  255.)
-        );
+        fprintf(f, "%c", (unsigned char)(y  *  255.));
+    }
+    for (int i = 0; i < sz; i+=3) {
+        float r = rgb[i+0], g = rgb[i+1], b = rgb[i+2]
+            , y = 0, cb = 0, cr = 0;
+
+        rgb_to_ycbcr(r, g, b, &y, &cb, &cr);
+
+        if (y  > 1.) y  = 1.;
+        if (cb > 1.) cb = 1.;
+        if (cr > 1.) cr = 1.;
+
+        fprintf(f, "%c", (unsigned char)(cb  *  255.));
+    }
+    for (int i = 0; i < sz; i+=3) {
+        float r = rgb[i+0], g = rgb[i+1], b = rgb[i+2]
+            , y = 0, cb = 0, cr = 0;
+
+        rgb_to_ycbcr(r, g, b, &y, &cb, &cr);
+
+        if (y  > 1.) y  = 1.;
+        if (cb > 1.) cb = 1.;
+        if (cr > 1.) cr = 1.;
+
+        fprintf(f, "%c", (unsigned char)(cr  *  255.));
     }
     fclose(f);
 }
