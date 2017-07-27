@@ -6,10 +6,11 @@ extern "C" {
 
 void rgb_to_ycbcr(float r, float g, float b, float *y, float *cb, float *cr)
 {
-	float d = 128./255.;
-  	*y  =     .299 * r + .587 * g + .114 * b; // Luminance
-	*cb = d - .169 * r - .331 * g + .500 * b; // Chrominance Blue
-	*cr = d + .500 * r - .419 * g - .081 * b; // Chrominance Red
+	float k0 =  16./255.;
+    float k1 = 128./255.;
+    *y  = (r *  0.257 + g *  0.504 + b *  0.098) + k0; // Luminance
+    *cb = (r * -0.148 + g * -0.291 + b *  0.439) + k1; // Chrominance Red
+    *cr = (r *  0.439 + g * -0.368 + b * -0.071) + k1; // Chrominance Blue
 }
 
 void rgb_to_ycgco(float r, float g, float b, float *y, float *cg, float *co)

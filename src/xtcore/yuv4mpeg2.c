@@ -17,8 +17,10 @@ void start_video(const char *file, int width, int height, int frame_rate)
     fprintf(f, "%s", HID);
     fprintf(f, "W%i ", width);
     fprintf(f, "H%i ", height);
-    fprintf(f, "F%i:1", frame_rate);
-    fprintf(f, " Ip A0:0");
+    fprintf(f, "F%i:1 ", frame_rate);
+    fprintf(f, "Ip ");
+    fprintf(f, "A1:1 ");
+    fprintf(f, "C444");
     fprintf(f, "\n");
     fclose(f);
 }
@@ -53,7 +55,7 @@ void write_frame(const char *file, int width, int height, float *rgb)
         if (cb > 1.) cb = 1.;
         if (cr > 1.) cr = 1.;
 
-        fprintf(f, "%c", (unsigned char)(cb  *  255.));
+        fprintf(f, "%c", (unsigned char)(cb * 255.));
     }
     for (int i = 0; i < sz; i+=3) {
         float r = rgb[i+0], g = rgb[i+1], b = rgb[i+2]
@@ -65,7 +67,7 @@ void write_frame(const char *file, int width, int height, float *rgb)
         if (cb > 1.) cb = 1.;
         if (cr > 1.) cr = 1.;
 
-        fprintf(f, "%c", (unsigned char)(cr  *  255.));
+        fprintf(f, "%c", (unsigned char)(cr * 255.));
     }
     fclose(f);
 }

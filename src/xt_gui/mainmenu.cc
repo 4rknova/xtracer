@@ -177,8 +177,8 @@ void export_video(const char *filepath, workspace_t *ws)
     xtcore::render::assemble(fb, ws->context);
 
     std::vector<float> rgb;
-    for (size_t x = 0; x < w; ++x) {
-        for (size_t y = 0; y < h; ++y) {
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x) {
             nimg::ColorRGBAf pixel = fb.pixel(x,y);
             rgb.push_back(pixel.r());
             rgb.push_back(pixel.g());
