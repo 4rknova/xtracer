@@ -5,8 +5,6 @@ Copyright 2010 - 2017 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 [![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
-[![Beerpay](https://beerpay.io/4rknova/xtracer/badge.svg?style=beer-square)](https://beerpay.io/4rknova/xtracer)
-[![Beerpay](https://beerpay.io/4rknova/xtracer/make-wish.svg?style=flat-square)](https://beerpay.io/4rknova/xtracer?focus=wish)
 
 XTracer is a raytracer written in c and c++.
 
