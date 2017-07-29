@@ -14,6 +14,7 @@ Samples
 [![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_2.png)]()
 [![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_4.png)]()
 [![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/gi_5.png)]()
+[![xtracer sample render](http://www.4rknova.com/xtracer/image/samples/xtracer_ext_01.png)]()
 
 Features
 --------
