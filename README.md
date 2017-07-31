@@ -10,6 +10,7 @@ XTracer is a raytracer written in c and c++.
 
 Samples
 -------
+[![xtracer sample render](http://www.4rknova.com/project/xtracer/image/samples/xtracer_ext_02.png)]()
 [![xtracer sample render](http://www.4rknova.com/project/xtracer/image/samples/xtracer_ext_01.png)]()
 [![xtracer sample render](http://www.4rknova.com/project/xtracer/image/samples/0001.png)]()
 [![xtracer sample render](http://www.4rknova.com/project/xtracer/image/samples/gi_2.png)]()
