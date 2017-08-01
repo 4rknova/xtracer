@@ -141,12 +141,14 @@ void wdg_zoom(workspace_t *ws)
 void menu_workspaces(state_t *state)
 {
     size_t idx = 0;
+
     for (auto& i : state->workspaces) {
 	    std::string name = std::to_string(++idx) + ". " + i->source_file.c_str();
+
         if (ImGui::BeginMenu(name.c_str())) {
             bool busy = (i->renderer);
 
-            ImGui::Image((ImTextureID)(i->texture), ImVec2(128, 128 * i->context.params.height / i->context.params.width));
+            ImGui::Image((ImTextureID &)(i->texture), ImVec2(128, 128 * i->context.params.height / i->context.params.width));
 
             if ((state->workspace != i)
                 && ImGui::MenuItem("Switch to this")) state->workspace = i;
@@ -163,9 +165,17 @@ void menu_workspaces(state_t *state)
             ImGui::EndMenu();
         }
     }
+
+    if (state->workspaces.size() > 0) {
+        if (ImGui::MenuItem("Close all")) {
+            for (auto& i : state->workspaces) {
+                if (!(i->renderer)) action::close(state, i);
+            }
+        }
+    }
 }
 
-#include <xtcore/yuv4mpeg2.h>
+#include <nimg/yuv4mpeg2.h>
 void export_video(const char *filepath, workspace_t *ws)
 {
     size_t w = ws->context.params.width;

@@ -1,0 +1,141 @@
+title = Scanned Soldier
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.5
+
+data = data
+
+cubemap = {
+    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-200)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 5
+        flength  = 175
+    }
+
+    wide = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-330)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 15
+        flength  = 300
+    }
+
+    head = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-130, 130, -100)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 120
+    }
+
+    head 2 = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-110, 130, -60)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 110
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 1.5
+        position = vec3(0, 50, -100)
+    }
+}
+
+geometry = {
+	soldier = {
+		type = mesh
+		source = <data>/AOR2/Shoot Pose/OBJ/AOR_02_ReferenceScan_Shoot_Pose.OBJ
+
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = -470
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	soldier = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+            		source    = <data>/AOR2/Shoot Pose/Texture/Shoot Pose Colour 16k.jpg
+                    filtering = bilinear
+                }
+            }
+
+            scalars = {
+                reflectance = 0
+            }
+        }
+
+		diffuse = col3(1,1,1)
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	soldier = {
+		geometry = soldier
+		material = soldier
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

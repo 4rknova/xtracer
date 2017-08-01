@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+// ref: http://www.equasys.de/colorconversion.html
+
 void rgb_to_ycbcr(float r, float g, float b, float *y, float *cb, float *cr)
 {
 	float k0 =  16./255.;

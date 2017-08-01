@@ -1,5 +1,5 @@
-#ifndef YUV4MPEG2_H_INCLUDED
-#define YUV4MPEG2_H_INCLUDED
+#ifndef NIMG_YUV4MPEG2_H_INCLUDED
+#define NIMG_YUV4MPEG2_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,4 +12,4 @@ void write_frame(const char *file, int width, int height, float *rgb);
 }
 #endif
 
-#endif /* YUV4MPEG2_H_INCLUDED */
+#endif /* NIMG_YUV4MPEG2_H_INCLUDED */
