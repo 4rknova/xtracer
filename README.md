@@ -47,6 +47,13 @@ How to use
 You can find sample scenes in the scene directory. Note that some of the 
 scenes require textures or meshes that are not included in the repository.
 
+External Libraries
+------------------
+ImGui         | https://github.com/ocornut/imgui
+TinyObjLoader | https://github.com/syoyo/tinyobjloader
+STB           | https://github.com/nothings/stb
+Miniz         | https://github.com/richgel999/miniz
+
 License (BSD 3-clause)
 ----------------------
 <a href="http://opensource.org/licenses/BSD-3-Clause" target="_blank">

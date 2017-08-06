@@ -6,6 +6,24 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 
+set(PATH_ROOT ${CMAKE_SOURCE_DIR})
+set(PATH_SRC  ${PATH_ROOT}/src)
+set(PATH_BIN  ${PATH_ROOT}/bin)
+set(PATH_LIB  ${PATH_ROOT}/lib)
+set(PATH_EXT  ${PATH_ROOT}/ext)
+set(PATH_TEST ${PATH_BIN}/test)
+
+MACRO(SCAN_DIRS return_list)
+    FILE(GLOB_RECURSE new_list *.h)
+    SET(dir_list ${PATH_EXT})
+    FOREACH(file_path ${new_list})
+        GET_FILENAME_COMPONENT(dir_path ${file_path} PATH)
+        SET(dir_list ${dir_list} ${dir_path})
+    ENDFOREACH()
+    LIST(REMOVE_DUPLICATES dir_list)
+    SET(${return_list} ${dir_list})
+ENDMACRO()
+
 execute_process(
     COMMAND git describe --long
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -13,12 +31,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-set(PATH_ROOT ${CMAKE_SOURCE_DIR})
-set(PATH_SRC  ${PATH_ROOT}/src)
-set(PATH_BIN  ${PATH_ROOT}/bin)
-set(PATH_LIB  ${PATH_ROOT}/lib)
-set(PATH_EXT  ${PATH_ROOT}/ext)
-set(PATH_TEST ${PATH_BIN}/test)
+SCAN_DIRS(ext_libs)
 
 set(OUT_LIB     xtcore)
 set(OUT_EXE_CLI xtracer_cli)
@@ -60,6 +73,9 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
     ${PATH_SRC_FRONTEND_GUI}/ext/*.cpp
+    ${PATH_EXT}/*/*.c
+    ${PATH_EXT}/*/*.cc
+    ${PATH_EXT}/*/*.cpp
 )
 
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
@@ -69,14 +85,14 @@ set_target_properties(xtcore_dynamic PROPERTIES OUTPUT_NAME xtcore)
 
 target_include_directories(xtcore_static PUBLIC
     ${PATH_LIB}
-    ${PATH_EXT}
     ${PATH_SRC}
+    ${ext_libs}
 )
 
 target_include_directories(xtcore_dynamic PUBLIC
     ${PATH_LIB}
-    ${PATH_EXT}
     ${PATH_SRC}
+    ${ext_libs}
 )
 
 add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
@@ -84,14 +100,14 @@ add_executable(${OUT_EXE_GUI} ${SRC_FRONTEND_GUI})
 
 target_include_directories(${OUT_EXE_CLI} PUBLIC
     ${PATH_LIB}
-    ${PATH_EXT}
     ${PATH_SRC}
+    ${ext_libs}
 )
 
 target_include_directories(${OUT_EXE_GUI} PUBLIC
     ${PATH_LIB}
-    ${PATH_EXT}
     ${PATH_SRC}
+    ${ext_libs}
 )
 
 target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a")

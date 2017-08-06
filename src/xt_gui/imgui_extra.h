@@ -2,7 +2,7 @@
 #define XTGUI_IMGUI_EXTRA_H_INCLUDED
 
 #include <limits>
-#include "ext/imgui.h"
+#include <imgui/imgui.h>
 
 void slider_float (const char *name, float  &val, float  a, float  b);
 void slider_int   (const char *name, size_t &val, size_t a, size_t b);

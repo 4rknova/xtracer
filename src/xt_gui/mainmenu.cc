@@ -1,7 +1,6 @@
 #include <thread>
 #include <string>
 #include "opengl.h"
-#include "ext/imgui.h"
 #include <xtcore/config.h>
 #include <xtcore/renderer.h>
 #include <xtcore/renderer/stencil/renderer.h>
@@ -10,6 +9,7 @@
 #include <xtcore/renderer.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
+#include <imgui.h>
 #include "imgui_extra.h"
 
 // Main menu modules

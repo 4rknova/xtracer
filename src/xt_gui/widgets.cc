@@ -2,8 +2,10 @@
 #include <string>
 #include <queue>
 #include <vector>
-#include "ext/imgui.h"
-#include "ext/stb_image.h"
+
+#include <imgui.h>
+#include <stb_image.h>
+
 #include "config.h"
 #include "shader.h"
 #include "state.h"

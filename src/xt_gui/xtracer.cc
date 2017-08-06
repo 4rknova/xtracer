@@ -3,8 +3,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <xtcore/log.h>
-#include "ext/imgui.h"
-#include "ext/imgui_impl_glfw_gl3.h"
+#include <imgui.h>
+#include <imgui_impl_glfw_gl3.h>
 #include "config.h"
 #include "state.h"
 #include "widgets.h"
