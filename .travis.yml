@@ -1,22 +1,17 @@
 language: cpp
+
 os:
-- linux
-- osx
-matrix:
-  allow_failures:
-  - os: osx
+    - linux
+    - osx
+
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install homebrew/x11/freeglut; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install freeglut3 freeglut3-dev; fi
-deploy:
-  provider: releases
-  api_key:
-    secure: l2amX1gIefACeX5D6VhN7ylVcmNaKVlbjbygbEcy2Zx7D6MpUdg3H/tqPthwy7f8fFD4BPbAvuEDEpVAfvrFu4CI/Rrs7cSLYYX3DsvVgUS0ZDI4MRJ3tmM2IcyapcRFrC26MvauZ7VF4ZM86bU91KOR6W9hI+ZKfuSfYBije4Qu4JMd1L3OrorkdmWqzru566tNMlQ4jrjHx21Vmi25lcEif8frmj5SdgUtTcOt6Mk/TvtuYb3fIQie+NwHY3X5YVhcYwlMNc9N+2eNTBudWhPDz+Avu9iLJWI/bieb/OaR/pzkC+2zRVpAnam5TTNTi+wv+pHZ/96gX7xFMXUwJ4KoeUSqdEVvJma8ny/nizovKyPkm/xAMNBWvZAEhQrHwB7iu5xSUkbAF1yudTYEgPKAUyYhU84vv2MoXCWI/As44NnATWTSJeAV8bGIXc9iGB8lntYqHZ9fO55w3w97tFOGBzIaacXEhwvjlT83S3u5NN2LmzL3gwQJSzUfpsiJIVuPzgpdVTakz3AQLz/pS3mCzXE7kGWBLy+iyKxaBDY/1KUiQhfTA3ZpOti3EfyHMNZ7mq2cT9xYruHXXj/9wZYzeHUVazDYyJhEnw9muKXcgnfH/XPuhttYWJ/gmVpYSoZ+YVL1mTsq5UT2Aw1KnVnkAlWSzqKlqcQGD8AsUhA=
-  file: bin/xtracer
-  on:
-    tags: true
-    repo: 4rknova/xtracer
-    skip_cleanup: true
-    all_branches: true
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew update && brew install glfw3 && brew install sdl2; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo add-apt-repository -y ppa:pyglfw/pyglfw; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo add-apt-repository -y ppa:george-edison55/precise-backports --yes; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get install -y --no-install-recommends libglew-dev libglfw3-dev libxrandr-dev libxi-dev libxxf86vm-dev; fi
+
+script:
+  - ./configure
+  - make
