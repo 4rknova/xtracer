@@ -6,6 +6,7 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 
+# PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
 set(PATH_BIN  ${PATH_ROOT}/bin)
@@ -72,10 +73,7 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.c
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
-    ${PATH_SRC_FRONTEND_GUI}/ext/*.cpp
-    ${PATH_EXT}/*/*.c
-    ${PATH_EXT}/*/*.cc
-    ${PATH_EXT}/*/*.cpp
+    ${PATH_EXT}/imgui/*.cpp
 )
 
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
