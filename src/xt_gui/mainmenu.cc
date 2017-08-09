@@ -1,5 +1,9 @@
 #include <thread>
 #include <string>
+
+#define TINYFILES_IMPL
+#include <tinyfiles/tinyfiles.h>
+
 #include "opengl.h"
 #include <xtcore/config.h>
 #include <xtcore/renderer.h>
@@ -263,16 +267,19 @@ void render_main_menu(state_t *state)
 
     wdg_log(_flag_popup_win_log, state);
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
+
 	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0))
 	{
-		static char filepath[256];
-		ImGui::InputText("File", filepath, 256);
-        size_t path_given = (strlen(filepath) > 0);
-        const char *text_button = (path_given > 0 ? "OK" : "Cancel");
+        static int valid_file = 0;
 
-	    if (ImGui::Button(text_button, ImVec2(300,0)))
+        const int maxlength = TF_MAX_PATH + TF_MAX_FILENAME;
+		static char filepath[maxlength];
+		ImGui::InputText("File", filepath, maxlength);
+
+        ImGui::SameLine();
+	    if (ImGui::Button(valid_file ? "load" : "cancel", ImVec2(100,0)))
 		{
-            if (path_given) {
+            if (valid_file) {
     			workspace_t *ws = new workspace_t;
 		    	ws->source_file = filepath;
                 ws->init();
@@ -283,8 +290,30 @@ void render_main_menu(state_t *state)
 			ImGui::CloseCurrentPopup();
 			_flag_popup_win_load = false;
 		}
+
+        tfDIR dir;
+        int is_valid = tfDirOpen(&dir, filepath);
+        ImGui::BeginChild("LST_FS", ImVec2(500, 250), true);
+
+        while (is_valid && dir.has_next) {
+            tfFILE file;
+            tfReadFile(&dir, &file);
+            if (file.is_dir) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5,0.5,0.5,1));
+            }
+            if (ImGui::Selectable(file.name, false)) {
+                strncpy(filepath, file.path, strlen(file.path));
+                if (!(file.is_dir)) valid_file = true;
+            }
+            if (file.is_dir) ImGui::PopStyleColor();
+            tfDirNext(&dir);
+        }
+
+        ImGui::EndChild();
+        tfDirClose(&dir);
 	    ImGui::EndPopup();
 	}
+
 	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_2))
     {
         ImGui::SameLine(ImGui::GetWindowWidth() - 425);

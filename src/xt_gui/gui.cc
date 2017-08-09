@@ -26,7 +26,7 @@ typedef struct
     const char * description;
 }resolution_t;
 
-#define RES(w,h,s) { w, h, #w " x " #h " - " s}
+#define RES(w,h,s) { w, h, #w "x" #h " " s}
 
 // https://en.wikipedia.org/wiki/Graphics_display_resolution
 const resolution_t resolutions[] = {
@@ -133,7 +133,7 @@ void mm_resolution (workspace_t *ws)
     ImGui::Text("Sensor");ImGui::Separator();
     ImGui::Columns(2, 0, false);
     ImGui::Text(MM_STR_PRESETS);
-    ImGui::BeginChild("LST_RES", ImVec2(150, 100), true);
+    ImGui::BeginChild("LST_RES", ImVec2(250, 100), true);
     for (size_t i = 0; i < res_entries; ++i) {
         const resolution_t *r = &resolutions[i];
         if (ImGui::Selectable(r->description, selected == i)) {
