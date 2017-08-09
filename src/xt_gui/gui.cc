@@ -26,74 +26,67 @@ typedef struct
     const char * description;
 }resolution_t;
 
-#define RES(w,h,s) { w, h, #w " x " #h s}
+#define RES(w,h,s) { w, h, #w " x " #h " - " s}
 
 // https://en.wikipedia.org/wiki/Graphics_display_resolution
 const resolution_t resolutions[] = {
-    // Cubemaps
-      {  128,  768, " 128 x  768, VStrip" }
-    , {  512, 3072, " 512 x 3072, VStrip" }
-    , { 1024, 6144, "1024 x 6144, VStrip" }
-    // Square
-    , { 1024, 1024, "1024 x 1024, Square" }
-    , { 2048, 2048, "2048 x 2048, Square" }
-    , { 4096, 4096, "4096 x 4096, Square" }
-    // High Definition
-    , {  640,  360, " 640  360 nHD"      }
-    , {  960,  540, "qHD"      }
-    , { 1280,  720, "HD"       }
-    , { 1600,  900, "HD+"      }
-    , { 1920, 1080, "FHD"      }
-    , { 2160, 1440, "FHD+"     }
-    , { 2048, 1080, "DCI 2K"   }
-    , { 2560, 1440, "QHD/WQHD" }
-    , { 3200, 1800, "QHD+"     }
-    , { 3440, 1440, "UWQHD"    }
-    , { 3840, 1600, "UW4K"     }
-    , { 3840, 2160, "4K UHD"   }
-    , { 4096, 2160, "DCI 4K"   }
-    , { 5120, 2160, "UW5K"     }
-    , { 5120, 2880, "5K UHD+"  }
-    , { 7680, 3200, "UW8K"     }
-    , { 7680, 4320, "8K UHD"   }
-    // Video Graphics Array
-    , {  160,  120, "QQVGA"    }
-    , {  240,  160, "HQVGA"    }
-    , {  320,  240, "QVGA"     }
-    , {  400,  240, "WQVGA"    }
-    , {  480,  320, "HVGA"     }
-    , {  640,  480, "VGA/SD"   }
-    , {  768,  480, "WVGA"     }
-    , {  854,  480, "FWVGA"    }
-    , {  800,  600, "SVGA"     }
-    , {  960,  640, "DVGA"     }
-    , { 1024,  576, "WSVGA 576"}
-    , { 1024,  600, "WSVGA 600"}
-    // Extended Graphics Array
-    , { 1024,  768, "XGA"      }
-    , { 1366,  768, "WXGA"     }
-    , { 1152,  864, "XGA+"     }
-    , { 1440,  900, "WXGA+"    }
-    , { 1280, 1024, "SXGA"     }
-    , { 1400, 1050, "SXGA+"    }
-    , { 1680, 1050, "WSXGA+"   }
-    , { 1600, 1200, "UXGA"     }
-    , { 1920, 1200, "WUXGA"    }
-    // Quad Extended Graphics Array
-    , { 2048, 1152, "QWXGA"    }
-    , { 2048, 1536, "QXGA"     }
-    , { 2560, 1600, "WQXGA"    }
-    , { 2560, 2048, "QSXGA"    }
-    , { 3200, 2048, "WQSXGA"   }
-    , { 3200, 2400, "QUXGA"    }
-    , { 3840, 2400, "WQUXGA"   }
-    // Hyper Extended Graphics Array
-    , { 4096, 3072, "HXGA"     }
-    , { 5120, 3200, "WHXGA"    }
-    , { 5120, 4096, "HSXGA"    }
-    , { 6400, 4096, "WHSXGA"   }
-    , { 6400, 4800, "HUXGA"    }
-    , { 7680, 4800, "WHUXGA"   }
+      RES(  128,  768, "VStrip"   ) // Cubemaos
+    , RES(  512, 3072, "VStrip"   )
+    , RES( 1024, 6144, "VStrip"   )
+    , RES( 1024, 1024, "Square"   ) // Square
+    , RES( 2048, 2048, "Square"   )
+    , RES( 4096, 4096, "Square"   )
+    , RES(  640,  360, "nHD"      ) // High Definition
+    , RES(  960,  540, "qHD"      )
+    , RES( 1280,  720, "HD"       )
+    , RES( 1600,  900, "HD+"      )
+    , RES( 1920, 1080, "FHD"      )
+    , RES( 2160, 1440, "FHD+"     )
+    , RES( 2048, 1080, "DCI 2K"   )
+    , RES( 2560, 1440, "QHD/WQHD" )
+    , RES( 3200, 1800, "QHD+"     )
+    , RES( 3440, 1440, "UWQHD"    )
+    , RES( 3840, 1600, "UW4K"     )
+    , RES( 3840, 2160, "4K UHD"   )
+    , RES( 4096, 2160, "DCI 4K"   )
+    , RES( 5120, 2160, "UW5K"     )
+    , RES( 5120, 2880, "5K UHD+"  )
+    , RES( 7680, 3200, "UW8K"     )
+    , RES( 7680, 4320, "8K UHD"   )
+    , RES(  160,  120, "QQVGA"    ) // Video Graphics Array
+    , RES(  240,  160, "HQVGA"    )
+    , RES(  320,  240, "QVGA"     )
+    , RES(  400,  240, "WQVGA"    )
+    , RES(  480,  320, "HVGA"     )
+    , RES(  640,  480, "VGA/SD"   )
+    , RES(  768,  480, "WVGA"     )
+    , RES(  854,  480, "FWVGA"    )
+    , RES(  800,  600, "SVGA"     )
+    , RES(  960,  640, "DVGA"     )
+    , RES( 1024,  576, "WSVGA 576")
+    , RES( 1024,  600, "WSVGA 600")
+    , RES( 1024,  768, "XGA"      ) // Extended Graphics Array
+    , RES( 1366,  768, "WXGA"     )
+    , RES( 1152,  864, "XGA+"     )
+    , RES( 1440,  900, "WXGA+"    )
+    , RES( 1280, 1024, "SXGA"     )
+    , RES( 1400, 1050, "SXGA+"    )
+    , RES( 1680, 1050, "WSXGA+"   )
+    , RES( 1600, 1200, "UXGA"     )
+    , RES( 1920, 1200, "WUXGA"    )
+    , RES( 2048, 1152, "QWXGA"    ) // Quad Extended Graphics Array
+    , RES( 2048, 1536, "QXGA"     )
+    , RES( 2560, 1600, "WQXGA"    )
+    , RES( 2560, 2048, "QSXGA"    )
+    , RES( 3200, 2048, "WQSXGA"   )
+    , RES( 3200, 2400, "QUXGA"    )
+    , RES( 3840, 2400, "WQUXGA"   )
+    , RES( 4096, 3072, "HXGA"     ) // Hyper Extended Graphics Array
+    , RES( 5120, 3200, "WHXGA"    )
+    , RES( 5120, 4096, "HSXGA"    )
+    , RES( 6400, 4096, "WHSXGA"   )
+    , RES( 6400, 4800, "HUXGA"    )
+    , RES( 7680, 4800, "WHUXGA"   )
 };
 
 
