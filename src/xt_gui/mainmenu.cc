@@ -19,83 +19,7 @@
 #include "action.h"
 #include "mainmenu.h"
 
-
 #define LOG_HISTORY_SIZE (200)
-
-struct resolution_t {
-    const size_t  width;
-    const size_t  height;
-    const char   *description;
-};
-
-// https://en.wikipedia.org/wiki/Graphics_display_resolution
-const resolution_t resolutions[] = {
-// Cubemaps
-      {  128,  768, "128x768"  }
-    , {  512, 3072, "512x3072" }
-    , { 1024, 6144, "1024x6144"}
-// Square
-    , { 1024, 1024, "1K"       }
-    , { 2048, 2048, "2K"       }
-    , { 4096, 4096, "4K"       }
-// High Definition
-    , {  640,  360, "nHD"      }
-    , {  960,  540, "qHD"      }
-    , { 1280,  720, "HD"       }
-    , { 1600,  900, "HD+"      }
-    , { 1920, 1080, "FHD"      }
-    , { 2160, 1440, "FHD+"     }
-    , { 2048, 1080, "DCI 2K"   }
-    , { 2560, 1440, "QHD/WQHD" }
-    , { 3200, 1800, "QHD+"     }
-    , { 3440, 1440, "UWQHD"    }
-    , { 3840, 1600, "UW4K"     }
-    , { 3840, 2160, "4K UHD"   }
-    , { 4096, 2160, "DCI 4K"   }
-    , { 5120, 2160, "UW5K"     }
-    , { 5120, 2880, "5K UHD+"  }
-    , { 7680, 3200, "UW8K"     }
-    , { 7680, 4320, "8K UHD"   }
-// Video Graphics Array
-    , {  160,  120, "QQVGA"    }
-    , {  240,  160, "HQVGA"    }
-    , {  320,  240, "QVGA"     }
-    , {  400,  240, "WQVGA"    }
-    , {  480,  320, "HVGA"     }
-    , {  640,  480, "VGA/SD"   }
-    , {  768,  480, "WVGA"     }
-    , {  854,  480, "FWVGA"    }
-    , {  800,  600, "SVGA"     }
-    , {  960,  640, "DVGA"     }
-    , { 1024,  576, "WSVGA 576"}
-    , { 1024,  600, "WSVGA 600"}
-// Extended Graphics Array
-    , { 1024,  768, "XGA"      }
-    , { 1366,  768, "WXGA"     }
-    , { 1152,  864, "XGA+"     }
-    , { 1440,  900, "WXGA+"    }
-    , { 1280, 1024, "SXGA"     }
-    , { 1400, 1050, "SXGA+"    }
-    , { 1680, 1050, "WSXGA+"   }
-    , { 1600, 1200, "UXGA"     }
-    , { 1920, 1200, "WUXGA"    }
-// Quad Extended Graphics Array
-    , { 2048, 1152, "QWXGA"    }
-    , { 2048, 1536, "QXGA"     }
-    , { 2560, 1600, "WQXGA"    }
-    , { 2560, 2048, "QSXGA"    }
-    , { 3200, 2048, "WQSXGA"   }
-    , { 3200, 2400, "QUXGA"    }
-    , { 3840, 2400, "WQUXGA"   }
-// Hyper Extended Graphics Array
-    , { 4096, 3072, "HXGA"     }
-    , { 5120, 3200, "WHXGA"    }
-    , { 5120, 4096, "HSXGA"    }
-    , { 6400, 4096, "WHSXGA"   }
-    , { 6400, 4800, "HUXGA"    }
-    , { 7680, 4800, "WHUXGA"   }
-};
-
 namespace gui {
 
 void wdg_log(bool &visible, state_t *state)
@@ -159,34 +83,8 @@ void wdg_conf(workspace_t *ws)
 }
 
 
-{
-        size_t res_entries = sizeof(resolutions) / sizeof(resolution_t);
-        ImVec2 bd(100,0);
-        ImGui::Text("Sensor");ImGui::Separator();
-        int selected = 0;
+        mm_resolution(ws);
 
-        ImGui::Columns(2, 0, false);
-        ImGui::Text("Presets");
-        ImGui::BeginChild("LST_RES", ImVec2(150, 100), true);
-        for (size_t i = 0; i < res_entries; ++i) {
-            const resolution_t *r = &resolutions[i];
-            if (ImGui::Selectable(r->description, selected == i)) {
-                p->width  = r->width;
-                p->height = r->height;
-                selected = i;
-            }
-        }
-        ImGui::EndChild();
-        ImGui::NextColumn();
-        ImGui::NewLine();
-        ImGui::Text("Resolution");
-        textedit_int("Width"          , p->width , 1, 1);
-        textedit_int("Height"         , p->height, 1, 1);
-        ImGui::NewLine();
-        ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
-        ImGui::Columns(1);
-}
-        ImGui::NewLine();
         ImGui::NewLine();
         ImGui::Text("Sampling");ImGui::Separator();
         textedit_int("Antialiasing"   , p->ssaa   , 1, 1);

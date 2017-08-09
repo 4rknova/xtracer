@@ -5,8 +5,9 @@
 
 namespace gui {
 
-void mm_create    (workspace_t *ws);
-void mm_tileorder (workspace_t *ws);
+void mm_create     (workspace_t *ws);
+void mm_tileorder  (workspace_t *ws);
+void mm_resolution (workspace_t *ws);
 
 } /* namespace gui */
 
