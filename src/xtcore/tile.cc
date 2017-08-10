@@ -119,8 +119,7 @@ void order_radial(Tileset &tiles, bool outwards)
     int dh = h / 2;
 
     std::sort (tiles.begin(), tiles.end(),
-        [outwards, dw, dh](const tile_t &a, const tile_t &b) -> bool
-        {
+        [outwards, dw, dh](const tile_t &a, const tile_t &b) -> bool {
             int ax = a.x0() + a.width()  / 2 - dw;
             int ay = a.y0() + a.height() / 2 - dh;
             int ar = ax * ax + ay * ay;

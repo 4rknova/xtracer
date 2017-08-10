@@ -1,7 +1,14 @@
 #include <xtcore/cam_perspective.h>
+#include <xtcore/config.h>
 #include <xtcore/tile.h>
+#include <xtcore/log.h>
+#include <nimg/yuv4mpeg2.h>
 #include <imgui.h>
 #include "imgui_extra.h"
+#include "config.h"
+#include "action.h"
+#include "util.h"
+#include "fsutil.h"
 #include "gui.h"
 
 #define MM_STR_CREATE             "Create"
@@ -19,18 +26,20 @@
 #define MM_STR_TILE_ORDER         "Tile order"
 #define MM_STR_PRESETS            "Presets"
 
+#define LOG_HISTORY_SIZE (200)
+
 typedef struct
 {
     const size_t width;
     const size_t height;
     const char * description;
-}resolution_t;
+} resolution_t;
 
 #define RES(w,h,s) { w, h, #w "x" #h " " s}
 
 // https://en.wikipedia.org/wiki/Graphics_display_resolution
 const resolution_t resolutions[] = {
-      RES(  128,  768, "VStrip"   ) // Cubemaos
+      RES(  128,  768, "VStrip"   ) // Cubemaps
     , RES(  512, 3072, "VStrip"   )
     , RES( 1024, 6144, "VStrip"   )
     , RES( 1024, 1024, "Square"   ) // Square
@@ -88,9 +97,6 @@ const resolution_t resolutions[] = {
     , RES( 6400, 4800, "HUXGA"    )
     , RES( 7680, 4800, "WHUXGA"   )
 };
-
-
-
 
 namespace gui {
 
@@ -151,6 +157,169 @@ void mm_resolution (workspace_t *ws)
     ImGui::NewLine();
     ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
     ImGui::Columns(1);
+}
+
+void mm_export(workspace_t *ws)
+{
+    if (ws->renderer) return;
+
+    if (ImGui::BeginMenu("Export")) {
+    	static char filepath[256];
+	    ImGui::InputText("File", filepath, 256);
+
+        if (strlen(filepath) > 0) {
+            ImVec2 bd(52,0);
+            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+            if (ImGui::Button("Y4M", bd)) {
+                size_t w = ws->context.params.width;
+                size_t h = ws->context.params.height;
+                start_video(filepath, w, h, 25);
+                nimg::Pixmap fb;
+                xtcore::render::assemble(fb, ws->context);
+                std::vector<float> rgb;
+                for (size_t y = 0; y < h; ++y) {
+                    for (size_t x = 0; x < w; ++x) {
+                        nimg::ColorRGBAf pixel = fb.pixel(x,y);
+                        rgb.push_back(pixel.r());
+                        rgb.push_back(pixel.g());
+                        rgb.push_back(pixel.b());
+                    }
+                }
+
+                for (size_t i = 0; i < 60; ++i) {
+                    write_frame(filepath, w, h, &rgb[0]);
+                }
+            }
+        }
+        ImGui::EndMenu();
+    }
+}
+
+void mm_zoom(workspace_t *ws) {
+    if (!ws) return;
+
+    if (ImGui::BeginMenu("View")) {
+        ImGui::Text("Zoom");
+        ImGui::Separator();
+        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
+        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
+        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.001f; } ImGui::SameLine();
+        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
+        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
+        textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
+        ImGui::EndMenu();
+    }
+}
+
+void mm_dialog_load(state_t *state, bool &is_active)
+{
+    if (!is_active) return;
+
+    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
+    ImGui::OpenPopup("Load");
+	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0)) {
+
+        const int maxlength = 4096;
+		static char filepath[maxlength];
+
+		if (filepath[0] == 0) filepath[0] = '.';
+
+		util::filesystem::fsvec fsv;
+        util::filesystem::ls(fsv, filepath);
+
+		bool valid_file = true;
+
+	    if (ImGui::Button(valid_file ? "load" : "cancel", ImVec2(80,0))) {
+			if (valid_file) {
+				workspace_t *ws = new workspace_t;
+	    		ws->source_file = filepath;
+            	ws->init();
+	   			action::load(ws);
+    	        state->workspaces.push_back(ws);
+        	    state->workspace = ws;
+			}
+			ImGui::CloseCurrentPopup();
+			is_active = false;
+		}
+
+        ImGui::SameLine();
+		ImGui::InputText("File", filepath, maxlength);
+
+        ImGui::BeginChild("LST_FS", ImVec2(450, 250), true);
+        for (auto f : fsv) {
+            bool is_dir = (f.type == util::filesystem::FS_ENTRY_TYPE_DIRECTORY);
+            if (is_dir) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5,0.5,0.5,1));
+            if (ImGui::Selectable(f.name.c_str(), false)) {
+                strncpy(filepath, f.path.c_str(), f.path.size());
+                if (!(is_dir)) valid_file = true;
+            }
+            if (is_dir) ImGui::PopStyleColor();
+        }
+        ImGui::EndChild();
+
+	    ImGui::EndPopup();
+	}
+}
+
+void mm_dialog_info(state_t *state, bool &is_active)
+{
+    if (!is_active) return;
+
+    ImGui::OpenPopup("About");
+	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_2)) {
+        ImGui::SameLine(ImGui::GetWindowWidth() - 425);
+        ImGui::BeginGroup();
+        ImGui::NewLine();
+        ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
+        ImGui::Text("v%s", xtcore::get_version());
+        ImGui::NewLine();
+        ImGui::EndGroup();
+        ImGui::NewLine();
+        ImGui::Text("%s",xtcore::get_license());
+        ImGui::NewLine();
+        ImGui::NewLine();
+        ImGui::SameLine(ImGui::GetWindowWidth() - 100);
+	    if (ImGui::Button("OK", ImVec2(75,0))) {
+			ImGui::CloseCurrentPopup();
+            is_active = false;
+        }
+        ImGui::NewLine();
+	    ImGui::EndPopup();
+    }
+}
+
+void mm_dialog_log(state_t *state, bool &is_active)
+{
+    if (!is_active) return;
+
+    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
+
+    ImGui::OpenPopup("Log");
+	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
+        ImGui::SetWindowSize(ImVec2(state->window.width - 2., state->window.height - 23.));
+    	if (ImGui::Button("close", ImVec2(100,0)))
+    	{
+            is_active = false;
+    		ImGui::CloseCurrentPopup();
+    	}
+        ImGui::SameLine();
+        if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
+        for (int i = MIN(LOG_HISTORY_SIZE, Log::handle().get_size()-1); i >= 0; --i) {
+            log_entry_t l = Log::handle().get_entry(i);
+            ImVec4 col;
+            switch(l.type) {
+                case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); break;
+                case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); break;
+                case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); break;
+                case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); break;
+            }
+           ImGui::TextColored(col, "%s", l.message.c_str());
+        }
+    	ImGui::EndPopup();
+    }
 }
 
 } /* namespace gui */

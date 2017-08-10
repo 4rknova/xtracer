@@ -1,9 +1,5 @@
 #include <thread>
 #include <string>
-
-#define TINYFILES_IMPL
-#include <tinyfiles/tinyfiles.h>
-
 #include "opengl.h"
 #include <xtcore/config.h>
 #include <xtcore/renderer.h>
@@ -23,35 +19,7 @@
 #include "action.h"
 #include "mainmenu.h"
 
-#define LOG_HISTORY_SIZE (200)
 namespace gui {
-
-void wdg_log(bool &visible, state_t *state)
-{
-    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
-	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
-        ImGui::SetWindowSize(ImVec2(state->window.width - 2., state->window.height - 23.));
-    	if (ImGui::Button("close", ImVec2(100,0)))
-    	{
-    		ImGui::CloseCurrentPopup();
-            visible = false;
-    	}
-        ImGui::SameLine();
-        if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
-        for (int i = MIN(LOG_HISTORY_SIZE, Log::handle().get_size()-1); i >= 0; --i) {
-            log_entry_t l = Log::handle().get_entry(i);
-            ImVec4 col;
-            switch(l.type) {
-                case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); break;
-                case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); break;
-                case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); break;
-                case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); break;
-            }
-           ImGui::TextColored(col, "%s", l.message.c_str());
-        }
-    	ImGui::EndPopup();
-    }
-}
 
 void wdg_conf(workspace_t *ws)
 {
@@ -124,23 +92,6 @@ void wdg_renderer(workspace_t *ws)
     }
 }
 
-void wdg_zoom(workspace_t *ws)
-{
-    if (!ws) return;
-
-    if (ImGui::BeginMenu("View")) {
-        ImGui::Text("Zoom");
-        ImGui::Separator();
-        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
-        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
-        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.001f; } ImGui::SameLine();
-        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
-        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
-        textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
-        ImGui::EndMenu();
-    }
-}
-
 void menu_workspaces(state_t *state)
 {
     size_t idx = 0;
@@ -178,163 +129,42 @@ void menu_workspaces(state_t *state)
     }
 }
 
-#include <nimg/yuv4mpeg2.h>
-void export_video(const char *filepath, workspace_t *ws)
-{
-    size_t w = ws->context.params.width;
-    size_t h = ws->context.params.height;
-
-    start_video(filepath, w, h, 25);
-
-    nimg::Pixmap fb;
-    xtcore::render::assemble(fb, ws->context);
-
-    std::vector<float> rgb;
-    for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x) {
-            nimg::ColorRGBAf pixel = fb.pixel(x,y);
-            rgb.push_back(pixel.r());
-            rgb.push_back(pixel.g());
-            rgb.push_back(pixel.b());
-        }
-    }
-
-    for (size_t i = 0; i < 60; ++i) {
-        write_frame(filepath, w, h, &rgb[0]);
-    }
-}
-
-void wdg_export(workspace_t *ws)
-{
-    if (ws->renderer) return;
-
-    if (ImGui::BeginMenu("Export")) {
-    	static char filepath[256];
-	    ImGui::InputText("File", filepath, 256);
-
-        if (strlen(filepath) > 0) {
-            ImVec2 bd(52,0);
-            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
-            if (ImGui::Button("Y4M", bd)) export_video(filepath, ws);
-        }
-        ImGui::EndMenu();
-    }
-}
-
 void render_main_menu(state_t *state)
 {
-	static bool _flag_popup_win_load  = false;
-	static bool _flag_popup_win_about = false;
-	static bool _flag_popup_win_log   = false;
+	static bool flag_dg_load = false;
+	static bool flag_dg_info = false;
+	static bool flag_dg_log  = false;
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open")) { _flag_popup_win_load  = true; }
+            if (ImGui::MenuItem("Open")) { flag_dg_load = true; }
             if (state->workspaces.size() > 0) {
                 if  (ImGui::BeginMenu("Workspaces")) {
                     menu_workspaces(state);
                     ImGui::EndMenu();
                 }
             }
-            if (ImGui::MenuItem("Exit"  )) { action::quit();               }
+            if (ImGui::MenuItem("Log"  )) { flag_dg_log  = true; }
+            if (ImGui::MenuItem("About")) { flag_dg_info = true; }
+            if (ImGui::MenuItem("Exit" )) { action::quit();              }
             ImGui::EndMenu();
         }
 
         mm_create(state->workspace);
 
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
-            wdg_zoom(state->workspace);
+            gui::mm_zoom(state->workspace);
             wdg_conf(state->workspace);
             wdg_renderer(state->workspace);
-            wdg_export(state->workspace);
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Window")) {
-            if (ImGui::MenuItem("Log"  )) { _flag_popup_win_log   = true; }
-            if (ImGui::MenuItem("About")) { _flag_popup_win_about = true; }
+            gui::mm_export(state->workspace);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
 
-    // Popups
-	if (_flag_popup_win_load ) { ImGui::OpenPopup("Load");  }
-	if (_flag_popup_win_about) { ImGui::OpenPopup("About"); }
-    if (_flag_popup_win_log  ) { ImGui::OpenPopup("Log");   }
-
-    wdg_log(_flag_popup_win_log, state);
-    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
-
-	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0))
-	{
-        static int valid_file = 0;
-
-        const int maxlength = TF_MAX_PATH + TF_MAX_FILENAME;
-		static char filepath[maxlength];
-		ImGui::InputText("File", filepath, maxlength);
-
-        ImGui::SameLine();
-	    if (ImGui::Button(valid_file ? "load" : "cancel", ImVec2(100,0)))
-		{
-            if (valid_file) {
-    			workspace_t *ws = new workspace_t;
-		    	ws->source_file = filepath;
-                ws->init();
-    			action::load(ws);
-                state->workspaces.push_back(ws);
-                state->workspace = ws;
-            }
-			ImGui::CloseCurrentPopup();
-			_flag_popup_win_load = false;
-		}
-
-        tfDIR dir;
-        int is_valid = tfDirOpen(&dir, filepath);
-        ImGui::BeginChild("LST_FS", ImVec2(500, 250), true);
-
-        while (is_valid && dir.has_next) {
-            tfFILE file;
-            tfReadFile(&dir, &file);
-            if (file.is_dir) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5,0.5,0.5,1));
-            }
-            if (ImGui::Selectable(file.name, false)) {
-                strncpy(filepath, file.path, strlen(file.path));
-                if (!(file.is_dir)) valid_file = true;
-            }
-            if (file.is_dir) ImGui::PopStyleColor();
-            tfDirNext(&dir);
-        }
-
-        ImGui::EndChild();
-        tfDirClose(&dir);
-	    ImGui::EndPopup();
-	}
-
-	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_2))
-    {
-        ImGui::SameLine(ImGui::GetWindowWidth() - 425);
-        ImGui::BeginGroup();
-        ImGui::NewLine();
-        ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-        ImGui::Text("v%s", xtcore::get_version());
-        ImGui::NewLine();
-        ImGui::EndGroup();
-        ImGui::NewLine();
-        ImGui::Text("%s",xtcore::get_license());
-        ImGui::NewLine();
-        ImGui::NewLine();
-        ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-	    if (ImGui::Button("OK", ImVec2(75,0))) {
-			ImGui::CloseCurrentPopup();
-            _flag_popup_win_about = false;
-        }
-        ImGui::NewLine();
-	    ImGui::EndPopup();
-    }
+    gui::mm_dialog_load(state, flag_dg_load);
+	gui::mm_dialog_info(state, flag_dg_info);
+    gui::mm_dialog_log (state, flag_dg_log );
 }
 
 } /* namespace gui */

@@ -8,6 +8,7 @@ temp/
 *.png
 *.jpg
 *.swp
+*.old
 CMakeCache.txt
 CMakeFiles/
 Testing/

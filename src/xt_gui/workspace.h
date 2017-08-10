@@ -4,11 +4,11 @@
 #include <string>
 #include <queue>
 #include <mutex>
-#include <GL/gl.h>
 #include <nplatform/timer.h>
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
+#include "opengl.h"
 
 #define DEFAULT_GAMMA       (2.2)
 #define DEFAULT_PROGRESSIVE (false)
