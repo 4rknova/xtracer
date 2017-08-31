@@ -293,6 +293,11 @@ void mm_dialog_info(state_t *state, bool &is_active)
 
 void mm_dialog_log(state_t *state, bool &is_active)
 {
+    static bool log_filter_dbg = true;
+    static bool log_filter_msg = true;
+    static bool log_filter_wrn = true;
+    static bool log_filter_err = true;
+
     if (!is_active) return;
 
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
@@ -300,23 +305,41 @@ void mm_dialog_log(state_t *state, bool &is_active)
     ImGui::OpenPopup("Log");
 	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
         ImGui::SetWindowSize(ImVec2(state->window.width - 2., state->window.height - 23.));
-    	if (ImGui::Button("close", ImVec2(100,0)))
-    	{
+
+        if (ImGui::Button("close", ImVec2(100,0))) {
             is_active = false;
     		ImGui::CloseCurrentPopup();
     	}
         ImGui::SameLine();
         if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
-        for (int i = MIN(LOG_HISTORY_SIZE, Log::handle().get_size()-1); i >= 0; --i) {
+        ImGui::SameLine();
+        ImGui::Checkbox("debug"   , &log_filter_dbg); ImGui::SameLine();
+        ImGui::Checkbox("message" , &log_filter_msg); ImGui::SameLine();
+        ImGui::Checkbox("warning" , &log_filter_wrn); ImGui::SameLine();
+        ImGui::Checkbox("error"   , &log_filter_err);
+
+        ImGui::NewLine();
+        int line_count = 0;
+        int sz = MIN(Log::handle().get_size() - 1, LOG_HISTORY_SIZE);
+        for (int i = sz; i >= 0; --i) {
             log_entry_t l = Log::handle().get_entry(i);
             ImVec4 col;
+            bool display = false;
             switch(l.type) {
-                case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); break;
-                case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); break;
-                case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); break;
-                case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); break;
+                case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); display = log_filter_dbg; break;
+                case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); display = log_filter_msg; break;
+                case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); display = log_filter_wrn; break;
+                case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); display = log_filter_err; break;
             }
-           ImGui::TextColored(col, "%s", l.message.c_str());
+            if (display) {
+                ++line_count;
+                ImGui::Columns(2,0);
+                ImGui::SetColumnWidth(-1, 30);
+                ImGui::TextColored(ImVec4(0.5,0.5,0.5,1), "%i", line_count);
+                ImGui::NextColumn();
+                ImGui::TextColored(col, "%s", l.message.c_str());
+                ImGui::Columns(1);
+            }
         }
     	ImGui::EndPopup();
     }
