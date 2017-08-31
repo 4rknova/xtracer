@@ -30,7 +30,7 @@ camera = {
 		position = vec3(0,110,200)
 		target   = vec3(0,90,30)
 		up       = vec3(0,1,0)
-        aperture = 50
+        aperture = 15
         flength  = 150
     }
 
