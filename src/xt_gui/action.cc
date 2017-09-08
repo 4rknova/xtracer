@@ -18,6 +18,7 @@ void task_render(workspace_t *ws)
         xtcore::render::order(ws->context.tiles, ws->tile_order);
         ws->timer.start();
         ws->renderer->render();
+        ws->timer.stop();
         delete ws->renderer;
         ws->renderer = 0;
     }

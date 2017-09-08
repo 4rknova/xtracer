@@ -41,7 +41,6 @@ void wdg_conf(workspace_t *ws)
         for (int cam_idx = 0; it != et; ++it) {
             ++i;
             if (ImGui::Selectable((*it).first.c_str(), selected == i)) {
-//            if (ImGui::RadioButton((*it).first.c_str(), &e, ++cam_idx)) {
                 ws->context.params.camera = (*it).first;
                 i = selected;
             }
@@ -78,20 +77,6 @@ void wdg_conf(workspace_t *ws)
     }
 }
 
-void wdg_renderer(workspace_t *ws)
-{
-    if (ws->renderer) return;
-
-    if (ImGui::BeginMenu("Render")) {
-        bool render = false;
-        if (ImGui::MenuItem("Depth"        )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer(); }
-        if (ImGui::MenuItem("Stencil"      )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer(); }
-        if (ImGui::MenuItem("Photon Mapper")) { render = true; ws->renderer = new Renderer(); }
-        if (render) action::render(ws);
-        ImGui::EndMenu();
-    }
-}
-
 void menu_workspaces(state_t *state)
 {
     size_t idx = 0;
@@ -101,20 +86,8 @@ void menu_workspaces(state_t *state)
 
         if (ImGui::BeginMenu(name.c_str())) {
             bool busy = (i->renderer);
-
-            ImGui::Image((ImTextureID &)(i->texture), ImVec2(128, 128 * i->context.params.height / i->context.params.width));
-
-            if ((state->workspace != i)
-                && ImGui::MenuItem("Switch to this")) state->workspace = i;
-            if (busy) {
-                ImGui::Text("Rendering.. ");
-                if (state->workspace->timer.get_time_in_sec() > 0.0) {
-                    std::string timestr;
-                    print_time_breakdown(timestr, state->workspace->timer.get_time_in_mlsec());
-                    ImGui::Text("%s", timestr.c_str());
-                }
-                ImGui::ProgressBar(i->progress);
-            }
+            if ((state->workspace != i) && ImGui::MenuItem("Switch to this")) state->workspace = i;
+            if (busy) ImGui::Text("Rendering.. ");
             if (!(i->renderer) && ImGui::MenuItem("Close")  ) action::close(state, i);
             ImGui::EndMenu();
         }
@@ -155,7 +128,7 @@ void render_main_menu(state_t *state)
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             gui::mm_zoom(state->workspace);
             wdg_conf(state->workspace);
-            wdg_renderer(state->workspace);
+            gui::mm_renderer(state->workspace);
             gui::mm_export(state->workspace);
             ImGui::EndMenu();
         }

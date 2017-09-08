@@ -2,8 +2,14 @@
 #include <xtcore/config.h>
 #include <xtcore/tile.h>
 #include <xtcore/log.h>
+#include <xtcore/timeutil.h>
+#include <xtcore/renderer.h>
+#include <xtcore/renderer/stencil/renderer.h>
+#include <xtcore/renderer/depth/renderer.h>
+#include <xtcore/renderer/photon_mapper/renderer.h>
 #include <nimg/yuv4mpeg2.h>
 #include <imgui.h>
+
 #include "imgui_extra.h"
 #include "config.h"
 #include "action.h"
@@ -19,12 +25,13 @@
 #define MM_STR_CAM_PERSPECTIVE    "Perspective"
 #define MM_STR_CAM_ODS            "ODS"
 #define MM_STR_CAM_ERP            "ERP"
-#define MM_STR_ADD                "add"
-#define MM_STR_ORDER_RANDOM       "random"
-#define MM_STR_ORDER_RAD_IN       "inwards"
-#define MM_STR_ORDER_RAD_OUT      "outwards"
+#define MM_STR_ADD                "Add"
+#define MM_STR_ORDER_RANDOM       "Random"
+#define MM_STR_ORDER_RAD_IN       "Inwards"
+#define MM_STR_ORDER_RAD_OUT      "Outwards"
 #define MM_STR_TILE_ORDER         "Tile order"
 #define MM_STR_PRESETS            "Presets"
+#define MM_STR_SENSOR             "Sensor"
 
 #define LOG_HISTORY_SIZE (200)
 
@@ -35,13 +42,16 @@ typedef struct
     const char * description;
 } resolution_t;
 
-#define RES(w,h,s) { w, h, #w "x" #h " " s}
+#define RES(w,h,s) { w, h, s }
 
 // https://en.wikipedia.org/wiki/Graphics_display_resolution
 const resolution_t resolutions[] = {
       RES(  128,  768, "VStrip"   ) // Cubemaps
     , RES(  512, 3072, "VStrip"   )
     , RES( 1024, 6144, "VStrip"   )
+    , RES(  768,  128, "HStrip"   )
+    , RES( 3072,  512, "HStrip"   )
+    , RES( 6144, 1024, "HStrip"   )
     , RES( 1024, 1024, "Square"   ) // Square
     , RES( 2048, 2048, "Square"   )
     , RES( 4096, 4096, "Square"   )
@@ -136,27 +146,33 @@ void mm_resolution (workspace_t *ws)
     int selected = -1;
     ImVec2 bd(100,0);
 
-    ImGui::Text("Sensor");ImGui::Separator();
-    ImGui::Columns(2, 0, false);
+    ImGui::Text(MM_STR_SENSOR);ImGui::Separator();
     ImGui::Text(MM_STR_PRESETS);
-    ImGui::BeginChild("LST_RES", ImVec2(250, 100), true);
+    ImGui::BeginChild("LST_RES", ImVec2(300, 100), true);
     for (size_t i = 0; i < res_entries; ++i) {
         const resolution_t *r = &resolutions[i];
-        if (ImGui::Selectable(r->description, selected == i)) {
+        ImGui::Columns(4, "ID_RESOLUTIONS", false);
+        if (ImGui::Selectable("apply", selected == i)) {
             ws->context.params.width  = r->width;
             ws->context.params.height = r->height;
             selected = i;
         }
+        ImGui::NextColumn();
+        ImGui::Text("%i", r->width);
+        ImGui::NextColumn();
+        ImGui::Text("%i", r->height);
+        ImGui::NextColumn();
+        ImGui::Columns(1, "ID_RESOLUTIONS");
     }
     ImGui::EndChild();
-    ImGui::NextColumn();
-    ImGui::NewLine();
-    ImGui::Text("Resolution");
-    textedit_int("Width"          , ws->context.params.width , 1, 1);
-    textedit_int("Height"         , ws->context.params.height, 1, 1);
-    ImGui::NewLine();
-    ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
-    ImGui::Columns(1);
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+        ImGui::Text("Resolution");
+        textedit_int("Width"          , ws->context.params.width , 1, 1);
+        textedit_int("Height"         , ws->context.params.height, 1, 1);
+        ImGui::NewLine();
+        ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
+    ImGui::EndGroup();
 }
 
 void mm_export(workspace_t *ws)
@@ -198,6 +214,20 @@ void mm_export(workspace_t *ws)
     }
 }
 
+void mm_renderer(workspace_t *ws)
+{
+    if (ws->renderer) return;
+
+    if (ImGui::BeginMenu("Render")) {
+        bool render = false;
+        if (ImGui::MenuItem("Depth"    )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer(); }
+        if (ImGui::MenuItem("Stencil"  )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer(); }
+        if (ImGui::MenuItem("Raytracer")) { render = true; ws->renderer = new Renderer(); }
+        if (render) action::render(ws);
+        ImGui::EndMenu();
+    }
+}
+
 void mm_zoom(workspace_t *ws) {
     if (!ws) return;
 
@@ -211,6 +241,49 @@ void mm_zoom(workspace_t *ws) {
         if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
         textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
+    }
+}
+
+void mm_workspaces(state_t *state)
+{
+    static bool activity_filter_running = true;
+    static bool activity_filter_idle    = true;
+    ImGui::Checkbox("running", &activity_filter_running); ImGui::SameLine();
+    ImGui::Checkbox("idle"   , &activity_filter_idle);
+    ImGui::NewLine();
+
+    int count = 0;
+    for (auto& i : state->workspaces) {
+        bool rendering = (i->renderer != 0);
+        if (
+            (!activity_filter_idle    && !rendering)
+         || (!activity_filter_running &&  rendering)
+        ) continue;
+
+        ++count;
+        ImGui::BeginChildFrame(120 + count, ImVec2(300,135));
+
+        float aspect  = i->context.params.height / (float)i->context.params.width;
+        float thumb_w = (aspect < 1.f ? 128.f : (128.f / aspect));
+        float thumb_h = (aspect > 1.f ? 128.f : (128.f * aspect));
+
+        ImGui::Columns(2,"ID_WORKSPACE",false);
+            ImGui::SetColumnWidth(-1,138);
+            ImGui::Image((ImTextureID &)(i->texture), ImVec2(thumb_w, thumb_h));
+        ImGui::NextColumn();
+            ImGui::Text("%s", i->source_file.c_str());
+            ImGui::Separator();
+
+            if ((i->progress > 0.f) && (i->progress < 1.f)) ImGui::ProgressBar(i->progress);
+            else if (state->workspace->timer.get_time_in_sec() > 0.0) {
+                std::string timestr;
+                print_time_breakdown(timestr, i->timer.get_time_in_mlsec());
+                ImGui::Text("%s", timestr.c_str());
+            }
+
+            if (state->workspace != i && ImGui::Button("Select")) state->workspace = i;
+        ImGui::Columns(1);
+        ImGui::EndChildFrame();
     }
 }
 

@@ -2,10 +2,10 @@
 #include <string>
 #include <queue>
 #include <vector>
-
 #include <imgui.h>
 #include <stb_image.h>
 
+#include "gui.h"
 #include "config.h"
 #include "shader.h"
 #include "state.h"
@@ -219,6 +219,9 @@ void render_workspace(state_t *state)
 	    ImGui::BeginGroup();
 
         float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
+
+        mm_workspaces(state);
+
         draw_render_scenegraph(state);
         ImGui::EndGroup();
         ImGui::End();
