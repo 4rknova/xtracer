@@ -1,0 +1,327 @@
+title = Scanned Soldier
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.5
+
+data = data
+
+cubemap = {
+    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-200)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 5
+        flength  = 175
+    }
+
+    wide = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-330)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 15
+        flength  = 300
+    }
+
+    head = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-50, 150, 50)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 120
+    }
+
+    head 2 = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-110, 130, -60)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 110
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 1.5
+        position = vec3(0, 50, -100)
+    }
+}
+
+
+mesh_base = <data>/resources/geometry/ten24/female_07/OBJ/01_Decimated Exports
+
+geometry = {
+	head = {
+		type = mesh
+		source = <mesh_base>/Head_Decimated.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+	}
+
+    jacket = {
+		type = mesh
+		source = <mesh_base>/Jacket_Decimated.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+    eyebrows = {
+		type = mesh
+		source = <mesh_base>/Eye_Brows.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+    eyelashes = {
+		type = mesh
+		source = <mesh_base>/Eye_Lashes_Decimated.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+    eyes = {
+		type = mesh
+		source = <mesh_base>/Eyes.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+    teeth = {
+		type = mesh
+		source = <mesh_base>/Teeth_Decimated.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+    hat = {
+		type = mesh
+		source = <mesh_base>/Hat_Decimated.OBJ
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+    }
+
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = 470
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+img_base = <data>/resources/geometry/ten24/female_07/Textures/16K Diffuse
+
+material = {
+	head = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+		            source    = <img_base>/Head_Colour_16k.png
+                    filtering = bilinear
+                }
+
+                specular = {
+                    type      = texture
+                    source    = <img_base>/Head_Spec.tga
+                }
+            }
+
+            scalars = {
+                reflectance = 0.1
+                exponent    = 1000
+            }
+        }
+	}
+
+	eyes = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+		            source    = <img_base>/Eyes_Diffuse.tga
+                    filtering = bilinear
+                }
+
+                specular = {
+                    type      = texture
+                    source    = <img_base>/Eyes_Spec.tga
+                }
+            }
+
+            scalars = {
+                reflectance = 0.1
+                exponent    = 128
+            }
+        }
+	}
+
+	jacket = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type   = texture
+		            source = <img_base>/Jacket_Diffuse.tga
+                }
+            }
+        }
+    }
+
+	hair = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+		            value = col3(0.54901960784,0.40784313725,0.29019607843)
+                }
+            }
+        }
+    }
+
+	teeth = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type   = texture
+		            source = <img_base>/Teeth Colour.tga
+                }
+            }
+        }
+    }
+
+	hat = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type   = texture
+		            source = <img_base>/Hat_Colour.tga
+                }
+            }
+        }
+    }
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	head = {
+		geometry = head
+		material = head
+	}
+
+	teeth = {
+		geometry = teeth
+		material = teeth
+	}
+
+    euebrows = {
+        geometry = eyebrows
+        material = hair
+    }
+
+	eyelashes = {
+		geometry = eyelashes
+		material = hair
+	}
+
+    jacket = {
+		geometry = jacket
+		material = jacket
+	}
+
+    eyes = {
+        geometry = eyes
+        material = eyes
+    }
+
+    hat = {
+        geometry = hat
+        material = hat
+    }
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}
