@@ -16,12 +16,6 @@
 #include "mainmenu.h"
 #include "imgui_extra.h"
 
-#define GUI_SIDEPANEL_WIDTH        (325)
-#define WORKSPACE_PROP_CONF_HEIGHT (300)
-#define WORKSPACE_PROP_CONT_HEIGHT (100)
-
-#define STRLEN_MAX (512)
-
 namespace gui {
 
 static const char *postsdr_source_frag =
@@ -50,96 +44,6 @@ void draw_group_render_controls(workspace_t *ws)
     ImGui::EndGroup();
 }
 
-void draw_edit_str(const char *label, std::string &value)
-{
-    static char _temp[STRLEN_MAX];
-    memset(_temp, 0, STRLEN_MAX);
-    strncpy(_temp, value.c_str(), STRLEN_MAX);
-	ImGui::PushItemWidth(100);
-    if (ImGui::InputText(label, _temp, STRLEN_MAX, ImGuiInputTextFlags_EnterReturnsTrue))
-    {
-        value = _temp;
-    }
-	ImGui::PopItemWidth();
-}
-
-void draw_edit_float(const char *label, float value)
-{
-    static float _temp = value;
-	ImGui::PushItemWidth(100);
-    if (ImGui::InputFloat(label, &_temp, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsDecimal)) {
-		value = _temp;
-	}
-	ImGui::PopItemWidth();
-}
-
-void draw_render_scenegraph(state_t *state)
-{
-    workspace_t *ws = state->workspace;
-
-    ImGui::BeginGroup();
-    ImGui::Text("%s", ws->source_file.c_str());
-	ImGui::Separator();
-	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
-		if (ImGui::TreeNodeEx("Cameras", ImGuiTreeNodeFlags_DefaultOpen)) {
-			CamCollection::iterator it = ws->context.scene.m_cameras.begin();
-			CamCollection::iterator et = ws->context.scene.m_cameras.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Geometry",ImGuiTreeNodeFlags_DefaultOpen)) {
-			GeoCollection::iterator it = ws->context.scene.m_geometry.begin();
-			GeoCollection::iterator et = ws->context.scene.m_geometry.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
-			MatCollection::iterator it = ws->context.scene.m_materials.begin();
-			MatCollection::iterator et = ws->context.scene.m_materials.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-					for (size_t s = 0; s < (*it).second->get_scalar_count(); ++s) {
-						std::string _temp;
-						float val = (*it).second->get_scalar_by_index(s,&_temp);
-						draw_edit_float(_temp.c_str(), val);
-					}
-					for (size_t s = 0; s < (*it).second->get_sampler_count(); ++s) {
-						std::string _temp;
-						(*it).second->get_sampler_by_index(s,&_temp);
-						if (ImGui::TreeNodeEx(_temp.c_str())) {
-							ImGui::TreePop();
-						}
-					}
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ObjCollection::iterator it = ws->context.scene.m_objects.begin();
-			ObjCollection::iterator et = ws->context.scene.m_objects.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-                    draw_edit_str("Geometry", (*it).second->geometry);
-                    draw_edit_str("Material", (*it).second->material);
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-	    ImGui::TreePop();
-	}
-    ImGui::EndGroup();
-}
-
 void init(state_t *state)
 {
 	// Load logo
@@ -155,6 +59,55 @@ void init(state_t *state)
     stbi_image_free(image);
 
     apply_theme();
+}
+/*
+void render_workspace(state_t *state)
+{
+
+        workspace_t *ws = state->workspace;
+
+		if (!ws) return;
+
+        for (auto i : state->workspaces) i->update();
+
+		std::string name = ws->source_file.c_str();
+	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
+        bool dummy;
+		ImGui::Begin(name.c_str(), &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_0);
+
+        ImVec2 res = ImVec2(GUI_SIDEPANEL_WIDTH,(float)state->window.height - 22);
+        ImGui::SetWindowSize(res);
+
+
+	    ImGui::BeginGroup();
+
+        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
+
+        ImGui::EndGroup();
+        ImGui::End();
+
+        float rhs_w = state->window.width - GUI_SIDEPANEL_WIDTH - 4;
+	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,22), ImGuiSetCond_Appearing);
+		ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_1);
+		ImGui::End();
+}
+*/
+void handle_io_kb(int key)
+{
+    ImGuiIO &io = ImGui::GetIO();
+	printf("%i\n", key);
+    io.AddInputCharacter(key);
+}
+
+void handle_io_ms(int x, int y, bool button_event, bool left, bool right, float wheel)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    io.MousePos = ImVec2((float)x, (float)y);
+    if (button_event) {
+        io.MouseDown[0] = left;
+        io.MouseDown[1] = right;
+        io.MouseWheel = wheel;
+    }
 }
 
 void render_background(state_t *state)
@@ -199,71 +152,15 @@ void render_background(state_t *state)
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void render_workspace(state_t *state)
-{
-        workspace_t *ws = state->workspace;
-
-		if (!ws) return;
-
-        for (auto i : state->workspaces) i->update();
-
-		std::string name = ws->source_file.c_str();
-	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
-        bool dummy;
-		ImGui::Begin(name.c_str(), &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_0);
-
-        ImVec2 res = ImVec2(GUI_SIDEPANEL_WIDTH,(float)state->window.height - 22);
-        ImGui::SetWindowSize(res);
-
-
-	    ImGui::BeginGroup();
-
-        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
-
-        mm_workspaces(state);
-
-        draw_render_scenegraph(state);
-        ImGui::EndGroup();
-        ImGui::End();
-
-        float rhs_w = state->window.width - GUI_SIDEPANEL_WIDTH - 4;
-	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,22), ImGuiSetCond_Appearing);
-		ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_1);
-        float ry = state->window.height - 23;
-        float zx = ws->zoom_multiplier * ws->context.params.width;
-        float zy = ws->zoom_multiplier * ws->context.params.height;
-        ImGui::SetWindowSize(ImVec2(rhs_w, ry));
-        ImGui::SetCursorPos(ImVec2(
-              zx < rhs_w ? (rhs_w - zx) * 0.5f : 0.f
-            , zy < ry    ? (ry    - zy) * 0.5f : 0.f ));
-		ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(ws->zoom_multiplier * ws->context.params.width,
-		                                                     ws->zoom_multiplier * ws->context.params.height));
-		ImGui::End();
-}
-
-void handle_io_kb(int key)
-{
-    ImGuiIO &io = ImGui::GetIO();
-	printf("%i\n", key);
-    io.AddInputCharacter(key);
-}
-
-void handle_io_ms(int x, int y, bool button_event, bool left, bool right, float wheel)
-{
-    ImGuiIO &io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
-    if (button_event) {
-        io.MouseDown[0] = left;
-        io.MouseDown[1] = right;
-        io.MouseWheel = wheel;
-    }
-}
 
 void draw_widgets(state_t *state)
 {
+    for (auto i : state->workspaces) i->update();
     render_background(state);
     render_main_menu(state);
-    render_workspace(state);
+    container(state);
+
+    //render_workspace(state);
     ImGui::Render();
 }
 

@@ -17,21 +17,26 @@
 #include "fsutil.h"
 #include "gui.h"
 
-#define MM_STR_CREATE             "Create"
-#define MM_STR_CAMERA             "Camera"
-#define MM_STR_MATERIAL           "Material"
-#define MM_STR_GEOMETRY           "Geometry"
-#define MM_STR_ENTITY             "Entity"
-#define MM_STR_CAM_PERSPECTIVE    "Perspective"
-#define MM_STR_CAM_ODS            "ODS"
-#define MM_STR_CAM_ERP            "ERP"
-#define MM_STR_ADD                "Add"
-#define MM_STR_ORDER_RANDOM       "Random"
-#define MM_STR_ORDER_RAD_IN       "Inwards"
-#define MM_STR_ORDER_RAD_OUT      "Outwards"
-#define MM_STR_TILE_ORDER         "Tile order"
-#define MM_STR_PRESETS            "Presets"
-#define MM_STR_SENSOR             "Sensor"
+#define STRLEN_MAX (512)
+
+#define STR_CREATE             "Create"
+#define STR_CAMERA             "Camera"
+#define STR_MATERIAL           "Material"
+#define STR_GEOMETRY           "Geometry"
+#define STR_ENTITY             "Entity"
+#define STR_CAM_PERSPECTIVE    "Perspective"
+#define STR_CAM_ODS            "ODS"
+#define STR_CAM_ERP            "ERP"
+#define STR_ADD                "Add"
+#define STR_ORDER_RANDOM       "Random"
+#define STR_ORDER_RAD_IN       "Inwards"
+#define STR_ORDER_RAD_OUT      "Outwards"
+#define STR_TILE_ORDER         "Tile order"
+#define STR_PRESETS            "Presets"
+#define STR_SENSOR             "Sensor"
+#define STR_WORKSPACES         "Workspaces"
+#define STR_SCENE              "Scene"
+#define STR_PREVIEW            "Preview"
 
 #define LOG_HISTORY_SIZE (200)
 
@@ -110,11 +115,34 @@ const resolution_t resolutions[] = {
 
 namespace gui {
 
+void draw_edit_str(const char *label, std::string &value)
+{
+    static char _temp[STRLEN_MAX];
+    memset(_temp, 0, STRLEN_MAX);
+    strncpy(_temp, value.c_str(), STRLEN_MAX);
+	ImGui::PushItemWidth(100);
+    if (ImGui::InputText(label, _temp, STRLEN_MAX, ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        value = _temp;
+    }
+	ImGui::PopItemWidth();
+}
+
+void draw_edit_float(const char *label, float value)
+{
+    static float _temp = value;
+	ImGui::PushItemWidth(100);
+    if (ImGui::InputFloat(label, &_temp, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsDecimal)) {
+		value = _temp;
+	}
+	ImGui::PopItemWidth();
+}
+
 void mm_create(workspace_t *ws)
 {
     if (!ws) return;
 
-    if (ImGui::BeginMenu(MM_STR_CREATE)) {
+    if (ImGui::BeginMenu(STR_CREATE)) {
         // Creation is based on NCF node
         // Add button defines what is created
         not_yet_implemented();
@@ -126,14 +154,14 @@ void mm_tileorder(workspace_t *ws)
 {
     int tile_order = (int)ws->tile_order;
 
-    ImGui::Text(MM_STR_TILE_ORDER);
+    ImGui::Text(STR_TILE_ORDER);
     ImGui::Separator();
     ImGui::Columns(3, 0, false);
-    ImGui::RadioButton(MM_STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
+    ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
     ImGui::NextColumn();
-    ImGui::RadioButton(MM_STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
+    ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
     ImGui::NextColumn();
-    ImGui::RadioButton(MM_STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
+    ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
     ImGui::Columns(1);
     ImGui::NewLine();
 
@@ -146,8 +174,8 @@ void mm_resolution (workspace_t *ws)
     int selected = -1;
     ImVec2 bd(100,0);
 
-    ImGui::Text(MM_STR_SENSOR);ImGui::Separator();
-    ImGui::Text(MM_STR_PRESETS);
+    ImGui::Text(STR_SENSOR);ImGui::Separator();
+    ImGui::Text(STR_PRESETS);
     ImGui::BeginChild("LST_RES", ImVec2(300, 100), true);
     for (size_t i = 0; i < res_entries; ++i) {
         const resolution_t *r = &resolutions[i];
@@ -241,49 +269,6 @@ void mm_zoom(workspace_t *ws) {
         if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
         textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
-    }
-}
-
-void mm_workspaces(state_t *state)
-{
-    static bool activity_filter_running = true;
-    static bool activity_filter_idle    = true;
-    ImGui::Checkbox("running", &activity_filter_running); ImGui::SameLine();
-    ImGui::Checkbox("idle"   , &activity_filter_idle);
-    ImGui::NewLine();
-
-    int count = 0;
-    for (auto& i : state->workspaces) {
-        bool rendering = (i->renderer != 0);
-        if (
-            (!activity_filter_idle    && !rendering)
-         || (!activity_filter_running &&  rendering)
-        ) continue;
-
-        ++count;
-        ImGui::BeginChildFrame(120 + count, ImVec2(300,135));
-
-        float aspect  = i->context.params.height / (float)i->context.params.width;
-        float thumb_w = (aspect < 1.f ? 128.f : (128.f / aspect));
-        float thumb_h = (aspect > 1.f ? 128.f : (128.f * aspect));
-
-        ImGui::Columns(2,"ID_WORKSPACE",false);
-            ImGui::SetColumnWidth(-1,138);
-            ImGui::Image((ImTextureID &)(i->texture), ImVec2(thumb_w, thumb_h));
-        ImGui::NextColumn();
-            ImGui::Text("%s", i->source_file.c_str());
-            ImGui::Separator();
-
-            if ((i->progress > 0.f) && (i->progress < 1.f)) ImGui::ProgressBar(i->progress);
-            else if (state->workspace->timer.get_time_in_sec() > 0.0) {
-                std::string timestr;
-                print_time_breakdown(timestr, i->timer.get_time_in_mlsec());
-                ImGui::Text("%s", timestr.c_str());
-            }
-
-            if (state->workspace != i && ImGui::Button("Select")) state->workspace = i;
-        ImGui::Columns(1);
-        ImGui::EndChildFrame();
     }
 }
 
@@ -416,6 +401,163 @@ void mm_dialog_log(state_t *state, bool &is_active)
         }
     	ImGui::EndPopup();
     }
+}
+
+void panel_workspace(workspace_t *ws, int id)
+{
+    ImGui::BeginChildFrame(id, ImVec2(300,135));
+
+    float aspect  = ws->context.params.height / (float)ws->context.params.width;
+    float thumb_w = (aspect < 1.f ? 128.f : (128.f / aspect));
+    float thumb_h = (aspect > 1.f ? 128.f : (128.f * aspect));
+
+    ImGui::Columns(2,"ID_WORKSPACE",false);
+    ImGui::SetColumnWidth(-1,138);
+    ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
+    ImGui::NextColumn();
+    ImGui::Text("%s", ws->source_file.c_str());
+
+    if ((ws->progress > 0.f) && (ws->progress < 1.f)) ImGui::ProgressBar(ws->progress);
+    else if (ws->timer.get_time_in_sec() > 0.0) {
+        std::string timestr;
+        print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
+        ImGui::Text("%s", timestr.c_str());
+    }
+
+//    if (ImGui::Button("Select")) state->workspace = ws;
+    ImGui::Columns(1);
+    ImGui::EndChildFrame();
+}
+
+void panel_workspaces(state_t *state)
+{
+    static bool activity_filter_running = true;
+    static bool activity_filter_idle    = true;
+    ImGui::Text("Filters:");
+    ImGui::SameLine();
+    ImGui::Checkbox("busy", &activity_filter_running); ImGui::SameLine();
+    ImGui::Checkbox("idle"   , &activity_filter_idle);
+    ImGui::NewLine();
+
+    int count = 0;
+    for (auto& i : state->workspaces) {
+        bool rendering = (i->is_rendering());
+        if ( (!activity_filter_idle    && !rendering)
+          || (!activity_filter_running &&  rendering)
+        ) continue;
+
+        ++count;
+        panel_workspace(i, 100 + count);
+    }
+}
+
+void panel_scene(workspace_t *ws)
+{
+    if (!ws) return;
+
+    ImGui::BeginGroup();
+    ImGui::Text("%s", ws->source_file.c_str());
+	ImGui::Separator();
+	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::TreeNodeEx("Cameras", ImGuiTreeNodeFlags_DefaultOpen)) {
+			CamCollection::iterator it = ws->context.scene.m_cameras.begin();
+			CamCollection::iterator et = ws->context.scene.m_cameras.end();
+			for (; it!=et; ++it) {
+				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNodeEx("Geometry",ImGuiTreeNodeFlags_DefaultOpen)) {
+			GeoCollection::iterator it = ws->context.scene.m_geometry.begin();
+			GeoCollection::iterator et = ws->context.scene.m_geometry.end();
+			for (; it!=et; ++it) {
+				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
+			MatCollection::iterator it = ws->context.scene.m_materials.begin();
+			MatCollection::iterator et = ws->context.scene.m_materials.end();
+			for (; it!=et; ++it) {
+				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+					for (size_t s = 0; s < (*it).second->get_scalar_count(); ++s) {
+						std::string _temp;
+						float val = (*it).second->get_scalar_by_index(s,&_temp);
+						draw_edit_float(_temp.c_str(), val);
+					}
+					for (size_t s = 0; s < (*it).second->get_sampler_count(); ++s) {
+						std::string _temp;
+						(*it).second->get_sampler_by_index(s,&_temp);
+						if (ImGui::TreeNodeEx(_temp.c_str())) {
+							ImGui::TreePop();
+						}
+					}
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNodeEx("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ObjCollection::iterator it = ws->context.scene.m_objects.begin();
+			ObjCollection::iterator et = ws->context.scene.m_objects.end();
+			for (; it!=et; ++it) {
+				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+                    draw_edit_str("Geometry", (*it).second->geometry);
+                    draw_edit_str("Material", (*it).second->material);
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+	    ImGui::TreePop();
+	}
+    ImGui::EndGroup();
+}
+
+void panel_preview(workspace_t *ws, size_t w, size_t h)
+{
+    if (!ws) return;
+
+    float zx = ws->zoom_multiplier * ws->context.params.width;
+    float zy = ws->zoom_multiplier * ws->context.params.height;
+	ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(zx, zy));
+}
+
+void container(state_t *state)
+{
+    enum TAB {
+          TAB_WORKSPACES
+        , TAB_SCENE
+        , TAB_PREVIEW
+    };
+
+    static TAB current_tab = TAB_WORKSPACES;
+    static bool dummy = true;
+
+    workspace_t *ws = state->workspace;
+    size_t w = state->window.width;
+    size_t h = state->window.height;
+
+	ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.1f);
+    ImGui::BeginGroup();
+    if (      ImGui::GoxTab(STR_WORKSPACES, &dummy)) current_tab = TAB_WORKSPACES;
+    if (ws && ImGui::GoxTab(STR_SCENE     , &dummy)) current_tab = TAB_SCENE;
+    if (ws && ImGui::GoxTab(STR_PREVIEW   , &dummy)) current_tab = TAB_PREVIEW;
+    ImGui::EndGroup();
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+
+    switch (current_tab) {
+        case TAB_WORKSPACES : panel_workspaces(state); break;
+        case TAB_SCENE      : panel_scene(ws);         break;
+        case TAB_PREVIEW    : panel_preview(ws, w, h); break;
+    }
+    ImGui::EndGroup();
+    ImGui::End();
 }
 
 } /* namespace gui */

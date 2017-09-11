@@ -35,6 +35,7 @@ struct workspace_t
     void deinit();
     void update();
     void setup_callbacks();
+    bool is_rendering();
 
     float progress;
 

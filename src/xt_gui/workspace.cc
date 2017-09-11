@@ -59,6 +59,11 @@ void workspace_t::setup_callbacks()
     }
 }
 
+bool workspace_t::is_rendering()
+{
+    return renderer != 0;
+}
+
 void workspace_t::deinit()
 {
     glDeleteTextures(1, &texture);
