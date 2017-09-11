@@ -1,18 +1,7 @@
-#ifndef XTGUI_CONFIG_H_INCLUDED
-#define XTGUI_CONFIG_H_INCLUDED
+#ifndef XT_CONFIG_H_INCLUDED
+#define XT_CONFIG_H_INCLUDED
 
 #define WINDOW_DEFAULT_WIDTH  (1920)
 #define WINDOW_DEFAULT_HEIGHT (1080)
 
-#define WIN_FLAGS_SET_0 ( ImGuiWindowFlags_NoCollapse \
-                        | ImGuiWindowFlags_NoTitleBar \
-                        | ImGuiWindowFlags_NoResize   \
-                        | ImGuiWindowFlags_NoMove)
-
-#define WIN_FLAGS_SET_1 WIN_FLAGS_SET_0 \
-                        | ImGuiWindowFlags_HorizontalScrollbar
-
-#define WIN_FLAGS_SET_2 ( ImGuiWindowFlags_NoCollapse \
-                        | ImGuiWindowFlags_NoResize)
-
-#endif /* XTGUI_CONFIG_H_INCLUDED */
+#endif /* XT_CONFIG_H_INCLUDED */

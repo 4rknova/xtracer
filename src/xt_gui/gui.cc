@@ -37,8 +37,31 @@
 #define STR_WORKSPACES         "Workspaces"
 #define STR_SCENE              "Scene"
 #define STR_PREVIEW            "Preview"
+#define STR_LOG                "Log"
+#define STR_FILTERS            "Filters"
+
+enum ID {
+      ID_PANEL_SIDE
+    , ID_PANEL_MAIN
+    , ID_PANEL_LOG
+    , ID_PANEL_PREVIEW
+};
+
+#define SIZE_MAIN_MENU         20
+#define SIZE_OFFSET            1
 
 #define LOG_HISTORY_SIZE (200)
+
+#define WIN_FLAGS_SET_0 ( ImGuiWindowFlags_NoCollapse \
+                        | ImGuiWindowFlags_NoTitleBar \
+                        | ImGuiWindowFlags_NoResize   \
+                        | ImGuiWindowFlags_NoMove)
+
+#define WIN_FLAGS_SET_1 ( WIN_FLAGS_SET_0 \
+                        | ImGuiWindowFlags_HorizontalScrollbar)
+
+#define WIN_FLAGS_SET_2 ( ImGuiWindowFlags_NoCollapse \
+                        | ImGuiWindowFlags_NoResize)
 
 typedef struct
 {
@@ -138,31 +161,17 @@ void draw_edit_float(const char *label, float value)
 	ImGui::PopItemWidth();
 }
 
-void mm_create(workspace_t *ws)
-{
-    if (!ws) return;
-
-    if (ImGui::BeginMenu(STR_CREATE)) {
-        // Creation is based on NCF node
-        // Add button defines what is created
-        not_yet_implemented();
-        ImGui::EndMenu();
-    }
-}
-
 void mm_tileorder(workspace_t *ws)
 {
     int tile_order = (int)ws->tile_order;
 
     ImGui::Text(STR_TILE_ORDER);
     ImGui::Separator();
-    ImGui::Columns(3, 0, false);
     ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
-    ImGui::NextColumn();
+    ImGui::SameLine();
     ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
-    ImGui::NextColumn();
+    ImGui::SameLine();
     ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
-    ImGui::Columns(1);
     ImGui::NewLine();
 
     ws->tile_order = (xtcore::render::TILE_ORDER)tile_order;
@@ -179,17 +188,19 @@ void mm_resolution (workspace_t *ws)
     ImGui::BeginChild("LST_RES", ImVec2(300, 100), true);
     for (size_t i = 0; i < res_entries; ++i) {
         const resolution_t *r = &resolutions[i];
-        ImGui::Columns(4, "ID_RESOLUTIONS", false);
-        if (ImGui::Selectable("apply", selected == i)) {
+        ImGui::Columns(3, "ID_RESOLUTIONS", false);
+        ImGui::SetColumnWidth(-1, 120);
+        if (ImGui::Selectable(r->description, selected == i)) {
             ws->context.params.width  = r->width;
             ws->context.params.height = r->height;
             selected = i;
         }
         ImGui::NextColumn();
-        ImGui::Text("%i", r->width);
+        ImGui::SetColumnWidth(-1, 60);
+        ImGui::Text("%4i", r->height);
         ImGui::NextColumn();
-        ImGui::Text("%i", r->height);
-        ImGui::NextColumn();
+        ImGui::SetColumnWidth(-1, 60);
+        ImGui::Text("%4i", r->width);
         ImGui::Columns(1, "ID_RESOLUTIONS");
     }
     ImGui::EndChild();
@@ -262,11 +273,16 @@ void mm_zoom(workspace_t *ws) {
     if (ImGui::BeginMenu("View")) {
         ImGui::Text("Zoom");
         ImGui::Separator();
-        if (ImGui::Button("x0.2")) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
-        if (ImGui::Button("x0.5")) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
-        if (ImGui::Button("x1.0")) { ws->zoom_multiplier = 1.001f; } ImGui::SameLine();
-        if (ImGui::Button("x2.0")) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
-        if (ImGui::Button("x4.0")) { ws->zoom_multiplier = 4.001f; }
+        if (ImGui::Button("x0.1" )) { ws->zoom_multiplier = 0.101f; } ImGui::SameLine();
+        if (ImGui::Button("x0.2" )) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
+        if (ImGui::Button("x0.4" )) { ws->zoom_multiplier = 0.401f; } ImGui::SameLine();
+        if (ImGui::Button("x0.5" )) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
+        if (ImGui::Button("x1.0" )) { ws->zoom_multiplier = 1.001f; }
+        if (ImGui::Button("x2.0" )) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
+        if (ImGui::Button("x4.0" )) { ws->zoom_multiplier = 4.001f; } ImGui::SameLine();
+        if (ImGui::Button("x5.0" )) { ws->zoom_multiplier = 5.001f; } ImGui::SameLine();
+        if (ImGui::Button("x8.0" )) { ws->zoom_multiplier = 8.001f; } ImGui::SameLine();
+        if (ImGui::Button("x9.0" )) { ws->zoom_multiplier = 9.001f; }
         textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
     }
@@ -349,58 +365,48 @@ void mm_dialog_info(state_t *state, bool &is_active)
     }
 }
 
-void mm_dialog_log(state_t *state, bool &is_active)
+void panel_log(state_t *state)
 {
     static bool log_filter_dbg = true;
     static bool log_filter_msg = true;
     static bool log_filter_wrn = true;
     static bool log_filter_err = true;
 
-    if (!is_active) return;
+    if (!state) return;
 
-    ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
-
-    ImGui::OpenPopup("Log");
-	if (ImGui::BeginPopupModal("Log", 0, WIN_FLAGS_SET_0)) {
-        ImGui::SetWindowSize(ImVec2(state->window.width - 2., state->window.height - 23.));
-
-        if (ImGui::Button("close", ImVec2(100,0))) {
-            is_active = false;
-    		ImGui::CloseCurrentPopup();
-    	}
-        ImGui::SameLine();
-        if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
-        ImGui::SameLine();
-        ImGui::Checkbox("debug"   , &log_filter_dbg); ImGui::SameLine();
-        ImGui::Checkbox("message" , &log_filter_msg); ImGui::SameLine();
-        ImGui::Checkbox("warning" , &log_filter_wrn); ImGui::SameLine();
-        ImGui::Checkbox("error"   , &log_filter_err);
-
-        ImGui::NewLine();
-        int line_count = 0;
-        int sz = MIN(Log::handle().get_size() - 1, LOG_HISTORY_SIZE);
-        for (int i = sz; i >= 0; --i) {
-            log_entry_t l = Log::handle().get_entry(i);
-            ImVec4 col;
-            bool display = false;
-            switch(l.type) {
-                case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); display = log_filter_dbg; break;
-                case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); display = log_filter_msg; break;
-                case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); display = log_filter_wrn; break;
-                case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); display = log_filter_err; break;
-            }
-            if (display) {
-                ++line_count;
-                ImGui::Columns(2,0);
-                ImGui::SetColumnWidth(-1, 30);
-                ImGui::TextColored(ImVec4(0.5,0.5,0.5,1), "%i", line_count);
-                ImGui::NextColumn();
-                ImGui::TextColored(col, "%s", l.message.c_str());
-                ImGui::Columns(1);
-            }
+    ImGui::SameLine();
+    ImGui::Text(STR_FILTERS);
+    ImGui::SameLine();
+    ImGui::Checkbox("debug"   , &log_filter_dbg); ImGui::SameLine();
+    ImGui::Checkbox("message" , &log_filter_msg); ImGui::SameLine();
+    ImGui::Checkbox("warning" , &log_filter_wrn); ImGui::SameLine();
+    ImGui::Checkbox("error"   , &log_filter_err);
+    if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
+    ImGui::NewLine();
+    int line_count = 0;
+    int sz = MIN(int(Log::handle().get_size())-1, LOG_HISTORY_SIZE);
+    ImGui::BeginChild(ID_PANEL_LOG);
+    for (int i = sz; i >= 0; --i) {
+        log_entry_t l = Log::handle().get_entry(i);
+        ImVec4 col;
+        bool display = false;
+        switch(l.type) {
+            case LOGENTRY_DEBUG   : col = ImVec4(0,0,1,1); display = log_filter_dbg; break;
+            case LOGENTRY_MESSAGE : col = ImVec4(1,1,1,1); display = log_filter_msg; break;
+            case LOGENTRY_WARNING : col = ImVec4(1,1,0,1); display = log_filter_wrn; break;
+            case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); display = log_filter_err; break;
         }
-    	ImGui::EndPopup();
+        if (display) {
+            ++line_count;
+            ImGui::Columns(2,0);
+            ImGui::SetColumnWidth(-1, 40);
+            ImGui::TextColored(ImVec4(0.5,0.5,0.5,1), "%4i", line_count);
+            ImGui::NextColumn();
+            ImGui::TextColored(col, "%s", l.message.c_str());
+            ImGui::Columns(1);
+        }
     }
+    ImGui::EndChild();
 }
 
 void panel_workspace(workspace_t *ws, int id)
@@ -413,6 +419,7 @@ void panel_workspace(workspace_t *ws, int id)
 
     ImGui::Columns(2,"ID_WORKSPACE",false);
     ImGui::SetColumnWidth(-1,138);
+    ImGui::SetCursorPos(ImVec2(3 + (128 - thumb_w) / 2, 3 + (128 - thumb_h) / 2));
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::NextColumn();
     ImGui::Text("%s", ws->source_file.c_str());
@@ -433,7 +440,7 @@ void panel_workspaces(state_t *state)
 {
     static bool activity_filter_running = true;
     static bool activity_filter_idle    = true;
-    ImGui::Text("Filters:");
+    ImGui::Text(STR_FILTERS);
     ImGui::SameLine();
     ImGui::Checkbox("busy", &activity_filter_running); ImGui::SameLine();
     ImGui::Checkbox("idle"   , &activity_filter_idle);
@@ -524,13 +531,18 @@ void panel_preview(workspace_t *ws, size_t w, size_t h)
 
     float zx = ws->zoom_multiplier * ws->context.params.width;
     float zy = ws->zoom_multiplier * ws->context.params.height;
+    ImGui::BeginChild(ID_PANEL_PREVIEW, ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::SetCursorPos(ImVec2(MAX((ImGui::GetWindowWidth()  - zx) / 2, 0)
+                             , MAX((ImGui::GetWindowHeight() - zy) / 2, 0)));
 	ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(zx, zy));
+    ImGui::EndChild();
 }
 
 void container(state_t *state)
 {
     enum TAB {
-          TAB_WORKSPACES
+          TAB_LOG
+        , TAB_WORKSPACES
         , TAB_SCENE
         , TAB_PREVIEW
     };
@@ -541,22 +553,24 @@ void container(state_t *state)
     workspace_t *ws = state->workspace;
     size_t w = state->window.width;
     size_t h = state->window.height;
-
-	ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.1f);
+    ImGui::SetNextWindowPos(ImVec2(SIZE_OFFSET, SIZE_MAIN_MENU + SIZE_OFFSET));
+    ImGui::SetNextWindowSize(ImVec2(state->window.width - 2 * SIZE_OFFSET, state->window.height - SIZE_MAIN_MENU));
+	ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.1f, WIN_FLAGS_SET_0);
     ImGui::BeginGroup();
-    if (      ImGui::GoxTab(STR_WORKSPACES, &dummy)) current_tab = TAB_WORKSPACES;
-    if (ws && ImGui::GoxTab(STR_SCENE     , &dummy)) current_tab = TAB_SCENE;
-    if (ws && ImGui::GoxTab(STR_PREVIEW   , &dummy)) current_tab = TAB_PREVIEW;
+    dummy = (current_tab == TAB_WORKSPACES); if (      ImGui::GoxTab(STR_WORKSPACES, &dummy)) current_tab = TAB_WORKSPACES;
+    dummy = (current_tab == TAB_LOG);        if (      ImGui::GoxTab(STR_LOG       , &dummy)) current_tab = TAB_LOG;
+    dummy = (current_tab == TAB_SCENE);      if (ws && ImGui::GoxTab(STR_SCENE     , &dummy)) current_tab = TAB_SCENE;
+    dummy = (current_tab == TAB_PREVIEW);    if (ws && ImGui::GoxTab(STR_PREVIEW   , &dummy)) current_tab = TAB_PREVIEW;
     ImGui::EndGroup();
     ImGui::SameLine();
-    ImGui::BeginGroup();
-
+    ImGui::BeginChild(ID_PANEL_MAIN);
     switch (current_tab) {
         case TAB_WORKSPACES : panel_workspaces(state); break;
+        case TAB_LOG        : panel_log(state);        break;
         case TAB_SCENE      : panel_scene(ws);         break;
         case TAB_PREVIEW    : panel_preview(ws, w, h); break;
     }
-    ImGui::EndGroup();
+    ImGui::EndChild();
     ImGui::End();
 }
 

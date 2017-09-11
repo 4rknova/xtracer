@@ -35,15 +35,6 @@ static const char *postsdr_source_frag =
     "Color = vec4(color, 1);"
 	"}";
 
-
-void draw_group_render_controls(workspace_t *ws)
-{
-    static const ImVec2 btn_sz_zoom = ImVec2(50.f, 0.f);
-
-    ImGui::BeginGroup();
-    ImGui::EndGroup();
-}
-
 void init(state_t *state)
 {
 	// Load logo
@@ -60,38 +51,7 @@ void init(state_t *state)
 
     apply_theme();
 }
-/*
-void render_workspace(state_t *state)
-{
 
-        workspace_t *ws = state->workspace;
-
-		if (!ws) return;
-
-        for (auto i : state->workspaces) i->update();
-
-		std::string name = ws->source_file.c_str();
-	    ImGui::SetNextWindowPos(ImVec2((float)1,(float)21), ImGuiSetCond_Appearing);
-        bool dummy;
-		ImGui::Begin(name.c_str(), &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_0);
-
-        ImVec2 res = ImVec2(GUI_SIDEPANEL_WIDTH,(float)state->window.height - 22);
-        ImGui::SetWindowSize(res);
-
-
-	    ImGui::BeginGroup();
-
-        float sh = state->window.height - WORKSPACE_PROP_CONF_HEIGHT -  WORKSPACE_PROP_CONT_HEIGHT - 50 - 8;
-
-        ImGui::EndGroup();
-        ImGui::End();
-
-        float rhs_w = state->window.width - GUI_SIDEPANEL_WIDTH - 4;
-	    ImGui::SetNextWindowPos(ImVec2((float)GUI_SIDEPANEL_WIDTH + 2,22), ImGuiSetCond_Appearing);
-		ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.3f, WIN_FLAGS_SET_1);
-		ImGui::End();
-}
-*/
 void handle_io_kb(int key)
 {
     ImGuiIO &io = ImGui::GetIO();
@@ -159,8 +119,6 @@ void draw_widgets(state_t *state)
     render_background(state);
     render_main_menu(state);
     container(state);
-
-    //render_workspace(state);
     ImGui::Render();
 }
 

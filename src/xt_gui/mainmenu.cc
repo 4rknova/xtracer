@@ -106,7 +106,6 @@ void render_main_menu(state_t *state)
 {
 	static bool flag_dg_load = false;
 	static bool flag_dg_info = false;
-	static bool flag_dg_log  = false;
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
@@ -117,13 +116,10 @@ void render_main_menu(state_t *state)
                     ImGui::EndMenu();
                 }
             }
-            if (ImGui::MenuItem("Log"  )) { flag_dg_log  = true; }
             if (ImGui::MenuItem("About")) { flag_dg_info = true; }
             if (ImGui::MenuItem("Exit" )) { action::quit();              }
             ImGui::EndMenu();
         }
-
-        mm_create(state->workspace);
 
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             gui::mm_zoom(state->workspace);
@@ -137,7 +133,6 @@ void render_main_menu(state_t *state)
 
     gui::mm_dialog_load(state, flag_dg_load);
 	gui::mm_dialog_info(state, flag_dg_info);
-    gui::mm_dialog_log (state, flag_dg_log );
 }
 
 } /* namespace gui */
