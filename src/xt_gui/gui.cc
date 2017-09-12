@@ -409,8 +409,10 @@ void panel_log(state_t *state)
     ImGui::EndChild();
 }
 
-void panel_workspace(workspace_t *ws, int id)
+bool panel_workspace(workspace_t *ws, int id, bool is_current = false)
 {
+    bool res = false;
+
     ImGui::BeginChildFrame(id, ImVec2(300,135));
 
     float aspect  = ws->context.params.height / (float)ws->context.params.width;
@@ -422,7 +424,11 @@ void panel_workspace(workspace_t *ws, int id)
     ImGui::SetCursorPos(ImVec2(3 + (128 - thumb_w) / 2, 3 + (128 - thumb_h) / 2));
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::NextColumn();
-    ImGui::Text("%s", ws->source_file.c_str());
+
+    ImVec4 col(.8f,.8f,.8f,1.f);
+    if (is_current) col = ImVec4(0.f,1.f,0.f,1.f);
+
+    ImGui::TextColored(col, "%s", ws->source_file.c_str());
 
     if ((ws->progress > 0.f) && (ws->progress < 1.f)) ImGui::ProgressBar(ws->progress);
     else if (ws->timer.get_time_in_sec() > 0.0) {
@@ -431,9 +437,11 @@ void panel_workspace(workspace_t *ws, int id)
         ImGui::Text("%s", timestr.c_str());
     }
 
-//    if (ImGui::Button("Select")) state->workspace = ws;
+    if (ImGui::Button("Select")) res = true;
     ImGui::Columns(1);
     ImGui::EndChildFrame();
+
+    return res;
 }
 
 void panel_workspaces(state_t *state)
@@ -454,7 +462,10 @@ void panel_workspaces(state_t *state)
         ) continue;
 
         ++count;
-        panel_workspace(i, 100 + count);
+
+        bool is_current  = (state->workspace == i);
+        bool set_current = panel_workspace(i, 100 + count, is_current);
+        if (set_current) state->workspace = i;
     }
 }
 
