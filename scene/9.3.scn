@@ -19,14 +19,14 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 0
+			x = 5
 			y = 5
-			z = -7
+			z = -20
 		}
 
 		target = {
 			x = 0
-			y = 5
+			y = 0
 			z = 0
 		}
 
@@ -41,7 +41,7 @@ data = data/resources/geometry/sketchfab/acropolis
 geometry = {
 	model = {
 		type = mesh
-		source = <data>/model.obj
+		source = <data>/model_fix.obj
 
         scale = {
             x = 300.0
@@ -52,12 +52,12 @@ geometry = {
 
 	sat1 = {
 		type = sphere
-        radius = 50
+        radius = 1
 
 		position = {
-    		x = 88
-			y = 15
-			z = -170
+    		x = 4
+			y = 9
+			z = -8
 		}
 
 		intensity = {

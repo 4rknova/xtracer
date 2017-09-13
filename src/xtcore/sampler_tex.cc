@@ -10,6 +10,9 @@ Texture2D::Texture2D()
     : m_filtering(FILTERING_NEAREST)
 {}
 
+Texture2D::~Texture2D()
+{}
+
 void Texture2D::set_filtering(FILTERING filtering)
 {
     m_filtering = filtering;

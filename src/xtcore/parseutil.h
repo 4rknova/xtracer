@@ -8,7 +8,7 @@
 #include "camera.h"
 #include "material.h"
 #include "sampler_tex.h"
-#include "solidcolor.h"
+#include "sampler_col.h"
 #include "object.h"
 #include "cubemap.h"
 
@@ -37,7 +37,7 @@ xtcore::assets::Texture2D  *deserialize_texture  (const char *source, const ncf:
 xtcore::assets::Geometry   *deserialize_geometry (const char *source, const ncf::NCF *p);
 xtcore::assets::Object     *deserialize_object   (const char *source, const ncf::NCF *p);
 xtcore::assets::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
-xtcore::assets::SolidColor *deserialize_rgba     (const char *source, const ncf::NCF *p);
+xtcore::assets::ISampler   *deserialize_rgba     (const char *source, const ncf::NCF *p);
 
     } /* namespace io */
 } /* namespace xtcore */

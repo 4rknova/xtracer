@@ -1,14 +1,23 @@
 #include "sampler_col.h"
 
 namespace xtcore {
+    namespace assets {
 
-SamplerColor::SamplerColor(nimg::ColorRGBf &color)
-    : m_color(color)
+SolidColor::SolidColor()
 {}
 
-nimg::ColorRGBf SamplerColor::sample(NMath::Vector3f &uvw) const
+SolidColor::~SolidColor()
+{}
+
+void SolidColor::set(nimg::ColorRGBf &color)
+{
+    m_color = color;
+}
+
+nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &uvw) const
 {
     return m_color;
 }
 
+    } /* namespace assets */
 } /* namespace xtcore */

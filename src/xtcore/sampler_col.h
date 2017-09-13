@@ -4,18 +4,22 @@
 #include "sampler.h"
 
 namespace xtcore {
+    namespace assets {
 
-class SamplerColor
+class SolidColor : public ISampler
 {
     public:
-    SamplerColor(nimg::ColorRGBf &color);
+    SolidColor();
+    virtual ~SolidColor();
 
-    nimg::ColorRGBf sample(NMath::Vector3f &uvw) const;
+    void set(nimg::ColorRGBf &color);
+    virtual nimg::ColorRGBf sample(const NMath::Vector3f &uvw) const;
 
     private:
     nimg::ColorRGBf m_color;
 };
 
+    } /* namespace assets */
 } /* namespace xtcore */
 
 #endif /* XTCORE_SAMPLER_COLOR_H_INCLUDED */

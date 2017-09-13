@@ -14,27 +14,7 @@ cubemap = {
 }
 
 camera = {
-    default  = {
-        type     = thin-lens
-		fov      = 45
-		position = vec3(-50,130,-200)
-		target   = vec3(-50,110,30)
-		up       = vec3(0,1,0)
-        aperture = 5
-        flength  = 175
-    }
-
-    wide = {
-        type     = thin-lens
-		fov      = 45
-		position = vec3(-50,130,-330)
-		target   = vec3(-50,110,30)
-		up       = vec3(0,1,0)
-        aperture = 15
-        flength  = 300
-    }
-
-    head = {
+    default = {
         type     = thin-lens
         fov      = 45
         position = vec3(-50, 150, 50)
@@ -44,20 +24,14 @@ camera = {
         flength  = 120
     }
 
-    head 2 = {
+    far = {
         type     = thin-lens
         fov      = 45
-        position = vec3(-110, 130, -60)
+        position = vec3(-110, 130, 60)
         target   = vec3(0, 150, 0)
 		up       = vec3(0,1,0)
         aperture = 1
         flength  = 110
-    }
-
-    ods = {
-        type     = ods
-        ipd      = 1.5
-        position = vec3(0, 50, -100)
     }
 }
 

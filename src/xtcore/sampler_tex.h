@@ -18,9 +18,10 @@ class Texture2D : public ISampler
     void set_filtering(FILTERING filtering);
     void applu_multiplier(float multiplier);
 
-	nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
+	virtual nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
 
     Texture2D();
+    virtual ~Texture2D();
 
 	private:
     FILTERING    m_filtering;

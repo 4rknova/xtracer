@@ -384,10 +384,11 @@ xtcore::assets::IMaterial *deserialize_material_blinnphong(const char *source, c
     return new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
 }
 
-xtcore::assets::SolidColor *deserialize_rgba(const char *source, const ncf::NCF *p)
+xtcore::assets::ISampler *deserialize_rgba(const char *source, const ncf::NCF *p)
 {
     xtcore::assets::SolidColor *sampler = new (std::nothrow) xtcore::assets::SolidColor();
-    ((xtcore::assets::SolidColor *)sampler)->set(deserialize_col3(p, XTPROTO_VALUE));
+    nimg::ColorRGBf col = deserialize_col3(p, XTPROTO_VALUE);
+    ((xtcore::assets::SolidColor *)sampler)->set(col);
     return sampler;
 }
 

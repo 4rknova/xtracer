@@ -21,5 +21,19 @@ class MaterialLambert : public IMaterial
 
     } /* namespace assets */
 } /* namespace xtcore */
+/*
+#include "interaction.h"
+
+namespace xtcore {
+    namespace shader {
+
+class Lambert {
+    public
+        virtual void shade(surface_interaction_t *si, );
+};
+
+*/
+//    } /* namespace shader */
+//} /* namespace xtcore */
 
 #endif /* XTCORE_MAT_LAMBERT_H_INCLUDED */
