@@ -463,10 +463,6 @@ xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NC
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
 	}
 
-    if (p->query_property(XTPROTO_MULTIPLIER)) {
-        data->applu_multiplier(deserialize_numf(p->get_property_by_name(XTPROTO_MULTIPLIER)));
-    }
-
     return data;
 }
 
