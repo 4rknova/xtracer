@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstddef>
 #include <nimg/pixmap.h>
+#include "aa_sample.h"
 
 namespace xtcore {
     namespace render {
@@ -26,8 +27,8 @@ struct tile_t {
     void setup_handler_on_init  (tile_event_handler_t *h);
     void setup_handler_on_done  (tile_event_handler_t *h);
 
-    void write(size_t x, size_t y, const nimg::ColorRGBAf &col);
-    void read(size_t x, size_t y, nimg::ColorRGBAf &col) const;
+    void write (size_t x, size_t y, const nimg::ColorRGBAf &col);
+    void read  (size_t x, size_t y,       nimg::ColorRGBAf &col) const;
 
     // Event triggers
     void init();
@@ -35,6 +36,8 @@ struct tile_t {
     void submit();
 
 	tile_t(size_t x0, size_t y0, size_t x1, size_t y1);
+
+    xtcore::antialiasing::sample_set_t samples;
 
     private:
     nimg::Pixmap m_data;

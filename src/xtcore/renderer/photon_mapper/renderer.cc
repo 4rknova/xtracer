@@ -25,44 +25,39 @@ void Renderer::render()
 {
 	if (!m_context) return;
 
-    const size_t t          = m_context->params.threads;
-    const size_t s          = m_context->params.samples;
-	const size_t w          = m_context->params.width;
-	const size_t h          = m_context->params.height;
-    const size_t tile_count = m_context->tiles.size();
-    const size_t rdepth     = m_context->params.rdepth;
+    xtcore::render::params_t *p   = &(m_context->params);
+    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera.c_str());
 
-    xtcore::antialiasing::SampleSet samples;
-    xtcore::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    size_t samples_size = samples.size();
-    xtcore::assets::ICamera *cam = m_context->scene.get_camera(m_context->params.camera.c_str());
     if (!cam) return;
-    float d = 1.f / (s * samples_size);
 
-	float progress = 0;
-	if (t) omp_set_num_threads(t);
+	if (p->threads) omp_set_num_threads(p->threads);
 
     #pragma omp parallel for schedule(dynamic, 1)
-    for (size_t i = 0; i < tile_count; ++i) {
+    for (size_t i = 0; i < m_context->tiles.size(); ++i) {
         xtcore::render::tile_t *tile = &(m_context->tiles[i]);
-
         tile->init();
 
-	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
-	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
-				ColorRGBf color;
-                for (size_t aa = 0; aa < samples_size; ++aa) {
-                    float rx = (float)x + samples[aa].x;
-					float ry = (float)y + samples[aa].y;
+        m_context->aa_sampler.produce(tile, p->aa);
 
-                    for (float dofs = 0; dofs < s; ++dofs) {
-                        Ray primary_ray = cam->get_primary_ray(rx, ry, (float)w, (float)h);
-                        color += trace_ray(primary_ray, primary_ray, rdepth + 1) * d;
-				    }
-                }
-				tile->write(x, y, color);
-			}
-		}
+        while (tile->samples.count() > 0) {
+            xtcore::antialiasing::sample_t aa_sample;
+            tile->samples.pop(aa_sample);
+			nimg::ColorRGBAf color_pixel;
+            nimg::ColorRGBf  color_sample;
+
+            tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
+
+            for (float dofs = 0; dofs < p->samples; ++dofs) {
+                Ray primary_ray = cam->get_primary_ray(
+                      aa_sample.coords.x, aa_sample.coords.y
+                    , (float)(p->width)
+                    , (float)(p->height)
+                );
+                color_sample += trace_ray(primary_ray, primary_ray, p->rdepth + 1) * (1./ p->samples);
+		    }
+
+            tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBf(color_pixel) + color_sample * aa_sample.weight);
+        }
         tile->submit();
 	}
 }

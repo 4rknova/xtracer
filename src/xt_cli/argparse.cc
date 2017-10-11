@@ -110,12 +110,12 @@ int setup(int argc, char **argv
 				return 2;
 			}
 
-			if (sscanf(argv[i], "%lu", &(params.ssaa)) < 1) {
+			if (sscanf(argv[i], "%lu", &(params.aa)) < 1) {
 				Log::handle().post_error("Invalid %s value. Should be <uint>.", argv[i-1]);
 				return 2;
 			}
 
-			if (params.ssaa < 2) {
+			if (params.aa < 2) {
 				Log::handle().post_error("Invalid %s value. Should be 2 or greater.", argv[i-1]);
 				return 2;
 			}

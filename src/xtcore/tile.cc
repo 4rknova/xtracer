@@ -51,6 +51,7 @@ void tile_t::init()
 {
     m_data.init(width(), height());
     if (m_on_init) m_on_init->handle_event(this);
+   samples.clear();
 }
 
 void tile_t::submit()

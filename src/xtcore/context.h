@@ -4,6 +4,7 @@
 #include "nimg/pixmap.h"
 #include "scene.h"
 #include "tile.h"
+#include "aa.h"
 
 namespace xtcore {
 	namespace render {
@@ -14,7 +15,7 @@ struct params_t
     size_t height;    // Height of frame
     size_t threads;   // Number of threads
     size_t samples;   // Number of samples
-    size_t ssaa;      // Level of Screen Space Anti-Aliasing
+    size_t aa;        // Level of Screen Space Anti-Aliasing
     size_t rdepth;    // Maximum recursion depth
     size_t tile_size; // Tile size for framebuffers segmentation
 
@@ -28,6 +29,8 @@ struct context_t
 	Scene     scene;
 	Tileset   tiles;
     params_t  params;
+
+    xtcore::antialiasing::MSAA aa_sampler;
 
     /* init: Initialize context buffers
     **       Note that any change to params

@@ -4,45 +4,77 @@
 namespace xtcore {
     namespace antialiasing {
 
-void gen_samples_noaa(SampleSet &samples, size_t level)
+void gen_samples_grid(sample_set_t &samples, NMath::Vector2f pixel, size_t level)
 {
-    samples.clear();
-    NMath::Vector2f v(0.5f, 0.5f);
-    samples.push_back(v);
-}
+    if (level == 0) return;
 
-void gen_samples_ssaa(SampleSet &samples, size_t level)
-{
-    samples.clear();
-
-    if (level < 2) {
-        NMath::Vector2f v(0.5f, 0.5f);
-        samples.push_back(v);
+    if (level == 1) {
+        sample_t s;
+        s.weight = 1.f;
+        s.pixel  = pixel;
+        s.coords = pixel + NMath::Vector2f(0.5f, 0.5f);
+        samples.push(s);
         return;
     }
 
     float sub_pixel = 1.f / level;
     float offset    = sub_pixel * 0.5f;
 
-    for (size_t x = 0; x < level; ++x) {
-        for (size_t y = 0; y < level; ++y) {
-            NMath::Vector2f uv = NMath::Vector2f(x, y) * sub_pixel + offset;
-            samples.push_back(uv);
+    sample_t s;
+    s.pixel  = pixel;
+    s.weight = 1.f / (level * level);
+    for (size_t y = 0; y < level; ++y) {
+        for (size_t x = 0; x < level; ++x) {
+            s.coords = pixel + NMath::Vector2f(x, y) * sub_pixel + offset;
+            samples.push(s);
         }
     }
 }
 
-void gen_samples_msaa(SampleSet &samples, size_t level)
+void gen_samples_random(sample_set_t &samples, NMath::Vector2f pixel, size_t count)
 {
-    samples.clear();
+    if (count < 1) return;
 
-    if (level < 1) level = 1;
+    sample_t s;
+    s.weight = 1.f / count;
+    s.pixel  = pixel;
 
-    for (size_t i = 0; i < level; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         float x = NMath::prng_c(0.0, 1.0);
         float y = NMath::prng_c(0.0, 1.0);
-        NMath::Vector2f uv(x, y);
-        samples.push_back(uv);
+        s.coords = pixel + NMath::Vector2f(x, y);
+        samples.push(s);
+    }
+}
+
+MSAA::MSAA()
+    : distribution(SAMPLE_DISTRIBUTION_GRID)
+{}
+
+MSAA::~MSAA()
+{}
+
+void MSAA::produce(xtcore::render::tile_t *tile, size_t level)
+{
+    if (!tile) return;
+
+    for (size_t x = 0; x < tile->width(); ++x) {
+        for (size_t y = 0; y < tile->height(); ++y) {
+            sample_set_t offsets;
+
+            NMath::Vector2f p(x + tile->x0(),y + tile->y0());
+
+            switch (distribution) {
+                case SAMPLE_DISTRIBUTION_GRID   : gen_samples_grid   (offsets, p, level); break;
+                case SAMPLE_DISTRIBUTION_RANDOM : gen_samples_random (offsets, p, level); break;
+            }
+
+            while (offsets.count() > 0) {
+                sample_t s;
+                offsets.pop(s);
+                tile->samples.push(s);
+            }
+        }
     }
 }
 

@@ -28,65 +28,50 @@ void Renderer::setup(xtcore::render::context_t &context)
 	m_context = &context;
 }
 
-void Renderer::render(void)
+void Renderer::render()
 {
-    if (m_context) render_depth();
-}
+    if (!m_context) return;
 
-void Renderer::render_depth()
-{
-	// precalculate some constants
-	const size_t w          = m_context->params.width;
-	const size_t h          = m_context->params.height;
-    const size_t t          = m_context->params.threads;
-    const size_t s          = m_context->params.samples;
-    const size_t tile_count = m_context->tiles.size();
-
-    xtcore::antialiasing::SampleSet samples;
-    xtcore::antialiasing::gen_samples_ssaa(samples, m_context->params.ssaa);
-    xtcore::assets::ICamera *cam = m_context->scene.get_camera(m_context->params.camera.c_str());
+    xtcore::render::params_t *p   = &(m_context->params);
+    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera.c_str());
     if (!cam) return;
-    float d = 1.f / (s * samples.size());
 
-    float progress = 0;
-	if (t) omp_set_num_threads(t);
+	if (p->threads) omp_set_num_threads(p->threads);
 
 	#pragma omp parallel for schedule(dynamic, 1)
-    for (size_t i = 0; i < tile_count; ++i) {
+    for (size_t i = 0; i < m_context->tiles.size(); ++i) {
         xtcore::render::tile_t *tile = &(m_context->tiles[i]);
-
         tile->init();
 
-	    for (size_t y = tile->y0(); y < tile->y1(); ++y) {
-	        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
+        m_context->aa_sampler.produce(tile, p->aa);
 
-                nimg::ColorRGBf color;
+        while (tile->samples.count() > 0) {
+            xtcore::antialiasing::sample_t aa_sample;
+            tile->samples.pop(aa_sample);
+			nimg::ColorRGBAf color_pixel;
+            nimg::ColorRGBf  color_sample;
 
-                // antialiasing loop
-                for (size_t aa = 0; aa < samples.size(); ++aa) {
-                    float rx = (float)x + samples[aa].x;
-                    float ry = (float)y + samples[aa].y;
+            tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-			        NMath::IntInfo info;
-            		memset(&info, 0, sizeof(info));
+	        NMath::IntInfo info;
+            std::string obj;
+       		memset(&info, 0, sizeof(info));
 
-                    for (float dofs = 0; dofs < s; ++dofs) {
-                  	 	NMath::Ray ray = cam->get_primary_ray((float)rx, (float)ry, (float)w, (float)h);
-                  		std::string obj;
-                        float depth = 0.f;
+            for (float dofs = 0; dofs < p->samples; ++dofs) {
+          	 	NMath::Ray ray = cam->get_primary_ray(
+                      aa_sample.coords.x, aa_sample.coords.y
+                    , (float)(p->width)
+                    , (float)(p->height)
+                );
+                float depth = 0.f;
 
-                        if (m_context->scene.intersection(ray, info, obj)) {
-                            NMath::scalar_t  d = (ray.origin - info.point).length();
-                            depth = 1. / log(d);
-                        }
-                        color += nimg::ColorRGBf(depth, depth, depth) * d;
-                    }
+                if (m_context->scene.intersection(ray, info, obj)) {
+                    depth = 1. / log((ray.origin - info.point).length());
                 }
-
-                tile->write(x, y, color);
+                color_sample += nimg::ColorRGBf(depth, depth, depth) * (1. / p->samples);
             }
+            tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), nimg::ColorRGBf(color_pixel) + color_sample * aa_sample.weight);
         }
-
         tile->submit();
     }
 }

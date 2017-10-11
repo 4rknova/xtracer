@@ -13,7 +13,7 @@ class IRenderer
 	virtual ~IRenderer();
 
 	virtual void setup(context_t &context) = 0;
-	virtual void render() = 0;
+	virtual void render()                  = 0;
 
 };
 

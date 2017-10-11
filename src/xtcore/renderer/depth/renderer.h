@@ -27,8 +27,6 @@ class Renderer : public xtcore::render::IRenderer
 	virtual void render();
 
 	private:
-
-    virtual void render_depth();
     xtcore::render::context_t *m_context;
 };
 

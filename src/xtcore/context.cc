@@ -11,7 +11,7 @@ params_t::params_t()
     , height(XTCORE_CONTEXT_DEFAULT_HEIGHT)
     , threads(0)
     , samples(1)
-    , ssaa(1)
+    , aa(1)
     , rdepth(3)
     , tile_size(8)
 {}

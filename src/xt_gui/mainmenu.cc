@@ -58,7 +58,7 @@ void wdg_conf(workspace_t *ws)
 
         ImGui::NewLine();
         ImGui::Text("Sampling");ImGui::Separator();
-        textedit_int("Antialiasing"   , p->ssaa   , 1, 1);
+        textedit_int("Antialiasing"   , p->aa     , 1, 1);
         textedit_int("Recursion Depth", p->rdepth , 1, 1);
         textedit_int("Samples"        , p->samples, 1, 1);
         ImGui::NewLine();
