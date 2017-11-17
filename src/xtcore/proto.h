@@ -34,6 +34,7 @@
 #define XTPROTO_PROP_COLORS         "colors"            /* string     */ /* color properties */
 #define XTPROTO_PROP_TEXTURES       "textures"          /* string     */ /* texture properties */
 
+#define XTPROTO_PROP_PREFIX         "prefix"            /* string     */ /* A prefix string */
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */ /* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */ /* Default value */
 #define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */ /* Translation */
@@ -52,7 +53,7 @@
 #define XTPROTO_PROP_KAMBN			"k_ambient"			/* scalar_t   */ /* Ambient ratio */
 #define XTPROTO_PROP_KDIFF			"k_diffuse"			/* scalar_t   */ /* Diffuse ratio */
 #define XTPROTO_PROP_KSPEC			"k_specular"		/* scalar_t   */ /* Specular ratio */
-#define XTPROTO_PROP_KEXPN			"exponent"		/* scalar_t   */ /* Specular exponent */
+#define XTPROTO_PROP_KEXPN			"exponent"	    	/* scalar_t   */ /* Specular exponent */
 #define	XTPROTO_PROP_ROUGH			"roughness"			/* scalar_t   */ /* Roughness */
 #define XTPROTO_PROP_REFLC			"reflectance"		/* scalar_t   */ /* Reflectance ratio */
 #define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */ /* Transparency ratio */
@@ -114,16 +115,17 @@
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */
 #define XTPROTO_LTRL_CAM_CUBEMAP    "cubemap"           /* string     */ /* Cubemap camera */
 
-#define XTPROTO_TEXTURE         "texture"
-#define XTPROTO_CUBEMAP         "cubemap"
-#define XTPROTO_COLOR           "color"
-#define XTPROTO_PROPERTIES      "properties"
-#define XTPROTO_SAMPLERS        "samplers"
-#define XTPROTO_SCALARS         "scalars"
-#define XTPROTO_VALUE           "value"
-#define XTPROTO_FLIP_NORMALS    "flip_normals"
-#define XTPROTO_MODIFIERS       "modifiers"
-#define XTPROTO_EXTRUDE         "extrude"
-#define XTPROTO_MULTIPLIER      "multiplier"
-
+#define XTPROTO_TEXTURE             "texture"
+#define XTPROTO_CUBEMAP             "cubemap"
+#define XTPROTO_COLOR               "color"
+#define XTPROTO_PROPERTIES          "properties"
+#define XTPROTO_SAMPLERS            "samplers"
+#define XTPROTO_SCALARS             "scalars"
+#define XTPROTO_VALUE               "value"
+#define XTPROTO_FLIP_NORMALS        "flip_normals"
+#define XTPROTO_FLIP_X              "flip_x"
+#define XTPROTO_FLIP_Y              "flip_y"
+#define XTPROTO_MODIFIERS           "modifiers"
+#define XTPROTO_EXTRUDE             "extrude"
+#define XTPROTO_MULTIPLIER          "multiplier"
 #endif /* XTCORE_PROTO_H_INCLUDED */

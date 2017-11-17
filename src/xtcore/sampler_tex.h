@@ -19,6 +19,9 @@ class Texture2D : public ISampler
 
 	virtual nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
 
+    void flip_horizontal();
+    void flip_vertical();
+
     Texture2D();
     virtual ~Texture2D();
 

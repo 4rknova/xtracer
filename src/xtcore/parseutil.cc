@@ -8,12 +8,13 @@
 #include <nmath/triangle.h>
 #include <nmesh/mesh.h>
 #include <nmesh/transform.h>
-#include <nmesh/obj.h>
 #include <nmesh/invnormals.h>
 #include <nmesh/icosahedron.h>
 #include <nimg/checkerboard.h>
+#include <nimg/transform.h>
 
 #include "proto.h"
+#include "obj.h"
 
 #include "log.h"
 #include "cam_perspective.h"
@@ -36,7 +37,7 @@ bool deserialize_bool(const char *val, const bool def)
 	if (!val) return false;
 	std::string s = val;
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-	return ( (s == "yes") || (s == "true") ) ? true : false;
+	return ( (s == "1") || (s == "yes") || (s == "true") ) ? true : false;
 }
 
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def)
@@ -287,7 +288,7 @@ xtcore::assets::Geometry *deserialize_geometry_mesh(const char *source, const nc
     	NMath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
     	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
     	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
-    	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
+    	nmesh::mutator::translate(obj,  xform_tsl.x, xform_tsl.y, xform_tsl.z);
 
         if (mods->query_property(XTPROTO_FLIP_NORMALS)) {
             bool flag = deserialize_bool(mods->get_property_by_name(XTPROTO_FLIP_NORMALS));
@@ -456,12 +457,17 @@ xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NC
         return 0;
 	}
 
-  	if      ( filter.empty()
-   	      || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::assets::FILTERING_NEAREST);  }
+  	if ( filter.empty()
+   	 || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::assets::FILTERING_NEAREST);  }
 	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtcore::assets::FILTERING_BILINEAR); }
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
 	}
+
+	bool flip_x = deserialize_bool(p->get_property_by_name(XTPROTO_FLIP_X));
+	bool flip_y = deserialize_bool(p->get_property_by_name(XTPROTO_FLIP_Y));
+    if (flip_x) data->flip_horizontal();
+    if (flip_y) data->flip_vertical();
 
     return data;
 }
@@ -472,13 +478,57 @@ xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p
 
     xtcore::assets::Object *data = new (std::nothrow) xtcore::assets::Object;
 
-	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
-	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
+    bool external = p->query_property(XTPROTO_PROP_SOURCE);
 
-	data->geometry = deserialize_cstr(g);
-	data->material = deserialize_cstr(m);
+    /* An object can be either:
+    **  1. Imported from an external file.
+    **     If multiple sub-objects are defined within the external source, the object
+    **     name will be used as a prefix and multiple individual objects will be
+    **     created. A separate prefix property will be used to create material and
+    **     geometry names.
+    **  2. Created from components defined in the scn structure. (backwards compatible)
+    ** If the source tag is defined then the parser will attempt to do (1).
+    ** Otherwise, a geometry and a material node will be used to create the object.
+    */
+    if (external) {
+        std::string flpath = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+        std::string prefix = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_PREFIX));
 
-	return data;
+        // Open source file from relative path
+	    std::string base, file, fsource = source;
+		ncf::util::path_comp(fsource, base, file);
+    	base.append(flpath);
+        Log::handle().post_message("Object: External loader [%s, %s]", base.c_str(), prefix.c_str());
+
+        nmesh::object_t obj;
+        fsource = base;
+
+		ncf::util::path_comp(fsource, base, file);
+	    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))
+    	{
+    		Log::handle().post_warning("Failed to load mesh from %s", flpath.c_str());
+	    	delete data;
+        }
+
+        // Iterate through all shapes
+        for (nmesh::material_t material : obj.materials) {
+            Log::handle().post_message("%i-> creating material %s", obj.materials.size(), material.name.c_str());
+        }
+
+        for (nmesh::shape_t shape : obj.shapes) {
+            Log::handle().post_message("%i-> creating geometry %s", obj.shapes.size(), shape.name.c_str());
+        }
+    }
+    else
+    {
+    	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
+    	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
+
+    	data->geometry = deserialize_cstr(g);
+    	data->material = deserialize_cstr(m);
+
+    	return data;
+    }
 }
 
     } /* namespace io */

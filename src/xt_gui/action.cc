@@ -3,6 +3,7 @@
 #include <nimg/img.h>
 #include <xtcore/context.h>
 #include <xtcore/log.h>
+#include <xtcore/timeutil.h>
 #include "action.h"
 
 namespace action {
@@ -22,11 +23,16 @@ void task_render(workspace_t *ws)
         delete ws->renderer;
         ws->renderer = 0;
     }
+    std::string timestr;
+    print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
+    Log::handle().post_message("Render completed: [%s] -> %s", ws->source_file.c_str(), timestr.c_str());
 }
 
 void task_load(workspace_t *ws)
 {
-    ws->context.scene.load(ws->source_file.c_str(), nullptr);
+
+    int err = ws->context.scene.load(ws->source_file.c_str(), nullptr);
+    if (err) Log::handle().post_error("Failed to load scene: %s", ws->source_file.c_str());
 }
 
 int render(workspace_t *ws)

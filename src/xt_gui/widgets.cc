@@ -28,7 +28,7 @@ static const char *postsdr_source_frag =
     "float f = distance(vec2(iWindowResolution.x / 2., iWindowResolution.y / 3.)"
 	"                      , iWindowResolution - gl_FragCoord.xy) * (1./iWindowResolution.x-.02)*0.01;"
     "vec3 a = vec3(1)"
-    "   , b = vec3(0.8, 0.8, 0.8)"
+    "   , b = vec3(0.80, 0.80, 0.80)"
     "   , c = vec3(0.11, 0.41, 0.91)"
     "   , d = vec3(0.34, 0.36, 0.90);"
     "vec3 color = 0.35 * mix(mix(a,b,uv.y),mix(c,d,uv.x),f);"

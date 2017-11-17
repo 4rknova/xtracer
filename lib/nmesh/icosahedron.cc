@@ -80,57 +80,5 @@ void icosahedron(object_t *obj)
     }
 }
 
-/*
-// refine triangles
-for (int i = 0; i < recursionLevel; i++)
-{
-  var faces2 = new List<TriangleIndices>();
-  foreach (var tri in faces)
-  {
-      // replace triangle by 4 triangles
-      int a = getMiddlePoint(tri.v1, tri.v2);
-      int b = getMiddlePoint(tri.v2, tri.v3);
-      int c = getMiddlePoint(tri.v3, tri.v1);
-
-      faces2.Add(new TriangleIndices(tri.v1, a, c));
-      faces2.Add(new TriangleIndices(tri.v2, b, a));
-      faces2.Add(new TriangleIndices(tri.v3, c, b));
-      faces2.Add(new TriangleIndices(a, b, c));
-  }
-  faces = faces2;
-}
-
-// return index of point in the middle of p1 and p2
-    private int getMiddlePoint(int p1, int p2)
-    {
-        // first check if we have it already
-        bool firstIsSmaller = p1 < p2;
-        Int64 smallerIndex = firstIsSmaller ? p1 : p2;
-        Int64 greaterIndex = firstIsSmaller ? p2 : p1;
-        Int64 key = (smallerIndex << 32) + greaterIndex;
-
-        int ret;
-        if (this.middlePointIndexCache.TryGetValue(key, out ret))
-        {
-            return ret;
-        }
-
-        // not in cache, calculate it
-        Point3D point1 = this.geometry.Positions[p1];
-        Point3D point2 = this.geometry.Positions[p2];
-        Point3D middle = new Point3D(
-            (point1.X + point2.X) / 2.0,
-            (point1.Y + point2.Y) / 2.0,
-            (point1.Z + point2.Z) / 2.0);
-
-        // add vertex makes sure point is on unit sphere
-        int i = addVertex(middle);
-
-        // store it, return index
-        this.middlePointIndexCache.Add(key, i);
-        return i;
-    }
-
-*/
     } /* namespace generator */
 } /* namespace nmesh */

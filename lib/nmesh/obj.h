@@ -1,16 +1,16 @@
-#ifndef NMESH_OBJ_HPP_INCLUDED
-#define NMESH_OBJ_HPP_INCLUDED
+#ifndef XTCORE_OBJ_HPP_INCLUDED
+#define XTCORE_OBJ_HPP_INCLUDED
 
-#include "structs.h"
+#include <nmesh/structs.h>
 
 namespace nmesh {
-		namespace io {
+	namespace io {
 			namespace import {
 
-int obj(const char *file, object_t &obj);
+int obj(const char *file, nmesh::object_t &obj, const char *dir = 0);
 
 		} /* namespace import */
 	} /* namespace io */
 } /* namespace nmesh */
 
-#endif /* NMESH_OBJ_HPP_INCLUDED */
+#endif /* XTCORE_OBJ_HPP_INCLUDED */

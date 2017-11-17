@@ -11,27 +11,27 @@ namespace nmesh {
 	namespace io {
 		namespace import {
 
-int obj(const char* filename, object_t &obj)
+int obj(const char* filename, nmesh::object_t &obj, const char *dir)
 {
-	if(!filename) return 1;
+	if (!filename) return 1;
 
 	tinyobj::attrib_t attribs;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 
 	std::string err;
-	bool loaded = tinyobj::LoadObj(&attribs, &shapes, &materials, &err, filename);
+	bool loaded = tinyobj::LoadObj(&attribs, &shapes, &materials, &err, filename, dir);
 
 	if (!loaded) return 1;
 
 	for (size_t s = 0; s < shapes.size(); ++s) {
-        shape_t shape;
+        nmesh::shape_t shape;
 
         shape.name = shapes[s].name;
 
         // load indices
 		for (size_t i = 0; i < shapes[s].mesh.indices.size(); ++i) {
-            index_t idx;
+            nmesh::index_t idx;
             idx.v  = shapes[s].mesh.indices[i].vertex_index;
             idx.n  = shapes[s].mesh.indices[i].normal_index;
             idx.uv = shapes[s].mesh.indices[i].texcoord_index;
@@ -63,7 +63,7 @@ int obj(const char* filename, object_t &obj)
 
     // Load materials
     for (size_t i = 0; i < materials.size(); ++i) {
-        material_t mat;
+        nmesh::material_t mat;
 
         tinyobj::material_t *m = &(materials[i]);
 

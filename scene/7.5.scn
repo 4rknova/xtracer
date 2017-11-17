@@ -1,0 +1,99 @@
+title = Master Yoda
+descr =
+versn = 0.5
+
+data = data
+
+cubemap = {
+    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-15, 8, 50)
+        target   = vec3(4, 7, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 35
+    }
+}
+
+
+base = <data>/resources/geometry/sketchfab/master-yoda/source/Yoda/
+
+geometry = {
+	head = {
+		type = mesh
+		source = <base>/Yoda Bust.OBJ
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = 470
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	head = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+		            source    = <base>/Yoda Bust.png
+                    filtering = bilinear
+                }
+            }
+
+            scalars = {
+                reflectance = 0.1
+                exponent    = 1000
+            }
+        }
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	head = {
+		geometry = head
+		material = head
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

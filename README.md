@@ -53,7 +53,6 @@ ImGui         | https://github.com/ocornut/imgui
 TinyObjLoader | https://github.com/syoyo/tinyobjloader
 TinyFiles     | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
 STB           | https://github.com/nothings/stb
-Miniz         | https://github.com/richgel999/miniz
 
 License (BSD 3-clause)
 ----------------------

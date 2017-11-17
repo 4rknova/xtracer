@@ -1,5 +1,5 @@
-#ifndef NMESH_STRUCTS_H_INCLUDED
-#define NMESH_STRUCTS_H_INCLUDED
+#ifndef XTCORE_STRUCTS_H_INCLUDED
+#define XTCORE_STRUCTS_H_INCLUDED
 
 #include <string>
 #include <vector>
@@ -77,4 +77,4 @@ typedef struct {
 
 } /* namespace nmesh */
 
-#endif /* NMESH_STRUCTS_H_INCLUDED */
+#endif /* XTCORE_STRUCTS_H_INCLUDED */

@@ -1,5 +1,6 @@
 #include <nimg/img.h>
 #include <nimg/sample.h>
+#include <nimg/transform.h>
 #include "sampler_tex.h"
 #include <cstdio>
 
@@ -37,6 +38,16 @@ nimg::ColorRGBf Texture2D::sample(const NMath::Vector3f &tc) const
     }
 
     return nimg::ColorRGBf(0,0,0);
+}
+
+void Texture2D::flip_horizontal()
+{
+    nimg::transform::flip_horizontal(&m_map);
+}
+
+void Texture2D::flip_vertical()
+{
+    nimg::transform::flip_vertical(&m_map);
 }
 
     } /* namespace assets */

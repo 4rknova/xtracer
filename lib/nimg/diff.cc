@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cmath>
 #include <vector>
 #include "luminance.h"
@@ -14,8 +15,8 @@ int diff(const Pixmap &src, const Pixmap &dst, const float threshold)
 
     int res = 0;
 
-    for (unsigned int j = 0; j < src.height(); ++j) {
-        for (unsigned int i = 0; i < src.width(); ++i) {
+    for (size_t j = 0; j < src.height(); ++j) {
+        for (size_t i = 0; i < src.width(); ++i) {
 
             ColorRGBAf val_src = src.pixel_ro(i, j);
             ColorRGBAf val_dst = dst.pixel_ro(i, j);
@@ -41,8 +42,8 @@ float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold)
 
     std::vector<float> val;
 
-    for (unsigned int j = 0; j < src.height(); ++j) {
-        for (unsigned int i = 0; i < src.width(); ++i) {
+    for (size_t j = 0; j < src.height(); ++j) {
+        for (size_t i = 0; i < src.width(); ++i) {
 
             ColorRGBAf val_src = src.pixel_ro(i, j);
             ColorRGBAf val_dst = dst.pixel_ro(i, j);
@@ -66,7 +67,7 @@ float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold)
 
     float res = sqrtf(total);
 
-    return res;  //d(x,y)=sqrt(sum_i((xi-yi)^2))
+    return res;
 }
 
     } /* namespace eval */

@@ -26,7 +26,6 @@ namespace xtcore {
 bool            deserialize_bool(const char *val, const bool            def = DEFVAL_BOOL);
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = DEFVAL_NUMF);
 std::string     deserialize_cstr(const char *val, const char*           def = DEFVAL_CSTR);
-
 NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const NMath::Vector2f def = DEFVAL_TEX2);
 NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def = DEFVAL_VEC3);
 nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
