@@ -4,6 +4,7 @@
 #include <xtcore/context.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
+#include <xtcore/parseutil.h>
 #include "action.h"
 
 namespace action {
@@ -30,8 +31,7 @@ void task_render(workspace_t *ws)
 
 void task_load(workspace_t *ws)
 {
-
-    int err = ws->context.scene.load(ws->source_file.c_str(), nullptr);
+    int err = xtcore::io::scn::load(&(ws->context.scene), ws->source_file.c_str());
     if (err) Log::handle().post_error("Failed to load scene: %s", ws->source_file.c_str());
 }
 

@@ -11,9 +11,11 @@
 #include "sampler_col.h"
 #include "object.h"
 #include "cubemap.h"
+#include "scene.h"
 
 namespace xtcore {
     namespace io {
+        namespace scn {
 
 /* Default Values */
 #define DEFVAL_BOOL (false)
@@ -38,6 +40,15 @@ xtcore::assets::Object     *deserialize_object   (const char *source, const ncf:
 xtcore::assets::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
 xtcore::assets::ISampler   *deserialize_rgba     (const char *source, const ncf::NCF *p);
 
+int create_cubemap  (Scene *scene, ncf::NCF *p);
+int create_camera   (Scene *scene, ncf::NCF *p);
+int create_material (Scene *scene, ncf::NCF *p);
+int create_geometry (Scene *scene, ncf::NCF *p);
+int create_object   (Scene *scene, ncf::NCF *p);
+
+int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers = 0);
+
+        } /* namespace scn */
     } /* namespace io */
 } /* namespace xtcore */
 

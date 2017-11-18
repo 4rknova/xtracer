@@ -31,6 +31,7 @@
 
 namespace xtcore {
     namespace io {
+        namespace scn {
 
 bool deserialize_bool(const char *val, const bool def)
 {
@@ -531,5 +532,145 @@ xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p
     }
 }
 
+int create_camera(Scene *scene, ncf::NCF *p)
+{
+    if (!scene) return -1;
+
+    const char * name = p->get_name();
+    xtcore::assets::ICamera *data = deserialize_camera(scene->m_source.c_str(), p);
+    if (!data) return 1;
+    scene->destroy_camera(name);
+    scene->m_cameras[name] = data;
+    return 0;
+}
+
+int create_material(Scene *scene, ncf::NCF *p)
+{
+    if (!scene) return -1;
+
+    const char * name = p->get_name();
+    xtcore::assets::IMaterial *data = deserialize_material(scene->m_source.c_str(), p);
+    if (!data) return 1;
+    scene->destroy_material(name);
+    scene->m_materials[name] = data;
+    return 0;
+}
+
+int create_geometry(Scene *scene, ncf::NCF *p)
+{
+    if (!scene) return -1;
+
+    const char * name = p->get_name();
+    xtcore::assets::Geometry *data = deserialize_geometry(scene->m_source.c_str(), p);
+    if (!data) return 1;
+    scene->destroy_geometry(name);
+    scene->m_geometry[name] = data;
+    return 0;
+}
+
+int create_object(Scene *scene, ncf::NCF *p)
+{
+    if (!scene) return -1;
+
+    const char * name = p->get_name();
+    xtcore::assets::Object *data = deserialize_object(scene->m_source.c_str(), p);
+    if (!data) return 1;
+    scene->destroy_object(name);
+    scene->m_objects[name] = data;
+    return 0;
+}
+
+int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers)
+{
+	Log::handle().post_message("Loading script [%s]..", filename);
+
+    if(!filename) return 1;
+
+    ncf::NCF root;
+    root.set_source(filename);
+
+    ncf::error_t error;
+
+	if (root.parse(&error))  {
+        root.purge();
+		Log::handle().post_error("Failed to parse the scene. Line %i: %s", error.line, error.message);
+		return 2;
+	}
+
+    // Mods are of the form: group.group.property:value
+    if (modifiers) {
+    	std::list<std::string>::const_iterator mod_it = modifiers->begin();
+    	std::list<std::string>::const_iterator mod_et = modifiers->end();
+
+        for (; mod_it != mod_et; ++mod_it) {
+            std::string mod = (*mod_it);
+    		if (mod.find_last_of(':') == std::string::npos) {
+    			Log::handle().post_warning("Invalid rule: %s", mod.c_str());
+    			continue;
+    		}
+
+	    	ncf::NCF *node = &root;
+    		std::string nleft, nright;
+            while((mod.find_first_of('.') != std::string::npos)
+               && (mod.find_first_of(':') > mod.find_first_of('.'))) {
+    			ncf::util::split(mod, nleft, nright, '.');
+	    		mod = nright;
+		    	node = node->get_group_by_name(nleft.c_str());
+    		}
+
+		    ncf::util::split(mod, nleft, nright, ':');
+    		node->set_property(nleft.c_str(), nright.c_str());
+        }
+	}
+
+    Log::handle().post_message("Building the scene..");
+
+    scene->m_source   = deserialize_cstr(filename);
+	scene->m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
+	scene->m_ambient  = deserialize_col3(&root, XTPROTO_PROP_IAMBN)
+			          * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
+
+    scene->m_cubemap = deserialize_cubemap(scene->m_source.c_str(), &root);
+
+	std::list<std::string> sections;
+	sections.push_back(XTPROTO_NODE_CAMERA);
+	sections.push_back(XTPROTO_NODE_GEOMETRY);
+	sections.push_back(XTPROTO_NODE_MATERIAL);
+	sections.push_back(XTPROTO_NODE_TEXTURE);
+	sections.push_back(XTPROTO_NODE_OBJECT);
+
+	std::list<std::string>::iterator it = sections.begin();
+	std::list<std::string>::iterator et = sections.end();
+
+	for (; it != et; ++it) {
+    	size_t count = root.get_group_by_name((*it).c_str())->count_groups();
+
+		if (count) {
+			for (size_t i = 0; i < count; ++i) {
+				ncf::NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
+                Log::handle().post_debug("Loading: %s", lnode->get_name());
+
+                int res = 0;
+
+				     if (!(*it).compare(XTPROTO_NODE_CAMERA  )) res = create_camera   (scene, lnode);
+				else if (!(*it).compare(XTPROTO_NODE_MATERIAL)) res = create_material (scene, lnode);
+				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY)) res = create_geometry (scene, lnode);
+			    else if (!(*it).compare(XTPROTO_NODE_OBJECT  )) res = create_object   (scene, lnode);
+
+                // Check for parsing errors
+                if (res) {
+                    Log::handle().post_error("Failed to load: %s", lnode->get_name());
+                    scene->release();
+                    return 1;
+                }
+			}
+		}
+	}
+
+	Log::handle().post_message("Scene loaded.");
+	return 0;
+}
+
+        } /* namespace scn */
     } /* namespace io */
 } /* namespace xtcore */

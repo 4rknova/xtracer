@@ -7,7 +7,6 @@
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
-#include <ncf/ncf.h>
 
 #include "camera.h"
 #include "material.h"
@@ -31,56 +30,46 @@ struct light_t
 
 class Scene
 {
-	friend class Renderer;
-	private:
-		Scene(const Scene &);
-		Scene &operator =(const Scene &);
+public:
+	Scene(const Scene &);
+	Scene &operator =(const Scene &);
 
-        void get_light_sources(std::vector<light_t> &lights);
+    void get_light_sources(std::vector<light_t> &lights);
+ 	 Scene();
+	~Scene();
 
-	public:
-		Scene();
-		~Scene();
+	void apply_modifiers();
+	unsigned int build();
 
-		int load(const char *filename, const std::list<std::string> *modifiers);
-		void apply_modifiers();
-		unsigned int build();
+	const ColorRGBf &ambient();
+	void ambient(const ColorRGBf &ambient);
 
-		const ColorRGBf &ambient();
-		void ambient(const ColorRGBf &ambient);
+	xtcore::assets::ICamera *get_camera(const char *name);
 
-		xtcore::assets::ICamera *get_camera(const char *name);
+    nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
+	bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
 
-        nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
-		bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
+	int destroy_camera   (const char *name);
+	int destroy_material (const char *name);
+	int destroy_geometry (const char *name);
+	int destroy_object   (const char *name);
 
-		int create_cubemap  (ncf::NCF *p);
-		int create_camera   (ncf::NCF *p);
-		int create_material (ncf::NCF *p);
-		int create_geometry (ncf::NCF *p);
-		int create_object   (ncf::NCF *p);
+	// Maps of the scene entities
+	CamCollection m_cameras;
+	MatCollection m_materials;
+	GeoCollection m_geometry;
+	ObjCollection m_objects;
 
-		int destroy_camera   (const char *name);
-		int destroy_material (const char *name);
-		int destroy_geometry (const char *name);
-		int destroy_object   (const char *name);
+	// Ambient
+	nimg::ColorRGBf m_ambient;	// intensity
 
-		// Maps of the scene entities
-	    CamCollection m_cameras;
-		MatCollection m_materials;
-		GeoCollection m_geometry;
-		ObjCollection m_objects;
+	// The scene's source filepath and filename
+	std::string m_name;
+	std::string m_source;
+    xtcore::assets::Cubemap *m_cubemap;
 
-		// Ambient
-		nimg::ColorRGBf m_ambient;	// intensity
-
-		// The scene's source filepath and filename
-		std::string m_name;
-		std::string m_source;
-        xtcore::assets::Cubemap *m_cubemap;
-
-		// This will cleanup all the allocated memory
-		void release();
+	// This will cleanup all the allocated memory
+	void release();
 };
 
 #endif /* XTCORE_SCENE_HPP_INCLUDED */

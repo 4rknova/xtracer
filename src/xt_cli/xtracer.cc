@@ -12,6 +12,7 @@
 #include <xtcore/timeutil.h>
 #include <xtcore/log.h>
 #include <xtcore/context.h>
+#include <xtcore/parseutil.h>
 #include <xtcore/renderer/photon_mapper/renderer.h>
 #include <xtcore/renderer/stencil/renderer.h>
 #include <xtcore/renderer/depth/renderer.h>
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
     )) return 1;
 
 	xtcore::render::context_t context;
-	if (!context.scene.load(scene_path.c_str(), &modifiers)) {
+	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
         if (context.scene.m_cameras.size() == 0) {
             Log::handle().post_error("no cameras found");
             return 2;
