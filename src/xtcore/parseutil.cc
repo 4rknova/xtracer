@@ -479,57 +479,13 @@ xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p
 
     xtcore::assets::Object *data = new (std::nothrow) xtcore::assets::Object;
 
-    bool external = p->query_property(XTPROTO_PROP_SOURCE);
+   	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
+   	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
 
-    /* An object can be either:
-    **  1. Imported from an external file.
-    **     If multiple sub-objects are defined within the external source, the object
-    **     name will be used as a prefix and multiple individual objects will be
-    **     created. A separate prefix property will be used to create material and
-    **     geometry names.
-    **  2. Created from components defined in the scn structure. (backwards compatible)
-    ** If the source tag is defined then the parser will attempt to do (1).
-    ** Otherwise, a geometry and a material node will be used to create the object.
-    */
-    if (external) {
-        std::string flpath = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
-        std::string prefix = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_PREFIX));
+   	data->geometry = deserialize_cstr(g);
+   	data->material = deserialize_cstr(m);
 
-        // Open source file from relative path
-	    std::string base, file, fsource = source;
-		ncf::util::path_comp(fsource, base, file);
-    	base.append(flpath);
-        Log::handle().post_message("Object: External loader [%s, %s]", base.c_str(), prefix.c_str());
-
-        nmesh::object_t obj;
-        fsource = base;
-
-		ncf::util::path_comp(fsource, base, file);
-	    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))
-    	{
-    		Log::handle().post_warning("Failed to load mesh from %s", flpath.c_str());
-	    	delete data;
-        }
-
-        // Iterate through all shapes
-        for (nmesh::material_t material : obj.materials) {
-            Log::handle().post_message("%i-> creating material %s", obj.materials.size(), material.name.c_str());
-        }
-
-        for (nmesh::shape_t shape : obj.shapes) {
-            Log::handle().post_message("%i-> creating geometry %s", obj.shapes.size(), shape.name.c_str());
-        }
-    }
-    else
-    {
-    	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
-    	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
-
-    	data->geometry = deserialize_cstr(g);
-    	data->material = deserialize_cstr(m);
-
-    	return data;
-    }
+   	return data;
 }
 
 int create_camera(Scene *scene, ncf::NCF *p)
@@ -566,6 +522,39 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     scene->destroy_geometry(name);
     scene->m_geometry[name] = data;
     return 0;
+}
+
+int create_object(Scene *scene, const char *filepath, const char *prefix)
+{
+    if (!scene) return -1;
+/*
+    // Open source file from relative path
+	    std::string base, file, fsource = source;
+		ncf::util::path_comp(fsource, base, file);
+    	base.append(flpath);
+        Log::handle().post_message("Object: External loader [%s, %s]", base.c_str(), prefix.c_str());
+
+        nmesh::object_t obj;
+        fsource = base;
+
+		ncf::util::path_comp(fsource, base, file);
+	    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))
+    	{
+    		Log::handle().post_warning("Failed to load mesh from %s", flpath.c_str());
+	    	delete data;
+        }
+
+        // Iterate through all shapes
+        for (nmesh::material_t material : obj.materials) {
+            Log::handle().post_message("%i-> creating material %s", obj.materials.size(), material.name.c_str());
+        }
+
+        for (nmesh::shape_t shape : obj.shapes) {
+            Log::handle().post_message("%i-> creating geometry %s", obj.shapes.size(), shape.name.c_str());
+        }
+    }
+*/
+    return -1;
 }
 
 int create_object(Scene *scene, ncf::NCF *p)
@@ -655,7 +644,29 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 				     if (!(*it).compare(XTPROTO_NODE_CAMERA  )) res = create_camera   (scene, lnode);
 				else if (!(*it).compare(XTPROTO_NODE_MATERIAL)) res = create_material (scene, lnode);
 				else if (!(*it).compare(XTPROTO_NODE_GEOMETRY)) res = create_geometry (scene, lnode);
-			    else if (!(*it).compare(XTPROTO_NODE_OBJECT  )) res = create_object   (scene, lnode);
+			    else if (!(*it).compare(XTPROTO_NODE_OBJECT  )) {
+
+                    // Check if the object is loaded from an external source
+                    bool external = lnode->query_property(XTPROTO_PROP_SOURCE);
+
+                    /* An object can be either:
+                    **  1. Imported from an external file.
+                    **     If multiple sub-objects are defined within the external source, the object
+                    **     name will be used as a prefix and multiple individual objects will be
+                    **     created. A separate prefix property will be used to create material and
+                    **     geometry names.
+                    **     Only OBJ format is supported for external data atm
+                    **  2. Created from components defined in the scn structure. (backwards compatible)
+                    ** If the source tag is defined then the parser will attempt to do (1).
+                    ** Otherwise, a geometry and a material node will be used to create the object.
+                    */
+                    if (external) {
+                        std::string flpath = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_SOURCE));
+                        std::string prefix = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_PREFIX));
+                        res = create_object(scene, flpath.c_str(), prefix.c_str());
+                    }
+                    else res = create_object(scene, lnode);
+                }
 
                 // Check for parsing errors
                 if (res) {

@@ -64,6 +64,7 @@ void Mesh::build_octree(object_t &object)
 
 NMath::Vector3f Mesh::point_sample() const
 {
+    // Not yet implemented.
     return NMath::Vector3f(0,0,0);
 }
 

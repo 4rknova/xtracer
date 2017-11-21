@@ -17,7 +17,7 @@ Log::Log()
 	: m_max_log_size(0)
 	, m_flag_echo(true)
 	, m_flag_rewind(false)
-    , m_level(LOGENTRY_MESSAGE)
+    , m_level(LOGENTRY_DEBUG)
 {}
 
 Log::~Log()
