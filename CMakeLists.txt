@@ -6,6 +6,8 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
 
+set(CMAKE_C_FLAGS "-std=c99")
+
 # PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
