@@ -25,7 +25,7 @@ Compilation / Installation
 --------------------------
 
 XTracer should be able to compile and run on any system equipped with openmp
-compatible c and c++ compilers. 
+compatible c and c++ compilers.
 
 The source code is distributed along with a makefile configuration script for
 unix based systems with a GNU toolchain installed. To view all the available
@@ -35,7 +35,7 @@ type: make install. To uninstall type: make uninstall
 
 How to use
 ----------
-You can find sample scenes in the scene directory. Note that some of the 
+You can find sample scenes in the scene directory. Note that some of the
 scenes require textures or meshes that are not included in the repository.
 
 External Libraries
