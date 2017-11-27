@@ -25,10 +25,9 @@ Compilation / Installation
 --------------------------
 
 XTracer should be able to compile and run on any system equipped with openmp
-compatible c and c++ compilers and cmake.
-
-The source code is distributed along with a makefile configuration script for
-unix based systems with a GNU toolchain installed. Use the following commands:
+compatible c and c++ compilers and cmake. The source code is distributed along
+with a makefile configuration script for unix based systems with a GNU toolchain
+installed. Use the following commands:
 
     ./configure
     make
@@ -40,6 +39,8 @@ scenes require textures or meshes that are not included in the repository.
 
 External Libraries
 ------------------
+Name          | URL
+--------------|-----------
 ImGui         | https://github.com/ocornut/imgui
 TinyObjLoader | https://github.com/syoyo/tinyobjloader
 TinyFiles     | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
