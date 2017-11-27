@@ -25,13 +25,13 @@ Compilation / Installation
 --------------------------
 
 XTracer should be able to compile and run on any system equipped with openmp
-compatible c and c++ compilers.
+compatible c and c++ compilers and cmake.
 
 The source code is distributed along with a makefile configuration script for
-unix based systems with a GNU toolchain installed. To view all the available
-configuration options type: ./configure --help. Once the configuration is done,
-you can build the binary by typing: make -j. To install the binary in your system
-type: make install. To uninstall type: make uninstall
+unix based systems with a GNU toolchain installed. Use the following commands:
+
+    ./configure
+    make
 
 How to use
 ----------
