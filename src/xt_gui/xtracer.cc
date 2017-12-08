@@ -8,6 +8,7 @@
 #include "config.h"
 #include "state.h"
 #include "widgets.h"
+#include "profiler.h"
 
 gui::state_t state;
 
@@ -52,6 +53,7 @@ int main(int argc, char** argv)
     //io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 
+    xtcore::profiler::init();
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -64,6 +66,7 @@ int main(int argc, char** argv)
 		gui::draw_widgets(&state);
         glfwSwapBuffers(window);
     }
+    xtcore::profiler::deinit();
 
     // Cleanup
     ImGui_ImplGlfwGL3_Shutdown();

@@ -75,12 +75,27 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.c
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
+)
+
+file(GLOB SRC_IMGUI
     ${PATH_EXT}/imgui/*.cpp
 )
 
+file(GLOB SRC_REMOTERY
+    ${PATH_EXT}/remotery/lib/*.c
+)
+
+add_library(imgui STATIC ${SRC_IMGUI})
+set_target_properties(imgui PROPERTIES OUTPUT_NAME imgui)
+
+add_library(remotery STATIC ${SRC_REMOTERY})
+set_target_properties(remotery PROPERTIES OUTPUT_NAME remotery)
+set_target_properties(remotery PROPERTIES COMPILE_FLAGS "-std=gnu99 -I{PATH_EXT}/remotery/lib/ -pthread -lm")
+
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
-add_library(xtcore_dynamic SHARED ${SRC_XTCORE} ${SRC_LIBS})
 set_target_properties(xtcore_static  PROPERTIES OUTPUT_NAME xtcore)
+
+add_library(xtcore_dynamic SHARED ${SRC_XTCORE} ${SRC_LIBS})
 set_target_properties(xtcore_dynamic PROPERTIES OUTPUT_NAME xtcore)
 
 target_include_directories(xtcore_static PUBLIC
@@ -110,11 +125,11 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
     ${ext_libs}
 )
 
-target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a")
+target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a" "${PATH_BIN}/libremotery.a")
 
 SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
-target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" "${PATH_BIN}/libimgui.a" "${PATH_BIN}/libremotery.a" ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")

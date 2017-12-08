@@ -12,6 +12,8 @@
 #include <xtcore/aa.h>
 #include "renderer.h"
 
+#include "profiler.h"
+
 Renderer::Renderer()
 	: m_context(NULL)
 {}
@@ -35,6 +37,7 @@ void Renderer::render()
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < m_context->tiles.size(); ++i) {
         xtcore::render::tile_t *tile = &(m_context->tiles[i]);
+        xtcore::profiler::start("Render tile");
         tile->init();
 
         m_context->aa_sampler.produce(tile, p->aa);
@@ -59,6 +62,7 @@ void Renderer::render()
             tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBf(color_pixel) + color_sample * aa_sample.weight);
         }
         tile->submit();
+        xtcore::profiler::end();
 	}
 }
 

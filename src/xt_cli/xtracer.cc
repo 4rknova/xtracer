@@ -17,6 +17,7 @@
 #include <xtcore/renderer/stencil/renderer.h>
 #include <xtcore/renderer/depth/renderer.h>
 #include "argparse.h"
+#include "profiler.h"
 
 #define PROGRESS_BAR_LENGTH (15)
 
@@ -79,6 +80,8 @@ int main(int argc, char **argv)
             , camera
             , params
     )) return 1;
+
+    xtcore::profiler::init();
 
 	xtcore::render::context_t context;
 	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
@@ -147,5 +150,8 @@ int main(int argc, char **argv)
     }
 
 	delete renderer;
+
+    xtcore::profiler::deinit();
+
     return 0;
 }
