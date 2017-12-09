@@ -543,8 +543,20 @@ void panel_preview(workspace_t *ws, size_t w, size_t h)
     float zx = ws->zoom_multiplier * ws->context.params.width;
     float zy = ws->zoom_multiplier * ws->context.params.height;
     ImGui::BeginChild(ID_PANEL_PREVIEW, ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar);
-    ImGui::SetCursorPos(ImVec2(MAX((ImGui::GetWindowWidth()  - zx) / 2, 0)
-                             , MAX((ImGui::GetWindowHeight() - zy) / 2, 0)));
+    // Zooming
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.KeyCtrl) {
+        float z = ws->zoom_multiplier + io.MouseWheel * io.DeltaTime;
+        ws->zoom_multiplier = z < 0.1 ? 0.1 : z;
+    }
+    // Middle mouse scroll
+    if (ImGui::IsMouseDown(2)) {
+        ImVec2 d = ImGui::GetMouseDragDelta(2);
+        ImGui::SetScrollX(0.1 * d.x+ImGui::GetScrollX());
+        ImGui::SetScrollY(0.1 * d.y+ImGui::GetScrollY());
+    }
+    ImGui::SetCursorPos(ImVec2(MAX((ImGui::GetWindowWidth()  - zx) / 2.0f, 0.0f)
+                             , MAX((ImGui::GetWindowHeight() - zy) / 2.0f, 0.0f)));
 	ImGui::Image((void*)(uintptr_t)(ws->texture), ImVec2(zx, zy));
     ImGui::EndChild();
 }
