@@ -1,8 +1,7 @@
-XTRACER
--------
-
 <img align="center" src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
 
+XTRACER
+-------
 Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
 [![Build Status](https://img.shields.io/travis/4rknova/xtracer/master.svg?label=master)](https://travis-ci.org/4rknova/xtracer)
