@@ -1,25 +1,42 @@
 XTRACER
 -------
-Copyright 2010 - 2017 (c) Nikos Papadopoulos [nikpapas@gmail.com]
+Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
 
-XTracer is a raytracer written in c and c++.
+XTracer is a renderer written in c and c++.
 
 Features
 --------
-Category      | Features
---------------|-----------
-Primitives    | Plane, Triangle, Sphere, Mesh
-Materials     | Lambert, Phong, Blinn-Phong
-Lights        | Point, Sphere, Box, Triangle
-Cameras       | Pinhole, Thin lense
-Shading       | Reflection (glossy & perfect mirror), Refraction, Depth of field, Soft shadows, Texture mapping, Fresnel
-Acceleration  | Threads, Octrees, KD-trees
-Anti-aliasing | Supersampling
-Rendering     | HDR, Whitted/Distributed raytracing, Photon mapping (diffuse term)
+* Renderers
+    * Distributed ray-tracing
+    * Ray traced depth
+    * Ray traced Stencil
+* Primitives
+    * Plane
+    * Triangle
+    * Sphere
+    * Mesh
+* Materials
+    * Lambert
+    * Phong
+    * Blinn-Phong
+* Light sources
+    * Point
+    * Sphere
+    * Box
+    * Triangle
+    * Mesh
+* Cameras
+    * Pinhole
+    * Thin lens
+* Acceleration
+    * Threading
+    * Octrees
+    * KD-trees
+* Anti-Aliasing
+    * Multi Sampling
 
 Compilation / Installation
 --------------------------
@@ -45,6 +62,7 @@ ImGui         | https://github.com/ocornut/imgui
 TinyObjLoader | https://github.com/syoyo/tinyobjloader
 TinyFiles     | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
 STB           | https://github.com/nothings/stb
+Remotery      | https://github.com/Celtoys/Remotery
 
 License (BSD 3-clause)
 ----------------------
