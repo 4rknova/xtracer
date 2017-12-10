@@ -2,7 +2,7 @@ XTRACER
 -------
 Copyright 2010 - 2017 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
-[![License](http://img.shields.io/:license-lgpl-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=develop)](https://travis-ci.org/4rknova/xtracer)
 [![Build Status](https://travis-ci.org/4rknova/xtracer.svg?branch=master)](https://travis-ci.org/4rknova/xtracer)
 
