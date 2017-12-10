@@ -1,3 +1,5 @@
+#include <xtcore/memutil.tml>
+#include <xtcore/parseutil.h>
 #include "workspace.h"
 
 ws_handler_t::ws_handler_t(std::mutex *m)
@@ -23,50 +25,54 @@ xtcore::render::tile_t *ws_handler_t::pop()
     return t;
 }
 
-void workspace_t::init()
+void workspace_t::load()
 {
-    progress = 0.f;
+    int err = xtcore::io::scn::load(&(context.scene), source_file.c_str());
+    status = (err ? WS_STATUS_INVALID : WS_STATUS_LOADED);
 }
 
-void workspace_t::init_texture()
+void workspace_t::prepare()
 {
-    if (!texture) {
-        glGenTextures(1, &texture);
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    }
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-
     if (clear_buffer) {
         float *data = new float[context.params.width * context.params.height*4];
         memset(data, 0, sizeof(float) * 4 * context.params.width * context.params.height);
+        glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context.params.width, context.params.height, 0, GL_RGBA, GL_FLOAT, data);
         delete data;
     }
+}
+
+void workspace_t::render()
+{
+    status = WS_STATUS_PROCESSING;
+
+    progress = 0.f;
+    context.init();
+    setup_callbacks();
+    renderer->setup(context);
+    xtcore::render::order(context.tiles, tile_order);
+
+    timer.start();
+    renderer->render();
+    timer.stop();
+
+    xtcore::memory::safe_delete<xtcore::render::IRenderer>(renderer);
+
+    status = WS_STATUS_LOADED;
 }
 
 void workspace_t::setup_callbacks()
 {
     progress = 0.f;
     for (auto& i : context.tiles) {
-        i.setup_handler_on_init   (&handler_init);
-        i.setup_handler_on_done   (&handler_done);
+        i.setup_handler_on_init(&handler_init);
+        i.setup_handler_on_done(&handler_done);
     }
 }
 
 bool workspace_t::is_rendering()
 {
-    return renderer != 0;
-}
-
-void workspace_t::deinit()
-{
-    glDeleteTextures(1, &texture);
+    return status == WS_STATUS_PROCESSING;
 }
 
 void workspace_t::update()
@@ -111,4 +117,29 @@ void workspace_t::update()
         progress += pu;
 	}
     m.unlock();
+}
+
+workspace_t::workspace_t()
+    : status(WS_STATUS_INVALID)
+    , texture(0)
+    , zoom_multiplier(1.001f)
+    , renderer(0)
+    , handler_init(&m)
+    , handler_done(&m)
+    , gamma(DEFAULT_GAMMA)
+    , tile_order(xtcore::render::TILE_ORDER_UNCHANGED)
+    , clear_buffer(true)
+{
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S    , GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T    , GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+workspace_t::~workspace_t()
+{
+    glDeleteTextures(1, &texture);
 }

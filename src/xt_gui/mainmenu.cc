@@ -85,7 +85,7 @@ void menu_workspaces(state_t *state)
 	    std::string name = std::to_string(++idx) + ". " + i->source_file.c_str();
 
         if (ImGui::BeginMenu(name.c_str())) {
-            bool busy = (i->renderer);
+            bool busy = (i->is_rendering());
             if ((state->workspace != i) && ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) ImGui::Text("Rendering.. ");
             if (!(i->renderer) && ImGui::MenuItem("Close")  ) action::close(state, i);
@@ -117,7 +117,7 @@ void render_main_menu(state_t *state)
                 }
             }
             if (ImGui::MenuItem("About")) { flag_dg_info = true; }
-            if (ImGui::MenuItem("Exit" )) { action::quit();              }
+            if (ImGui::MenuItem("Exit" )) { action::quit();      }
             ImGui::EndMenu();
         }
 

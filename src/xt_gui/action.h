@@ -6,19 +6,19 @@
 
 namespace action {
 
-int render(workspace_t *ws);
+enum IMG_FORMAT
+{
+      IMG_FORMAT_HDR
+    , IMG_FORMAT_PNG
+    , IMG_FORMAT_BMP
+    , IMG_FORMAT_TGA
+};
 
-int load(workspace_t *ws);
-int save(workspace_t *ws);
+int render (workspace_t *ws);
+int load   (workspace_t *ws);
+int close  (gui::state_t *state, workspace_t *ws);
 
-int close(gui::state_t *state, workspace_t *ws);
-
-int export_hdr(const char *filepath, workspace_t *ws);
-int export_png(const char *filepath, workspace_t *ws);
-int export_bmp(const char *filepath, workspace_t *ws);
-int export_tga(const char *filepath, workspace_t *ws);
-
-void not_yet_implemented();
+int write(IMG_FORMAT format, const char *filepath, workspace_t *ws);
 void quit();
 
 } /* namespace action */

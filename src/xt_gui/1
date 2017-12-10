@@ -13,12 +13,13 @@
 #define DEFAULT_GAMMA       (2.2)
 #define DEFAULT_PROGRESSIVE (false)
 
+
 enum WS_STATUS
 {
       WS_STATUS_INVALID
     , WS_STATUS_LOADED
     , WS_STATUS_PROCESSING
-};
+}
 
 struct ws_handler_t : public xtcore::render::tile_event_handler_t
 {
@@ -38,9 +39,9 @@ struct workspace_t
     xtcore::render::IRenderer *renderer;
     xtcore::render::context_t  context;
 
-    void load();
-    void prepare();
-    void render();
+    void init();
+    void init_texture();
+    void deinit();
     void update();
     void setup_callbacks();
     bool is_rendering();
@@ -62,7 +63,8 @@ struct workspace_t
     xtcore::render::TILE_ORDER tile_order;
     bool clear_buffer;
 
-     workspace_t();
+    workspace_t()
+
     ~workspace_t();
 };
 

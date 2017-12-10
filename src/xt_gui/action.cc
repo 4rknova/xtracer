@@ -4,26 +4,14 @@
 #include <xtcore/context.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
-#include <xtcore/parseutil.h>
 #include "action.h"
 
 namespace action {
 
 void task_render(workspace_t *ws)
 {
-    if (ws) {
-        ws->init();
-        ws->context.init();
-        ws->setup_callbacks();
-        ws->renderer->setup(ws->context);
-        ws->setup_callbacks();
-        xtcore::render::order(ws->context.tiles, ws->tile_order);
-        ws->timer.start();
-        ws->renderer->render();
-        ws->timer.stop();
-        delete ws->renderer;
-        ws->renderer = 0;
-    }
+    if (!ws) return;
+    ws->render();
     std::string timestr;
     print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
     Log::handle().post_message("Render completed: [%s] -> %s", ws->source_file.c_str(), timestr.c_str());
@@ -31,13 +19,15 @@ void task_render(workspace_t *ws)
 
 void task_load(workspace_t *ws)
 {
-    int err = xtcore::io::scn::load(&(ws->context.scene), ws->source_file.c_str());
-    if (err) Log::handle().post_error("Failed to load scene: %s", ws->source_file.c_str());
+    if (!ws) return;
+    ws->load();
 }
 
 int render(workspace_t *ws)
 {
-    ws->init_texture();
+    if (!ws) return 1;
+
+    ws->prepare();
     std::thread t(task_render, ws);
     t.detach();
     return 0;
@@ -48,11 +38,6 @@ int load(workspace_t *ws)
     std::thread t(task_load, ws);
     t.detach();
     return 0;
-}
-
-int save(workspace_t *ws)
-{
-    not_yet_implemented();
 }
 
 void quit()
@@ -69,60 +54,30 @@ int close(gui::state_t *state, workspace_t *ws)
         if ((*it) == ws) {
             state->workspaces.erase(it);
             if (state->workspace == ws) state->workspace = 0;
-            ws->deinit();
             delete ws;
             break;
         }
     }
 }
 
-int export_hdr(const char *filepath, workspace_t *ws)
+int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
 {
-    std::string fp = std::string(filepath) + ".hdr";
+    std::string fp = std::string(filepath);
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
     Log::handle().post_message("Exporting %s..", fp.c_str());
-    int res = nimg::io::save::hdr(fp.c_str(), fb);
+
+    int res = 1;
+
+    switch (format) {
+        IMG_FORMAT_HDR: fp += ".hdr"; res = nimg::io::save::hdr(fp.c_str(), fb); break;
+        IMG_FORMAT_PNG: fp += ".png"; res = nimg::io::save::png(fp.c_str(), fb); break;
+        IMG_FORMAT_BMP: fp += ".bmp"; res = nimg::io::save::bmp(fp.c_str(), fb); break;
+        IMG_FORMAT_TGA: fp += ".tga"; res = nimg::io::save::tga(fp.c_str(), fb); break;
+    }
+
     if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
     return res;
-}
-
-int export_png(const char *filepath, workspace_t *ws)
-{
-    std::string fp = std::string(filepath) + ".png";
-    nimg::Pixmap fb;
-    xtcore::render::assemble(fb, ws->context);
-    Log::handle().post_message("Exporting %s..", fp.c_str());
-    int res = nimg::io::save::png(fp.c_str(), fb);
-    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
-    return res;
-}
-
-int export_tga(const char *filepath, workspace_t *ws)
-{
-    std::string fp = std::string(filepath) + ".tga";
-    nimg::Pixmap fb;
-    xtcore::render::assemble(fb, ws->context);
-    Log::handle().post_message("Exporting %s..", fp.c_str());
-    int res = nimg::io::save::tga(fp.c_str(), fb);
-    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
-    return res;
-}
-
-int export_bmp(const char *filepath, workspace_t *ws)
-{
-    std::string fp = std::string(filepath) + ".bmp";
-    nimg::Pixmap fb;
-    xtcore::render::assemble(fb, ws->context);
-    Log::handle().post_message("Exporting %s..", fp.c_str());
-    int res = nimg::io::save::bmp(fp.c_str(), fb);
-    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
-    return res;
-}
-
-void not_yet_implemented()
-{
-    Log::handle().post_warning("This feature is not yet implemented.");
 }
 
 } /* namespace action */

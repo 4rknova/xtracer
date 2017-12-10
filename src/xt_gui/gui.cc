@@ -224,10 +224,10 @@ void mm_export(workspace_t *ws)
 
         if (strlen(filepath) > 0) {
             ImVec2 bd(52,0);
-            if (ImGui::Button("HDR", bd)) action::export_hdr(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("PNG", bd)) action::export_png(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("TGA", bd)) action::export_tga(filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("BMP", bd)) action::export_bmp(filepath, ws);
+            if (ImGui::Button("HDR", bd)) action::write(action::IMG_FORMAT_HDR, filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("PNG", bd)) action::write(action::IMG_FORMAT_PNG, filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("TGA", bd)) action::write(action::IMG_FORMAT_BMP, filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("BMP", bd)) action::write(action::IMG_FORMAT_TGA, filepath, ws);
             if (ImGui::Button("Y4M", bd)) {
                 size_t w = ws->context.params.width;
                 size_t h = ws->context.params.height;
@@ -310,7 +310,6 @@ void mm_dialog_load(state_t *state, bool &is_active)
 			if (valid_file) {
 				workspace_t *ws = new workspace_t;
 	    		ws->source_file = filepath;
-            	ws->init();
 	   			action::load(ws);
     	        state->workspaces.push_back(ws);
         	    state->workspace = ws;
@@ -552,8 +551,8 @@ void panel_preview(workspace_t *ws, size_t w, size_t h)
     // Middle mouse scroll
     if (ImGui::IsMouseDown(2)) {
         ImVec2 d = ImGui::GetMouseDragDelta(2);
-        ImGui::SetScrollX(0.1 * d.x+ImGui::GetScrollX());
-        ImGui::SetScrollY(0.1 * d.y+ImGui::GetScrollY());
+        ImGui::SetScrollX(ImGui::GetScrollX() + 2.0 * io.DeltaTime * d.x);
+        ImGui::SetScrollY(ImGui::GetScrollY() + 2.0 * io.DeltaTime * d.y);
     }
     ImGui::SetCursorPos(ImVec2(MAX((ImGui::GetWindowWidth()  - zx) / 2.0f, 0.0f)
                              , MAX((ImGui::GetWindowHeight() - zy) / 2.0f, 0.0f)));
