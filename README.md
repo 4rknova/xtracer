@@ -1,7 +1,7 @@
 XTRACER
 -------
 
-<img align="center" https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg>
+<img align="center" src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
 
 Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
