@@ -7,14 +7,15 @@ Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 [![Build Status](https://img.shields.io/travis/4rknova/xtracer/master.svg?label=master)](https://travis-ci.org/4rknova/xtracer)
 [![Build Status](https://img.shields.io/travis/4rknova/xtracer/develop.svg?label=develop)](https://travis-ci.org/4rknova/xtracer)
 
-XTracer is a renderer written in c and c++.
+XTracer is an experimental rendering framework written in c and c++.
 
 Features
 --------
+
 * Renderers
     * Distributed ray-tracing
-    * Ray traced depth
-    * Ray traced Stencil
+    * Depth
+    * Stencil
 * Primitives
     * Plane
     * Triangle
@@ -53,6 +54,7 @@ installed. Use the following commands:
 
 How to use
 ----------
+
 You can find sample scenes in the scene directory. Note that some of the
 scenes require textures or meshes that are not included in the repository.
 
@@ -68,8 +70,9 @@ STB           | Public Domain      | https://github.com/nothings/stb
 Remotery      | Apache License 2.0 | https://github.com/Celtoys/Remotery
 strpool       | Public Domain      | https://github.com/mattiasgustavsson/libs
 
-License (BSD 3-clause)
-----------------------
+License
+-------
+
 <a href="http://opensource.org/licenses/BSD-3-Clause" target="_blank">
 <img align="right" src="http://opensource.org/trademarks/opensource/OSI-Approved-License-100x137.png">
 </a>
