@@ -11,6 +11,8 @@
 #pragma warning (push)
 #pragma warning (disable : 4251)
 
+namespace xtcore {
+
 enum LOGENTRY_TYPE
 {
       LOGENTRY_DEBUG
@@ -76,6 +78,8 @@ class Log
 		std::vector<log_entry_t*> m_log;
 		static Log m_log_manager;
 };
+
+} /* namespace xtcore */
 
 #pragma warning (pop)
 

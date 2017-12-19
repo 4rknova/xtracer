@@ -6,18 +6,8 @@
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
-#include <xtcore/config.h>
-#include <xtcore/proto.h>
-#include <xtcore/scene.h>
-#include <xtcore/timeutil.h>
-#include <xtcore/log.h>
-#include <xtcore/context.h>
-#include <xtcore/parseutil.h>
-#include <xtcore/renderer/photon_mapper/renderer.h>
-#include <xtcore/renderer/stencil/renderer.h>
-#include <xtcore/renderer/depth/renderer.h>
+#include <xtcore/xtcore.h>
 #include "argparse.h"
-#include "profiler.h"
 
 #define PROGRESS_BAR_LENGTH (15)
 
@@ -62,13 +52,14 @@ ws_handler_init_t handler_init;
 int main(int argc, char **argv)
 {
 	if (argc == 2 && ARGUMENT(1, ARG_CLI_VERSION)) {
-		Log::handle().post_message("%s", xtcore::get_version());
+		xtcore::Log::handle().post_message("%s", xtcore::get_version());
 		return 1;
 	}
 
-	Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
+	xtcore::Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
-    std::string renderer_name, outdir, scene_path, camera;
+    std::string renderer_name, outdir, scene_path;
+    HASH_UINT64 camera;
     xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
@@ -81,12 +72,12 @@ int main(int argc, char **argv)
             , params
     )) return 1;
 
-    xtcore::profiler::init();
+    xtcore::init();
 
 	xtcore::render::context_t context;
 	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
         if (context.scene.m_cameras.size() == 0) {
-            Log::handle().post_error("no cameras found");
+            xtcore::Log::handle().post_error("no cameras found");
             return 2;
         }
         context.params.camera = camera;
@@ -120,7 +111,7 @@ int main(int argc, char **argv)
     std::string t;
 	print_time_breakdown(t, timer.get_time_in_mlsec());
     printf("%c[2K\r", 27);
-    Log::handle().post_message("Total time: %s", t.c_str());
+    xtcore::Log::handle().post_message("Total time: %s", t.c_str());
 
     // Export the frame
     {
@@ -133,25 +124,23 @@ int main(int argc, char **argv)
 
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
-	    std::string cam = context.params.camera;
-
-        if (cam.empty()) cam = XTPROTO_PROP_DEFAULT;
+	    HASH_UINT64 cam = context.params.camera;
 
     	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
 			outdir.append(1, path_delim);
 		}
 
-	    file = outdir + filename + cam  + "_" + renderer_name + ".png";
+	    file = outdir + filename + "_" + renderer_name + ".png";
         nimg::Pixmap fb;
         xtcore::render::assemble(fb, context);
-		Log::handle().post_message("Exporting to %s..", file.c_str());
+		xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
 		int res = nimg::io::save::png(file.c_str(), fb);
-        if (res) Log::handle().post_error("Failed to export image file");
+        if (res) xtcore::Log::handle().post_error("Failed to export image file");
     }
 
 	delete renderer;
 
-    xtcore::profiler::deinit();
+    xtcore::deinit();
 
     return 0;
 }

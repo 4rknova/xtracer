@@ -125,11 +125,11 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
     ${ext_libs}
 )
 
-target_link_libraries(${OUT_EXE_CLI} PRIVATE "${PATH_BIN}/libxtcore.a" "${PATH_BIN}/libremotery.a")
+target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery)
 
 SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
-target_link_libraries(${OUT_EXE_GUI} PRIVATE "${PATH_BIN}/libxtcore.a" "${PATH_BIN}/libimgui.a" "${PATH_BIN}/libremotery.a" ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")

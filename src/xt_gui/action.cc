@@ -14,7 +14,7 @@ void task_render(workspace_t *ws)
     ws->render();
     std::string timestr;
     print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
-    Log::handle().post_message("Render completed: [%s] -> %s", ws->source_file.c_str(), timestr.c_str());
+    xtcore::Log::handle().post_message("Render completed: [%s] -> %s", ws->source_file.c_str(), timestr.c_str());
 }
 
 void task_load(workspace_t *ws)
@@ -65,7 +65,7 @@ int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
     std::string fp = std::string(filepath);
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
-    Log::handle().post_message("Exporting %s..", fp.c_str());
+    xtcore::Log::handle().post_message("Exporting %s..", fp.c_str());
 
     int res = 1;
 
@@ -76,7 +76,7 @@ int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
         IMG_FORMAT_TGA: fp += ".tga"; res = nimg::io::save::tga(fp.c_str(), fb); break;
     }
 
-    if (res) Log::handle().post_error("Failed to export %d", fp.c_str());
+    if (res) xtcore::Log::handle().post_error("Failed to export %d", fp.c_str());
     return res;
 }
 

@@ -28,7 +28,7 @@ void Renderer::render()
 	if (!m_context) return;
 
     xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera.c_str());
+    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera);
 
     if (!cam) return;
 
@@ -37,7 +37,6 @@ void Renderer::render()
     #pragma omp parallel for schedule(dynamic, 1)
     for (size_t i = 0; i < m_context->tiles.size(); ++i) {
         xtcore::render::tile_t *tile = &(m_context->tiles[i]);
-        xtcore::profiler::start("Render tile");
         tile->init();
 
         m_context->aa_sampler.produce(tile, p->aa);
@@ -62,7 +61,6 @@ void Renderer::render()
             tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBf(color_pixel) + color_sample * aa_sample.weight);
         }
         tile->submit();
-        xtcore::profiler::end();
 	}
 }
 
@@ -75,11 +73,11 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 	ColorRGBf gi_res(0, 0, 0);
 
 	// Check for ray intersection
-	std::string obj; // this will hold the object name
+	HASH_UINT64 obj;
 	if (m_context->scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
-		if (!obj.empty()) {
-            std::string &mat_id = m_context->scene.m_objects[obj]->material;
+//		if (!obj) {
+            HASH_UINT64 mat_id = m_context->scene.m_objects[obj]->material;
             xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
 			// if the ray starts inside the geometry
@@ -92,14 +90,14 @@ ColorRGBf Renderer::trace_ray(const Ray &pray, const Ray &ray, const unsigned in
 			scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
 			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
 			return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
-		}
+//		}
 	}
 
     return m_context->scene.sample_cubemap(ray.direction);
 }
 
 ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int depth,
-	IntInfo &info, std::string &obj,
+	IntInfo &info, HASH_UINT64 &obj,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	ColorRGBf color(0, 0, 0);
@@ -109,7 +107,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 	xtcore::assets::Object *mobj = m_context->scene.m_objects[obj];
 
-	std::map<std::string, xtcore::assets::IMaterial *>::iterator it_mat = m_context->scene.m_materials.find(mobj->material);
+	auto it_mat = m_context->scene.m_materials.find(mobj->material);
 
     if (it_mat == m_context->scene.m_materials.end()) return color;
 
@@ -117,7 +115,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 	NMath::Vector3f n = info.normal;
 	NMath::Vector3f p = info.point;
 
-    std::string &mat_id = mobj->material;
+    HASH_UINT64 &mat_id = mobj->material;
 	xtcore::assets::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
     color = mat->get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord)
@@ -144,17 +142,17 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			scalar_t distance = v.length();
 
 			// if the point is not in shadow for this light
-			std::string obj;
+			HASH_UINT64 obj;
 			IntInfo res;
 			bool test = m_context->scene.intersection(sray, res, obj);
 
-            std::map<std::string, xtcore::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj);
-            std::map<std::string, xtcore::assets::Object*>::iterator oet = m_context->scene.m_objects.end();
+            std::map<HASH_UINT64, xtcore::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj)
+                                                                   , oet = m_context->scene.m_objects.end();
 
             if (oit == oet) continue;
 
-            std::map<std::string, xtcore::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry);
-            std::map<std::string, xtcore::assets::Geometry*>::iterator get = m_context->scene.m_geometry.end();
+            std::map<HASH_UINT64, xtcore::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry)
+                                                                     , get = m_context->scene.m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 

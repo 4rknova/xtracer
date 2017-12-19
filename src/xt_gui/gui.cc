@@ -1,5 +1,4 @@
 #include <xtcore/cam_perspective.h>
-#include <xtcore/config.h>
 #include <xtcore/tile.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
@@ -7,6 +6,7 @@
 #include <xtcore/renderer/stencil/renderer.h>
 #include <xtcore/renderer/depth/renderer.h>
 #include <xtcore/renderer/photon_mapper/renderer.h>
+#include <xtcore/xtcore.h>
 #include <nimg/yuv4mpeg2.h>
 #include <imgui.h>
 
@@ -216,7 +216,7 @@ void mm_resolution (workspace_t *ws)
 
 void mm_export(workspace_t *ws)
 {
-    if (ws->renderer) return;
+    if (ws->is_rendering()) return;
 
     if (ImGui::BeginMenu("Export")) {
     	static char filepath[256];
@@ -272,7 +272,7 @@ void wdg_conf(workspace_t *ws)
         ImGui::BeginChild("LST_CAM", ImVec2(150, 100), true);
         for (int cam_idx = 0; it != et; ++it) {
             ++i;
-            if (ImGui::Selectable((*it).first.c_str(), selected == i)) {
+            if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
                 ws->context.params.camera = (*it).first;
                 i = selected;
             }
@@ -280,7 +280,7 @@ void wdg_conf(workspace_t *ws)
         ImGui::EndChild();
         ImGui::NextColumn();
         ImGui::Text("Current");
-        ImGui::Text(ws->context.params.camera.c_str());
+        ImGui::Text(xtcore::pool::str::get(ws->context.params.camera));
         ImGui::Columns(1);
         ImGui::NewLine();
 }
@@ -479,78 +479,82 @@ void render_main_menu(state_t *state)
 
 void panel_log(state_t *state)
 {
-    static bool log_filter_dbg = true;
+    static bool log_filter_dbg = false;
     static bool log_filter_msg = true;
     static bool log_filter_wrn = true;
     static bool log_filter_err = true;
 
-    if (!state) return;
-
-    ImGui::SameLine();
-    ImGui::Text(STR_FILTERS);
-    ImGui::SameLine();
-    ImGui::Checkbox("debug"   , &log_filter_dbg); ImGui::SameLine();
-    ImGui::Checkbox("message" , &log_filter_msg); ImGui::SameLine();
-    ImGui::Checkbox("warning" , &log_filter_wrn); ImGui::SameLine();
-    ImGui::Checkbox("error"   , &log_filter_err);
-    if (ImGui::Button("Clear", ImVec2(100,0))) { Log::handle().clear(); }
-    ImGui::NewLine();
+    ImGui::Columns(2, "ID_LOG", false);
+    ImGui::SetColumnWidth(-1, 100);
+        ImGui::BeginChild("LST_LOG_FILTERS", ImVec2(90, 125));
+        ImGui::Text(STR_FILTERS);
+        ImGui::Separator();
+        ImGui::Checkbox("debug"   , &log_filter_dbg);
+        ImGui::Checkbox("message" , &log_filter_msg);
+        ImGui::Checkbox("warning" , &log_filter_wrn);
+        ImGui::Checkbox("error"   , &log_filter_err);
+        ImGui::EndChild();
+    if (ImGui::Button("Clear", ImVec2(75,0))) { xtcore::Log::handle().clear(); }
     int line_count = 0;
-    int sz = MIN(int(Log::handle().get_size())-1, LOG_HISTORY_SIZE);
-    ImGui::BeginChild(ID_PANEL_LOG);
+    int sz = MIN(int(xtcore::Log::handle().get_size())-1, LOG_HISTORY_SIZE);
+    ImGui::NextColumn();
+    ImGui::BeginChild(ID_PANEL_LOG, ImVec2(-1, ImGui::GetWindowHeight() - 10));
     for (int i = sz; i >= 0; --i) {
-        log_entry_t l = Log::handle().get_entry(i);
+        xtcore::log_entry_t l = xtcore::Log::handle().get_entry(i);
         ImVec4 col;
         bool display = false;
         switch(l.type) {
-            case LOGENTRY_DEBUG   : col = ImVec4(0.0,0.5,0.8,1); display = log_filter_dbg; break;
-            case LOGENTRY_MESSAGE : col = ImVec4(1.0,1.0,1.0,1); display = log_filter_msg; break;
-            case LOGENTRY_WARNING : col = ImVec4(1.0,1.0,0.0,1); display = log_filter_wrn; break;
-            case LOGENTRY_ERROR   : col = ImVec4(1,0,0,1); display = log_filter_err; break;
+            case xtcore::LOGENTRY_DEBUG   : col = ImVec4(0.0,0.5,0.8,1); display = log_filter_dbg; break;
+            case xtcore::LOGENTRY_MESSAGE : col = ImVec4(1.0,1.0,1.0,1); display = log_filter_msg; break;
+            case xtcore::LOGENTRY_WARNING : col = ImVec4(1.0,1.0,0.0,1); display = log_filter_wrn; break;
+            case xtcore::LOGENTRY_ERROR   : col = ImVec4(1.0,0.0,0.0,1); display = log_filter_err; break;
         }
         if (display) {
             ++line_count;
-            ImGui::Columns(2,0);
-            ImGui::SetColumnWidth(-1, 40);
+            ImGui::Columns(2,"ID_LOG_CONTAINER");
+            ImGui::SetColumnWidth(-1, 50);
             ImGui::TextColored(ImVec4(0.5,0.5,0.5,1), "%4i", line_count);
             ImGui::NextColumn();
             ImGui::TextColored(col, "%s", l.message.c_str());
-            ImGui::Columns(1);
+            ImGui::Columns(1,"ID_LOG_CONTAINER");
         }
     }
     ImGui::EndChild();
+    ImGui::Columns(1, "ID_LOG");
 }
 
 bool panel_workspace(workspace_t *ws, int id, bool is_current = false)
 {
     bool res = false;
 
-    ImGui::BeginChildFrame(id, ImVec2(300,135));
+    ImGui::BeginChildFrame(id, ImVec2(ImGui::GetWindowWidth() - 10, 135));
 
     float aspect  = ws->context.params.height / (float)ws->context.params.width;
     float thumb_w = (aspect < 1.f ? 128.f : (128.f / aspect));
     float thumb_h = (aspect > 1.f ? 128.f : (128.f * aspect));
 
-    ImGui::Columns(2,"ID_WORKSPACE",false);
+    ImGui::Columns(3,"ID_WORKSPACE",false);
     ImGui::SetColumnWidth(-1,138);
     ImGui::SetCursorPos(ImVec2(3 + (128 - thumb_w) / 2, 3 + (128 - thumb_h) / 2));
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::NextColumn();
-
+    ImGui::SetColumnWidth(-1,75);
+    if (ImGui::Button("Select")) res = true;
+    ImGui::NextColumn();
     ImVec4 col(.8f,.8f,.8f,1.f);
     if (is_current) col = ImVec4(0.f,1.f,0.f,1.f);
 
     ImGui::TextColored(col, "%s", ws->source_file.c_str());
+    ImGui::Text("Resolution: %ix%i", ws->context.params.width, ws->context.params.height);
+    ImGui::Text("Active Cam: %s", ws->context.params.camera ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
 
-    if ((ws->progress > 0.f) && (ws->progress < 1.f)) ImGui::ProgressBar(ws->progress);
+    if (ws->is_rendering()) ImGui::ProgressBar(ws->progress);
     else if (ws->timer.get_time_in_sec() > 0.0) {
         std::string timestr;
         print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
         ImGui::Text("%s", timestr.c_str());
     }
-
-    if (ImGui::Button("Select")) res = true;
-    ImGui::Columns(1);
+    ImGui::Columns(1, "ID_WORKSPACE");
     ImGui::EndChildFrame();
 
     return res;
@@ -558,33 +562,40 @@ bool panel_workspace(workspace_t *ws, int id, bool is_current = false)
 
 void panel_workspaces(state_t *state)
 {
-    static bool activity_filter_running = true;
-    static bool activity_filter_idle    = true;
-    ImGui::Text(STR_FILTERS);
-    ImGui::SameLine();
-    ImGui::Checkbox("busy", &activity_filter_running); ImGui::SameLine();
-    ImGui::Checkbox("idle"   , &activity_filter_idle);
-    ImGui::NewLine();
+    static bool activity_filter_busy = true;
+    static bool activity_filter_idle = true;
 
-    int count = 0;
-    for (auto& i : state->workspaces) {
-        bool rendering = (i->is_rendering());
-        if ( (!activity_filter_idle    && !rendering)
-          || (!activity_filter_running &&  rendering)
-        ) continue;
+    ImGui::Columns(2, "LST_WORKSPACES", false);
+    {
+        ImGui::SetColumnWidth(-1,100);
+        ImGui::BeginChild("LST_LOG_FILTERS", ImVec2(90, 150));
+        ImGui::Text(STR_FILTERS);
+        ImGui::Separator();
+        ImGui::Checkbox("busy", &activity_filter_busy);
+        ImGui::Checkbox("idle", &activity_filter_idle);
+        ImGui::EndChild();
+        ImGui::NextColumn();
+        int count = 0;
+        for (auto& i : state->workspaces) {
+            bool rendering = (i->is_rendering());
+            if ( (!activity_filter_idle && !rendering)
+              || (!activity_filter_busy &&  rendering)
+            ) continue;
 
-        ++count;
+            ++count;
 
-        bool is_current  = (state->workspace == i);
-        bool set_current = panel_workspace(i, 100 + count, is_current);
-        if (set_current) state->workspace = i;
+            bool is_current  = (state->workspace == i);
+            bool set_current = panel_workspace(i, 100 + count, is_current);
+            if (set_current) state->workspace = i;
+        }
     }
+    ImGui::Columns(1, "LST_WORKSPACES");
 }
 
 void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
-
+/*
     ImGui::BeginGroup();
     ImGui::Text("%s", ws->source_file.c_str());
 	ImGui::Separator();
@@ -593,7 +604,7 @@ void panel_scene(workspace_t *ws)
 			CamCollection::iterator it = ws->context.scene.m_cameras.begin();
 			CamCollection::iterator et = ws->context.scene.m_cameras.end();
 			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+				if (ImGui::TreeNodeEx(xtcore::pool::str::get((*it).first))) {
 					ImGui::TreePop();
 				}
 			}
@@ -603,7 +614,7 @@ void panel_scene(workspace_t *ws)
 			GeoCollection::iterator it = ws->context.scene.m_geometry.begin();
 			GeoCollection::iterator et = ws->context.scene.m_geometry.end();
 			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
+				if (ImGui::TreeNodeEx(xtcore::pool::str::get((*it).first))) {
 					ImGui::TreePop();
 				}
 			}
@@ -622,7 +633,7 @@ void panel_scene(workspace_t *ws)
 					for (size_t s = 0; s < (*it).second->get_sampler_count(); ++s) {
 						std::string _temp;
 						(*it).second->get_sampler_by_index(s,&_temp);
-						if (ImGui::TreeNodeEx(_temp.c_str())) {
+						if (ImGui::TreeNodeEx(xtcore::pool::str::get(_temp))) {
 							ImGui::TreePop();
 						}
 					}
@@ -646,6 +657,7 @@ void panel_scene(workspace_t *ws)
 	    ImGui::TreePop();
 	}
     ImGui::EndGroup();
+*/
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)
@@ -692,10 +704,10 @@ void container(state_t *state)
     ImGui::SetNextWindowSize(ImVec2(state->window.width - 2 * SIZE_OFFSET, state->window.height - SIZE_MAIN_MENU));
 	ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.1f, WIN_FLAGS_SET_0);
     ImGui::BeginGroup();
-    dummy = (current_tab == TAB_WORKSPACES); if (      ImGui::GoxTab(STR_WORKSPACES, &dummy)) current_tab = TAB_WORKSPACES;
-    dummy = (current_tab == TAB_LOG);        if (      ImGui::GoxTab(STR_LOG       , &dummy)) current_tab = TAB_LOG;
-    dummy = (current_tab == TAB_SCENE);      if (ws && ImGui::GoxTab(STR_SCENE     , &dummy)) current_tab = TAB_SCENE;
-    dummy = (current_tab == TAB_PREVIEW);    if (ws && ImGui::GoxTab(STR_PREVIEW   , &dummy)) current_tab = TAB_PREVIEW;
+    dummy = (current_tab == TAB_WORKSPACES); if (      ImGui::GoxTab(STR_WORKSPACES, 75, &dummy)) current_tab = TAB_WORKSPACES;
+    dummy = (current_tab == TAB_LOG);        if (      ImGui::GoxTab(STR_LOG       , 75, &dummy)) current_tab = TAB_LOG;
+    dummy = (current_tab == TAB_SCENE);      if (ws && ImGui::GoxTab(STR_SCENE     , 75, &dummy)) current_tab = TAB_SCENE;
+    dummy = (current_tab == TAB_PREVIEW);    if (ws && ImGui::GoxTab(STR_PREVIEW   , 75, &dummy)) current_tab = TAB_PREVIEW;
     ImGui::EndGroup();
     ImGui::SameLine();
     ImGui::BeginChild(ID_PANEL_MAIN);

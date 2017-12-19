@@ -40,7 +40,7 @@ void not_yet_implemented()
 }
 
 namespace ImGui {
-    bool GoxTab(const char *text, bool *v)
+    bool GoxTab(const char *text, float width, bool *v)
     {
         ImFont *font = GImGui->Font;
         const ImFont::Glyph *glyph;
@@ -51,6 +51,7 @@ namespace ImGui {
         float pad = style.FramePadding.x;
         ImVec4 color;
         ImVec2 text_size = CalcTextSize(text);
+        text_size.x = MAX(text_size.x, width);
         ImGuiWindow* window = GetCurrentWindow();
 
         ImVec2 cur = window->DC.CursorPos;

@@ -27,7 +27,7 @@ class Renderer : public xtcore::render::IRenderer
 
 	private:
 		ColorRGBf trace_ray(const Ray &pray, const Ray &ray, const unsigned int depth, const scalar_t ior_src = 1.0002926, const scalar_t ior_dst = 1.0);
-		ColorRGBf shade(const Ray &pray, const Ray &ray, const unsigned int depth, IntInfo &info, std::string &obj, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
+		ColorRGBf shade(const Ray &pray, const Ray &ray, const unsigned int depth, IntInfo &info, HASH_UINT64 &obj, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
         xtcore::render::context_t *m_context;
 };

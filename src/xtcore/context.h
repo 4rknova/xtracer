@@ -1,6 +1,7 @@
 #ifndef XTCORE_CONTEXT_H_INCLUDED
 #define XTCORE_CONTEXT_H_INCLUDED
 
+#include "strpool.h"
 #include "nimg/pixmap.h"
 #include "scene.h"
 #include "tile.h"
@@ -19,7 +20,7 @@ struct params_t
     size_t rdepth;    // Maximum recursion depth
     size_t tile_size; // Tile size for framebuffers segmentation
 
-    std::string camera;
+    HASH_UINT64 camera;
 
     params_t();
 };

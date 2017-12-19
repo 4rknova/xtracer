@@ -33,7 +33,7 @@ void Renderer::render()
     if (!m_context) return;
 
     xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera.c_str());
+    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera);
     if (!cam) return;
 
 	if (p->threads) omp_set_num_threads(p->threads);
@@ -54,7 +54,7 @@ void Renderer::render()
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
 	        NMath::IntInfo info;
-            std::string obj;
+            HASH_UINT64 obj;
        		memset(&info, 0, sizeof(info));
 
             for (float dofs = 0; dofs < p->samples; ++dofs) {

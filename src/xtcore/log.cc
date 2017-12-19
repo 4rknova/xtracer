@@ -6,6 +6,8 @@
 #include <iomanip>
 #include "log.h"
 
+namespace xtcore {
+
 log_entry_t::log_entry_t()
 	: type(LOGENTRY_DEBUG)
 {}
@@ -272,3 +274,5 @@ unsigned int Log::count_entries()
 {
 	return m_log.size();
 }
+
+} /* namespace xtcore */

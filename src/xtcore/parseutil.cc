@@ -16,6 +16,7 @@
 #include "proto.h"
 #include "obj.h"
 
+#include "strpool.h"
 #include "log.h"
 #include "cam_perspective.h"
 #include "cam_ods.h"
@@ -482,8 +483,8 @@ xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p
    	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
    	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
 
-   	data->geometry = deserialize_cstr(g);
-   	data->material = deserialize_cstr(m);
+   	data->geometry = xtcore::pool::str::add(deserialize_cstr(g).c_str());
+   	data->material = xtcore::pool::str::add(deserialize_cstr(m).c_str());
 
    	return data;
 }
@@ -493,10 +494,11 @@ int create_camera(Scene *scene, ncf::NCF *p)
     if (!scene) return -1;
 
     const char * name = p->get_name();
+    HASH_UINT64 id = xtcore::pool::str::add(name);
     xtcore::assets::ICamera *data = deserialize_camera(scene->m_source.c_str(), p);
     if (!data) return 1;
-    scene->destroy_camera(name);
-    scene->m_cameras[name] = data;
+    scene->destroy_camera(id);
+    scene->m_cameras[id] = data;
     return 0;
 }
 
@@ -505,10 +507,11 @@ int create_material(Scene *scene, ncf::NCF *p)
     if (!scene) return -1;
 
     const char * name = p->get_name();
+    HASH_UINT64 id = xtcore::pool::str::add(name);
     xtcore::assets::IMaterial *data = deserialize_material(scene->m_source.c_str(), p);
     if (!data) return 1;
-    scene->destroy_material(name);
-    scene->m_materials[name] = data;
+    scene->destroy_material(id);
+    scene->m_materials[id] = data;
     return 0;
 }
 
@@ -517,10 +520,11 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     if (!scene) return -1;
 
     const char * name = p->get_name();
+    HASH_UINT64 id = xtcore::pool::str::add(name);
     xtcore::assets::Geometry *data = deserialize_geometry(scene->m_source.c_str(), p);
     if (!data) return 1;
-    scene->destroy_geometry(name);
-    scene->m_geometry[name] = data;
+    scene->destroy_geometry(id);
+    scene->m_geometry[id] = data;
     return 0;
 }
 
@@ -562,10 +566,11 @@ int create_object(Scene *scene, ncf::NCF *p)
     if (!scene) return -1;
 
     const char * name = p->get_name();
+    HASH_UINT64 id = xtcore::pool::str::add(name);
     xtcore::assets::Object *data = deserialize_object(scene->m_source.c_str(), p);
     if (!data) return 1;
-    scene->destroy_object(name);
-    scene->m_objects[name] = data;
+    scene->destroy_object(id);
+    scene->m_objects[id] = data;
     return 0;
 }
 

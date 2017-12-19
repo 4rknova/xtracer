@@ -1,7 +1,7 @@
 #ifndef XTCORE_OBJECT_H_INCLUDED
 #define XTCORE_OBJECT_H_INCLUDED
 
-#include <string>
+#include "strpool.h"
 
 namespace xtcore {
     namespace assets {
@@ -9,10 +9,8 @@ namespace xtcore {
 class Object
 {
 	public:
-	std::string geometry;
-	std::string material;
-
-    Object();
+	HASH_UINT64 geometry;
+	HASH_UINT64 material;
 };
 
     } /* namespace assets */

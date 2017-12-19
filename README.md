@@ -58,13 +58,14 @@ scenes require textures or meshes that are not included in the repository.
 
 External Libraries
 ------------------
-Name          | URL
---------------|-----------
-ImGui         | https://github.com/ocornut/imgui
-TinyObjLoader | https://github.com/syoyo/tinyobjloader
-TinyFiles     | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
-STB           | https://github.com/nothings/stb
-Remotery      | https://github.com/Celtoys/Remotery
+Name          | License            | URL
+--------------|----------------------------------------------------------------------------
+ImGui         | MIT License        | https://github.com/ocornut/imgui
+TinyObjLoader | MIT License        | https://github.com/syoyo/tinyobjloader
+TinyFiles     | Public Domain      | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
+STB           | Public Domain      | https://github.com/nothings/stb
+Remotery      | Apache License 2.0 | https://github.com/Celtoys/Remotery
+strpool       | Public Domain      | https://github.com/mattiasgustavsson/libs
 
 License (BSD 3-clause)
 ----------------------

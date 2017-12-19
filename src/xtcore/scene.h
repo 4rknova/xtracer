@@ -1,13 +1,13 @@
 #ifndef XTCORE_SCENE_HPP_INCLUDED
 #define XTCORE_SCENE_HPP_INCLUDED
 
-#include <string>
 #include <vector>
 #include <list>
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
 
+#include "strpool.h"
 #include "camera.h"
 #include "material.h"
 #include "sampler_tex.h"
@@ -17,10 +17,10 @@
 
 using nimg::ColorRGBf;
 
-typedef std::map<std::string, xtcore::assets::ICamera   *> CamCollection;
-typedef std::map<std::string, xtcore::assets::IMaterial *> MatCollection;
-typedef std::map<std::string, xtcore::assets::Geometry  *> GeoCollection;
-typedef std::map<std::string, xtcore::assets::Object    *> ObjCollection;
+typedef std::map<HASH_UINT64, xtcore::assets::ICamera   *> CamCollection;
+typedef std::map<HASH_UINT64, xtcore::assets::IMaterial *> MatCollection;
+typedef std::map<HASH_UINT64, xtcore::assets::Geometry  *> GeoCollection;
+typedef std::map<HASH_UINT64, xtcore::assets::Object    *> ObjCollection;
 
 struct light_t
 {
@@ -44,15 +44,15 @@ public:
 	const ColorRGBf &ambient();
 	void ambient(const ColorRGBf &ambient);
 
-	xtcore::assets::ICamera *get_camera(const char *name);
+	xtcore::assets::ICamera *get_camera(HASH_UINT64 id);
 
     nimg::ColorRGBf sample_cubemap(const NMath::Vector3f &direction) const;
-	bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, std::string &obj);
+	bool intersection(const NMath::Ray &ray, NMath::IntInfo &info, HASH_UINT64 &obj);
 
-	int destroy_camera   (const char *name);
-	int destroy_material (const char *name);
-	int destroy_geometry (const char *name);
-	int destroy_object   (const char *name);
+	int destroy_camera   (HASH_UINT64 id);
+	int destroy_material (HASH_UINT64 id);
+	int destroy_geometry (HASH_UINT64 id);
+	int destroy_object   (HASH_UINT64 id);
 
 	// Maps of the scene entities
 	CamCollection m_cameras;

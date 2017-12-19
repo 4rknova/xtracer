@@ -1,9 +1,8 @@
 #ifndef XTRACER_ARGPARSE_H_INCLUDED
 #define XTRACER_ARGPARSE_H_INCLUDED
 
-#include <string>
 #include <list>
-#include <xtcore/context.h>
+#include <xtcore/xtcore.h>
 
 using xtcore::render::params_t;
 
@@ -12,7 +11,7 @@ int setup(int argc, char** argv
         , std::string            &outdir
         , std::string            &scene
         , std::list<std::string> &modifiers
-        , std::string            &camera
+        , HASH_UINT64            &camera
         , params_t               &params);
 
 #endif /* XTRACER_ARGPARSE_H_INCLUDED */

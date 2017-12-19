@@ -13,7 +13,7 @@ void textedit_int   (const char *name, size_t &val, int   step, int   lim_mix = 
 void not_yet_implemented();
 
 namespace ImGui {
-    bool GoxTab(const char *text, bool *v);
+    bool GoxTab(const char *text, float width, bool *v);
 }
 
 #endif /* XTGUI_IMGUI_EXTRA_H_INCLUDED */

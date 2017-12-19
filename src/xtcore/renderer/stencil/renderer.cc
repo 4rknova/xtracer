@@ -34,7 +34,7 @@ void Renderer::render(void)
     if (!m_context) return;
 
     xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera.c_str());
+    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera);
 
     if (!cam) return;
 
@@ -53,7 +53,7 @@ void Renderer::render(void)
             tile->samples.pop(aa_sample);
             nimg::ColorRGBAf color(0,0,0,0);
 		    NMath::IntInfo info;
-            std::string obj;
+            HASH_UINT64 obj;
             memset(&info, 0, sizeof(info));
 
             for (float dofs = 0; dofs < p->samples; ++dofs) {
