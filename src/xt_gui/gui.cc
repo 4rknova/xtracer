@@ -5,6 +5,7 @@
 #include <xtcore/renderer.h>
 #include <xtcore/renderer/stencil/renderer.h>
 #include <xtcore/renderer/depth/renderer.h>
+#include <xtcore/renderer/normal/renderer.h>
 #include <xtcore/renderer/photon_mapper/renderer.h>
 #include <xtcore/xtcore.h>
 #include <nimg/yuv4mpeg2.h>
@@ -342,6 +343,7 @@ void mm_renderer(workspace_t *ws)
         bool render = false;
         if (ImGui::MenuItem("Depth"    )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer(); }
         if (ImGui::MenuItem("Stencil"  )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer(); }
+        if (ImGui::MenuItem("Normal"   )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer(); }
         if (ImGui::MenuItem("Raytracer")) { render = true; ws->renderer = new Renderer(); }
         if (render) action::render(ws);
         ImGui::EndMenu();
