@@ -47,8 +47,8 @@ set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
 set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
-set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/xt_cli)
-set(PATH_SRC_FRONTEND_GUI ${PATH_SRC}/xt_gui)
+set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
+set(PATH_SRC_FRONTEND_GUI ${PATH_SRC}/frontend/gui)
 
 file(GLOB SRC_LIBS
     ${PATH_LIB}/*/*.c
