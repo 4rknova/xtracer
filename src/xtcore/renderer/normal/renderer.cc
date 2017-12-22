@@ -48,31 +48,51 @@ void Renderer::render()
         while (tile->samples.count() > 0) {
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
-            NMath::Vector3f  normal;
-
-            tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
 	        NMath::IntInfo info;
             HASH_UINT64 obj;
        		memset(&info, 0, sizeof(info));
 
+            nimg::ColorRGBAf color_pixel;
+            tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
+
+            NMath::Vector3f  acc_normal = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+            NMath::scalar_t  alpha  = color_pixel.a();
+
+            NMath::Vector3f normal_sample;
             for (float dofs = 0; dofs < p->samples; ++dofs) {
           	 	NMath::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
                     , (float)(p->height)
                 );
-                NMath::Vector3f sample_normal;
 
                 if (m_context->scene.intersection(ray, info, obj)) {
-                    sample_normal = info.normal;
+                    normal_sample += info.normal * (1. / p->samples);
+                    if (alpha < 1.0) alpha = 1.0;
                 }
-                normal += sample_normal * (1. / p->samples);
             }
-            normal.normalize();
-            nimg::ColorRGBAf color_pixel(normal.x, normal.y, normal.z, 1.f);
-            tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel * aa_sample.weight);
+
+            acc_normal += aa_sample.weight * (normal_sample * 0.5f + 0.5f);
+            color_pixel = nimg::ColorRGBAf(acc_normal.x, acc_normal.y, acc_normal.z, 0.);
+            color_pixel.a(alpha);
+            tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
         }
+
+        // Normalize
+        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
+            for (size_t y = tile->y0(); y < tile->y1(); ++y) {
+                nimg::ColorRGBAf color;
+                tile->read(x, y, color);
+                NMath::Vector3f n(color.r(), color.g(), color.b());
+                n = (n - 0.5f) * 2.0f;
+                n.normalize();
+                n = n * 0.5f + 0.5f;
+                color = nimg::ColorRGBAf(n.x, n.y, n.z, color.a());
+                tile->write(x, y, color);
+            }
+        }
+
         tile->submit();
     }
 }

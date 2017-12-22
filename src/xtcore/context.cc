@@ -1,19 +1,24 @@
 #include "context.h"
 
-#define XTCORE_CONTEXT_DEFAULT_WIDTH  800
-#define XTCORE_CONTEXT_DEFAULT_HEIGHT 800
+#define XTCORE_CONTEXT_DEFAULT_WIDTH   (500)
+#define XTCORE_CONTEXT_DEFAULT_HEIGHT  (500)
+#define XTCORE_CONTEXT_DEFAULT_THREADS (0)
+#define XTCORE_CONTEXT_DEFAULT_SAMPLES (1)
+#define XTCORE_CONTEXT_DEFAULT_AA      (1)
+#define XTCORE_CONTEXT_DEFAULT_RDEPTH  (3)
+#define XTCORE_CONTEXT_DEFAULT_TILESZ  (32)
 
 namespace xtcore {
     namespace render {
 
 params_t::params_t()
-    : width(XTCORE_CONTEXT_DEFAULT_WIDTH)
-    , height(XTCORE_CONTEXT_DEFAULT_HEIGHT)
-    , threads(0)
-    , samples(1)
-    , aa(1)
-    , rdepth(3)
-    , tile_size(8)
+    : width     (XTCORE_CONTEXT_DEFAULT_WIDTH)
+    , height    (XTCORE_CONTEXT_DEFAULT_HEIGHT)
+    , threads   (XTCORE_CONTEXT_DEFAULT_THREADS)
+    , samples   (XTCORE_CONTEXT_DEFAULT_SAMPLES)
+    , aa        (XTCORE_CONTEXT_DEFAULT_AA)
+    , rdepth    (XTCORE_CONTEXT_DEFAULT_RDEPTH)
+    , tile_size (XTCORE_CONTEXT_DEFAULT_TILESZ)
 {}
 
 void context_t::init()
