@@ -60,6 +60,7 @@ void Renderer::render()
             NMath::scalar_t  alpha  = color_pixel.a();
 
             NMath::Vector3f normal_sample;
+            NMath::scalar_t alpha_sample = 0.f;
             for (float dofs = 0; dofs < p->samples; ++dofs) {
           	 	NMath::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
@@ -68,14 +69,15 @@ void Renderer::render()
                 );
 
                 if (m_context->scene.intersection(ray, info, obj)) {
-                    normal_sample += info.normal * (1. / p->samples);
-                    if (alpha < 1.0) alpha = 1.0;
+                    float weight = (1. / p->samples);
+                    normal_sample += info.normal * weight;
+                    alpha_sample  += weight;
                 }
             }
 
             acc_normal += aa_sample.weight * (normal_sample * 0.5f + 0.5f);
             color_pixel = nimg::ColorRGBAf(acc_normal.x, acc_normal.y, acc_normal.z, 0.);
-            color_pixel.a(alpha);
+            color_pixel.a(alpha + aa_sample.weight * alpha_sample);
             tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
         }
 
