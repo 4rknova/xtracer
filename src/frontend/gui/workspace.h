@@ -20,6 +20,12 @@ enum WS_STATUS
     , WS_STATUS_PROCESSING
 };
 
+enum WS_RMODE
+{
+      WS_RMODE_SINGLE
+    , WS_RMODE_CONTINUOUS
+};
+
 struct ws_handler_t : public xtcore::render::tile_event_handler_t
 {
     ws_handler_t(std::mutex *m);
@@ -60,7 +66,11 @@ struct workspace_t
     Timer timer;
 
     xtcore::render::TILE_ORDER tile_order;
+
     bool clear_buffer;
+    bool show_tile_updates;
+
+    WS_RMODE rmode;
 
      workspace_t();
     ~workspace_t();

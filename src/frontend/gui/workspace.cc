@@ -44,20 +44,30 @@ void workspace_t::prepare()
 
 void workspace_t::render()
 {
-    status = WS_STATUS_PROCESSING;
-
+    status   = WS_STATUS_PROCESSING;
     progress = 0.f;
+
     context.init();
     setup_callbacks();
     renderer->setup(context);
     xtcore::render::order(context.tiles, tile_order);
 
-    timer.start();
-    renderer->render();
-    timer.stop();
+    switch (rmode) {
+        case WS_RMODE_SINGLE:
+        {
+            timer.start();
+            renderer->render();
+            timer.stop();
+        } break;
+        case WS_RMODE_CONTINUOUS:
+        {
+            while (rmode == WS_RMODE_CONTINUOUS) {
+                renderer->render();
+            }
+        } break;
+    }
 
     xtcore::memory::safe_delete<xtcore::render::IRenderer>(renderer);
-
     status = WS_STATUS_LOADED;
 }
 
@@ -82,20 +92,23 @@ void workspace_t::update()
     m.lock();
 
     glBindTexture(GL_TEXTURE_2D, texture);
-	while (1) {
-        xtcore::render::tile_t *t = handler_init.pop();
 
-        if (!t) break;
+    if (show_tile_updates) {
+    	while (1) {
+            xtcore::render::tile_t *t = handler_init.pop();
 
-		for (int y = t->y0(); y < t->y1(); ++y) {
-            for (int x = t->x0(); x < t->x1(); ++x) {
-                nimg::ColorRGBAf col;
-                t->read(x, y, col);
-                float data[4] = {1,0,0,1};
-                glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);
-            }
-		}
-	}
+            if (!t) break;
+
+    		for (int y = t->y0(); y < t->y1(); ++y) {
+                for (int x = t->x0(); x < t->x1(); ++x) {
+                    nimg::ColorRGBAf col;
+                    t->read(x, y, col);
+                    float data[4] = {1,0,0,1};
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);
+                }
+    		}
+    	}
+    }
 
     while (1) {
         xtcore::render::tile_t *t = handler_done.pop();
@@ -129,6 +142,8 @@ workspace_t::workspace_t()
     , gamma(DEFAULT_GAMMA)
     , tile_order(xtcore::render::TILE_ORDER_UNCHANGED)
     , clear_buffer(true)
+    , show_tile_updates(true)
+    , rmode(WS_RMODE_SINGLE)
 {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);

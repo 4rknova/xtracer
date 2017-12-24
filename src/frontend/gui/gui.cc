@@ -40,6 +40,10 @@
 #define STR_PREVIEW            "Preview"
 #define STR_LOG                "Log"
 #define STR_FILTERS            "Filters"
+#define STR_RMODE              "Rendering mode"
+#define STR_RMODE_SINGLE       "Single frame"
+#define STR_RMODE_CONTINUOUS   "Continuous"
+#define STR_SHOW_TILE_UPDATES  "Show tile updates"
 
 enum ID {
       ID_PANEL_SIDE
@@ -165,17 +169,25 @@ void draw_edit_float(const char *label, float value)
 void mm_tileorder(workspace_t *ws)
 {
     int tile_order = (int)ws->tile_order;
-
     ImGui::Text(STR_TILE_ORDER);
     ImGui::Separator();
     ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
-    ImGui::SameLine();
     ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
-    ImGui::SameLine();
     ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
     ImGui::NewLine();
-
     ws->tile_order = (xtcore::render::TILE_ORDER)tile_order;
+}
+
+void mm_rmode(workspace_t *ws)
+{
+    if (!ws) return;
+    int rmode = (int)ws->rmode;
+    ImGui::Text(STR_RMODE);
+    ImGui::Separator();
+    ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
+    ImGui::RadioButton(STR_RMODE_CONTINUOUS, &rmode, WS_RMODE_CONTINUOUS);
+    ImGui::Checkbox(STR_SHOW_TILE_UPDATES, &(ws->show_tile_updates));
+    ws->rmode = (WS_RMODE)rmode;
 }
 
 void mm_resolution (workspace_t *ws)
@@ -464,7 +476,10 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit" )) { action::quit();      }
             ImGui::EndMenu();
         }
-
+        if (state->workspace && ImGui::BeginMenu("Setup")) {
+            mm_rmode(state->workspace);
+            ImGui::EndMenu();
+        }
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             gui::mm_zoom(state->workspace);
             wdg_conf(state->workspace);
