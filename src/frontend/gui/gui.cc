@@ -44,6 +44,8 @@
 #define STR_RMODE_SINGLE       "Single frame"
 #define STR_RMODE_CONTINUOUS   "Continuous"
 #define STR_SHOW_TILE_UPDATES  "Show tile updates"
+#define STR_SELECT             "Select"
+#define STR_CLOSE              "Close"
 
 enum ID {
       ID_PANEL_SIDE
@@ -279,24 +281,24 @@ void wdg_conf(workspace_t *ws)
         auto it = ws->context.scene.m_cameras.begin();
         auto et = ws->context.scene.m_cameras.end();
 
-{
-        ImGui::Columns(2, 0, false);
-        int i=0,selected = 0;
-        ImGui::BeginChild("LST_CAM", ImVec2(150, 100), true);
-        for (int cam_idx = 0; it != et; ++it) {
-            ++i;
-            if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
-                ws->context.params.camera = (*it).first;
-                i = selected;
+        {
+            ImGui::Columns(2, 0, false);
+            int i=0,selected = 0;
+            ImGui::BeginChild("LST_CAM", ImVec2(150, 100), true);
+            for (int cam_idx = 0; it != et; ++it) {
+                ++i;
+                if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
+                    ws->context.params.camera = (*it).first;
+                    i = selected;
+                }
             }
+            ImGui::EndChild();
+            ImGui::NextColumn();
+            ImGui::Text("Current");
+            ImGui::Text(xtcore::pool::str::get(ws->context.params.camera));
+            ImGui::Columns(1);
+            ImGui::NewLine();
         }
-        ImGui::EndChild();
-        ImGui::NextColumn();
-        ImGui::Text("Current");
-        ImGui::Text(xtcore::pool::str::get(ws->context.params.camera));
-        ImGui::Columns(1);
-        ImGui::NewLine();
-}
 
 
         mm_resolution(ws);
@@ -540,7 +542,7 @@ void panel_log(state_t *state)
     ImGui::Columns(1, "ID_LOG");
 }
 
-bool panel_workspace(workspace_t *ws, int id, bool is_current = false)
+bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = false)
 {
     bool res = false;
 
@@ -556,7 +558,9 @@ bool panel_workspace(workspace_t *ws, int id, bool is_current = false)
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::NextColumn();
     ImGui::SetColumnWidth(-1,75);
-    if (ImGui::Button("Select")) res = true;
+    ImVec2 button_sz(50,30);
+    if (ImGui::Button(STR_SELECT, button_sz)) { res = true; }
+    if (ImGui::Button(STR_CLOSE , button_sz)) { action::close(state, ws); }
     ImGui::NextColumn();
     ImVec4 col(.8f,.8f,.8f,1.f);
     if (is_current) col = ImVec4(0.f,1.f,0.f,1.f);
@@ -602,7 +606,7 @@ void panel_workspaces(state_t *state)
             ++count;
 
             bool is_current  = (state->workspace == i);
-            bool set_current = panel_workspace(i, 100 + count, is_current);
+            bool set_current = panel_workspace(state, i, 100 + count, is_current);
             if (set_current) state->workspace = i;
         }
     }
