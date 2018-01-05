@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         ImGui_ImplGlfwGL3_NewFrame();
         glfwGetFramebufferSize(window, &(state.window.width), &(state.window.height));
         glViewport(0, 0, state.window.width, state.window.height);
-        glClearColor(1,1,1,1);
+        glClearColor(0.20,0.25,0.25,1);
         glClear(GL_COLOR_BUFFER_BIT);
 		gui::draw_widgets(&state);
         glfwSwapBuffers(window);

@@ -523,7 +523,7 @@ void panel_log(state_t *state)
         ImVec4 col;
         bool display = false;
         switch(l.type) {
-            case xtcore::LOGENTRY_DEBUG   : col = ImVec4(0.0,0.5,0.8,1); display = log_filter_dbg; break;
+            case xtcore::LOGENTRY_DEBUG   : col = ImVec4(0.3,0.8,1.0,1); display = log_filter_dbg; break;
             case xtcore::LOGENTRY_MESSAGE : col = ImVec4(1.0,1.0,1.0,1); display = log_filter_msg; break;
             case xtcore::LOGENTRY_WARNING : col = ImVec4(1.0,1.0,0.0,1); display = log_filter_wrn; break;
             case xtcore::LOGENTRY_ERROR   : col = ImVec4(1.0,0.0,0.0,1); display = log_filter_err; break;

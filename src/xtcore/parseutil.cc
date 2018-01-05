@@ -531,34 +531,70 @@ int create_geometry(Scene *scene, ncf::NCF *p)
 int create_object(Scene *scene, const char *filepath, const char *prefix)
 {
     if (!scene) return -1;
-/*
-    // Open source file from relative path
-	    std::string base, file, fsource = source;
-		ncf::util::path_comp(fsource, base, file);
-    	base.append(flpath);
-        Log::handle().post_message("Object: External loader [%s, %s]", base.c_str(), prefix.c_str());
 
-        nmesh::object_t obj;
-        fsource = base;
+    Log::handle().post_message("Object: External loader [%s, %s]",filepath, prefix);
 
-		ncf::util::path_comp(fsource, base, file);
-	    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))
-    	{
-    		Log::handle().post_warning("Failed to load mesh from %s", flpath.c_str());
-	    	delete data;
-        }
+    nmesh::object_t obj;
 
-        // Iterate through all shapes
-        for (nmesh::material_t material : obj.materials) {
-            Log::handle().post_message("%i-> creating material %s", obj.materials.size(), material.name.c_str());
-        }
+    std::string base, filename, fsource = filepath;
 
-        for (nmesh::shape_t shape : obj.shapes) {
-            Log::handle().post_message("%i-> creating geometry %s", obj.shapes.size(), shape.name.c_str());
-        }
+	ncf::util::path_comp(fsource, base, filename);
+    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))	{
+   		Log::handle().post_warning("Failed to load mesh from %s", fsource.c_str());
     }
-*/
-    return -1;
+
+    Log::handle().post_debug("Materials: %i", obj.materials.size());
+    Log::handle().post_debug("   Shapes: %i", obj.shapes.size());
+
+    std::vector<HASH_UINT64> matids;
+    for (nmesh::material_t material : obj.materials) {
+        std::string name = prefix;
+        name.append(material.name);
+        HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
+        matids.push_back(id);
+
+        xtcore::assets::IMaterial *mat = new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
+
+        xtcore::assets::ISampler *sampler = 0;
+        if (material.texture_diffuse.empty()) {
+            sampler = new (std::nothrow) xtcore::assets::SolidColor();
+            nimg::ColorRGBf col(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+            ((xtcore::assets::SolidColor*)sampler)->set(col);
+        } else {
+            std::string texture_fp = base + material.texture_diffuse;
+            Log::handle().post_debug("loading texture %s", texture_fp.c_str());
+            sampler = new (std::nothrow) xtcore::assets::Texture2D();
+            ((xtcore::assets::Texture2D*)sampler)->load(texture_fp.c_str());
+            ((xtcore::assets::Texture2D*)sampler)->flip_vertical();
+        }
+        ((xtcore::assets::MaterialBlinnPhong*)mat)->add_sampler(MAT_SAMPLER_DIFFUSE,sampler);
+
+
+        scene->m_materials[id] = mat;
+        Log::handle().post_message("creating material %s", name.c_str());
+    }
+
+    for (nmesh::shape_t shape : obj.shapes) {
+        std::string name = prefix;
+        name.append(shape.name);
+        HASH_UINT64 id = xtcore::pool::str::add(shape.name.c_str());
+
+        Log::handle().post_message("creating geometry %s", name.c_str());
+
+        // Create Geometry
+        xtcore::assets::Geometry *geo = new (std::nothrow) nmesh::Mesh();
+        ((nmesh::Mesh*)geo)->build_octree(shape, obj.attributes);
+        scene->m_geometry[id] = geo;
+
+        // Create Object
+        xtcore::assets::Object *obj = new (std::nothrow) xtcore::assets::Object();
+        obj->geometry = id;
+        obj->material = matids[shape.mesh.materials[0]];
+        scene->m_objects[id] = obj;
+        Log::handle().post_message("creating object %s : %s", shape.name.c_str(), xtcore::pool::str::get(obj->material));
+    }
+
+    return 0;
 }
 
 int create_object(Scene *scene, ncf::NCF *p)
@@ -666,9 +702,14 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
                     ** Otherwise, a geometry and a material node will be used to create the object.
                     */
                     if (external) {
+	                    std::string base, file, fsource = scene->m_source;
+                		ncf::util::path_comp(fsource, base, file);
+
                         std::string flpath = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_SOURCE));
                         std::string prefix = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_PREFIX));
-                        res = create_object(scene, flpath.c_str(), prefix.c_str());
+
+                        base.append(flpath);
+                        res = create_object(scene, base.c_str(), prefix.c_str());
                     }
                     else res = create_object(scene, lnode);
                 }

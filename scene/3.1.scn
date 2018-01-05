@@ -24,52 +24,22 @@ camera = {
         flength  = 175
     }
 
-    wide = {
-        type     = thin-lens
-		fov      = 45
-		position = vec3(-50,130,-330)
-		target   = vec3(-50,110,30)
-		up       = vec3(0,1,0)
-        aperture = 15
-        flength  = 300
-    }
-
-    head = {
-        type     = thin-lens
-        fov      = 45
-        position = vec3(-130, 130, -100)
-        target   = vec3(0, 150, 0)
-		up       = vec3(0,1,0)
-        aperture = 1
-        flength  = 120
-    }
-
-    head 2 = {
-        type     = thin-lens
-        fov      = 45
-        position = vec3(-110, 130, -60)
-        target   = vec3(0, 150, 0)
-		up       = vec3(0,1,0)
-        aperture = 1
-        flength  = 110
-    }
-
     ods = {
         type     = ods
         ipd      = 1.5
-        position = vec3(0, 50, -100)
+        position = vec3(0, 1, 0)
     }
 }
 
 geometry = {
 	sat1 = {
 		type = sphere
-        radius = 50
+        radius = 0.01
 
 		position = {
-    		x = 88
-			y = 15
-			z = -470
+    		x = 1
+			y = 1
+			z = 0
 		}
 
 		intensity = {
@@ -96,9 +66,9 @@ material = {
 }
 
 object = {
-	soldier = {
-		source = <data>/AOR2/Shoot Pose/OBJ/AOR_02_ReferenceScan_Shoot_Pose.OBJ
-        prefix = soldier_
+	sponza = {
+		source = <data>/dabrovic/sponza.obj
+        prefix = sponza_
     }
 
     l0 = {

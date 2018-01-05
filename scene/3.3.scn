@@ -1,0 +1,78 @@
+title = Scanned Soldier
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.5
+
+data = data
+
+cubemap = {
+    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-200)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 5
+        flength  = 175
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 1.5
+        position = vec3(0, 1, 0)
+    }
+}
+
+geometry = {
+	sat1 = {
+		type = sphere
+        radius = 0.01
+
+		position = {
+    		x = 1
+			y = 1
+			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	sponza = {
+		source = <data>/dabrovic/sponza.obj
+        prefix = sponza_
+    }
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}
