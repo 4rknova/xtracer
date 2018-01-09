@@ -1,5 +1,5 @@
-title = Conference Room
-descr = Conference Room
+title = Cornell Box
+descr = Cornell Box
 versn = 0.5
 
 data = data
@@ -8,35 +8,29 @@ camera = {
     default  = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(-350,250,-80)
-		target   = vec3(-0,130,50)
+		position = vec3(0,1,5)
+		target   = vec3(0,1,0)
 		up       = vec3(0,1,0)
-        aperture = 5
-        flength  = 400
+        aperture = 0
+        flength  = 175
     }
 
     ods = {
         type     = ods
         ipd      = 1.5
-        position = vec3(0, 250, 0)
+        position = vec3(0, 1, 5)
     }
 }
 
 geometry = {
 	sat1 = {
 		type = sphere
-        radius = 0.001
+        radius = 0.1
 
 		position = {
     		x = 0
-			y = 300
+			y = 1
 			z = 0
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
 		}
 	}
 }
@@ -57,13 +51,12 @@ material = {
 }
 
 object = {
-	sponza = {
-		source = <data>/conference/conference.obj
-        prefix = sponza_
+	scene = {
+		source = <data>/cornell/CornellBox-Original.obj
     }
 
-    l0 = {
-        geometry = sat1
-        material = light
-    }
+#    l0 = {
+ #       geometry = sat1
+  #      material = light
+   # }
 }

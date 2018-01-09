@@ -528,6 +528,28 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
+xtcore::assets::ISampler *get_sampler(const char *name, const char *base, const char *texture, float value[3])
+{
+     xtcore::assets::ISampler *sampler = 0;
+     {
+        if (texture && strlen(texture) > 0) {
+            sampler = new (std::nothrow) xtcore::assets::Texture2D();
+            std::string normalized_path = base;
+            normalized_path.append(texture);
+            std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
+            Log::handle().post_message("loading texture %s", normalized_path.c_str());
+            ((xtcore::assets::Texture2D*)sampler)->load(normalized_path.c_str());
+            ((xtcore::assets::Texture2D*)sampler)->flip_horizontal();
+        } else {
+            sampler = new (std::nothrow) xtcore::assets::SolidColor();
+            nimg::ColorRGBf col(value[0], value[1], value[2]);
+            ((xtcore::assets::SolidColor*)sampler)->set(col);
+        }
+
+     }
+     return sampler;
+}
+
 int create_object(Scene *scene, const char *filepath, const char *prefix)
 {
     if (!scene) return -1;
@@ -554,24 +576,13 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         matids.push_back(id);
 
         xtcore::assets::IMaterial *mat = new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
-
-        xtcore::assets::ISampler *sampler = 0;
-        if (material.texture_diffuse.empty()) {
-            sampler = new (std::nothrow) xtcore::assets::SolidColor();
-            nimg::ColorRGBf col(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
-            ((xtcore::assets::SolidColor*)sampler)->set(col);
-        } else {
-            std::string texture_fp = base + material.texture_diffuse;
-            Log::handle().post_debug("loading texture %s", texture_fp.c_str());
-            sampler = new (std::nothrow) xtcore::assets::Texture2D();
-            ((xtcore::assets::Texture2D*)sampler)->load(texture_fp.c_str());
-            ((xtcore::assets::Texture2D*)sampler)->flip_vertical();
-        }
-        ((xtcore::assets::MaterialBlinnPhong*)mat)->add_sampler(MAT_SAMPLER_DIFFUSE,sampler);
-
-
+        mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), material.texture_diffuse.c_str() , material.diffuse ));
+        mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
+        mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));
+        mat->add_scalar (MAT_SCALART_EXPONENT, material.shininess * 100.f);
+        mat->add_scalar (MAT_SCALART_IOR     , material.ior);
         scene->m_materials[id] = mat;
-        Log::handle().post_message("creating material %s", name.c_str());
+        Log::handle().post_debug("creating material %s", name.c_str());
     }
 
     for (nmesh::shape_t shape : obj.shapes) {
@@ -579,7 +590,7 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         name.append(shape.name);
         HASH_UINT64 id = xtcore::pool::str::add(shape.name.c_str());
 
-        Log::handle().post_message("creating geometry %s", name.c_str());
+        Log::handle().post_debug("creating geometry %s", name.c_str());
 
         // Create Geometry
         xtcore::assets::Geometry *geo = new (std::nothrow) nmesh::Mesh();

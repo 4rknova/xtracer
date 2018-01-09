@@ -62,7 +62,7 @@ int close(gui::state_t *state, workspace_t *ws)
 
 int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
 {
-    std::string fp = std::string(filepath);
+    std::string fp = filepath;
     nimg::Pixmap fb;
     xtcore::render::assemble(fb, ws->context);
     xtcore::Log::handle().post_message("Exporting %s..", fp.c_str());
@@ -70,13 +70,14 @@ int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
     int res = 1;
 
     switch (format) {
-        IMG_FORMAT_HDR: fp += ".hdr"; res = nimg::io::save::hdr(fp.c_str(), fb); break;
-        IMG_FORMAT_PNG: fp += ".png"; res = nimg::io::save::png(fp.c_str(), fb); break;
-        IMG_FORMAT_BMP: fp += ".bmp"; res = nimg::io::save::bmp(fp.c_str(), fb); break;
-        IMG_FORMAT_TGA: fp += ".tga"; res = nimg::io::save::tga(fp.c_str(), fb); break;
+        case IMG_FORMAT_HDR: fp += ".hdr"; res = nimg::io::save::hdr(fp.c_str(), fb); break;
+        case IMG_FORMAT_PNG: fp += ".png"; res = nimg::io::save::png(fp.c_str(), fb); break;
+        case IMG_FORMAT_JPG: fp += ".jpg"; res = nimg::io::save::jpg(fp.c_str(), fb); break;
+        case IMG_FORMAT_BMP: fp += ".bmp"; res = nimg::io::save::bmp(fp.c_str(), fb); break;
+        case IMG_FORMAT_TGA: fp += ".tga"; res = nimg::io::save::tga(fp.c_str(), fb); break;
     }
 
-    if (res) xtcore::Log::handle().post_error("Failed to export %d", fp.c_str());
+    if (res) xtcore::Log::handle().post_error("Failed to export %s", fp.c_str());
     return res;
 }
 

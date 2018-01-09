@@ -57,7 +57,7 @@ enum ID {
 #define SIZE_MAIN_MENU         20
 #define SIZE_OFFSET            1
 
-#define LOG_HISTORY_SIZE (200)
+#define LOG_HISTORY_SIZE (10000)
 
 #define WIN_FLAGS_SET_0 ( ImGuiWindowFlags_NoCollapse \
                         | ImGuiWindowFlags_NoTitleBar \
@@ -234,15 +234,16 @@ void mm_export(workspace_t *ws)
     if (ws->is_rendering()) return;
 
     if (ImGui::BeginMenu("Export")) {
-    	static char filepath[256];
-	    ImGui::InputText("File", filepath, 256);
+    	static char filepath[512];
+	    ImGui::InputText("File", filepath, 512);
 
         if (strlen(filepath) > 0) {
             ImVec2 bd(52,0);
             if (ImGui::Button("HDR", bd)) action::write(action::IMG_FORMAT_HDR, filepath, ws); ImGui::SameLine();
             if (ImGui::Button("PNG", bd)) action::write(action::IMG_FORMAT_PNG, filepath, ws); ImGui::SameLine();
+            if (ImGui::Button("JPG", bd)) action::write(action::IMG_FORMAT_JPG, filepath, ws);
             if (ImGui::Button("TGA", bd)) action::write(action::IMG_FORMAT_BMP, filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("BMP", bd)) action::write(action::IMG_FORMAT_TGA, filepath, ws);
+            if (ImGui::Button("BMP", bd)) action::write(action::IMG_FORMAT_TGA, filepath, ws); ImGui::SameLine();
             if (ImGui::Button("Y4M", bd)) {
                 size_t w = ws->context.params.width;
                 size_t h = ws->context.params.height;

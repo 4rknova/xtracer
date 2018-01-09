@@ -17,29 +17,29 @@ camera = {
     default  = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(-50,130,-200)
-		target   = vec3(-50,110,30)
+		position = vec3(-5,1,-5)
+		target   = vec3(-10,0.5,-10)
 		up       = vec3(0,1,0)
-        aperture = 5
+        aperture = 0
         flength  = 175
     }
 
     ods = {
         type     = ods
-        ipd      = 1.5
-        position = vec3(0, 1, 0)
+        ipd      = 0
+        position = vec3(4, 1, -2)
     }
 }
 
 geometry = {
 	sat1 = {
 		type = sphere
-        radius = 1
+        radius = 0.01
 
 		position = {
-    		x = 0
-			y = 10
-			z = 0
+    		x = 5
+			y = 0.5
+			z = -3
 		}
 	}
 }
@@ -61,8 +61,8 @@ material = {
 
 object = {
 	sponza = {
-		source = <data>/crytek/sponza.obj
-        prefix = sponza_
+		source = <data>/fireplace/fireplace_room.obj
+        prefix = fireplace_room_
     }
 
     l0 = {

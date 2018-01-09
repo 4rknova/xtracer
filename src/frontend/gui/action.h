@@ -10,6 +10,7 @@ enum IMG_FORMAT
 {
       IMG_FORMAT_HDR
     , IMG_FORMAT_PNG
+    , IMG_FORMAT_JPG
     , IMG_FORMAT_BMP
     , IMG_FORMAT_TGA
 };
