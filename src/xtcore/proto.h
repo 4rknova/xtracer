@@ -2,7 +2,7 @@
 #define XTCORE_PROTO_H_INCLUDED
 
 /*
-**	SYMBOLIC NAME					LITERAL				TYPE			 DESCRIPTION
+**	    SYMBOLIC NAME			    LITERAL				TYPE			 DESCRIPTION
 */
 #define XTPROTO_FORMAT_VEC3         "vec3(%f,%f,%f)"    /* string     */ /* Format for vec3 */
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */

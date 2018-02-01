@@ -22,41 +22,9 @@ camera = {
     }
 }
 
-geometry = {
-	sat1 = {
-		type = sphere
-        radius = 0.1
-
-		position = {
-    		x = 0
-			y = 1
-			z = 0
-		}
-	}
-}
-
-material = {
-    light = {
-        type = lambert
-
-        properties = {
-            samplers = {
-                emissive = {
-                    type  = color
-                    value = col3(1,1,1)
-                }
-            }
-        }
-    }
-}
-
 object = {
 	scene = {
-		source = <data>/cornell/CornellBox-Original.obj
+		source = <data>/cornell/CornellBox-Empty-White.obj
+        prefix = cornell_
     }
-
-#    l0 = {
- #       geometry = sat1
-  #      material = light
-   # }
 }

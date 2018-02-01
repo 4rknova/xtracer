@@ -1,30 +1,3 @@
-/*
-
-	This file is part of libnmath.
-
-	sample.inl
-	Sampling functions
-
-	Copyright (C) 2012
-	Papadopoulos Nikolaos
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 3 of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU	Lesser General Public License for more details.
-
-	You should have received a copy of the GNU Lesser General
-	Public License along with this program; if not, write to the
-	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-	Boston, MA 02110-1301 USA
-
-*/
-
 #ifndef NMATH_SAMPLE_INL_INCLUDED
 #define NMATH_SAMPLE_INL_INCLUDED
 
@@ -87,7 +60,7 @@ inline Vector3f hemisphere(const Vector3f &normal, const Vector3f &direction)
 
 	Vector3f dirc = direction.normalized();
 	float ndotl = dot(norm, dirc);
-	
+
 	return (d * (ndotl > 0 ? ndotl : 0)).normalized();
 }
 
@@ -95,7 +68,7 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 {
 	 Matrix3x3f mat;
 	 Vector3f refl = direction.reflected(normal);
-	 
+
 	 if (1.0f - dot(direction, normal) > EPSILON) {
 		Vector3f ivec = cross(direction, refl).normalized();
 		Vector3f kvec = cross(refl, ivec);
@@ -103,7 +76,7 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 		mat.set_column_vector(refl, 1);
 		mat.set_column_vector(kvec, 2);
 	}
-	
+
 	scalar_t u = prng_c(0.0f, 1.0f);
 	scalar_t v = prng_c(0.0f, 1.0f);
 	scalar_t theta = 2.0 * M_PI * u;
@@ -112,15 +85,13 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 	Vector3f vc(nmath_cos(theta) * nmath_sin(phi),
 			    nmath_cos(phi),
 			    nmath_sin(theta) * nmath_sin(phi));
-	
+
 	vc.transform(mat);
 
 	scalar_t vdotr = dot(refl, vc);
 
-	if (vdotr < 0.0) {
-		vdotr = 0.0;
-	}
-	
+	if (vdotr < 0.0) vdotr = 0.0;
+
 	return (vc * nmath_pow(vdotr, exponent)).normalized();
 }
 

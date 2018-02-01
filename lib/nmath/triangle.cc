@@ -149,8 +149,9 @@ Ray Triangle::ray_sample() const
 
     ray.origin = point_sample();
 
-    Vector3f normal = cross(v[1] - v[0], v[2] - v[0]).normalized();
+    Vector3f normal = calc_normal();
     ray.direction = Sample::hemisphere(normal, normal);
+    ray.origin += ray.direction * EPSILON;
 
     return ray;
 }

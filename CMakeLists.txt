@@ -36,9 +36,10 @@ execute_process(
 
 SCAN_DIRS(ext_libs)
 
-set(OUT_LIB     xtcore)
-set(OUT_EXE_CLI xtracer_cli)
-set(OUT_EXE_GUI xtracer_gui)
+set(OUT_LIB             xtcore)
+set(OUT_EXE_CLI         xtracer_cli)
+set(OUT_EXE_GUI         xtracer_gui)
+set(OUT_EXE_VIZ_SAMPLES viz_samples)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -46,9 +47,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
 set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
 
-set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
-set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
-set(PATH_SRC_FRONTEND_GUI ${PATH_SRC}/frontend/gui)
+set(PATH_SRC_XTCORE           ${PATH_SRC}/xtcore)
+set(PATH_SRC_FRONTEND_CLI     ${PATH_SRC}/frontend/cli)
+set(PATH_SRC_FRONTEND_GUI     ${PATH_SRC}/frontend/gui)
+set(PATH_SRC_UTIL_VIZ_SAMPLES ${PATH_SRC}/util/viz/sampling)
 
 file(GLOB SRC_LIBS
     ${PATH_LIB}/*/*.c
@@ -75,6 +77,10 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.c
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
+)
+
+file(GLOB SRC_UTIL_VIZ_SAMPLES
+    ${PATH_SRC_UTIL_VIZ_SAMPLES}/*.cc
 )
 
 file(GLOB SRC_IMGUI
@@ -110,8 +116,9 @@ target_include_directories(xtcore_dynamic PUBLIC
     ${ext_libs}
 )
 
-add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
-add_executable(${OUT_EXE_GUI} ${SRC_FRONTEND_GUI})
+add_executable(${OUT_EXE_CLI}         ${SRC_FRONTEND_CLI})
+add_executable(${OUT_EXE_GUI}         ${SRC_FRONTEND_GUI})
+add_executable(${OUT_EXE_VIZ_SAMPLES} ${SRC_UTIL_VIZ_SAMPLES})
 
 target_include_directories(${OUT_EXE_CLI} PUBLIC
     ${PATH_LIB}
@@ -125,11 +132,17 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
     ${ext_libs}
 )
 
+target_include_directories(${OUT_EXE_VIZ_SAMPLES} PUBLIC
+    ${PATH_SRC}
+)
+
 target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery)
 
 SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
 target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery ${LIBRARIES})
+
+target_link_libraries(${OUT_EXE_VIZ_SAMPLES} PRIVATE xtcore_static imgui ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")
@@ -143,6 +156,7 @@ target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic)
 add_dependencies (${OUT_EXE_GUI} xtcore_static xtcore_dynamic)
+add_dependencies (${OUT_EXE_VIZ_SAMPLES} xtcore_static xtcore_dynamic)
 
 enable_testing()
 file(MAKE_DIRECTORY ${PATH_TEST})
