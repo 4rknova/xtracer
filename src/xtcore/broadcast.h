@@ -4,7 +4,8 @@
 namespace xtcore {
     namespace network {
 
-int broadcast(const char *message);
+int listen(bool *done);
+int broadcast();
 
     } /* namespace network */
 } /* namespace xtcore */

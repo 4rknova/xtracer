@@ -46,6 +46,9 @@
 #define STR_SHOW_TILE_UPDATES  "Show tile updates"
 #define STR_SELECT             "Select"
 #define STR_CLOSE              "Close"
+#define STR_NETWORK            "Network"
+#define STR_BROADCAST          "Broadcast"
+#define STR_RECEIVE            "Receive"
 
 enum ID {
       ID_PANEL_SIDE
@@ -350,6 +353,15 @@ void menu_workspaces(state_t *state)
     }
 }
 
+void mm_network(state_t *state)
+{
+    if (ImGui::BeginMenu(STR_NETWORK)) {
+        if (ImGui::MenuItem(STR_BROADCAST)) { action::broadcast(state); }
+        if (ImGui::MenuItem(STR_RECEIVE  )) { action::listen   (state); }
+        ImGui::EndMenu();
+    }
+}
+
 void mm_renderer(workspace_t *ws)
 {
     if (ws->status == WS_STATUS_PROCESSING) return;
@@ -490,6 +502,7 @@ void render_main_menu(state_t *state)
             mm_export(state->workspace);
             ImGui::EndMenu();
         }
+        gui::mm_network(state);
         ImGui::EndMainMenuBar();
     }
 

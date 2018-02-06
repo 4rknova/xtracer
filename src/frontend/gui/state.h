@@ -7,6 +7,11 @@
 
 namespace gui {
 
+struct network_t
+{
+    bool is_listening;
+};
+
 struct textures_t
 {
     GLuint logo;
@@ -25,6 +30,7 @@ struct window_t
 
 struct state_t
 {
+    network_t    network;
     textures_t   textures;
     window_t     window;
     workspace_t *workspace;
