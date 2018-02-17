@@ -10,7 +10,7 @@
 class CamODS : public xtcore::assets::ICamera
 {
 	public:
-    NMath::scalar_t ipd;
+    float           ipd;
     NMath::Vector3f orientation;
 
     CamODS();

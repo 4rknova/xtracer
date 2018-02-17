@@ -29,6 +29,18 @@ void workspace_t::load()
 {
     int err = xtcore::io::scn::load(&(context.scene), source_file.c_str());
     status = (err ? WS_STATUS_INVALID : WS_STATUS_LOADED);
+
+    int y = 100;
+    for (auto it = context.scene.m_cameras.begin(); it != context.scene.m_cameras.end(); ++it) {
+        y += 100;
+        HASH_UINT64 id = (*it).first;
+        node_cam_t *node = new node_cam_t;
+        node->id   = id;
+        node->data = (*it).second;
+        node->position = ImVec2(100, y);
+
+        graph.nodes.push_back(node);
+    }
 }
 
 void workspace_t::prepare()

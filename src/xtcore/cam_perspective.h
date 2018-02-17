@@ -15,9 +15,9 @@ class CamPerspective : public xtcore::assets::ICamera
 	public:
 		NMath::Vector3f target;
 		NMath::Vector3f up;
-		NMath::scalar_t fov;
-		NMath::scalar_t aperture;
-		NMath::scalar_t flength;
+		float           fov;
+		float           aperture;
+		float           flength;
 
 		CamPerspective();
 		~CamPerspective();

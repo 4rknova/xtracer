@@ -1,3 +1,4 @@
+#include <string>
 #include "util.h"
 #include "imgui_extra.h"
 #include <imgui/imgui_internal.h>
@@ -19,7 +20,7 @@ void slider_int(const char *name, size_t &val, size_t a, size_t b)
 void textedit_float(const char *name, float  &val, float step, float lim_min, float lim_max)
 {
     float tmp = val;
-    if (ImGui::InputFloat("##value", &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
+    if (ImGui::InputFloat(name, &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
         CLAMP(tmp, lim_min, lim_max);
         val = tmp;
     }
@@ -32,6 +33,23 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
         CLAMP(tmp, lim_min, lim_max);
         val = tmp;
     }
+}
+
+void textedit_float3 (const char *name, NMath::Vector3f &vec, float step)
+{
+    float x = vec.x;
+    float y = vec.y;
+    float z = vec.z;
+
+    std::string nx(name); nx.append(".x");
+    std::string ny(name); ny.append(".y");
+    std::string nz(name); nz.append(".z");
+
+    ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
+
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x;
+    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
+    if (ImGui::InputFloat(nz.c_str(), &z, step, 2 * step, f)) vec.z = z;
 }
 
 void not_yet_implemented()

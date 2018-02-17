@@ -2,7 +2,7 @@ title = Cornell Box
 descr = Cornell Box
 versn = 0.5
 
-data = data
+data = data/graphics.cs.williams.edu
 
 camera = {
     default  = {
@@ -24,7 +24,7 @@ camera = {
 
 object = {
 	scene = {
-		source = <data>/cornell/CornellBox-Empty-White.obj
+		source = <data>/cornell/CornellBox-Original.obj
         prefix = cornell_
     }
 }

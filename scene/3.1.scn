@@ -2,7 +2,7 @@ title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.5
 
-data = data
+data = data/graphics.cs.williams.edu
 
 cubemap = {
     posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
@@ -67,7 +67,7 @@ material = {
 
 object = {
 	sponza = {
-		source = <data>/dabrovic/sponza.obj
+		source = <data>/dabrovic_sponza/sponza.obj
         prefix = sponza_
     }
 

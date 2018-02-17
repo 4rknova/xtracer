@@ -630,69 +630,16 @@ void panel_workspaces(state_t *state)
 void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
-/*
+
     ImGui::BeginGroup();
     ImGui::Text("%s", ws->source_file.c_str());
-	ImGui::Separator();
-	if (ImGui::TreeNodeEx("root", ImGuiTreeNodeFlags_DefaultOpen)) {
-		if (ImGui::TreeNodeEx("Cameras", ImGuiTreeNodeFlags_DefaultOpen)) {
-			CamCollection::iterator it = ws->context.scene.m_cameras.begin();
-			CamCollection::iterator et = ws->context.scene.m_cameras.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx(xtcore::pool::str::get((*it).first))) {
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Geometry",ImGuiTreeNodeFlags_DefaultOpen)) {
-			GeoCollection::iterator it = ws->context.scene.m_geometry.begin();
-			GeoCollection::iterator et = ws->context.scene.m_geometry.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx(xtcore::pool::str::get((*it).first))) {
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
-			MatCollection::iterator it = ws->context.scene.m_materials.begin();
-			MatCollection::iterator et = ws->context.scene.m_materials.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-					for (size_t s = 0; s < (*it).second->get_scalar_count(); ++s) {
-						std::string _temp;
-						float val = (*it).second->get_scalar_by_index(s,&_temp);
-						draw_edit_float(_temp.c_str(), val);
-					}
-					for (size_t s = 0; s < (*it).second->get_sampler_count(); ++s) {
-						std::string _temp;
-						(*it).second->get_sampler_by_index(s,&_temp);
-						if (ImGui::TreeNodeEx(xtcore::pool::str::get(_temp))) {
-							ImGui::TreePop();
-						}
-					}
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ObjCollection::iterator it = ws->context.scene.m_objects.begin();
-			ObjCollection::iterator et = ws->context.scene.m_objects.end();
-			for (; it!=et; ++it) {
-				if (ImGui::TreeNodeEx((*it).first.c_str())) {
-                    draw_edit_str("Geometry", (*it).second->geometry);
-                    draw_edit_str("Material", (*it).second->material);
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-	    ImGui::TreePop();
-	}
+
+    link_t link;
+    ImGui::Image((void*)(uintptr_t)ws->texture, ImVec2(100,100));
+    draw_nlist(&(ws->graph));
+    draw_graph(&(ws->graph), &link);
+
     ImGui::EndGroup();
-*/
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)

@@ -8,6 +8,7 @@
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
 #include <xtcore/renderer.h>
+#include "graph.h"
 #include "opengl.h"
 
 #define DEFAULT_GAMMA       (2.2)
@@ -74,6 +75,9 @@ struct workspace_t
 
      workspace_t();
     ~workspace_t();
+
+
+    graph_t graph;
 };
 
 #endif /* XTGUI_GUI_WORKSPACE_H_INCLUDED */
