@@ -3,10 +3,16 @@
 
 #include <vector>
 #include <xtcore/strpool.h>
+
 #include <xtcore/camera.h>
+#include <xtcore/object.h>
+#include <xtcore/geometry.h>
+#include <xtcore/material.h>
+
 #include "imgui_extra.h"
 
-#define NODE_SLOT_RADIUS (5.f)
+#define INVALID_ID          ( -1)
+#define NODE_SLOT_RADIUS    (5.f)
 #define NODE_WINDOW_PADDING ImVec2(8.f,8.f)
 
 struct node_t
@@ -86,6 +92,24 @@ struct node_t
 struct node_cam_t : public node_t
 {
     xtcore::assets::ICamera *data;
+    virtual void draw_properties();
+};
+
+struct node_obj_t : public node_t
+{
+    xtcore::assets::Object *data;
+    virtual void draw_properties();
+};
+
+struct node_mat_t : public node_t
+{
+    xtcore::assets::IMaterial *data;
+    virtual void draw_properties();
+};
+
+struct node_geo_t : public node_t
+{
+    xtcore::assets::Geometry *data;
     virtual void draw_properties();
 };
 

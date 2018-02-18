@@ -9,6 +9,11 @@ SolidColor::SolidColor()
 SolidColor::~SolidColor()
 {}
 
+void SolidColor::get(nimg::ColorRGBf &color)
+{
+    color = m_color;
+}
+
 void SolidColor::set(nimg::ColorRGBf &color)
 {
     m_color = color;

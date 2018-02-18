@@ -204,23 +204,27 @@ void mm_resolution (workspace_t *ws)
     ImGui::Text(STR_SENSOR);ImGui::Separator();
     ImGui::Text(STR_PRESETS);
     ImGui::BeginChild("LST_RES", ImVec2(300, 100), true);
-    for (size_t i = 0; i < res_entries; ++i) {
+    ImGui::Columns(4, "LST_RES_COLUMNS");
+    ImGui::Separator();
+    ImGui::Text("ID");     ImGui::NextColumn();
+    ImGui::Text("Type");   ImGui::NextColumn();
+    ImGui::Text("Width");  ImGui::NextColumn();
+    ImGui::Text("Height"); ImGui::NextColumn();
+    for (int i = 0; i < res_entries; i++) {
         const resolution_t *r = &resolutions[i];
-        ImGui::Columns(3, "ID_RESOLUTIONS", false);
-        ImGui::SetColumnWidth(-1, 120);
-        if (ImGui::Selectable(r->description, selected == i)) {
+        char label[32];
+        sprintf(label, "%02d", i);
+        if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns)) {
             ws->context.params.width  = r->width;
             ws->context.params.height = r->height;
-            selected = i;
         }
+        bool hovered = ImGui::IsItemHovered();
         ImGui::NextColumn();
-        ImGui::SetColumnWidth(-1, 60);
-        ImGui::Text("%4i", r->height);
-        ImGui::NextColumn();
-        ImGui::SetColumnWidth(-1, 60);
-        ImGui::Text("%4i", r->width);
-        ImGui::Columns(1, "ID_RESOLUTIONS");
+        ImGui::Text("%s", r->description); ImGui::NextColumn();
+        ImGui::Text("%i", r->width);       ImGui::NextColumn();
+        ImGui::Text("%i", r->height);      ImGui::NextColumn();
     }
+    ImGui::Columns(1);
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginGroup();
@@ -631,15 +635,21 @@ void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
 
-    ImGui::BeginGroup();
-    ImGui::Text("%s", ws->source_file.c_str());
+    float res     = 256.f;
+    float aspect  = ws->context.params.height / (float)ws->context.params.width;
+    float thumb_w = (aspect < 1.f ? res : (res / aspect));
+    float thumb_h = (aspect > 1.f ? res : (res * aspect));
 
+    ImGui::Columns(2,"ID_SCED",false);
+    ImGui::SetColumnWidth(-1,res + 20);
+    ImGui::BeginChild("LST_PREVIEW", ImVec2(res + 20, res + 20), false);
+    ImGui::SetCursorPos(ImVec2(3 + (res - thumb_w) / 2, 3 + (res - thumb_h) / 2));
+    ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
+    ImGui::EndChild();
+    ImGui::NextColumn();
     link_t link;
-    ImGui::Image((void*)(uintptr_t)ws->texture, ImVec2(100,100));
-    draw_nlist(&(ws->graph));
     draw_graph(&(ws->graph), &link);
-
-    ImGui::EndGroup();
+    ImGui::Columns(1);
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)

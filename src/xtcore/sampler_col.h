@@ -13,6 +13,7 @@ class SolidColor : public ISampler
     virtual ~SolidColor();
 
     void set(nimg::ColorRGBf &color);
+    void get(nimg::ColorRGBf &color);
     virtual nimg::ColorRGBf sample(const NMath::Vector3f &uvw) const;
 
     private:

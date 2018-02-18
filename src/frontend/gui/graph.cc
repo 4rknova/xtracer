@@ -1,20 +1,23 @@
 #include <cmath>
+#include <xtcore/memutil.tml>
 
-#include <cam_erp.h>
-#include <cam_ods.h>
-#include <cam_cubemap.h>
-#include <cam_perspective.h>
+#include <xtcore/cam_erp.h>
+#include <xtcore/cam_ods.h>
+#include <xtcore/cam_cubemap.h>
+#include <xtcore/cam_perspective.h>
+#include <xtcore/mat_lambert.h>
+#include <xtcore/mat_blinnphong.h>
+#include <xtcore/mat_phong.h>
+#include <xtcore/sampler_col.h>
+#include <xtcore/sampler_tex.h>
 
 #include "graph.h"
 
-#define INVALID_ID          ( -1)
-#define NODE_SLOT_RADIUS    (8.f)
-#define NODE_WINDOW_PADDING ImVec2(8.f,8.f)
 
 node_t::node_t()
     : id(INVALID_ID)
     , inputs(0)
-    , outputs(1)
+    , outputs(0)
 {}
 
 node_t::~node_t()
@@ -66,6 +69,71 @@ void node_cam_t::draw_properties()
     }
 }
 
+void node_obj_t::draw_properties()
+{
+    ImGui::TextColored(ImVec4(.1,1.,.9,1.), "%s", xtcore::pool::str::get(id));
+    ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->geometry));
+    ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->material));
+}
+
+void node_mat_t::draw_properties()
+{
+    int spec = 0;
+         if (dynamic_cast<xtcore::assets::MaterialLambert*>   (data)) spec = 1;
+    else if (dynamic_cast<xtcore::assets::MaterialBlinnPhong*>(data)) spec = 2;
+    else if (dynamic_cast<xtcore::assets::MaterialPhong*>     (data)) spec = 3;
+
+    ImGui::Text("Material.%s", xtcore::pool::str::get(id));
+
+    switch (spec) {
+        case 1: {
+            ImGui::Text("Shader: Lambert");
+            break;
+        }
+        case 2: {
+            ImGui::Text("Shader: BlinnPhong");
+            break;
+        }
+        case 3: {
+            ImGui::Text("Shader: Phong");
+            break;
+        }
+    }
+
+    int sz_scalar  = data->get_scalar_count();
+    int sz_sampler = data->get_sampler_count();
+
+    for (int i = 0; i < sz_scalar; ++i) {
+        std::string name;
+        float &f = data->get_scalar_by_index(i, &name);
+        textedit_float(name.c_str(), f, 0.1f);
+    }
+
+    for (int i = 0; i < sz_sampler; ++i) {
+        std::string name;
+        xtcore::assets::ISampler *s = data->get_sampler_by_index(i, &name);
+
+        if (dynamic_cast<xtcore::assets::SolidColor*>(s)) {
+            nimg::ColorRGBf col;
+            ((xtcore::assets::SolidColor*)(s))->get(col);
+            float c[4] = {col.r(), col.g(), col.b(), 1.};
+            ImGui::ColorPicker4(name.c_str(), c, ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
+            col.r(c[0]);
+            col.g(c[1]);
+            col.b(c[2]);
+            ((xtcore::assets::SolidColor*)(s))->set(col);
+        }
+        else if (dynamic_cast<xtcore::assets::Texture2D*>(s)) {
+            ImGui::Text("Texture: %s", name.c_str());
+        }
+    }
+}
+
+void node_geo_t::draw_properties()
+{
+    ImGui::Text("Geometry.%s", xtcore::pool::str::get(id));
+}
+
 ImVec2 node_t::get_input_slot_position(int slot_no) const
 {
     ImVec2 sz = get_size();
@@ -108,40 +176,10 @@ graph_t::~graph_t()
     auto net = nodes.end();
     auto let = links.end();
 
-    for (auto it = nodes.begin(); it != net; ++it) delete (*it);
-    for (auto it = links.begin(); it != let; ++it) delete (*it);
+    for (auto it = nodes.begin(); it != net; ++it) xtcore::memory::safe_delete<node_t>(*it);
+    for (auto it = links.begin(); it != let; ++it) xtcore::memory::safe_delete<link_t>(*it);
     nodes.clear();
     links.clear();
-}
-
-void draw_nlist(graph_t *graph)
-{
-    ImVector<node_t*> *nodes = &(graph->nodes);
-    ImVector<link_t*> *links = &(graph->links);
-
-    ImGui::BeginChild("node_list", ImVec2(100,0));
-    ImGui::Text("Nodes");
-    ImGui::Separator();
-
-    bool open_context_menu = false;
-    int node_hovered_in_list = -1;
-    int node_hovered_in_scene = -1;
-
-    for (int node_idx = 0; node_idx < nodes->size(); node_idx++)
-    {
-        node_t* node = nodes->Data[node_idx];
-        ImGui::PushID(node->id);
-        const char *name = xtcore::pool::str::get(node->id);
-        if (name && ImGui::Selectable(name, node->id == graph->active_node))
-            graph->active_node = node->id;
-        if (ImGui::IsItemHovered())
-        {
-            node_hovered_in_list = node->id;
-            open_context_menu |= ImGui::IsMouseClicked(1);
-        }
-        ImGui::PopID();
-    }
-    ImGui::EndChild();
 }
 
 void draw_graph(graph_t *graph, link_t *link)
@@ -165,8 +203,8 @@ void draw_graph(graph_t *graph, link_t *link)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, (ImVec4)ImColor(60,60,70,200));
-    ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove);
-    ImGui::PushItemWidth(120.0f);
+    ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoMove);
+    ImGui::PushItemWidth(100.0f);
 
     ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -176,7 +214,7 @@ void draw_graph(graph_t *graph, link_t *link)
     {
         ImVec2 offset = ImGui::GetCursorPos() - scrolling;
         ImU32 GRID_COLOR = ImColor(200,200,200,40);
-        float GRID_SZ = 64.0f;
+        float GRID_SZ = 32.0f;
         ImVec2 win_pos = ImGui::GetCursorScreenPos();
         ImVec2 canvas_sz = ImGui::GetWindowSize();
         for (float x = fmodf(offset.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)

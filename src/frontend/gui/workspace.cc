@@ -30,17 +30,83 @@ void workspace_t::load()
     int err = xtcore::io::scn::load(&(context.scene), source_file.c_str());
     status = (err ? WS_STATUS_INVALID : WS_STATUS_LOADED);
 
-    int y = 100;
-    for (auto it = context.scene.m_cameras.begin(); it != context.scene.m_cameras.end(); ++it) {
-        y += 100;
-        HASH_UINT64 id = (*it).first;
-        node_cam_t *node = new node_cam_t;
-        node->id   = id;
-        node->data = (*it).second;
-        node->position = ImVec2(100, y);
-
-        graph.nodes.push_back(node);
+    int x = 0, y = 0;
+    // Cameras
+    {
+        const float interval = 300.f;
+        auto et = context.scene.m_cameras.end();
+        y = -interval * context.scene.m_cameras.size() / 2;
+        for (auto it = context.scene.m_cameras.begin(); it != et; ++it) {
+            node_cam_t *node = new node_cam_t;
+            node->inputs  = 0;
+            node->outputs = 0;
+            node->id   = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph.nodes.push_back(node);
+            y += interval;
+        }
     }
+    x += 250;
+    // Objects
+    {
+        const float interval = 100.f;
+        auto et = context.scene.m_objects.end();
+        y = -interval * context.scene.m_objects.size() / 2;
+        for (auto it = context.scene.m_objects.begin(); it != et; ++it) {
+            node_obj_t *node = new node_obj_t;
+            node->inputs  = 0;
+            node->outputs = 2;
+            node->id   = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph.nodes.push_back(node);
+/*
+            link_t *link = new link_t;
+            link->InputIdx  = node->id;
+            link->OutputIdx = node->data->geometry;
+            link->InputSlot = 0;
+            link->OutputSlot = 0;
+            graph.links.push_back(link);
+*/
+            y += interval;
+        }
+    }
+    x += 250;
+    // Materials
+    {
+        const float interval = 300.f;
+        auto et = context.scene.m_materials.end();
+        y = -interval * context.scene.m_materials.size() / 2;
+        for (auto it = context.scene.m_materials.begin(); it != et; ++it) {
+            node_mat_t *node = new node_mat_t;
+            node->inputs  = 1;
+            node->outputs = 0;
+            node->id   = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph.nodes.push_back(node);
+            y += interval;
+        }
+    }
+    x += 250;
+    // Geometry
+    {
+        const float interval = 50.f;
+        auto et = context.scene.m_geometry.end();
+        y = -interval * context.scene.m_geometry.size() / 2;
+        for (auto it = context.scene.m_geometry.begin(); it != et; ++it) {
+            node_geo_t *node = new node_geo_t;
+            node->inputs  = 1;
+            node->outputs = 0;
+            node->id   = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph.nodes.push_back(node);
+            y += interval;
+        }
+    }
+
 }
 
 void workspace_t::prepare()

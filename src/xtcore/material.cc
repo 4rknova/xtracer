@@ -8,7 +8,7 @@ namespace xtcore {
 IMaterial::IMaterial()
 {}
 
-void purge(std::map<std::string, NMath::scalar_t> &map)
+void purge(std::map<std::string, float> &map)
 {
 	if(!map.empty()) map.clear();
 }
@@ -24,9 +24,9 @@ void purge(std::map<std::string, ISampler*> &map)
 	}
 }
 
-int purge(std::map<std::string, NMath::scalar_t> &map, const char *name)
+int purge(std::map<std::string, float> &map, const char *name)
 {
-	typename std::map<std::string, NMath::scalar_t>::iterator it = map.find(name);
+	typename std::map<std::string, float>::iterator it = map.find(name);
 	if (it == map.end()) return 1;
 	map.erase(it);
 	return 0;
@@ -52,9 +52,9 @@ bool IMaterial::is_emissive() const
     return nimg::eval::luminance(get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0))) > 0;
 }
 
-NMath::scalar_t IMaterial::get_scalar(const char *name) const
+float IMaterial::get_scalar(const char *name) const
 {
-    const std::map<std::string, NMath::scalar_t>::const_iterator it = m_scalars.find(name);
+    const std::map<std::string, float>::const_iterator it = m_scalars.find(name);
     if (it == m_scalars.end()) return 0.f;
     return (*it).second;
 }
@@ -66,10 +66,10 @@ nimg::ColorRGBf IMaterial::get_sample(const char *name, const NMath::Vector3f &t
     return (*it).second->sample(tc);
 }
 
-NMath::scalar_t IMaterial::get_scalar_by_index(size_t idx, std::string *name)
+float& IMaterial::get_scalar_by_index(size_t idx, std::string *name)
 {
-    std::map<std::string, NMath::scalar_t>::iterator it = m_scalars.begin();
-    std::map<std::string, NMath::scalar_t>::iterator et = m_scalars.end();
+    std::map<std::string, float>::iterator it = m_scalars.begin();
+    std::map<std::string, float>::iterator et = m_scalars.end();
 
     size_t counter = 0;
     for (; (it != et) && (++counter <= idx); ++it);
@@ -79,7 +79,7 @@ NMath::scalar_t IMaterial::get_scalar_by_index(size_t idx, std::string *name)
         name->append((*it).first);
     }
 
-    return (*it).second;
+    return ((*it).second);
 }
 
 ISampler *IMaterial::get_sampler_by_index(size_t idx, std::string *name)
@@ -119,7 +119,7 @@ int IMaterial::purge_scalar(const char *name)
     return purge(m_scalars, name);
 }
 
-int IMaterial::add_scalar(const char *name, NMath::scalar_t scalar)
+int IMaterial::add_scalar(const char *name, float scalar)
 {
     int res = purge_scalar(name);
     m_scalars[name] = scalar;
