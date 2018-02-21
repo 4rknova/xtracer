@@ -34,6 +34,8 @@ using ncf::util::to_double;
 using ncf::util::to_bool;
 using xtcore::Log;
 
+namespace xtcore {
+
 // Private constructor & assignment operator.
 // They are not implemented but declared private
 // for the time being.
@@ -171,3 +173,5 @@ bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, HASH_UINT6
 
 	return info.t != INFINITY ? true : false;
 }
+
+} /* namespace xtcore */

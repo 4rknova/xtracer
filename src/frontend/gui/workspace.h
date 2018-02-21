@@ -77,7 +77,7 @@ struct workspace_t
     ~workspace_t();
 
 
-    graph_t graph;
+    gui::graph::graph_t graph;
 };
 
 #endif /* XTGUI_GUI_WORKSPACE_H_INCLUDED */

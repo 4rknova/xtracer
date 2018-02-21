@@ -123,10 +123,10 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
 
-    std::vector<light_t> lights;
+    std::vector<xtcore::light_t> lights;
     m_context->scene.get_light_sources(lights);
-	std::vector<light_t>::iterator it = lights.begin();
-	std::vector<light_t>::iterator et = lights.end();
+	auto it = lights.begin();
+	auto et = lights.end();
 
 	for (; it != et; ++it) {
 		unsigned int tlshsamples = m_context->params.samples;
@@ -146,13 +146,13 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 			IntInfo res;
 			bool test = m_context->scene.intersection(sray, res, obj);
 
-            std::map<HASH_UINT64, xtcore::assets::Object*>::iterator oit = m_context->scene.m_objects.find(obj)
-                                                                   , oet = m_context->scene.m_objects.end();
+            auto oit = m_context->scene.m_objects.find(obj)
+               , oet = m_context->scene.m_objects.end();
 
             if (oit == oet) continue;
 
-            std::map<HASH_UINT64, xtcore::assets::Geometry*>::iterator git = m_context->scene.m_geometry.find((*oit).second->geometry)
-                                                                     , get = m_context->scene.m_geometry.end();
+            auto git = m_context->scene.m_geometry.find((*oit).second->geometry)
+               , get = m_context->scene.m_geometry.end();
 
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
@@ -198,7 +198,7 @@ ColorRGBf Renderer::shade(const Ray &pray, const Ray &ray, const unsigned int de
 
 		unsigned int tlmcsamples = m_context->params.samples;
 		scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
-		for (unsigned int mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
+		for (size_t mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
 			Ray reflray;
 			reflray.origin = p;
 			reflray.direction = NMath::Sample::lobe(n, -ray.direction, exponent);

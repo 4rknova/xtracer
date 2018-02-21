@@ -647,8 +647,8 @@ void panel_scene(workspace_t *ws)
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::EndChild();
     ImGui::NextColumn();
-    link_t link;
-    draw_graph(&(ws->graph), &link);
+    gui::graph::link_t link;
+    gui::graph::draw(&(ws->graph), &(ws->context.scene));
     ImGui::Columns(1);
 }
 

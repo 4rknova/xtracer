@@ -17,6 +17,8 @@
 
 using nimg::ColorRGBf;
 
+namespace xtcore {
+
 typedef std::map<HASH_UINT64, xtcore::assets::ICamera   *> CamCollection;
 typedef std::map<HASH_UINT64, xtcore::assets::IMaterial *> MatCollection;
 typedef std::map<HASH_UINT64, xtcore::assets::Geometry  *> GeoCollection;
@@ -71,5 +73,7 @@ public:
 	// This will cleanup all the allocated memory
 	void release();
 };
+
+} /* namespace xtcore */
 
 #endif /* XTCORE_SCENE_HPP_INCLUDED */

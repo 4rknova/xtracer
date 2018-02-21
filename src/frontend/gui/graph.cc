@@ -13,9 +13,12 @@
 
 #include "graph.h"
 
+namespace gui {
+    namespace graph {
 
 node_t::node_t()
     : id(INVALID_ID)
+    , name(0)
     , inputs(0)
     , outputs(0)
 {}
@@ -31,7 +34,7 @@ void node_cam_t::draw_properties()
     else if (dynamic_cast<CamPerspective*>(data)) spec = 3;
     else if (dynamic_cast<CamCubemap*>    (data)) spec = 4;
 
-    ImGui::Text("Camera.%s", xtcore::pool::str::get(id));
+    ImGui::Text("Camera.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: {
@@ -71,7 +74,7 @@ void node_cam_t::draw_properties()
 
 void node_obj_t::draw_properties()
 {
-    ImGui::TextColored(ImVec4(.1,1.,.9,1.), "%s", xtcore::pool::str::get(id));
+    ImGui::TextColored(ImVec4(.1,1.,.9,1.), "%s", xtcore::pool::str::get(name));
     ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->geometry));
     ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->material));
 }
@@ -83,7 +86,7 @@ void node_mat_t::draw_properties()
     else if (dynamic_cast<xtcore::assets::MaterialBlinnPhong*>(data)) spec = 2;
     else if (dynamic_cast<xtcore::assets::MaterialPhong*>     (data)) spec = 3;
 
-    ImGui::Text("Material.%s", xtcore::pool::str::get(id));
+    ImGui::Text("Material.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: {
@@ -131,7 +134,7 @@ void node_mat_t::draw_properties()
 
 void node_geo_t::draw_properties()
 {
-    ImGui::Text("Geometry.%s", xtcore::pool::str::get(id));
+    ImGui::Text("Geometry.%s", xtcore::pool::str::get(name));
 }
 
 ImVec2 node_t::get_input_slot_position(int slot_no) const
@@ -173,6 +176,11 @@ graph_t::graph_t()
 
 graph_t::~graph_t()
 {
+    clear();
+}
+
+void graph_t::clear()
+{
     auto net = nodes.end();
     auto let = links.end();
 
@@ -182,7 +190,63 @@ graph_t::~graph_t()
     links.clear();
 }
 
-void draw_graph(graph_t *graph, link_t *link)
+void node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, int node_hovered_in_list, int node_hovered_in_scene)
+{
+    ImGui::PushID(id);
+    ImVec2 node_rect_min = offset + position;
+
+    // Display node contents first
+    draw_list->ChannelsSetCurrent(1); // Foreground
+    bool old_any_active = ImGui::IsAnyItemActive();
+    ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
+    ImGui::BeginGroup();
+    draw_properties();
+    ImGui::EndGroup();
+
+    // Save the size of what we have emitted and whether any of the widgets are being used
+    bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
+    ImVec2 sz = get_size();
+    ImVec2 node_rect_max = node_rect_min + sz;
+
+    // Display node box
+    draw_list->ChannelsSetCurrent(0); // Background
+    ImGui::SetCursorScreenPos(node_rect_min);
+    ImGui::InvisibleButton("node", sz);
+
+    ImGuiIO &io = ImGui::GetIO();
+    /* if (ImGui::IsItemHovered())
+    {
+        node_hovered_in_scene = id;
+        open_context_menu |= ImGui::IsMouseClicked(1);
+    }
+    */
+    bool node_moving_active = ImGui::IsItemActive();
+    //        if (node_widgets_active || node_moving_active) graph->active_node = id;
+    if (node_moving_active && ImGui::IsMouseDragging(0)) position = position + ImGui::GetIO().MouseDelta;
+
+    ImU32 node_bg_color = ImColor(60,60,60);
+    //        ImU32 node_bg_color = (node_hovered_in_list == id || node_hovered_in_scene == id || (node_hovered_in_list == -1 && graph->active_node == id)) ? ImColor(75,75,75) : ImColor(60,60,60);
+    draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
+    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f);
+
+    ImVec2 m = io.MousePos;                         // Mouse coords
+    float  r = NODE_SLOT_RADIUS * NODE_SLOT_RADIUS; // Radius sqyared
+
+    for (int slot_idx = 0; slot_idx < inputs; slot_idx++) {
+        ImVec2 p = offset + get_input_slot_position(slot_idx) - circle_offset;
+        ImVec2 d = p - m;
+        draw_list->AddCircleFilled(p, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+    }
+    for (int slot_idx = 0; slot_idx < outputs; slot_idx++) {
+        ImVec2 p = offset + get_output_slot_position(slot_idx) - circle_offset;
+        ImVec2 d = p - m;
+        draw_list->AddCircleFilled(p, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+    }
+
+
+    ImGui::PopID();
+}
+void draw(graph_t *graph, const xtcore::Scene *scene)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
     ImVector<link_t*> *links = &(graph->links);
@@ -199,7 +263,6 @@ void draw_graph(graph_t *graph, link_t *link)
     ImGui::BeginGroup();
 
     // Create our child canvas
-    ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, (ImVec4)ImColor(60,60,70,200));
@@ -273,9 +336,9 @@ void draw_graph(graph_t *graph, link_t *link)
         }
         else
         {
-//            if (ImGui::MenuItem("Add")) {
-//             nodes->push_back(node_t(nodes->size, "New node", scene_pos, 0.5f, ImColor(100,100,200), 2, 5));
-//            }
+            if (ImGui::MenuItem("Add Camera")) {
+               build(graph, scene);
+            }
         }
         ImGui::EndPopup();
     }
@@ -292,3 +355,108 @@ void draw_graph(graph_t *graph, link_t *link)
     ImGui::EndGroup();
 
 }
+
+void build(graph_t *graph, const xtcore::Scene *scene)
+{
+    int id = 0;
+
+    if (!graph || !scene) return;
+
+    graph->clear();
+
+
+    std::map<HASH_UINT64, int> mat, geo;
+
+    int x = 0, y = 0;
+    // Cameras
+    {
+        const float interval = 300.f;
+        auto et = scene->m_cameras.end();
+        y = -interval * scene->m_cameras.size() / 2;
+        for (auto it = scene->m_cameras.begin(); it != et; ++it) {
+            node_cam_t *node = new node_cam_t;
+            node->inputs  = 0;
+            node->outputs = 0;
+            node->id   = id++;
+            node->name = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph->nodes.push_back(node);
+            y += interval;
+        }
+    }
+    x = 1000;
+    // Materials
+    {
+        const float interval = 400.f;
+        auto et = scene->m_materials.end();
+        y = -interval * scene->m_materials.size() / 2;
+        for (auto it = scene->m_materials.begin(); it != et; ++it) {
+            node_mat_t *node = new node_mat_t;
+            node->inputs  = 1;
+            node->outputs = 0;
+            node->id   = id++;
+            node->name = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph->nodes.push_back(node);
+            mat[node->name] = node->id;
+            y += interval;
+        }
+    }
+    x = 750;
+    // Geometry
+    {
+        const float interval = 50.f;
+        auto et = scene->m_geometry.end();
+        y = -interval * scene->m_geometry.size() / 2;
+        for (auto it = scene->m_geometry.begin(); it != et; ++it) {
+            node_geo_t *node = new node_geo_t;
+            node->inputs  = 1;
+            node->outputs = 0;
+            node->id   = id++;
+            node->name = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph->nodes.push_back(node);
+            geo[node->name] = node->id;
+            y += interval;
+        }
+    }
+    x = 500;
+    // Objects
+    {
+        const float interval = 100.f;
+        auto et = scene->m_objects.end();
+        y = -interval * scene->m_objects.size() / 2;
+        for (auto it = scene->m_objects.begin(); it != et; ++it) {
+            node_obj_t *node = new node_obj_t;
+            node->inputs  = 0;
+            node->outputs = 2;
+            node->id   = id++;
+            node->name = (*it).first;
+            node->data = (*it).second;
+            node->position = ImVec2(x, y);
+            graph->nodes.push_back(node);
+
+            link_t *link0 = new link_t;
+            link0->InputIdx  = node->id;
+            link0->OutputIdx = geo[node->data->geometry];
+            link0->InputSlot = 0;
+            link0->OutputSlot = 0;
+            graph->links.push_back(link0);
+
+            link_t *link1 = new link_t;
+            link1->InputIdx  = node->id;
+            link1->OutputIdx = mat[node->data->material];
+            link1->InputSlot = 1;
+            link1->OutputSlot = 0;
+            graph->links.push_back(link1);
+
+            y += interval;
+        }
+    }
+}
+
+    } /* namespace graph */
+} /* namespace gui */
