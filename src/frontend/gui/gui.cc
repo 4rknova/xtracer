@@ -640,16 +640,12 @@ void panel_scene(workspace_t *ws)
     float thumb_w = (aspect < 1.f ? res : (res / aspect));
     float thumb_h = (aspect > 1.f ? res : (res * aspect));
 
-    ImGui::Columns(2,"ID_SCED",false);
-    ImGui::SetColumnWidth(-1,res + 20);
+    gui::graph::draw(&(ws->graph), &(ws->context.scene));
+    ImGui::SetCursorScreenPos(ImVec2(44,27));
     ImGui::BeginChild("LST_PREVIEW", ImVec2(res + 20, res + 20), false);
     ImGui::SetCursorPos(ImVec2(3 + (res - thumb_w) / 2, 3 + (res - thumb_h) / 2));
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
     ImGui::EndChild();
-    ImGui::NextColumn();
-    gui::graph::link_t link;
-    gui::graph::draw(&(ws->graph), &(ws->context.scene));
-    ImGui::Columns(1);
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)

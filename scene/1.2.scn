@@ -28,12 +28,6 @@ geometry = {
             scale  = vec3(10,10,10)
         }
     }
-
-    light = {
-        type     = sphere
-        position = vec3(0,0,0)
-        radius   = 1
-    }
 }
 
 material = {

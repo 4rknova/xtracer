@@ -14,7 +14,7 @@
 
 #define INVALID_ID          ( -1)
 #define NODE_SLOT_RADIUS    (5.f)
-#define NODE_WINDOW_PADDING ImVec2(8.f,8.f)
+#define NODE_WINDOW_PADDING ImVec2(10.f,10.f)
 
 namespace gui {
     namespace graph {
@@ -24,6 +24,7 @@ struct node_t
     int         id;
     HASH_UINT64 name;
     ImVec2      position;
+    ImVec2      size;
     size_t      inputs;
     size_t      outputs;
 
@@ -32,7 +33,6 @@ struct node_t
 
     ImVec2 get_input_slot_position(int slot_no) const;
     ImVec2 get_output_slot_position(int slot_no) const;
-    ImVec2 get_size() const;
 
     virtual void draw_properties() = 0;
 

@@ -2,7 +2,7 @@ title = Conference Room
 descr = Conference Room
 versn = 0.5
 
-data = data
+data = data/graphics.cs.williams.edu
 
 camera = {
     default  = {

@@ -135,24 +135,26 @@ void node_mat_t::draw_properties()
 void node_geo_t::draw_properties()
 {
     ImGui::Text("Geometry.%s", xtcore::pool::str::get(name));
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
+    ImGui::Text("Placeholder");
 }
 
 ImVec2 node_t::get_input_slot_position(int slot_no) const
 {
-    ImVec2 sz = get_size();
-    return ImVec2(position.x, position.y + sz.y * ((float)slot_no+1) / ((float)inputs+1));
+    float seg = size.y / inputs;
+    return position + ImVec2(-NODE_SLOT_RADIUS, seg * (slot_no + 0.5f));
 }
 
 ImVec2 node_t::get_output_slot_position(int slot_no) const
 {
-    ImVec2 sz = get_size();
-    return ImVec2(position.x + sz.x - 1, position.y + sz.y * ((float)slot_no+1) / ((float)outputs+1));
-}
-
-ImVec2 node_t::get_size() const
-{
-    ImVec2 p = NODE_WINDOW_PADDING;
-    return ImGui::GetItemRectSize() + p + p;
+    float seg = size.y / outputs;
+    return position + ImVec2(NODE_SLOT_RADIUS + size.x, seg * (slot_no + 0.5f));
 }
 
 link_t::link_t(int input_idx, int input_slot, int output_idx, int output_slot)
@@ -205,47 +207,36 @@ void node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, in
 
     // Save the size of what we have emitted and whether any of the widgets are being used
     bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
-    ImVec2 sz = get_size();
-    ImVec2 node_rect_max = node_rect_min + sz;
+    size = ImGui::GetItemRectSize() + NODE_WINDOW_PADDING + NODE_WINDOW_PADDING;
+    ImVec2 node_rect_max = node_rect_min + size;
 
     // Display node box
     draw_list->ChannelsSetCurrent(0); // Background
     ImGui::SetCursorScreenPos(node_rect_min);
-    ImGui::InvisibleButton("node", sz);
+    ImGui::InvisibleButton("node", size);
 
     ImGuiIO &io = ImGui::GetIO();
-    /* if (ImGui::IsItemHovered())
-    {
-        node_hovered_in_scene = id;
-        open_context_menu |= ImGui::IsMouseClicked(1);
-    }
-    */
+
+    ImU32 node_bg_color = ImGui::IsItemHovered() ? ImColor(65,65,65) : ImColor(60,60,60);
+
     bool node_moving_active = ImGui::IsItemActive();
-    //        if (node_widgets_active || node_moving_active) graph->active_node = id;
     if (node_moving_active && ImGui::IsMouseDragging(0)) position = position + ImGui::GetIO().MouseDelta;
 
-    ImU32 node_bg_color = ImColor(60,60,60);
-    //        ImU32 node_bg_color = (node_hovered_in_list == id || node_hovered_in_scene == id || (node_hovered_in_list == -1 && graph->active_node == id)) ? ImColor(75,75,75) : ImColor(60,60,60);
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
     draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f);
 
-    ImVec2 m = io.MousePos;                         // Mouse coords
-    float  r = NODE_SLOT_RADIUS * NODE_SLOT_RADIUS; // Radius sqyared
-
-    for (int slot_idx = 0; slot_idx < inputs; slot_idx++) {
-        ImVec2 p = offset + get_input_slot_position(slot_idx) - circle_offset;
-        ImVec2 d = p - m;
-        draw_list->AddCircleFilled(p, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+    for (int slot_idx = 0; slot_idx < inputs; ++slot_idx) {
+        draw_list->AddCircleFilled(offset + get_input_slot_position(slot_idx)
+                                 , NODE_SLOT_RADIUS, ImColor(150,150,150,150));
     }
-    for (int slot_idx = 0; slot_idx < outputs; slot_idx++) {
-        ImVec2 p = offset + get_output_slot_position(slot_idx) - circle_offset;
-        ImVec2 d = p - m;
-        draw_list->AddCircleFilled(p, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+    for (int slot_idx = 0; slot_idx < outputs; ++slot_idx) {
+        draw_list->AddCircleFilled(offset + get_output_slot_position(slot_idx)
+                                 , NODE_SLOT_RADIUS, ImColor(150,150,150,150));
     }
-
 
     ImGui::PopID();
 }
+
 void draw(graph_t *graph, const xtcore::Scene *scene)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
@@ -286,7 +277,12 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
             draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR);
     }
 
-    ImVec2 circle_offset = ImVec2(NODE_SLOT_RADIUS / 2 + 4, 0);
+    ImVec2 circle_offset = ImVec2(NODE_SLOT_RADIUS / 2, 0);
+
+    // Display nodes
+    for (auto it = nodes->begin(); it != nodes->end(); ++it) {
+        (*it)->draw(draw_list, offset, circle_offset, node_hovered_in_list, node_hovered_in_scene);
+    }
 
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
@@ -295,15 +291,9 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
         link_t* link     = links->Data[link_idx];
         node_t* node_inp = nodes->Data[link->InputIdx];
         node_t* node_out = nodes->Data[link->OutputIdx];
-        ImVec2 p1 = offset + node_inp->get_output_slot_position(link->InputSlot) + circle_offset;
-        ImVec2 p2 = offset + node_out->get_input_slot_position(link->OutputSlot) - circle_offset;
-        draw_list->AddBezierCurve(p1, p1+ImVec2(+50,0), p2+ImVec2(-50,0), p2, ImColor(200,200,100), 3.0f);
-    }
-
-    // Display nodes
-    for (auto it = nodes->begin(); it != nodes->end(); ++it)
-    {
-        (*it)->draw(draw_list, offset, circle_offset, node_hovered_in_list, node_hovered_in_scene);
+        ImVec2 p1 = offset + node_out->get_input_slot_position(link->OutputSlot);
+        ImVec2 p2 = offset + node_inp->get_output_slot_position(link->InputSlot);
+        draw_list->AddBezierCurve(p1, p1+ImVec2(-50,0), p2+ImVec2(50,0), p2, ImColor(200,200,100), 3.0f);
     }
     draw_list->ChannelsMerge();
 
@@ -346,7 +336,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
 
     // Scrolling
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0.0f))
-        scrolling = scrolling - ImGui::GetIO().MouseDelta;
+        scrolling = scrolling + ImGui::GetIO().MouseDelta;
 
     ImGui::PopItemWidth();
     ImGui::EndChild();
