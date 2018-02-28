@@ -151,12 +151,34 @@ xtcore::assets::ICamera *Scene::get_camera(HASH_UINT64 id)
 	return 0;
 }
 
+void Scene::build()
+{
+    static_geometry.clear();
+
+    auto it = m_objects.begin();
+    auto et = m_objects.end();
+
+    for (; it != et; ++it) {
+        geonode_t n;
+        n.id   = (*it).first;
+        n.data = m_geometry[(*it).second->geometry];
+        n.data->calc_aabb();
+        static_geometry.add(n.data->aabb, n);
+    }
+
+    static_geometry.max_depth(3);
+    static_geometry.build();
+}
+
+//#define USE_SCENE_OCTREE
+
 bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, HASH_UINT64 &obj)
 {
 	IntInfo test, res;
 
 	std::map<HASH_UINT64, xtcore::assets::Object *>::iterator it;
 
+#ifndef USE_SCENE_OCTREE
 	for (it = m_objects.begin(); it != m_objects.end(); ++it) {
         xtcore::assets::Geometry *geom = m_geometry[((*it).second)->geometry];
 
@@ -167,11 +189,15 @@ bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, HASH_UINT6
 			}
 		}
 	}
-
 	// copy result to info
 	memcpy(&info, &res, sizeof(info));
 
 	return info.t != INFINITY ? true : false;
+#else
+    bool hit = static_geometry.intersection(ray, &info) != NULL;
+    obj = info.id;
+    return hit && (info.t != INFINITY);
+#endif
 }
 
 } /* namespace xtcore */

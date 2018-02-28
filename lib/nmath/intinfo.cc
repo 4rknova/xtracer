@@ -10,7 +10,7 @@ extern "C" {
 }   /* extern "C" */
 
 IntInfo::IntInfo()
-	: t(INFINITY), geometry(NULL)
+	: t(INFINITY)
 {}
 
 #endif /* __cplusplus */

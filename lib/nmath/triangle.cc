@@ -49,7 +49,6 @@ bool Triangle::intersection(const Ray &ray, IntInfo* i_info) const
 	{
 		i_info->t = t;
 		i_info->point = pos;
-		i_info->geometry = this;
 
 		// Texcoords
 		Vector2f texcoord = tc[0] * bc.x + tc[1] * bc.y + tc[2] * bc.z;

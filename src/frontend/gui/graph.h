@@ -36,7 +36,7 @@ struct node_t
 
     virtual void draw_properties() = 0;
 
-    void draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, int node_hovered_in_list, int node_hovered_in_scene);
+    bool draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset);
 };
 
 struct node_cam_t : public node_t

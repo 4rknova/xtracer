@@ -735,6 +735,7 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 		}
 	}
 
+    scene->build();
 	Log::handle().post_message("Scene loaded.");
 	return 0;
 }

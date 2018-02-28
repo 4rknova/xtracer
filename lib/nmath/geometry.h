@@ -13,10 +13,16 @@ extern "C" {
 
 enum XTCORE_GEOMETRY_TYPE
 {
-	GEOMETRY_PLANE,
-	GEOMETRY_TRIANGLE,
-	GEOMETRY_SPHERE,
-	GEOMETRY_MESH		/* For external objects that might extend geometry */
+      GEOMETRY_PLANE
+	, GEOMETRY_TRIANGLE
+	, GEOMETRY_SPHERE
+	, GEOMETRY_MESH		/* For external objects that might extend geometry */
+};
+
+enum XTCORE_GEOMETRY_LOCALITY
+{
+      XTCORE_GEOMETRY_STATIC
+    , XTCORE_GEOMETRY_DYNAMIC
 };
 
 #ifdef __cplusplus
@@ -37,7 +43,8 @@ class Geometry
         virtual Vector3f point_sample() const = 0;
         virtual Ray ray_sample() const = 0;
 
-		XTCORE_GEOMETRY_TYPE type;
+		XTCORE_GEOMETRY_TYPE     type;
+        XTCORE_GEOMETRY_LOCALITY locality;
 
 		BoundingBox3 aabb;
 		Vector2f uv_scale;

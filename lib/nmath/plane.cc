@@ -58,8 +58,6 @@ bool Plane::intersection(const Ray &ray, IntInfo* i_info) const
 		if (tv < 0.f) tv = 1.f + tv;
 
 		i_info->texcoord = Vector2f(tu, tv);
-
-		i_info->geometry = this;
 	}
 
 	return true;

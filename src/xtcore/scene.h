@@ -6,6 +6,7 @@
 
 #include <nmath/vector.h>
 #include <nmath/intinfo.h>
+#include <nsps/octree.h>
 
 #include "strpool.h"
 #include "camera.h"
@@ -30,6 +31,26 @@ struct light_t
     xtcore::assets::IMaterial *material;
 };
 
+struct geonode_t
+{
+    HASH_UINT64      id;
+    NMath::Geometry *data;
+
+    geonode_t()
+        : id(0)
+        , data(NULL)
+    {}
+
+    bool intersection(const NMath::Ray &ray, NMath::IntInfo *info) const
+    {
+        if (!data) return false;
+        bool res = data->intersection(ray, info);
+        info->id = id;
+        return res;
+    }
+};
+
+
 class Scene
 {
 public:
@@ -41,7 +62,7 @@ public:
 	~Scene();
 
 	void apply_modifiers();
-	unsigned int build();
+	void build();
 
 	const ColorRGBf &ambient();
 	void ambient(const ColorRGBf &ambient);
@@ -72,6 +93,8 @@ public:
 
 	// This will cleanup all the allocated memory
 	void release();
+
+    nsps::Octree<geonode_t> static_geometry;
 };
 
 } /* namespace xtcore */

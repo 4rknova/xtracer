@@ -18,7 +18,7 @@ class Mesh: public NMath::Geometry
 		Mesh();
 		~Mesh();
 
-		bool intersection(const Ray &ray, IntInfo* i_info) const;
+		bool intersection(const Ray &ray, IntInfo *i_info) const;
 		void calc_aabb();
         void build_octree(shape_t &shape, attrib_t &attributes);
         void build_octree(object_t &object);

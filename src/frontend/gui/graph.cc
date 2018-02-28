@@ -10,8 +10,18 @@
 #include <xtcore/mat_phong.h>
 #include <xtcore/sampler_col.h>
 #include <xtcore/sampler_tex.h>
+#include <nmath/plane.h>
+#include <nmath/triangle.h>
+#include <nmath/sphere.h>
+#include <nmesh/mesh.h>
 
 #include "graph.h"
+
+#define COL_NODE_OUTLINE ImColor(100,100,100)
+#define COL_NODE_NORMAL  ImColor( 60, 60, 60)
+#define COL_NODE_HOVERED ImColor( 75, 75, 75)
+#define COL_LINK_NORMAL  ImColor(175,175, 75)
+#define COL_LINK_HOVERED ImColor(255, 25, 40)
 
 namespace gui {
     namespace graph {
@@ -89,18 +99,9 @@ void node_mat_t::draw_properties()
     ImGui::Text("Material.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
-        case 1: {
-            ImGui::Text("Shader: Lambert");
-            break;
-        }
-        case 2: {
-            ImGui::Text("Shader: BlinnPhong");
-            break;
-        }
-        case 3: {
-            ImGui::Text("Shader: Phong");
-            break;
-        }
+        case 1: { ImGui::Text("Shader: Lambert");    break; }
+        case 2: { ImGui::Text("Shader: BlinnPhong"); break; }
+        case 3: { ImGui::Text("Shader: Phong");      break; }
     }
 
     int sz_scalar  = data->get_scalar_count();
@@ -134,15 +135,45 @@ void node_mat_t::draw_properties()
 
 void node_geo_t::draw_properties()
 {
+    int spec = 0;
+         if (dynamic_cast<NMath::Plane*>    (data)) spec = 1;
+    else if (dynamic_cast<NMath::Triangle*> (data)) spec = 2;
+    else if (dynamic_cast<NMath::Sphere*>   (data)) spec = 3;
+    else if (dynamic_cast<nmesh::Mesh*>     (data)) spec = 4;
+
     ImGui::Text("Geometry.%s", xtcore::pool::str::get(name));
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
-    ImGui::Text("Placeholder");
+
+    switch (spec) {
+        case 1: {
+            NMath::Plane *p = (NMath::Plane*)data;
+            textedit_float3("normal"  , p->normal   , 0.1);
+            textedit_double("distance", p->distance , 0.1);
+            break;
+        }
+        case 2: {
+            NMath::Triangle *p = (NMath::Triangle*)data;
+            textedit_float3("v0" , p->v[0]   , 0.1);
+            textedit_float3("v1" , p->v[1]   , 0.1);
+            textedit_float3("v2" , p->v[2]   , 0.1);
+            textedit_float3("n0" , p->n[0]   , 0.1);
+            textedit_float3("n1" , p->n[1]   , 0.1);
+            textedit_float3("n2" , p->n[2]   , 0.1);
+            textedit_float2("tc0", p->tc[0]  , 0.1);
+            textedit_float2("tc1", p->tc[1]  , 0.1);
+            textedit_float2("tc2", p->tc[2]  , 0.1);
+            break;
+        }
+        case 3: {
+            NMath::Sphere *p = (NMath::Sphere*)data;
+            textedit_float3("origin", p->origin, 0.1);
+            textedit_double("radius", p->radius, 0.1);
+            break;
+        }
+        case 4: {
+            nmesh::Mesh *p = (nmesh::Mesh*)data;
+            break;
+        }
+    }
 }
 
 ImVec2 node_t::get_input_slot_position(int slot_no) const
@@ -192,13 +223,13 @@ void graph_t::clear()
     links.clear();
 }
 
-void node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, int node_hovered_in_list, int node_hovered_in_scene)
+bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
 {
     ImGui::PushID(id);
     ImVec2 node_rect_min = offset + position;
 
     // Display node contents first
-    draw_list->ChannelsSetCurrent(1); // Foreground
+    draw_list->ChannelsSetCurrent(2); // Foreground
     bool old_any_active = ImGui::IsAnyItemActive();
     ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
     ImGui::BeginGroup();
@@ -211,19 +242,21 @@ void node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, in
     ImVec2 node_rect_max = node_rect_min + size;
 
     // Display node box
-    draw_list->ChannelsSetCurrent(0); // Background
+    draw_list->ChannelsSetCurrent(1); // Background
     ImGui::SetCursorScreenPos(node_rect_min);
     ImGui::InvisibleButton("node", size);
 
     ImGuiIO &io = ImGui::GetIO();
 
-    ImU32 node_bg_color = ImGui::IsItemHovered() ? ImColor(65,65,65) : ImColor(60,60,60);
+    bool node_hovered = ImGui::IsItemHovered();
+
+    ImU32 node_bg_color = node_hovered ? COL_NODE_NORMAL : COL_NODE_HOVERED;
 
     bool node_moving_active = ImGui::IsItemActive();
     if (node_moving_active && ImGui::IsMouseDragging(0)) position = position + ImGui::GetIO().MouseDelta;
 
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
-    draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f);
+    draw_list->AddRect(node_rect_min, node_rect_max, COL_NODE_OUTLINE, 4.0f);
 
     for (int slot_idx = 0; slot_idx < inputs; ++slot_idx) {
         draw_list->AddCircleFilled(offset + get_input_slot_position(slot_idx)
@@ -235,6 +268,8 @@ void node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, in
     }
 
     ImGui::PopID();
+
+    return node_hovered;
 }
 
 void draw(graph_t *graph, const xtcore::Scene *scene)
@@ -247,8 +282,6 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
 
     // Draw a list of nodes on the left side
     bool open_context_menu = false;
-    int node_hovered_in_list = -1;
-    int node_hovered_in_scene = -1;
 
     ImGui::SameLine();
     ImGui::BeginGroup();
@@ -262,7 +295,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
 
     ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSplit(2);
+    draw_list->ChannelsSplit(3);
 
     // Display grid
     {
@@ -280,12 +313,16 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     ImVec2 circle_offset = ImVec2(NODE_SLOT_RADIUS / 2, 0);
 
     // Display nodes
+    int hovered_id = INVALID_ID;
+
     for (auto it = nodes->begin(); it != nodes->end(); ++it) {
-        (*it)->draw(draw_list, offset, circle_offset, node_hovered_in_list, node_hovered_in_scene);
+        bool hovered = (*it)->draw(draw_list, offset, circle_offset);
+        if (hovered) hovered_id = (*it)->id;
     }
 
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
+
     for (int link_idx = 0; link_idx < links->size(); link_idx++)
     {
         link_t* link     = links->Data[link_idx];
@@ -293,21 +330,22 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
         node_t* node_out = nodes->Data[link->OutputIdx];
         ImVec2 p1 = offset + node_out->get_input_slot_position(link->OutputSlot);
         ImVec2 p2 = offset + node_inp->get_output_slot_position(link->InputSlot);
-        draw_list->AddBezierCurve(p1, p1+ImVec2(-50,0), p2+ImVec2(50,0), p2, ImColor(200,200,100), 3.0f);
+
+        bool is_linked_item_hovered = (node_inp->id == hovered_id) || (node_out->id == hovered_id);
+
+        ImColor col = is_linked_item_hovered ? COL_LINK_HOVERED : COL_LINK_NORMAL;
+
+        draw_list->AddBezierCurve(p1, p1+ImVec2(-50,0), p2+ImVec2(50,0), p2, col, 3.0f);
     }
     draw_list->ChannelsMerge();
 
-    // Open context menu
     if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(1))
     {
-        graph->active_node = node_hovered_in_list = node_hovered_in_scene = -1;
         open_context_menu = true;
     }
     if (open_context_menu)
     {
         ImGui::OpenPopup("context_menu");
-        if (node_hovered_in_list  != -1) graph->active_node = node_hovered_in_list;
-        if (node_hovered_in_scene != -1) graph->active_node = node_hovered_in_scene;
     }
 
     // Draw context menu
@@ -397,7 +435,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     x = 750;
     // Geometry
     {
-        const float interval = 50.f;
+        const float interval = 200.f;
         auto et = scene->m_geometry.end();
         y = -interval * scene->m_geometry.size() / 2;
         for (auto it = scene->m_geometry.begin(); it != et; ++it) {

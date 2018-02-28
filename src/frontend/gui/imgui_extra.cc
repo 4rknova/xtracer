@@ -17,12 +17,21 @@ void slider_int(const char *name, size_t &val, size_t a, size_t b)
     val = tmp;
 }
 
-void textedit_float(const char *name, float  &val, float step, float lim_min, float lim_max)
+void textedit_float(const char *name, float &val, float step, float lim_min, float lim_max)
 {
     float tmp = val;
     if (ImGui::InputFloat(name, &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
         CLAMP(tmp, lim_min, lim_max);
         val = tmp;
+    }
+}
+
+void textedit_double(const char *name, double &val, float step, float lim_min, float lim_max)
+{
+    float tmp = (float)val;
+    if (ImGui::InputFloat(name, &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        CLAMP(tmp, lim_min, lim_max);
+        val = (double)tmp;
     }
 }
 
@@ -35,7 +44,21 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
     }
 }
 
-void textedit_float3 (const char *name, NMath::Vector3f &vec, float step)
+void textedit_float2(const char *name, NMath::Vector2f &vec, float step)
+{
+    float x = vec.x;
+    float y = vec.y;
+
+    std::string nx(name); nx.append(".x");
+    std::string ny(name); ny.append(".y");
+
+    ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
+
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x;
+    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
+}
+
+void textedit_float3(const char *name, NMath::Vector3f &vec, float step)
 {
     float x = vec.x;
     float y = vec.y;

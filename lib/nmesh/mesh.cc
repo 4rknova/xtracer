@@ -18,7 +18,9 @@ bool Mesh::intersection(const Ray &ray, IntInfo* i_info) const
 }
 
 void Mesh::calc_aabb()
-{}
+{
+    aabb = m_octree.bbox();
+}
 
 void Mesh::build_octree(shape_t &shape, attrib_t &attributes)
 {
@@ -57,6 +59,7 @@ void Mesh::build_octree(shape_t &shape, attrib_t &attributes)
     m_octree.max_items_per_node(LIMITS_MAX_ITEMS_PER_NODE);
     m_octree.max_depth(LIMITS_MAX_DEPTH);
     m_octree.build();
+    aabb = m_octree.bbox();
 }
 
 void Mesh::build_octree(object_t &object)
@@ -101,6 +104,7 @@ void Mesh::build_octree(object_t &object)
 	m_octree.max_items_per_node(LIMITS_MAX_ITEMS_PER_NODE);
 	m_octree.max_depth(LIMITS_MAX_DEPTH);
 	m_octree.build();
+    aabb = m_octree.bbox();
 }
 
 NMath::Vector3f Mesh::point_sample() const

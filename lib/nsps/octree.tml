@@ -112,7 +112,7 @@ void Octree<T>::add(const BoundingBox3 &aabb, const T &data)
 template <typename T>
 BoundingBox3 Octree<T>::bbox()
 {
-    return m_root.aabb;
+    return m_root->aabb;
 }
 
 template <typename T>
