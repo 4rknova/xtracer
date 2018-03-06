@@ -404,6 +404,9 @@ void mm_zoom(workspace_t *ws) {
 
 void mm_dialog_load(state_t *state, bool &is_active)
 {
+    static bool needs_refreshing = true;
+    static util::filesystem::fsvec fsv;
+
     if (!is_active) return;
 
     ImGui::SetNextWindowPos(ImVec2(1.,21.), ImGuiSetCond_Appearing);
@@ -415,8 +418,11 @@ void mm_dialog_load(state_t *state, bool &is_active)
 
 		if (filepath[0] == 0) filepath[0] = '.';
 
-		util::filesystem::fsvec fsv;
-        util::filesystem::ls(fsv, filepath);
+
+        if (needs_refreshing) {
+            util::filesystem::ls(fsv, filepath);
+            needs_refreshing = false;
+        }
 
 		bool valid_file = true;
 
@@ -433,15 +439,26 @@ void mm_dialog_load(state_t *state, bool &is_active)
 		}
 
         ImGui::SameLine();
-		ImGui::InputText("File", filepath, maxlength);
+		if (ImGui::InputText("File", filepath, maxlength, ImGuiInputTextFlags_EnterReturnsTrue)) {
+            needs_refreshing = true;
+        }
 
         ImGui::BeginChild("LST_FS", ImVec2(450, 250), true);
         for (auto f : fsv) {
             bool is_dir = (f.type == util::filesystem::FS_ENTRY_TYPE_DIRECTORY);
             if (is_dir) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5,0.5,0.5,1));
+
+            bool is_parent     = (f.type == util::filesystem::FS_ENTRY_TYPE_SPECIAL_DIR_PARENT);
+            bool is_directory  = (f.type == util::filesystem::FS_ENTRY_TYPE_DIRECTORY);
+            bool is_scene_file = util::filesystem::has_extension(&f, "scn");
+            if (!is_parent && !is_directory && !is_scene_file) continue;
+
             if (ImGui::Selectable(f.name.c_str(), false)) {
-                strncpy(filepath, f.path.c_str(), f.path.size());
+                size_t m = std::string::npos;
+                if (f.type == util::filesystem::FS_ENTRY_TYPE_SPECIAL_DIR_PARENT) m = f.path.find_last_of("/");
+                strncpy(filepath, f.path.c_str(), MIN(m, f.path.size()));
                 if (!(is_dir)) valid_file = true;
+                needs_refreshing = true;
             }
             if (is_dir) ImGui::PopStyleColor();
         }
