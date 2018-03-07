@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <limits.h>
 #include <xtcore/cam_perspective.h>
 #include <xtcore/tile.h>
 #include <xtcore/log.h>
@@ -404,6 +406,7 @@ void mm_zoom(workspace_t *ws) {
 
 void mm_dialog_load(state_t *state, bool &is_active)
 {
+	static bool valid_file = false;
     static bool needs_refreshing = true;
     static util::filesystem::fsvec fsv;
 
@@ -413,18 +416,25 @@ void mm_dialog_load(state_t *state, bool &is_active)
     ImGui::OpenPopup("Load");
 	if (ImGui::BeginPopupModal("Load", 0, WIN_FLAGS_SET_0)) {
 
-        const int maxlength = 4096;
-		static char filepath[maxlength];
+        const int maxlength = PATH_MAX;
+		static char *filepath = 0;
 
-		if (filepath[0] == 0) filepath[0] = '.';
+        if (!filepath) {
+            filepath = (char*)malloc(maxlength);
+            memset(filepath, 0, maxlength);
+        }
+
+		if (filepath[0] == 0) {
+            filepath[0] = '.';
+            filepath[1] = 0;
+        }
 
 
         if (needs_refreshing) {
+            xtcore::Log::handle().post_debug("Fetching directory listing..");
             util::filesystem::ls(fsv, filepath);
             needs_refreshing = false;
         }
-
-		bool valid_file = true;
 
 	    if (ImGui::Button(valid_file ? "load" : "cancel", ImVec2(80,0))) {
 			if (valid_file) {
@@ -437,13 +447,14 @@ void mm_dialog_load(state_t *state, bool &is_active)
 			ImGui::CloseCurrentPopup();
 			is_active = false;
 		}
-
         ImGui::SameLine();
-		if (ImGui::InputText("File", filepath, maxlength, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        ImGui::PushItemWidth(510);
+		if (ImGui::InputText("##VAL", filepath, maxlength)) {
             needs_refreshing = true;
         }
+        ImGui::PopItemWidth();
 
-        ImGui::BeginChild("LST_FS", ImVec2(450, 250), true);
+        ImGui::BeginChild("LST_FS", ImVec2(600, 250), true);
         for (auto f : fsv) {
             bool is_dir = (f.type == util::filesystem::FS_ENTRY_TYPE_DIRECTORY);
             if (is_dir) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5,0.5,0.5,1));
@@ -454,10 +465,8 @@ void mm_dialog_load(state_t *state, bool &is_active)
             if (!is_parent && !is_directory && !is_scene_file) continue;
 
             if (ImGui::Selectable(f.name.c_str(), false)) {
-                size_t m = std::string::npos;
-                if (f.type == util::filesystem::FS_ENTRY_TYPE_SPECIAL_DIR_PARENT) m = f.path.find_last_of("/");
-                strncpy(filepath, f.path.c_str(), MIN(m, f.path.size()));
-                if (!(is_dir)) valid_file = true;
+                realpath(f.path.c_str(), filepath);
+                if (!is_dir) valid_file = true;
                 needs_refreshing = true;
             }
             if (is_dir) ImGui::PopStyleColor();
@@ -537,17 +546,22 @@ void panel_log(state_t *state)
     static bool log_filter_msg = true;
     static bool log_filter_wrn = true;
     static bool log_filter_err = true;
+    static bool log_autoscroll = true;
 
     ImGui::Columns(2, "ID_LOG", false);
     ImGui::SetColumnWidth(-1, 100);
-        ImGui::BeginChild("LST_LOG_FILTERS", ImVec2(90, 125));
-        ImGui::Text(STR_FILTERS);
-        ImGui::Separator();
-        ImGui::Checkbox("debug"   , &log_filter_dbg);
-        ImGui::Checkbox("message" , &log_filter_msg);
-        ImGui::Checkbox("warning" , &log_filter_wrn);
-        ImGui::Checkbox("error"   , &log_filter_err);
-        ImGui::EndChild();
+    ImGui::BeginChild("LST_LOG_FILTERS", ImVec2(90, 125));
+    ImGui::Text(STR_FILTERS);
+    ImGui::Separator();
+    ImGui::Checkbox("debug"   , &log_filter_dbg);
+    ImGui::Checkbox("message" , &log_filter_msg);
+    ImGui::Checkbox("warning" , &log_filter_wrn);
+    ImGui::Checkbox("error"   , &log_filter_err);
+    ImGui::Separator();
+    ImGui::EndChild();
+    ImGui::NewLine();
+    ImGui::Checkbox("autoscroll"   , &log_autoscroll);
+    ImGui::NewLine();
     if (ImGui::Button("Clear", ImVec2(75,0))) { xtcore::Log::handle().clear(); }
     int line_count = 0;
     int sz = MIN(int(xtcore::Log::handle().get_size())-1, LOG_HISTORY_SIZE);
@@ -572,6 +586,7 @@ void panel_log(state_t *state)
             ImGui::TextColored(col, "%s", l.message.c_str());
             ImGui::Columns(1,"ID_LOG_CONTAINER");
         }
+        if (log_autoscroll) ImGui::SetScrollPosHere();
     }
     ImGui::EndChild();
     ImGui::Columns(1, "ID_LOG");

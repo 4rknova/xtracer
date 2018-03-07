@@ -223,7 +223,7 @@ void graph_t::clear()
     links.clear();
 }
 
-bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
+bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, node_t *selected)
 {
     ImGui::PushID(id);
     ImVec2 node_rect_min = offset + position;
@@ -233,6 +233,7 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
     bool old_any_active = ImGui::IsAnyItemActive();
     ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
     ImGui::BeginGroup();
+    //ImGui::Text("%s", xtcore::pool::str::get(name));
     draw_properties();
     ImGui::EndGroup();
 
@@ -253,7 +254,12 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
     ImU32 node_bg_color = node_hovered ? COL_NODE_NORMAL : COL_NODE_HOVERED;
 
     bool node_moving_active = ImGui::IsItemActive();
-    if (node_moving_active && ImGui::IsMouseDragging(0)) position = position + ImGui::GetIO().MouseDelta;
+    if (node_moving_active) {
+        selected = this;
+        if (ImGui::IsMouseDragging(0)) {
+            position = position + ImGui::GetIO().MouseDelta;
+        }
+    }
 
     draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f);
     draw_list->AddRect(node_rect_min, node_rect_max, COL_NODE_OUTLINE, 4.0f);
@@ -315,8 +321,9 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     // Display nodes
     int hovered_id = INVALID_ID;
 
+    static node_t *selected = 0;
     for (auto it = nodes->begin(); it != nodes->end(); ++it) {
-        bool hovered = (*it)->draw(draw_list, offset, circle_offset);
+        bool hovered = (*it)->draw(draw_list, offset, circle_offset, selected);
         if (hovered) hovered_id = (*it)->id;
     }
 
@@ -380,6 +387,14 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
+    ImGui::EndGroup();
+
+    ImGui::SetCursorScreenPos(ImVec2(44, 50) + NODE_WINDOW_PADDING);
+    ImGui::BeginGroup();
+    if (selected) {
+        printf("ok\n");
+        selected->draw_properties();
+    }
     ImGui::EndGroup();
 
 }
