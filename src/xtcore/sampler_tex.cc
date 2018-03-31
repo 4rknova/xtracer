@@ -5,7 +5,7 @@
 #include <cstdio>
 
 namespace xtcore {
-    namespace assets {
+    namespace sampler {
 
 Texture2D::Texture2D()
     : m_filtering(FILTERING_NEAREST)
@@ -50,5 +50,5 @@ void Texture2D::flip_vertical()
     nimg::transform::flip_vertical(&m_map);
 }
 
-    } /* namespace assets */
+    } /* namespace sampler */
 } /* namespace xtcore */

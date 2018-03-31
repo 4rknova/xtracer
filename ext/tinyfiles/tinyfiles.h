@@ -1,6 +1,10 @@
 /*
 	tinyfiles.h - v1.0
 
+	To create implementation (the function definitions)
+		#define TINYFILES_IMPLEMENTATION
+	in *one* C/CPP file (translation unit) that includes this file
+
 	Summary:
 		Utility header for traversing directories to apply a function on each found file.
 		Recursively finds sub-directories. Can also be used to iterate over files in a
@@ -21,7 +25,7 @@
 		{
 			tfFILE file;
 			tfReadFile( &dir, &file );
-			printf( "%s\n", file.name );
+			PRINTF( "%s\n", file.name );
 			tfDirNext( &dir );
 		}
 
@@ -30,33 +34,39 @@
 
 #if !defined( TINYFILES_H )
 
-// change to 0 to compile out any debug checks
-#define TF_DEBUG_CHECKS 0
-
-#if TF_DEBUG_CHECKS
-
-	#include <stdio.h>  // printf
-	#include <assert.h> // assert
-	#include <string.h> // strerror
-	#include <errno.h>
-	#define TF_ASSERT assert
-	
-#else
-	#define TF_ASSERT( ... )
-
-#endif // TF_DEBUG_CHECKS
-
 #define TF_WINDOWS	1
 #define TF_MAC		2
 #define TF_UNIX		3
 
 #if defined( _WIN32 )
 	#define TF_PLATFORM TF_WINDOWS
+	#if !defined( _CRT_SECURE_NO_WARNINGS )
+	#define _CRT_SECURE_NO_WARNINGS
+	#endif
 #elif defined( __APPLE__ )
 	#define TF_PLATFORM TF_MAC
 #else
 	#define TF_PLATFORM TF_UNIX
 #endif
+
+#include <string.h> // strerror, strncpy
+
+// change to 0 to compile out any debug checks
+#define TF_DEBUG_CHECKS 0
+
+#if TF_DEBUG_CHECKS
+
+	#include <stdio.h>  // PRINTF
+	#include <assert.h> // assert
+	#include <errno.h>
+	#define TF_ASSERT assert
+	
+#else
+
+	#define TF_ASSERT( ... )
+    #define PRINTF( ... )
+
+#endif // TF_DEBUG_CHECKS
 
 #define TF_MAX_PATH 1024
 #define TF_MAX_FILENAME 256
@@ -64,11 +74,14 @@
 
 struct tfFILE;
 struct tfDIR;
+struct tfFILETIME;
 typedef struct tfFILE tfFILE;
 typedef struct tfDIR tfDIR;
+typedef struct tfFILETIME tfFILETIME;
 typedef void (*tfCallback)( tfFILE* file, void* udata );
 
-// Stores the file extension in tfFILE::ext
+// Stores the file extension in tfFILE::ext, and returns a pointer to
+// tfFILE::ext
 const char* tfGetExt( tfFILE* file );
 
 // Applies a function (cb) to all files in a directory. Will recursively visit
@@ -79,7 +92,7 @@ void tfTraverse( const char* path, tfCallback cb, void* udata );
 // file contents, and instead performs more lightweight OS-specific calls.
 int tfReadFile( tfDIR* dir, tfFILE* file );
 
-// Once a tfDIR is opened, this function can be used to grab another directory
+// Once a tfDIR is opened, this function can be used to grab another file
 // from the operating system.
 void tfDirNext( tfDIR* dir );
 
@@ -89,7 +102,33 @@ void tfDirClose( tfDIR* dir );
 // Performs lightweight OS-specific call to open a file handle on a directory.
 int tfDirOpen( tfDIR* dir, const char* path );
 
+// Compares file last write times. -1 if file at path_a was modified earlier than path_b.
+// 0 if they are equal. 1 if file at path_b was modified earlier than path_a.
+int tfCompareFileTimesByPath( const char* path_a, const char* path_b );
+
+// Retrieves time file was last modified, returns 0 upon failure
+int tfGetFileTime( const char* path, tfFILETIME* time );
+
+// Compares file last write times. -1 if time_a was modified earlier than path_b.
+// 0 if they are equal. 1 if time_b was modified earlier than path_a.
+int tfCompareFileTimes( tfFILETIME* time_a, tfFILETIME* time_b );
+
+// Returns 1 of file exists, otherwise returns 0.
+int tfFileExists( const char* path );
+
+// Returns 1 if the file's extension matches the string in ext
+// Returns 0 otherwise
+int tfMatchExt( tfFILE* file, const char* ext );
+
+// Prints detected errors to stdout
+void tfDoUnitTests();
+
 #if TF_PLATFORM == TF_WINDOWS
+
+#if !defined _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#include <Windows.h>
 
 	struct tfFILE
 	{
@@ -108,11 +147,18 @@ int tfDirOpen( tfDIR* dir, const char* path );
 		HANDLE handle;
 		WIN32_FIND_DATAA fdata;
 	};
-	
-#elif TF_PLATFORM == TF_MAC || TN_PLATFORM == TN_UNIX
+
+	struct tfFILETIME
+	{
+		FILETIME time;
+	};
+
+#elif TF_PLATFORM == TF_MAC || TF_PLATFORM == TF_UNIX
 
 	#include <sys/stat.h>
 	#include <dirent.h>
+	#include <unistd.h>
+    #include <time.h>
 
 	struct tfFILE
 	{
@@ -133,12 +179,18 @@ int tfDirOpen( tfDIR* dir, const char* path );
 		struct dirent* entry;
 	};
 
+	struct tfFILETIME
+	{
+		time_t time;
+	};
+
 #endif
 
 #define TINYFILES_H
 #endif
 
-#ifdef TINYFILES_IMPL
+#ifdef TINYFILES_IMPLEMENTATION
+#undef TINYFILES_IMPLEMENTATION
 
 #define tfSafeStrCpy( dst, src, n, max ) tfSafeStrCopy_internal( dst, src, n, max, __FILE__, __LINE__ )
 static int tfSafeStrCopy_internal( char* dst, const char* src, int n, int max, const char* file, int line )
@@ -151,13 +203,11 @@ static int tfSafeStrCopy_internal( char* dst, const char* src, int n, int max, c
 		if ( n >= max )
 		{
 			if ( !TF_DEBUG_CHECKS ) break;
-            /*
-			printf( "ERROR: String \"%s\" too long to copy on line %d in file %s (max length of %d).\n"
+			PRINTF( "ERROR: String \"%s\" too long to copy on line %d in file %s (max length of %d).\n"
 				, original
 				, line
 				, file
 				, max );
-            */
 			TF_ASSERT( 0 );
 		}
 
@@ -205,6 +255,12 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 	tfDirClose( &dir );
 }
 
+int tfMatchExt( tfFILE* file, const char* ext )
+{
+	if (*ext == '.') ++ext;
+	return !strcmp( file->ext, ext );
+}
+
 #if TF_PLATFORM == TF_WINDOWS
 
 	int tfReadFile( tfDIR* dir, tfFILE* file )
@@ -224,7 +280,8 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 		tfSafeStrCpy( fname, dname, 0, TF_MAX_FILENAME );
 		tfSafeStrCpy( fpath, fname, n - 1, TF_MAX_PATH );
 
-		file->size = ((size_t)dir->fdata.nFileSizeHigh * ((size_t)MAXDWORD + 1)) + (size_t)dir->fdata.nFileSizeLow;
+		size_t max_dword = MAXDWORD;
+		file->size = ((size_t)dir->fdata.nFileSizeHigh * (max_dword + 1)) + (size_t)dir->fdata.nFileSizeLow;
 		tfGetExt( file );
 
 		file->is_dir = !!(dir->fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
@@ -262,7 +319,7 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 
 		if ( dir->handle == INVALID_HANDLE_VALUE )
 		{
-			//printf( "ERROR: Failed to open directory (%s): %s.\n", path, strerror( errno ) );
+			PRINTF( "ERROR: Failed to open directory (%s): %s.\n", path, strerror( errno ) );
 			tfDirClose( dir );
 			TF_ASSERT( 0 );
 			return 0;
@@ -273,7 +330,42 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 		return 1;
 	}
 
-#elif TF_PLATFORM == TF_MAC || TN_PLATFORM == TN_UNIX
+	int tfCompareFileTimesByPath( const char* path_a, const char* path_b )
+	{
+		FILETIME time_a = { 0 };
+		FILETIME time_b = { 0 };
+		WIN32_FILE_ATTRIBUTE_DATA data;
+
+		if ( GetFileAttributesExA( path_a, GetFileExInfoStandard, &data ) ) time_a = data.ftLastWriteTime;
+		if ( GetFileAttributesExA( path_b, GetFileExInfoStandard, &data ) ) time_b = data.ftLastWriteTime;
+		return CompareFileTime( &time_a, &time_b );
+	}
+
+	int tfGetFileTime( const char* path, tfFILETIME* time )
+	{
+		FILETIME initialized_to_zero = { 0 };
+		time->time = initialized_to_zero;
+		WIN32_FILE_ATTRIBUTE_DATA data;
+		if ( GetFileAttributesExA( path, GetFileExInfoStandard, &data ) )
+		{
+			time->time = data.ftLastWriteTime;
+			return 1;
+		}
+		return 0;
+	}
+
+	int tfCompareFileTimes( tfFILETIME* time_a, tfFILETIME* time_b )
+	{
+		return CompareFileTime( &time_a->time, &time_b->time );
+	}
+
+	int tfFileExists( const char* path )
+	{
+		WIN32_FILE_ATTRIBUTE_DATA unused;
+		return GetFileAttributesExA( path, GetFileExInfoStandard, &unused );
+	}
+
+#elif TF_PLATFORM == TF_MAC || TF_PLATFORM == TF_UNIX
 
 	int tfReadFile( tfDIR* dir, tfFILE* file )
 	{
@@ -327,7 +419,7 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 
 		if ( !dir->dir )
 		{
-			//printf( "ERROR: Failed to open directory (%s): %s.\n", path, strerror( errno ) );
+			PRINTF( "ERROR: Failed to open directory (%s): %s.\n", path, strerror( errno ) );
 			tfDirClose( dir );
 			TF_ASSERT( 0 );
 			return 0;
@@ -340,25 +432,53 @@ void tfTraverse( const char* path, tfCallback cb, void* udata )
 		return 1;
 	}
 
-#endif // TN_PLATFORM
+	// Warning : untested code! (let me know if it breaks)
+	int tfCompareFileTimesByPath( const char* path_a, const char* path_b )
+	{
+		time_t time_a;
+		time_t time_b;
+		struct stat info;
+		if ( stat( path_a, &info ) ) return 0;
+		time_a = info.st_mtime;
+		if ( stat( path_b, &info ) ) return 0;
+		time_b = info.st_mtime;
+		return (int)difftime( time_a, time_b );
+	}
+
+	// Warning : untested code! (let me know if it breaks)
+	int tfGetFileTime( const char* path, tfFILETIME* time )
+	{
+		struct stat info;
+		if ( stat( path, &info ) ) return 0;
+		time->time = info.st_mtime;
+		return 1;
+	}
+
+	// Warning : untested code! (let me know if it breaks)
+	int tfCompareFileTimes( tfFILETIME* time_a, tfFILETIME* time_b )
+	{
+		return (int)difftime( time_a->time, time_b->time );
+	}
+
+	// Warning : untested code! (let me know if it breaks)
+	int tfFileExists( const char* path )
+	{
+		return access( path, F_OK ) != -1;
+	}
+
+#endif // TF_PLATFORM
 
 #endif
 
 /*
-	zlib license:
-	
-	Copyright (c) 2016 Randy Gaul http://www.randygaul.net
-	This software is provided 'as-is', without any express or implied warranty.
-	In no event will the authors be held liable for any damages arising from
-	the use of this software.
-	Permission is granted to anyone to use this software for any purpose,
-	including commercial applications, and to alter it and redistribute it
-	freely, subject to the following restrictions:
-	  1. The origin of this software must not be misrepresented; you must not
-	     claim that you wrote the original software. If you use this software
-	     in a product, an acknowledgment in the product documentation would be
-	     appreciated but is not required.
-	  2. Altered source versions must be plainly marked as such, and must not
-	     be misrepresented as being the original software.
-	  3. This notice may not be removed or altered from any source distribution.
+	This is free and unencumbered software released into the public domain.
+
+	Our intent is that anyone is free to copy and use this software,
+	for any purpose, in any form, and by any means.
+
+	The authors dedicate any and all copyright interest in the software
+	to the public domain, at their own expense for the betterment of mankind.
+
+	The software is provided "as is", without any kind of warranty, including
+	any implied warranty. If it breaks, you get to keep both pieces.
 */

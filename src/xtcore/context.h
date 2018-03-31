@@ -7,6 +7,9 @@
 #include "tile.h"
 #include "aa.h"
 
+using nimg::Pixmap;
+using nimg::ColorRGBf;
+
 namespace xtcore {
 	namespace render {
 
@@ -48,7 +51,7 @@ struct context_t
 **         and copies the data to the
 **         pixmap.
 */
-void assemble(nimg::Pixmap &pixmap, const context_t &context);
+void assemble(Pixmap &pixmap, const context_t &context);
 
 	} /* namespace render */
 } /* namespace xtcore */

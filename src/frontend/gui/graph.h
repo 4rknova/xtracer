@@ -7,7 +7,7 @@
 #include <xtcore/scene.h>
 #include <xtcore/camera.h>
 #include <xtcore/object.h>
-#include <xtcore/geometry.h>
+#include <xtcore/math/surface.h>
 #include <xtcore/material.h>
 
 #include "imgui_extra.h"
@@ -41,25 +41,25 @@ struct node_t
 
 struct node_cam_t : public node_t
 {
-    xtcore::assets::ICamera *data;
+    xtcore::asset::ICamera *data;
     virtual void draw_properties();
 };
 
 struct node_obj_t : public node_t
 {
-    xtcore::assets::Object *data;
+    xtcore::asset::Object *data;
     virtual void draw_properties();
 };
 
 struct node_mat_t : public node_t
 {
-    xtcore::assets::IMaterial *data;
+    xtcore::asset::IMaterial *data;
     virtual void draw_properties();
 };
 
 struct node_geo_t : public node_t
 {
-    xtcore::assets::Geometry *data;
+    xtcore::asset::ISurface *data;
     virtual void draw_properties();
 };
 
@@ -84,7 +84,7 @@ struct graph_t {
 };
 
 void build (graph_t *graph, const xtcore::Scene *scene);
-void draw  (graph_t *graph, const xtcore::Scene *scene);
+void draw  (graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t *node);
 
     } /* namespace graph */
 } /* namespace gui */

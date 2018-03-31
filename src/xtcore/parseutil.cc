@@ -3,28 +3,28 @@
 
 #include <ncf/util.h>
 
-#include <nmath/plane.h>
-#include <nmath/sphere.h>
-#include <nmath/triangle.h>
-#include <nmesh/mesh.h>
 #include <nmesh/transform.h>
 #include <nmesh/invnormals.h>
 #include <nmesh/icosahedron.h>
 #include <nimg/checkerboard.h>
 #include <nimg/transform.h>
 
+#include "math/plane.h"
+#include "math/sphere.h"
+#include "math/triangle.h"
+#include "mesh.h"
 #include "proto.h"
 #include "obj.h"
 
 #include "strpool.h"
 #include "log.h"
-#include "cam_perspective.h"
-#include "cam_ods.h"
-#include "cam_erp.h"
-#include "cam_cubemap.h"
-#include "mat_lambert.h"
-#include "mat_phong.h"
-#include "mat_blinnphong.h"
+#include "camera/perspective.h"
+#include "camera/ods.h"
+#include "camera/erp.h"
+#include "camera/cubemap.h"
+#include "material/lambert.h"
+#include "material/phong.h"
+#include "material/blinnphong.h"
 
 #include "extrude.h"
 
@@ -140,11 +140,11 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
-xtcore::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
+xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    xtcore::assets::Cubemap *data = new xtcore::assets::Cubemap;
+    xtcore::sampler::Cubemap *data = new xtcore::sampler::Cubemap;
 
     ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
 
@@ -159,24 +159,24 @@ xtcore::assets::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF 
         std::string base, file, fsource = source;
     	ncf::util::path_comp(fsource, base, file);
 
-        data->load((base + posx).c_str(), xtcore::assets::CUBEMAP_FACE_RIGHT);
-        data->load((base + posy).c_str(), xtcore::assets::CUBEMAP_FACE_TOP);
-        data->load((base + posz).c_str(), xtcore::assets::CUBEMAP_FACE_FRONT);
-        data->load((base + negx).c_str(), xtcore::assets::CUBEMAP_FACE_LEFT);
-        data->load((base + negy).c_str(), xtcore::assets::CUBEMAP_FACE_BOTTOM);
-        data->load((base + negz).c_str(), xtcore::assets::CUBEMAP_FACE_BACK);
+        data->load((base + posx).c_str(), xtcore::sampler::CUBEMAP_FACE_RIGHT);
+        data->load((base + posy).c_str(), xtcore::sampler::CUBEMAP_FACE_TOP);
+        data->load((base + posz).c_str(), xtcore::sampler::CUBEMAP_FACE_FRONT);
+        data->load((base + negx).c_str(), xtcore::sampler::CUBEMAP_FACE_LEFT);
+        data->load((base + negy).c_str(), xtcore::sampler::CUBEMAP_FACE_BOTTOM);
+        data->load((base + negz).c_str(), xtcore::sampler::CUBEMAP_FACE_BACK);
     }
     return data;
 }
 
 
-xtcore::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    assets::ICamera *data = new (std::nothrow) CamPerspective();
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::Perspective();
 
-    CamPerspective *cam = (CamPerspective *)data;
+    xtcore::camera::Perspective *cam = (xtcore::camera::Perspective *)data;
     cam->position = deserialize_vec3(p, XTPROTO_PROP_POSITION);
     cam->target   = deserialize_vec3(p, XTPROTO_PROP_TARGET);
     cam->up       = deserialize_vec3(p, XTPROTO_PROP_UP);
@@ -187,25 +187,25 @@ xtcore::assets::ICamera *deserialize_camera_tlp(const char *source, const ncf::N
     return data;
 }
 
-xtcore::assets::ICamera *deserialize_camera_cbm(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_cbm(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    assets::ICamera *data = new (std::nothrow) CamCubemap();
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::Cubemap();
 
-    CamCubemap *cam = (CamCubemap *)data;
+    xtcore::camera::Cubemap *cam = (xtcore::camera::Cubemap *)data;
     cam->position = deserialize_vec3(p, XTPROTO_PROP_POSITION);
 
     return data;
 }
 
-xtcore::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    assets::ICamera *data = new (std::nothrow) CamODS();
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::ODS();
 
-    CamODS *cam = (CamODS *)data;
+    xtcore::camera::ODS *cam = (xtcore::camera::ODS *)data;
     cam->position    = deserialize_vec3(p, XTPROTO_PROP_POSITION);
     cam->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
     cam->ipd         = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_IPD));
@@ -213,24 +213,24 @@ xtcore::assets::ICamera *deserialize_camera_ods(const char *source, const ncf::N
     return data;
 }
 
-xtcore::assets::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    assets::ICamera *data = new (std::nothrow) CamERP();
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::ERP();
 
-    CamERP *cam = (CamERP *)data;
+    xtcore::camera::ERP *cam = (xtcore::camera::ERP *)data;
     cam->position    = deserialize_vec3(p, XTPROTO_PROP_POSITION);
     cam->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION);
 
     return data;
 }
 
-xtcore::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
-    xtcore::assets::ICamera *data = 0;
+    xtcore::asset::ICamera *data = 0;
 
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -243,11 +243,11 @@ xtcore::assets::ICamera *deserialize_camera(const char *source, const ncf::NCF *
 	return data;
 }
 
-xtcore::assets::Geometry *deserialize_geometry_mesh(const char *source, const ncf::NCF *p)
+xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtcore::assets::Geometry *data = new (std::nothrow) nmesh::Mesh;
+    xtcore::asset::ISurface *data = new (std::nothrow) xtcore::surface::Mesh;
 
     nmesh::object_t obj;
 
@@ -299,45 +299,47 @@ xtcore::assets::Geometry *deserialize_geometry_mesh(const char *source, const nc
         }
 
         if (mods->query_group(XTPROTO_EXTRUDE)) {
-            xtcore::assets::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
+            xtcore::sampler::Cubemap *cb = deserialize_cubemap(source, mods->get_group_by_name(XTPROTO_EXTRUDE));
             Log::handle().post_message("Applying modifier: extrude..");
             xtcore::auxiliary::extrude(&obj, cb);
         }
     }
 
     Log::handle().post_message("Building octree..");
-	((nmesh::Mesh *)data)->build_octree(obj);
+	((xtcore::surface::Mesh *)data)->build_octree(obj);
 
     return data;
 }
 
-xtcore::assets::Geometry *deserialize_geometry(const char *source, const ncf::NCF *p)
+xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtcore::assets::Geometry *data = 0;
+    xtcore::asset::ISurface *data = 0;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
-		data = new (std::nothrow) NMath::Plane;
-		((NMath::Plane *)data)->normal   = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
-		((NMath::Plane *)data)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+		data = new (std::nothrow) xtcore::surface::Plane;
+		((xtcore::surface::Plane *)data)->normal   = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
+		((xtcore::surface::Plane *)data)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+        printf("--\n%f,%f,%f\n", ((xtcore::surface::Plane *)data)->normal.x,   ((xtcore::surface::Plane *)data)->normal.y,((xtcore::surface::Plane *)data)->normal.z);
+        printf("%f\n", ((xtcore::surface::Plane *)data)->distance);
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
-		data = new (std::nothrow) NMath::Sphere;
-		((NMath::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-		((NMath::Sphere *)data)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
+		data = new (std::nothrow) xtcore::surface::Sphere;
+		((xtcore::surface::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+		((xtcore::surface::Sphere *)data)->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS));
 	}
     else if (!type.compare(XTPROTO_LTRL_POINT)) {
-        data = new (std::nothrow) NMath::Sphere;
-		((NMath::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-		((NMath::Sphere *)data)->radius = 0;
+        data = new (std::nothrow) xtcore::surface::Sphere;
+		((xtcore::surface::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+		((xtcore::surface::Sphere *)data)->radius = 0;
     }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
-		data = new (std::nothrow) NMath::Triangle;
+		data = new (std::nothrow) xtcore::surface::Triangle;
 
-        NMath::Triangle *tri = (NMath::Triangle *)data;
+        xtcore::surface::Triangle *tri = (xtcore::surface::Triangle *)data;
 
 		for (size_t i = 0; i < 3; ++i) {
 			ncf::NCF *vnode = p->get_group_by_name(XTPROTO_PROP_VRTXDATA);
@@ -372,34 +374,34 @@ xtcore::assets::Geometry *deserialize_geometry(const char *source, const ncf::NC
 	return data;
 }
 
-xtcore::assets::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
+xtcore::asset::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtcore::assets::MaterialLambert();
+    return new (std::nothrow) xtcore::material::Lambert();
 }
 
-xtcore::assets::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
+xtcore::asset::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtcore::assets::MaterialPhong();
+    return new (std::nothrow) xtcore::material::Phong();
 }
 
-xtcore::assets::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
+xtcore::asset::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
 {
-    return new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
+    return new (std::nothrow) xtcore::material::BlinnPhong();
 }
 
-xtcore::assets::ISampler *deserialize_rgba(const char *source, const ncf::NCF *p)
+xtcore::sampler::ISampler *deserialize_rgba(const char *source, const ncf::NCF *p)
 {
-    xtcore::assets::SolidColor *sampler = new (std::nothrow) xtcore::assets::SolidColor();
+    xtcore::sampler::SolidColor *sampler = new (std::nothrow) xtcore::sampler::SolidColor();
     nimg::ColorRGBf col = deserialize_col3(p, XTPROTO_VALUE);
-    ((xtcore::assets::SolidColor *)sampler)->set(col);
+    ((xtcore::sampler::SolidColor *)sampler)->set(col);
     return sampler;
 }
 
-xtcore::assets::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
+xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
 
-    xtcore::assets::IMaterial *data = 0;
+    xtcore::asset::IMaterial *data = 0;
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
@@ -419,7 +421,7 @@ xtcore::assets::IMaterial *deserialize_material(const char *source, const ncf::N
         for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
             ncf::NCF *entry = gsamplers->get_group_by_index(i);
 
-            xtcore::assets::ISampler *sampler = 0;
+            xtcore::sampler::ISampler *sampler = 0;
             std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
                  if (!type.compare(XTPROTO_TEXTURE)) sampler = deserialize_texture(source, entry);
@@ -439,11 +441,11 @@ xtcore::assets::IMaterial *deserialize_material(const char *source, const ncf::N
 	return data;
 }
 
-xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p)
+xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
-	xtcore::assets::Texture2D *data = new (std::nothrow) xtcore::assets::Texture2D;
+	xtcore::sampler::Texture2D *data = new (std::nothrow) xtcore::sampler::Texture2D;
 
 	std::string script_base, script_filename, fsource = source;
 	ncf::util::path_comp(fsource, script_base, script_filename);
@@ -459,9 +461,9 @@ xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NC
         return 0;
 	}
 
-  	if ( filter.empty()
-   	 || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::assets::FILTERING_NEAREST);  }
-	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtcore::assets::FILTERING_BILINEAR); }
+  	if (      filter.empty()
+      	  || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::sampler::FILTERING_NEAREST);  }
+	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtcore::sampler::FILTERING_BILINEAR); }
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
 	}
@@ -474,11 +476,11 @@ xtcore::assets::Texture2D *deserialize_texture(const char *source, const ncf::NC
     return data;
 }
 
-xtcore::assets::Object *deserialize_object(const char *source, const ncf::NCF *p)
+xtcore::asset::Object *deserialize_object(const char *source, const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
-    xtcore::assets::Object *data = new (std::nothrow) xtcore::assets::Object;
+    xtcore::asset::Object *data = new (std::nothrow) xtcore::asset::Object;
 
    	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
    	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
@@ -495,7 +497,7 @@ int create_camera(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::assets::ICamera *data = deserialize_camera(scene->m_source.c_str(), p);
+    xtcore::asset::ICamera *data = deserialize_camera(scene->m_source.c_str(), p);
     if (!data) return 1;
     scene->destroy_camera(id);
     scene->m_cameras[id] = data;
@@ -508,7 +510,7 @@ int create_material(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::assets::IMaterial *data = deserialize_material(scene->m_source.c_str(), p);
+    xtcore::asset::IMaterial *data = deserialize_material(scene->m_source.c_str(), p);
     if (!data) return 1;
     scene->destroy_material(id);
     scene->m_materials[id] = data;
@@ -521,29 +523,29 @@ int create_geometry(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::assets::Geometry *data = deserialize_geometry(scene->m_source.c_str(), p);
+    xtcore::asset::ISurface *data = deserialize_geometry(scene->m_source.c_str(), p);
     if (!data) return 1;
     scene->destroy_geometry(id);
     scene->m_geometry[id] = data;
     return 0;
 }
 
-xtcore::assets::ISampler *get_sampler(const char *name, const char *base, const char *texture, float value[3])
+xtcore::sampler::ISampler *get_sampler(const char *name, const char *base, const char *texture, float value[3])
 {
-     xtcore::assets::ISampler *sampler = 0;
+     xtcore::sampler::ISampler *sampler = 0;
      {
         if (texture && strlen(texture) > 0) {
-            sampler = new (std::nothrow) xtcore::assets::Texture2D();
+            sampler = new (std::nothrow) xtcore::sampler::Texture2D();
             std::string normalized_path = base;
             normalized_path.append(texture);
             std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
             Log::handle().post_message("loading texture %s", normalized_path.c_str());
-            ((xtcore::assets::Texture2D*)sampler)->load(normalized_path.c_str());
-            ((xtcore::assets::Texture2D*)sampler)->flip_horizontal();
+            ((xtcore::sampler::Texture2D*)sampler)->load(normalized_path.c_str());
+            ((xtcore::sampler::Texture2D*)sampler)->flip_horizontal();
         } else {
-            sampler = new (std::nothrow) xtcore::assets::SolidColor();
+            sampler = new (std::nothrow) xtcore::sampler::SolidColor();
             nimg::ColorRGBf col(value[0], value[1], value[2]);
-            ((xtcore::assets::SolidColor*)sampler)->set(col);
+            ((xtcore::sampler::SolidColor*)sampler)->set(col);
         }
 
      }
@@ -575,7 +577,7 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
         matids.push_back(id);
 
-        xtcore::assets::IMaterial *mat = new (std::nothrow) xtcore::assets::MaterialBlinnPhong();
+        xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::material::BlinnPhong();
         mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), material.texture_diffuse.c_str() , material.diffuse ));
         mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
         mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));
@@ -593,16 +595,18 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         Log::handle().post_debug("creating geometry %s", name.c_str());
 
         // Create Geometry
-        xtcore::assets::Geometry *geo = new (std::nothrow) nmesh::Mesh();
-        ((nmesh::Mesh*)geo)->build_octree(shape, obj.attributes);
-        scene->m_geometry[id] = geo;
+        xtcore::asset::ISurface *surf = new (std::nothrow) xtcore::surface::Mesh();
+        ((xtcore::surface::Mesh*)surf)->build_octree(shape, obj.attributes);
+        scene->m_geometry[id] = surf;
 
         // Create Object
-        xtcore::assets::Object *obj = new (std::nothrow) xtcore::assets::Object();
+        xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
         obj->geometry = id;
         obj->material = matids[shape.mesh.materials[0]];
         scene->m_objects[id] = obj;
-        Log::handle().post_message("creating object %s : %s", shape.name.c_str(), xtcore::pool::str::get(obj->material));
+        Log::handle().post_message("creating object %s : %s"
+                                 , shape.name.c_str()
+                                 , xtcore::pool::str::get(obj->material));
     }
 
     return 0;
@@ -614,7 +618,7 @@ int create_object(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::assets::Object *data = deserialize_object(scene->m_source.c_str(), p);
+    xtcore::asset::Object *data = deserialize_object(scene->m_source.c_str(), p);
     if (!data) return 1;
     scene->destroy_object(id);
     scene->m_objects[id] = data;

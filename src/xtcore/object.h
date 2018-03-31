@@ -4,7 +4,7 @@
 #include "strpool.h"
 
 namespace xtcore {
-    namespace assets {
+    namespace asset {
 
 class Object
 {
@@ -13,7 +13,7 @@ class Object
 	HASH_UINT64 material;
 };
 
-    } /* namespace assets */
+    } /* namespace asset */
 } /* namespace xtcore */
 
 #endif /* XTCORE_OBJECT_H_INCLUDED */

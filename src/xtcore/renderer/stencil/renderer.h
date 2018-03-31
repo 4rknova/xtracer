@@ -1,15 +1,15 @@
-#ifndef XTPLUGIN_RENDERER_STENCIL_H_INCLUDED
-#define XTPLUGIN_RENDERER_STENCIL_H_INCLUDED
+#ifndef XTCORE_RENDERER_STENCIL_H_INCLUDED
+#define XTCORE_RENDERER_STENCIL_H_INCLUDED
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
-#include <nmath/ray.h>
-#include <nmath/intinfo.h>
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include <nplatform/timer.h>
 #include <xtcore/scene.h>
 #include <xtcore/renderer.h>
+#include "math/ray.h"
+#include "math/hitrecord.h"
 
 using nimg::ColorRGBf;
 using nimg::Pixmap;
@@ -34,4 +34,4 @@ class Renderer : public xtcore::render::IRenderer
     } /* namespace renderer */
 } /* namespace xtcore */
 
-#endif /* XTPLUGIN_RENDERER_STENCIL_H_INCLUDED */
+#endif /* XTCORE_RENDERER_STENCIL_H_INCLUDED */

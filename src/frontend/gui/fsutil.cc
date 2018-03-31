@@ -1,7 +1,7 @@
 #include <cstring>
 #include <algorithm>
 
-#define TINYFILES_IMPL
+#define TINYFILES_IMPLEMENTATION
 #include <tinyfiles/tinyfiles.h>
 #include "fsutil.h"
 
@@ -49,6 +49,17 @@ int ls(fsvec &fsv, const char *path)
     );
 
     return 1;
+}
+
+bool file_exists(const char *filepath)
+{
+    bool valid_path = (tfFileExists(filepath) == 1);
+    if (!valid_path) return false;
+
+    tfDIR d;
+    bool valid_dir = tfDirOpen(&d, filepath);
+    if (valid_dir) tfDirClose(&d);
+    return valid_path && !valid_dir;
 }
 
 bool has_extension(fs_entry_t *entry, const char *extension)

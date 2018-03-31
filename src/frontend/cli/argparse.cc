@@ -1,7 +1,7 @@
 #include <cstring>
 #include <cstdio>
 #include <nmath/mutil.h>
-#include <xtcore/xtcore.h>
+#include <xtcore/log.h>
 #include "setup.h"
 #include "argdefs.h"
 #include "argparse.h"

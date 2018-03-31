@@ -4,34 +4,22 @@
 #include <ncf/util.h>
 #include <nmath/mutil.h>
 #include <nmath/vector.h>
-#include <nmath/geometry.h>
-#include <nmath/sphere.h>
-#include <nmath/plane.h>
-#include <nmath/triangle.h>
 #include <nmesh/transform.h>
 #include <nmesh/obj.h>
 #include <nmesh/structs.h>
-#include <nmesh/mesh.h>
 #include <nimg/checkerboard.h>
+#include "math/surface.h"
+#include "math/sphere.h"
+#include "math/plane.h"
+#include "math/triangle.h"
+#include "mesh.h"
 #include "proto.h"
 #include "parseutil.h"
 #include "log.h"
 #include "scene.h"
-#include "cam_perspective.h"
-#include "cam_ods.h"
-#include "cam_erp.h"
 
 using NMath::Vector2f;
 using NMath::Vector3f;
-using NMath::Geometry;
-using NMath::Plane;
-using NMath::Triangle;
-using NMath::Sphere;
-using ncf::util::path_comp;
-using ncf::util::trim;
-using ncf::util::split;
-using ncf::util::to_double;
-using ncf::util::to_bool;
 using xtcore::Log;
 
 namespace xtcore {
@@ -60,16 +48,16 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
 
-    std::map<HASH_UINT64, xtcore::assets::Object*>::iterator oit = m_objects.begin();
-    std::map<HASH_UINT64, xtcore::assets::Object*>::iterator oet = m_objects.end();
+    std::map<HASH_UINT64, xtcore::asset::Object*>::iterator oit = m_objects.begin();
+    std::map<HASH_UINT64, xtcore::asset::Object*>::iterator oet = m_objects.end();
 
     for(; oit != oet; ++oit) {
         if (!(*oit).second) continue;
 
-        std::map<HASH_UINT64, xtcore::assets::Geometry* >::iterator
+        std::map<HASH_UINT64, xtcore::asset::ISurface* >::iterator
             git = m_geometry.find((*oit).second->geometry)
           , get = m_geometry.end();
-        std::map<HASH_UINT64, xtcore::assets::IMaterial*>::iterator
+        std::map<HASH_UINT64, xtcore::asset::IMaterial*>::iterator
             mit = m_materials.find((*oit).second->material)
           , met = m_materials.end();
 
@@ -127,7 +115,7 @@ int Scene::destroy_material (HASH_UINT64 id) { return purge(m_materials, id); }
 int Scene::destroy_geometry (HASH_UINT64 id) { return purge(m_geometry , id); }
 int Scene::destroy_object   (HASH_UINT64 id) { return purge(m_objects  , id); }
 
-nimg::ColorRGBf Scene::sample_cubemap(const NMath::Vector3f &direction) const
+nimg::ColorRGBf Scene::sample_cubemap(const Vector3f &direction) const
 {
     return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBf(0,0,0);
 }
@@ -142,14 +130,16 @@ void Scene::ambient(const ColorRGBf &ambient)
 	m_ambient = ambient;
 }
 
-xtcore::assets::ICamera *Scene::get_camera(HASH_UINT64 id)
+xtcore::asset::ICamera *Scene::get_camera(HASH_UINT64 id)
 {
-    std::map<HASH_UINT64, xtcore::assets::ICamera *>::iterator et = m_cameras.end()
-                                                             , ft = m_cameras.find(id);
+    auto et = m_cameras.end()
+       , ft = m_cameras.find(id);
+
     if (ft != et) return ft->second;
 
 	return 0;
 }
+
 
 void Scene::build()
 {
@@ -172,15 +162,15 @@ void Scene::build()
 
 //#define USE_SCENE_OCTREE
 
-bool Scene::intersection(const NMath::Ray &ray, NMath::IntInfo &info, HASH_UINT64 &obj)
+bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
 {
-	IntInfo test, res;
+	HitRecord test, res;
 
-	std::map<HASH_UINT64, xtcore::assets::Object *>::iterator it;
+	std::map<HASH_UINT64, xtcore::asset::Object *>::iterator it;
 
 #ifndef USE_SCENE_OCTREE
 	for (it = m_objects.begin(); it != m_objects.end(); ++it) {
-        xtcore::assets::Geometry *geom = m_geometry[((*it).second)->geometry];
+        asset::ISurface *geom = m_geometry[((*it).second)->geometry];
 
 		if (geom && geom->intersection(ray, &test)) {
 			if(res.t > test.t) {

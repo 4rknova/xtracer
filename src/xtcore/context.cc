@@ -2,11 +2,13 @@
 
 #define XTCORE_CONTEXT_DEFAULT_WIDTH   (500)
 #define XTCORE_CONTEXT_DEFAULT_HEIGHT  (500)
+#define XTCORE_CONTEXT_DEFAULT_TILESZ  (32)
 #define XTCORE_CONTEXT_DEFAULT_THREADS (0)
 #define XTCORE_CONTEXT_DEFAULT_SAMPLES (1)
 #define XTCORE_CONTEXT_DEFAULT_AA      (1)
 #define XTCORE_CONTEXT_DEFAULT_RDEPTH  (3)
-#define XTCORE_CONTEXT_DEFAULT_TILESZ  (32)
+
+using nimg::ColorRGBAf;
 
 namespace xtcore {
     namespace render {
@@ -30,10 +32,10 @@ void context_t::init()
 context_t::context_t()
 {}
 
-void assemble(nimg::Pixmap &pixmap, const context_t &context)
+void assemble(Pixmap &pixmap, const context_t &context)
 {
     pixmap.init(context.params.width, context.params.height);
-    nimg::ColorRGBAf col;
+    ColorRGBAf col;
 
     for (size_t i = 0; i < context.tiles.size(); ++i) {
         const xtcore::render::tile_t *tile = &(context.tiles[i]);

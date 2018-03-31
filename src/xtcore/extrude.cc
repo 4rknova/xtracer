@@ -6,7 +6,7 @@
 namespace xtcore {
     namespace auxiliary {
 
-void extrude(nmesh::object_t *obj, xtcore::assets::Cubemap *cb)
+void extrude(nmesh::object_t *obj, xtcore::sampler::Cubemap *cb)
 {
     if (!obj || !cb) return;
 

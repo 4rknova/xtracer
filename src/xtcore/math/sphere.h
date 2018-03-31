@@ -1,0 +1,36 @@
+#ifndef XTCORE_SPHERE_H_INCLUDED
+#define XTCORE_SPHERE_H_INCLUDED
+
+#include <nmath/defs.h>
+#include <nmath/precision.h>
+#include <nmath/vector.h>
+#include "surface.h"
+#include "ray.h"
+
+using NMath::Vector3f;
+
+namespace xtcore {
+    namespace surface {
+
+#define XTCORE_SPHERE_DEFAULT_RADIUS 1.0
+
+class Sphere: public xtcore::asset::ISurface
+{
+    public:
+        Sphere();
+        Sphere(const Vector3f &org, scalar_t rad);
+
+		bool intersection(const Ray &ray, HitRecord* i_info) const;
+		void calc_aabb();
+
+        Vector3f point_sample() const;
+        Ray ray_sample() const;
+
+        Vector3f origin;
+        scalar_t radius;
+};
+
+    } /* namespace surface */
+} /* namespace xtcore */
+
+#endif /* XTCORE_SPHERE_H_INCLUDED */

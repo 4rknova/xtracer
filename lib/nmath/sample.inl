@@ -5,18 +5,12 @@
     #error "sample.h must be included before sample.inl"
 #endif /* NMATH_SAMPLE_H_INCLUDED */
 
-#ifdef __cplusplus
-	#include <cstdlib>
-#endif /* __cplusplus */
-
 #include "precision.h"
 #include "prng.h"
 #include "matrix.h"
 
 namespace NMath {
 	namespace Sample {
-
-#ifdef __cplusplus
 
 inline Vector3f sphere()
 {
@@ -94,8 +88,6 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 
 	return (vc * nmath_pow(vdotr, exponent)).normalized();
 }
-
-#endif /* __cplusplus */
 
 	} /* namespace Sample */
 } /* namespace NMath */

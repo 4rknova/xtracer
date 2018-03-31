@@ -6,12 +6,16 @@
 #include <nmath/precision.h>
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
-#include <nmath/plane.h>
 #include <nmath/sample.h>
+
 #include <nimg/luminance.h>
+
 #include <ncf/util.h>
+
+#include <xtcore/math/plane.h>
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
+
 #include "renderer.h"
 
 namespace xtcore {
@@ -34,7 +38,7 @@ void Renderer::render(void)
     if (!m_context) return;
 
     xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera);
+    xtcore::asset::ICamera  *cam = m_context->scene.get_camera(p->camera);
 
     if (!cam) return;
 
@@ -52,12 +56,12 @@ void Renderer::render(void)
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
             nimg::ColorRGBAf color(0,0,0,0);
-		    NMath::IntInfo info;
+		    xtcore::HitRecord info;
             HASH_UINT64 obj;
             memset(&info, 0, sizeof(info));
 
             for (float dofs = 0; dofs < p->samples; ++dofs) {
-             	NMath::Ray ray = cam->get_primary_ray(
+             	xtcore::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
                     , (float)(p->height)

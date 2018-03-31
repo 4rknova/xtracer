@@ -2,12 +2,12 @@
 #define XTCORE_EXTRUDE_H_INCLUDED
 
 #include <nmesh/structs.h>
-#include "cubemap.h"
+#include "sampler_cubemap.h"
 
 namespace xtcore {
     namespace auxiliary {
 
-void extrude(nmesh::object_t *obj, xtcore::assets::Cubemap *cb);
+void extrude(nmesh::object_t *obj, xtcore::sampler::Cubemap *cb);
 
     } /* namespace auxiliary */
 } /* namespace auxiliary */

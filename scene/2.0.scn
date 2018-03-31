@@ -1,0 +1,93 @@
+title = Room
+descr = Three spheres in a room (sphere lights).
+versn = 0.3
+
+camera = {
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,0,-2000)
+		up       = vec3(0,1,0)
+	}
+
+	side = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(300,300,-1400)
+		up       = vec3(0,1,0)
+	}
+}
+
+geometry = {
+	red_ball = {
+		type     = sphere
+		position = vec3(80,-305,-100)
+		radius   = 95
+	}
+
+	floor = {
+		type     = plane
+		normal   = vec3(0,1,0)
+		distance = -400
+	}
+
+	l0 = {
+		type     = sphere
+		radius   = 25
+		position = vec3(0,150,-400)
+	}
+}
+
+object = {
+	ball = {
+		geometry = red_ball
+		material = lambert_red
+	}
+    floor = {
+		geometry = floor
+		material = lambert_grey
+	}
+    light = {
+        geometry = l0
+        material = light
+    }
+}
+
+material = {
+	lambert_red = {
+		type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,0,0)
+                }
+            }
+        }
+	}
+
+	lambert_grey = {
+		type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
+	}
+
+    light = {
+        type = lambert
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+

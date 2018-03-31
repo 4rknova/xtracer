@@ -41,7 +41,7 @@ geometry = {
 
 	floor = {
 		type     = plane
-		normal   = vec3(0,1,0){
+		normal   = vec3(0,1,0)
 		distance = -400
 	}
 
@@ -103,18 +103,16 @@ object = {
 	}
 	right_wall = {
 		geometry = right_wall
-		material = lambert_blue
+       material = lambert_blue
 	}
 	left_wall = {
 		geometry = left_wall
 		material = lambert_green
 	}
-
     light = {
         geometry = l0
         material = light
     }
-
 }
 
 material = {

@@ -1,6 +1,8 @@
 #include "xtcore.h"
 #include "license.h"
 #include "config.h"
+#include "profiler.h"
+#include "strpool.h"
 
 namespace xtcore {
 

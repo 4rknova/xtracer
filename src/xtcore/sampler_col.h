@@ -4,7 +4,7 @@
 #include "sampler.h"
 
 namespace xtcore {
-    namespace assets {
+    namespace sampler {
 
 class SolidColor : public ISampler
 {
@@ -20,7 +20,7 @@ class SolidColor : public ISampler
     nimg::ColorRGBf m_color;
 };
 
-    } /* namespace assets */
+    } /* namespace sampler */
 } /* namespace xtcore */
 
 #endif /* XTCORE_SAMPLER_COLOR_H_INCLUDED */

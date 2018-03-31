@@ -3,13 +3,17 @@
 
 #include <map>
 #include <nimg/color.h>
-#include <nmath/intinfo.h>
+#include "math/hitrecord.h"
 #include "sampler.h"
 #include "camera.h"
 #include "matdefs.h"
 
+using NMath::Vector3f;
+using nimg::ColorRGBf;
+using xtcore::sampler::ISampler;
+
 namespace xtcore {
-    namespace assets {
+    namespace asset {
 
 class IMaterial
 {
@@ -19,14 +23,14 @@ class IMaterial
 
     bool is_emissive() const;
 
-	virtual nimg::ColorRGBf shade(
-          const NMath::Vector3f &cam_position
-        , const NMath::Vector3f &light_pos
-        , const nimg::ColorRGBf &light_intensity
-        , const NMath::IntInfo  &info) const = 0;
+	virtual ColorRGBf shade(
+          const Vector3f  &cam_position
+        , const Vector3f  &light_pos
+        , const ColorRGBf &light_intensity
+        , const HitRecord &info) const = 0;
 
     float get_scalar(const char *name) const;
-    nimg::ColorRGBf get_sample(const char *name, const NMath::Vector3f &tc) const;
+    ColorRGBf get_sample(const char *name, const Vector3f &tc) const;
 
        float&  get_scalar_by_index  (size_t idx, std::string *name=0);
     ISampler*  get_sampler_by_index (size_t idx, std::string *name=0);
@@ -45,7 +49,7 @@ class IMaterial
 
 };
 
-    } /* namespace assets */
+    } /* namespace asset */
 } /* namespace xtcore */
 
 #endif /* XTCORE_MATERIAL_H_INCLUDED */

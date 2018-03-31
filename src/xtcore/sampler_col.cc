@@ -1,7 +1,7 @@
 #include "sampler_col.h"
 
 namespace xtcore {
-    namespace assets {
+    namespace sampler {
 
 SolidColor::SolidColor()
 {}
@@ -24,5 +24,5 @@ nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &uvw) const
     return m_color;
 }
 
-    } /* namespace assets */
+    } /* namespace sampler */
 } /* namespace xtcore */

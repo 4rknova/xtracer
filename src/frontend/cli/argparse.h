@@ -3,6 +3,7 @@
 
 #include <list>
 #include <xtcore/xtcore.h>
+#include <xtcore/renderer.h>
 
 using xtcore::render::params_t;
 

@@ -1,14 +1,10 @@
 #include <stdlib.h>
 #include <limits.h>
-#include <xtcore/cam_perspective.h>
 #include <xtcore/tile.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/renderer.h>
-#include <xtcore/renderer/stencil/renderer.h>
-#include <xtcore/renderer/depth/renderer.h>
-#include <xtcore/renderer/normal/renderer.h>
-#include <xtcore/renderer/photon_mapper/renderer.h>
+#include <xtcore/renderer/renderers.h>
 #include <xtcore/xtcore.h>
 #include <nimg/yuv4mpeg2.h>
 #include <imgui.h>
@@ -433,6 +429,7 @@ void mm_dialog_load(state_t *state, bool &is_active)
         if (needs_refreshing) {
             xtcore::Log::handle().post_debug("Fetching directory listing..");
             util::filesystem::ls(fsv, filepath);
+            valid_file = util::filesystem::file_exists(filepath);
             needs_refreshing = false;
         }
 
@@ -466,7 +463,7 @@ void mm_dialog_load(state_t *state, bool &is_active)
 
             if (ImGui::Selectable(f.name.c_str(), false)) {
                 realpath(f.path.c_str(), filepath);
-                if (!is_dir) valid_file = true;
+                valid_file = !is_dir && !is_parent;
                 needs_refreshing = true;
             }
             if (is_dir) ImGui::PopStyleColor();
@@ -667,17 +664,25 @@ void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
 
+    gui::graph::node_t *node = 0;
+    gui::graph::draw(&(ws->graph), &(ws->context.scene), ws->scroll_position, node);
+
     float res     = 256.f;
     float aspect  = ws->context.params.height / (float)ws->context.params.width;
     float thumb_w = (aspect < 1.f ? res : (res / aspect));
     float thumb_h = (aspect > 1.f ? res : (res * aspect));
 
-    gui::graph::draw(&(ws->graph), &(ws->context.scene));
-    ImGui::SetCursorScreenPos(ImVec2(44,27));
-    ImGui::BeginChild("LST_PREVIEW", ImVec2(res + 20, res + 20), false);
-    ImGui::SetCursorPos(ImVec2(3 + (res - thumb_w) / 2, 3 + (res - thumb_h) / 2));
+    ImGui::SetCursorScreenPos(ImVec2(50,32));
+    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0, 0, 0, .5));
+    ImGui::BeginChild("LST_PREVIEW", ImVec2(res+4, ImGui::GetWindowHeight()-6), false);
+    ImGui::SetCursorPos(ImVec2(2 + (res - thumb_w) / 2, 3 + (res - thumb_h) / 2));
     ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
+    if (ImGui::Button("Center", ImVec2(100,20))) ws->scroll_position = ImVec2(0,0);
+    if (node) {
+        node->draw_properties();
+    }
     ImGui::EndChild();
+    ImGui::PopStyleColor();
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)

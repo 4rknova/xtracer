@@ -1,19 +1,19 @@
 #include <cmath>
 #include <xtcore/memutil.tml>
 
-#include <xtcore/cam_erp.h>
-#include <xtcore/cam_ods.h>
-#include <xtcore/cam_cubemap.h>
-#include <xtcore/cam_perspective.h>
-#include <xtcore/mat_lambert.h>
-#include <xtcore/mat_blinnphong.h>
-#include <xtcore/mat_phong.h>
+#include <xtcore/math/plane.h>
+#include <xtcore/math/triangle.h>
+#include <xtcore/math/sphere.h>
+#include <xtcore/camera/erp.h>
+#include <xtcore/camera/ods.h>
+#include <xtcore/camera/cubemap.h>
+#include <xtcore/camera/perspective.h>
+#include <xtcore/material/lambert.h>
+#include <xtcore/material/blinnphong.h>
+#include <xtcore/material/phong.h>
 #include <xtcore/sampler_col.h>
 #include <xtcore/sampler_tex.h>
-#include <nmath/plane.h>
-#include <nmath/triangle.h>
-#include <nmath/sphere.h>
-#include <nmesh/mesh.h>
+#include <xtcore/mesh.h>
 
 #include "graph.h"
 
@@ -39,17 +39,17 @@ node_t::~node_t()
 void node_cam_t::draw_properties()
 {
     int spec = 0;
-         if (dynamic_cast<CamODS*>        (data)) spec = 1;
-    else if (dynamic_cast<CamERP*>        (data)) spec = 2;
-    else if (dynamic_cast<CamPerspective*>(data)) spec = 3;
-    else if (dynamic_cast<CamCubemap*>    (data)) spec = 4;
+         if (dynamic_cast<xtcore::camera::ODS*>        (data)) spec = 1;
+    else if (dynamic_cast<xtcore::camera::ERP*>        (data)) spec = 2;
+    else if (dynamic_cast<xtcore::camera::Perspective*>(data)) spec = 3;
+    else if (dynamic_cast<xtcore::camera::Cubemap*>    (data)) spec = 4;
 
     ImGui::Text("Camera.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: {
             ImGui::Text("Type : ODS");
-            CamODS *p = (CamODS*)data;
+            xtcore::camera::ODS *p = (xtcore::camera::ODS*)data;
             textedit_float3("position"   , p->position   , 0.1);
             textedit_float3("orientation", p->orientation, 0.1);
             textedit_float ("IPD"        , p->ipd        , 0.1);
@@ -57,14 +57,14 @@ void node_cam_t::draw_properties()
         }
         case 2: {
             ImGui::Text("Type : ERP");
-            CamERP *p = (CamERP*)data;
+            xtcore::camera::ERP *p = (xtcore::camera::ERP*)data;
             textedit_float3("position"   , p->position   , 0.1);
             textedit_float3("orientation", p->orientation, 0.1);
             break;
         }
         case 3: {
             ImGui::Text("Type : Perspective");
-            CamPerspective *p = (CamPerspective*)data;
+            xtcore::camera::Perspective *p = (xtcore::camera::Perspective*)data;
             textedit_float3("position"   , p->position   , 0.1);
             textedit_float3("target"     , p->target     , 0.1);
             textedit_float3("up"         , p->up         , 0.1);
@@ -75,7 +75,7 @@ void node_cam_t::draw_properties()
         }
         case 4: {
             ImGui::Text("Type : Cubemap");
-            CamCubemap *p = (CamCubemap*)data;
+            xtcore::camera::Cubemap *p = (xtcore::camera::Cubemap*)data;
             textedit_float3("position"   , p->position   , 0.1);
             break;
         }
@@ -85,16 +85,16 @@ void node_cam_t::draw_properties()
 void node_obj_t::draw_properties()
 {
     ImGui::TextColored(ImVec4(.1,1.,.9,1.), "%s", xtcore::pool::str::get(name));
-    ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->geometry));
-    ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::assets::Object*)data)->material));
+    ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->geometry));
+    ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->material));
 }
 
 void node_mat_t::draw_properties()
 {
     int spec = 0;
-         if (dynamic_cast<xtcore::assets::MaterialLambert*>   (data)) spec = 1;
-    else if (dynamic_cast<xtcore::assets::MaterialBlinnPhong*>(data)) spec = 2;
-    else if (dynamic_cast<xtcore::assets::MaterialPhong*>     (data)) spec = 3;
+         if (dynamic_cast<xtcore::material::Lambert*>   (data)) spec = 1;
+    else if (dynamic_cast<xtcore::material::BlinnPhong*>(data)) spec = 2;
+    else if (dynamic_cast<xtcore::material::Phong*>     (data)) spec = 3;
 
     ImGui::Text("Material.%s", xtcore::pool::str::get(name));
 
@@ -115,19 +115,19 @@ void node_mat_t::draw_properties()
 
     for (int i = 0; i < sz_sampler; ++i) {
         std::string name;
-        xtcore::assets::ISampler *s = data->get_sampler_by_index(i, &name);
+        xtcore::sampler::ISampler *s = data->get_sampler_by_index(i, &name);
 
-        if (dynamic_cast<xtcore::assets::SolidColor*>(s)) {
+        if (dynamic_cast<xtcore::sampler::SolidColor*>(s)) {
             nimg::ColorRGBf col;
-            ((xtcore::assets::SolidColor*)(s))->get(col);
+            ((xtcore::sampler::SolidColor*)(s))->get(col);
             float c[4] = {col.r(), col.g(), col.b(), 1.};
             ImGui::ColorPicker4(name.c_str(), c, ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
             col.r(c[0]);
             col.g(c[1]);
             col.b(c[2]);
-            ((xtcore::assets::SolidColor*)(s))->set(col);
+            ((xtcore::sampler::SolidColor*)(s))->set(col);
         }
-        else if (dynamic_cast<xtcore::assets::Texture2D*>(s)) {
+        else if (dynamic_cast<xtcore::sampler::Texture2D*>(s)) {
             ImGui::Text("Texture: %s", name.c_str());
         }
     }
@@ -136,22 +136,22 @@ void node_mat_t::draw_properties()
 void node_geo_t::draw_properties()
 {
     int spec = 0;
-         if (dynamic_cast<NMath::Plane*>    (data)) spec = 1;
-    else if (dynamic_cast<NMath::Triangle*> (data)) spec = 2;
-    else if (dynamic_cast<NMath::Sphere*>   (data)) spec = 3;
-    else if (dynamic_cast<nmesh::Mesh*>     (data)) spec = 4;
+         if (dynamic_cast<xtcore::surface::Plane*>    (data)) spec = 1;
+    else if (dynamic_cast<xtcore::surface::Triangle*> (data)) spec = 2;
+    else if (dynamic_cast<xtcore::surface::Sphere*>   (data)) spec = 3;
+    else if (dynamic_cast<xtcore::surface::Mesh*>     (data)) spec = 4;
 
     ImGui::Text("Geometry.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: {
-            NMath::Plane *p = (NMath::Plane*)data;
+            xtcore::surface::Plane *p = (xtcore::surface::Plane*)data;
             textedit_float3("normal"  , p->normal   , 0.1);
             textedit_double("distance", p->distance , 0.1);
             break;
         }
         case 2: {
-            NMath::Triangle *p = (NMath::Triangle*)data;
+            xtcore::surface::Triangle *p = (xtcore::surface::Triangle*)data;
             textedit_float3("v0" , p->v[0]   , 0.1);
             textedit_float3("v1" , p->v[1]   , 0.1);
             textedit_float3("v2" , p->v[2]   , 0.1);
@@ -164,13 +164,13 @@ void node_geo_t::draw_properties()
             break;
         }
         case 3: {
-            NMath::Sphere *p = (NMath::Sphere*)data;
+            xtcore::surface::Sphere *p = (xtcore::surface::Sphere*)data;
             textedit_float3("origin", p->origin, 0.1);
             textedit_double("radius", p->radius, 0.1);
             break;
         }
         case 4: {
-            nmesh::Mesh *p = (nmesh::Mesh*)data;
+            xtcore::surface::Mesh *p = (xtcore::surface::Mesh*)data;
             break;
         }
     }
@@ -233,8 +233,8 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
     bool old_any_active = ImGui::IsAnyItemActive();
     ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
     ImGui::BeginGroup();
-    //ImGui::Text("%s", xtcore::pool::str::get(name));
-    draw_properties();
+    ImGui::Text("%s", xtcore::pool::str::get(name));
+    //draw_properties();
     ImGui::EndGroup();
 
     // Save the size of what we have emitted and whether any of the widgets are being used
@@ -256,6 +256,7 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
     bool node_moving_active = ImGui::IsItemActive();
     if (node_moving_active) {
         selected = this;
+        printf("ok\n");
         if (ImGui::IsMouseDragging(0)) {
             position = position + ImGui::GetIO().MouseDelta;
         }
@@ -278,12 +279,11 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
     return node_hovered;
 }
 
-void draw(graph_t *graph, const xtcore::Scene *scene)
+void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t *node)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
     ImVector<link_t*> *links = &(graph->links);
 
-    static ImVec2 scrolling = ImVec2(0.0f, 0.0f);
     static bool show_grid = true;
 
     // Draw a list of nodes on the left side
@@ -321,9 +321,8 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     // Display nodes
     int hovered_id = INVALID_ID;
 
-    static node_t *selected = 0;
     for (auto it = nodes->begin(); it != nodes->end(); ++it) {
-        bool hovered = (*it)->draw(draw_list, offset, circle_offset, selected);
+        bool hovered = (*it)->draw(draw_list, offset, circle_offset, node);
         if (hovered) hovered_id = (*it)->id;
     }
 
@@ -359,7 +358,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
     if (ImGui::BeginPopup("context_menu"))
     {
-        node_t* node = graph->active_node != -1 ? nodes->Data[graph->active_node] : NULL;
+        node = (graph->active_node != -1 ? nodes->Data[graph->active_node] : NULL);
         ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
         if (node)
         {
@@ -390,13 +389,6 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     ImGui::EndGroup();
 
     ImGui::SetCursorScreenPos(ImVec2(44, 50) + NODE_WINDOW_PADDING);
-    ImGui::BeginGroup();
-    if (selected) {
-        printf("ok\n");
-        selected->draw_properties();
-    }
-    ImGui::EndGroup();
-
 }
 
 void build(graph_t *graph, const xtcore::Scene *scene)
@@ -428,7 +420,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 1000;
+    x = 200;
     // Materials
     {
         const float interval = 400.f;
@@ -447,7 +439,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 750;
+    x = 200;
     // Geometry
     {
         const float interval = 200.f;
@@ -466,7 +458,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 500;
+    x = 200;
     // Objects
     {
         const float interval = 100.f;

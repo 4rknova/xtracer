@@ -6,8 +6,8 @@
 #include <nmath/precision.h>
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
-#include <nmath/plane.h>
 #include <nmath/sample.h>
+#include <xtcore/math/plane.h>
 #include <nimg/luminance.h>
 #include <ncf/util.h>
 #include <xtcore/tile.h>
@@ -33,7 +33,7 @@ void Renderer::render()
     if (!m_context) return;
 
     xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::assets::ICamera  *cam = m_context->scene.get_camera(p->camera);
+    xtcore::asset::ICamera  *cam = m_context->scene.get_camera(p->camera);
     if (!cam) return;
 
 	if (p->threads) omp_set_num_threads(p->threads);
@@ -49,7 +49,7 @@ void Renderer::render()
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
 
-	        NMath::IntInfo info;
+	        xtcore::HitRecord info;
             HASH_UINT64 obj;
        		memset(&info, 0, sizeof(info));
 
@@ -62,7 +62,7 @@ void Renderer::render()
             NMath::Vector3f normal_sample;
             NMath::scalar_t alpha_sample = 0.f;
             for (float dofs = 0; dofs < p->samples; ++dofs) {
-          	 	NMath::Ray ray = cam->get_primary_ray(
+          	 	xtcore::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
                     , (float)(p->height)

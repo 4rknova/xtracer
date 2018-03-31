@@ -34,13 +34,9 @@
 namespace NMath {
 	namespace Sample {
 
-#ifdef __cplusplus
-
 inline Vector3f sphere();
 inline Vector3f hemisphere(const Vector3f &normal, const Vector3f &direction);
 inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const scalar_t exponent);
-
-#endif /* __cplusplus */
 
 	} /* namespace Sample */
 } /* namespace NMath */

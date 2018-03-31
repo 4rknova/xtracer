@@ -3,7 +3,7 @@
 #include "material.h"
 
 namespace xtcore {
-    namespace assets {
+    namespace asset {
 
 IMaterial::IMaterial()
 {}
@@ -49,7 +49,7 @@ IMaterial::~IMaterial()
 
 bool IMaterial::is_emissive() const
 {
-    return nimg::eval::luminance(get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0))) > 0;
+    return nimg::eval::luminance(get_sample(MAT_SAMPLER_EMISSIVE, Vector3f(0,0,0))) > 0;
 }
 
 float IMaterial::get_scalar(const char *name) const
@@ -59,10 +59,10 @@ float IMaterial::get_scalar(const char *name) const
     return (*it).second;
 }
 
-nimg::ColorRGBf IMaterial::get_sample(const char *name, const NMath::Vector3f &tc) const
+ColorRGBf IMaterial::get_sample(const char *name, const Vector3f &tc) const
 {
     const std::map<std::string, ISampler*>::const_iterator it = m_samplers.find(name);
-    if (it == m_samplers.end()) return nimg::ColorRGBf(0,0,0);
+    if (it == m_samplers.end()) return ColorRGBf(0,0,0);
     return (*it).second->sample(tc);
 }
 
@@ -134,5 +134,5 @@ int IMaterial::add_sampler(const char *name, ISampler *sampler)
     return res == 1 ? 0 : 1;
 }
 
-    } /* namespace assets */
+    } /* namespace asset */
 } /* namespace xtcore */

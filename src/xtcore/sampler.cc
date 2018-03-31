@@ -3,7 +3,7 @@
 #define DEFAULT_FILTERING FILTERING_NEAREST
 
 namespace xtcore {
-    namespace assets {
+    namespace sampler {
 
 ISampler::ISampler()
     : filtering(DEFAULT_FILTERING)
@@ -12,5 +12,5 @@ ISampler::ISampler()
 ISampler::~ISampler()
 {}
 
-    } /* namespace assets */
+    } /* namespace sampler */
 } /* namespace xtcore */

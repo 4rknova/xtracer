@@ -1,21 +1,23 @@
 #ifndef XTCORE_CAMERA_H_INCLUDED
 #define XTCORE_CAMERA_H_INCLUDED
 
-#include <nmath/ray.h>
+#include "math/ray.h"
+
+using NMath::Vector3f;
 
 namespace xtcore {
-    namespace assets {
+    namespace asset {
 
 class ICamera
 {
 	public:
-        NMath::Vector3f position;
+        Vector3f position;
 
-        virtual ~ICamera();
-		virtual NMath::Ray get_primary_ray(float x, float y, float width, float height) = 0;
+        virtual ~ICamera() {};
+		virtual Ray get_primary_ray(float x, float y, float width, float height) = 0;
 };
 
-    } /* namespace assets */
+    } /* namespace asset */
 } /* namespace xtcore */
 
 #endif /* XTCORE_CAMERA_H_INCLUDED */

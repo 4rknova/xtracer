@@ -4,8 +4,11 @@
 #include <nmath/vector.h>
 #include <nimg/color.h>
 
+using NMath::Vector3f;
+using nimg::ColorRGBf;
+
 namespace xtcore {
-    namespace assets {
+    namespace sampler {
 
 enum FILTERING
 {
@@ -18,12 +21,12 @@ class ISampler
     public:
              ISampler();
     virtual ~ISampler();
-    virtual nimg::ColorRGBf sample(const NMath::Vector3f &uvw) const = 0;
+    virtual ColorRGBf sample(const Vector3f &uvw) const = 0;
 
     FILTERING filtering;
 };
 
-    } /* namespace assets */
+    } /* namespace sampler */
 } /* namespace xtcore */
 
 

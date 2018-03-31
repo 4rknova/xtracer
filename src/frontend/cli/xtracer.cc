@@ -6,7 +6,10 @@
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
-#include <xtcore/xtcore.h>
+#include <xtcore/log.h>
+#include <xtcore/timeutil.h>
+#include <xtcore/parseutil.h>
+#include <xtcore/renderer/renderers.h>
 #include "argparse.h"
 
 #define PROGRESS_BAR_LENGTH (15)

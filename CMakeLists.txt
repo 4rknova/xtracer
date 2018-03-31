@@ -62,6 +62,9 @@ file(GLOB SRC_XTCORE
     ${PATH_SRC_XTCORE}/*.c
     ${PATH_SRC_XTCORE}/*.cc
     ${PATH_SRC_XTCORE}/*.cpp
+    ${PATH_SRC_XTCORE}/*/*.c
+    ${PATH_SRC_XTCORE}/*/*.cc
+    ${PATH_SRC_XTCORE}/*/*.cpp
     ${PATH_SRC_XTCORE}/*/*/*.c
     ${PATH_SRC_XTCORE}/*/*/*.cc
     ${PATH_SRC_XTCORE}/*/*/*.cpp

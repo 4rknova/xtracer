@@ -4,6 +4,7 @@
 #include <string>
 #include <queue>
 #include <mutex>
+#include <imgui/imgui.h>
 #include <nplatform/timer.h>
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
@@ -77,6 +78,8 @@ struct workspace_t
     ~workspace_t();
 
 
+    // Editor
+    ImVec2              scroll_position;
     gui::graph::graph_t graph;
 };
 

@@ -26,6 +26,7 @@ struct fs_entry_t
 typedef std::vector<fs_entry_t> fsvec;
 
 int  ls(fsvec &fsv, const char *path);
+bool file_exists(const char *filepath);
 bool has_extension(fs_entry_t *entry, const char *extension);
 
     } /* namespace filesystem */
