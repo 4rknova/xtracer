@@ -44,8 +44,6 @@ void node_cam_t::draw_properties()
     else if (dynamic_cast<xtcore::camera::Perspective*>(data)) spec = 3;
     else if (dynamic_cast<xtcore::camera::Cubemap*>    (data)) spec = 4;
 
-    ImGui::Text("Camera.%s", xtcore::pool::str::get(name));
-
     switch (spec) {
         case 1: {
             ImGui::Text("Type : ODS");
@@ -84,7 +82,6 @@ void node_cam_t::draw_properties()
 
 void node_obj_t::draw_properties()
 {
-    ImGui::TextColored(ImVec4(.1,1.,.9,1.), "%s", xtcore::pool::str::get(name));
     ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->geometry));
     ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->material));
 }
@@ -95,8 +92,6 @@ void node_mat_t::draw_properties()
          if (dynamic_cast<xtcore::material::Lambert*>   (data)) spec = 1;
     else if (dynamic_cast<xtcore::material::BlinnPhong*>(data)) spec = 2;
     else if (dynamic_cast<xtcore::material::Phong*>     (data)) spec = 3;
-
-    ImGui::Text("Material.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: { ImGui::Text("Shader: Lambert");    break; }
@@ -140,8 +135,6 @@ void node_geo_t::draw_properties()
     else if (dynamic_cast<xtcore::surface::Triangle*> (data)) spec = 2;
     else if (dynamic_cast<xtcore::surface::Sphere*>   (data)) spec = 3;
     else if (dynamic_cast<xtcore::surface::Mesh*>     (data)) spec = 4;
-
-    ImGui::Text("Geometry.%s", xtcore::pool::str::get(name));
 
     switch (spec) {
         case 1: {
@@ -223,9 +216,10 @@ void graph_t::clear()
     links.clear();
 }
 
-bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, node_t *selected)
+bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
 {
     ImGui::PushID(id);
+
     ImVec2 node_rect_min = offset + position;
 
     // Display node contents first
@@ -233,8 +227,7 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
     bool old_any_active = ImGui::IsAnyItemActive();
     ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
     ImGui::BeginGroup();
-    ImGui::Text("%s", xtcore::pool::str::get(name));
-    //draw_properties();
+    ImGui::TextColored(ImVec4(.75,.75,.75,1.), "%s", xtcore::pool::str::get(name));
     ImGui::EndGroup();
 
     // Save the size of what we have emitted and whether any of the widgets are being used
@@ -255,8 +248,6 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
 
     bool node_moving_active = ImGui::IsItemActive();
     if (node_moving_active) {
-        selected = this;
-        printf("ok\n");
         if (ImGui::IsMouseDragging(0)) {
             position = position + ImGui::GetIO().MouseDelta;
         }
@@ -279,12 +270,10 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, no
     return node_hovered;
 }
 
-void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t *node)
+void draw(graph_t *graph, const xtcore::Scene *scene)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
     ImVector<link_t*> *links = &(graph->links);
-
-    static bool show_grid = true;
 
     // Draw a list of nodes on the left side
     bool open_context_menu = false;
@@ -299,13 +288,13 @@ void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t 
     ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoMove);
     ImGui::PushItemWidth(100.0f);
 
-    ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
+    ImVec2 offset = ImGui::GetCursorScreenPos() - graph->scroll_position;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->ChannelsSplit(3);
 
     // Display grid
     {
-        ImVec2 offset = ImGui::GetCursorPos() - scrolling;
+        ImVec2 offset = ImGui::GetCursorPos() - graph->scroll_position;
         ImU32 GRID_COLOR = ImColor(200,200,200,40);
         float GRID_SZ = 32.0f;
         ImVec2 win_pos = ImGui::GetCursorScreenPos();
@@ -320,10 +309,16 @@ void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t 
 
     // Display nodes
     int hovered_id = INVALID_ID;
-
     for (auto it = nodes->begin(); it != nodes->end(); ++it) {
-        bool hovered = (*it)->draw(draw_list, offset, circle_offset, node);
-        if (hovered) hovered_id = (*it)->id;
+        bool hovered = (*it)->draw(draw_list, offset, circle_offset);
+
+        if (hovered) {
+            hovered_id = (*it)->id;
+        }
+
+        if (ImGui::IsMouseClicked(0) && hovered_id != INVALID_ID) {
+            graph->active_node = hovered_id;
+        }
     }
 
     // Display links
@@ -345,34 +340,19 @@ void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t 
     }
     draw_list->ChannelsMerge();
 
-    if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(1))
-    {
-        open_context_menu = true;
-    }
-    if (open_context_menu)
-    {
-        ImGui::OpenPopup("context_menu");
-    }
+    if (  !ImGui::IsAnyItemHovered()
+        && ImGui::IsMouseHoveringWindow()
+        && ImGui::IsMouseClicked(1)) { open_context_menu = true; }
+
+    if (open_context_menu) ImGui::OpenPopup("context_menu");
 
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
     if (ImGui::BeginPopup("context_menu"))
     {
-        node = (graph->active_node != -1 ? nodes->Data[graph->active_node] : NULL);
         ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
-        if (node)
-        {
-            ImGui::Text("node_t '%s'", xtcore::pool::str::get(node->id));
-            ImGui::Separator();
-            if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-            if (ImGui::MenuItem("Delete"  , NULL, false, false)) {}
-            if (ImGui::MenuItem("Copy"    , NULL, false, false)) {}
-        }
-        else
-        {
-            if (ImGui::MenuItem("Add Camera")) {
-               build(graph, scene);
-            }
+        if (ImGui::MenuItem("Add Camera")) {
+            build(graph, scene);
         }
         ImGui::EndPopup();
     }
@@ -380,7 +360,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t 
 
     // Scrolling
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0.0f))
-        scrolling = scrolling + ImGui::GetIO().MouseDelta;
+        graph->scroll_position = graph->scroll_position + ImGui::GetIO().MouseDelta;
 
     ImGui::PopItemWidth();
     ImGui::EndChild();
@@ -388,7 +368,15 @@ void draw(graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t 
     ImGui::PopStyleVar(2);
     ImGui::EndGroup();
 
-    ImGui::SetCursorScreenPos(ImVec2(44, 50) + NODE_WINDOW_PADDING);
+    ImGui::SetCursorScreenPos(ImVec2(50,32));
+    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0, 0, 0, .5));
+    ImGui::BeginChild("LST_PREVIEW", ImVec2(250, ImGui::GetWindowHeight()-6), false);
+    if (ImGui::Button("Center View", ImVec2(245, 20))) graph->scroll_position = ImVec2(0,0);
+    if (graph->active_node != INVALID_ID) {
+        graph->nodes[graph->active_node]->draw_properties();
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
 }
 
 void build(graph_t *graph, const xtcore::Scene *scene)
@@ -405,7 +393,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     int x = 0, y = 0;
     // Cameras
     {
-        const float interval = 300.f;
+        const float interval = 50.f;
         auto et = scene->m_cameras.end();
         y = -interval * scene->m_cameras.size() / 2;
         for (auto it = scene->m_cameras.begin(); it != et; ++it) {
@@ -420,10 +408,10 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 200;
+    x = 300;
     // Materials
     {
-        const float interval = 400.f;
+        const float interval = 50.f;
         auto et = scene->m_materials.end();
         y = -interval * scene->m_materials.size() / 2;
         for (auto it = scene->m_materials.begin(); it != et; ++it) {
@@ -439,10 +427,10 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 200;
+    x = 400;
     // Geometry
     {
-        const float interval = 200.f;
+        const float interval = 50.f;
         auto et = scene->m_geometry.end();
         y = -interval * scene->m_geometry.size() / 2;
         for (auto it = scene->m_geometry.begin(); it != et; ++it) {
@@ -461,7 +449,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     x = 200;
     // Objects
     {
-        const float interval = 100.f;
+        const float interval = 50.f;
         auto et = scene->m_objects.end();
         y = -interval * scene->m_objects.size() / 2;
         for (auto it = scene->m_objects.begin(); it != et; ++it) {

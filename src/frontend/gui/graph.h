@@ -36,7 +36,7 @@ struct node_t
 
     virtual void draw_properties() = 0;
 
-    bool draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset, node_t *selected);
+    bool draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset);
 };
 
 struct node_cam_t : public node_t
@@ -75,6 +75,7 @@ struct graph_t {
     ImVector<node_t*> nodes;
     ImVector<link_t*> links;
 
+    ImVec2 scroll_position;
     int active_node;
 
     void clear();
@@ -84,7 +85,7 @@ struct graph_t {
 };
 
 void build (graph_t *graph, const xtcore::Scene *scene);
-void draw  (graph_t *graph, const xtcore::Scene *scene, ImVec2 &scrolling, node_t *node);
+void draw  (graph_t *graph, const xtcore::Scene *scene);
 
     } /* namespace graph */
 } /* namespace gui */

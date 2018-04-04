@@ -665,13 +665,13 @@ void panel_scene(workspace_t *ws)
     if (!ws) return;
 
     gui::graph::node_t *node = 0;
-    gui::graph::draw(&(ws->graph), &(ws->context.scene), ws->scroll_position, node);
+    gui::graph::draw(&(ws->graph), &(ws->context.scene));
 
     float res     = 256.f;
     float aspect  = ws->context.params.height / (float)ws->context.params.width;
     float thumb_w = (aspect < 1.f ? res : (res / aspect));
     float thumb_h = (aspect > 1.f ? res : (res * aspect));
-
+/*
     ImGui::SetCursorScreenPos(ImVec2(50,32));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0, 0, 0, .5));
     ImGui::BeginChild("LST_PREVIEW", ImVec2(res+4, ImGui::GetWindowHeight()-6), false);
@@ -683,6 +683,7 @@ void panel_scene(workspace_t *ws)
     }
     ImGui::EndChild();
     ImGui::PopStyleColor();
+*/
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)
