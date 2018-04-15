@@ -6,6 +6,7 @@
 #include <xtcore/renderer.h>
 #include <xtcore/renderer/renderers.h>
 #include <xtcore/xtcore.h>
+#include <xtcore/midi.h>
 #include <nimg/yuv4mpeg2.h>
 #include <imgui.h>
 
@@ -15,6 +16,9 @@
 #include "util.h"
 #include "fsutil.h"
 #include "gui.h"
+
+#define MIN(x,y) (x > y ? y : x)
+#define MAX(x,y) (x > y ? x : y)
 
 #define STRLEN_MAX (512)
 
@@ -522,6 +526,16 @@ void render_main_menu(state_t *state)
             mm_rmode(state->workspace);
             ImGui::EndMenu();
         }
+        xtcore::midi::devices_t devs;
+        if (ImGui::BeginMenu("Midi")) {
+            if (xtcore::midi::detect(&devs)) {
+                for(xtcore::midi::device_t &d : devs.devices) {
+                    ImGui::MenuItem(d.name.c_str());
+                }
+            }
+            ImGui::EndMenu();
+        }
+
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             gui::mm_zoom(state->workspace);
             wdg_conf(state->workspace);

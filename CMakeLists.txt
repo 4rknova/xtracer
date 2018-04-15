@@ -80,6 +80,9 @@ file(GLOB SRC_FRONTEND_GUI
     ${PATH_SRC_FRONTEND_GUI}/*.c
     ${PATH_SRC_FRONTEND_GUI}/*.cc
     ${PATH_SRC_FRONTEND_GUI}/*.cpp
+    ${PATH_SRC_FRONTEND_GUI}/*/*.c
+    ${PATH_SRC_FRONTEND_GUI}/*/*.cc
+    ${PATH_SRC_FRONTEND_GUI}/*/*.cpp
 )
 
 file(GLOB SRC_UTIL_VIZ_SAMPLES
@@ -94,12 +97,20 @@ file(GLOB SRC_REMOTERY
     ${PATH_EXT}/remotery/lib/*.c
 )
 
+file(GLOB SRC_RTMIDI
+    ${PATH_EXT}/rtmidi/*.cpp
+)
+
 add_library(imgui STATIC ${SRC_IMGUI})
 set_target_properties(imgui PROPERTIES OUTPUT_NAME imgui)
 
 add_library(remotery STATIC ${SRC_REMOTERY})
 set_target_properties(remotery PROPERTIES OUTPUT_NAME remotery)
 set_target_properties(remotery PROPERTIES COMPILE_FLAGS "-std=gnu99 -I{PATH_EXT}/remotery/lib/ -pthread -lm")
+
+add_library(rtmidi STATIC ${SRC_RTMIDI})
+set_target_properties(rtmidi PROPERTIES OUTPUT_NAME rtmidi)
+set_target_properties(rtmidi PROPERTIES COMPILE_FLAGS "-I{PATH_EXT}/rtmidi/ -D__LINUX_ALSA__")
 
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
 set_target_properties(xtcore_static  PROPERTIES OUTPUT_NAME xtcore)
@@ -139,11 +150,11 @@ target_include_directories(${OUT_EXE_VIZ_SAMPLES} PUBLIC
     ${PATH_SRC}
 )
 
-target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery)
+target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery rtmidi asound pthread)
 
 SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
-target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery rtmidi asound pthread ${LIBRARIES})
 
 target_link_libraries(${OUT_EXE_VIZ_SAMPLES} PRIVATE xtcore_static imgui ${LIBRARIES})
 

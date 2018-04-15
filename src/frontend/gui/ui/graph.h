@@ -1,5 +1,5 @@
-#ifndef SINGULARITY_GRAPH_H_INCLUDED
-#define SINGULARITY_GRAPH_H_INCLUDED
+#ifndef XT_GRAPH_H_INCLUDED
+#define XT_GRAPH_H_INCLUDED
 
 #include <vector>
 #include <xtcore/strpool.h>
@@ -90,4 +90,4 @@ void draw  (graph_t *graph, const xtcore::Scene *scene);
     } /* namespace graph */
 } /* namespace gui */
 
-#endif /* SINGULARITY_GRAPH_H_INCLUDED */
+#endif /* XT_GRAPH_H_INCLUDED */

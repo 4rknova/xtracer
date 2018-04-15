@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <stb_image.h>
 
-#include "gui.h"
+#include "ui/gui.h"
 #include "config.h"
 #include "shader.h"
 #include "state.h"

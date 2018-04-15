@@ -3,6 +3,7 @@
 #include "config.h"
 #include "profiler.h"
 #include "strpool.h"
+#include "midi.h"
 
 namespace xtcore {
 
@@ -20,12 +21,14 @@ int init()
 {
     xtcore::pool::str::init();
     xtcore::profiler::init();
+    xtcore::midi::init();
 }
 
 int deinit()
 {
     xtcore::profiler::deinit();
     xtcore::pool::str::release();
+    xtcore::midi::deinit();
 }
 
 } /* namespace xtcore */

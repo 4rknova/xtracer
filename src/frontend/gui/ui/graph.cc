@@ -232,7 +232,7 @@ bool node_t::draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset)
 
     // Save the size of what we have emitted and whether any of the widgets are being used
     bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
-    size = ImGui::GetItemRectSize() + NODE_WINDOW_PADDING + NODE_WINDOW_PADDING;
+    size = ImVec2(100,25); // ImGui::GetItemRectSize() + NODE_WINDOW_PADDING + NODE_WINDOW_PADDING;
     ImVec2 node_rect_max = node_rect_min + size;
 
     // Display node box
@@ -371,7 +371,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
     ImGui::SetCursorScreenPos(ImVec2(50,32));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0, 0, 0, .5));
     ImGui::BeginChild("LST_PREVIEW", ImVec2(250, ImGui::GetWindowHeight()-6), false);
-    if (ImGui::Button("Center View", ImVec2(245, 20))) graph->scroll_position = ImVec2(0,0);
+    if (ImGui::Button("Center View", ImVec2(245, 20))) graph->scroll_position = ImVec2(2*-ImGui::GetWindowWidth(),-ImGui::GetWindowHeight()/2);
     if (graph->active_node != INVALID_ID) {
         graph->nodes[graph->active_node]->draw_properties();
     }
@@ -386,7 +386,6 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     if (!graph || !scene) return;
 
     graph->clear();
-
 
     std::map<HASH_UINT64, int> mat, geo;
 
@@ -408,10 +407,10 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 300;
+    x = 500;
     // Materials
     {
-        const float interval = 50.f;
+        const float interval = 70.f;
         auto et = scene->m_materials.end();
         y = -interval * scene->m_materials.size() / 2;
         for (auto it = scene->m_materials.begin(); it != et; ++it) {
@@ -427,10 +426,10 @@ void build(graph_t *graph, const xtcore::Scene *scene)
             y += interval;
         }
     }
-    x = 400;
+    x = 500;
     // Geometry
     {
-        const float interval = 50.f;
+        const float interval = 140.f;
         auto et = scene->m_geometry.end();
         y = -interval * scene->m_geometry.size() / 2;
         for (auto it = scene->m_geometry.begin(); it != et; ++it) {
