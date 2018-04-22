@@ -9,12 +9,8 @@
 #include <xtcore/object.h>
 #include <xtcore/math/surface.h>
 #include <xtcore/material.h>
-
+#include <xtcore/sampler_col.h>
 #include "imgui_extra.h"
-
-#define INVALID_ID          ( -1)
-#define NODE_SLOT_RADIUS    (5.f)
-#define NODE_WINDOW_PADDING ImVec2(10.f,10.f)
 
 namespace gui {
     namespace graph {
@@ -36,7 +32,8 @@ struct node_t
 
     virtual void draw_properties() = 0;
 
-    bool draw(ImDrawList *draw_list, ImVec2 offset, ImVec2 circle_offset);
+    bool draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset);
+    void init();
 };
 
 struct node_cam_t : public node_t
@@ -63,9 +60,24 @@ struct node_geo_t : public node_t
     virtual void draw_properties();
 };
 
+struct node_col_t : public node_t
+{
+    xtcore::sampler::SolidColor *data;
+    virtual void draw_properties();
+};
+
+struct node_numf_t : public node_t
+{
+    float *data;
+    virtual void draw_properties();
+};
+
 struct link_t
 {
-    int InputIdx, InputSlot, OutputIdx, OutputSlot;
+    int a_id;
+    int b_id;
+    int a_slot;
+    int b_slot;
 
     link_t();
     link_t(int input_idx, int input_slot, int output_idx, int output_slot);

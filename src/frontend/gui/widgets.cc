@@ -65,7 +65,7 @@ void handle_io_ms(int x, int y, bool button_event, bool left, bool right, float 
     if (button_event) {
         io.MouseDown[0] = left;
         io.MouseDown[1] = right;
-        io.MouseWheel = wheel;
+        io.MouseWheel   = wheel;
     }
 }
 

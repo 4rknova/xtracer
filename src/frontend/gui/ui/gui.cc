@@ -16,6 +16,8 @@
 #include "util.h"
 #include "fsutil.h"
 #include "gui.h"
+#include "graphics.h"
+
 
 #define MIN(x,y) (x > y ? y : x)
 #define MAX(x,y) (x > y ? x : y)
@@ -509,6 +511,7 @@ void render_main_menu(state_t *state)
 	static bool flag_dg_load = false;
 	static bool flag_dg_info = false;
 
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) { flag_dg_load = true; }
@@ -518,21 +521,20 @@ void render_main_menu(state_t *state)
                     ImGui::EndMenu();
                 }
             }
+            xtcore::midi::devices_t devs;
+            xtcore::midi::detect(&devs);
+            if (devs.devices.size() > 0){
+                if (ImGui::BeginMenu("Midi")) {
+                    for(xtcore::midi::device_t &d : devs.devices) ImGui::MenuItem(d.name.c_str());
+                    ImGui::EndMenu();
+                }
+            }
             if (ImGui::MenuItem("About")) { flag_dg_info = true; }
             if (ImGui::MenuItem("Exit" )) { action::quit();      }
             ImGui::EndMenu();
         }
         if (state->workspace && ImGui::BeginMenu("Setup")) {
             mm_rmode(state->workspace);
-            ImGui::EndMenu();
-        }
-        xtcore::midi::devices_t devs;
-        if (ImGui::BeginMenu("Midi")) {
-            if (xtcore::midi::detect(&devs)) {
-                for(xtcore::midi::device_t &d : devs.devices) {
-                    ImGui::MenuItem(d.name.c_str());
-                }
-            }
             ImGui::EndMenu();
         }
 
@@ -546,6 +548,7 @@ void render_main_menu(state_t *state)
         gui::mm_network(state);
         ImGui::EndMainMenuBar();
     }
+    ImGui::PopStyleVar();
 
     mm_dialog_load(state, flag_dg_load);
 	mm_dialog_info(state, flag_dg_info);
@@ -577,7 +580,11 @@ void panel_log(state_t *state)
     int line_count = 0;
     int sz = MIN(int(xtcore::Log::handle().get_size())-1, LOG_HISTORY_SIZE);
     ImGui::NextColumn();
+    ImDrawList *dl = ImGui::GetWindowDrawList();
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    dl->AddRectFilled(p + ImVec2(1,1), p + ImGui::GetWindowSize(), ImColor(0.f,0.f,0.f,0.1f));
     ImGui::BeginChild(ID_PANEL_LOG, ImVec2(-1, ImGui::GetWindowHeight() - 10));
+    ImGui::NewLine();
     for (int i = sz; i >= 0; --i) {
         xtcore::log_entry_t l = xtcore::Log::handle().get_entry(i);
         ImVec4 col;
@@ -597,7 +604,7 @@ void panel_log(state_t *state)
             ImGui::TextColored(col, "%s", l.message.c_str());
             ImGui::Columns(1,"ID_LOG_CONTAINER");
         }
-        if (log_autoscroll) ImGui::SetScrollPosHere();
+        if (log_autoscroll) ImGui::SetScrollHere();
     }
     ImGui::EndChild();
     ImGui::Columns(1, "ID_LOG");
@@ -680,24 +687,6 @@ void panel_scene(workspace_t *ws)
 
     gui::graph::node_t *node = 0;
     gui::graph::draw(&(ws->graph), &(ws->context.scene));
-
-    float res     = 256.f;
-    float aspect  = ws->context.params.height / (float)ws->context.params.width;
-    float thumb_w = (aspect < 1.f ? res : (res / aspect));
-    float thumb_h = (aspect > 1.f ? res : (res * aspect));
-/*
-    ImGui::SetCursorScreenPos(ImVec2(50,32));
-    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(0, 0, 0, .5));
-    ImGui::BeginChild("LST_PREVIEW", ImVec2(res+4, ImGui::GetWindowHeight()-6), false);
-    ImGui::SetCursorPos(ImVec2(2 + (res - thumb_w) / 2, 3 + (res - thumb_h) / 2));
-    ImGui::Image((ImTextureID &)(ws->texture), ImVec2(thumb_w, thumb_h));
-    if (ImGui::Button("Center", ImVec2(100,20))) ws->scroll_position = ImVec2(0,0);
-    if (node) {
-        node->draw_properties();
-    }
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-*/
 }
 
 void panel_preview(workspace_t *ws, size_t w, size_t h)
@@ -706,7 +695,7 @@ void panel_preview(workspace_t *ws, size_t w, size_t h)
 
     float zx = ws->zoom_multiplier * ws->context.params.width;
     float zy = ws->zoom_multiplier * ws->context.params.height;
-    ImGui::BeginChild(ID_PANEL_PREVIEW, ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::BeginChild(ID_PANEL_PREVIEW, ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     // Zooming
     ImGuiIO &io = ImGui::GetIO();
     if (io.KeyCtrl) {
@@ -714,10 +703,10 @@ void panel_preview(workspace_t *ws, size_t w, size_t h)
         ws->zoom_multiplier = z < 0.1 ? 0.1 : z;
     }
     // Middle mouse scroll
-    if (ImGui::IsMouseDown(2)) {
-        ImVec2 d = ImGui::GetMouseDragDelta(2);
-        ImGui::SetScrollX(ImGui::GetScrollX() + 2.0 * io.DeltaTime * d.x);
-        ImGui::SetScrollY(ImGui::GetScrollY() + 2.0 * io.DeltaTime * d.y);
+    if (ImGui::IsMouseDown(0)) {
+        ImVec2 d = ImGui::GetIO().MouseDelta;
+        ImGui::SetScrollX(ImGui::GetScrollX() - 10.f * ws->zoom_multiplier * io.DeltaTime * d.x);
+        ImGui::SetScrollY(ImGui::GetScrollY() - 10.f * ws->zoom_multiplier * io.DeltaTime * d.y);
     }
     ImGui::SetCursorPos(ImVec2(MAX((ImGui::GetWindowWidth()  - zx) / 2.0f, 0.0f)
                              , MAX((ImGui::GetWindowHeight() - zy) / 2.0f, 0.0f)));
@@ -742,6 +731,7 @@ void container(state_t *state)
     size_t h = state->window.height;
     ImGui::SetNextWindowPos(ImVec2(SIZE_OFFSET, SIZE_MAIN_MENU + SIZE_OFFSET));
     ImGui::SetNextWindowSize(ImVec2(state->window.width - 2 * SIZE_OFFSET, state->window.height - SIZE_MAIN_MENU));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::Begin("Render", &(dummy), ImVec2(0,0), 0.1f, WIN_FLAGS_SET_0);
     ImGui::BeginGroup();
     dummy = (current_tab == TAB_WORKSPACES); if (      ImGui::GoxTab(STR_WORKSPACES, 75, &dummy)) current_tab = TAB_WORKSPACES;
@@ -759,6 +749,7 @@ void container(state_t *state)
     }
     ImGui::EndChild();
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 } /* namespace gui */

@@ -123,7 +123,7 @@ namespace ImGui {
                     ImVec2(glyph->U1, glyph->V1),
                     ImVec2(glyph->U0, glyph->V1),
                      text_color);
-            pos.y -= glyph->XAdvance;
+            pos.y -= glyph->AdvanceX;
         }
         ImGui::PopID();
         return ret;
