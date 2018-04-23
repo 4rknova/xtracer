@@ -38,8 +38,8 @@
 #define LAYER_BOTTOM      (0)
 
 #define MOUSE_BUTTON_LEFT   (0)
-#define MOUSE_BUTTON_MIDDLE (1)
-#define MOUSE_BUTTON_RIGHT  (2)
+#define MOUSE_BUTTON_RIGHT  (1)
+#define MOUSE_BUTTON_MIDDLE (2)
 
 namespace gui {
     namespace graph {
@@ -237,22 +237,41 @@ void graph_t::clear()
 
 bool node_t::draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset)
 {
+
     ImGui::PushID(id);
 
     ImVec2 node_rect_min = offset + position;
 
     dl->ChannelsSetCurrent(LAYER_FOREGROUND);
     bool old_any_active = ImGui::IsAnyItemActive();
-    ImGui::SetCursorScreenPos(node_rect_min);
-    ImGui::PushItemWidth(size.x);
-    ImGui::BeginGroup();
-    draw_properties();
-    ImGui::EndGroup();
-    ImGui::PopItemWidth();
-
     // Save the size of what we have emitted and whether any of the widgets are being used
     bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
+    bool node_hovered = ImGui::IsItemHovered();
+    ImColor node_bg_color = node_hovered ? COL_NODE_HOVERED : COL_NODE_NORMAL;
+    ImColor node_sl_color = node_hovered ? COL_SLOT_HOVERED : COL_SLOT_NORMAL;
+    ImColor node_br_color = node_hovered ? COL_LINE_HOVERED : COL_LINE_NORMAL;
+
     ImVec2 node_rect_max = node_rect_min + size;
+    ImGui::SetCursorScreenPos(node_rect_min);
+    ImGui::PushItemWidth(size.x);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,10));
+    ImGui::BeginGroup();
+
+
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    int rounded_corners = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight;
+    dl->AddRectFilled(p + ImVec2(1,1), p + ImVec2(size.x-1, 20), COL_HEAD_COL, 4., rounded_corners);
+    dl->AddLine(p + ImVec2(1,20), p + ImVec2(size.x-1, 20), node_br_color);
+    gui::graphics::draw(gui::graphics::GRAPHIC_COLOR, p.x + 5, p.y + 4);
+    ImGui::SetCursorScreenPos(node_rect_min + ImVec2(25,3));
+    ImGui::PushItemWidth(size.x * 3.0/4.0);
+    ImGui::TextColored(ImVec4(1,1,1,1), "RGB");
+    draw_properties();
+    ImGui::PopItemWidth();
+    ImGui::EndGroup();
+    ImGui::PopStyleVar();
+    ImGui::PopItemWidth();
+
 
     // Display node box
     dl->ChannelsSetCurrent(LAYER_BACKGROUND); // Background
@@ -260,11 +279,6 @@ bool node_t::draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset)
     ImGui::InvisibleButton("node", size);
 
     ImGuiIO &io = ImGui::GetIO();
-
-    bool node_hovered = ImGui::IsItemHovered();
-    ImColor node_bg_color = node_hovered ? COL_NODE_HOVERED : COL_NODE_NORMAL;
-    ImColor node_sl_color = node_hovered ? COL_SLOT_HOVERED : COL_SLOT_NORMAL;
-    ImColor node_br_color = node_hovered ? COL_LINE_HOVERED : COL_LINE_NORMAL;
 
     if (ImGui::IsItemActive() && ImGui::IsMouseDragging(MOUSE_BUTTON_LEFT)) {
         position = position + ImGui::GetIO().MouseDelta;
@@ -506,23 +520,8 @@ void node_col_t::draw_properties()
     size = ImVec2(175, 220);
     outputs = 1;
 
-    ImVec2 p = ImGui::GetCursorScreenPos();
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImGui::Dummy(ImVec2(1,1));
-
-    int rounded_corners = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight;
-    dl->AddRectFilled(p + ImVec2(1,1), p + ImVec2(size.x-1, 20), COL_HEAD_COL, 4., rounded_corners);
-
-    gui::graphics::draw(gui::graphics::GRAPHIC_COLOR, p.x + 5, p.y + 4);
-    ImGui::SameLine();
-    ImGui::Dummy(ImVec2(1,0));
-    ImGui::SameLine();
-    ImGui::PushItemWidth(size.x * 3.0/4.0);
-    ImGui::TextColored(ImVec4(1,1,1,1), "RGB");
     nimg::ColorRGBf col;
     data->get(col);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding   , ImVec2(10,10));
     float c[4] = {col.r(), col.g(), col.b(), 1.};
     ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoSidePreview;
     ImGui::Dummy(ImVec2(0,10));
@@ -530,8 +529,6 @@ void node_col_t::draw_properties()
     ImGui::ColorPicker3(STR_EMPTY, c, flags);
     col.r(c[0]); col.g(c[1]); col.b(c[2]);
     data->set(col);
-    ImGui::PopStyleVar();
-    ImGui::PopItemWidth();
 }
 
 xtcore::sampler::SolidColor col;
@@ -563,7 +560,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
                 ImVec2 md = ImVec2(fmodf(offset.x, FLT_GRID_BLOCK), fmodf(offset.y, FLT_GRID_BLOCK));
                 for (float x=md.x; x<ws.x; x+=FLT_GRID_BLOCK) draw_list->AddLine(ImVec2(x,0)+wp, ImVec2(x,ws.y)+wp, COL_GRID);
                 for (float y=md.y; y<ws.y; y+=FLT_GRID_BLOCK) draw_list->AddLine(ImVec2(0,y)+wp, ImVec2(ws.x,y)+wp, COL_GRID);
-                bool scene_is_scrolling = !ImGui::IsAnyItemHovered() && ImGui::IsMouseDragging(0);
+                bool scene_is_scrolling = ImGui::IsMouseDragging(MOUSE_BUTTON_MIDDLE);
                 if (scene_is_scrolling) graph->scroll_position = graph->scroll_position - ImGui::GetIO().MouseDelta;
             }
             { // Nodes
