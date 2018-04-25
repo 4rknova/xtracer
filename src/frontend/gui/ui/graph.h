@@ -23,6 +23,8 @@ struct node_t
     ImVec2      size;
     size_t      inputs;
     size_t      outputs;
+    const char *label;
+    ImColor     color_header;
 
              node_t();
     virtual ~node_t();
@@ -30,47 +32,24 @@ struct node_t
     ImVec2 get_input_slot_position(int slot_no) const;
     ImVec2 get_output_slot_position(int slot_no) const;
 
+    virtual void init() = 0;
     virtual void draw_properties() = 0;
 
     bool draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset);
-    void init();
 };
 
-struct node_cam_t : public node_t
+template <typename T> struct node_deriv_t : public node_t
 {
-    xtcore::asset::ICamera *data;
+    T* data;
+    virtual void init();
     virtual void draw_properties();
 };
 
-struct node_obj_t : public node_t
-{
-    xtcore::asset::Object *data;
-    virtual void draw_properties();
-};
-
-struct node_mat_t : public node_t
-{
-    xtcore::asset::IMaterial *data;
-    virtual void draw_properties();
-};
-
-struct node_geo_t : public node_t
-{
-    xtcore::asset::ISurface *data;
-    virtual void draw_properties();
-};
-
-struct node_col_t : public node_t
-{
-    xtcore::sampler::SolidColor *data;
-    virtual void draw_properties();
-};
-
-struct node_numf_t : public node_t
-{
-    float *data;
-    virtual void draw_properties();
-};
+typedef node_deriv_t<xtcore::asset::ICamera>      node_cam_t;
+typedef node_deriv_t<xtcore::asset::Object>       node_obj_t;
+typedef node_deriv_t<xtcore::asset::IMaterial>    node_mat_t;
+typedef node_deriv_t<xtcore::asset::ISurface>     node_geo_t;
+typedef node_deriv_t<xtcore::sampler::SolidColor> node_col_t;
 
 struct link_t
 {
