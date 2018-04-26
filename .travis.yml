@@ -28,5 +28,5 @@ install:
 script:
     - if [ $TRAVIS_OS_NAME == linux ]; then ./configure; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then cmake ./CMakeLists.txt -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.a; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then cmake ./CMakeLists.txt -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" -DOpenMP_C_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.a; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then make; fi
