@@ -21,7 +21,9 @@ install:
     - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then sudo make install; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then cd ..; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 for glfw3 ; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/versions; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3; fi
 
 script:
     - ./configure
