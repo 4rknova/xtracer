@@ -27,4 +27,4 @@ install:
 
 script:
     - if [ $TRAVIS_OS_NAME == linux ]; then ./configure && make; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then CC=clang-3.9 CXX=clang-3.9++ ./configure && make; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then PATH="/usr/local/opt/llvm@3.9/bin:$PATH" LDFLAGS="-L/usr/local/opt/llvm@3.9/lib -Wl,-rpath,/usr/local/opt/llvm@3.9/lib" CC=clang-3.9 CXX=clang-3.9++ ./configure && make; fi
