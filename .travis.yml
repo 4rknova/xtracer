@@ -26,6 +26,5 @@ install:
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew llvm; fi
 
 script:
-    - ./configure
-    - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then CC=clang-omp CXX=clang-omp++ make; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then ./configure && make; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then CC=clang-omp CXX=clang-omp++ ./configure && make; fi
