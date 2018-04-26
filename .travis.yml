@@ -23,8 +23,8 @@ install:
     - if [ $TRAVIS_OS_NAME == linux ]; then cd ..; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/core; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew llvm@3.9; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew llvm libomp; fi
 
 script:
-    - if [ $TRAVIS_OS_NAME == linux ]; then ./configure && make; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then PATH="/usr/local/opt/llvm@3.9/bin:$PATH" LDFLAGS="-L/usr/local/opt/llvm@3.9/lib -Wl,-rpath,/usr/local/opt/llvm@3.9/lib" CC=clang-3.9 CXX=clang-3.9++ ./configure && make; fi
+    - ./configure
+    - make
