@@ -23,7 +23,7 @@ install:
     - if [ $TRAVIS_OS_NAME == linux ]; then cd ..; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/core; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew; fi
 
 script:
     - ./configure
