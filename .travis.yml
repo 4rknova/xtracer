@@ -27,5 +27,5 @@ install:
 
 script:
     - ./configure
-    - if [ $TRAVIS_OS_NAME == linux ]; make
-    - if [ $TRAVIS_OS_NAME == osx   ]; CC=clang-omp CXX=clang-omp++ make
+    - if [ $TRAVIS_OS_NAME == linux ]; make; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; CC=clang-omp CXX=clang-omp++ make; fi
