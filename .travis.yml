@@ -26,7 +26,7 @@ install:
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew llvm libomp; fi
 
 script:
-    - if [ $TRAVIS_OS_NAME == linux ]; ./configure
-    - if [ $TRAVIS_OS_NAME == linux ]; make
-    - if [ $TRAVIS_OS_NAME == osx   ]; cmake ./CMakeLists.txt -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.a
-    - if [ $TRAVIS_OS_NAME == osx   ]; make
+    - if [ $TRAVIS_OS_NAME == linux ]; then ./configure; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then cmake ./CMakeLists.txt -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.a; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then make; fi
