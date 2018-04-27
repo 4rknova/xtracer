@@ -24,9 +24,10 @@ install:
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/core; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew llvm libomp; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install --with-clang llvm
 
 script:
     - if [ $TRAVIS_OS_NAME == linux ]; then ./configure; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then cmake ./CMakeLists.txt -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include" -DOpenMP_C_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=$(brew --prefix libomp)/lib/libomp.a; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; then cmake; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then make; fi
