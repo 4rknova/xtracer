@@ -25,6 +25,7 @@ install:
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/core; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew libomp; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew upgrade cmake; fi
+    - ls /usr/local/bin/clang*
 
 script:
     - ./configure
