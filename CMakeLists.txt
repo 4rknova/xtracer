@@ -7,6 +7,10 @@ find_package(glfw3 3.2 REQUIRED)
 
 # Find OpenMP
 if(APPLE AND USE_OpenMP)
+    set(CMAKE_C_COMPILER "/usr/local/Cellar/llvm/5.0.1/bin/clang")
+    set(CMAKE_CXX_COMPILER "/usr/local/Cellar/llvm/5.0.1/bin/clang++")
+    set(OPENMP_LIBRARIES "/usr/local/Cellar/llvm/5.0.1/lib")
+    set(OPENMP_INCLUDES "/usr/local/Cellar/llvm/5.0.1/include")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(OpenMP_C "${CMAKE_C_COMPILER}")
         set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
