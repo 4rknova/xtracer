@@ -1,5 +1,5 @@
 language: cpp
-compiler: gcc
+compiler: clang
 
 os:
     - linux
@@ -25,6 +25,7 @@ before_install:
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew libomp llvm; fi
     - if [ $TRAVIS_OS_NAME == osx   ]; then brew outdated cmake || brew upgrade cmake; fi
+    - if [ $TRAVIS_OS_NAME == osx   ]; xcode-select --install ; fi
 
 script:
     - ./configure
