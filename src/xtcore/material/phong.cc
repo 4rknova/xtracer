@@ -1,39 +1,33 @@
 #include "phong.h"
 
 namespace xtcore {
-    namespace material {
+    namespace asset {
+        namespace material {
 
-ColorRGBf Phong::shade(
-       const Vector3f  &cam_position
-     , const Vector3f  &light_position
-     , const ColorRGBf &light_intensity
-     , const HitRecord &info) const
+bool Phong::shade(
+                ColorRGBf &intensity
+        , const ICamera   *camera
+        , const emitter_t *emitter
+        , const HitRecord &info) const
 {
-    Vector3f light_dir = light_position - info.point;
-    light_dir.normalize();
+    Vector3f light_dir = (emitter->position - info.point).normalized();
 
-    NMath::scalar_t d = dot(light_dir, info.normal);
+    NMath::scalar_t d = nmath_max(0, dot(light_dir, info.normal));
 
-    if (d < 0) d = 0;
+    Vector3f ray = (camera->position - info.point).normalized();
 
-    Vector3f ray = cam_position - info.point;
-    ray.normalize();
+    Vector3f r = (light_dir.reflected(info.normal)).normalized();
 
-    Vector3f r = light_dir.reflected(info.normal);
-    r.normalize();
+    NMath::scalar_t rmv = nmath_max(0, dot(r, ray));
 
-    NMath::scalar_t rmv = dot(r, ray);
-
-    if (rmv < 0) rmv = 0;
-
-    ColorRGBf res;
-
-    res +=  light_intensity *
+    intensity += emitter->intensity *
             (   (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
               + (get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)))
             );
-    return res;
+
+    return true;
 }
 
-    } /* namespace material */
+        } /* namespace material */
+    } /* namespace asset */
 } /* namespace xtcore */

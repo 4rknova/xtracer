@@ -7,6 +7,7 @@
 #include "sampler.h"
 #include "camera.h"
 #include "matdefs.h"
+#include "emitter.h"
 
 using NMath::Vector3f;
 using nimg::ColorRGBf;
@@ -23,10 +24,10 @@ class IMaterial
 
     bool is_emissive() const;
 
-	virtual ColorRGBf shade(
-          const Vector3f  &cam_position
-        , const Vector3f  &light_pos
-        , const ColorRGBf &light_intensity
+	virtual bool shade(
+                ColorRGBf &intensity
+        , const ICamera   *cam
+        , const emitter_t *emitter
         , const HitRecord &info) const = 0;
 
     float get_scalar(const char *name) const;

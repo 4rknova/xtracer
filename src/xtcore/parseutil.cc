@@ -25,6 +25,7 @@
 #include "material/lambert.h"
 #include "material/phong.h"
 #include "material/blinnphong.h"
+#include "material/emissive.h"
 
 #include "extrude.h"
 
@@ -374,21 +375,6 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 	return data;
 }
 
-xtcore::asset::IMaterial *deserialize_material_lambert(const char *source, const ncf::NCF *p)
-{
-    return new (std::nothrow) xtcore::material::Lambert();
-}
-
-xtcore::asset::IMaterial *deserialize_material_phong(const char *source, const ncf::NCF *p)
-{
-    return new (std::nothrow) xtcore::material::Phong();
-}
-
-xtcore::asset::IMaterial *deserialize_material_blinnphong(const char *source, const ncf::NCF *p)
-{
-    return new (std::nothrow) xtcore::material::BlinnPhong();
-}
-
 xtcore::sampler::ISampler *deserialize_rgba(const char *source, const ncf::NCF *p)
 {
     xtcore::sampler::SolidColor *sampler = new (std::nothrow) xtcore::sampler::SolidColor();
@@ -405,9 +391,10 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 
 	std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) data = deserialize_material_lambert(source, p);
-	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data = deserialize_material_phong(source, p);
-	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = deserialize_material_blinnphong(source, p);
+	     if (!type.compare(XTPROTO_LTRL_LAMBERT)   ) data = new (std::nothrow) xtcore::asset::material::Lambert();
+	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data = new (std::nothrow) xtcore::asset::material::Phong();
+	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = new (std::nothrow) xtcore::asset::material::BlinnPhong();
+	else if (!type.compare(XTPROTO_LTRL_EMISSIVE)  ) data = new (std::nothrow) xtcore::asset::material::Emissive();
 	else {
 		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete data;
@@ -577,7 +564,7 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
         matids.push_back(id);
 
-        xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::material::BlinnPhong();
+        xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::BlinnPhong();
         mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), material.texture_diffuse.c_str() , material.diffuse ));
         mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
         mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));

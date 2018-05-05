@@ -8,21 +8,25 @@
 
 using NMath::Vector3f;
 using nimg::ColorRGBf;
+using xtcore::asset::ICamera;
 
 namespace xtcore {
-    namespace material {
+    namespace asset {
+        namespace material {
 
 class Lambert : public xtcore::asset::IMaterial
 {
     public:
-    virtual ColorRGBf shade(
-          const Vector3f  &cam_position
-        , const Vector3f  &light_position
-        , const ColorRGBf &light_intensity
+    virtual bool shade(
+                ColorRGBf &intensity
+        , const ICamera   *camera
+        , const emitter_t *emitter
         , const HitRecord &info) const;
+
 };
 
-    } /* namespace material */
+        } /* namespace material */
+    } /* namespace asset */
 } /* namespace xtcore */
 
 #endif /* XTCORE_MAT_LAMBERT_H_INCLUDED */

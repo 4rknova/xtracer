@@ -11,6 +11,7 @@
 #include <xtcore/material/lambert.h>
 #include <xtcore/material/blinnphong.h>
 #include <xtcore/material/phong.h>
+#include <xtcore/material/emissive.h>
 #include <xtcore/sampler_col.h>
 #include <xtcore/sampler_tex.h>
 #include <xtcore/mesh.h>
@@ -140,14 +141,16 @@ template<>
 void node_mat_t::draw_properties()
 {
     int spec = 0;
-         if (dynamic_cast<xtcore::material::Lambert*>   (data)) spec = 1;
-    else if (dynamic_cast<xtcore::material::BlinnPhong*>(data)) spec = 2;
-    else if (dynamic_cast<xtcore::material::Phong*>     (data)) spec = 3;
+         if (dynamic_cast<xtcore::asset::material::Lambert*>   (data)) spec = 1;
+    else if (dynamic_cast<xtcore::asset::material::BlinnPhong*>(data)) spec = 2;
+    else if (dynamic_cast<xtcore::asset::material::Phong*>     (data)) spec = 3;
+    else if (dynamic_cast<xtcore::asset::material::Emissive*>  (data)) spec = 4;
 
     switch (spec) {
         case 1: { ImGui::Text("Shader: Lambert");    break; }
         case 2: { ImGui::Text("Shader: BlinnPhong"); break; }
         case 3: { ImGui::Text("Shader: Phong");      break; }
+        case 4: { ImGui::Text("Shader: Emissive");   break; }
     }
 
     int sz_scalar  = data->get_scalar_count();

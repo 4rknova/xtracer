@@ -1,5 +1,5 @@
-#ifndef XTCORE_MAT_BLINN_PHONG_H_INCLUDED
-#define XTCORE_MAT_BLINN_PHONG_H_INCLUDED
+#ifndef XTCORE_MAT_EMISSIVE_H_INCLUDED
+#define XTCORE_MAT_EMISSIVE_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
@@ -14,7 +14,7 @@ namespace xtcore {
     namespace asset {
         namespace material {
 
-class BlinnPhong : public xtcore::asset::IMaterial
+class Emissive : public xtcore::asset::IMaterial
 {
     public:
     virtual bool shade(
@@ -22,10 +22,11 @@ class BlinnPhong : public xtcore::asset::IMaterial
         , const ICamera   *camera
         , const emitter_t *emitter
         , const HitRecord &info) const;
+
 };
 
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */
 
-#endif /* XTCORE_MAT_BLINN_PHONG_H_INCLUDED */
+#endif /* XTCORE_MAT_EMISSIVE_H_INCLUDED */

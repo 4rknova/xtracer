@@ -42,6 +42,9 @@ namespace NMath {
 	extern "C" {
 #endif	/* __cplusplus */
 
+#define nmath_max(x,y) (x > y ? x : y)
+#define nmath_min(x,y) (y > x ? x : y)
+
 /* Floating point precision */
 #ifdef MATH_SINGLE_PRECISION
 	#define SCALAR_T_MAX FLT_MAX

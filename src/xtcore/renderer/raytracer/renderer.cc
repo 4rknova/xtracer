@@ -157,7 +157,12 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
             bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
 			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
-                color += mat->shade(pray.origin, light_pos, (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0)), info) * tlshscaling;
+                ColorRGBf intensity;
+                xtcore::asset::emitter_t e;
+                e.position  = light_pos;
+                e.intensity = (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0));
+                mat->shade(intensity, m_context->scene.get_camera(m_context->params.camera), &e, info) * tlshscaling;
+                color += intensity;
 			}
 		}
 	}
