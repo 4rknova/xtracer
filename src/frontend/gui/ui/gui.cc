@@ -636,6 +636,9 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
     if (is_current) col = ImVec4(0.f,1.f,0.f,1.f);
 
     ImGui::TextColored(col, "%s", ws->source_file.c_str());
+    ImGui::Text(ws->context.scene.m_name.c_str());
+    ImGui::Text(ws->context.scene.m_version.c_str());
+    ImGui::Text(ws->context.scene.m_description.c_str());
     ImGui::Text("Resolution: %ix%i", ws->context.params.width, ws->context.params.height);
     ImGui::Text("Active Cam: %s", ws->context.params.camera ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
 

@@ -11,8 +11,8 @@
 #define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
 
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
-#define XTPROTO_PROP_DESCR			"descr"				/* string     */ /* Scene description */
-#define XTPROTO_PROP_VERSN			"versn"				/* string     */ /* Scene version */
+#define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
+#define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
 
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
 

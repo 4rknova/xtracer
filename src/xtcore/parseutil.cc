@@ -657,8 +657,10 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 
     Log::handle().post_message("Building the scene..");
 
-    scene->m_source   = deserialize_cstr(filename);
-	scene->m_name     = root.get_property_by_name(XTPROTO_PROP_TITLE);
+    scene->m_source      = deserialize_cstr(filename);
+	scene->m_name        = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_TITLE));
+    scene->m_description = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_DESCR));
+    scene->m_version     = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_VERSN));
 	scene->m_ambient  = deserialize_col3(&root, XTPROTO_PROP_IAMBN)
 			          * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
 

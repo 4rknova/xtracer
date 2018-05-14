@@ -1,6 +1,6 @@
-title = Cubemap
-descr = Cubemap example
-versn = 0.3
+title       = Cubemap
+description = Cubemap example
+version     = 0.3
 
 data = data/cubemap
 

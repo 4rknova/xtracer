@@ -90,6 +90,9 @@ public:
 	// The scene's source filepath and filename
 	std::string m_name;
 	std::string m_source;
+    std::string m_description;
+    std::string m_version;
+
     xtcore::sampler::Cubemap *m_cubemap;
 
 	// This will cleanup all the allocated memory
