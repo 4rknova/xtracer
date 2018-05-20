@@ -6,6 +6,6 @@
 #include <renderer/normal/renderer.h>
 #include <renderer/uv/renderer.h>
 #include <renderer/raytracer/renderer.h>
-#include <renderer/pathtracer/renderer.h>
+#include <renderer/ao/renderer.h>
 
 #endif /* XTCORE_RENDERERS_H_INCLUDED */

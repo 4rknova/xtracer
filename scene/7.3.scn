@@ -95,7 +95,7 @@ geometry = {
 
 material = {
 	soldier = {
-		type = phong
+		type = lambert
 
         properties = {
             samplers = {
@@ -110,8 +110,6 @@ material = {
                 reflectance = 0
             }
         }
-
-		diffuse = col3(1,1,1)
 	}
 
     light = {

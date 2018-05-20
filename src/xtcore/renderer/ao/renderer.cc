@@ -17,7 +17,10 @@
 
 namespace xtcore {
     namespace renderer {
-        namespace pathtracer {
+        namespace ao {
+
+#define RADIUS (128.0)
+
 
 Renderer::Renderer()
 	: m_context(NULL)
@@ -26,6 +29,38 @@ Renderer::Renderer()
 void Renderer::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
+}
+
+nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::HitRecord &info)
+{
+    if (depth == 0) return nimg::ColorRGBf(0,0,0);
+
+    HASH_UINT64 obj;
+
+    if (m_context->scene.intersection(ray, info, obj)) {
+        xtcore::Ray r;
+        r.origin    = info.point + info.normal;
+        r.direction = NMath::Sample::hemisphere(info.normal, info.normal);
+
+        xtcore::asset::Object    *o = m_context->scene.m_objects[obj];
+        xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
+
+        if (m->is_emissive()) {
+            return m->get_sample("emissive", info.texcoord);
+        }
+        else
+        {
+            xtcore::HitRecord hit;
+            return m->get_sample("diffuse", info.texcoord) * eval(--depth, r, hit);
+        }
+    }
+    else
+    {
+        return m_context->scene.m_cubemap->sample(ray.direction);
+        return ColorRGBf(1,1,1);
+        float t = 0.5 * ray.direction.y + 1.0;
+        return (1.0f - t) * nimg::ColorRGBf(1,1,1) + t * nimg::ColorRGBf(0.5,0.7,1.0);
+    }
 }
 
 void Renderer::render()
@@ -49,18 +84,9 @@ void Renderer::render()
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
 
-	        xtcore::HitRecord info;
-            HASH_UINT64 obj;
-       		memset(&info, 0, sizeof(info));
-
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-            NMath::Vector3f  acc_normal = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
-            NMath::scalar_t  alpha  = color_pixel.a();
-
-            NMath::Vector3f normal_sample;
-            NMath::scalar_t alpha_sample = 0.f;
             for (float dofs = 0; dofs < p->samples; ++dofs) {
           	 	xtcore::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
@@ -68,37 +94,19 @@ void Renderer::render()
                     , (float)(p->height)
                 );
 
-                if (m_context->scene.intersection(ray, info, obj)) {
-                    float weight = (1. / p->samples);
-                    normal_sample += info.normal * weight;
-                    alpha_sample  += weight;
-                }
+                xtcore::HitRecord info;
+                memset(&info, 0 ,sizeof(info));
+                color_pixel += eval(p->rdepth, ray, info) * aa_sample.weight * (1.f/p->samples);
             }
 
-            acc_normal += aa_sample.weight * (normal_sample * 0.5f + 0.5f);
-            color_pixel = nimg::ColorRGBAf(acc_normal.x, acc_normal.y, acc_normal.z, 0.);
-            color_pixel.a(alpha + aa_sample.weight * alpha_sample);
+            color_pixel.a(1);
             tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
-        }
-
-        // Normalize
-        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
-            for (size_t y = tile->y0(); y < tile->y1(); ++y) {
-                nimg::ColorRGBAf color;
-                tile->read(x, y, color);
-                NMath::Vector3f n(color.r(), color.g(), color.b());
-                n = (n - 0.5f) * 2.0f;
-                n.normalize();
-                n = n * 0.5f + 0.5f;
-                color = nimg::ColorRGBAf(n.x, n.y, n.z, color.a());
-                tile->write(x, y, color);
-            }
         }
 
         tile->submit();
     }
 }
 
-        } /* namespace pathtraceer */
+        } /* namespacer ao */
     } /* namespace renderer */
 } /* namespace xtcore */

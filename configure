@@ -1,2 +1,6 @@
 cmake ./CMakeLists.txt
-xxd -i ./LICENSE | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > ./src/xtcore/license.h
+
+DIR_RES="./src/xtcore/res/"
+OUT_LICENSE="$DIR_RES/license.h"
+mkdir -p $DIR_RES
+xxd -i ./LICENSE | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE

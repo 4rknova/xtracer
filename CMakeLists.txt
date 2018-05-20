@@ -16,6 +16,10 @@ set(PATH_LIB  ${PATH_ROOT}/lib)
 set(PATH_EXT  ${PATH_ROOT}/ext)
 set(PATH_TEST ${PATH_BIN}/test)
 
+set(PATH_SRC_XTCORE           ${PATH_SRC}/xtcore)
+set(PATH_SRC_FRONTEND_CLI     ${PATH_SRC}/frontend/cli)
+set(PATH_SRC_FRONTEND_GUI     ${PATH_SRC}/frontend/gui)
+
 MACRO(SCAN_DIRS return_list)
     FILE(GLOB_RECURSE new_list *.h)
     SET(dir_list ${PATH_EXT})
@@ -45,10 +49,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
 set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
-
-set(PATH_SRC_XTCORE           ${PATH_SRC}/xtcore)
-set(PATH_SRC_FRONTEND_CLI     ${PATH_SRC}/frontend/cli)
-set(PATH_SRC_FRONTEND_GUI     ${PATH_SRC}/frontend/gui)
 
 file(GLOB SRC_LIBS
     ${PATH_LIB}/*/*.c
@@ -149,7 +149,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
-set(DEFS XTCORE_VERSION="${DEF_VERSION}")
+set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
 
 MESSAGE( STATUS ${DEFS})
 

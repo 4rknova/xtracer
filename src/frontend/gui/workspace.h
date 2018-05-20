@@ -13,7 +13,6 @@
 #include "opengl.h"
 
 #define DEFAULT_GAMMA       (2.2)
-#define DEFAULT_PROGRESSIVE (false)
 
 enum WS_STATUS
 {

@@ -1,9 +1,9 @@
 #include "xtcore.h"
-#include "license.h"
 #include "config.h"
 #include "profiler.h"
 #include "strpool.h"
 #include "midi.h"
+#include "res/license.h"
 
 namespace xtcore {
 

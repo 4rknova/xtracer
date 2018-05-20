@@ -1,5 +1,5 @@
-#ifndef XTCORE_RENDERER_PATHTRACER_H_INCLUDED
-#define XTCORE_RENDERER_PATHTRACER_H_INCLUDED
+#ifndef XTCORE_RENDERER_AO_H_INCLUDED
+#define XTCORE_RENDERER_AO_H_INCLUDED
 
 #include <nplatform/timer.h>
 
@@ -19,7 +19,7 @@ using nimg::Pixmap;
 
 namespace xtcore {
     namespace renderer {
-        namespace pathtracer {
+        namespace ao {
 
 class Renderer : public xtcore::render::IRenderer
 {
@@ -30,11 +30,13 @@ class Renderer : public xtcore::render::IRenderer
 	virtual void render();
 
 	private:
+    nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray, xtcore::HitRecord &hit);
+
     xtcore::render::context_t *m_context;
 };
 
-        } /* namespace pathtracer */
+        } /* namespace ao */
     } /* namespace renderer */
 } /* namespace xtcore */
 
-#endif /* XTCORE_RENDERER_PATHTRACER_H_INCLUDED */
+#endif /* XTCORE_RENDERER_AO_H_INCLUDED */
