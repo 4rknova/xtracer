@@ -4,13 +4,16 @@ versn = 0.5
 
 data = data
 
-cubemap = {
-    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
-    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
-    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
-    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
-    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
-    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+environment = {
+    type = cubemap
+    config = {
+        posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
+        negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
+        negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
+        posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
+        posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
+        negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+    }
 }
 
 camera = {

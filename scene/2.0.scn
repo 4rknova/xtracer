@@ -2,6 +2,15 @@ title = Room
 descr = Three spheres in a room (sphere lights).
 versn = 0.3
 
+environment = {
+    type = gradient
+    config = {
+        a = col3(1.0,1.0,1.0)
+        b = col3(0.7,0.8,1.0)
+    }
+
+}
+
 camera = {
 	default = {
         type     = thin-lens

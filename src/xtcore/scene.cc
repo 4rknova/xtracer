@@ -36,7 +36,7 @@ Scene &Scene::operator =(const Scene &)
 }
 
 Scene::Scene()
-    : m_cubemap(0)
+    : m_environment(0)
 {}
 
 Scene::~Scene()
@@ -99,9 +99,9 @@ int purge(std::map<HASH_UINT64, T*> &map, HASH_UINT64 id)
 
 void Scene::release()
 {
-    if (m_cubemap) {
-        delete m_cubemap;
-        m_cubemap = 0;
+    if (m_environment) {
+        delete m_environment;
+        m_environment = 0;
     }
 
     purge(m_cameras);
@@ -117,7 +117,7 @@ int Scene::destroy_object   (HASH_UINT64 id) { return purge(m_objects  , id); }
 
 nimg::ColorRGBf Scene::sample_cubemap(const Vector3f &direction) const
 {
-    return m_cubemap ? m_cubemap->sample(direction) : nimg::ColorRGBf(0,0,0);
+    return m_environment ? m_environment->sample(direction) : nimg::ColorRGBf(0,0,0);
 }
 
 const ColorRGBf &Scene::ambient()

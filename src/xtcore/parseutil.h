@@ -9,6 +9,8 @@
 #include "material.h"
 #include "sampler_tex.h"
 #include "sampler_col.h"
+#include "sampler_cubemap.h"
+#include "sampler_gradient.h"
 #include "object.h"
 #include "cubemap.h"
 #include "scene.h"
@@ -38,6 +40,7 @@ xtcore::asset::ISurface     *deserialize_geometry (const char *source, const ncf
 xtcore::asset::Object       *deserialize_object   (const char *source, const ncf::NCF *p);
 xtcore::sampler::Texture2D  *deserialize_texture  (const char *source, const ncf::NCF *p);
 xtcore::sampler::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
+xtcore::sampler::Gradient   *deserialize_gradient (const char *source, const ncf::NCF *p);
 xtcore::sampler::ISampler   *deserialize_rgba     (const char *source, const ncf::NCF *p);
 
 int create_cubemap  (Scene *scene, ncf::NCF *p);

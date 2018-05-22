@@ -26,6 +26,10 @@
 #include "material/phong.h"
 #include "material/blinnphong.h"
 #include "material/emissive.h"
+#include "sampler_col.h"
+#include "sampler_tex.h"
+#include "sampler_cubemap.h"
+#include "sampler_gradient.h"
 
 #include "extrude.h"
 
@@ -141,21 +145,33 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
+xtcore::sampler::Gradient *deserialize_gradient(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    xtcore::sampler::Gradient *data = new xtcore::sampler::Gradient;
+
+    if (data) {
+        data->a = deserialize_col3(p, "a");
+        data->b = deserialize_col3(p, "b");
+    }
+
+    return data;
+}
+
 xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p)
 {
     if (!p) return 0;
 
     xtcore::sampler::Cubemap *data = new xtcore::sampler::Cubemap;
 
-    ncf::NCF *n = p->get_group_by_name(XTPROTO_NODE_CUBEMAP);
-
     if (data) {
-        std::string posx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSX));
-        std::string posy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSY));
-        std::string posz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_POSZ));
-        std::string negx = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGX));
-        std::string negy = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGY));
-        std::string negz = deserialize_cstr(n->get_property_by_name(XTPROTO_LTRL_NEGZ));
+        std::string posx = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSX));
+        std::string posy = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSY));
+        std::string posz = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSZ));
+        std::string negx = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGX));
+        std::string negy = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGY));
+        std::string negz = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGZ));
 
         std::string base, file, fsource = source;
     	ncf::util::path_comp(fsource, base, file);
@@ -411,9 +427,10 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
             xtcore::sampler::ISampler *sampler = 0;
             std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
-                 if (!type.compare(XTPROTO_TEXTURE)) sampler = deserialize_texture(source, entry);
-            else if (!type.compare(XTPROTO_CUBEMAP)) sampler = deserialize_cubemap(source, entry);
-            else if (!type.compare(XTPROTO_COLOR  )) sampler = deserialize_rgba   (source, entry);
+                 if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
+            else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
+            else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(source, entry);
+            else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (source, entry);
 
             data->add_sampler(entry->get_name(), sampler);
         }
@@ -661,10 +678,17 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 	scene->m_name        = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_TITLE));
     scene->m_description = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_DESCR));
     scene->m_version     = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_VERSN));
-	scene->m_ambient  = deserialize_col3(&root, XTPROTO_PROP_IAMBN)
-			          * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
+	scene->m_ambient     = deserialize_col3(&root, XTPROTO_PROP_IAMBN)
+			             * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
 
-    scene->m_cubemap = deserialize_cubemap(scene->m_source.c_str(), &root);
+
+    ncf::NCF *env_node = root.get_group_by_name(XTPROTO_NODE_ENVIRONMENT);
+    ncf::NCF *env_data = env_node->get_group_by_name(XTPROTO_CONFIG);
+
+    std::string environment =  deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
+         if (!environment.compare(XTPROTO_CUBEMAP )) scene->m_environment = deserialize_cubemap (scene->m_source.c_str(), env_data);
+    else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(scene->m_source.c_str(), env_data);
+    else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (scene->m_source.c_str(), env_data);
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);

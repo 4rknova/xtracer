@@ -10,6 +10,9 @@
 #define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
 #define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
 
+
+#define XTPROTO_CONFIG              "config"            /* N/A        */ /* Config */
+
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
 #define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
@@ -104,7 +107,9 @@
 
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
 
+#define XTPROTO_NODE_ENVIRONMENT    "environment"       /* N/A        */ /* Environment */
 #define XTPROTO_NODE_CUBEMAP    	"cubemap"			/* N/A        */ /* Cubemap */
+#define XTPROTO_GRADIENT            "gradient"          /* N/A        */ /* Gradient */
 #define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */ /* Resource node */
 #define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */ /* Resource node */

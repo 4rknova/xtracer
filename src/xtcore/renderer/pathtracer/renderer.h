@@ -1,5 +1,5 @@
-#ifndef XTCORE_RENDERER_AO_H_INCLUDED
-#define XTCORE_RENDERER_AO_H_INCLUDED
+#ifndef XTCORE_RENDERER_PATHTRACER_H_INCLUDED
+#define XTCORE_RENDERER_PATHTRACER_H_INCLUDED
 
 #include <nplatform/timer.h>
 
@@ -19,7 +19,7 @@ using nimg::Pixmap;
 
 namespace xtcore {
     namespace renderer {
-        namespace ao {
+        namespace pathtracer {
 
 class Renderer : public xtcore::render::IRenderer
 {
@@ -35,8 +35,8 @@ class Renderer : public xtcore::render::IRenderer
     xtcore::render::context_t *m_context;
 };
 
-        } /* namespace ao */
+        } /* namespace pathtracer */
     } /* namespace renderer */
 } /* namespace xtcore */
 
-#endif /* XTCORE_RENDERER_AO_H_INCLUDED */
+#endif /* XTCORE_RENDERER_PATHTRACER_H_INCLUDED */

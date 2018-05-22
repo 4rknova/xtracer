@@ -17,7 +17,7 @@
 
 namespace xtcore {
     namespace renderer {
-        namespace ao {
+        namespace pathtracer {
 
 #define RADIUS (128.0)
 
@@ -56,10 +56,7 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::Hit
     }
     else
     {
-        return m_context->scene.m_cubemap->sample(ray.direction);
-        return ColorRGBf(1,1,1);
-        float t = 0.5 * ray.direction.y + 1.0;
-        return (1.0f - t) * nimg::ColorRGBf(1,1,1) + t * nimg::ColorRGBf(0.5,0.7,1.0);
+        return m_context->scene.m_environment->sample(ray.direction);
     }
 }
 
@@ -87,7 +84,7 @@ void Renderer::render()
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-            for (float dofs = 0; dofs < p->samples; ++dofs) {
+            for (size_t i = 0; i < p->samples; ++i) {
           	 	xtcore::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
@@ -107,6 +104,6 @@ void Renderer::render()
     }
 }
 
-        } /* namespacer ao */
+        } /* namespace pathtracer */
     } /* namespace renderer */
 } /* namespace xtcore */

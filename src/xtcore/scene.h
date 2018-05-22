@@ -13,7 +13,7 @@
 #include "camera.h"
 #include "material.h"
 #include "sampler_tex.h"
-#include "sampler_cubemap.h"
+#include "sampler.h"
 #include "object.h"
 
 using NMath::Vector3f;
@@ -93,7 +93,7 @@ public:
     std::string m_description;
     std::string m_version;
 
-    xtcore::sampler::Cubemap *m_cubemap;
+    xtcore::sampler::ISampler *m_environment;
 
 	// This will cleanup all the allocated memory
 	void release();

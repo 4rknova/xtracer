@@ -381,7 +381,7 @@ void mm_renderer(workspace_t *ws)
         if (ImGui::MenuItem("Normal"           )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer(); }
         if (ImGui::MenuItem("UV"               )) { render = true; ws->renderer = new xtcore::renderer::uv::Renderer(); }
         if (ImGui::MenuItem("Raytracer"        )) { render = true; ws->renderer = new Renderer(); }
-        if (ImGui::MenuItem("Ambient Occlusion")) { render = true; ws->renderer = new xtcore::renderer::ao::Renderer(); }
+        if (ImGui::MenuItem("Ambient Occlusion")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
         if (render) action::render(ws);
         ImGui::EndMenu();
     }
