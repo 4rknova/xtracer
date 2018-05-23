@@ -2,6 +2,14 @@ title = DOF
 descr = Depth of field
 versn = 0.4
 
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
 camera = {
 	default = {
 		type     = thin-lens
