@@ -1,6 +1,6 @@
-title = Room
-descr = Three spheres in a room (sphere lights).
-versn = 0.3
+title       = Simple Example Scene
+description = A sphere on a plane.
+version     = 0.5
 
 environment = {
     type = gradient
@@ -8,7 +8,6 @@ environment = {
         a = col3(1.0,1.0,1.0)
         b = col3(0.7,0.8,1.0)
     }
-
 }
 
 camera = {
@@ -44,7 +43,7 @@ geometry = {
 object = {
 	ball = {
 		geometry = red_ball
-		material = lambert_red
+		material = lambert_white
 	}
     floor = {
 		geometry = floor
@@ -57,7 +56,7 @@ object = {
 }
 
 material = {
-	lambert_red = {
+	lambert_white = {
 		type = lambert
         properties = {
             samplers = {
@@ -93,4 +92,3 @@ material = {
         }
     }
 }
-

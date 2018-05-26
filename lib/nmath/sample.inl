@@ -89,6 +89,22 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 	return (vc * nmath_pow(vdotr, exponent)).normalized();
 }
 
+inline Vector3f diffuse(Vector3f &normal)
+{
+    Vector3f p;
+    float l = 1.0;
+
+    do {
+        p = 2.0 * Vector3f(prng_c(0,1), prng_c(0,1), prng_c(0,1)) - Vector3f(1,1,1);
+        l = (p * p).length();
+        l *= l;
+    } while (l >= 1.0);
+
+    p.normalize();
+
+    return p;
+}
+
 	} /* namespace Sample */
 } /* namespace NMath */
 

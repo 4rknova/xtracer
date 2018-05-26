@@ -1,43 +1,31 @@
-title = Conference Room
-descr = Conference Room
-versn = 0.5
+title       = Conference Room
+description = Conference Room
+version     = 0.5
 
-data = data/graphics.cs.williams.edu
+data  = data
+model = <data>/geometry/graphics.cs.williams.edu/conference
 
 camera = {
-    default  = {
-        type     = thin-lens
-		fov      = 45
-		position = vec3(-350,250,-80)
-		target   = vec3(-0,130,50)
-		up       = vec3(0,1,0)
-        aperture = 5
-        flength  = 400
+    default = {
+        type     = ods
+        ipd      = 3.2
+        position = vec3(200,300,-450)
     }
 
-    ods = {
-        type     = ods
-        ipd      = 1.5
-        position = vec3(0, 250, 0)
-    }
+	cam0 = {
+        type     = thin-lens
+		fov      = 60
+		position = vec3(-500,400,100)
+		target   = vec3(0,150,0)
+		up       = vec3(0,1,0)
+	}
 }
 
 geometry = {
-	sat1 = {
-		type = sphere
-        radius = 0.001
-
-		position = {
-    		x = 0
-			y = 300
-			z = 0
-		}
-
-		intensity = {
-			r = 1
-			g = 1
-			b = 1
-		}
+	light = {
+		type     = sphere
+		position = vec3(400,400,0)
+        radius   = 2.5
 	}
 }
 
@@ -57,13 +45,13 @@ material = {
 }
 
 object = {
-	sponza = {
-		source = <data>/conference/conference.obj
-        prefix = sponza_
-    }
+	3dmodel = {
+		source = <model>/conference.obj
+        prefix = conf_
+	}
 
-    l0 = {
-        geometry = sat1
+    light = {
+        geometry = light
         material = light
     }
 }

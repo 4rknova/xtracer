@@ -39,8 +39,8 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::Hit
 
     if (m_context->scene.intersection(ray, info, obj)) {
         xtcore::Ray r;
-        r.origin    = info.point + info.normal;
-        r.direction = NMath::Sample::hemisphere(info.normal, info.normal);
+        r.origin    = info.point + info.normal * EPSILON;
+        r.direction = NMath::Sample::diffuse(info.normal);
 
         xtcore::asset::Object    *o = m_context->scene.m_objects[obj];
         xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
@@ -56,7 +56,9 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::Hit
     }
     else
     {
-        return m_context->scene.m_environment->sample(ray.direction);
+        ISampler *s = m_context->scene.m_environment;
+        return s ? m_context->scene.m_environment->sample(ray.direction)
+                 : ColorRGBf(0,0,0);
     }
 }
 

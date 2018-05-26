@@ -2,6 +2,7 @@
 #include <nimg/sample.h>
 #include <nimg/transform.h>
 #include "sampler_tex.h"
+#include "log.h"
 #include <cstdio>
 
 namespace xtcore {
@@ -21,7 +22,9 @@ void Texture2D::set_filtering(FILTERING filtering)
 
 int Texture2D::load(const char *file)
 {
-	return nimg::io::load::image(file, m_map);
+    int res = nimg::io::load::image(file, m_map);
+    Log::handle().post_debug("Loading texture: %s (%i)", file, res);
+    return res;
 }
 
 int Texture2D::load(const nimg::Pixmap &map)

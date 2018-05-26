@@ -1,6 +1,5 @@
 #include <nmath/precision.h>
 #include <nimg/color.h>
-#include "log.h"
 #include "sampler_cubemap.h"
 
 namespace xtcore {

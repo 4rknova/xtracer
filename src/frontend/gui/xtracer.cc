@@ -43,6 +43,11 @@ int main(int argc, char** argv)
                                         , NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
+
+    /* The following line is required for outdated versions
+    ** of libglew and is introduced as a fix for Ubuntu builds.
+    */
+    glewExperimental = GL_TRUE;
     glewInit();
 
     // Setup ImGui binding
@@ -55,11 +60,6 @@ int main(int argc, char** argv)
     // Setup style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-
-    /* The following line is required for outdated versions
-    ** of libglew and is introduced as a fix for Ubuntu builds.
-    */
-    glewExperimental = GL_TRUE;
 
     gui::init(&state);
 

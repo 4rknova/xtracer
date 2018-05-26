@@ -1,45 +1,51 @@
-title = Crytek Sponza
-descr = Crytek Sponza
-versn = 0.5
+title = Sponza Atrium (Crytek)
+descr = Sponza Atrium (Crytek)
+versn = 0.6
 
-data = data
+data  = data
+model = <data>/geometry/graphics.cs.williams.edu/crytek-sponza
 
-cubemap = {
-    posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
-    negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
-    negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
-    posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
-    posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
-    negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+environment = {
+    type = gradient
+    config = {
+        a = col3(1.0,1.0,1.0)
+        b = col3(0.7,0.8,1.0)
+    }
 }
 
 camera = {
     default  = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(-50,130,-200)
-		target   = vec3(-50,110,30)
+		position = vec3(0,2,0)
+		target   = vec3(1,2,0)
 		up       = vec3(0,1,0)
-        aperture = 5
-        flength  = 175
+        aperture = 0.001
+        flength  = 0.1
     }
 
     ods = {
         type     = ods
         ipd      = 1.5
-        position = vec3(0, 1, 0)
+        position = vec3(0, 2, 0)
     }
 }
 
 geometry = {
 	sat1 = {
 		type = sphere
-        radius = 1
+        radius = 0.01
 
 		position = {
-    		x = 0
-			y = 10
+    		x = 1
+			y = 1
 			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
 		}
 	}
 }
@@ -61,7 +67,7 @@ material = {
 
 object = {
 	sponza = {
-		source = <data>/crytek/sponza.obj
+		source = <model>/sponza.obj
         prefix = sponza_
     }
 

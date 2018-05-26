@@ -1,8 +1,9 @@
-title = Icosahedron
-descr = An icosahedron
-versn = 0.1
+title       = Simple Example Scene
+description = An icosahedron reflecting the environment
+version     = 0.5
 
-data = data/cubemap
+data = data
+env  = <data>/image/envmap/humus/VancouverConventionCentre
 
 camera = {
 	ods = {
@@ -54,13 +55,16 @@ material = {
 	}
 }
 
-cubemap = {
-    posy = <data>/posy.jpg
-    negy = <data>/negy.jpg
-    negx = <data>/negx.jpg
-    posx = <data>/posx.jpg
-    posz = <data>/posz.jpg
-    negz = <data>/negz.jpg
+environment = {
+    type   = cubemap
+    config = {
+        posy = <env>/posy.jpg
+        negy = <env>/negy.jpg
+        negx = <env>/negx.jpg
+        posx = <env>/posx.jpg
+        posz = <env>/posz.jpg
+        negz = <env>/negz.jpg
+    }
 }
 
 object = {

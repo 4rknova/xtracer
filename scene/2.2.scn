@@ -1,6 +1,6 @@
-title = Room
-descr = Three spheres in a room.
-versn = 0.4
+title       = Room
+description = Three spheres in a room (specular, sphere lights).
+version     = 0.5
 
 camera = {
 

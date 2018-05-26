@@ -1,8 +1,6 @@
-title = Room
-descr = Three spheres in a room (sphere lights).
-versn = 0.3
-
-ambient = col3(0,0,0)
+title       = Room
+description = Three spheres in a room (diffuse, sphere lights).
+version     = 0.5
 
 camera = {
 	default = {
@@ -97,13 +95,13 @@ object = {
 		geometry = ceiling
 		material = lambert_grey
 	}
-	back = {
+    back = {
 		geometry = back
 		material = lambert_grey
 	}
 	right_wall = {
 		geometry = right_wall
-       material = lambert_blue
+        material = lambert_blue
 	}
 	left_wall = {
 		geometry = left_wall

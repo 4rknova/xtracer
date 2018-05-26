@@ -340,8 +340,6 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 		data = new (std::nothrow) xtcore::surface::Plane;
 		((xtcore::surface::Plane *)data)->normal   = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
 		((xtcore::surface::Plane *)data)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
-        printf("--\n%f,%f,%f\n", ((xtcore::surface::Plane *)data)->normal.x,   ((xtcore::surface::Plane *)data)->normal.y,((xtcore::surface::Plane *)data)->normal.z);
-        printf("%f\n", ((xtcore::surface::Plane *)data)->distance);
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		data = new (std::nothrow) xtcore::surface::Sphere;

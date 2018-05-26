@@ -18,9 +18,9 @@
 #	-	The final image appears flipped to the yy' axis. This is due to the
 #		different coordinate system used in the original data.
 
-title = Cornell box replica (based on the original radiosity dataset)
-descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
-versn = 0.4
+title       = Cornell box replica (based on the original radiosity dataset)
+description = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
+version     = 0.4
 
 camera = {
 	default = {
