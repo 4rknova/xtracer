@@ -94,6 +94,8 @@ const resolution_t resolutions[] = {
     , RES(  768,  128, "HStrip"   )
     , RES( 3072,  512, "HStrip"   )
     , RES( 6144, 1024, "HStrip"   )
+    , RES(  500,  500, "Square"   ) // Square
+    , RES(  800,  800, "Square"   ) // Square
     , RES( 1024, 1024, "Square"   ) // Square
     , RES( 2048, 2048, "Square"   )
     , RES( 4096, 4096, "Square"   )
@@ -175,69 +177,44 @@ void draw_edit_float(const char *label, float value)
 	ImGui::PopItemWidth();
 }
 
-void mm_tileorder(workspace_t *ws)
-{
-    int tile_order = (int)ws->tile_order;
-    ImGui::Text(STR_TILE_ORDER);
-    ImGui::Separator();
-    ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
-    ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
-    ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
-    ImGui::NewLine();
-    ws->tile_order = (xtcore::render::TILE_ORDER)tile_order;
-}
-
-void mm_rmode(workspace_t *ws)
-{
-    if (!ws) return;
-    int rmode = (int)ws->rmode;
-    ImGui::Text(STR_RMODE);
-    ImGui::Separator();
-    ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
-    ImGui::RadioButton(STR_RMODE_CONTINUOUS, &rmode, WS_RMODE_CONTINUOUS);
-    ImGui::Checkbox(STR_SHOW_TILE_UPDATES, &(ws->show_tile_updates));
-    ws->rmode = (WS_RMODE)rmode;
-}
-
 void mm_resolution (workspace_t *ws)
 {
+    ImGui::Text("Resolution");
+    textedit_int("Width" , ws->context.params.width , 1, 1);
+    textedit_int("Height", ws->context.params.height, 1, 1);
+    ImGui::NewLine();
+    ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
+    ImGui::NewLine();
     size_t res_entries = sizeof(resolutions) / sizeof(resolution_t);
     int selected = -1;
     ImVec2 bd(100,0);
-
-    ImGui::Text(STR_SENSOR);ImGui::Separator();
     ImGui::Text(STR_PRESETS);
-    ImGui::BeginChild("LST_RES", ImVec2(300, 100), true);
-    ImGui::Columns(4, "LST_RES_COLUMNS");
-    ImGui::Separator();
+    ImGui::Columns(4, "LST_RES_COLUMNS", false);
     ImGui::Text("ID");     ImGui::NextColumn();
     ImGui::Text("Type");   ImGui::NextColumn();
     ImGui::Text("Width");  ImGui::NextColumn();
     ImGui::Text("Height"); ImGui::NextColumn();
-    for (int i = 0; i < res_entries; i++) {
-        const resolution_t *r = &resolutions[i];
-        char label[32];
-        sprintf(label, "%02d", i);
-        if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns)) {
-            ws->context.params.width  = r->width;
-            ws->context.params.height = r->height;
-        }
-        bool hovered = ImGui::IsItemHovered();
-        ImGui::NextColumn();
-        ImGui::Text("%s", r->description); ImGui::NextColumn();
-        ImGui::Text("%i", r->width);       ImGui::NextColumn();
-        ImGui::Text("%i", r->height);      ImGui::NextColumn();
-    }
     ImGui::Columns(1);
+    ImGui::BeginChild("LST_RES", ImVec2(300, 500), true);
+    {
+        ImGui::Columns(4, "LST_RES_COLUMNS_INNER");
+        for (int i = 0; i < res_entries; i++) {
+            const resolution_t *r = &resolutions[i];
+            char label[32];
+            sprintf(label, "%02d", i);
+            if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns)) {
+                ws->context.params.width  = r->width;
+                ws->context.params.height = r->height;
+            }
+            bool hovered = ImGui::IsItemHovered();
+            ImGui::NextColumn();
+            ImGui::Text("%s", r->description); ImGui::NextColumn();
+            ImGui::Text("%i", r->width);       ImGui::NextColumn();
+            ImGui::Text("%i", r->height);      ImGui::NextColumn();
+        }
+        ImGui::Columns(1);
+    }
     ImGui::EndChild();
-    ImGui::SameLine();
-    ImGui::BeginGroup();
-        ImGui::Text("Resolution");
-        textedit_int("Width"          , ws->context.params.width , 1, 1);
-        textedit_int("Height"         , ws->context.params.height, 1, 1);
-        ImGui::NewLine();
-        ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
-    ImGui::EndGroup();
 }
 
 void mm_export(workspace_t *ws)
@@ -280,58 +257,61 @@ void mm_export(workspace_t *ws)
     }
 }
 
+void mm_sampling(workspace_t *ws)
+{
+    xtcore::render::params_t *p = &(ws->context.params);
+    textedit_int("Antialiasing"   , p->aa     , 1, 1);
+    textedit_int("Recursion Depth", p->rdepth , 1, 1);
+    textedit_int("Samples"        , p->samples, 1, 1);
+    ImGui::NewLine();
+    int tile_order = (int)ws->tile_order;
+    ImGui::Text(STR_TILE_ORDER);
+    ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
+    ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
+    ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
+    ImGui::NewLine();
+    ws->tile_order = (xtcore::render::TILE_ORDER)tile_order;
+}
+
+void mm_concurrency(workspace_t *ws)
+{
+    xtcore::render::params_t *p = &(ws->context.params);
+    ImVec2 bd(30,0);
+    if (ImGui::Button("1"  , bd)) { p->tile_size =   1; } ImGui::SameLine();
+    if (ImGui::Button("2"  , bd)) { p->tile_size =   2; } ImGui::SameLine();
+    if (ImGui::Button("4"  , bd)) { p->tile_size =   4; } ImGui::SameLine();
+    if (ImGui::Button("8"  , bd)) { p->tile_size =   8; } ImGui::SameLine();
+    if (ImGui::Button("16" , bd)) { p->tile_size =  16; } ImGui::SameLine();
+    if (ImGui::Button("32" , bd)) { p->tile_size =  32; } ImGui::SameLine();
+    if (ImGui::Button("64" , bd)) { p->tile_size =  64; } ImGui::SameLine();
+    if (ImGui::Button("128", bd)) { p->tile_size = 128; }
+    textedit_int("Tile Size", p->tile_size, 1, 1, MIN(p->width, p->height));
+    textedit_int("Threads", ws->context.params.threads, 1, 1);
+}
+
+void mm_camera(workspace_t *ws)
+{
+    static int index = 0, selected = -1;
+    auto it = ws->context.scene.m_cameras.begin();
+    auto et = ws->context.scene.m_cameras.end();
+
+    int i=0;
+    for (int cam_idx = 0; it != et; ++it) {
+        ++i;
+        if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
+            ws->context.params.camera = (*it).first;
+            i = selected;
+        }
+    }
+}
+
+
 void wdg_conf(workspace_t *ws)
 {
     if (ws->status == WS_STATUS_PROCESSING) return;
-
     if (ImGui::BeginMenu("Configuration")) {
-        xtcore::render::params_t *p = &(ws->context.params);
-
-        ImGui::Text("Camera");ImGui::Separator();
-
-        static int index = 0, selected = -1;
-        auto it = ws->context.scene.m_cameras.begin();
-        auto et = ws->context.scene.m_cameras.end();
-
-        {
-            ImGui::Columns(2, 0, false);
-            int i=0,selected = 0;
-            ImGui::BeginChild("LST_CAM", ImVec2(150, 100), true);
-            for (int cam_idx = 0; it != et; ++it) {
-                ++i;
-                if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
-                    ws->context.params.camera = (*it).first;
-                    i = selected;
-                }
-            }
-            ImGui::EndChild();
-            ImGui::NextColumn();
-            ImGui::Text("Current");
-            ImGui::Text(xtcore::pool::str::get(ws->context.params.camera));
-            ImGui::Columns(1);
-            ImGui::NewLine();
-        }
-
-
-        mm_resolution(ws);
-
-        ImGui::NewLine();
-        ImGui::Text("Sampling");ImGui::Separator();
-        textedit_int("Antialiasing"   , p->aa     , 1, 1);
-        textedit_int("Recursion Depth", p->rdepth , 1, 1);
-        textedit_int("Samples"        , p->samples, 1, 1);
-        ImGui::NewLine();
-        mm_tileorder(ws);
-        ImGui::Text("Concurrency");ImGui::Separator();
-        ImVec2 bd(30,0);
-        if (ImGui::Button("8"  , bd)) { p->tile_size =   8; } ImGui::SameLine();
-        if (ImGui::Button("16" , bd)) { p->tile_size =  16; } ImGui::SameLine();
-        if (ImGui::Button("32" , bd)) { p->tile_size =  32; } ImGui::SameLine();
-        if (ImGui::Button("64" , bd)) { p->tile_size =  64; } ImGui::SameLine();
-        if (ImGui::Button("128", bd)) { p->tile_size = 128; }
-        textedit_int("Tile Size"      , p->tile_size, 1, 1, MIN(p->width, p->height));
-        textedit_int("Threads"        , ws->context.params.threads, 1, 1);
-        ImGui::NewLine();
+        if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);      ImGui::EndMenu(); }
+        if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws);  ImGui::EndMenu(); }
         ImGui::EndMenu();
     }
 }
@@ -372,17 +352,32 @@ void mm_network(state_t *state)
 
 void mm_renderer(workspace_t *ws)
 {
-    if (ws->status == WS_STATUS_PROCESSING) return;
-
     if (ImGui::BeginMenu("Render")) {
-        bool render = false;
-        if (ImGui::MenuItem("Depth"            )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer(); }
-        if (ImGui::MenuItem("Stencil"          )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer(); }
-        if (ImGui::MenuItem("Normal"           )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer(); }
-        if (ImGui::MenuItem("UV"               )) { render = true; ws->renderer = new xtcore::renderer::uv::Renderer(); }
-        if (ImGui::MenuItem("Raytracer"        )) { render = true; ws->renderer = new Renderer(); }
-        if (ImGui::MenuItem("Ambient Occlusion")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
-        if (render) action::render(ws);
+        if (ImGui::BeginMenu("Mode")) {
+            int rmode = (int)ws->rmode;
+            ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
+            ImGui::RadioButton(STR_RMODE_CONTINUOUS, &rmode, WS_RMODE_CONTINUOUS);
+            ImGui::NewLine();
+            ImGui::Checkbox(STR_SHOW_TILE_UPDATES, &(ws->show_tile_updates));
+            ws->rmode = (WS_RMODE)rmode;
+            ImGui::EndMenu();
+        }
+
+        if (ws->status != WS_STATUS_PROCESSING) {
+            if (ImGui::BeginMenu("Sampling"   )) { mm_sampling(ws);    ImGui::EndMenu(); }
+            if (ImGui::BeginMenu("Concurrency")) { mm_concurrency(ws); ImGui::EndMenu(); }
+            if (ImGui::BeginMenu("Integrator")) {
+                bool render = false;
+                if (ImGui::MenuItem("Depth"     )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer();      }
+                if (ImGui::MenuItem("Stencil"   )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer();    }
+                if (ImGui::MenuItem("Normal"    )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer();     }
+                if (ImGui::MenuItem("UV"        )) { render = true; ws->renderer = new xtcore::renderer::uv::Renderer();         }
+                if (ImGui::MenuItem("Raytracer" )) { render = true; ws->renderer = new xtcore::renderer::raytracer::Renderer();  }
+                if (ImGui::MenuItem("Pathtracer")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
+                if (render) action::render(ws);
+                ImGui::EndMenu();
+            }
+        }
         ImGui::EndMenu();
     }
 }
@@ -391,8 +386,6 @@ void mm_zoom(workspace_t *ws) {
     if (!ws) return;
 
     if (ImGui::BeginMenu("View")) {
-        ImGui::Text("Zoom");
-        ImGui::Separator();
         if (ImGui::Button("x0.1" )) { ws->zoom_multiplier = 0.101f; } ImGui::SameLine();
         if (ImGui::Button("x0.2" )) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
         if (ImGui::Button("x0.4" )) { ws->zoom_multiplier = 0.401f; } ImGui::SameLine();
@@ -533,10 +526,6 @@ void render_main_menu(state_t *state)
             }
             if (ImGui::MenuItem("About")) { flag_dg_info = true; }
             if (ImGui::MenuItem("Exit" )) { action::quit();      }
-            ImGui::EndMenu();
-        }
-        if (state->workspace && ImGui::BeginMenu("Setup")) {
-            mm_rmode(state->workspace);
             ImGui::EndMenu();
         }
 

@@ -51,7 +51,9 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::Hit
         else
         {
             xtcore::HitRecord hit;
-            return m->get_sample("diffuse", info.texcoord) * eval(--depth, r, hit);
+            return m->get_sample("diffuse", info.texcoord)
+                 * (1.f - dot(info.normal, r.direction))
+                 * eval(--depth, r, hit);
         }
     }
     else

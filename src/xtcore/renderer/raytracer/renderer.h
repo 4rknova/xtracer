@@ -16,6 +16,10 @@ using nimg::Pixmap;
 using NMath::scalar_t;
 using NMath::Vector3f;
 
+namespace xtcore {
+    namespace renderer {
+        namespace raytracer {
+
 class Renderer : public xtcore::render::IRenderer
 {
 	public:
@@ -30,5 +34,9 @@ class Renderer : public xtcore::render::IRenderer
 
         xtcore::render::context_t *m_context;
 };
+
+        } /* namespace raytracer */
+    } /* namespace renderer */
+} /* namespace xtcore */
 
 #endif /* XTCORE_RENDERER_PHOTONMAPPER_H_INCLUDED */

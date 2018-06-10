@@ -87,10 +87,14 @@ int main(int argc, char **argv)
     } else return 1;
 
 	xtcore::render::IRenderer *renderer = NULL;
-
-    if      (RENDERER("depth")  ) renderer = new xtcore::renderer::depth::Renderer();
-    else if (RENDERER("stencil")) renderer = new xtcore::renderer::stencil::Renderer();
-    else                          renderer = new Renderer();
+;
+    if      (RENDERER("depth"     )) renderer = new xtcore::renderer::depth::Renderer();
+    else if (RENDERER("stencil"   )) renderer = new xtcore::renderer::stencil::Renderer();
+    else if (RENDERER("normal"    )) renderer = new xtcore::renderer::normal::Renderer();
+    else if (RENDERER("uv"        )) renderer = new xtcore::renderer::uv::Renderer();
+    else if (RENDERER("raytracer" )) renderer = new xtcore::renderer::raytracer::Renderer();
+    else if (RENDERER("pathtracer")) renderer = new xtcore::renderer::pathtracer::Renderer();
+    else return 0;
 
     context.params = params;
     context.init();

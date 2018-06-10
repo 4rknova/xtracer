@@ -51,12 +51,17 @@ void tile_t::init()
 {
     m_data.init(width(), height());
     if (m_on_init) m_on_init->handle_event(this);
-   samples.clear();
+    samples.clear();
 }
 
 void tile_t::submit()
 {
     if (m_on_done) m_on_done->handle_event(this);
+}
+
+void tile_t::apply_filter(IFilter *filter)
+{
+    filter->render(&m_data);
 }
 
 void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t tile_size)

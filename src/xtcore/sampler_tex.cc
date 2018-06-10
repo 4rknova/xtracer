@@ -23,7 +23,7 @@ void Texture2D::set_filtering(FILTERING filtering)
 int Texture2D::load(const char *file)
 {
     int res = nimg::io::load::image(file, m_map);
-    Log::handle().post_debug("Loading texture: %s (%i)", file, res);
+    Log::handle().post_message("Loading texture %s (%i)", file, res);
     return res;
 }
 

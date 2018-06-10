@@ -6,7 +6,7 @@
 namespace nimg {
 	namespace eval {
 
-float luminance(const ColorRGBf &color);
+float luminance(const ColorRGBf  &color);
 float luminance(const ColorRGBAf &color);
 
 	} /* namespace eval */

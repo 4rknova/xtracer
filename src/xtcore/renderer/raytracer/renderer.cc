@@ -14,6 +14,10 @@
 
 #include "profiler.h"
 
+namespace xtcore {
+    namespace renderer {
+        namespace raytracer {
+
 Renderer::Renderer()
 	: m_context(NULL)
 {}
@@ -76,21 +80,19 @@ ColorRGBf Renderer::trace_ray(const xtcore::Ray &pray, const xtcore::Ray &ray, c
 	HASH_UINT64 obj;
 	if (m_context->scene.intersection(ray, info, obj)) {
 		// get a pointer to the material
-//		if (!obj) {
-            HASH_UINT64 mat_id = m_context->scene.m_objects[obj]->material;
-            xtcore::asset::IMaterial *mat = m_context->scene.m_materials[mat_id];
+        HASH_UINT64 mat_id = m_context->scene.m_objects[obj]->material;
+        xtcore::asset::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
-			// if the ray starts inside the geometry
-			scalar_t dot_normal_dir = dot(info.normal, ray.direction);
+		// if the ray starts inside the geometry
+		scalar_t dot_normal_dir = dot(info.normal, ray.direction);
 
-            NMath::scalar_t transparency = mat->get_scalar(MAT_SCALART_TRANSPARENCY);
-            NMath::scalar_t ior          = mat->get_scalar(MAT_SCALART_IOR);
+        NMath::scalar_t transparency = mat->get_scalar(MAT_SCALART_TRANSPARENCY);
+        NMath::scalar_t ior          = mat->get_scalar(MAT_SCALART_IOR);
 
-			if (transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
-			scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
-			scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
-			return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
-//		}
+		if (transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
+		scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
+		scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
+		return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
 	}
 
     return m_context->scene.sample_cubemap(ray.direction);
@@ -121,55 +123,47 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
     color = mat->get_sample(MAT_SAMPLER_EMISSIVE, info.texcoord)
           + mat->get_sample(MAT_SAMPLER_AMBIENT, info.texcoord) * m_context->scene.ambient();
 
-	scalar_t shadow_sample_scaling = 1.0f / m_context->params.samples;
-
     std::vector<xtcore::light_t> lights;
     m_context->scene.get_light_sources(lights);
 	auto it = lights.begin();
 	auto et = lights.end();
 
 	for (; it != et; ++it) {
-		unsigned int tlshsamples = m_context->params.samples;
-		scalar_t tlshscaling = shadow_sample_scaling;
+        NMath::Vector3f light_pos = (*it).light->point_sample();
+		NMath::Vector3f v = light_pos - p;
 
-		for (unsigned int shsamples = 0; shsamples < tlshsamples; ++shsamples) {
-            NMath::Vector3f light_pos = (*it).light->point_sample();
-			NMath::Vector3f v = light_pos - p;
+		xtcore::Ray sray;
+		sray.direction = v.normalized();
+		sray.origin = p;
+		scalar_t distance = v.length();
 
-			xtcore::Ray sray;
-			sray.direction = v.normalized();
-			sray.origin = p;
-			scalar_t distance = v.length();
+		// if the point is not in shadow for this light
+		HASH_UINT64 obj;
+		xtcore::HitRecord res;
+		bool test = m_context->scene.intersection(sray, res, obj);
 
-			// if the point is not in shadow for this light
-			HASH_UINT64 obj;
-			xtcore::HitRecord res;
-			bool test = m_context->scene.intersection(sray, res, obj);
+        auto oit = m_context->scene.m_objects.find(obj)
+           , oet = m_context->scene.m_objects.end();
 
-            auto oit = m_context->scene.m_objects.find(obj)
-               , oet = m_context->scene.m_objects.end();
+        if (oit == oet) continue;
 
-            if (oit == oet) continue;
+        auto git = m_context->scene.m_geometry.find((*oit).second->geometry)
+           , get = m_context->scene.m_geometry.end();
 
-            auto git = m_context->scene.m_geometry.find((*oit).second->geometry)
-               , get = m_context->scene.m_geometry.end();
+        bool hits_light_geometry = (git != get && (*it).light == (*git).second);
 
-            bool hits_light_geometry = (git != get && (*it).light == (*git).second);
-
-			if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
-                ColorRGBf intensity;
-                xtcore::asset::emitter_t e;
-                e.position  = light_pos;
-                e.intensity = (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0));
-                mat->shade(intensity, m_context->scene.get_camera(m_context->params.camera), &e, info) * tlshscaling;
-                color += intensity;
-			}
+		if (!test || res.t < EPSILON || res.t > distance || hits_light_geometry) {
+            ColorRGBf intensity;
+            xtcore::asset::emitter_t e;
+            e.position  = light_pos;
+            e.intensity = (*it).material->get_sample(MAT_SAMPLER_EMISSIVE, NMath::Vector3f(0,0,0));
+            mat->shade(intensity, m_context->scene.get_camera(m_context->params.camera), &e, info);
+            color += intensity;
 		}
 	}
 
 	// Fresnel
 	float fr = 1.0;
-
     NMath::scalar_t reflectance  = mat->get_scalar(MAT_SCALART_REFLECTANCE);
     NMath::scalar_t transparency = mat->get_scalar(MAT_SCALART_TRANSPARENCY);
     NMath::scalar_t exponent     = mat->get_scalar(MAT_SCALART_EXPONENT);
@@ -200,16 +194,15 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
 	}
 
 	if (reflectance > 0) {
-
-		unsigned int tlmcsamples = m_context->params.samples;
-		scalar_t tlmcscaling = 1.0f / (scalar_t)tlmcsamples;
-		for (size_t mcsamples = 0; mcsamples < tlmcsamples; ++mcsamples) {
-			xtcore::Ray reflray;
-			reflray.origin = p;
-			reflray.direction = NMath::Sample::lobe(n, -ray.direction, exponent);
-			color += fr * (reflectance * trace_ray(pray, reflray, depth-1) * specular * tlmcscaling);
-		}
+		xtcore::Ray reflray;
+		reflray.origin    = p;
+		reflray.direction = NMath::Sample::lobe(n, -ray.direction, exponent);
+		color += fr * (reflectance * trace_ray(pray, reflray, depth-1) * specular);
 	}
 
 	return color;
 }
+
+        } /* namespace raytracer */
+    } /* namespace renderer */
+} /* namespace xtcore */

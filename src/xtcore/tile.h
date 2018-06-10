@@ -4,7 +4,10 @@
 #include <vector>
 #include <cstddef>
 #include <nimg/pixmap.h>
+#include "filter.h"
 #include "aa_sample.h"
+
+using xtcore::filter::IFilter;
 
 namespace xtcore {
     namespace render {
@@ -38,6 +41,8 @@ struct tile_t {
 	tile_t(size_t x0, size_t y0, size_t x1, size_t y1);
 
     xtcore::antialiasing::sample_set_t samples;
+
+    void apply_filter(IFilter *filter);
 
     private:
     nimg::Pixmap m_data;

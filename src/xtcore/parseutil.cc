@@ -704,7 +704,7 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 		if (count) {
 			for (size_t i = 0; i < count; ++i) {
 				ncf::NCF *lnode = root.get_group_by_name((*it).c_str())->get_group_by_index(i);
-                Log::handle().post_debug("Loading: %s", lnode->get_name());
+                Log::handle().post_message("Creating %s / %s..", (*it).c_str(), lnode->get_name());
 
                 int res = 0;
 

@@ -102,8 +102,8 @@ void workspace_t::update()
 
     		for (int y = t->y0(); y < t->y1(); ++y) {
                 for (int x = t->x0(); x < t->x1(); ++x) {
-                    nimg::ColorRGBAf col;
-                    t->read(x, y, col);
+ //                   nimg::ColorRGBAf col;
+ //                  t->read(x, y, col);
                     float data[4] = {1,0,0,1};
                     glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);
                 }

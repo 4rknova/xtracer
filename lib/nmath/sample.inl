@@ -100,6 +100,7 @@ inline Vector3f diffuse(Vector3f &normal)
         l *= l;
     } while (l >= 1.0);
 
+    p += normal;
     p.normalize();
 
     return p;

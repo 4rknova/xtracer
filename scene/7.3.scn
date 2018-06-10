@@ -2,17 +2,21 @@ title = Scanned Soldier
 descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.5
 
-data = data
+data         = data
+path_cubemap = <data>/image/envmap/humus/HornstullsStrand
+path_model   = <data>/geometry/ten24/AOR 2 Ref Scan_Shoot Pose/Shoot Pose
+path_mesh    = <path_model>/OBJ
+path_texture = <path_model>/Texture
 
 environment = {
     type = cubemap
     config = {
-        posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
-        negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
-        negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
-        posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
-        posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
-        negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
+        posy = <path_cubemap>/posy.jpg
+        negy = <path_cubemap>/negy.jpg
+        negx = <path_cubemap>/negx.jpg
+        posx = <path_cubemap>/posx.jpg
+        posz = <path_cubemap>/posz.jpg
+        negz = <path_cubemap>/negz.jpg
     }
 }
 
@@ -67,7 +71,7 @@ camera = {
 geometry = {
 	soldier = {
 		type = mesh
-		source = <data>/AOR2/Shoot Pose/OBJ/AOR_02_ReferenceScan_Shoot_Pose.OBJ
+		source = <path_mesh>/AOR_02_ReferenceScan_Shoot_Pose.OBJ
 
         modifiers = {
             scale = {
@@ -104,7 +108,7 @@ material = {
             samplers = {
                 diffuse = {
                     type      = texture
-            		source    = <data>/AOR2/Shoot Pose/Texture/Shoot Pose Colour 16k.jpg
+            		source    = <path_texture>/Shoot Pose Colour 16k.jpg
                     filtering = bilinear
                 }
             }
