@@ -1,3 +1,4 @@
+#include <nmath/sample.h>
 #include "blinnphong.h"
 
 namespace xtcore {
@@ -29,6 +30,16 @@ bool BlinnPhong::shade(
     return true;
 }
 
+bool BlinnPhong::sample_path(
+            Ray       &ray
+    ,       ColorRGBf &color
+    , const HitRecord &info) const
+{
+    ray.origin    = info.point + info.normal * EPSILON;
+    ray.direction = NMath::Sample::diffuse(info.normal);
+    color         = get_sample("diffuse", info.texcoord);
+    return true;
+}
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */

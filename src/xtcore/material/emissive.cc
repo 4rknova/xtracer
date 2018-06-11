@@ -14,6 +14,15 @@ bool Emissive::shade(
     return false;
 }
 
+bool Emissive::sample_path(
+                Ray       &ray
+        ,       ColorRGBf &color
+        , const HitRecord &info) const
+{
+    color = get_sample("emissive", info.texcoord);
+    return false;
+}
+
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */

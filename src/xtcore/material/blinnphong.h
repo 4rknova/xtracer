@@ -22,6 +22,12 @@ class BlinnPhong : public xtcore::asset::IMaterial
         , const ICamera   *camera
         , const emitter_t *emitter
         , const HitRecord &info) const;
+
+
+    virtual bool sample_path(
+                Ray       &ray
+        ,       ColorRGBf &color
+        , const HitRecord &info) const;
 };
 
         } /* namespace material */

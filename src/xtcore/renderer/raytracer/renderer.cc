@@ -92,6 +92,7 @@ ColorRGBf Renderer::trace_ray(const xtcore::Ray &pray, const xtcore::Ray &ray, c
 		if (transparency > EPSILON && dot_normal_dir > 0) info.normal = -info.normal;
 		scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
 		scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
+
 		return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
 	}
 

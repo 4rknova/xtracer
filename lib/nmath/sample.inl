@@ -89,7 +89,7 @@ inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const sc
 	return (vc * nmath_pow(vdotr, exponent)).normalized();
 }
 
-inline Vector3f diffuse(Vector3f &normal)
+inline Vector3f diffuse(const Vector3f &normal)
 {
     Vector3f p;
     float l = 1.0;

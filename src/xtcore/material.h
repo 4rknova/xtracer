@@ -4,6 +4,7 @@
 #include <map>
 #include <nimg/color.h>
 #include "math/hitrecord.h"
+#include "math/ray.h"
 #include "sampler.h"
 #include "camera.h"
 #include "matdefs.h"
@@ -28,6 +29,11 @@ class IMaterial
                 ColorRGBf &intensity
         , const ICamera   *cam
         , const emitter_t *emitter
+        , const HitRecord &info) const = 0;
+
+    virtual bool sample_path(
+                Ray       &ray
+        ,       ColorRGBf &color
         , const HitRecord &info) const = 0;
 
     float get_scalar(const char *name) const;

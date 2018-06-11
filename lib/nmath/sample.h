@@ -37,7 +37,7 @@ namespace NMath {
 inline Vector3f sphere();
 inline Vector3f hemisphere(const Vector3f &normal, const Vector3f &direction);
 inline Vector3f lobe(const Vector3f &normal, const Vector3f &direction, const scalar_t exponent);
-inline Vector3f diffuse(Vector3f &normal);
+inline Vector3f diffuse(const Vector3f &normal);
 
 	} /* namespace Sample */
 } /* namespace NMath */
