@@ -28,6 +28,14 @@ title       = Cornell box replica (based on the original radiosity dataset)
 description = <title>. You will normally want to render this scene with a 1:1 aspect ratio.
 version     = 0.1
 
+
+environment = {
+    type = color
+    config = {
+        value = col3(1,1,1)
+    }
+}
+
 camera = {
 	default = {
         type     = thin-lens
