@@ -2,19 +2,14 @@ title = Scanned Face
 descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
 
-data = data
+path_data     = data
+path_geometry = <path_data>/geometry/ten24/ModoRenderScene
 
 environment = {
     type = gradient
     config = {
         a = col3(1,1,1)
         b = col3(0.5,0.7,1.0)
-        posy = <data>/cubemap/humus/hornstulls_strand/posy.jpg
-        negy = <data>/cubemap/humus/hornstulls_strand/negy.jpg
-        negx = <data>/cubemap/humus/hornstulls_strand/negx.jpg
-        posx = <data>/cubemap/humus/hornstulls_strand/posx.jpg
-        posz = <data>/cubemap/humus/hornstulls_strand/posz.jpg
-        negz = <data>/cubemap/humus/hornstulls_strand/negz.jpg
     }
 }
 
@@ -49,7 +44,7 @@ camera = {
 geometry = {
 	head = {
 		type = mesh
-		source = <data>/head/OBJ/Male_Head_L4.OBJ
+		source = <path_geometry>/OBJ/Male_Head_L4.OBJ
 
         modifiers = {
             scale = {
@@ -80,29 +75,18 @@ geometry = {
 
 material = {
 	head = {
-		type = phong
+	    type = lambert
 
         properties = {
             samplers = {
                 diffuse = {
                     type      = texture
-            		source    = <data>/head/Textures/Male_Colour.jpg
+            		source    = <path_geometry>/Textures/Male_Colour.jpg
                     filtering = bilinear
+                    flip_y = true
                 }
-
-                specular = {
-                    type       = texture
-                    multiplier = .25
-                    source     = <data>/head/Textures/Male_Spec_Amount.jpg
-                }
-            }
-
-            scalars = {
-                reflectance = 0
             }
         }
-
-		diffuse = col3(1,1,1)
 	}
 
     light = {

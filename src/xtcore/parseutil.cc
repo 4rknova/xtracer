@@ -573,26 +573,46 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
     Log::handle().post_debug("   Shapes: %i", obj.shapes.size());
 
     std::vector<HASH_UINT64> matids;
-    for (nmesh::material_t material : obj.materials) {
+    for (int m = 0; m < obj.materials.size(); ++m) {
         std::string name = prefix;
-        name.append(material.name);
+        name.append(obj.materials[m].name);
         HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
-        matids.push_back(id);
 
-        xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::BlinnPhong();
-        mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), material.texture_diffuse.c_str() , material.diffuse ));
-        mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
-        mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));
-        mat->add_scalar (MAT_SCALART_EXPONENT, material.shininess * 100.f);
-        mat->add_scalar (MAT_SCALART_IOR     , material.ior);
-        scene->m_materials[id] = mat;
-        Log::handle().post_debug("creating material %s", name.c_str());
+        // Check if the id is already in there
+        bool loaded = false;
+        for (int i = 0; i < matids.size(); ++i) {
+            if (matids[i] == id) {
+                Log::handle().post_debug("Material [%s] already exists", name.c_str());
+                // Fix indices
+                for (nmesh::shape_t shape: obj.shapes) {
+                    if (shape.mesh.materials[0] = m) shape.mesh.materials[0] = i;
+                }
+                loaded = true;
+                break;
+            }
+        }
+
+        if (!loaded) {
+            Log::handle().post_debug("creating material %s", name.c_str());
+            matids.push_back(id);
+            xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::Lambert();
+            mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse ));
+//            mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
+ //           mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));
+  //          mat->add_scalar (MAT_SCALART_EXPONENT, material.shininess * 100.f);
+   //         mat->add_scalar (MAT_SCALART_IOR     , material.ior);
+            scene->m_materials[id] = mat;
+        }
     }
 
+    int shape_count = 0;
     for (nmesh::shape_t shape : obj.shapes) {
-        std::string name = prefix;
+        ++shape_count;
+        std::string name = std::to_string(shape_count);
+        name.append(prefix);
         name.append(shape.name);
-        HASH_UINT64 id = xtcore::pool::str::add(shape.name.c_str());
+
+        HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
 
         Log::handle().post_debug("creating geometry %s", name.c_str());
 
@@ -607,7 +627,7 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         obj->material = matids[shape.mesh.materials[0]];
         scene->m_objects[id] = obj;
         Log::handle().post_message("creating object %s : %s"
-                                 , shape.name.c_str()
+                                 , name.c_str()
                                  , xtcore::pool::str::get(obj->material));
     }
 
@@ -683,7 +703,7 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     ncf::NCF *env_node = root.get_group_by_name(XTPROTO_NODE_ENVIRONMENT);
     ncf::NCF *env_data = env_node->get_group_by_name(XTPROTO_CONFIG);
 
-    std::string environment =  deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
+    std::string environment = deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
          if (!environment.compare(XTPROTO_CUBEMAP )) scene->m_environment = deserialize_cubemap (scene->m_source.c_str(), env_data);
     else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(scene->m_source.c_str(), env_data);
     else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (scene->m_source.c_str(), env_data);

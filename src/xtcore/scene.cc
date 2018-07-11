@@ -115,7 +115,7 @@ int Scene::destroy_material (HASH_UINT64 id) { return purge(m_materials, id); }
 int Scene::destroy_geometry (HASH_UINT64 id) { return purge(m_geometry , id); }
 int Scene::destroy_object   (HASH_UINT64 id) { return purge(m_objects  , id); }
 
-nimg::ColorRGBf Scene::sample_cubemap(const Vector3f &direction) const
+nimg::ColorRGBf Scene::sample_environment(const Vector3f &direction) const
 {
     return m_environment ? m_environment->sample(direction) : nimg::ColorRGBf(0,0,0);
 }

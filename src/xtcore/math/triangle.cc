@@ -46,6 +46,7 @@ bool Triangle::intersection(const Ray &ray, HitRecord* i_info) const
 		// Normal
 		Vector3f pn = n[0] * bc.x + n[1] * bc.y + n[2] * bc.z;
 		i_info->normal = pn.length() ? pn : normal;
+        i_info->incident_direction = ray.direction;
 	}
 
 	return true;

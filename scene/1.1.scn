@@ -30,7 +30,7 @@ geometry = {
 
 material = {
 	ball = {
-		type = phong
+		type = blinn_phong
         properties = {
             samplers = {
         		diffuse  = {
@@ -46,7 +46,7 @@ material = {
 
             scalars = {
                 reflectance = 1
-                exponent    = 90000
+                exponent    = 90
             }
         }
 	}

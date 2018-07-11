@@ -70,7 +70,7 @@ public:
 
 	xtcore::asset::ICamera *get_camera(HASH_UINT64 id);
 
-    nimg::ColorRGBf sample_cubemap(const Vector3f &direction) const;
+    nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
 	bool intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj);
 
 	int destroy_camera   (HASH_UINT64 id);

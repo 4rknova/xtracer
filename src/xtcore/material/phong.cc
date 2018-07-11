@@ -1,4 +1,6 @@
 #include <nmath/sample.h>
+#include <nmath/prng.h>
+#include <nimg/luminance.h>
 #include "phong.h"
 
 namespace xtcore {
@@ -35,8 +37,23 @@ bool Phong::sample_path(
     , const HitRecord &info) const
 {
     ray.origin    = info.point + info.normal * EPSILON;
-    ray.direction = NMath::Sample::diffuse(info.normal);
-    color         = get_sample("diffuse", info.texcoord);
+
+    ColorRGBf diff = get_sample("diffuse", info.texcoord);
+    ColorRGBf spec = get_sample("specular", info.texcoord);
+    scalar_t s = get_scalar("reflectance");
+    scalar_t k = NMath::prng_c(0.0f, 1.0f);
+//    float lumdiff = nimg::eval::luminance(diff);
+
+    if (k > s) {
+        color = diff;
+        ray.direction = NMath::Sample::diffuse(info.normal);
+    }
+    else {
+        color = spec;
+        scalar_t exp = get_scalar("exponent");
+        ray.direction = NMath::Sample::lobe(info.normal, info.incident_direction, exp);
+    }
+
     return true;
 }
         } /* namespace material */

@@ -48,6 +48,8 @@ bool Sphere::intersection(const Ray &ray, HitRecord* i_info) const
 			i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5), 
 								(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
 
+            i_info->incident_direction = ray.direction;
+
 			return true;
 		}
 	}

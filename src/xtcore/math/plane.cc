@@ -34,6 +34,7 @@ bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
 		i_info->t = t;
 		i_info->point = ray.origin + ray.direction * t;
 		i_info->normal = normal;
+        i_info->incident_direction = ray.direction;
 
 		// Texture coordinates.
 		Vector3f n = normal.normalized();

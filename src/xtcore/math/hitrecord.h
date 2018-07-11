@@ -21,6 +21,7 @@ class HitRecord
 		Vector3f normal;
 		Vector3f point;
 		Vector3f texcoord;
+        Vector3f incident_direction;
 		scalar_t t;
 
         HASH_UINT64 id;

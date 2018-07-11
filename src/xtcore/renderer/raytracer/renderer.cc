@@ -96,7 +96,7 @@ ColorRGBf Renderer::trace_ray(const xtcore::Ray &pray, const xtcore::Ray &ray, c
 		return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
 	}
 
-    return m_context->scene.sample_cubemap(ray.direction);
+    return m_context->scene.sample_environment(ray.direction);
 }
 
 ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,

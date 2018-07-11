@@ -20,17 +20,17 @@
 #	-	The final image appears flipped to the yy' axis. This is due to the
 #		different coordinate system used in the original data.
 
-title       = Cornell box replica (based on the original radiosity dataset)
-description = <title>. You will normally want to render this scene with a 1:1 aspect ratio.
-version     = 0.2
+title = Cornell box replica (based on the original radiosity dataset)
+descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
+versn = 0.2
 
 environment = {
-    type = gradient
+    type = color
     config = {
-        a = col3(1,1,1)
-        b = col3(0.5,0.7,1.0)
+        value = col3(1,1,1)
     }
 }
+
 
 # The scene cameras.
 camera = {
@@ -85,7 +85,7 @@ material = {
 		type       = blinn_phong
         properties = {
             scalars = {
-		        exponent    = 16000000
+		        exponent    = 256 
 		        reflectance = 1
             }
 
@@ -138,18 +138,14 @@ material = {
 		type       = blinn_phong
         properties = {
             scalars = {
-                exponent    = 256
-		        reflectance = 0.5
+                exponent    = 160
+		        reflectance = 1
             }
 
             samplers = {
 		        specular = {
                     type  = color
-                    value = col3(.5,.5,.5)
-        		}
-		        diffuse = {
-                    type  = color
-                    value = col3(.5,.5,.5)
+                    value = col3(1,1,1)
         		}
 
 	        }
@@ -710,12 +706,12 @@ object = {
 	# Ceiling
 	ceiling_1 = {
 		geometry = ceiling_1
-		material = white
+		material = light
 	}
 
 	ceiling_2 = {
 		geometry = ceiling_2
-		material = white
+		material = light
 	}
 
 	# Back wall
