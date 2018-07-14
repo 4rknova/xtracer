@@ -1,0 +1,78 @@
+title = Scanned Soldier
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.5
+
+data         = data
+path_model   = <data>/geometry/sketchfab/war_of_the_tripods
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,0.1,0)
+		target   = vec3(0,0.2,-1)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 0.01
+        position = vec3(0, 1, 0)
+        orientation = vec3(0,180,0)
+    }
+}
+
+geometry = {
+	sat1 = {
+		type = sphere
+        radius = 0.1
+
+		position = {
+    		x = 0
+			y = 0.8
+			z = 0
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+    light = {
+       type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	geo = {
+		source = <path_model>/war_of_the_tripods.obj
+        prefix = scn_
+	}
+
+#    l0 = {
+#        geometry = sat1
+#        material = light
+#    }
+}

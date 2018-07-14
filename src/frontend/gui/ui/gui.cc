@@ -372,6 +372,7 @@ void mm_renderer(workspace_t *ws)
                 if (ImGui::MenuItem("Stencil"   )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer();    }
                 if (ImGui::MenuItem("Normal"    )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer();     }
                 if (ImGui::MenuItem("UV"        )) { render = true; ws->renderer = new xtcore::renderer::uv::Renderer();         }
+                if (ImGui::MenuItem("Emission"  )) { render = true; ws->renderer = new xtcore::renderer::emission::Renderer();   }
                 if (ImGui::MenuItem("Raytracer" )) { render = true; ws->renderer = new xtcore::renderer::raytracer::Renderer();  }
                 if (ImGui::MenuItem("Pathtracer")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
                 if (render) action::render(ws);

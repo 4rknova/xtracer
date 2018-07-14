@@ -283,7 +283,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         else Log::handle().post_message("Invalid mesh generator: %s", token.c_str());
     }
     // External sources
-    else {
+        else {
         // Open source file from relative path
 	    std::string base, file, fsource = source;
 		ncf::util::path_comp(fsource, base, file);
@@ -458,7 +458,7 @@ xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::N
 
 	Log::handle().post_message("Loading texture: %s", path.c_str());
 	if (data->load(path.c_str())) {
-	    Log::handle().post_error("Failed to texture: %s", path.c_str());
+	    Log::handle().post_error("Failed to load texture: %s", path.c_str());
         delete data;
         return 0;
 	}
@@ -532,7 +532,7 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
-xtcore::sampler::ISampler *get_sampler(const char *name, const char *base, const char *texture, float value[3])
+xtcore::sampler::ISampler *create_sampler(const char *name, const char *base, const char *texture, float value[3])
 {
      xtcore::sampler::ISampler *sampler = 0;
      {
@@ -541,11 +541,11 @@ xtcore::sampler::ISampler *get_sampler(const char *name, const char *base, const
             std::string normalized_path = base;
             normalized_path.append(texture);
             std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
-            Log::handle().post_message("loading texture %s", normalized_path.c_str());
             ((xtcore::sampler::Texture2D*)sampler)->load(normalized_path.c_str());
             ((xtcore::sampler::Texture2D*)sampler)->flip_horizontal();
         } else {
             sampler = new (std::nothrow) xtcore::sampler::SolidColor();
+            printf("val\n");
             nimg::ColorRGBf col(value[0], value[1], value[2]);
             ((xtcore::sampler::SolidColor*)sampler)->set(col);
         }
@@ -595,12 +595,24 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         if (!loaded) {
             Log::handle().post_debug("creating material %s", name.c_str());
             matids.push_back(id);
-            xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::Lambert();
-            mat->add_sampler(MAT_SAMPLER_DIFFUSE , get_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse ));
-//            mat->add_sampler(MAT_SAMPLER_SPECULAR, get_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), material.texture_specular.c_str(), material.specular));
- //           mat->add_sampler(MAT_SAMPLER_EMISSIVE, get_sampler(MAT_SAMPLER_EMISSIVE, (0)         , (0)                              , material.emission));
-  //          mat->add_scalar (MAT_SCALART_EXPONENT, material.shininess * 100.f);
-   //         mat->add_scalar (MAT_SCALART_IOR     , material.ior);
+
+            // Determine material type
+            xtcore::asset::IMaterial *mat = 0;
+
+            bool has_emissive_col = ((obj.materials[m].emission[0] > 0.f) || (obj.materials[m].emission[1] > 0.f) || (obj.materials[m].emission[2] > 0.f));
+            if (obj.materials[m].texture_emissive.length() != 0 | has_emissive_col)
+            {
+                mat = new (std::nothrow) xtcore::asset::material::Emissive();
+                xtcore::sampler::ISampler *s = create_sampler(MAT_SAMPLER_EMISSIVE, base.c_str(), obj.materials[m].texture_emissive.c_str(), obj.materials[m].emission);
+                mat->add_sampler(MAT_SAMPLER_EMISSIVE, s);
+            }
+            else
+            {
+                mat = new (std::nothrow) xtcore::asset::material::Lambert();
+                xtcore::sampler::ISampler *s = create_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
+                mat->add_sampler(MAT_SAMPLER_DIFFUSE, s);
+            }
+
             scene->m_materials[id] = mat;
         }
     }

@@ -5,6 +5,7 @@
 #include <renderer/depth/renderer.h>
 #include <renderer/normal/renderer.h>
 #include <renderer/uv/renderer.h>
+#include <renderer/emission/renderer.h>
 #include <renderer/raytracer/renderer.h>
 #include <renderer/pathtracer/renderer.h>
 

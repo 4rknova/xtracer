@@ -49,7 +49,10 @@ IMaterial::~IMaterial()
 
 bool IMaterial::is_emissive() const
 {
-    return nimg::eval::luminance(get_sample(MAT_SAMPLER_EMISSIVE, Vector3f(0,0,0))) > 0;
+    bool has_emissive_tex = (m_samplers.find(MAT_SAMPLER_EMISSIVE) != m_samplers.end());
+    bool has_emissive_scl = (m_scalars.find(MAT_SAMPLER_EMISSIVE) != m_scalars.end());
+
+    return (has_emissive_scl || has_emissive_tex);
 }
 
 float IMaterial::get_scalar(const char *name) const

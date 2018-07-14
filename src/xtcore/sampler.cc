@@ -1,6 +1,6 @@
 #include "sampler.h"
 
-#define DEFAULT_FILTERING FILTERING_NEAREST
+#define DEFAULT_FILTERING FILTERING_BILINEAR
 
 namespace xtcore {
     namespace sampler {
