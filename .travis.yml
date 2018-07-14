@@ -3,11 +3,6 @@ compiler: clang
 
 os:
     - linux
-    - osx
-
-allow_failures:
-    - os: osx
-    
 
 before_install:
     - if [ $TRAVIS_OS_NAME == linux ]; then sudo add-apt-repository -y ppa:pyglfw/pyglfw; fi
@@ -21,10 +16,6 @@ before_install:
     - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then sudo make install; fi
     - if [ $TRAVIS_OS_NAME == linux ]; then cd ..; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew tap homebrew/core; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew update; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew install glfw3 glew libomp llvm; fi
-    - if [ $TRAVIS_OS_NAME == osx   ]; then brew outdated cmake || brew upgrade cmake; fi
 
 script:
     - ./configure
