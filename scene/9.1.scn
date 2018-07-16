@@ -1,16 +1,15 @@
-data   = data/graphics.cs.williams.edu/dabrovic_sponza
-datacb = data/cubemap
 title = Sponza Atrium
 descr = Sponza Atrium
 versn = 0.1
 
-cubemap = {
-    posy = <datacb>/posy.jpg
-    negy = <datacb>/negy.jpg
-    negx = <datacb>/negx.jpg
-    posx = <datacb>/posx.jpg
-    posz = <datacb>/posz.jpg
-    negz = <datacb>/negz.jpg
+data = data/geometry/
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
 }
 
 camera = {
@@ -35,11 +34,6 @@ camera = {
 }
 
 geometry = {
-	3dmodel = {
-		type   = mesh
-		source = <data>/sponza.obj
-	}
-
 	light = {
 		type     = sphere
 		position = vec3(0,10,0)
@@ -48,21 +42,8 @@ geometry = {
 }
 
 material = {
-	3dmodel = {
-		type = lambert
-
-        properties = {
-            samplers = {
-                diffuse = {
-                    type  = color
-                    value = col3(1,1,1)
-                }
-            }
-		}
-	}
-
     light = {
-        type = lambert
+        type = emissive
 
         properties = {
             samplers = {
@@ -77,8 +58,8 @@ material = {
 
 object = {
 	3dmodel = {
-		geometry = 3dmodel
-		material = 3dmodel
+		source = <data>/graphics.cs.williams.edu/dabrovic-sponza/sponza.obj
+        prefix = sponza_
 	}
 
     light = {

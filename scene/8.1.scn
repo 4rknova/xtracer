@@ -1,10 +1,16 @@
-# Xtracer 2
-
-data  = data
+data  = data/geometry/stanford
 
 title = Stanford models
 descr = Stanford models
 versn = 0.1
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
 
 camera = {
 	default = {
@@ -44,7 +50,7 @@ camera = {
 geometry = {
 	m0 = {
 		type   = mesh
-		source = <data>/bunny.obj
+		source = <data>/bunny/bunny.obj
         modifiers = {
     		rotation    = vec3(0,0,1.5708)
     		scale       = vec3(.75,.75,.75)
@@ -54,7 +60,7 @@ geometry = {
 
 	m1 = {
 		type   = mesh
-		source = <data>/dragon.obj
+		source = <data>/dragon/dragon.obj
         modifiers = {
     		rotation    = vec3(0,0,1.5708)
             translation = vec3(1.5,.7,0)
@@ -63,7 +69,7 @@ geometry = {
 
 	m2 = {
 		type   = mesh
-		source = <data>/happy_buddha.obj
+		source = <data>/happy_buddha/happy_buddha.obj
         modifiers = {
     		rotation    = vec3(0,-1.5708,1.5708)
     		translation = vec3(-1.5,1,0)
@@ -182,7 +188,7 @@ material = {
 	}
 
     light_source = {
-        type = lambert
+        type = emissive
 
         properties = {
             samplers = {
