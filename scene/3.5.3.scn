@@ -24,7 +24,7 @@ camera = {
 
 object = {
 	scene = {
-		source = <data>/cornell/CornellBox-Glossy.obj
+		source = <data>/cornell/CornellBox-Sphere.obj
         prefix = cornell_
     }
 }
