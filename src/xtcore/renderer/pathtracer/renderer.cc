@@ -31,12 +31,14 @@ void Renderer::setup(xtcore::render::context_t &context)
 	m_context = &context;
 }
 
-nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::HitRecord &info)
+nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray)
 {
     if (depth == 0) return nimg::ColorRGBf(0,0,0);
 
     HASH_UINT64 obj;
 
+    xtcore::HitRecord info;
+    memset(&info, 0 ,sizeof(info));
     if (m_context->scene.intersection(ray, info, obj)) {
         xtcore::asset::Object    *o = m_context->scene.m_objects[obj];
         xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
@@ -45,8 +47,7 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray, xtcore::Hit
         ColorRGBf c;
         bool path_continues = m->sample_path(r, c, info);
         if (path_continues) {
-            xtcore::HitRecord hit;
-            c = c * eval(--depth, r, hit);
+            c = c * eval(--depth, r);
         }
         return c;
     }
@@ -74,7 +75,6 @@ void Renderer::render()
         while (tile->samples.count() > 0) {
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
-
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
@@ -85,9 +85,7 @@ void Renderer::render()
                     , (float)(p->height)
                 );
 
-                xtcore::HitRecord info;
-                memset(&info, 0 ,sizeof(info));
-                color_pixel += eval(p->rdepth, ray, info) * aa_sample.weight * (1.f/p->samples);
+                color_pixel += eval(p->rdepth, ray) * aa_sample.weight * (1.f/p->samples);
             }
 
             color_pixel.a(1);

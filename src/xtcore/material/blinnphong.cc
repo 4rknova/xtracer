@@ -35,13 +35,12 @@ bool BlinnPhong::sample_path(
     ,       ColorRGBf &color
     , const HitRecord &info) const
 {
-    ray.origin    = info.point + info.normal * EPSILON;
+    ray.origin = info.point + info.normal * EPSILON;
 
     ColorRGBf diff = get_sample("diffuse", info.texcoord);
     ColorRGBf spec = get_sample("specular", info.texcoord);
     scalar_t s = get_scalar("reflectance");
     scalar_t k = NMath::prng_c(0.0f, 1.0f);
-//    float lumdiff = nimg::eval::luminance(diff);
 
     if (k > s) {
         color = diff;

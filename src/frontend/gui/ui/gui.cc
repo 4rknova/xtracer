@@ -310,8 +310,8 @@ void wdg_conf(workspace_t *ws)
 {
     if (ws->status == WS_STATUS_PROCESSING) return;
     if (ImGui::BeginMenu("Configuration")) {
-        if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);      ImGui::EndMenu(); }
-        if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws);  ImGui::EndMenu(); }
+        if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);     ImGui::EndMenu(); }
+        if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws); ImGui::EndMenu(); }
         ImGui::EndMenu();
     }
 }
@@ -346,6 +346,7 @@ void mm_network(state_t *state)
     if (ImGui::BeginMenu(STR_NETWORK)) {
         if (ImGui::MenuItem(STR_BROADCAST)) { action::broadcast(state); }
         if (ImGui::MenuItem(STR_RECEIVE  )) { action::listen   (state); }
+        if (ImGui::MenuItem("test wget"  )) { action::test_wget(); }
         ImGui::EndMenu();
     }
 }
@@ -502,6 +503,7 @@ void mm_dialog_info(state_t *state, bool &is_active)
 	    ImGui::EndPopup();
     }
 }
+
 void render_main_menu(state_t *state)
 {
 	static bool flag_dg_load = false;
@@ -630,7 +632,7 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
     ImGui::Text(ws->context.scene.m_version.c_str());
     ImGui::Text(ws->context.scene.m_description.c_str());
     ImGui::Text("Resolution: %ix%i", ws->context.params.width, ws->context.params.height);
-    ImGui::Text("Active Cam: %s", ws->context.params.camera ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
+    ImGui::Text("Active Cam: %s", ws->context.params.camera != HASH_ID_INVALID ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
 
     if (ws->is_rendering()) ImGui::ProgressBar(ws->progress);
     else if (ws->timer.get_time_in_sec() > 0.0) {

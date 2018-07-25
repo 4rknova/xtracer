@@ -139,7 +139,7 @@ material = {
         properties = {
             scalars = {
                 exponent    = 256
-		        reflectance = 0.5
+		        reflectance = 1
             }
 
             samplers = {

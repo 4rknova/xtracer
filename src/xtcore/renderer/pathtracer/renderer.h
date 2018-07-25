@@ -30,7 +30,7 @@ class Renderer : public xtcore::render::IRenderer
 	virtual void render();
 
 	private:
-    nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray, xtcore::HitRecord &hit);
+    nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray);
 
     xtcore::render::context_t *m_context;
 };

@@ -4,7 +4,7 @@
 #include <xtcore/context.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
-#include <xtcore/broadcast.h>
+#include <xtcore/net.h>
 #include "action.h"
 
 namespace action {
@@ -49,6 +49,12 @@ int listen(gui::state_t *state)
 {
     std::thread t(task_listen, state);
     t.detach();
+    return 0;
+}
+
+int test_wget()
+{
+    xtcore::network::wget(0,0);
     return 0;
 }
 

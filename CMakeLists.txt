@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 project(xtracer)
 
 find_package(OpenGL REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -143,7 +144,7 @@ target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery rtmidi asoun
 
 SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
-target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery rtmidi asound pthread ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery rtmidi asound pthread ssl crypto ${LIBRARIES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11")

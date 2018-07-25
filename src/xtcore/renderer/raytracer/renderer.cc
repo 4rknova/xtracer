@@ -33,7 +33,6 @@ void Renderer::render()
 
     xtcore::render::params_t *p   = &(m_context->params);
     xtcore::asset::ICamera   *cam = m_context->scene.get_camera(p->camera);
-
     if (!cam) return;
 
 	if (p->threads) omp_set_num_threads(p->threads);
@@ -49,32 +48,29 @@ void Renderer::render()
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
 			nimg::ColorRGBAf color_pixel;
-            nimg::ColorRGBf  color_sample;
-
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-            for (float dofs = 0; dofs < p->samples; ++dofs) {
+            for (size_t i = 0; i < p->samples; ++i) {
                 xtcore::Ray primary_ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
                     , (float)(p->height)
                 );
-                color_sample += trace_ray(primary_ray, primary_ray, p->rdepth + 1) * (1./ p->samples);
+                color_pixel += eval(primary_ray, primary_ray, p->rdepth + 1) * aa_sample.weight * (1./ p->samples);
 		    }
 
-            tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBf(color_pixel) + color_sample * aa_sample.weight);
+            color_pixel.a(1);
+            tile->write(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
         }
         tile->submit();
 	}
 }
 
-ColorRGBf Renderer::trace_ray(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
+ColorRGBf Renderer::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	xtcore::HitRecord info;
 	memset(&info, 0, sizeof(info));
-
-	ColorRGBf gi_res(0, 0, 0);
 
 	// Check for ray intersection
 	HASH_UINT64 obj;
@@ -93,7 +89,7 @@ ColorRGBf Renderer::trace_ray(const xtcore::Ray &pray, const xtcore::Ray &ray, c
 		scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
 		scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
 
-		return gi_res + shade(pray, ray, depth, info, obj, ior_a, ior_b);
+		return shade(pray, ray, depth, info, obj, ior_a, ior_b);
 	}
 
     return m_context->scene.sample_environment(ray.direction);
@@ -190,7 +186,7 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
 
     		float ft = 1.0 - fr;
 			color *= transparency;
-		    color += ft * transparency * trace_ray(pray, refrray, depth-1, ior_src, ior_dst) * specular;
+		    color += ft * transparency * eval(pray, refrray, depth-1, ior_src, ior_dst) * specular;
         }
 	}
 
@@ -198,7 +194,7 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
 		xtcore::Ray reflray;
 		reflray.origin    = p;
 		reflray.direction = NMath::Sample::lobe(n, -ray.direction, exponent);
-		color += fr * (reflectance * trace_ray(pray, reflray, depth-1) * specular);
+		color += fr * (reflectance * eval(pray, reflray, depth-1) * specular);
 	}
 
 	return color;

@@ -3,7 +3,7 @@ descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
 
 path_data     = data
-path_geometry = <path_data>/geometry/gl.ict.usc.edu/digital_emily
+path_geometry = <path_data>/geometry/graphics.cs.williams.edu/sportsCar
 
 environment = {
     type = gradient
@@ -17,8 +17,8 @@ camera = {
 	default = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(0,11,25)
-		target   = vec3(0,9,3)
+		position = vec3(5,2,5)
+		target   = vec3(0,1,0)
 		up       = vec3(0,1,0)
         aperture = 0
         flength  = 200
@@ -77,8 +77,7 @@ material = {
 
 object = {
 	head = {
-		source = <path_geometry>/Emily_2_1_mod.obj
-        prefix = emily_
+		source = <path_geometry>/sportsCar.obj
 	}
 
     l0 = {

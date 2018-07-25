@@ -24,16 +24,16 @@ void release()
     strpool_term(&pool);
 }
 
-HASH_UINT64 add(const char *str)
+HASH_ID add(const char *str)
 {
     size_t len = strlen(str);
-    HASH_UINT64 id = strpool_inject(&pool, str, (int)len);
+    HASH_ID id = strpool_inject(&pool, str, (int)len);
     strpool_incref(&pool, id);
     Log::handle().post_debug(LOG_DEBUG_PREFIX "add [%i] %s", strpool_getref(&pool, id), str);
     return id;
 }
 
-void del(HASH_UINT64 id)
+void del(HASH_ID id)
 {
     int count = strpool_decref(&pool, id);
     if (count == 0) {
@@ -42,7 +42,7 @@ void del(HASH_UINT64 id)
     }
 }
 
-char const* get(HASH_UINT64 id)
+char const* get(HASH_ID id)
 {
     return strpool_cstr(&pool, id);
 }

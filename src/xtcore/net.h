@@ -4,8 +4,9 @@
 namespace xtcore {
     namespace network {
 
-int listen(bool *done);
 int broadcast();
+int listen(bool *done);
+int wget(const char *url, const char *path);
 
     } /* namespace network */
 } /* namespace xtcore */

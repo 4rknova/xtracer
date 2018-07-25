@@ -29,6 +29,16 @@ void workspace_t::load()
 {
     int err = xtcore::io::scn::load(&(context.scene), source_file.c_str());
     status = (err ? WS_STATUS_INVALID : WS_STATUS_LOADED);
+
+    // Auto-select camera
+    {
+        xtcore::render::params_t *p = &(context.params);
+        auto first_cam = context.scene.m_cameras.begin();
+        bool is_cam_valid = (first_cam != context.scene.m_cameras.end());
+        HASH_ID cam_id = HASH_ID_INVALID;
+        if (is_cam_valid && (p->camera == HASH_ID_INVALID)) p->camera = (*first_cam).first;
+    }
+
     gui::graph::build(&graph, &(context.scene));
 }
 

@@ -21,6 +21,7 @@ params_t::params_t()
     , aa        (XTCORE_CONTEXT_DEFAULT_AA)
     , rdepth    (XTCORE_CONTEXT_DEFAULT_RDEPTH)
     , tile_size (XTCORE_CONTEXT_DEFAULT_TILESZ)
+    , camera    (0)
 {}
 
 void context_t::init()

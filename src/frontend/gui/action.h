@@ -18,6 +18,7 @@ enum IMG_FORMAT
 /* networking actions */
 int broadcast (gui::state_t *state);
 int listen    (gui::state_t *state);
+int test_wget();
 
 /* rendering actions */
 int render (workspace_t *ws);

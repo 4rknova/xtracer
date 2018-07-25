@@ -4,7 +4,11 @@
 #include <stdlib.h>     /* for atoi() and exit() */
 #include <string.h>     /* for memset() */
 #include <unistd.h>     /* for close() */
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#include <cpp-httplib/httplib.h>
+#include "log.h"
 
+#include <iostream>
 
 #define MAXSTRL 255     /* Max string length */
 #define IP      "255.255.255.255"
@@ -82,6 +86,30 @@ int broadcast()
     close(sock);
 
 	return 0;
+}
+
+int wget(const char *url, const char *path)
+{
+
+    {
+        httplib::Client cli("www.4rknova.com", 80);
+        auto res = cli.Get("/main.html");
+        if (res) {
+            std::cout << res->status << std::endl;
+            std::cout << res->get_header_value("Content-Type") << std::endl;
+            std::cout << res->body << std::endl;
+        }
+    }
+    {
+        httplib::SSLClient cli("gist.githubusercontent.com", 443, 5);
+        auto res = cli.Get("/noonat/1131091/raw/3ef186720b1bb6e704c46aebf57a42677d1638af/cube.obj");
+        if (res) {
+            std::cout << res->status << std::endl;
+            std::cout << res->get_header_value("Content-Type") << std::endl;
+            std::cout << res->body.size() << std::endl;
+            std::cout << res->body << std::endl;
+        }
+    }
 }
 
     } /* namespace network */
