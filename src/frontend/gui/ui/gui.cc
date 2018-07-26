@@ -291,17 +291,22 @@ void mm_concurrency(workspace_t *ws)
 
 void mm_camera(workspace_t *ws)
 {
-    static int index = 0, selected = -1;
     auto it = ws->context.scene.m_cameras.begin();
     auto et = ws->context.scene.m_cameras.end();
 
-    int i=0;
-    for (int cam_idx = 0; it != et; ++it) {
-        ++i;
-        if (ImGui::Selectable(xtcore::pool::str::get((*it).first), selected == i)) {
-            ws->context.params.camera = (*it).first;
-            i = selected;
-        }
+    HASH_ID current_cam = ws->context.params.camera;
+    int current_idx = 0;
+
+    for (auto tt = ws->context.scene.m_cameras.begin(); (tt != et) && (*tt).first != current_cam; ++tt) { ++current_idx; }
+    int selected_idx = current_idx;
+    for (int idx = -1; it != et; ++it) {
+        ImGui::RadioButton(xtcore::pool::str::get((*it).first), &selected_idx, ++idx);
+    }
+
+    if (current_idx != selected_idx) {
+        auto tt = ws->context.scene.m_cameras.begin();
+        for (int idx = 0; idx < selected_idx; ++idx) ++tt;
+        ws->context.params.camera = (*tt).first;
     }
 }
 
@@ -309,11 +314,8 @@ void mm_camera(workspace_t *ws)
 void wdg_conf(workspace_t *ws)
 {
     if (ws->status == WS_STATUS_PROCESSING) return;
-    if (ImGui::BeginMenu("Configuration")) {
-        if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);     ImGui::EndMenu(); }
-        if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws); ImGui::EndMenu(); }
-        ImGui::EndMenu();
-    }
+    if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);     ImGui::EndMenu(); }
+    if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws); ImGui::EndMenu(); }
 }
 
 void menu_workspaces(state_t *state)
@@ -354,15 +356,12 @@ void mm_network(state_t *state)
 void mm_renderer(workspace_t *ws)
 {
     if (ImGui::BeginMenu("Render")) {
-        if (ImGui::BeginMenu("Mode")) {
-            int rmode = (int)ws->rmode;
-            ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
-            ImGui::RadioButton(STR_RMODE_CONTINUOUS, &rmode, WS_RMODE_CONTINUOUS);
-            ImGui::NewLine();
-            ImGui::Checkbox(STR_SHOW_TILE_UPDATES, &(ws->show_tile_updates));
-            ws->rmode = (WS_RMODE)rmode;
-            ImGui::EndMenu();
-        }
+        int rmode = (int)ws->rmode;
+        ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
+        ImGui::RadioButton(STR_RMODE_CONTINUOUS, &rmode, WS_RMODE_CONTINUOUS);
+        ImGui::Checkbox(STR_SHOW_TILE_UPDATES, &(ws->show_tile_updates));
+        ImGui::NewLine();
+        ws->rmode = (WS_RMODE)rmode;
 
         if (ws->status != WS_STATUS_PROCESSING) {
             if (ImGui::BeginMenu("Sampling"   )) { mm_sampling(ws);    ImGui::EndMenu(); }

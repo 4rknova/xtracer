@@ -49,7 +49,7 @@ bool BlinnPhong::sample_path(
     else {
         color = spec;
         scalar_t exp = get_scalar("exponent");
-        ray.direction = NMath::Sample::lobe(info.normal, -ray.direction, exp);
+        ray.direction = NMath::Sample::lobe(info.normal, -info.incident_direction, exp);
     }
 
     return true;

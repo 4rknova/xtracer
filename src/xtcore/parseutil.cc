@@ -545,7 +545,6 @@ xtcore::sampler::ISampler *create_sampler(const char *name, const char *base, co
             ((xtcore::sampler::Texture2D*)sampler)->flip_horizontal();
         } else {
             sampler = new (std::nothrow) xtcore::sampler::SolidColor();
-            printf("val\n");
             nimg::ColorRGBf col(value[0], value[1], value[2]);
             ((xtcore::sampler::SolidColor*)sampler)->set(col);
         }
@@ -608,9 +607,13 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
             }
             else
             {
-                mat = new (std::nothrow) xtcore::asset::material::Lambert();
-                xtcore::sampler::ISampler *s = create_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
-                mat->add_sampler(MAT_SAMPLER_DIFFUSE, s);
+                mat = new (std::nothrow) xtcore::asset::material::BlinnPhong();
+                xtcore::sampler::ISampler *kd = create_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
+                xtcore::sampler::ISampler *ks = create_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), obj.materials[m].texture_specular.c_str(), obj.materials[m].specular);
+                mat->add_sampler(MAT_SAMPLER_DIFFUSE , kd);
+                mat->add_sampler(MAT_SAMPLER_SPECULAR, ks);
+                mat->add_scalar(MAT_SCALART_IOR, obj.materials[m].ior);
+                mat->add_scalar(MAT_SCALART_EXPONENT, obj.materials[m].shininess);
             }
 
             scene->m_materials[id] = mat;
