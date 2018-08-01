@@ -140,27 +140,29 @@ xtcore::asset::ICamera *Scene::get_camera(HASH_UINT64 id)
 	return 0;
 }
 
-
-void Scene::build()
+NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
 {
-    static_geometry.clear();
-
     auto it = m_objects.begin();
     auto et = m_objects.end();
 
+    NMath::scalar_t dist = INFINITY;
+
     for (; it != et; ++it) {
-        geonode_t n;
-        n.id   = (*it).first;
-        n.data = m_geometry[(*it).second->geometry];
-        n.data->calc_aabb();
-        static_geometry.add(n.data->aabb, n);
+        HASH_ID obj_id = (*it).first;
+        HASH_ID geo_id = (*it).second->geometry;
+        auto geo = m_geometry.find(geo_id);
+        if (geo == m_geometry.end()) continue;
+
+        asset::ISurface *s = (*geo).second;
+
+        NMath::scalar_t temp_dist = s->distance(p);
+        if (temp_dist < dist) {
+            dist = temp_dist;
+            object = obj_id;
+        }
     }
-
-    static_geometry.max_depth(3);
-    static_geometry.build();
+    return dist;
 }
-
-//#define USE_SCENE_OCTREE
 
 bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
 {
@@ -168,7 +170,6 @@ bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
 
 	std::map<HASH_UINT64, xtcore::asset::Object *>::iterator it;
 
-#ifndef USE_SCENE_OCTREE
 	for (it = m_objects.begin(); it != m_objects.end(); ++it) {
         asset::ISurface *geom = m_geometry[((*it).second)->geometry];
 
@@ -183,11 +184,6 @@ bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
 	memcpy(&info, &res, sizeof(info));
 
 	return info.t != INFINITY ? true : false;
-#else
-    bool hit = static_geometry.intersection(ray, &info) != NULL;
-    obj = info.id;
-    return hit && (info.t != INFINITY);
-#endif
 }
 
 } /* namespace xtcore */

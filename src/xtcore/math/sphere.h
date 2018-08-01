@@ -21,6 +21,7 @@ class Sphere: public xtcore::asset::ISurface
         Sphere(const Vector3f &org, scalar_t rad);
 
 		bool intersection(const Ray &ray, HitRecord* i_info) const;
+        NMath::scalar_t distance(NMath::Vector3f p) const;
 		void calc_aabb();
 
         Vector3f point_sample() const;

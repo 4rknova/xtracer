@@ -21,13 +21,14 @@ class Plane: public xtcore::asset::ISurface
 	Plane();
 
 	bool intersection(const Ray &ray, HitRecord* i_info) const;
+    NMath::scalar_t distance(NMath::Vector3f p) const;
 	void calc_aabb();
 
     Vector3f point_sample() const;
     Ray ray_sample() const;
 
 	Vector3f normal;
-	scalar_t distance;
+	scalar_t offset;
 };
 
     } /* namespace surface */

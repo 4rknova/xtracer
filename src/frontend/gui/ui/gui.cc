@@ -375,6 +375,7 @@ void mm_renderer(workspace_t *ws)
                 if (ImGui::MenuItem("Emission"  )) { render = true; ws->renderer = new xtcore::renderer::emission::Renderer();   }
                 if (ImGui::MenuItem("Raytracer" )) { render = true; ws->renderer = new xtcore::renderer::raytracer::Renderer();  }
                 if (ImGui::MenuItem("Pathtracer")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
+                if (ImGui::MenuItem("Raymarcher")) { render = true; ws->renderer = new xtcore::renderer::raymarcher::Renderer(); }
                 if (render) action::render(ws);
                 ImGui::EndMenu();
             }

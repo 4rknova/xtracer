@@ -212,7 +212,7 @@ OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, Hi
 				pt0 = pt;
 				closest = *iter;
 			}
-			iter++;
+			++iter;
 		}
 	}
 	else {

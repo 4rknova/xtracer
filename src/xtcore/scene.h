@@ -32,29 +32,9 @@ struct light_t
     xtcore::asset::IMaterial *material;
 };
 
-struct geonode_t
-{
-    HASH_UINT64              id;
-    xtcore::asset::ISurface *data;
-
-    geonode_t()
-        : id(0)
-        , data(NULL)
-    {}
-
-    bool intersection(const Ray &ray, HitRecord *info) const
-    {
-        if (!data) return false;
-        bool res = data->intersection(ray, info);
-        info->id = id;
-        return res;
-    }
-};
-
-
 class Scene
 {
-public:
+    public:
 	Scene(const Scene &);
 	Scene &operator =(const Scene &);
 
@@ -63,7 +43,7 @@ public:
 	~Scene();
 
 	void apply_modifiers();
-	void build();
+    NMath::scalar_t distance(NMath::Vector3f p, HASH_ID &object) const;
 
 	const ColorRGBf &ambient();
 	void ambient(const ColorRGBf &ambient);
@@ -97,8 +77,6 @@ public:
 
 	// This will cleanup all the allocated memory
 	void release();
-
-    Octree<geonode_t> static_geometry;
 };
 
 } /* namespace xtcore */

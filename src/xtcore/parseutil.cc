@@ -338,8 +338,8 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 
 	if (!type.compare(XTPROTO_LTRL_PLANE)) {
 		data = new (std::nothrow) xtcore::surface::Plane;
-		((xtcore::surface::Plane *)data)->normal   = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
-		((xtcore::surface::Plane *)data)->distance = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
+		((xtcore::surface::Plane *)data)->normal = deserialize_vec3(p, XTPROTO_PROP_NORMAL);
+		((xtcore::surface::Plane *)data)->offset = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DISTANCE));
 	}
 	else if (!type.compare(XTPROTO_LTRL_SPHERE)) {
 		data = new (std::nothrow) xtcore::surface::Sphere;
@@ -784,8 +784,6 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 			}
 		}
 	}
-
-    scene->build();
 	Log::handle().post_message("Scene loaded.");
 	return 0;
 }

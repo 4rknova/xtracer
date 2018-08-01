@@ -26,6 +26,7 @@ class Mesh: public xtcore::asset::ISurface
 	~Mesh();
 
 	bool intersection(const Ray &ray, HitRecord *i_info) const;
+    NMath::scalar_t distance(NMath::Vector3f p) const;
 	void calc_aabb();
     void build_octree(shape_t &shape, attrib_t &attributes);
     void build_octree(object_t &object);

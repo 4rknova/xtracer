@@ -42,8 +42,16 @@ namespace NMath {
 	extern "C" {
 #endif	/* __cplusplus */
 
-#define nmath_max(x,y) (x > y ? x : y)
-#define nmath_min(x,y) (y > x ? x : y)
+#define nmath_max(x,y)      (x > y ? x : y)
+#define nmath_max3(x,y,z)   (nmath_max(nmath_max(x,y),z))
+#define nmath_max4(x,y,z,w) (nmath_max(nmath_max(nmath_max(x,y),z),w))
+#define nmath_min(x,y)      (y > x ? x : y)
+#define nmath_min3(x,y,z)   (nmath_min(nmath_min(x,y),z))
+#define nmath_min4(x,y,z,w) (nmath_min(nmath_min(nmath_min(x,y),z),w))
+
+#define nmath_sign(x)       (x < 0.0 ? -1.0 : ( x > 0.0 ? 1.0 : 0.0))
+
+#define nmath_clamp(k,a,b) (k < a ? a : (k > b ? b : k))
 
 /* Floating point precision */
 #ifdef MATH_SINGLE_PRECISION

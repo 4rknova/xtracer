@@ -12,6 +12,11 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {}
 
+NMath::scalar_t Mesh::distance(NMath::Vector3f p) const
+{
+    return INFINITY;
+}
+
 bool Mesh::intersection(const Ray &ray, HitRecord* i_info) const
 {
 	return m_octree.intersection(ray, i_info) != NULL;

@@ -10,5 +10,10 @@ ISurface::ISurface()
 ISurface::~ISurface()
 {}
 
+NMath::scalar_t ISurface::distance(NMath::Vector3f p) const
+{
+    return INFINITY;
+}
+
     } /* namespace asset */
 } /* namespace xtcore */

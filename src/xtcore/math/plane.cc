@@ -7,8 +7,13 @@ namespace xtcore {
     namespace surface {
 
 Plane::Plane()
-	: distance(XTCORE_PLANE_DEFAULT_DISTANCE)
+	: offset(XTCORE_PLANE_DEFAULT_DISTANCE)
 {}
+
+NMath::scalar_t Plane::distance(NMath::Vector3f p) const
+{
+     return dot(p, normal) + offset;
+}
 
 // algebraic solution
 bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
@@ -19,7 +24,7 @@ bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
 
 	if (fabs(n_dot_dir) < EPSILON) return false;
 
-	Vector3f v = Vector3f(nmath_abs(normal.x), nmath_abs(normal.y), nmath_abs(normal.z)) * distance;
+	Vector3f v = Vector3f(nmath_abs(normal.x), nmath_abs(normal.y), nmath_abs(normal.z)) * offset;
 
 	Vector3f vorigin = v - ray.origin;
 

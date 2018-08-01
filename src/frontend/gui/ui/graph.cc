@@ -201,8 +201,8 @@ void node_geo_t::draw_properties()
     switch (spec) {
         case 1: {
             xtcore::surface::Plane *p = (xtcore::surface::Plane*)data;
-            textedit_float3("normal"  , p->normal   , 0.1);
-            textedit_double("distance", p->distance , 0.1);
+            textedit_float3("normal"  , p->normal, 0.1);
+            textedit_double("distance", p->offset, 0.1);
             break;
         }
         case 2: {

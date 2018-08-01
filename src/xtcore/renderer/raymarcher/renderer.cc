@@ -17,7 +17,9 @@
 
 namespace xtcore {
     namespace renderer {
-        namespace pathtracer {
+        namespace raymarcher {
+
+#define MAX_ITERATIONS (256)
 
 Renderer::Renderer()
 	: m_context(NULL)
@@ -34,19 +36,32 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray)
 
     HASH_UINT64 obj;
 
-    xtcore::HitRecord info;
-    memset(&info, 0 ,sizeof(info));
-    if (m_context->scene.intersection(ray, info, obj)) {
-        xtcore::asset::Object    *o = m_context->scene.m_objects[obj];
-        xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
+    NMath::Vector3f p = ray.origin;
+    NMath::scalar_t d = INFINITY;   // Distance
+    size_t iterations = MAX_ITERATIONS;
+    bool done = false;
+    bool hit  = false;
 
-        Ray r;
-        ColorRGBf c;
-        bool path_continues = m->sample_path(r, c, info);
-        if (path_continues) {
-            c = c * eval(--depth, r);
-        }
-        return c;
+    while (!done) {
+        NMath::scalar_t distance = m_context->scene.distance(p, obj);
+        p += ray.direction * distance;
+        hit = (distance < EPSILON);
+        if (hit) d = distance;
+        --iterations;
+        done = ((iterations == 0) || hit);
+    }
+
+    if (hit) {
+    /*
+        // Calculate the normal: Gradient via Forward differencing
+        NMath::Vector3f n;
+        HASH_ID id;
+        n.x = m_context->scene.distance(NMath::Vector3f(p.x + EPSILON, p.y, p.z), id);
+        n.y = m_context->scene.distance(NMath::Vector3f(p.x, p.y + EPSILON, p.z), id);
+        n.z = m_context->scene.distance(NMath::Vector3f(p.x, p.y, p.z + EPSILON), id);
+    */
+        float c = (MAX_ITERATIONS - iterations) / (float)MAX_ITERATIONS;
+        return nimg::ColorRGBf(c, c, c);
     }
 
     return m_context->scene.sample_environment(ray.direction);
@@ -93,6 +108,6 @@ void Renderer::render()
     }
 }
 
-        } /* namespace pathtracer */
+        } /* namespace raymarcher */
     } /* namespace renderer */
 } /* namespace xtcore */

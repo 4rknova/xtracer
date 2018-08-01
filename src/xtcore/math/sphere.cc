@@ -17,6 +17,11 @@ Sphere::Sphere(const Vector3f &org, scalar_t rad)
     , radius(rad > 0 ? rad : XTCORE_SPHERE_DEFAULT_RADIUS)
 {}
 
+NMath::scalar_t Sphere::distance(NMath::Vector3f p) const
+{
+    return (p - origin).length() - radius;
+}
+
 bool Sphere::intersection(const Ray &ray, HitRecord* i_info) const
 {
 

@@ -15,6 +15,7 @@ class Triangle: public xtcore::asset::ISurface
 {
     public:
 	bool intersection(const Ray &ray, HitRecord* i_info) const;
+    NMath::scalar_t distance(NMath::Vector3f p) const;
 	void calc_aabb();
 	Vector3f calc_normal() const;
 	Vector3f calc_barycentric(const Vector3f &p) const;
