@@ -33,6 +33,14 @@ def export(filename):
 		f.write("versn = \n")
 		f.write("\n")
 
+		f.write("environment = {\n")
+		f.write("	type = gradient\n")
+		f.write("	config = {\n")
+		f.write("		a = col3(1.0,1.0,1.0)\n")
+		f.write("		b = col3(0.7,0.8,1.0)\n")
+		f.write("	}\n")
+		f.write("}\n")
+
 		f.write("camera = {\n")
 		for ob in bpy.context.scene.objects:
 			if ob.type == 'CAMERA':
@@ -41,11 +49,11 @@ def export(filename):
 				p = ob.matrix_world.to_translation()
 				u = ob.matrix_world.to_quaternion() * Vector((0.0, 1.0, 0.0))
 				d = ob.matrix_world.to_quaternion() * Vector((0.0, 0.0,-1.0))
-				f.write("\t\ttype     = thin-lens\n")
-				f.write("\t\tfov      = 45\n")
+				f.write("\t\ttype	 = thin-lens\n")
+				f.write("\t\tfov	  = 45\n")
 				f.write("\t\tposition = vec3(" + str(p.x) + ", " + str(p.y) + ", " + str(p.z) + ")\n")
 				f.write("\t\ttarget   = vec3(" + str(d.x) + ", " + str(d.y) + ", " + str(d.z) + ")\n")
-				f.write("\t\tup       = vec3(" + str(u.x) + ", " + str(u.y) + ", " + str(u.z) + ")\n")
+				f.write("\t\tup	   = vec3(" + str(u.x) + ", " + str(u.y) + ", " + str(u.z) + ")\n")
 
 				print(ob.location)
 				f.write("\t}\n")
@@ -57,12 +65,22 @@ def export(filename):
 				f.write("\t" + ob.name + " = {\n")
 				print("exporting mesh   ", ob.name)
 				f.write("\t}\n")
+			if ob.type == 'EMPTY':
+				p = ob.matrix_world.to_translation()
+				if ob.empty_draw_type == 'SPHERE':
+					print("exporting sphere   ", ob.name)
+					f.write("\t" + ob.name + " = {\n")
+					f.write("\t\ttype = sphere\n")
+					f.write("\t\tposition = vec3(" + str(p.x) + ", " + str(p.y) + ", " + str(p.z) + ")\n")
+					f.write("\t\tradius = " + str(ob.empty_draw_size) + "\n")
+					f.write("\t}\n")
+
 		f.write("}\n")
 
 	return {'FINISHED'}
 
 def menu_func(self, context):
-	self.layout.operator(xtracer.bl_idname, text="XTracer (.scn)")
+	self.layout.operator(xtracer.bl_idname, text="xtracer (.scn)")
 
 def register():
 	print("Registering..")
