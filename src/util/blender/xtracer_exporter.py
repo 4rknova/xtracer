@@ -2,6 +2,15 @@ import math
 import bpy
 from mathutils import Vector
 
+# To export a mesh as an implicit surface, add a custom property in the object
+# called implicit_type.
+#   Values:
+#	1.0 : sphere
+#	2.0 : plane
+#	3.0 : torus
+#	4.0 : cone
+#	5.0 : cylinder
+
 bl_info = {
 	"name"			: "Xtracer (*.scn)",
 	"author"		: "Nikos Papadopoulos",
@@ -22,6 +31,19 @@ __email__   = bl_info["email"]
 __author__  = bl_info["author"]
 __bpydoc__  = bl_info["description"]
 __version__ = bl_info["version"]
+
+class sample():
+	def __init__(self):
+		self.name  = ""
+		self.type  = ""
+		self.value = ""
+
+class material():
+	def __init__(self):
+		self.name = ""
+		self.type = ""
+		self.samplers = []
+		self.scalars  = []
 
 class entity():
 	def __init__(self):
@@ -50,20 +72,32 @@ class scene():
 				cam.properties.append(("up", "vec3(" + str(u.x) + ", " + str(u.y) + ", " + str(u.z) + ")"))
 				self.cameras.append(cam)
 
-#				mat = entity()
-#				slot = obj.material_slots[f.material_index]
-#				mat = slot.material
+			if ob.type == 'LAMP':
+				p = ob.matrix_world.to_quaternion()
+				geo = entity()
+				geo.name = ob.name
+				geo.properties.append(("type", "sphere"))
+				geo.properties.append(("position", "vec3(" + str(p.x) + ", " + str(p.y) + ", " + str(p.z) + ")"))
+				geo.properties.append(("radius", "0.001"))
+				self.geometry.append(geo)
+				mat = material()
+				mat.name = "ls_" + ob.name
+				mat.type = "emissive"
+				s = sample()
+				s.name  = "emissive"
+				s.type  = "color"
+				s.value = "col3(" + str(ob.color[0]) + ", " + str(ob.color[1]) + ", " + str(ob.color[2]) + ")"
+				mat.samplers.append(s)
+				self.materials.append(mat)
+				obj = entity()
+				obj.name = geo.name
+				obj.properties.append(("geometry", geo.name))
+				obj.properties.append(("material", mat.name))
+				self.objects.append(obj)
 
-
-#		f.write("geometry = {\n")
-#		for ob in bpy.context.scene.objects:
-#			if ob.type == 'MESH':
-#				print("exporting mesh   ", ob.name)
-#				#f.write("\t" + ob.name + " = {\n")
-#				#f.write("\t}\n")
 			if ob.type == 'MESH':
 				p = ob.matrix_world.to_translation()
-				if "implicit_type" in ob.keys():
+				if "implicit_type" in ob:
 					if ob["implicit_type"] == 1.0: # Sphere
 						geo = entity()
 						geo.name = ob.name
@@ -71,6 +105,21 @@ class scene():
 						geo.properties.append(("position", "vec3(" + str(p.x) + ", " + str(p.y) + ", " + str(p.z) + ")"))
 						geo.properties.append(("radius", str(ob.empty_draw_size)))
 						self.geometry.append(geo)
+						mat = material()
+						mat.name = geo.name
+						mat.type = "lambert"
+						s = sample()
+						s.name  = "diffuse"
+						s.type  = "color"
+						diff = ob.active_material.diffuse_color
+						s.value = "col3(" + str(diff[0]) + ", " + str(diff[1]) + ", " + str(diff[2]) + ")"
+						mat.samplers.append(s)
+						self.materials.append(mat)
+						obj = entity()
+						obj.name = geo.name
+						obj.properties.append(("geometry", geo.name))
+						obj.properties.append(("material", mat.name))
+						self.objects.append(obj)
 
 	def serialize(self, filename):
 		with open(filename, 'w') as f:
@@ -85,20 +134,19 @@ class scene():
 			f.write("		a = col3(1.0,1.0,1.0)\n")
 			f.write("		b = col3(0.7,0.8,1.0)\n")
 			f.write("	}\n")
-			f.write("}\n")
-			f.write("\n")
+			f.write("}\n\n")
 			f.write("camera = {\n")
 			for cam in self.cameras:
 				serialize(f, cam)
-			f.write("}\n")
+			f.write("}\n\n")
 			f.write("geometry = {\n")
 			for geo in self.geometry:
 				serialize(f, geo)
-			f.write("}\n")
+			f.write("}\n\n")
 			f.write("material = {\n")
 			for mat in self.materials:
-				serialize(f, mat)
-			f.write("}\n")
+				serialize_mat(f, mat)
+			f.write("}\n\n")
 			f.write("object = {\n")
 			for obj in self.objects:
 				serialize(f, obj)
@@ -118,11 +166,31 @@ class xtracer(bpy.types.Operator) :
 	def execute(self, context):
 		return export(self.filepath)
 
+def serialize_mat(stream, item):
+	stream.write("\t" + item.name + " = {\n")
+	stream.write("\t\ttype = " + item.type  + "\n")
+	stream.write("\t\tproperties = {\n")
+	if len(item.samplers):
+		stream.write("\t\t\tsamplers = {\n")
+		for entry in item.samplers:
+			stream.write("\t\t\t\t" + entry.name + " = {\n")
+			stream.write("\t\t\t\t\ttype  = " + entry.type + "\n")
+			stream.write("\t\t\t\t\tvalue = " + entry.value + "\n")
+			stream.write("\t\t\t\t}\n")
+		stream.write("\t\t\t}\n")
+	if len(item.scalars):
+		stream.write("\t\t\tscalars = {\n")
+		for entry in item.scalars:
+			stream.write("\t\t\t\t\t" + entry[0] + " = " + entry[1] + "\n")
+		stream.write("\t\t\t}\n")
+	stream.write("\t\t}\n")
+	stream.write("\t}\n\n")
+
 def serialize(stream, item):
 	stream.write("\t" + item.name + " = {\n")
 	for entry in item.properties:
 		stream.write("\t\t" + str(entry[0]) + " = " + str(entry[1]) + "\n")
-	stream.write("\t}\n")
+	stream.write("\t}\n\n")
 
 def export(filename):
 	s = scene()

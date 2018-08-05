@@ -76,7 +76,6 @@ int main(int argc, char **argv)
     )) return 1;
 
     xtcore::init();
-
 	xtcore::render::context_t context;
 	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
         if (context.scene.m_cameras.size() == 0) {

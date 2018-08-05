@@ -67,7 +67,6 @@ int main(int argc, char** argv)
     xtcore::Log::handle().echo(false);
     gui::graphics::init();
 
-
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();

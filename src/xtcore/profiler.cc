@@ -5,7 +5,9 @@
 namespace xtcore {
     namespace profiler {
 
+#if FEATURE_IS_INCLUDED(FEATURE_PROFILER)
 Remotery* g_rmt;
+#endif /* FEATURE_PROFILER */
 
 void init()
 {
@@ -38,7 +40,9 @@ void end()
 
 void deinit()
 {
+#if FEATURE_IS_INCLUDED(FEATURE_PROFILER)
     rmt_DestroyGlobalInstance(g_rmt);
+#endif /* FEATURE_PROFILER */
 }
 
     } /* namespace profiler */

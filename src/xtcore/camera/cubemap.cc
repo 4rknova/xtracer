@@ -15,7 +15,6 @@ Ray Cubemap::get_primary_ray(float x, float y, float width, float height)
 {
     Ray ray;
 
-    //size_t face = 6 * size_t(y) / size_t(height);
     size_t face_size = (size_t)(height) / 6;
     size_t face      = (size_t)(y) / face_size;
 
