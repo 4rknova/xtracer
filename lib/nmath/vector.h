@@ -64,8 +64,6 @@ static inline scalar_t vec2_dot(vec2_t v1, vec2_t v2);
 static inline vec2_t vec2_reflect(vec2_t v, vec2_t n);
 static inline vec2_t vec2_refract(vec2_t v, vec2_t n, scalar_t ior_src, scalar_t ior_dst);
 
-static inline void vec2_print(FILE *fp, vec2_t v);
-
 /*
     C 3D vector functions
 */
@@ -86,8 +84,6 @@ static inline vec3_t vec3_cross(vec3_t v1, vec3_t v2);
 
 static inline vec3_t vec3_reflect(vec3_t v, vec3_t n);
 static inline vec3_t vec3_refract(vec3_t v, vec3_t n, scalar_t ior_src, scalar_t ior_dst);
-
-static inline void vec3_print(FILE *fp, vec3_t v);
 
 /*
     C 4D vector functions
@@ -164,9 +160,6 @@ class Vector2f
         friend inline bool operator ==(const Vector2f &v1, const Vector2f &v2);
         friend inline bool operator !=(const Vector2f &v1, const Vector2f &v2);
 
-        /* Stream operations */
-        friend std::ostream& operator <<(std::ostream& out, const Vector2f &vec);
-
         /* Vector member functions */
         /* - Length */
         inline scalar_t length() const;
@@ -240,9 +233,6 @@ class Vector3f
         /* Comparison operations */
         friend inline bool operator ==(const Vector3f &v1, const Vector3f &v2);
         friend inline bool operator !=(const Vector3f &v1, const Vector3f &v2);
-
-        /* Stream operations */
-        friend std::ostream& operator <<(std::ostream& out, const Vector3f &vec);
 
         /* Vector member functions */
         /* - Length */
@@ -323,9 +313,6 @@ class Vector4f
 
 		friend inline bool operator < (const Vector3f &v1, const Vector3f &v2);
 		friend inline bool operator > (const Vector3f &v1, const Vector3f &v2);
-
-        /* Stream operations */
-        friend std::ostream& operator <<(std::ostream& out, const Vector4f &vec);
 
         /* Vector member functions */
         /* - Length */
