@@ -12,7 +12,7 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {}
 
-NMath::scalar_t Mesh::distance(NMath::Vector3f p) const
+NMath::scalar_t Mesh::distance(NMath::Vector3f) const
 {
     return INFINITY;
 }

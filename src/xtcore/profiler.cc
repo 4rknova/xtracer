@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <remotery/lib/Remotery.h>
+#include "macro.h"
 #include "profiler.h"
 
 namespace xtcore {
@@ -21,6 +22,8 @@ void log(const char *message)
 {
 #if FEATURE_IS_INCLUDED(FEATURE_PROFILER)
     if (message) rmt_LogText(message);
+#else
+    UNUSED(message);
 #endif /* FEATURE_PROFILER */
 }
 
@@ -28,6 +31,8 @@ void start(const char *tag)
 {
 #if FEATURE_IS_INCLUDED(FEATURE_PROFILER)
     rmt_BeginCPUSampleDynamic(tag, 0);
+#else
+    UNUSED(tag);
 #endif /* FEATURE_PROFILER */
 }
 

@@ -96,6 +96,7 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
 void order(Tileset &tiles, TILE_ORDER order)
 {
     switch (order) {
+        case TILE_ORDER_UNCHANGED  :                             break;
         case TILE_ORDER_RANDOM     : order_random(tiles);        break;
         case TILE_ORDER_RADIAL_IN  : order_radial(tiles, false); break;
         case TILE_ORDER_RADIAL_OUT : order_radial(tiles, true ); break;

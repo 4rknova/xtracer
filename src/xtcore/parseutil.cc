@@ -30,6 +30,7 @@
 #include "sampler_tex.h"
 #include "sampler_cubemap.h"
 #include "sampler_gradient.h"
+#include "macro.h"
 
 #include "extrude.h"
 
@@ -41,7 +42,7 @@ namespace xtcore {
 
 bool deserialize_bool(const char *val, const bool def)
 {
-	if (!val) return false;
+	if (!val) return def;
 	std::string s = val;
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return ( (s == "1") || (s == "yes") || (s == "true") ) ? true : false;
@@ -145,7 +146,7 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	return res;
 }
 
-xtcore::sampler::Gradient *deserialize_gradient(const char *source, const ncf::NCF *p)
+xtcore::sampler::Gradient *deserialize_gradient(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -187,7 +188,7 @@ xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF
 }
 
 
-xtcore::asset::ICamera *deserialize_camera_tlp(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_tlp(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -204,7 +205,7 @@ xtcore::asset::ICamera *deserialize_camera_tlp(const char *source, const ncf::NC
     return data;
 }
 
-xtcore::asset::ICamera *deserialize_camera_cbm(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_cbm(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -216,7 +217,7 @@ xtcore::asset::ICamera *deserialize_camera_cbm(const char *source, const ncf::NC
     return data;
 }
 
-xtcore::asset::ICamera *deserialize_camera_ods(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_ods(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -230,7 +231,7 @@ xtcore::asset::ICamera *deserialize_camera_ods(const char *source, const ncf::NC
     return data;
 }
 
-xtcore::asset::ICamera *deserialize_camera_erp(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera_erp(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -243,7 +244,7 @@ xtcore::asset::ICamera *deserialize_camera_erp(const char *source, const ncf::NC
     return data;
 }
 
-xtcore::asset::ICamera *deserialize_camera(const char *source, const ncf::NCF *p)
+xtcore::asset::ICamera *deserialize_camera(const ncf::NCF *p)
 {
     if (!p) return 0;
 
@@ -251,10 +252,10 @@ xtcore::asset::ICamera *deserialize_camera(const char *source, const ncf::NCF *p
 
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-         if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) data = deserialize_camera_tlp(source, p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)     ) data = deserialize_camera_ods(source, p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)     ) data = deserialize_camera_erp(source, p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP) ) data = deserialize_camera_cbm(source, p);
+         if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) data = deserialize_camera_tlp(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)     ) data = deserialize_camera_ods(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)     ) data = deserialize_camera_erp(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP) ) data = deserialize_camera_cbm(p);
     else Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 
 	return data;
@@ -389,7 +390,7 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 	return data;
 }
 
-xtcore::sampler::ISampler *deserialize_rgba(const char *source, const ncf::NCF *p)
+xtcore::sampler::ISampler *deserialize_rgba(const ncf::NCF *p)
 {
     xtcore::sampler::SolidColor *sampler = new (std::nothrow) xtcore::sampler::SolidColor();
     nimg::ColorRGBf col = deserialize_col3(p, XTPROTO_VALUE);
@@ -427,8 +428,8 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 
                  if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
             else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
-            else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(source, entry);
-            else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (source, entry);
+            else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
+            else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
             data->add_sampler(entry->get_name(), sampler);
         }
@@ -478,7 +479,7 @@ xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::N
     return data;
 }
 
-xtcore::asset::Object *deserialize_object(const char *source, const ncf::NCF *p)
+xtcore::asset::Object *deserialize_object(const ncf::NCF *p)
 {
 	if (!p)	return 0;
 
@@ -499,7 +500,7 @@ int create_camera(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::asset::ICamera *data = deserialize_camera(scene->m_source.c_str(), p);
+    xtcore::asset::ICamera *data = deserialize_camera(p);
     if (!data) return 1;
     scene->destroy_camera(id);
     scene->m_cameras[id] = data;
@@ -532,7 +533,7 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
-xtcore::sampler::ISampler *create_sampler(const char *name, const char *base, const char *texture, float value[3])
+xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3])
 {
      xtcore::sampler::ISampler *sampler = 0;
      {
@@ -572,19 +573,19 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
     Log::handle().post_debug("   Shapes: %i", obj.shapes.size());
 
     std::vector<HASH_UINT64> matids;
-    for (int m = 0; m < obj.materials.size(); ++m) {
+    for (size_t m = 0; m < obj.materials.size(); ++m) {
         std::string name = prefix;
         name.append(obj.materials[m].name);
         HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
 
         // Check if the id is already in there
         bool loaded = false;
-        for (int i = 0; i < matids.size(); ++i) {
+        for (size_t i = 0; i < matids.size(); ++i) {
             if (matids[i] == id) {
                 Log::handle().post_debug("Material [%s] already exists", name.c_str());
                 // Fix indices
                 for (nmesh::shape_t shape: obj.shapes) {
-                    if (shape.mesh.materials[0] = m) shape.mesh.materials[0] = i;
+                    if (shape.mesh.materials[0] == (int)m) shape.mesh.materials[0] = i;
                 }
                 loaded = true;
                 break;
@@ -599,17 +600,17 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
             xtcore::asset::IMaterial *mat = 0;
 
             bool has_emissive_col = ((obj.materials[m].emission[0] > 0.f) || (obj.materials[m].emission[1] > 0.f) || (obj.materials[m].emission[2] > 0.f));
-            if (obj.materials[m].texture_emissive.length() != 0 | has_emissive_col)
+            if (obj.materials[m].texture_emissive.length() != 0 || has_emissive_col)
             {
                 mat = new (std::nothrow) xtcore::asset::material::Emissive();
-                xtcore::sampler::ISampler *s = create_sampler(MAT_SAMPLER_EMISSIVE, base.c_str(), obj.materials[m].texture_emissive.c_str(), obj.materials[m].emission);
+                xtcore::sampler::ISampler *s = create_sampler(base.c_str(), obj.materials[m].texture_emissive.c_str(), obj.materials[m].emission);
                 mat->add_sampler(MAT_SAMPLER_EMISSIVE, s);
             }
             else
             {
                 mat = new (std::nothrow) xtcore::asset::material::BlinnPhong();
-                xtcore::sampler::ISampler *kd = create_sampler(MAT_SAMPLER_DIFFUSE , base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
-                xtcore::sampler::ISampler *ks = create_sampler(MAT_SAMPLER_SPECULAR, base.c_str(), obj.materials[m].texture_specular.c_str(), obj.materials[m].specular);
+                xtcore::sampler::ISampler *kd = create_sampler(base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
+                xtcore::sampler::ISampler *ks = create_sampler(base.c_str(), obj.materials[m].texture_specular.c_str(), obj.materials[m].specular);
                 mat->add_sampler(MAT_SAMPLER_DIFFUSE , kd);
                 mat->add_sampler(MAT_SAMPLER_SPECULAR, ks);
                 mat->add_scalar(MAT_SCALART_IOR, obj.materials[m].ior);
@@ -655,7 +656,7 @@ int create_object(Scene *scene, ncf::NCF *p)
 
     const char * name = p->get_name();
     HASH_UINT64 id = xtcore::pool::str::add(name);
-    xtcore::asset::Object *data = deserialize_object(scene->m_source.c_str(), p);
+    xtcore::asset::Object *data = deserialize_object(p);
     if (!data) return 1;
     scene->destroy_object(id);
     scene->m_objects[id] = data;
@@ -720,8 +721,8 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 
     std::string environment = deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
          if (!environment.compare(XTPROTO_CUBEMAP )) scene->m_environment = deserialize_cubemap (scene->m_source.c_str(), env_data);
-    else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(scene->m_source.c_str(), env_data);
-    else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (scene->m_source.c_str(), env_data);
+    else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(env_data);
+    else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (env_data);
 
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);

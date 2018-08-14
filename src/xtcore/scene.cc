@@ -164,7 +164,7 @@ NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
     return dist;
 }
 
-bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
+bool Scene::intersection(const Ray &ray, HitRecord &info)
 {
 	HitRecord test, res;
 
@@ -175,13 +175,13 @@ bool Scene::intersection(const Ray &ray, HitRecord &info, HASH_UINT64 &obj)
 
 		if (geom && geom->intersection(ray, &test)) {
 			if(res.t > test.t) {
-				obj = (*it).first;
-				memcpy(&res, &test, sizeof(res));
+				res = test;
+				res.id = (*it).first;
 			}
 		}
 	}
 	// copy result to info
-	memcpy(&info, &res, sizeof(info));
+	info = res;
 
 	return info.t != INFINITY ? true : false;
 }

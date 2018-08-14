@@ -882,10 +882,10 @@ static void strpool_internal_expand_handles( strpool_t* pool )
 
 static char* strpool_internal_get_data_storage( strpool_t* pool, int size, int* alloc_size )
     {
-    if( size < sizeof( strpool_internal_free_block_t ) ) size = sizeof( strpool_internal_free_block_t );
+    if((size_t)size < sizeof( strpool_internal_free_block_t ) ) size = sizeof( strpool_internal_free_block_t );
     if( size < pool->min_data_size ) size = pool->min_data_size;
     size = (int)strpool_internal_pow2ceil( (STRPOOL_U32)size );
-    
+
     // Try to find a large enough free slot in existing blocks
     for( int i = 0; i < pool->block_count; ++i )
         {

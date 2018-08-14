@@ -22,6 +22,7 @@ int init()
     xtcore::pool::str::init();
     xtcore::profiler::init();
     xtcore::midi::init();
+    return 0;
 }
 
 int deinit()
@@ -29,6 +30,7 @@ int deinit()
     xtcore::profiler::deinit();
     xtcore::pool::str::release();
     xtcore::midi::deinit();
+    return 0;
 }
 
 } /* namespace xtcore */

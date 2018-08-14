@@ -1,4 +1,5 @@
 #include <nmath/sample.h>
+#include "macro.h"
 #include "lambert.h"
 
 namespace xtcore {
@@ -11,6 +12,8 @@ bool Lambert::shade(
     , const emitter_t *emitter
     , const HitRecord &info) const
 {
+    UNUSED(camera)
+
     Vector3f light_dir = emitter->position - info.point;
     light_dir.normalize();
 

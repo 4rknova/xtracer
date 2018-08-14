@@ -70,13 +70,11 @@ ColorRGBf Renderer::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const 
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	xtcore::HitRecord info;
-	memset(&info, 0, sizeof(info));
 
 	// Check for ray intersection
-	HASH_UINT64 obj;
-	if (m_context->scene.intersection(ray, info, obj)) {
+	if (m_context->scene.intersection(ray, info)) {
 		// get a pointer to the material
-        HASH_UINT64 mat_id = m_context->scene.m_objects[obj]->material;
+        HASH_UINT64 mat_id = m_context->scene.m_objects[info.id]->material;
         xtcore::asset::IMaterial *mat = m_context->scene.m_materials[mat_id];
 
 		// if the ray starts inside the geometry
@@ -89,7 +87,7 @@ ColorRGBf Renderer::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const 
 		scalar_t ior_a = dot_normal_dir > 0 ? ior      : ior_src;
 		scalar_t ior_b = dot_normal_dir > 0 ? ior_src  : ior;
 
-		return shade(pray, ray, depth, info, obj, ior_a, ior_b);
+		return shade(pray, ray, depth, info, info.id, ior_a, ior_b);
 	}
 
     return m_context->scene.sample_environment(ray.direction);
@@ -135,11 +133,10 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
 		scalar_t distance = v.length();
 
 		// if the point is not in shadow for this light
-		HASH_UINT64 obj;
 		xtcore::HitRecord res;
-		bool test = m_context->scene.intersection(sray, res, obj);
+		bool test = m_context->scene.intersection(sray, res);
 
-        auto oit = m_context->scene.m_objects.find(obj)
+        auto oit = m_context->scene.m_objects.find(res.id)
            , oet = m_context->scene.m_objects.end();
 
         if (oit == oet) continue;

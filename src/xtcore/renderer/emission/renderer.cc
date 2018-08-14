@@ -52,15 +52,11 @@ void Renderer::render(void)
         tile->init();
         m_context->aa_sampler.produce(tile, p->aa);
 
-        bool hit = false;
-
         while (tile->samples.count() > 0) {
             xtcore::antialiasing::sample_t aa_sample;
             tile->samples.pop(aa_sample);
             nimg::ColorRGBAf color(0,0,0,0);
 		    xtcore::HitRecord info;
-            HASH_UINT64 obj;
-            memset(&info, 0, sizeof(info));
 
             for (float dofs = 0; dofs < p->samples; ++dofs) {
              	xtcore::Ray ray = cam->get_primary_ray(
@@ -69,15 +65,14 @@ void Renderer::render(void)
                     , (float)(p->height)
                 );
 
-                if (m_context->scene.intersection(ray, info, obj)) {
-                    xtcore::asset::Object *o = m_context->scene.m_objects[obj];
+                if (m_context->scene.intersection(ray, info)) {
+                    xtcore::asset::Object *o = m_context->scene.m_objects[info.id];
                     xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
                     if (m->is_emissive()) {
                         nimg::ColorRGBAf c = m->get_sample(XTPROTO_LTRL_EMISSIVE, info.texcoord);
                         c.a(1);
                         tile->write(aa_sample.pixel.x, aa_sample.pixel.y, c);
                     }
-                    hit = true;
                 }
             }
         }

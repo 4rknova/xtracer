@@ -7,6 +7,7 @@
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <cpp-httplib/httplib.h>
 #include "log.h"
+#include "macro.h"
 
 #include <iostream>
 
@@ -21,7 +22,6 @@ int listen(bool *done)
 {
     int sock;                         /* Socket */
     struct sockaddr_in broadcastAddr; /* Broadcast Address */
-    unsigned short broadcastPort;     /* Port */
     char recvString[MAXSTRL+1];       /* Buffer for received string */
     int recvStringLen;                /* Length of received string */
 
@@ -46,6 +46,8 @@ int listen(bool *done)
     }
 
     close(sock);
+
+    return 0;
 }
 
 int broadcast()
@@ -90,7 +92,8 @@ int broadcast()
 
 int wget(const char *url, const char *path)
 {
-
+    UNUSED(url);
+    UNUSED(path);
     {
         httplib::Client cli("www.4rknova.com", 80);
         auto res = cli.Get("/main.html");
@@ -110,6 +113,7 @@ int wget(const char *url, const char *path)
             std::cout << res->body << std::endl;
         }
     }
+    return 0;
 }
 
     } /* namespace network */

@@ -46,6 +46,8 @@ int detect(devices_t *devs)
             return -1;
         }
     }
+
+    return 0;
 }
 
 int open(device_t *dev)
@@ -57,6 +59,8 @@ int open(device_t *dev)
 
     // Don't ignore sysex, timing, or active sensing messages.
     _midiin->ignoreTypes(false, false, false);
+
+    return 0;
 }
 
 int close(device_t *dev)
@@ -65,6 +69,8 @@ int close(device_t *dev)
     if (!_midiin) return -2;
 
     _midiin->closePort();
+
+    return 0;
 }
 
 #else

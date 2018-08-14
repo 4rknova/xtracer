@@ -1,3 +1,4 @@
+#include "macro.h"
 #include "surface.h"
 
 namespace xtcore {
@@ -12,6 +13,7 @@ ISurface::~ISurface()
 
 NMath::scalar_t ISurface::distance(NMath::Vector3f p) const
 {
+    UNUSED(p)
     return INFINITY;
 }
 

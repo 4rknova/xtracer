@@ -32,12 +32,9 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray)
 {
     if (depth == 0) return nimg::ColorRGBf(0,0,0);
 
-    HASH_UINT64 obj;
-
     xtcore::HitRecord info;
-    memset(&info, 0 ,sizeof(info));
-    if (m_context->scene.intersection(ray, info, obj)) {
-        xtcore::asset::Object    *o = m_context->scene.m_objects[obj];
+    if (m_context->scene.intersection(ray, info)) {
+        xtcore::asset::Object    *o = m_context->scene.m_objects[info.id];
         xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
 
         Ray r;

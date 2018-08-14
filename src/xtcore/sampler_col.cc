@@ -1,3 +1,4 @@
+#include "macro.h"
 #include "sampler_col.h"
 
 namespace xtcore {
@@ -21,6 +22,7 @@ void SolidColor::set(nimg::ColorRGBf &color)
 
 nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &uvw) const
 {
+    UNUSED(uvw)
     return m_color;
 }
 

@@ -50,8 +50,6 @@ void Renderer::render()
             tile->samples.pop(aa_sample);
 
 	        xtcore::HitRecord info;
-            HASH_UINT64 obj;
-       		memset(&info, 0, sizeof(info));
 
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
@@ -68,7 +66,7 @@ void Renderer::render()
                     , (float)(p->height)
                 );
 
-                if (m_context->scene.intersection(ray, info, obj)) {
+                if (m_context->scene.intersection(ray, info)) {
                     float weight = (1. / p->samples);
                     uv_sample += info.texcoord * weight;
                     alpha_sample  += weight;

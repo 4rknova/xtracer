@@ -57,8 +57,6 @@ void Renderer::render(void)
             tile->samples.pop(aa_sample);
             nimg::ColorRGBAf color(0,0,0,0);
 		    xtcore::HitRecord info;
-            HASH_UINT64 obj;
-            memset(&info, 0, sizeof(info));
 
             for (float dofs = 0; dofs < p->samples; ++dofs) {
              	xtcore::Ray ray = cam->get_primary_ray(
@@ -67,7 +65,7 @@ void Renderer::render(void)
                     , (float)(p->height)
                 );
 
-                if (m_context->scene.intersection(ray, info, obj)) {
+                if (m_context->scene.intersection(ray, info)) {
                     tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBAf(1,1,1,1));
                     hit = true;
                 }
