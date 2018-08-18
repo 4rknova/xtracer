@@ -60,25 +60,25 @@ void workspace_t::render()
 
     context.init();
     setup_callbacks();
-    renderer->setup(context);
+    integrator->setup(context);
     xtcore::render::order(context.tiles, tile_order);
 
     switch (rmode) {
         case WS_RMODE_SINGLE:
         {
             timer.start();
-            renderer->render();
+            integrator->render();
             timer.stop();
         } break;
         case WS_RMODE_CONTINUOUS:
         {
             while (rmode == WS_RMODE_CONTINUOUS) {
-                renderer->render();
+                integrator->render();
             }
         } break;
     }
 
-    xtcore::memory::safe_delete<xtcore::render::IRenderer>(renderer);
+    xtcore::memory::safe_delete<xtcore::render::IIntegrator>(integrator);
     status = WS_STATUS_LOADED;
 }
 
@@ -147,7 +147,7 @@ workspace_t::workspace_t()
     : status(WS_STATUS_INVALID)
     , texture(0)
     , zoom_multiplier(1.001f)
-    , renderer(0)
+    , integrator(0)
     , handler_init(&m)
     , handler_done(&m)
     , gamma(DEFAULT_GAMMA)

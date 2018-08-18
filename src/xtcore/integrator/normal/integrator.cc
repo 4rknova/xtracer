@@ -13,22 +13,22 @@
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
 
-#include "renderer.h"
+#include "integrator.h"
 
 namespace xtcore {
-    namespace renderer {
-        namespace uv {
+    namespace integrator {
+        namespace normal {
 
-Renderer::Renderer()
+Integrator::Integrator()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtcore::render::context_t &context)
+void Integrator::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
 }
 
-void Renderer::render()
+void Integrator::render()
 {
     if (!m_context) return;
 
@@ -54,10 +54,10 @@ void Renderer::render()
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-            NMath::Vector3f  acc_uv = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+            NMath::Vector3f  acc_normal = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
             NMath::scalar_t  alpha  = color_pixel.a();
 
-            NMath::Vector3f uv_sample;
+            NMath::Vector3f normal_sample;
             NMath::scalar_t alpha_sample = 0.f;
             for (float dofs = 0; dofs < p->samples; ++dofs) {
           	 	xtcore::Ray ray = cam->get_primary_ray(
@@ -68,21 +68,35 @@ void Renderer::render()
 
                 if (m_context->scene.intersection(ray, info)) {
                     float weight = (1. / p->samples);
-                    uv_sample += info.texcoord * weight;
+                    normal_sample += info.normal * weight;
                     alpha_sample  += weight;
                 }
             }
 
-            acc_uv += aa_sample.weight * (uv_sample * 0.5f + 0.5f);
-            color_pixel = nimg::ColorRGBAf(acc_uv.x, acc_uv.y, acc_uv.z, 0.);
+            acc_normal += aa_sample.weight * (normal_sample * 0.5f + 0.5f);
+            color_pixel = nimg::ColorRGBAf(acc_normal.x, acc_normal.y, acc_normal.z, 0.);
             color_pixel.a(alpha + aa_sample.weight * alpha_sample);
             tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
+        }
+
+        // Normalize
+        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
+            for (size_t y = tile->y0(); y < tile->y1(); ++y) {
+                nimg::ColorRGBAf color;
+                tile->read(x, y, color);
+                NMath::Vector3f n(color.r(), color.g(), color.b());
+                n = (n - 0.5f) * 2.0f;
+                n.normalize();
+                n = n * 0.5f + 0.5f;
+                color = nimg::ColorRGBAf(n.x, n.y, n.z, color.a());
+                tile->write(x, y, color);
+            }
         }
 
         tile->submit();
     }
 }
 
-        } /* namespace uv */
-    } /* namespace renderer */
+        } /* namespace normal */
+    } /* namespace integrator */
 } /* namespace xtcore */

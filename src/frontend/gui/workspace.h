@@ -8,7 +8,7 @@
 #include <nplatform/timer.h>
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
-#include <xtcore/renderer.h>
+#include <xtcore/integrator.h>
 #include "graph.h"
 #include "opengl.h"
 
@@ -38,12 +38,12 @@ struct ws_handler_t : public xtcore::render::tile_event_handler_t
 
 struct workspace_t
 {
-    WS_STATUS                  status;
-    GLuint                     texture;
-    float                      zoom_multiplier;
-    std::string                source_file;
-    xtcore::render::IRenderer *renderer;
-    xtcore::render::context_t  context;
+    WS_STATUS                    status;
+    GLuint                       texture;
+    float                        zoom_multiplier;
+    std::string                  source_file;
+    xtcore::render::IIntegrator *integrator;
+    xtcore::render::context_t    context;
 
     void load();
     void prepare();

@@ -13,22 +13,22 @@
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
 
-#include "renderer.h"
+#include "integrator.h"
 
 namespace xtcore {
-    namespace renderer {
+    namespace integrator {
         namespace depth {
 
-Renderer::Renderer()
+Integrator::Integrator()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtcore::render::context_t &context)
+void Integrator::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
 }
 
-void Renderer::render()
+void Integrator::render()
 {
     if (!m_context) return;
 
@@ -75,5 +75,5 @@ void Renderer::render()
 }
 
         } /* namespace depth */
-    } /* namespace renderer */
+    } /* namespace integrator */
 } /* namespace xtcore */

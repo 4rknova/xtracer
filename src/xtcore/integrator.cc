@@ -1,9 +1,9 @@
-#include "renderer.h"
+#include "integrator.h"
 
 namespace xtcore {
 	namespace render {
 
-IRenderer::~IRenderer()
+IIntegrator::~IIntegrator()
 {}
 
 	} /* namespace render */

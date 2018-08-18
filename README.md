@@ -79,4 +79,5 @@ strpool       | Public Domain      | https://github.com/mattiasgustavsson/libs
 </a>
 
 BSD 3-Clause License.
+
 Please see License File for more information.

@@ -1,5 +1,5 @@
-#ifndef XTCORE_RENDERER_STENCIL_H_INCLUDED
-#define XTCORE_RENDERER_STENCIL_H_INCLUDED
+#ifndef XTCORE_INTEGRATOR_STENCIL_H_INCLUDED
+#define XTCORE_INTEGRATOR_STENCIL_H_INCLUDED
 
 #include <nmath/precision.h>
 #include <nmath/vector.h>
@@ -7,7 +7,7 @@
 #include <nimg/pixmap.h>
 #include <nplatform/timer.h>
 #include <xtcore/scene.h>
-#include <xtcore/renderer.h>
+#include <xtcore/integrator.h>
 #include "math/ray.h"
 #include "math/hitrecord.h"
 
@@ -15,13 +15,13 @@ using nimg::ColorRGBf;
 using nimg::Pixmap;
 
 namespace xtcore {
-    namespace renderer {
+    namespace integrator {
         namespace stencil {
 
-class Renderer : public xtcore::render::IRenderer
+class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	Renderer();
+	Integrator();
 
 	virtual void setup(xtcore::render::context_t &context);
 	virtual void render();
@@ -31,7 +31,7 @@ class Renderer : public xtcore::render::IRenderer
 };
 
         } /* namespace stencil */
-    } /* namespace renderer */
+    } /* namespace integrator */
 } /* namespace xtcore */
 
-#endif /* XTCORE_RENDERER_STENCIL_H_INCLUDED */
+#endif /* XTCORE_INTEGRATOR_STENCIL_H_INCLUDED */

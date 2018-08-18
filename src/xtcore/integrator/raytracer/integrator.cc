@@ -10,24 +10,23 @@
 #include <ncf/util.h>
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
-#include "renderer.h"
-
+#include "integrator.h"
 #include "profiler.h"
 
 namespace xtcore {
-    namespace renderer {
+    namespace integrator {
         namespace raytracer {
 
-Renderer::Renderer()
+Integrator::Integrator()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtcore::render::context_t &context)
+void Integrator::setup(xtcore::render::context_t &context)
 {
     m_context = &context;
 }
 
-void Renderer::render()
+void Integrator::render()
 {
 	if (!m_context) return;
 
@@ -66,7 +65,7 @@ void Renderer::render()
 	}
 }
 
-ColorRGBf Renderer::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
+ColorRGBf Integrator::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
 	xtcore::HitRecord info;
@@ -93,7 +92,7 @@ ColorRGBf Renderer::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const 
     return m_context->scene.sample_environment(ray.direction);
 }
 
-ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
+ColorRGBf Integrator::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
 	xtcore::HitRecord &info, HASH_UINT64 &obj,
 	const scalar_t ior_src, const scalar_t ior_dst)
 {
@@ -198,5 +197,5 @@ ColorRGBf Renderer::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const
 }
 
         } /* namespace raytracer */
-    } /* namespace renderer */
+    } /* namespace integrator */
 } /* namespace xtcore */

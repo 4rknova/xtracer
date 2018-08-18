@@ -9,14 +9,15 @@
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/parseutil.h>
-#include <xtcore/renderer/renderers.h>
+#include <xtcore/integrator.h>
+#include <xtcore/macro.h>
 #include "argparse.h"
 
 #define PROGRESS_BAR_LENGTH (15)
 
 #define ARG_CLI_VERSION "version" /* Display version and exit */
 
-#define RENDERER(x)   (!strcmp(renderer_name.c_str(), x))
+#define RENDERER(x)   (!strcmp(integrator_name.c_str(), x))
 #define ARGUMENT(i,x) (!strcmp(argv[i], x))
 
 static std::mutex mut;
@@ -30,6 +31,7 @@ struct ws_handler_init_t : public xtcore::render::tile_event_handler_t
 {
     void handle_event(xtcore::render::tile_t *tile)
     {
+        UNUSED(tile)
         mut.lock();
         ++workers;
         mut.unlock();
@@ -40,6 +42,7 @@ struct ws_handler_done_t : public xtcore::render::tile_event_handler_t
 {
     void handle_event(xtcore::render::tile_t *tile)
     {
+       UNUSED(tile)
        mut.lock();
        ++completed;
        printf("\rRendering.. %5.2f%% @ %lu", (float)completed/total * 100.f, workers);
@@ -61,13 +64,13 @@ int main(int argc, char **argv)
 
 	xtcore::Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
-    std::string renderer_name, outdir, scene_path;
+    std::string integrator_name, outdir, scene_path;
     HASH_UINT64 camera;
     xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
 	if (setup(argc, argv
-            , renderer_name
+            , integrator_name
             , outdir
             , scene_path
             , modifiers
@@ -85,14 +88,14 @@ int main(int argc, char **argv)
         context.params.camera = camera;
     } else return 1;
 
-	xtcore::render::IRenderer *renderer = NULL;
+	xtcore::render::IIntegrator *integrator = NULL;
 ;
-    if      (RENDERER("depth"     )) renderer = new xtcore::renderer::depth::Renderer();
-    else if (RENDERER("stencil"   )) renderer = new xtcore::renderer::stencil::Renderer();
-    else if (RENDERER("normal"    )) renderer = new xtcore::renderer::normal::Renderer();
-    else if (RENDERER("uv"        )) renderer = new xtcore::renderer::uv::Renderer();
-    else if (RENDERER("raytracer" )) renderer = new xtcore::renderer::raytracer::Renderer();
-    else if (RENDERER("pathtracer")) renderer = new xtcore::renderer::pathtracer::Renderer();
+    if      (RENDERER("depth"     )) integrator = new xtcore::integrator::depth::Integrator();
+    else if (RENDERER("stencil"   )) integrator = new xtcore::integrator::stencil::Integrator();
+    else if (RENDERER("normal"    )) integrator = new xtcore::integrator::normal::Integrator();
+    else if (RENDERER("uv"        )) integrator = new xtcore::integrator::uv::Integrator();
+    else if (RENDERER("raytracer" )) integrator = new xtcore::integrator::raytracer::Integrator();
+    else if (RENDERER("pathtracer")) integrator = new xtcore::integrator::pathtracer::Integrator();
     else return 0;
 
     context.params = params;
@@ -105,13 +108,13 @@ int main(int argc, char **argv)
         (*it).setup_handler_on_done(&handler_done);
     }
 
-    renderer->setup(context);
+    integrator->setup(context);
     total =  context.tiles.size();
 
 	Timer timer;
 	timer.start();
     printf("Rendering..");
-	renderer->render();
+	integrator->render();
 	timer.stop();
 
     std::string t;
@@ -130,13 +133,12 @@ int main(int argc, char **argv)
 
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
-	    HASH_UINT64 cam = context.params.camera;
 
     	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
 			outdir.append(1, path_delim);
 		}
 
-	    file = outdir + filename + "_" + renderer_name + ".png";
+	    file = outdir + filename + "_" + integrator_name + ".png";
         nimg::Pixmap fb;
         xtcore::render::assemble(fb, context);
 		xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
@@ -144,7 +146,7 @@ int main(int argc, char **argv)
         if (res) xtcore::Log::handle().post_error("Failed to export image file");
     }
 
-	delete renderer;
+	delete integrator;
 
     xtcore::deinit();
 

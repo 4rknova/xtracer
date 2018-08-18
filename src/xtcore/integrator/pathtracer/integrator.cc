@@ -13,22 +13,22 @@
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
 
-#include "renderer.h"
+#include "integrator.h"
 
 namespace xtcore {
-    namespace renderer {
+    namespace integrator {
         namespace pathtracer {
 
-Renderer::Renderer()
+Integrator::Integrator()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtcore::render::context_t &context)
+void Integrator::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
 }
 
-nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray)
+nimg::ColorRGBf Integrator::eval(size_t depth, const xtcore::Ray &ray)
 {
     if (depth == 0) return nimg::ColorRGBf(0,0,0);
 
@@ -49,11 +49,11 @@ nimg::ColorRGBf Renderer::eval(size_t depth, const xtcore::Ray &ray)
     return m_context->scene.sample_environment(ray.direction);
 }
 
-void Renderer::render()
+void Integrator::render()
 {
     if (!m_context) return;
 
-    xtcore::render::params_t *p   = &(m_context->params);
+    xtcore::render::params_t *p  = &(m_context->params);
     xtcore::asset::ICamera  *cam = m_context->scene.get_camera(p->camera);
     if (!cam) return;
 
@@ -91,5 +91,5 @@ void Renderer::render()
 }
 
         } /* namespace pathtracer */
-    } /* namespace renderer */
+    } /* namespace integrator */
 } /* namespace xtcore */

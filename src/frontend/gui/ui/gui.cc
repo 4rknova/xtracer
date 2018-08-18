@@ -3,8 +3,7 @@
 #include <xtcore/tile.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
-#include <xtcore/renderer.h>
-#include <xtcore/renderer/renderers.h>
+#include <xtcore/integrator.h>
 #include <xtcore/xtcore.h>
 #include <xtcore/midi.h>
 #include <nimg/yuv4mpeg2.h>
@@ -329,7 +328,7 @@ void menu_workspaces(state_t *state)
             bool busy = (i->is_rendering());
             if ((state->workspace != i) && ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) ImGui::Text("Rendering.. ");
-            if (!(i->renderer) && ImGui::MenuItem("Close")  ) action::close(state, i);
+            if (!(i->integrator) && ImGui::MenuItem("Close")  ) action::close(state, i);
             ImGui::EndMenu();
         }
     }
@@ -337,7 +336,7 @@ void menu_workspaces(state_t *state)
     if (state->workspaces.size() > 0) {
         if (ImGui::MenuItem("Close all")) {
             for (auto& i : state->workspaces) {
-                if (!(i->renderer)) action::close(state, i);
+                if (!(i->integrator)) action::close(state, i);
             }
         }
     }
@@ -353,7 +352,7 @@ void mm_network(state_t *state)
     }
 }
 
-void mm_renderer(workspace_t *ws)
+void mm_integrator(workspace_t *ws)
 {
     if (ImGui::BeginMenu("Render")) {
         int rmode = (int)ws->rmode;
@@ -368,14 +367,14 @@ void mm_renderer(workspace_t *ws)
             if (ImGui::BeginMenu("Concurrency")) { mm_concurrency(ws); ImGui::EndMenu(); }
             if (ImGui::BeginMenu("Integrator")) {
                 bool render = false;
-                if (ImGui::MenuItem("Depth"     )) { render = true; ws->renderer = new xtcore::renderer::depth::Renderer();      }
-                if (ImGui::MenuItem("Stencil"   )) { render = true; ws->renderer = new xtcore::renderer::stencil::Renderer();    }
-                if (ImGui::MenuItem("Normal"    )) { render = true; ws->renderer = new xtcore::renderer::normal::Renderer();     }
-                if (ImGui::MenuItem("UV"        )) { render = true; ws->renderer = new xtcore::renderer::uv::Renderer();         }
-                if (ImGui::MenuItem("Emission"  )) { render = true; ws->renderer = new xtcore::renderer::emission::Renderer();   }
-                if (ImGui::MenuItem("Raytracer" )) { render = true; ws->renderer = new xtcore::renderer::raytracer::Renderer();  }
-                if (ImGui::MenuItem("Pathtracer")) { render = true; ws->renderer = new xtcore::renderer::pathtracer::Renderer(); }
-                if (ImGui::MenuItem("Raymarcher")) { render = true; ws->renderer = new xtcore::renderer::raymarcher::Renderer(); }
+                if (ImGui::MenuItem("Depth"     )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
+                if (ImGui::MenuItem("Stencil"   )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
+                if (ImGui::MenuItem("Normal"    )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
+                if (ImGui::MenuItem("UV"        )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
+                if (ImGui::MenuItem("Emission"  )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
+                if (ImGui::MenuItem("Raytracer" )) { render = true; ws->integrator = new xtcore::integrator::raytracer::Integrator();  }
+                if (ImGui::MenuItem("Pathtracer")) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
+                if (ImGui::MenuItem("Raymarcher")) { render = true; ws->integrator = new xtcore::integrator::raymarcher::Integrator(); }
                 if (render) action::render(ws);
                 ImGui::EndMenu();
             }
@@ -535,7 +534,7 @@ void render_main_menu(state_t *state)
         if (state->workspace && ImGui::BeginMenu("Workspace")) {
             gui::mm_zoom(state->workspace);
             wdg_conf(state->workspace);
-            mm_renderer(state->workspace);
+            mm_integrator(state->workspace);
             mm_export(state->workspace);
             ImGui::EndMenu();
         }

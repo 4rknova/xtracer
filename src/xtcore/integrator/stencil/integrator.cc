@@ -15,27 +15,25 @@
 #include <xtcore/math/plane.h>
 #include <xtcore/tile.h>
 #include <xtcore/aa.h>
-#include <xtcore/material.h>
-#include <xtcore/proto.h>
 
-#include "renderer.h"
+#include "integrator.h"
 
 namespace xtcore {
-    namespace renderer {
-        namespace emission {
+    namespace integrator {
+        namespace stencil {
 
 using ncf::util::path_comp;
 
-Renderer::Renderer()
+Integrator::Integrator()
 	: m_context(NULL)
 {}
 
-void Renderer::setup(xtcore::render::context_t &context)
+void Integrator::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
 }
 
-void Renderer::render(void)
+void Integrator::render(void)
 {
     if (!m_context) return;
 
@@ -66,13 +64,7 @@ void Renderer::render(void)
                 );
 
                 if (m_context->scene.intersection(ray, info)) {
-                    xtcore::asset::Object *o = m_context->scene.m_objects[info.id];
-                    xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
-                    if (m->is_emissive()) {
-                        nimg::ColorRGBAf c = m->get_sample(XTPROTO_LTRL_EMISSIVE, info.texcoord);
-                        c.a(1);
-                        tile->write(aa_sample.pixel.x, aa_sample.pixel.y, c);
-                    }
+                    tile->write(aa_sample.pixel.x, aa_sample.pixel.y, nimg::ColorRGBAf(1,1,1,1));
                 }
             }
         }
@@ -80,6 +72,6 @@ void Renderer::render(void)
     }
 }
 
-        } /* namespace emission */
-    } /* namespace renderer */
+        } /* namespace stencil */
+    } /* namespace integrator */
 } /* namespace xtcore */
