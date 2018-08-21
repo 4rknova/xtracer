@@ -9,7 +9,7 @@ namespace nimg {
     namespace eval {
 
 int   diff(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
-float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold = EPS);
+float diff_euclid(const Pixmap &src, const Pixmap &dst);
 
     } /* namespace eval */
 } /* namespace nimg */

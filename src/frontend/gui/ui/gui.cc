@@ -221,16 +221,24 @@ void mm_export(workspace_t *ws)
     if (ws->is_rendering()) return;
 
     if (ImGui::BeginMenu("Export")) {
+
+        auto _button_lambda = [](const char *desc, action::IMG_FORMAT f,
+            const char *filepath, workspace_t *ws, bool sameline) -> void {
+            static const ImVec2 bd(52,0);
+            if (ImGui::Button(desc, bd)) action::write(f, filepath, ws);
+            if (sameline) { ImGui::SameLine();}
+        };
+
     	static char filepath[512];
 	    ImGui::InputText("File", filepath, 512);
 
         if (strlen(filepath) > 0) {
-            ImVec2 bd(52,0);
-            if (ImGui::Button("HDR", bd)) action::write(action::IMG_FORMAT_HDR, filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("PNG", bd)) action::write(action::IMG_FORMAT_PNG, filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("JPG", bd)) action::write(action::IMG_FORMAT_JPG, filepath, ws);
-            if (ImGui::Button("TGA", bd)) action::write(action::IMG_FORMAT_BMP, filepath, ws); ImGui::SameLine();
-            if (ImGui::Button("BMP", bd)) action::write(action::IMG_FORMAT_TGA, filepath, ws); ImGui::SameLine();
+            _button_lambda("HDR", action::IMG_FORMAT_HDR, filepath, ws, true);
+            _button_lambda("PNG", action::IMG_FORMAT_PNG, filepath, ws, true);
+            _button_lambda("JPG", action::IMG_FORMAT_JPG, filepath, ws, false);
+            _button_lambda("BMP", action::IMG_FORMAT_BMP, filepath, ws, true);
+            _button_lambda("TGA", action::IMG_FORMAT_TGA, filepath, ws, true);
+/*
             if (ImGui::Button("Y4M", bd)) {
                 size_t w = ws->context.params.width;
                 size_t h = ws->context.params.height;
@@ -251,6 +259,7 @@ void mm_export(workspace_t *ws)
                     write_frame(filepath, w, h, &rgb[0]);
                 }
             }
+*/
         }
         ImGui::EndMenu();
     }
@@ -628,17 +637,18 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
 
     ImGui::TextColored(col, "%s", ws->source_file.c_str());
     ImGui::Text(ws->context.scene.m_name.c_str());
-    ImGui::Text(ws->context.scene.m_version.c_str());
+    ImGui::SameLine();
+    ImGui::Text("v%s ", ws->context.scene.m_version.c_str());
     ImGui::Text(ws->context.scene.m_description.c_str());
     ImGui::Text("Resolution: %ix%i", ws->context.params.width, ws->context.params.height);
     ImGui::Text("Active Cam: %s", ws->context.params.camera != HASH_ID_INVALID ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
 
-    if (ws->is_rendering()) ImGui::ProgressBar(ws->progress);
-    else if (ws->timer.get_time_in_sec() > 0.0) {
+    if (ws->timer.get_time_in_sec() > 0.0) {
         std::string timestr;
         print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
         ImGui::Text("%s", timestr.c_str());
     }
+    if (ws->is_rendering()) ImGui::ProgressBar(ws->progress);
     ImGui::Columns(1, "ID_WORKSPACE");
     ImGui::EndChildFrame();
 

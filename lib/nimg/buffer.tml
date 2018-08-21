@@ -64,7 +64,6 @@ int Buffer<T>::init(size_t count)
 
 	if(!m_data)	return 1;
 
-	memset(m_data, 0, count * sizeof(T));
 	m_count = count;
 
 	return 0;

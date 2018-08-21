@@ -34,7 +34,7 @@ int diff(const Pixmap &src, const Pixmap &dst, const float threshold)
     return res;
 }
 
-float diff_euclid(const Pixmap &src, const Pixmap &dst, const float threshold)
+float diff_euclid(const Pixmap &src, const Pixmap &dst)
 {
     if (    src.width()  != dst.width()
         ||  src.height() != dst.height()

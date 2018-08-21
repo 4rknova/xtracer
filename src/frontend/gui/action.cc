@@ -5,6 +5,7 @@
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/net.h>
+#include <xtcore/macro.h>
 #include "action.h"
 
 namespace action {
@@ -26,6 +27,8 @@ void task_load(workspace_t *ws)
 
 void task_broadcast(gui::state_t *state)
 {
+    UNUSED(state)
+
     xtcore::Log::handle().post_message("Broadcasting..");
     int res = xtcore::network::broadcast();
     xtcore::Log::handle().post_debug("Broadcasting returned %i", res);
@@ -93,6 +96,8 @@ int close(gui::state_t *state, workspace_t *ws)
             break;
         }
     }
+
+    return 0;
 }
 
 int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)

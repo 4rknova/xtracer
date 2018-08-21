@@ -66,7 +66,7 @@ void Integrator::render()
 }
 
 ColorRGBf Integrator::eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth,
-	const scalar_t ior_src, const scalar_t ior_dst)
+	const scalar_t ior_src)
 {
 	xtcore::HitRecord info;
 
@@ -182,7 +182,7 @@ ColorRGBf Integrator::shade(const xtcore::Ray &pray, const xtcore::Ray &ray, con
 
     		float ft = 1.0 - fr;
 			color *= transparency;
-		    color += ft * transparency * eval(pray, refrray, depth-1, ior_src, ior_dst) * specular;
+		    color += ft * transparency * eval(pray, refrray, depth-1, ior_src) * specular;
         }
 	}
 

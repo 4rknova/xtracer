@@ -35,7 +35,6 @@ void workspace_t::load()
         xtcore::render::params_t *p = &(context.params);
         auto first_cam = context.scene.m_cameras.begin();
         bool is_cam_valid = (first_cam != context.scene.m_cameras.end());
-        HASH_ID cam_id = HASH_ID_INVALID;
         if (is_cam_valid && (p->camera == HASH_ID_INVALID)) p->camera = (*first_cam).first;
     }
 
@@ -110,8 +109,8 @@ void workspace_t::update()
 
             if (!t) break;
 
-    		for (int y = t->y0(); y < t->y1(); ++y) {
-                for (int x = t->x0(); x < t->x1(); ++x) {
+    		for (size_t y = t->y0(); y < t->y1(); ++y) {
+                for (size_t x = t->x0(); x < t->x1(); ++x) {
  //                   nimg::ColorRGBAf col;
  //                  t->read(x, y, col);
                     float data[4] = {1,0,0,1};
@@ -126,8 +125,8 @@ void workspace_t::update()
 
         if (!t) break;
 
-		for (int y = t->y0(); y < t->y1(); ++y) {
-            for (int x = t->x0(); x < t->x1(); ++x) {
+		for (size_t y = t->y0(); y < t->y1(); ++y) {
+            for (size_t x = t->x0(); x < t->x1(); ++x) {
                 nimg::ColorRGBAf col;
                 t->read(x, y, col);
                 float data[4] = {col.r(), col.g(), col.b(), col.a()};

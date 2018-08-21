@@ -7,6 +7,7 @@
 #include <imgui_impl_glfw_gl3.h>
 #include <xtcore/xtcore.h>
 #include <xtcore/log.h>
+#include <xtcore/macro.h>
 #include "config.h"
 #include "state.h"
 #include "widgets.h"
@@ -23,6 +24,8 @@ static void error_callback(int error, const char* description)
 
 int main(int argc, char** argv)
 {
+    UNUSED(argc)
+
     std::string title;
     title  = argv[0];
     title += " v";

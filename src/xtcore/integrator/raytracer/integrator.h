@@ -29,7 +29,7 @@ class Integrator : public xtcore::render::IIntegrator
 	virtual void render();
 
 	private:
-	ColorRGBf eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth, const scalar_t ior_src = 1.0002926, const scalar_t ior_dst = 1.0);
+	ColorRGBf eval(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth, const scalar_t ior_src = 1.00);
 	ColorRGBf shade(const xtcore::Ray &pray, const xtcore::Ray &ray, const unsigned int depth, xtcore::HitRecord &info, HASH_UINT64 &obj, const scalar_t ior_src = 1.0, const scalar_t ior_dst = 1.0);
 
     xtcore::render::context_t *m_context;

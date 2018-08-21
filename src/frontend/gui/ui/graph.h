@@ -25,6 +25,7 @@ struct node_t
     size_t      outputs;
     const char *label;
     ImColor     color_header;
+    bool        is_open;
 
              node_t();
     virtual ~node_t();

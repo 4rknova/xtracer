@@ -21,8 +21,7 @@ void textedit_float(const char *name, float &val, float step, float lim_min, flo
 {
     float tmp = val;
     if (ImGui::InputFloat(name, &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
-        CLAMP(tmp, lim_min, lim_max);
-        val = tmp;
+        val = CLAMP(tmp, lim_min, lim_max);
     }
 }
 
@@ -30,8 +29,7 @@ void textedit_double(const char *name, double &val, float step, float lim_min, f
 {
     float tmp = (float)val;
     if (ImGui::InputFloat(name, &tmp, step, 2.f * step, -1, ImGuiInputTextFlags_EnterReturnsTrue)) {
-        CLAMP(tmp, lim_min, lim_max);
-        val = (double)tmp;
+        val = CLAMP(tmp, lim_min, lim_max);
     }
 }
 
@@ -39,8 +37,7 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
 {
     int tmp = val;
     if (ImGui::InputInt(name, &tmp, step, 2 * step, ImGuiInputTextFlags_EnterReturnsTrue)) {
-        CLAMP(tmp, lim_min, lim_max);
-        val = tmp;
+        val = CLAMP(tmp, lim_min, lim_max);
     }
 }
 

@@ -35,7 +35,6 @@ nimg::ColorRGBf Integrator::eval(size_t depth, const xtcore::Ray &ray)
     if (depth == 0) return nimg::ColorRGBf(0,0,0);
 
     NMath::Vector3f p = ray.origin;
-    NMath::scalar_t d = INFINITY;   // Distance
     size_t iterations = MAX_ITERATIONS;
     bool done = false;
     bool hit  = false;
@@ -46,7 +45,6 @@ nimg::ColorRGBf Integrator::eval(size_t depth, const xtcore::Ray &ray)
         NMath::scalar_t distance = m_context->scene.distance(p, obj);
         p += ray.direction * distance;
         hit = (distance < EPSILON);
-        if (hit) d = distance;
         --iterations;
         done = ((iterations == 0) || hit);
     }
