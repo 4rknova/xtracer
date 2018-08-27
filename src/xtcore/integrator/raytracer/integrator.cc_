@@ -44,7 +44,7 @@ void Integrator::render()
         m_context->aa_sampler.produce(tile, p->aa);
 
         while (tile->samples.count() > 0) {
-            xtcore::antialiasing::sample_t aa_sample;
+            xtcore::antialiasing::sample_rgba_t aa_sample;
             tile->samples.pop(aa_sample);
 			nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);

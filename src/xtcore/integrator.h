@@ -1,7 +1,7 @@
 #ifndef XTCORE_INTEGRATOR_H_INCLUDED
 #define XTCORE_INTEGRATOR_H_INCLUDED
 
-#include <nimg/pixmap.h>
+#include "tile.h"
 #include "context.h"
 
 namespace xtcore {
@@ -10,11 +10,16 @@ namespace xtcore {
 class IIntegrator
 {
 	public:
+    IIntegrator();
 	virtual ~IIntegrator();
 
-	virtual void setup(context_t &context) = 0;
-	virtual void render()                  = 0;
+	void setup(context_t &context);
+	void render();
 
+    virtual void setup_auxiliary();
+    virtual void render_tile(tile_t *tile) = 0;
+
+    xtcore::render::context_t *ctx;
 };
 
 	} /* namespace render */

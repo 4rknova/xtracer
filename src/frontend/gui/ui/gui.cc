@@ -197,19 +197,18 @@ void mm_resolution (workspace_t *ws)
     ImGui::BeginChild("LST_RES", ImVec2(300, 500), true);
     {
         ImGui::Columns(4, "LST_RES_COLUMNS_INNER");
-        for (int i = 0; i < res_entries; i++) {
+        for (size_t i = 0; i < res_entries; i++) {
             const resolution_t *r = &resolutions[i];
             char label[32];
-            sprintf(label, "%02d", i);
+            sprintf(label, "%02lu", i);
             if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns)) {
                 ws->context.params.width  = r->width;
                 ws->context.params.height = r->height;
             }
-            bool hovered = ImGui::IsItemHovered();
             ImGui::NextColumn();
             ImGui::Text("%s", r->description); ImGui::NextColumn();
-            ImGui::Text("%i", r->width);       ImGui::NextColumn();
-            ImGui::Text("%i", r->height);      ImGui::NextColumn();
+            ImGui::Text("%lu", r->width);       ImGui::NextColumn();
+            ImGui::Text("%lu", r->height);      ImGui::NextColumn();
         }
         ImGui::Columns(1);
     }
@@ -377,13 +376,17 @@ void mm_integrator(workspace_t *ws)
             if (ImGui::BeginMenu("Integrator")) {
                 bool render = false;
                 if (ImGui::MenuItem("Depth"     )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
+                /*
                 if (ImGui::MenuItem("Stencil"   )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
                 if (ImGui::MenuItem("Normal"    )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
+                */
                 if (ImGui::MenuItem("UV"        )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
+                /*
                 if (ImGui::MenuItem("Emission"  )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
                 if (ImGui::MenuItem("Raytracer" )) { render = true; ws->integrator = new xtcore::integrator::raytracer::Integrator();  }
                 if (ImGui::MenuItem("Pathtracer")) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
                 if (ImGui::MenuItem("Raymarcher")) { render = true; ws->integrator = new xtcore::integrator::raymarcher::Integrator(); }
+                */
                 if (render) action::render(ws);
                 ImGui::EndMenu();
             }
@@ -556,7 +559,7 @@ void render_main_menu(state_t *state)
 	mm_dialog_info(state, flag_dg_info);
 }
 
-void panel_log(state_t *state)
+void panel_log()
 {
     static bool log_filter_dbg = false;
     static bool log_filter_msg = true;
@@ -640,7 +643,7 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
     ImGui::SameLine();
     ImGui::Text("v%s ", ws->context.scene.m_version.c_str());
     ImGui::Text(ws->context.scene.m_description.c_str());
-    ImGui::Text("Resolution: %ix%i", ws->context.params.width, ws->context.params.height);
+    ImGui::Text("Resolution: %lux%lu", ws->context.params.width, ws->context.params.height);
     ImGui::Text("Active Cam: %s", ws->context.params.camera != HASH_ID_INVALID ? xtcore::pool::str::get(ws->context.params.camera) : "N/A");
 
     if (ws->timer.get_time_in_sec() > 0.0) {
@@ -690,12 +693,10 @@ void panel_workspaces(state_t *state)
 void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
-
-    gui::graph::node_t *node = 0;
     gui::graph::draw(&(ws->graph), &(ws->context.scene));
 }
 
-void panel_preview(workspace_t *ws, size_t w, size_t h)
+void panel_preview(workspace_t *ws)
 {
     if (!ws) return;
 
@@ -733,8 +734,6 @@ void container(state_t *state)
     static bool dummy = true;
 
     workspace_t *ws = state->workspace;
-    size_t w = state->window.width;
-    size_t h = state->window.height;
     ImGui::SetNextWindowPos(ImVec2(SIZE_OFFSET, SIZE_MAIN_MENU + SIZE_OFFSET));
     ImGui::SetNextWindowSize(ImVec2(state->window.width - 2 * SIZE_OFFSET, state->window.height - SIZE_MAIN_MENU));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -749,9 +748,9 @@ void container(state_t *state)
     ImGui::BeginChild(ID_PANEL_MAIN);
     switch (current_tab) {
         case TAB_WORKSPACES : panel_workspaces(state); break;
-        case TAB_LOG        : panel_log(state);        break;
+        case TAB_LOG        : panel_log();             break;
         case TAB_SCENE      : panel_scene(ws);         break;
-        case TAB_PREVIEW    : panel_preview(ws, w, h); break;
+        case TAB_PREVIEW    : panel_preview(ws);       break;
     }
     ImGui::EndChild();
     ImGui::End();

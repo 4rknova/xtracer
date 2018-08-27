@@ -24,13 +24,7 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	Integrator();
-
-	virtual void setup(xtcore::render::context_t &context);
-	virtual void render();
-
-	private:
-    xtcore::render::context_t *m_context;
+	virtual void render_tile(xtcore::render::tile_t *tile);
 };
 
         } /* namespace uv */

@@ -17,7 +17,9 @@
 
 namespace xtcore {
     namespace integrator {
-        namespace pathtracer {
+        namespace raymarcher {
+
+#define MAX_ITERATIONS (200)
 
 Integrator::Integrator()
 	: m_context(NULL)
@@ -32,18 +34,32 @@ nimg::ColorRGBf Integrator::eval(size_t depth, const xtcore::Ray &ray)
 {
     if (depth == 0) return nimg::ColorRGBf(0,0,0);
 
-    xtcore::HitRecord info;
-    if (m_context->scene.intersection(ray, info)) {
-        xtcore::asset::Object    *o = m_context->scene.m_objects[info.id];
-        xtcore::asset::IMaterial *m = m_context->scene.m_materials[o->material];
+    NMath::Vector3f p = ray.origin;
+    size_t iterations = MAX_ITERATIONS;
+    bool done = false;
+    bool hit  = false;
 
-        Ray r;
-        ColorRGBf c;
-        bool path_continues = m->sample_path(r, c, info);
-        if (path_continues) {
-            c = c * eval(--depth, r);
-        }
-        return c;
+    HASH_UINT64 obj;
+
+    while (!done) {
+        NMath::scalar_t distance = m_context->scene.distance(p, obj);
+        p += ray.direction * distance;
+        hit = (distance < EPSILON);
+        --iterations;
+        done = ((iterations == 0) || hit);
+    }
+
+    if (hit) {
+    /*
+        // Calculate the normal: Gradient via Forward differencing
+        NMath::Vector3f n;
+        HASH_ID id;
+        n.x = m_context->scene.distance(NMath::Vector3f(p.x + EPSILON, p.y, p.z), id);
+        n.y = m_context->scene.distance(NMath::Vector3f(p.x, p.y + EPSILON, p.z), id);
+        n.z = m_context->scene.distance(NMath::Vector3f(p.x, p.y, p.z + EPSILON), id);
+    */
+        float c = (MAX_ITERATIONS - iterations) / (float)MAX_ITERATIONS;
+        return nimg::ColorRGBf(c, c, c);
     }
 
     return m_context->scene.sample_environment(ray.direction);
@@ -53,7 +69,7 @@ void Integrator::render()
 {
     if (!m_context) return;
 
-    xtcore::render::params_t *p  = &(m_context->params);
+    xtcore::render::params_t *p   = &(m_context->params);
     xtcore::asset::ICamera  *cam = m_context->scene.get_camera(p->camera);
     if (!cam) return;
 
@@ -67,7 +83,7 @@ void Integrator::render()
         m_context->aa_sampler.produce(tile, p->aa);
 
         while (tile->samples.count() > 0) {
-            xtcore::antialiasing::sample_t aa_sample;
+            xtcore::antialiasing::sample_rgba_t aa_sample;
             tile->samples.pop(aa_sample);
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
@@ -90,6 +106,6 @@ void Integrator::render()
     }
 }
 
-        } /* namespace pathtracer */
+        } /* namespace raymarcher */
     } /* namespace integrator */
 } /* namespace xtcore */

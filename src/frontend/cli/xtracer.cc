@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     } else return 1;
 
 	xtcore::render::IIntegrator *integrator = NULL;
-;
+/*
     if      (RENDERER("depth"     )) integrator = new xtcore::integrator::depth::Integrator();
     else if (RENDERER("stencil"   )) integrator = new xtcore::integrator::stencil::Integrator();
     else if (RENDERER("normal"    )) integrator = new xtcore::integrator::normal::Integrator();
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     else if (RENDERER("raytracer" )) integrator = new xtcore::integrator::raytracer::Integrator();
     else if (RENDERER("pathtracer")) integrator = new xtcore::integrator::pathtracer::Integrator();
     else return 0;
-
+*/
     context.params = params;
     context.init();
 

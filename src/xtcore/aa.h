@@ -9,7 +9,7 @@ namespace xtcore {
     namespace antialiasing {
 
 void gen_samples_grid   (sample_set_t &samples, NMath::Vector2f pixel, size_t level);
-void gen_samples_random (sample_set_t &samples, NMath::Vector2f pixel, size_t count);
+void gen_samples_random (sample_set_t &samples, NMath::Vector2f pixel, size_t level);
 
 enum SAMPLE_DISTRIBUTION
 {
@@ -20,7 +20,7 @@ enum SAMPLE_DISTRIBUTION
 class AA
 {
     public:
-    virtual void produce(xtcore::render::tile_t *tile, size_t level) = 0;
+    virtual void produce(xtcore::render::tile_t *tile, size_t level, size_t samples) = 0;
 };
 
 class MSAA : public AA
@@ -28,7 +28,7 @@ class MSAA : public AA
     public:
     MSAA();
     virtual ~MSAA();
-    virtual void produce(xtcore::render::tile_t *tile, size_t level);
+    virtual void produce(xtcore::render::tile_t *tile, size_t level, size_t samples);
     SAMPLE_DISTRIBUTION distribution;
 };
 

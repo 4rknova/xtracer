@@ -19,67 +19,38 @@ namespace xtcore {
     namespace integrator {
         namespace uv {
 
-Integrator::Integrator()
-	: m_context(NULL)
-{}
-
-void Integrator::setup(xtcore::render::context_t &context)
+void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
-	m_context = &context;
-}
+    xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
 
-void Integrator::render()
-{
-    if (!m_context) return;
+    while (tile->samples.count() > 0) {
+        xtcore::antialiasing::sample_rgba_t sample;
+        tile->samples.pop(sample);
 
-    xtcore::render::params_t *p   = &(m_context->params);
-    xtcore::asset::ICamera  *cam = m_context->scene.get_camera(p->camera);
-    if (!cam) return;
+	    xtcore::HitRecord info;
 
-	if (p->threads) omp_set_num_threads(p->threads);
+        nimg::ColorRGBAf color_pixel;
 
-	#pragma omp parallel for schedule(dynamic, 1)
-    for (size_t i = 0; i < m_context->tiles.size(); ++i) {
-        xtcore::render::tile_t *tile = &(m_context->tiles[i]);
-        tile->init();
+        tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
-        m_context->aa_sampler.produce(tile, p->aa);
+        NMath::Vector3f  acc_uv = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+        NMath::scalar_t  alpha  = color_pixel.a();
 
-        while (tile->samples.count() > 0) {
-            xtcore::antialiasing::sample_t aa_sample;
-            tile->samples.pop(aa_sample);
+        NMath::scalar_t alpha_sample = 0.f;
 
-	        xtcore::HitRecord info;
+        xtcore::Ray ray = cam->get_primary_ray(
+              sample.coords.x, sample.coords.y
+            , (float)(ctx->params.width)
+            , (float)(ctx->params.height));
 
-            nimg::ColorRGBAf color_pixel;
-            tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
-
-            NMath::Vector3f  acc_uv = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
-            NMath::scalar_t  alpha  = color_pixel.a();
-
-            NMath::Vector3f uv_sample;
-            NMath::scalar_t alpha_sample = 0.f;
-            for (float dofs = 0; dofs < p->samples; ++dofs) {
-          	 	xtcore::Ray ray = cam->get_primary_ray(
-                      aa_sample.coords.x, aa_sample.coords.y
-                    , (float)(p->width)
-                    , (float)(p->height)
-                );
-
-                if (m_context->scene.intersection(ray, info)) {
-                    float weight = (1. / p->samples);
-                    uv_sample += info.texcoord * weight;
-                    alpha_sample  += weight;
-                }
-            }
-
-            acc_uv += aa_sample.weight * (uv_sample * 0.5f + 0.5f);
-            color_pixel = nimg::ColorRGBAf(acc_uv.x, acc_uv.y, acc_uv.z, 0.);
-            color_pixel.a(alpha + aa_sample.weight * alpha_sample);
-            tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
+        if (ctx->scene.intersection(ray, info)) {
+            acc_uv += (info.texcoord * 0.5f + 0.5f) * sample.weight;
+            alpha_sample += sample.weight;
         }
 
-        tile->submit();
+        color_pixel = nimg::ColorRGBAf(acc_uv.x, acc_uv.y, acc_uv.z, 0.);
+        color_pixel.a(alpha + sample.weight * alpha_sample);
+        tile->write(floor(sample.pixel.x), floor(sample.pixel.y), color_pixel);
     }
 }
 

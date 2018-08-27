@@ -17,9 +17,7 @@
 
 namespace xtcore {
     namespace integrator {
-        namespace raymarcher {
-
-#define MAX_ITERATIONS (200)
+        namespace normal {
 
 Integrator::Integrator()
 	: m_context(NULL)
@@ -28,41 +26,6 @@ Integrator::Integrator()
 void Integrator::setup(xtcore::render::context_t &context)
 {
 	m_context = &context;
-}
-
-nimg::ColorRGBf Integrator::eval(size_t depth, const xtcore::Ray &ray)
-{
-    if (depth == 0) return nimg::ColorRGBf(0,0,0);
-
-    NMath::Vector3f p = ray.origin;
-    size_t iterations = MAX_ITERATIONS;
-    bool done = false;
-    bool hit  = false;
-
-    HASH_UINT64 obj;
-
-    while (!done) {
-        NMath::scalar_t distance = m_context->scene.distance(p, obj);
-        p += ray.direction * distance;
-        hit = (distance < EPSILON);
-        --iterations;
-        done = ((iterations == 0) || hit);
-    }
-
-    if (hit) {
-    /*
-        // Calculate the normal: Gradient via Forward differencing
-        NMath::Vector3f n;
-        HASH_ID id;
-        n.x = m_context->scene.distance(NMath::Vector3f(p.x + EPSILON, p.y, p.z), id);
-        n.y = m_context->scene.distance(NMath::Vector3f(p.x, p.y + EPSILON, p.z), id);
-        n.z = m_context->scene.distance(NMath::Vector3f(p.x, p.y, p.z + EPSILON), id);
-    */
-        float c = (MAX_ITERATIONS - iterations) / (float)MAX_ITERATIONS;
-        return nimg::ColorRGBf(c, c, c);
-    }
-
-    return m_context->scene.sample_environment(ray.direction);
 }
 
 void Integrator::render()
@@ -83,29 +46,57 @@ void Integrator::render()
         m_context->aa_sampler.produce(tile, p->aa);
 
         while (tile->samples.count() > 0) {
-            xtcore::antialiasing::sample_t aa_sample;
+            xtcore::antialiasing::sample_rgba_t aa_sample;
             tile->samples.pop(aa_sample);
+
+	        xtcore::HitRecord info;
+
             nimg::ColorRGBAf color_pixel;
             tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);
 
-            for (size_t i = 0; i < p->samples; ++i) {
+            NMath::Vector3f  acc_normal = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+            NMath::scalar_t  alpha  = color_pixel.a();
+
+            NMath::Vector3f normal_sample;
+            NMath::scalar_t alpha_sample = 0.f;
+            for (float dofs = 0; dofs < p->samples; ++dofs) {
           	 	xtcore::Ray ray = cam->get_primary_ray(
                       aa_sample.coords.x, aa_sample.coords.y
                     , (float)(p->width)
                     , (float)(p->height)
                 );
 
-                color_pixel += eval(p->rdepth, ray) * aa_sample.weight * (1.f/p->samples);
+                if (m_context->scene.intersection(ray, info)) {
+                    float weight = (1. / p->samples);
+                    normal_sample += info.normal * weight;
+                    alpha_sample  += weight;
+                }
             }
 
-            color_pixel.a(1);
+            acc_normal += aa_sample.weight * (normal_sample * 0.5f + 0.5f);
+            color_pixel = nimg::ColorRGBAf(acc_normal.x, acc_normal.y, acc_normal.z, 0.);
+            color_pixel.a(alpha + aa_sample.weight * alpha_sample);
             tile->write(floor(aa_sample.pixel.x), floor(aa_sample.pixel.y), color_pixel);
+        }
+
+        // Normalize
+        for (size_t x = tile->x0(); x < tile->x1(); ++x) {
+            for (size_t y = tile->y0(); y < tile->y1(); ++y) {
+                nimg::ColorRGBAf color;
+                tile->read(x, y, color);
+                NMath::Vector3f n(color.r(), color.g(), color.b());
+                n = (n - 0.5f) * 2.0f;
+                n.normalize();
+                n = n * 0.5f + 0.5f;
+                color = nimg::ColorRGBAf(n.x, n.y, n.z, color.a());
+                tile->write(x, y, color);
+            }
         }
 
         tile->submit();
     }
 }
 
-        } /* namespace raymarcher */
+        } /* namespace normal */
     } /* namespace integrator */
 } /* namespace xtcore */

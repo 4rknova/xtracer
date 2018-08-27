@@ -9,6 +9,13 @@
 namespace xtcore {
     namespace surface {
 
+Triangle::Triangle()
+{
+    tc[0] = NMath::Vector2f(0.0f, 0.0f);
+    tc[1] = NMath::Vector2f(1.0f, 1.0f);
+    tc[1] = NMath::Vector2f(1.0f, 0.0f);
+}
+
 NMath::scalar_t Triangle::distance(NMath::Vector3f p) const
 {
     NMath::Vector3f ba = v[1] - v[0]; NMath::Vector3f pa = p - v[0];
