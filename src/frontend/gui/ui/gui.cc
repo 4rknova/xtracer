@@ -23,35 +23,39 @@
 
 #define STRLEN_MAX (512)
 
-#define STR_CREATE             "Create"
-#define STR_CAMERA             "Camera"
-#define STR_MATERIAL           "Material"
-#define STR_GEOMETRY           "Geometry"
-#define STR_ENTITY             "Entity"
-#define STR_CAM_PERSPECTIVE    "Perspective"
-#define STR_CAM_ODS            "ODS"
-#define STR_CAM_ERP            "ERP"
-#define STR_ADD                "Add"
-#define STR_ORDER_RANDOM       "Random"
-#define STR_ORDER_RAD_IN       "Inwards"
-#define STR_ORDER_RAD_OUT      "Outwards"
-#define STR_TILE_ORDER         "Tile order"
-#define STR_PRESETS            "Presets"
-#define STR_SENSOR             "Sensor"
-#define STR_WORKSPACES         "Workspaces"
-#define STR_SCENE              "Scene"
-#define STR_PREVIEW            "Preview"
-#define STR_LOG                "Log"
-#define STR_FILTERS            "Filters"
-#define STR_RMODE              "Rendering mode"
-#define STR_RMODE_SINGLE       "Single frame"
-#define STR_RMODE_CONTINUOUS   "Continuous"
-#define STR_SHOW_TILE_UPDATES  "Show tile updates"
-#define STR_SELECT             "Select"
-#define STR_CLOSE              "Close"
-#define STR_NETWORK            "Network"
-#define STR_BROADCAST          "Broadcast"
-#define STR_RECEIVE            "Receive"
+#define STR_CREATE              "Create"
+#define STR_CAMERA              "Camera"
+#define STR_MATERIAL            "Material"
+#define STR_GEOMETRY            "Geometry"
+#define STR_ENTITY              "Entity"
+#define STR_CAM_PERSPECTIVE     "Perspective"
+#define STR_CAM_ODS             "ODS"
+#define STR_CAM_ERP             "ERP"
+#define STR_ADD                 "Add"
+#define STR_ORDER_SCANLINE      "Scanline"
+#define STR_ORDER_RANDOM        "Random"
+#define STR_ORDER_RAD_IN        "Inwards"
+#define STR_ORDER_RAD_OUT       "Outwards"
+#define STR_TILE_ORDER          "Tile order"
+#define STR_SAMPLE_DISTRIBUTION "Sample distribution"
+#define STR_SAMPLE_DIST_GRID    "Grid Aligned"
+#define STR_SAMPLE_DIST_RANDOM  "Monte Carlo"
+#define STR_PRESETS             "Presets"
+#define STR_SENSOR              "Sensor"
+#define STR_WORKSPACES          "Workspaces"
+#define STR_SCENE               "Scene"
+#define STR_PREVIEW             "Preview"
+#define STR_LOG                 "Log"
+#define STR_FILTERS             "Filters"
+#define STR_RMODE               "Rendering mode"
+#define STR_RMODE_SINGLE        "Single frame"
+#define STR_RMODE_CONTINUOUS    "Continuous"
+#define STR_SHOW_TILE_UPDATES   "Show tile updates"
+#define STR_SELECT              "Select"
+#define STR_CLOSE               "Close"
+#define STR_NETWORK             "Network"
+#define STR_BROADCAST           "Broadcast"
+#define STR_RECEIVE             "Receive"
 
 enum ID {
       ID_PANEL_SIDE
@@ -268,16 +272,26 @@ void mm_sampling(workspace_t *ws)
 {
     xtcore::render::params_t *p = &(ws->context.params);
     textedit_int("Antialiasing"   , p->aa     , 1, 1);
+
+    int sample_distribution = (int)(p->sample_distribution);
+    ImGui::Text(STR_SAMPLE_DISTRIBUTION);
+    ImGui::RadioButton(STR_SAMPLE_DIST_GRID  , &sample_distribution, xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID);
+    ImGui::RadioButton(STR_SAMPLE_DIST_RANDOM, &sample_distribution, xtcore::antialiasing::SAMPLE_DISTRIBUTION_RANDOM);
+    ImGui::NewLine();
+    p->sample_distribution = (xtcore::antialiasing::SAMPLE_DISTRIBUTION)sample_distribution;
+
     textedit_int("Recursion Depth", p->rdepth , 1, 1);
     textedit_int("Samples"        , p->samples, 1, 1);
     ImGui::NewLine();
-    int tile_order = (int)ws->tile_order;
+
+    int tile_order = (int)(p->tile_order);
     ImGui::Text(STR_TILE_ORDER);
-    ImGui::RadioButton(STR_ORDER_RANDOM , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
-    ImGui::RadioButton(STR_ORDER_RAD_IN , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
-    ImGui::RadioButton(STR_ORDER_RAD_OUT, &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
+    ImGui::RadioButton(STR_ORDER_SCANLINE, &tile_order, xtcore::render::TILE_ORDER_SCANLINE);
+    ImGui::RadioButton(STR_ORDER_RANDOM  , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
+    ImGui::RadioButton(STR_ORDER_RAD_IN  , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
+    ImGui::RadioButton(STR_ORDER_RAD_OUT , &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
     ImGui::NewLine();
-    ws->tile_order = (xtcore::render::TILE_ORDER)tile_order;
+    p->tile_order = (xtcore::render::TILE_ORDER)tile_order;
 }
 
 void mm_concurrency(workspace_t *ws)

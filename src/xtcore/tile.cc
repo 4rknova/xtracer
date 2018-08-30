@@ -96,7 +96,7 @@ void segment_framebuffer(Tileset &tiles, size_t width, size_t height, size_t til
 void order(Tileset &tiles, TILE_ORDER order)
 {
     switch (order) {
-        case TILE_ORDER_UNCHANGED  :                             break;
+        case TILE_ORDER_SCANLINE   : order_scanline(tiles);      break;
         case TILE_ORDER_RANDOM     : order_random(tiles);        break;
         case TILE_ORDER_RADIAL_IN  : order_radial(tiles, false); break;
         case TILE_ORDER_RADIAL_OUT : order_radial(tiles, true ); break;
@@ -106,6 +106,21 @@ void order(Tileset &tiles, TILE_ORDER order)
 void order_random(Tileset &tiles)
 {
     std::random_shuffle(tiles.begin(), tiles.end());
+}
+
+void order_scanline(Tileset &tiles)
+{
+    auto it = tiles.begin();
+    auto et = tiles.end();
+
+    std::sort(it, et, [](const tile_t &a, const tile_t &b) -> bool {
+        float dy = a.y0() - (float)b.y0();
+        float dx = a.x0() - (float)b.x0();
+
+        if (dy <= 0.f) return dx < 0.f;
+        return false;
+
+    });
 }
 
 void order_radial(Tileset &tiles, bool outwards)

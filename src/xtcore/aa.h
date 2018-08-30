@@ -17,20 +17,7 @@ enum SAMPLE_DISTRIBUTION
     , SAMPLE_DISTRIBUTION_RANDOM
 };
 
-class AA
-{
-    public:
-    virtual void produce(xtcore::render::tile_t *tile, size_t level, size_t samples) = 0;
-};
-
-class MSAA : public AA
-{
-    public:
-    MSAA();
-    virtual ~MSAA();
-    virtual void produce(xtcore::render::tile_t *tile, size_t level, size_t samples);
-    SAMPLE_DISTRIBUTION distribution;
-};
+void produce(xtcore::render::tile_t *tile, SAMPLE_DISTRIBUTION sd, size_t level, size_t samples);
 
     } /* namespace antialiasing */
 } /* namespace xtcore */

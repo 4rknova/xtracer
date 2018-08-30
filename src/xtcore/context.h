@@ -23,6 +23,10 @@ struct params_t
     size_t rdepth;    // Maximum recursion depth
     size_t tile_size; // Tile size for framebuffers segmentation
 
+    xtcore::render::TILE_ORDER tile_order;
+    xtcore::antialiasing::SAMPLE_DISTRIBUTION sample_distribution;
+
+
     HASH_UINT64 camera;
 
     params_t();
@@ -33,8 +37,6 @@ struct context_t
 	Scene     scene;
 	Tileset   tiles;
     params_t  params;
-
-    xtcore::antialiasing::MSAA aa_sampler;
 
     /* init: Initialize context buffers
     **       Note that any change to params

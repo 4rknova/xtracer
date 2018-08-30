@@ -66,8 +66,6 @@ struct workspace_t
 
     Timer timer;
 
-    xtcore::render::TILE_ORDER tile_order;
-
     bool clear_buffer;
     bool show_tile_updates;
 

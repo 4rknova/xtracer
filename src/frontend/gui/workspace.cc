@@ -60,7 +60,7 @@ void workspace_t::render()
     context.init();
     setup_callbacks();
     integrator->setup(context);
-    xtcore::render::order(context.tiles, tile_order);
+    xtcore::render::order(context.tiles, context.params.tile_order);
 
     switch (rmode) {
         case WS_RMODE_SINGLE:
@@ -123,7 +123,7 @@ void workspace_t::update()
     while (1) {
         xtcore::render::tile_t *t = handler_done.pop();
 
-        if (!t) break;
+        if (!t) { break; }
 
 		for (size_t y = t->y0(); y < t->y1(); ++y) {
             for (size_t x = t->x0(); x < t->x1(); ++x) {
@@ -150,7 +150,6 @@ workspace_t::workspace_t()
     , handler_init(&m)
     , handler_done(&m)
     , gamma(DEFAULT_GAMMA)
-    , tile_order(xtcore::render::TILE_ORDER_RANDOM)
     , clear_buffer(true)
     , show_tile_updates(true)
     , rmode(WS_RMODE_SINGLE)

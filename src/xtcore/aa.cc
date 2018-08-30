@@ -47,14 +47,8 @@ void gen_samples_random(sample_set_t &samples, NMath::Vector2f pixel, size_t lev
     }
 }
 
-MSAA::MSAA()
-    : distribution(SAMPLE_DISTRIBUTION_GRID)
-{}
 
-MSAA::~MSAA()
-{}
-
-void MSAA::produce(xtcore::render::tile_t *tile, size_t aa_level, size_t samples)
+void produce(xtcore::render::tile_t *tile, SAMPLE_DISTRIBUTION sd, size_t aa_level, size_t samples)
 {
     if (!tile) return;
 
@@ -64,7 +58,7 @@ void MSAA::produce(xtcore::render::tile_t *tile, size_t aa_level, size_t samples
 
             NMath::Vector2f p(x + tile->x0(),y + tile->y0());
 
-            switch (distribution) {
+            switch (sd) {
                 case SAMPLE_DISTRIBUTION_GRID   : gen_samples_grid   (offsets, p, aa_level); break;
                 case SAMPLE_DISTRIBUTION_RANDOM : gen_samples_random (offsets, p, aa_level); break;
             }

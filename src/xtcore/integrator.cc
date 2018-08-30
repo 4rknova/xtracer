@@ -37,7 +37,7 @@ void IIntegrator::render()
         xtcore::render::tile_t *tile = &(ctx->tiles[i]);
         tile->init();
 
-        ctx->aa_sampler.produce(tile, p->aa, p->samples);
+        xtcore::antialiasing::produce(tile, p->sample_distribution, p->aa, p->samples);
 
         render_tile(tile);
 
