@@ -500,7 +500,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     }
 }
 
-void draw(graph_t *graph, const xtcore::Scene *scene)
+void draw(graph_t *graph, const xtcore::Scene *scene, uintptr_t tex)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
     ImVector<link_t*> *links = &(graph->links);
@@ -530,6 +530,7 @@ void draw(graph_t *graph, const xtcore::Scene *scene)
                 for (float y=md.y; y<ws.y; y+=FLT_GRID_BLOCK) draw_list->AddLine(ImVec2(0,y)+wp, ImVec2(ws.x,y)+wp, COL_GRID);
                 bool scene_is_scrolling = ImGui::IsMouseDragging(MOUSE_BUTTON_MIDDLE);
                 if (scene_is_scrolling) graph->scroll_position = graph->scroll_position - ImGui::GetIO().MouseDelta;
+	            ImGui::Image((void*)(uintptr_t)(tex), ImVec2(256, 256));
             }
             { // Nodes
                 for (int i = 0; i < nodes->size(); ++i)

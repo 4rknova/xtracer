@@ -77,7 +77,7 @@ struct graph_t {
 };
 
 void build (graph_t *graph, const xtcore::Scene *scene);
-void draw  (graph_t *graph, const xtcore::Scene *scene);
+void draw  (graph_t *graph, const xtcore::Scene *scene, uintptr_t tex);
 
     } /* namespace graph */
 } /* namespace gui */

@@ -308,7 +308,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     	NMath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
     	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
     	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
-    	nmesh::mutator::translate(obj,  xform_tsl.x, xform_tsl.y, xform_tsl.z);
+    	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
 
         if (mods->query_property(XTPROTO_FLIP_NORMALS)) {
             bool flag = deserialize_bool(mods->get_property_by_name(XTPROTO_FLIP_NORMALS));

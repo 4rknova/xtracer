@@ -225,22 +225,22 @@ void mm_export(workspace_t *ws)
 
     if (ImGui::BeginMenu("Export")) {
 
-        auto _button_lambda = [](const char *desc, action::IMG_FORMAT f,
-            const char *filepath, workspace_t *ws, bool sameline) -> void {
+    	static char filepath[512];
+	    ImGui::InputText("File", filepath, 512);
+
+        auto _button_lambda = [&, filepath, ws](const char *desc, action::IMG_FORMAT f,
+            bool sameline) -> void {
             static const ImVec2 bd(52,0);
             if (ImGui::Button(desc, bd)) action::write(f, filepath, ws);
             if (sameline) { ImGui::SameLine();}
         };
 
-    	static char filepath[512];
-	    ImGui::InputText("File", filepath, 512);
-
         if (strlen(filepath) > 0) {
-            _button_lambda("HDR", action::IMG_FORMAT_HDR, filepath, ws, true);
-            _button_lambda("PNG", action::IMG_FORMAT_PNG, filepath, ws, true);
-            _button_lambda("JPG", action::IMG_FORMAT_JPG, filepath, ws, false);
-            _button_lambda("BMP", action::IMG_FORMAT_BMP, filepath, ws, true);
-            _button_lambda("TGA", action::IMG_FORMAT_TGA, filepath, ws, true);
+            _button_lambda("HDR", action::IMG_FORMAT_HDR, true);
+            _button_lambda("PNG", action::IMG_FORMAT_PNG, true);
+            _button_lambda("JPG", action::IMG_FORMAT_JPG, false);
+            _button_lambda("BMP", action::IMG_FORMAT_BMP, true);
+            _button_lambda("TGA", action::IMG_FORMAT_TGA, true);
 /*
             if (ImGui::Button("Y4M", bd)) {
                 size_t w = ws->context.params.width;
@@ -707,7 +707,7 @@ void panel_workspaces(state_t *state)
 void panel_scene(workspace_t *ws)
 {
     if (!ws) return;
-    gui::graph::draw(&(ws->graph), &(ws->context.scene));
+    gui::graph::draw(&(ws->graph), &(ws->context.scene), ws->texture);
 }
 
 void panel_preview(workspace_t *ws)
