@@ -44,6 +44,29 @@ Scene::~Scene()
 	release();
 }
 
+const xtcore::asset::Object *Scene::get_object(HASH_ID obj_id)
+{
+    auto it = m_objects.find(obj_id);
+    if (it == m_objects.end()) return 0;
+    return (*it).second;
+}
+
+const xtcore::asset::IMaterial *Scene::get_material(HASH_ID obj_id)
+{
+    const xtcore::asset::Object *obj = get_object(obj_id);
+    auto it = m_materials.find(obj->material);
+    if (it == m_materials.end()) return 0;
+    return (*it).second;
+}
+
+const xtcore::asset::ISurface *Scene::get_surface(HASH_ID obj_id)
+{
+    const xtcore::asset::Object *obj = get_object(obj_id);
+    auto it = m_surface.find(obj->surface);
+    if (it == m_surface.end()) return 0;
+    return (*it).second;
+}
+
 void Scene::get_light_sources(std::vector<light_t> &lights)
 {
     lights.clear();
@@ -55,8 +78,8 @@ void Scene::get_light_sources(std::vector<light_t> &lights)
         if (!(*oit).second) continue;
 
         std::map<HASH_UINT64, xtcore::asset::ISurface* >::iterator
-            git = m_geometry.find((*oit).second->geometry)
-          , get = m_geometry.end();
+            git = m_surface.find((*oit).second->surface)
+          , get = m_surface.end();
         std::map<HASH_UINT64, xtcore::asset::IMaterial*>::iterator
             mit = m_materials.find((*oit).second->material)
           , met = m_materials.end();
@@ -106,13 +129,13 @@ void Scene::release()
 
     purge(m_cameras);
 	purge(m_materials);
-	purge(m_geometry);
+	purge(m_surface);
 	purge(m_objects);
 }
 
 int Scene::destroy_camera   (HASH_UINT64 id) { return purge(m_cameras  , id); }
 int Scene::destroy_material (HASH_UINT64 id) { return purge(m_materials, id); }
-int Scene::destroy_geometry (HASH_UINT64 id) { return purge(m_geometry , id); }
+int Scene::destroy_surface (HASH_UINT64 id) { return purge(m_surface , id); }
 int Scene::destroy_object   (HASH_UINT64 id) { return purge(m_objects  , id); }
 
 nimg::ColorRGBf Scene::sample_environment(const Vector3f &direction) const
@@ -149,9 +172,9 @@ NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
 
     for (; it != et; ++it) {
         HASH_ID obj_id = (*it).first;
-        HASH_ID geo_id = (*it).second->geometry;
-        auto geo = m_geometry.find(geo_id);
-        if (geo == m_geometry.end()) continue;
+        HASH_ID geo_id = (*it).second->surface;
+        auto geo = m_surface.find(geo_id);
+        if (geo == m_surface.end()) continue;
 
         asset::ISurface *s = (*geo).second;
 
@@ -168,22 +191,27 @@ bool Scene::intersection(const Ray &ray, HitRecord &info)
 {
 	HitRecord test, res;
 
-	std::map<HASH_UINT64, xtcore::asset::Object *>::iterator it;
+    auto it = m_objects.begin()
+       , et = m_objects.end();
 
-	for (it = m_objects.begin(); it != m_objects.end(); ++it) {
-        asset::ISurface *geom = m_geometry[((*it).second)->geometry];
+    bool hit = false;
+
+	for (; it != et; ++it) {
+        asset::ISurface *geom = m_surface[((*it).second)->surface];
 
 		if (geom && geom->intersection(ray, &test)) {
-			if(res.t > test.t) {
+            hit = true;
+
+			if (res.t > test.t) {
 				res = test;
-				res.id = (*it).first;
+				res.id_object = (*it).first;
 			}
 		}
 	}
 	// copy result to info
 	info = res;
 
-	return info.t != INFINITY ? true : false;
+	return hit ? true : false;
 }
 
 } /* namespace xtcore */

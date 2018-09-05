@@ -7,6 +7,7 @@
 
 #define HASH_UINT32 uint32_t
 #define HASH_UINT64 uint64_t
+#define HASH_ID     HASH_UINT64
 
 using NMath::scalar_t;
 using NMath::Vector3f;
@@ -24,7 +25,7 @@ class HitRecord
         Vector3f incident_direction;
 		scalar_t t;
 
-        HASH_UINT64 id;
+        HASH_ID id_object;   // ID of object
 };
 
 } /* namespace xtcore */

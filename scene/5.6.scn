@@ -25,9 +25,10 @@ descr = <name>. You will normally want to render this scene with a 1:1 aspect ra
 versn = 0.2
 
 environment = {
-    type = color
+    type = gradient
     config = {
-        value = col3(1,1,1)
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
     }
 }
 
@@ -81,22 +82,24 @@ material = {
 		}
 	}
 
-	mirror = {
-		type       = blinn_phong
+    sphere = {
+        type = blinn_phong
         properties = {
             scalars = {
-		        exponent    = 256 
-		        reflectance = 1
+                exponent = 256
+                reflectance = 1
+                ior = 1.5
+                transparency = 1
             }
 
             samplers = {
-		        specular = {
+                specular = {
                     type  = color
                     value = col3(1,1,1)
                 }
             }
         }
-	}
+    }
 
 	col1 = {
 		type       = lambert
@@ -750,59 +753,59 @@ object = {
 	# Sphere
 	sphere = {
 		geometry = sphere
-		material = white
+		material = sphere
 	}
 
 
 	# Tall box
 	tall_block_1_1 = {
     	geometry = tall_block_1_1
-		material = mirror
+		material = white
 	}
 
 	tall_block_1_2 = {
 		geometry = tall_block_1_2
-		material = mirror
+		material = white
 	}
 
 	tall_block_2_1 = {
 		geometry = tall_block_2_1
-		material = mirror
+		material = white
 	}
 
 	tall_block_2_2 = {
 		geometry = tall_block_2_2
-		material = mirror
+		material = white
 	}
 
 	tall_block_3_1 = {
 		geometry = tall_block_3_1
-		material = mirror
+		material = white
 	}
 
 	tall_block_3_2 = {
 		geometry = tall_block_3_2
-		material = mirror
+		material = white
 	}
 
 	tall_block_4_1 = {
 		geometry = tall_block_4_1
-		material = mirror
+		material = white
 	}
 
 	tall_block_4_2 = {
 		geometry = tall_block_4_2
-		material = mirror
+		material = white
 	}
 
 	tall_block_5_1 = {
 		geometry = tall_block_5_1
-		material = mirror
+		material = white
 	}
 
 	tall_block_5_2 = {
 		geometry = tall_block_5_2
-		material = mirror
+		material = white
 	}
 
     light_1 = {

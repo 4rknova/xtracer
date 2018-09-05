@@ -40,16 +40,24 @@ bool BlinnPhong::sample_path(
     ColorRGBf diff = get_sample("diffuse", info.texcoord);
     ColorRGBf spec = get_sample("specular", info.texcoord);
     scalar_t s = get_scalar("reflectance");
-    scalar_t k = NMath::prng_c(0.0f, 1.0f);
+    scalar_t t = get_scalar("transparency");
+    scalar_t k = NMath::prng_c(0.0f, 1.0f); // Reflection probability
+    scalar_t l = NMath::prng_c(0.0f, 1.0f); // Refraction probability
 
-    if (k > s) {
-        color = diff;
-        ray.direction = NMath::Sample::diffuse(info.normal);
+
+    if (t > l) {
+        
     }
     else {
-        color = spec;
-        scalar_t exp = get_scalar("exponent");
-        ray.direction = NMath::Sample::lobe(info.normal, -info.incident_direction, exp);
+        if (k > s) {
+            color = diff;
+            ray.direction = NMath::Sample::diffuse(info.normal);
+        }
+        else {
+            color = spec;
+            scalar_t exp = get_scalar("exponent");
+            ray.direction = NMath::Sample::lobe(info.normal, -info.incident_direction, exp);
+        }
     }
 
     return true;

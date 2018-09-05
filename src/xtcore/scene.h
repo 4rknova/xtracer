@@ -42,6 +42,10 @@ class Scene
  	 Scene();
 	~Scene();
 
+    const xtcore::asset::Object    *get_object   (HASH_ID obj_id);
+    const xtcore::asset::IMaterial *get_material (HASH_ID obj_id);
+    const xtcore::asset::ISurface  *get_surface  (HASH_ID obj_id);
+
 	void apply_modifiers();
     NMath::scalar_t distance(NMath::Vector3f p, HASH_ID &object) const;
 
@@ -55,13 +59,13 @@ class Scene
 
 	int destroy_camera   (HASH_UINT64 id);
 	int destroy_material (HASH_UINT64 id);
-	int destroy_geometry (HASH_UINT64 id);
+	int destroy_surface  (HASH_UINT64 id);
 	int destroy_object   (HASH_UINT64 id);
 
 	// Maps of the scene entities
 	CamCollection m_cameras;
 	MatCollection m_materials;
-	GeoCollection m_geometry;
+	GeoCollection m_surface;
 	ObjCollection m_objects;
 
 	// Ambient

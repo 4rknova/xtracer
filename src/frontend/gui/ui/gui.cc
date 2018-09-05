@@ -189,7 +189,6 @@ void mm_resolution (workspace_t *ws)
     ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
     ImGui::NewLine();
     size_t res_entries = sizeof(resolutions) / sizeof(resolution_t);
-    int selected = -1;
     ImVec2 bd(100,0);
     ImGui::Text(STR_PRESETS);
     ImGui::Columns(4, "LST_RES_COLUMNS", false);
@@ -205,7 +204,8 @@ void mm_resolution (workspace_t *ws)
             const resolution_t *r = &resolutions[i];
             char label[32];
             sprintf(label, "%02lu", i);
-            if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns)) {
+            bool selected = ((ws->context.params.width == r->width) && (ws->context.params.height == r->height));
+            if (ImGui::Selectable(label, selected, ImGuiSelectableFlags_SpanAllColumns)) {
                 ws->context.params.width  = r->width;
                 ws->context.params.height = r->height;
             }
@@ -228,7 +228,7 @@ void mm_export(workspace_t *ws)
     	static char filepath[512];
 	    ImGui::InputText("File", filepath, 512);
 
-        auto _button_lambda = [&, filepath, ws](const char *desc, action::IMG_FORMAT f,
+        auto _button_lambda = [&, ws](const char *desc, action::IMG_FORMAT f,
             bool sameline) -> void {
             static const ImVec2 bd(52,0);
             if (ImGui::Button(desc, bd)) action::write(f, filepath, ws);
@@ -238,7 +238,7 @@ void mm_export(workspace_t *ws)
         if (strlen(filepath) > 0) {
             _button_lambda("HDR", action::IMG_FORMAT_HDR, true);
             _button_lambda("PNG", action::IMG_FORMAT_PNG, true);
-            _button_lambda("JPG", action::IMG_FORMAT_JPG, false);
+            _button_lambda("JPG", action::IMG_FORMAT_JPG, true);
             _button_lambda("BMP", action::IMG_FORMAT_BMP, true);
             _button_lambda("TGA", action::IMG_FORMAT_TGA, true);
 /*
@@ -297,15 +297,24 @@ void mm_sampling(workspace_t *ws)
 void mm_concurrency(workspace_t *ws)
 {
     xtcore::render::params_t *p = &(ws->context.params);
-    ImVec2 bd(30,0);
-    if (ImGui::Button("1"  , bd)) { p->tile_size =   1; } ImGui::SameLine();
-    if (ImGui::Button("2"  , bd)) { p->tile_size =   2; } ImGui::SameLine();
-    if (ImGui::Button("4"  , bd)) { p->tile_size =   4; } ImGui::SameLine();
-    if (ImGui::Button("8"  , bd)) { p->tile_size =   8; } ImGui::SameLine();
-    if (ImGui::Button("16" , bd)) { p->tile_size =  16; } ImGui::SameLine();
-    if (ImGui::Button("32" , bd)) { p->tile_size =  32; } ImGui::SameLine();
-    if (ImGui::Button("64" , bd)) { p->tile_size =  64; } ImGui::SameLine();
-    if (ImGui::Button("128", bd)) { p->tile_size = 128; }
+
+    auto _button_lambda = [&, p](const char *desc, size_t sz, bool sameline = false) -> void {
+        static const ImVec2 bd(30,0);
+        if (ImGui::Button(desc, bd)) {
+            p->tile_size = sz;
+        }
+        if (sameline) { ImGui::SameLine();}
+    };
+
+    _button_lambda(  "1",   1,  true);
+    _button_lambda(  "2",   2,  true);
+    _button_lambda(  "4",   4,  true);
+    _button_lambda(  "8",   8,  true);
+    _button_lambda( "16",  16,  true);
+    _button_lambda( "32",  32,  true);
+    _button_lambda( "64",  64,  true);
+    _button_lambda("128", 128, false);
+
     textedit_int("Tile Size", p->tile_size, 1, 1, MIN(p->width, p->height));
     textedit_int("Threads", ws->context.params.threads, 1, 1);
 }
@@ -398,7 +407,9 @@ void mm_integrator(workspace_t *ws)
                 /*
                 if (ImGui::MenuItem("Emission"  )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
                 if (ImGui::MenuItem("Raytracer" )) { render = true; ws->integrator = new xtcore::integrator::raytracer::Integrator();  }
+                */
                 if (ImGui::MenuItem("Pathtracer")) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
+                /*
                 if (ImGui::MenuItem("Raymarcher")) { render = true; ws->integrator = new xtcore::integrator::raymarcher::Integrator(); }
                 */
                 if (render) action::render(ws);

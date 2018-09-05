@@ -24,15 +24,10 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	Integrator();
-
-	virtual void setup(xtcore::render::context_t &context);
-	virtual void render();
+	virtual void render_tile(xtcore::render::tile_t *tile);
 
 	private:
     nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray);
-
-    xtcore::render::context_t *m_context;
 };
 
         } /* namespace pathtracer */

@@ -128,7 +128,7 @@ void node_obj_t::init()
 template<>
 void node_obj_t::draw_properties()
 {
-    ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->geometry));
+    ImGui::Text("Geometry: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->surface));
     ImGui::Text("Material: %s", xtcore::pool::str::get(((xtcore::asset::Object*)data)->material));
 }
 
@@ -448,9 +448,9 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     // Geometry
     {
         const float interval = 30.f;
-        auto et = scene->m_geometry.end();
-        y = -interval * scene->m_geometry.size() / 2;
-        for (auto it = scene->m_geometry.begin(); it != et; ++it) {
+        auto et = scene->m_surface.end();
+        y = -interval * scene->m_surface.size() / 2;
+        for (auto it = scene->m_surface.begin(); it != et; ++it) {
             node_geo_t *node = new node_geo_t;
             node->inputs  = 1;
             node->outputs = 0;
@@ -483,7 +483,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
 
             link_t *link0 = new link_t;
             link0->a_id  = node->id;
-            link0->b_id = geo[node->data->geometry];
+            link0->b_id = geo[node->data->surface];
             link0->a_slot = 0;
             link0->b_slot = 0;
             graph->links.push_back(link0);

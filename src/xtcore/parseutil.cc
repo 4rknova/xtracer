@@ -488,7 +488,7 @@ xtcore::asset::Object *deserialize_object(const ncf::NCF *p)
    	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
    	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
 
-   	data->geometry = xtcore::pool::str::add(deserialize_cstr(g).c_str());
+   	data->surface  = xtcore::pool::str::add(deserialize_cstr(g).c_str());
    	data->material = xtcore::pool::str::add(deserialize_cstr(m).c_str());
 
    	return data;
@@ -528,8 +528,8 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     HASH_UINT64 id = xtcore::pool::str::add(name);
     xtcore::asset::ISurface *data = deserialize_geometry(scene->m_source.c_str(), p);
     if (!data) return 1;
-    scene->destroy_geometry(id);
-    scene->m_geometry[id] = data;
+    scene->destroy_surface(id);
+    scene->m_surface[id] = data;
     return 0;
 }
 
@@ -635,11 +635,11 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
         // Create Geometry
         xtcore::asset::ISurface *surf = new (std::nothrow) xtcore::surface::Mesh();
         ((xtcore::surface::Mesh*)surf)->build_octree(shape, obj.attributes);
-        scene->m_geometry[id] = surf;
+        scene->m_surface[id] = surf;
 
         // Create Object
         xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
-        obj->geometry = id;
+        obj->surface  = id;
         obj->material = matids[shape.mesh.materials[0]];
         scene->m_objects[id] = obj;
         Log::handle().post_message("creating object %s : %s"

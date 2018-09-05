@@ -42,7 +42,6 @@ bool Phong::sample_path(
     ColorRGBf spec = get_sample("specular", info.texcoord);
     scalar_t s = get_scalar("reflectance");
     scalar_t k = NMath::prng_c(0.0f, 1.0f);
-//    float lumdiff = nimg::eval::luminance(diff);
 
     if (k > s) {
         color = diff;
