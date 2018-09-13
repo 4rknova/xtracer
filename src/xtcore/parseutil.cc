@@ -18,18 +18,9 @@
 
 #include "strpool.h"
 #include "log.h"
-#include "camera/perspective.h"
-#include "camera/ods.h"
-#include "camera/erp.h"
-#include "camera/cubemap.h"
-#include "material/lambert.h"
-#include "material/phong.h"
-#include "material/blinnphong.h"
-#include "material/emissive.h"
-#include "sampler_col.h"
-#include "sampler_tex.h"
-#include "sampler_cubemap.h"
-#include "sampler_gradient.h"
+#include "camera.h"
+#include "material.h"
+#include "sampler.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -410,6 +401,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 	else if (!type.compare(XTPROTO_LTRL_PHONG)     ) data = new (std::nothrow) xtcore::asset::material::Phong();
 	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = new (std::nothrow) xtcore::asset::material::BlinnPhong();
 	else if (!type.compare(XTPROTO_LTRL_EMISSIVE)  ) data = new (std::nothrow) xtcore::asset::material::Emissive();
+	else if (!type.compare(XTPROTO_LTRL_DIELECTRIC)) data = new (std::nothrow) xtcore::asset::material::Dielectric();
 	else {
 		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete data;

@@ -18,15 +18,15 @@ class Lambert : public xtcore::asset::IMaterial
 {
     public:
     virtual bool shade(
-                ColorRGBf &intensity
-        , const ICamera   *camera
-        , const emitter_t *emitter
-        , const HitRecord &info) const;
+                ColorRGBf    &intensity
+        , const ICamera      *camera
+        , const emitter_t    *emitter
+        , const hit_record_t &hit_record) const;
 
     virtual bool sample_path(
-                Ray       &ray
-        ,       ColorRGBf &color
-        , const HitRecord &info) const;
+                hit_result_t &hit_result
+        , const hit_record_t &hit_record
+    ) const;
 };
 
         } /* namespace material */

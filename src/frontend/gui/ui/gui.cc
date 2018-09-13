@@ -359,7 +359,7 @@ void menu_workspaces(state_t *state)
             bool busy = (i->is_rendering());
             if ((state->workspace != i) && ImGui::MenuItem("Switch to this")) state->workspace = i;
             if (busy) ImGui::Text("Rendering.. ");
-            if (!(i->integrator) && ImGui::MenuItem("Close")  ) action::close(state, i);
+            if (!busy && ImGui::MenuItem("Close")  ) action::close(state, i);
             ImGui::EndMenu();
         }
     }
@@ -367,7 +367,7 @@ void menu_workspaces(state_t *state)
     if (state->workspaces.size() > 0) {
         if (ImGui::MenuItem("Close all")) {
             for (auto& i : state->workspaces) {
-                if (!(i->integrator)) action::close(state, i);
+                if (!(i->is_rendering())) action::close(state, i);
             }
         }
     }
@@ -658,7 +658,7 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
     ImGui::SetColumnWidth(-1,75);
     ImVec2 button_sz(50,30);
     if (ImGui::Button(STR_SELECT, button_sz)) { res = true; }
-    if (ImGui::Button(STR_CLOSE , button_sz)) { action::close(state, ws); }
+    if (!(ws->is_rendering()) && ImGui::Button(STR_CLOSE , button_sz)) { action::close(state, ws); }
     ImGui::NextColumn();
     ImVec4 col(.8f,.8f,.8f,1.f);
     if (is_current) col = ImVec4(0.f,1.f,0.f,1.f);
@@ -676,7 +676,10 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
         print_time_breakdown(timestr, ws->timer.get_time_in_mlsec());
         ImGui::Text("%s", timestr.c_str());
     }
-    if (ws->is_rendering()) ImGui::ProgressBar(ws->progress);
+    if (ws->is_rendering()) {
+        const ImVec2& size_arg = ImVec2(100.f,10.f);
+        ImGui::ProgressBar(ws->progress, size_arg);
+    }
     ImGui::Columns(1, "ID_WORKSPACE");
     ImGui::EndChildFrame();
 

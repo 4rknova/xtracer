@@ -36,7 +36,7 @@ NMath::scalar_t Triangle::distance(NMath::Vector3f p) const
     return nmath_sqrt(k ? m : dot(nor,pa)*dot(nor,pa)/dot(nor,nor));
 }
 
-bool Triangle::intersection(const Ray &ray, HitRecord* i_info) const
+bool Triangle::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
 	Vector3f normal = calc_normal();
 	scalar_t n_dot_dir = dot(normal, ray.direction);
@@ -61,19 +61,19 @@ bool Triangle::intersection(const Ray &ray, HitRecord* i_info) const
 	// check for triangle boundaries
 	if (bc_sum < 1.0 - EPSILON || bc_sum > 1.0 + EPSILON) return false;
 
-	if (i_info)
+	if (i_hit_record)
 	{
-		i_info->t = t;
-		i_info->point = pos;
+		i_hit_record->t = t;
+		i_hit_record->point = pos;
 
 		// Texcoords
 		Vector2f texcoord = tc[0] * bc.x + tc[1] * bc.y + tc[2] * bc.z;
-		i_info->texcoord = texcoord;
+		i_hit_record->texcoord = texcoord;
 
 		// Normal
 		Vector3f pn = n[0] * bc.x + n[1] * bc.y + n[2] * bc.z;
-		i_info->normal = pn.length() ? pn : normal;
-        i_info->incident_direction = ray.direction;
+		i_hit_record->normal = pn.length() ? pn : normal;
+        i_hit_record->incident_direction = ray.direction;
 	}
 
 	return true;

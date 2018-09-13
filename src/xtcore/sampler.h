@@ -29,5 +29,4 @@ class ISampler
     } /* namespace sampler */
 } /* namespace xtcore */
 
-
 #endif /* XTCORE_SAMPLER_H_INCLUDED */

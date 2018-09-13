@@ -1,5 +1,5 @@
-#ifndef XTCORE_MAT_EMISSIVE_H_INCLUDED
-#define XTCORE_MAT_EMISSIVE_H_INCLUDED
+#ifndef XTCORE_MAT_DIELECTRIC_H_INCLUDED
+#define XTCORE_MAT_DIELECTRIC_H_INCLUDED
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
@@ -14,7 +14,7 @@ namespace xtcore {
     namespace asset {
         namespace material {
 
-class Emissive : public xtcore::asset::IMaterial
+class Dielectric : public xtcore::asset::IMaterial
 {
     public:
     virtual bool shade(
@@ -33,4 +33,4 @@ class Emissive : public xtcore::asset::IMaterial
     } /* namespace asset */
 } /* namespace xtcore */
 
-#endif /* XTCORE_MAT_EMISSIVE_H_INCLUDED */
+#endif /* XTCORE_MAT_DIELECTRIC_H_INCLUDED */

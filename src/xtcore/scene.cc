@@ -187,9 +187,9 @@ NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
     return dist;
 }
 
-bool Scene::intersection(const Ray &ray, HitRecord &info)
+bool Scene::intersection(const Ray &ray, hit_record_t &hit_record)
 {
-	HitRecord test, res;
+	hit_record_t test, res;
 
     auto it = m_objects.begin()
        , et = m_objects.end();
@@ -208,8 +208,8 @@ bool Scene::intersection(const Ray &ray, HitRecord &info)
 			}
 		}
 	}
-	// copy result to info
-	info = res;
+	// copy result to hit_record
+	hit_record = res;
 
 	return hit ? true : false;
 }

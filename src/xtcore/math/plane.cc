@@ -16,7 +16,7 @@ NMath::scalar_t Plane::distance(NMath::Vector3f p) const
 }
 
 // algebraic solution
-bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
+bool Plane::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
 	// check if the ray is travelling parallel to the plane.
 	// if the ray is in the plane then we ignore it.
@@ -34,19 +34,19 @@ bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
 
 	if (t < EPSILON) return false;
 
-	if (i_info)
+	if (i_hit_record)
 	{
-		i_info->t = t;
-		i_info->point = ray.origin + ray.direction * t;
-		i_info->normal = normal;
-        i_info->incident_direction = ray.direction;
+		i_hit_record->t = t;
+		i_hit_record->point = ray.origin + ray.direction * t;
+		i_hit_record->normal = normal;
+        i_hit_record->incident_direction = ray.direction;
 
 		// Texture coordinates.
 		Vector3f n = normal.normalized();
 		Vector3f uvec = Vector3f(n.y, n.z, -n.x);
 		Vector3f vvec = cross(uvec, n);
-		scalar_t tu = dot(uvec, (v+i_info->point)) * uv_scale.x;
-		scalar_t tv = dot(vvec, (v+i_info->point)) * uv_scale.y;
+		scalar_t tu = dot(uvec, (v+i_hit_record->point)) * uv_scale.x;
+		scalar_t tv = dot(vvec, (v+i_hit_record->point)) * uv_scale.y;
 		if (tu >  1.f) tu -= (float)(int)tu;
 		if (tv >  1.f) tv -= (float)(int)tv;
 		if (tu < -1.f) tu -= (float)(int)tu;
@@ -54,7 +54,7 @@ bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
 		if (tu <  0.f) tu = 1.f + tu;
 		if (tv <  0.f) tv = 1.f + tv;
 
-		i_info->texcoord = Vector2f(tu, tv);
+		i_hit_record->texcoord = Vector2f(tu, tv);
 	}
 
 	return true;
@@ -62,7 +62,7 @@ bool Plane::intersection(const Ray &ray, HitRecord* i_info) const
 
 void Plane::calc_aabb()
 {
-	// The plane is infoinite so the bounding box is infinity as well
+	// The plane is infinite so the bounding box is infinite as well
 	aabb.max = Vector3f(INFINITY, INFINITY, INFINITY);
 	aabb.min = -aabb.max;
 }

@@ -26,21 +26,20 @@ class IMaterial
     bool is_emissive() const;
 
 	virtual bool shade(
-                ColorRGBf &intensity
-        , const ICamera   *cam
-        , const emitter_t *emitter
-        , const HitRecord &info) const = 0;
+                ColorRGBf    &intensity
+        , const ICamera      *cam
+        , const emitter_t    *emitter
+        , const hit_record_t &hit_record) const = 0;
 
     virtual bool sample_path(
-                Ray       &ray
-        ,       ColorRGBf &color
-        , const HitRecord &info) const = 0;
+                hit_result_t &hit_result
+        , const hit_record_t &hit_record
+    ) const = 0;
 
-    float get_scalar(const char *name) const;
+    float     get_scalar(const char *name) const;
     ColorRGBf get_sample(const char *name, const Vector3f &tc) const;
-
-       float&  get_scalar_by_index  (size_t idx, std::string *name=0);
-    ISampler*  get_sampler_by_index (size_t idx, std::string *name=0);
+       float& get_scalar_by_index  (size_t idx, std::string *name=0);
+    ISampler* get_sampler_by_index (size_t idx, std::string *name=0);
 
     size_t get_scalar_count()  const;
     size_t get_sampler_count() const;
@@ -58,5 +57,11 @@ class IMaterial
 
     } /* namespace asset */
 } /* namespace xtcore */
+
+#include "material/lambert.h"
+#include "material/phong.h"
+#include "material/blinnphong.h"
+#include "material/emissive.h"
+#include "material/dielectric.h"
 
 #endif /* XTCORE_MATERIAL_H_INCLUDED */

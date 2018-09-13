@@ -2,7 +2,7 @@
 
 namespace xtcore {
 
-HitRecord::HitRecord()
+hit_record_t::hit_record_t()
 	: t(INFINITY)
 {}
 

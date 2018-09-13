@@ -1,4 +1,5 @@
 #include <nmath/sample.h>
+#include "macro.h"
 #include "blinnphong.h"
 
 namespace xtcore {
@@ -6,58 +7,48 @@ namespace xtcore {
         namespace material {
 
 bool BlinnPhong::shade(
-            ColorRGBf &intensity
-    , const ICamera   *camera
-    , const emitter_t *emitter
-    , const HitRecord &info) const
+            ColorRGBf    &intensity
+    , const ICamera      *camera
+    , const emitter_t    *emitter
+    , const hit_record_t &hit_record) const
 {
-    Vector3f light_dir = (emitter->position - info.point).normalized();
+    Vector3f light_dir = (emitter->position - hit_record.point).normalized();
 
-    NMath::scalar_t d = nmath_max(dot(light_dir, info.normal), 0);
+    NMath::scalar_t d = nmath_max(dot(light_dir, hit_record.normal), 0);
 
-    Vector3f ray = camera->position - info.point;
+    Vector3f ray = camera->position - hit_record.point;
     ray.normalize();
 
     Vector3f r = light_dir + ray;
     r.normalize();
 
-    NMath::scalar_t rmv = nmath_max(dot(r, info.normal), 0);
+    NMath::scalar_t rmv = nmath_max(dot(r, hit_record.normal), 0);
 
     intensity = emitter->intensity;
-    intensity *= (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
-            + (get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)));
+    intensity *= (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))
+            + (get_sample(MAT_SAMPLER_SPECULAR, hit_record.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)));
 
     return true;
 }
 
 bool BlinnPhong::sample_path(
-            Ray       &ray
-    ,       ColorRGBf &color
-    , const HitRecord &info) const
+            hit_result_t &hit_result
+    , const hit_record_t &hit_record
+) const
 {
-    ray.origin = info.point + info.normal * EPSILON;
+    hit_result.ray.origin = hit_record.point + hit_record.normal * EPSILON;
 
-    ColorRGBf diff = get_sample("diffuse", info.texcoord);
-    ColorRGBf spec = get_sample("specular", info.texcoord);
     scalar_t s = get_scalar("reflectance");
-    scalar_t t = get_scalar("transparency");
     scalar_t k = NMath::prng_c(0.0f, 1.0f); // Reflection probability
-    scalar_t l = NMath::prng_c(0.0f, 1.0f); // Refraction probability
 
-
-    if (t > l) {
-        
+    if (k > s) {
+        hit_result.intensity = get_sample("diffuse", hit_record.texcoord);
+        hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal);
     }
     else {
-        if (k > s) {
-            color = diff;
-            ray.direction = NMath::Sample::diffuse(info.normal);
-        }
-        else {
-            color = spec;
-            scalar_t exp = get_scalar("exponent");
-            ray.direction = NMath::Sample::lobe(info.normal, -info.incident_direction, exp);
-        }
+        hit_result.intensity = get_sample("specular", hit_record.texcoord);
+        scalar_t exp = get_scalar("exponent");
+        hit_result.ray.direction = NMath::Sample::lobe(hit_record.normal, -hit_record.incident_direction, exp);
     }
 
     return true;

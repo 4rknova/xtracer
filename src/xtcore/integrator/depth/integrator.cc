@@ -32,7 +32,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
-	    xtcore::HitRecord info;
+	    xtcore::hit_record_t hit_record;
 
         xtcore::Ray ray = cam->get_primary_ray(
               sample.coords.x, sample.coords.y
@@ -42,8 +42,8 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         float depth = 0.f;
 
-        if (ctx->scene.intersection(ray, info)) {
-            depth = 1. / log((ray.origin - info.point).length());
+        if (ctx->scene.intersection(ray, hit_record)) {
+            depth = 1. / log((ray.origin - hit_record.point).length());
         }
 
         color_sample += nimg::ColorRGBf(depth, depth, depth) * (1. / ctx->params.samples);

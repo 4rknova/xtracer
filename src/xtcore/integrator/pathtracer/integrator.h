@@ -25,9 +25,7 @@ class Integrator : public xtcore::render::IIntegrator
 {
 	public:
 	virtual void render_tile(xtcore::render::tile_t *tile);
-
-	private:
-    nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray);
+    nimg::ColorRGBf eval(size_t depth, hit_result_t &in);
 };
 
         } /* namespace pathtracer */

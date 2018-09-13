@@ -13,7 +13,7 @@ struct sample_rgba_t
     NMath::scalar_t  weight;   // Contribution
     NMath::Vector2f  pixel;    // Pixel indices
     NMath::Vector2f  coords;   // Sample coordinates
-   
+
     size_t           priority; // Layer
     nimg::ColorRGBAf value;    // Rendered value
 };

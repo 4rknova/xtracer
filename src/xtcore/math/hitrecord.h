@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
+#include <nimg/color.h>
+#include "ray.h"
 
 #define HASH_UINT32 uint32_t
 #define HASH_UINT64 uint64_t
@@ -11,21 +13,28 @@
 
 using NMath::scalar_t;
 using NMath::Vector3f;
+using nimg::ColorRGBf;
 
 namespace xtcore {
 
-class HitRecord
+struct hit_result_t
 {
-	public:
-		HitRecord();
+    scalar_t  ior;       // Index of refraction
+    ColorRGBf intensity; // Light attenuation
+    Ray       ray;
+};
 
-		Vector3f normal;
-		Vector3f point;
-		Vector3f texcoord;
-        Vector3f incident_direction;
-		scalar_t t;
+struct hit_record_t
+{
+    hit_record_t();
 
-        HASH_ID id_object;   // ID of object
+	Vector3f normal;
+	Vector3f point;
+	Vector3f texcoord;
+    Vector3f incident_direction;
+	scalar_t t;
+    scalar_t ior;
+    HASH_ID  id_object;
 };
 
 } /* namespace xtcore */

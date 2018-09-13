@@ -1,10 +1,18 @@
 # Xtracer 2
 
-data  = ./data
+data  = ./data/geometry/stanford/dragon
 
 title = Cornell box
 descr = <title> variant.
 versn = 0.1
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.7,0.7,0.7)
+        b = col3(0.3,0.3,0.3)
+    }
+}
 
 camera = {
 	default = {
@@ -14,12 +22,6 @@ camera = {
 		target   = vec3(278.0,273.0,-799.0)
 		up       = vec3(0,1,0)
 	}
-
-    ods = {
-        type     = ods
-        ipd      = 6.4
-		position = vec3(278.0,273.0,-150.0)
-    }
 }
 
 material = {
@@ -91,7 +93,7 @@ material = {
 	}
 
     light_source = {
-        type = lambert
+        type = emissive
 
         properties = {
             samplers = {
@@ -356,7 +358,7 @@ geometry = {
 
 	model = {
 	    type   = mesh
-		source = <data>/dragon.obj
+		source = <data>/dragon_decimated.obj
 		#smooth = true
 
         modifiers = {

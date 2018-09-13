@@ -17,9 +17,9 @@ NMath::scalar_t Mesh::distance(NMath::Vector3f) const
     return INFINITY;
 }
 
-bool Mesh::intersection(const Ray &ray, HitRecord* i_info) const
+bool Mesh::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
-	return m_octree.intersection(ray, i_info) != NULL;
+	return m_octree.intersection(ray, i_hit_record) != NULL;
 }
 
 void Mesh::calc_aabb()

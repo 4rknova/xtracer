@@ -133,7 +133,7 @@ static inline vec2_t vec2_refract(vec2_t v, vec2_t n, scalar_t ior_src, scalar_t
 	scalar_t cos_inc = - vec2_dot(normal, incident);
 	scalar_t radical = 1.f - ((ior * ior) * (1.f - (cos_inc * cos_inc)));
 
-	if(radical < 0.f)
+	if (radical < 0.f)
 	{
 		/* total internal reflection */
 		return vec2_reflect(v, n);

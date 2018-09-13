@@ -186,19 +186,19 @@ void Octree<T>::subdivide(OctreeNode<T> *node, size_t level)
 }
 
 template <typename T>
-OctreeItem<T> *Octree<T>::intersection(const Ray &ray, HitRecord *point) const
+OctreeItem<T> *Octree<T>::intersection(const Ray &ray, hit_record_t *point) const
 {
 	return r_intersection(m_root, ray, point);
 }
 
 template <typename T>
-OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, HitRecord *point) const
+OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, hit_record_t *point) const
 {
 	if (!node || !node->aabb.intersection(ray)) {
 		return NULL;
 	}
 
-	HitRecord pt0;
+	hit_record_t pt0;
 	pt0.t = FLT_MAX;
 
 	OctreeItem<T> *closest = NULL;
@@ -206,7 +206,7 @@ OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, Hi
 	if (node->count_items()) {
 		typename std::list<OctreeItem<T>*>::iterator iter = node->items.begin();
 		while (iter != node->items.end()) {
-			HitRecord pt;
+			hit_record_t pt;
 
 			if (((*iter)->data.intersection(ray, &pt)) && pt.t < pt0.t) {
 				pt0 = pt;
@@ -217,7 +217,7 @@ OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, Hi
 	}
 	else {
 		for (size_t i = 0; i < 8; ++i) {
-			HitRecord pt;
+			hit_record_t pt;
 			OctreeItem<T> *item;
 
 			if ((item = r_intersection(node->child[i], ray, &pt)) && pt.t < pt0.t) {

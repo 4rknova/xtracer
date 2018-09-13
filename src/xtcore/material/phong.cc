@@ -1,6 +1,7 @@
 #include <nmath/sample.h>
 #include <nmath/prng.h>
 #include <nimg/luminance.h>
+#include "macro.h"
 #include "phong.h"
 
 namespace xtcore {
@@ -8,53 +9,51 @@ namespace xtcore {
         namespace material {
 
 bool Phong::shade(
-            ColorRGBf &intensity
-    , const ICamera   *camera
-    , const emitter_t *emitter
-    , const HitRecord &info) const
+            ColorRGBf    &intensity
+    , const ICamera      *camera
+    , const emitter_t    *emitter
+    , const hit_record_t &hit_record) const
 {
-    Vector3f light_dir = (emitter->position - info.point).normalized();
+    Vector3f light_dir = (emitter->position - hit_record.point).normalized();
 
-    NMath::scalar_t d = nmath_max(0, dot(light_dir, info.normal));
+    NMath::scalar_t d = nmath_max(0, dot(light_dir, hit_record.normal));
 
-    Vector3f ray = (camera->position - info.point).normalized();
+    Vector3f ray = (camera->position - hit_record.point).normalized();
 
-    Vector3f r = (light_dir.reflected(info.normal)).normalized();
+    Vector3f r = (light_dir.reflected(hit_record.normal)).normalized();
 
     NMath::scalar_t rmv = nmath_max(0, dot(r, ray));
 
     intensity += emitter->intensity *
-            (   (d * get_sample(MAT_SAMPLER_DIFFUSE, info.texcoord))
-              + (get_sample(MAT_SAMPLER_SPECULAR, info.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)))
+            (   (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))
+              + (get_sample(MAT_SAMPLER_SPECULAR, hit_record.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)))
             );
 
     return true;
 }
 
 bool Phong::sample_path(
-            Ray       &ray
-    ,       ColorRGBf &color
-    , const HitRecord &info) const
+            hit_result_t &hit_result
+    , const hit_record_t &hit_record
+) const
 {
-    ray.origin    = info.point + info.normal * EPSILON;
-
-    ColorRGBf diff = get_sample("diffuse", info.texcoord);
-    ColorRGBf spec = get_sample("specular", info.texcoord);
+    hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
     scalar_t s = get_scalar("reflectance");
     scalar_t k = NMath::prng_c(0.0f, 1.0f);
 
     if (k > s) {
-        color = diff;
-        ray.direction = NMath::Sample::diffuse(info.normal);
+        hit_result.intensity = get_sample("diffuse", hit_record.texcoord);
+        hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal);
     }
     else {
-        color = spec;
+        hit_result.intensity = get_sample("specular", hit_record.texcoord);
         scalar_t exp = get_scalar("exponent");
-        ray.direction = NMath::Sample::lobe(info.normal, -info.incident_direction, exp);
+        hit_result.ray.direction = NMath::Sample::lobe(hit_record.normal, -hit_record.incident_direction, exp);
     }
 
     return true;
 }
+
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */

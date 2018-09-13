@@ -27,7 +27,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
         xtcore::antialiasing::sample_rgba_t sample;
         tile->samples.pop(sample);
 
-	    xtcore::HitRecord info;
+	    xtcore::hit_record_t hit_record;
 
         nimg::ColorRGBAf color_pixel;
 
@@ -43,8 +43,8 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             , (float)(ctx->params.width)
             , (float)(ctx->params.height));
 
-        if (ctx->scene.intersection(ray, info)) {
-            acc_uv += (info.texcoord * 0.5f + 0.5f) * sample.weight;
+        if (ctx->scene.intersection(ray, hit_record)) {
+            acc_uv += (hit_record.texcoord * 0.5f + 0.5f) * sample.weight;
             alpha_sample += sample.weight;
         }
 

@@ -20,4 +20,9 @@ class ICamera
     } /* namespace asset */
 } /* namespace xtcore */
 
+#include "camera/perspective.h"
+#include "camera/erp.h"
+#include "camera/ods.h"
+#include "camera/cubemap.h"
+
 #endif /* XTCORE_CAMERA_H_INCLUDED */

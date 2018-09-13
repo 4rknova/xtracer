@@ -39,7 +39,7 @@ class Octree
 		void clear();
 		void build();
 		void add(const BoundingBox3 &aabb, const T &data);
-		OctreeItem<T> *intersection(const Ray &ray, HitRecord *point) const;
+		OctreeItem<T> *intersection(const Ray &ray, hit_record_t *point) const;
 
 		void max_items_per_node(size_t count);
 		void max_depth(size_t depth);
@@ -49,7 +49,7 @@ class Octree
         BoundingBox3 bbox();
 
 	private:
-		OctreeItem<T> *r_intersection(OctreeNode<T> *node, const Ray &ray, HitRecord *point) const;
+		OctreeItem<T> *r_intersection(OctreeNode<T> *node, const Ray &ray, hit_record_t *point) const;
 		void subdivide(OctreeNode<T> *node, size_t level);
 		void release(OctreeNode<T> *node);	// Release a sub-tree.
 

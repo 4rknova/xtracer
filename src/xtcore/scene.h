@@ -55,7 +55,7 @@ class Scene
 	xtcore::asset::ICamera *get_camera(HASH_UINT64 id);
 
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
-	bool intersection(const Ray &ray, HitRecord &info);
+	bool intersection(const Ray &ray, hit_record_t &hit_record);
 
 	int destroy_camera   (HASH_UINT64 id);
 	int destroy_material (HASH_UINT64 id);

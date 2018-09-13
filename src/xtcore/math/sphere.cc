@@ -22,7 +22,7 @@ NMath::scalar_t Sphere::distance(NMath::Vector3f p) const
     return (p - origin).length() - radius;
 }
 
-bool Sphere::intersection(const Ray &ray, HitRecord* i_info) const
+bool Sphere::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
 
 #ifdef XTCORE_USE_BBOX_INTERSECTION
@@ -45,15 +45,15 @@ bool Sphere::intersection(const Ray &ray, HitRecord* i_info) const
 		scalar_t t2 = (-b - sqrt_discr) / 2.0;
 		scalar_t t = t1 < t2 ? t1 : t2;
 
-		if (t > EPSILON && i_info)
+		if (t > EPSILON && i_hit_record)
 		{
-			i_info->t = t;
-			i_info->point = ray.origin + ray.direction * t;
-			i_info->normal = (i_info->point - origin) / radius * (t1*t2 > 0. ? 1. : -1);
-			i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5), 
-								(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
+			i_hit_record->t = t;
+			i_hit_record->point = ray.origin + ray.direction * t;
+			i_hit_record->normal = (i_hit_record->point - origin) / radius * (t1*t2 > 0. ? 1. : -1);
+			i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5), 
+								(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
 
-            i_info->incident_direction = ray.direction;
+            i_hit_record->incident_direction = ray.direction;
 
 			return true;
 		}
@@ -77,12 +77,12 @@ bool Sphere::intersection(const Ray &ray, HitRecord* i_info) const
         if (t0 < 0.f) return false;
     }
 
-    i_info->t = t0;
-	i_info->point = ray.origin + ray.direction * t0;
-	i_info->normal = (i_info->point - origin) / radius;
-	i_info->texcoord = Vector2f((asin(i_info->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5),
-	    						(asin(i_info->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
-	i_info->geometry = this;
+    i_hit_record->t = t0;
+	i_hit_record->point = ray.origin + ray.direction * t0;
+	i_hit_record->normal = (i_hit_record->point - origin) / radius;
+	i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5),
+	    						(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
+	i_hit_record->geometry = this;
 
     return true;
 #endif

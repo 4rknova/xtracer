@@ -25,13 +25,11 @@ descr = <name>. You will normally want to render this scene with a 1:1 aspect ra
 versn = 0.2
 
 environment = {
-    type = gradient
+    type = color
     config = {
-        a = col3(1,1,1)
-        b = col3(0.5,0.7,1.0)
+        value = col3(1,1,1)
     }
 }
-
 
 # The scene cameras.
 camera = {
@@ -83,20 +81,10 @@ material = {
 	}
 
     sphere = {
-        type = blinn_phong
+        type = dielectric
         properties = {
             scalars = {
-                exponent = 256
-                reflectance = 1
                 ior = 1.5
-                transparency = 1
-            }
-
-            samplers = {
-                specular = {
-                    type  = color
-                    value = col3(1,1,1)
-                }
             }
         }
     }

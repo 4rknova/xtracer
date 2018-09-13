@@ -79,6 +79,7 @@
 #define XTPROTO_LTRL_PHONG			"phong"				/* string     */ /* BRDF: Phong */
 #define XTPROTO_LTRL_BLINNPHONG		"blinn_phong"		/* string     */ /* BRDF: Blinn Phong */
 #define XTPROTO_LTRL_EMISSIVE		"emissive"	     	/* string     */ /* BRDF: Emissive */
+#define XTPROTO_LTRL_DIELECTRIC     "dielectric"        /* string     */ /* BRDF: Dielectric */
 #define XTPROTO_LTRL_PLANE			"plane"				/* string     */ /* Plane */
 #define XTPROTO_LTRL_TRIANGLE		"triangle"			/* string     */ /* Triangle */
 #define XTPROTO_LTRL_POINT			"point"	    		/* string     */ /* Point */
