@@ -423,17 +423,25 @@ void mm_integrator(workspace_t *ws)
 void mm_zoom(workspace_t *ws) {
     if (!ws) return;
 
+    auto _button_lambda = [&, ws](const char *txt, float val, bool sameline = false) -> void {
+        static const ImVec2 bd(50,0);
+        if (ImGui::Button(txt, bd)) {
+            ws->zoom_multiplier = val;
+        }
+        if (sameline) { ImGui::SameLine();}
+    };
+
     if (ImGui::BeginMenu("View")) {
-        if (ImGui::Button("x0.1" )) { ws->zoom_multiplier = 0.101f; } ImGui::SameLine();
-        if (ImGui::Button("x0.2" )) { ws->zoom_multiplier = 0.201f; } ImGui::SameLine();
-        if (ImGui::Button("x0.4" )) { ws->zoom_multiplier = 0.401f; } ImGui::SameLine();
-        if (ImGui::Button("x0.5" )) { ws->zoom_multiplier = 0.501f; } ImGui::SameLine();
-        if (ImGui::Button("x1.0" )) { ws->zoom_multiplier = 1.001f; }
-        if (ImGui::Button("x2.0" )) { ws->zoom_multiplier = 2.001f; } ImGui::SameLine();
-        if (ImGui::Button("x4.0" )) { ws->zoom_multiplier = 4.001f; } ImGui::SameLine();
-        if (ImGui::Button("x5.0" )) { ws->zoom_multiplier = 5.001f; } ImGui::SameLine();
-        if (ImGui::Button("x8.0" )) { ws->zoom_multiplier = 8.001f; } ImGui::SameLine();
-        if (ImGui::Button("x9.0" )) { ws->zoom_multiplier = 9.001f; }
+        _button_lambda("x0.1", 0.101f,  true);
+        _button_lambda("x0.2", 0.201f,  true);
+        _button_lambda("x0.4", 0.401f,  true);
+        _button_lambda("x0.5", 0.501f,  true);
+        _button_lambda("x1.0", 1.001f,  true);
+        _button_lambda("x2.0", 2.001f, false);
+        _button_lambda("x4.0", 4.001f,  true);
+        _button_lambda("x5.0", 5.001f,  true);
+        _button_lambda("x10.0",10.001f,false);
+
         textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
     }
