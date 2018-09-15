@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(xtracer)
 
+set(OpenGL_GL_PREFERENCE GLVND)
+
 find_package(OpenGL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(GLEW REQUIRED)
