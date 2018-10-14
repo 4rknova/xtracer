@@ -3,6 +3,7 @@
 
 /*
 **	    SYMBOLIC NAME			    LITERAL				TYPE			 DESCRIPTION
+**      ----------------------------------------------------------------------------------------------------
 */
 #define XTPROTO_FORMAT_VEC3         "vec3(%f,%f,%f)"    /* string     */ /* Format for vec3 */
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */
@@ -10,15 +11,11 @@
 #define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
 #define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
 
-
 #define XTPROTO_CONFIG              "config"            /* N/A        */ /* Config */
-
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
 #define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
-
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
-
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -31,12 +28,10 @@
 #define XTPROTO_PROP_VRT_0			"v0"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_1			"v1"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_2			"v2"				/* vector     */ /* Vector coordinates */
-
 #define XTPROTO_PROP_PROPERTIES     "properties"        /* string     */ /* properties */
 #define XTPROTO_PROP_SCALARS        "scalars"           /* string     */ /* scalar properties */
 #define XTPROTO_PROP_COLORS         "colors"            /* string     */ /* color properties */
 #define XTPROTO_PROP_TEXTURES       "textures"          /* string     */ /* texture properties */
-
 #define XTPROTO_PROP_PREFIX         "prefix"            /* string     */ /* A prefix string */
 #define XTPROTO_PROP_TYPE			"type"				/* string	  */ /* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */ /* Default value */
@@ -62,18 +57,15 @@
 #define XTPROTO_PROP_TRSPC			"transparency"		/* scalar_t   */ /* Transparency ratio */
 #define XTPROTO_PROP_IOR			"ior"				/* scalar_t   */ /* Index of refraction */
 #define XTPROTO_PROP_IPD			"ipd"				/* scalar_t   */ /* Inter-Pupillary Distance */
-
 #define XTPROTO_PROP_FILTERING      "filtering"         /* string     */ /* Texture filtering type */
 #define XTPROTO_LTRL_NEAREST        "nearest"           /* string     */ /* Texture filtering, nearest */
 #define XTPROTO_LTRL_BILINEAR       "bilinear"          /* string     */ /* Texture filtering, bilinear */
-
 #define XTPROTO_LTRL_POSX           "posx"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_POSY           "posy"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_POSZ           "posz"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_NEGX           "negx"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_NEGY           "negy"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_NEGZ           "negz"              /* string     */ /* Cubemap face */
-
 #define XTPROTO_LTRL_EMISSIVE		"emissive"  		/* string     */ /* BRDF: Emissive */
 #define XTPROTO_LTRL_LAMBERT		"lambert"			/* string     */ /* BRDF: Lambert */
 #define XTPROTO_LTRL_PHONG			"phong"				/* string     */ /* BRDF: Phong */
@@ -94,20 +86,16 @@
 #define XTPROTO_PROP_USCALE			"u_scale"			/* scalar_t   */ /* U scaling */
 #define XTPROTO_PROP_VSCALE			"v_scale"			/* scalar_t   */ /* V scaling */
 #define XTPROTO_PROP_DIMENSIONS		"dimensions"		/* Vector3f   */ /* Dimensions for 3d shape */
-
 #define XTPROTO_PROP_TRANSLATION	"translation"		/* Vector3f   */ /* Translation */
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
-
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
-
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
-
 #define XTPROTO_NODE_ENVIRONMENT    "environment"       /* N/A        */ /* Environment */
 #define XTPROTO_NODE_CUBEMAP    	"cubemap"			/* N/A        */ /* Cubemap */
 #define XTPROTO_GRADIENT            "gradient"          /* N/A        */ /* Gradient */
@@ -116,12 +104,10 @@
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_OBJECT			"object"			/* N/A        */ /* Resource node */
-
 #define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */ /* Perspective camera */
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */ /* Omni Directional Stereo camera */
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */
 #define XTPROTO_LTRL_CAM_CUBEMAP    "cubemap"           /* string     */ /* Cubemap camera */
-
 #define XTPROTO_TEXTURE             "texture"
 #define XTPROTO_CUBEMAP             "cubemap"
 #define XTPROTO_COLOR               "color"
@@ -135,4 +121,5 @@
 #define XTPROTO_MODIFIERS           "modifiers"
 #define XTPROTO_EXTRUDE             "extrude"
 #define XTPROTO_MULTIPLIER          "multiplier"
+
 #endif /* XTCORE_PROTO_H_INCLUDED */
