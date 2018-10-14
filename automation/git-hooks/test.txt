@@ -1,0 +1,4 @@
+ISSUE-434: Fixed a bug
+
+Long description
+https://github.com/4rknova/xtracer/issues/434
