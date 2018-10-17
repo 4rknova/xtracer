@@ -27,8 +27,10 @@ version     = 0.2
 environment = {
     type = gradient
     config = {
-        a = col3(0.5,0.5,0.5)
-        b = col3(0.4,0.4,0.4)
+ #       a = col3(0.3,0.5,0.9)
+ #       b = col3(1.0,1.0,1.0)
+        a = col3(0,0,0);
+        b = col3(0,0,0);
     }
 }
 
@@ -94,6 +96,10 @@ material = {
                     type  = color
                     value = col3(1,1,1)
                 }
+                diffuse = {
+                    type = color
+                    value = col3(0,0,0)
+                }
             }
         }
 	}
@@ -123,10 +129,10 @@ material = {
 	}
 
 	light = {
-		type       = emissive
+		type = emissive
         properties = {
             samplers = {
-        		emissive = {
+                emissive = {
                     type = color
                     value = col3(1,1,1)
                 }
@@ -139,7 +145,7 @@ material = {
         properties = {
             scalars = {
                 exponent    = 256
-		        reflectance = 1
+		        reflectance = .5
             }
 
             samplers = {

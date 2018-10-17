@@ -26,15 +26,21 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     bool hit = ctx->scene.intersection(in.ray, hit_record);
     hit_record.ior = in.ior;
 
+
     if (hit) {
+        nimg::ColorRGBf value;
+
         const xtcore::asset::IMaterial *m = ctx->scene.get_material(hit_record.id_object);
 
         xtcore::hit_result_t hit_result;
         bool path_continues = m->sample_path(hit_result, hit_record);
+
+        value = in.intensity * hit_result.intensity;
+
         if (path_continues) {
-            in.intensity  = hit_result.intensity * eval(--depth, hit_result);
+            value *= eval(--depth, hit_result);
         }
-        return in.intensity;
+        return value;
     }
 
     return ctx->scene.sample_environment(in.ray.direction);

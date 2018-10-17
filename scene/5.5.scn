@@ -32,7 +32,7 @@ version     = 0.1
 environment = {
     type = color
     config = {
-        value = col3(1,1,1)
+        value = col3(0,0,0)
     }
 }
 

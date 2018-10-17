@@ -72,7 +72,7 @@ material = {
 	}
 
 	light = {
-		type       = lambert
+		type       = emissive
         properties = {
             samplers = {
     		    emissive = {
