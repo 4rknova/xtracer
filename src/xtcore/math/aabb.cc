@@ -21,48 +21,52 @@ BoundingBox3::BoundingBox3(const Vector3f& a, const Vector3f& b)
 }
 
 /*
-	ray - axis aligned bounding box intersection test based on:
-	"An Efficient and Robust Ray-Box Intersection Algorithm",
-	Amy Williams, Steve Barrus, R. Keith Morley, and Peter Shirley
-	Journal of graphics tools, 10(1):49-54, 2005
-*/
+    Amy Williams, Steve Barrus, R. Keith Morley, and Peter Shirley. 2005.
+    An efficient and robust ray-box intersection algorithm. In ACM SIGGRAPH 2005
+    Courses (SIGGRAPH '05), John Fujii (Ed.). ACM, New York, NY, USA, Article 9 .
+    DOI: https://doi.org/10.1145/1198555.1198748
 
+    https://dl.acm.org/citation.cfm?id=1198748
+    http://people.csail.mit.edu/amy/papers/box-jgt.pdf
+*/
 bool BoundingBox3::intersection(const Ray &ray) const
 {
 	if (ray.origin > min && ray.origin < max)
 		return true;
 
 	Vector3f aabb[2] = {min, max};
-	static const double t0 = 0.0;
+	static const float t0 = 0.0;
 
+    /* The sign and inverse quantities can
+       be precalculated in the ray object
+       during construction.
+    */
 	int xsign = (int)(ray.direction.x < 0.0);
-	double invdirx = 1.0 / ray.direction.x;
-
-	double tmin = (aabb[xsign].x - ray.origin.x) * invdirx;
-	double tmax = (aabb[1 - xsign].x - ray.origin.x) * invdirx;
-
 	int ysign = (int)(ray.direction.y < 0.0);
-	double invdiry = 1.0 / ray.direction.y;
-	double tymin = (aabb[ysign].y - ray.origin.y) * invdiry;
-	double tymax = (aabb[1 - ysign].y - ray.origin.y) * invdiry;
+	float invdirx = 1.0 / ray.direction.x;
+	float invdiry = 1.0 / ray.direction.y;
 
-	if ((tmin > tymax) || (tymin > tmax))
-		return false;
+	float tmin  = (aabb[    xsign].x - ray.origin.x) * invdirx;
+	float tmax  = (aabb[1 - xsign].x - ray.origin.x) * invdirx;
+	float tymin = (aabb[    ysign].y - ray.origin.y) * invdiry;
+	float tymax = (aabb[1 - ysign].y - ray.origin.y) * invdiry;
 
+	if ((tmin > tymax) || (tymin > tmax)) return false;
 	if (tymin > tmin) tmin = tymin;
 	if (tymax < tmax) tmax = tymax;
 
 	int zsign = (int)(ray.direction.z < 0.0);
-	double invdirz = 1.0 / ray.direction.z;
-	double tzmin = (aabb[zsign].z - ray.origin.z) * invdirz;
-	double tzmax = (aabb[1 - zsign].z - ray.origin.z) * invdirz;
+	float invdirz = 1.0 / ray.direction.z;
 
-	if ((tmin > tzmax) || (tzmin > tmax))
-		return false;
+	float tzmin = (aabb[zsign].z - ray.origin.z) * invdirz;
+	float tzmax = (aabb[1 - zsign].z - ray.origin.z) * invdirz;
 
+	if ((tmin > tzmax) || (tzmin > tmax)) return false;
 	if (tzmin > tmin) tmin = tzmin;
 	if (tzmax < tmax) tmax = tzmax;
 
+    /* Add a min, max distance for the ray (t0, t1)
+    */
 	return (tmax > t0);
 }
 
