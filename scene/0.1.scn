@@ -1,16 +1,25 @@
 # Xtracer 2
 
-data  = ./data/geometry/stanford/dragon
+data         = data
+path_cubemap = <data>/image/envmap/hdr
 
 title = Empty Scene
 descr = <title> variant.
 versn = 0.1
 
 environment = {
-    type = gradient
+#    type = cubemap
+#    config = {
+#        posy = <path_cubemap>/posy.jpg
+#        negy = <path_cubemap>/negy.jpg
+#        negx = <path_cubemap>/negx.jpg
+#        posx = <path_cubemap>/posx.jpg
+#        posz = <path_cubemap>/posz.jpg
+#        negz = <path_cubemap>/negz.jpg
+#    }
+    type = erp
     config = {
-        a = col3(0,0,0)
-        b = col3(1,1,1)
+        source = <path_cubemap>/studio_small_03_2k.hdr
     }
 }
 

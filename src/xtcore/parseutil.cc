@@ -21,6 +21,7 @@
 #include "camera.h"
 #include "material.h"
 #include "sampler.h"
+#include "sampler_erp.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -178,6 +179,22 @@ xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF
     return data;
 }
 
+xtcore::sampler::ERP *deserialize_erp(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    xtcore::sampler::ERP *data = new xtcore::sampler::ERP;
+
+    if (data) {
+        std::string src = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+
+        std::string base, file, fsource = source;
+        ncf::util::path_comp(fsource, base, file);
+
+        data->load((base + src).c_str());
+    }
+    return data;
+}
 
 xtcore::asset::ICamera *deserialize_camera_tlp(const ncf::NCF *p)
 {
@@ -420,6 +437,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 
                  if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
             else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
+            else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
             else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
             else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
@@ -713,6 +731,7 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 
     std::string environment = deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
          if (!environment.compare(XTPROTO_CUBEMAP )) scene->m_environment = deserialize_cubemap (scene->m_source.c_str(), env_data);
+         if (!environment.compare(XTPROTO_ERP     )) scene->m_environment = deserialize_erp     (scene->m_source.c_str(), env_data);
     else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(env_data);
     else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (env_data);
 

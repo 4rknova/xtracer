@@ -97,7 +97,6 @@
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
 #define XTPROTO_NODE_ENVIRONMENT    "environment"       /* N/A        */ /* Environment */
-#define XTPROTO_NODE_CUBEMAP    	"cubemap"			/* N/A        */ /* Cubemap */
 #define XTPROTO_GRADIENT            "gradient"          /* N/A        */ /* Gradient */
 #define XTPROTO_NODE_CAMERA			"camera"			/* N/A		  */ /* Resource node */
 #define XTPROTO_NODE_MATERIAL		"material"			/* N/A        */ /* Resource node */
@@ -110,6 +109,7 @@
 #define XTPROTO_LTRL_CAM_CUBEMAP    "cubemap"           /* string     */ /* Cubemap camera */
 #define XTPROTO_TEXTURE             "texture"
 #define XTPROTO_CUBEMAP             "cubemap"
+#define XTPROTO_ERP                 "erp"
 #define XTPROTO_COLOR               "color"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
