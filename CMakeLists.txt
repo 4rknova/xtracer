@@ -142,7 +142,7 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
 
 target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery rtmidi asound pthread)
 
-SET(LIBRARIES ${OPENGL_LIBRARY} -lglfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
+SET(LIBRARIES ${OPENGL_LIBRARY} glfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
 
 target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery rtmidi asound pthread ssl crypto ${LIBRARIES})
 
