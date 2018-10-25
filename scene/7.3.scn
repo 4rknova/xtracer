@@ -4,19 +4,24 @@ versn = 0.5
 
 data         = data
 path_cubemap = <data>/image/envmap/humus/HornstullsStrand
+path_cubemap = <data>/image/envmap/hdr
 path_model   = <data>/geometry/ten24/AOR 2 Ref Scan_Shoot Pose/Shoot Pose
 path_mesh    = <path_model>/OBJ
 path_texture = <path_model>/Texture
 
 environment = {
-    type = cubemap
+#    type = cubemap
+#    config = {
+#        posy = <path_cubemap>/posy.jpg
+#        negy = <path_cubemap>/negy.jpg
+#        negx = <path_cubemap>/negx.jpg
+#        posx = <path_cubemap>/posx.jpg
+#        posz = <path_cubemap>/posz.jpg
+#        negz = <path_cubemap>/negz.jpg
+#    }
+    type = erp
     config = {
-        posy = <path_cubemap>/posy.jpg
-        negy = <path_cubemap>/negy.jpg
-        negx = <path_cubemap>/negx.jpg
-        posx = <path_cubemap>/posx.jpg
-        posz = <path_cubemap>/posz.jpg
-        negz = <path_cubemap>/negz.jpg
+        source = <path_cubemap>/studio_small_03_2k.hdr
     }
 }
 
@@ -31,7 +36,17 @@ camera = {
         flength  = 175
     }
 
-    wide = {
+    wide_lens = {
+        type     = thin-lens
+		fov      = 120
+		position = vec3(-0,120,-80)
+		target   = vec3(-50,170,30)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 75
+    }
+
+    far = {
         type     = thin-lens
 		fov      = 45
 		position = vec3(-50,130,-330)

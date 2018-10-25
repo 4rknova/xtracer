@@ -14,8 +14,11 @@ nimg::ColorRGBf ERP::sample(const NMath::Vector3f &tc) const
 {
     NMath::Vector3f dir = tc.normalized();
 
-    float u = ((acos(dir.z) / NMath::PI) + 1.f) * 0.5f;
-    float v = atan2(dir.y, dir.x) / NMath::PI;
+    float theta = acos(dir.y);
+    float phi   = atan2(dir.x, -dir.z);
+
+    float u = 0.5f + phi / NMath::PI_DOUBLE;
+    float v = theta / NMath::PI;
 
     NMath::Vector3f coords(u, v, 0);
     return m_texture.sample(coords);
