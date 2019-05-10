@@ -106,6 +106,7 @@ inline ColorRGBAf &ColorRGBAf::operator +=(const ColorRGBAf &rhs)
 	r(r() + rhs.r());
 	g(g() + rhs.g());
 	b(b() + rhs.b());
+    a(a() + rhs.a());
 
 	return *this;
 }
@@ -115,6 +116,7 @@ inline ColorRGBAf &ColorRGBAf::operator -=(const ColorRGBAf &rhs)
 	r(r() - rhs.r());
 	g(g() - rhs.g());
 	b(b() - rhs.b());
+    a(a() - rhs.a());
 
 	return *this;
 }
@@ -124,6 +126,7 @@ inline ColorRGBAf &ColorRGBAf::operator *=(const ColorRGBAf &rhs)
 	r(r() * rhs.r());
 	g(g() * rhs.g());
 	b(b() * rhs.b());
+    a(a() * rhs.a());
 
 	return *this;
 }
@@ -133,6 +136,7 @@ inline ColorRGBAf &ColorRGBAf::operator *=(const float s)
 	r(r() * s);
 	g(g() * s);
 	b(b() * s);
+    a(a() * s);
 
 	return *this;
 }

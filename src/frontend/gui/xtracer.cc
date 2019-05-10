@@ -10,9 +10,8 @@
 #include <xtcore/macro.h>
 #include "config.h"
 #include "state.h"
-#include "widgets.h"
 #include "profiler.h"
-#include "ui/graphics.h"
+#include "gui.h"
 
 
 gui::state_t state;
@@ -68,7 +67,6 @@ int main(int argc, char** argv)
 
     xtcore::init();
     xtcore::Log::handle().echo(false);
-    gui::graphics::init();
 
     while (!glfwWindowShouldClose(window))
     {
@@ -85,7 +83,6 @@ int main(int argc, char** argv)
     xtcore::deinit();
 
     // Cleanup
-    gui::graphics::deinit();
     ImGui_ImplGlfwGL3_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);

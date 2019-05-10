@@ -22,7 +22,7 @@ public:
     virtual Vector3f point_sample() const = 0;
     virtual Ray ray_sample() const = 0;
 
-	BoundingBox3 aabb;
+	AABB3 aabb;
 	Vector2f uv_scale;
 };
 

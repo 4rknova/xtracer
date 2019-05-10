@@ -18,6 +18,9 @@ void render_main_menu(state_t *state);
 
 void container(state_t *state);
 
+void init(state_t *state);
+void draw_widgets(state_t *state);
+
 } /* namespace gui */
 
 #endif /* XT_GUI_H_INCLUDED */

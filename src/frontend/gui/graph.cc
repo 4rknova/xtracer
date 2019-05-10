@@ -15,14 +15,13 @@
 #include <xtcore/sampler_col.h>
 #include <xtcore/sampler_tex.h>
 #include <xtcore/mesh.h>
-#include "graphics.h"
 #include "graph.h"
-#include "../util.h"
+#include "util.h"
 
 #define COL_LINE_NORMAL   (ImColor(0.00f, 0.00f, 0.00f, 1.0f))
 #define COL_LINE_HOVERED  (ImColor(1.00f, 1.00f, 1.00f, 0.5f))
 #define COL_NODE_NORMAL   (ImColor(0.40f, 0.40f, 0.40f, 1.0f))
-#define COL_NODE_HOVERED  (ImColor(0.40f, 0.40f, 0.40f, 0.5f))
+#define COL_NODE_HOVERED  (ImColor(0.40f, 0.40f, 0.40f, 1.0f))
 #define COL_SLOT_NORMAL   (ImColor(0.40f, 0.75f, 1.00f, 0.5f))
 #define COL_SLOT_HOVERED  (ImColor(0.00f, 0.00f, 0.00f, 0.8f))
 #define COL_LINK_NORMAL   (ImColor(175,175, 75,255))
@@ -309,18 +308,6 @@ void graph_t::clear()
 
 bool node_t::draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset)
 {
-/*
-    static float scale = 1.0;
-
-    if (ImGui::GetIO().KeyCtrl)
-    {
-        scale = MAX(1.0, scale + ImGui::GetIO().MouseWheel / 250.);
-        printf("%f\n", scale);
-    }
-
-    size = ImVec2(scale * size.x, scale * size.y);
-*/
-
     bool node_hovered = false
         ,node_active  = false;
 

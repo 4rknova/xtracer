@@ -7,17 +7,19 @@
 #include <xtcore/xtcore.h>
 #include <xtcore/midi.h>
 #include <nimg/yuv4mpeg2.h>
+#include <stb/stb_image.h>
 #include <imgui.h>
 
+#include "shader.h"
 #include "imgui_extra.h"
 #include "config.h"
 #include "action.h"
 #include "util.h"
 #include "fsutil.h"
 #include "gui.h"
-#include "graphics.h"
+#include "logo.h"
 
-
+#define STRINGIFY(A) #A
 #define MIN(x,y) (x > y ? y : x)
 #define MAX(x,y) (x > y ? x : y)
 
@@ -156,6 +158,156 @@ const resolution_t resolutions[] = {
 };
 
 namespace gui {
+
+enum ACTION
+{
+      ACTION_NOP
+    , ACTION_RENDER
+    , ACTION_SCENE_SAVE
+    , ACTION_SCENE_LOAD
+    , ACTION_RENDER_SAVE
+};
+
+static const char *postsdr_source_frag =
+#include "background.frag"
+
+void apply_theme()
+{
+	ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowTitleAlign  = ImVec2(0.5, 0.5);
+
+    style.Alpha             =  1.0f;
+    style.FrameRounding     =  4.0f;
+    style.IndentSpacing     = 12.0f;
+	style.WindowRounding    =  5.3f;
+	style.ScrollbarRounding =  2.0f;
+
+	style.Colors[ImGuiCol_Text]                  = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.09f, 0.09f, 0.15f, 1.00f);
+	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.05f, 0.05f, 0.10f, 0.85f);
+	style.Colors[ImGuiCol_Border]                = ImVec4(0.70f, 0.70f, 0.70f, 0.35f);
+	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.10f, 0.10f, 0.20f, 0.90f);
+	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgHovered]        = ImVec4(0.85f, 0.80f, 0.80f, 0.40f);
+	style.Colors[ImGuiCol_FrameBgActive]         = ImVec4(0.80f, 0.65f, 0.65f, 0.45f);
+	style.Colors[ImGuiCol_TitleBg]               = ImVec4(0.50f, 0.50f, 0.50f, 0.83f);
+	style.Colors[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+	style.Colors[ImGuiCol_TitleBgActive]         = ImVec4(0.00f, 0.00f, 0.00f, 0.87f);
+	style.Colors[ImGuiCol_MenuBarBg]             = ImVec4(0.40f, 0.40f, 0.60f, 0.50f);
+	style.Colors[ImGuiCol_ScrollbarBg]           = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
+	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.55f, 0.53f, 0.55f, 0.51f);
+	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.56f, 0.56f, 0.56f, 0.91f);
+	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.90f, 0.90f, 0.90f, 0.83f);
+	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.70f, 0.70f, 0.70f, 0.62f);
+	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.30f, 0.30f, 0.30f, 0.84f);
+	style.Colors[ImGuiCol_Button]                = ImVec4(0.50f, 0.72f, 0.89f, 0.49f);
+	style.Colors[ImGuiCol_ButtonHovered]         = ImVec4(0.40f, 0.52f, 0.59f, 0.68f);
+	style.Colors[ImGuiCol_ButtonActive]          = ImVec4(0.70f, 0.50f, 0.55f, 1.00f);
+	style.Colors[ImGuiCol_Header]                = ImVec4(0.30f, 0.69f, 1.00f, 0.53f);
+	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.44f, 0.61f, 0.86f, 1.00f);
+	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.38f, 0.62f, 0.83f, 1.00f);
+	style.Colors[ImGuiCol_Column]                = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
+	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
+	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 1.00f, 1.00f, 0.85f);
+	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
+	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
+	style.Colors[ImGuiCol_PlotLines]             = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_PlotLinesHovered]      = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+}
+
+void init(state_t *state)
+{
+	// Load logo
+    int w, h, comp;
+    unsigned char* image = stbi_load_from_memory(res_logo_png, res_logo_png_len, &w, &h, &comp, STBI_rgb_alpha);
+    glGenTextures(1, &(state->textures.logo));
+    glBindTexture(GL_TEXTURE_2D, state->textures.logo);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    stbi_image_free(image);
+
+    apply_theme();
+}
+
+void handle_io_kb(int key)
+{
+    ImGuiIO &io = ImGui::GetIO();
+	printf("%i\n", key);
+    io.AddInputCharacter(key);
+}
+
+void handle_io_ms(int x, int y, bool button_event, bool left, bool right, float wheel)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    io.MousePos = ImVec2((float)x, (float)y);
+    if (button_event) {
+        io.MouseDown[0] = left;
+        io.MouseDown[1] = right;
+        io.MouseWheel   = wheel;
+    }
+}
+
+void render_background(state_t *state)
+{
+	static GLuint   vao     = 0;
+	static GLuint   vbo     = 0;
+	static Program *postprg = 0;
+
+	if (!postprg) {
+		Shader  *postsdr_frag;
+        postsdr_frag = new Shader(GL_FRAGMENT_SHADER);
+    	postprg = new Program;
+    	postsdr_frag->set_source(postsdr_source_frag);
+	    postprg->add_shader(postsdr_frag);
+        postprg->link();
+	}
+
+	if (!vbo) {
+		GLfloat verts[] = {
+           -1,-1, 0,
+            1,-1, 0,
+            1, 1, 0,
+           -1,-1, 0,
+           -1, 1, 0,
+            1, 1, 0,
+		};
+
+		glGenVertexArrays(1, &vao);
+		glGenBuffers(1, &vbo);
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * sizeof(verts), &verts[0], GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+	}
+
+    postprg->set_uniform("iWindowResolution"
+        , NMath::Vector2f((float)state->window.width
+                        , (float)state->window.height));
+
+	glBindVertexArray(vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void draw_widgets(state_t *state)
+{
+    for (auto i : state->workspaces) i->update();
+    render_background(state);
+    render_main_menu(state);
+    container(state);
+    ImGui::Render();
+}
 
 void draw_edit_str(const char *label, std::string &value)
 {
@@ -378,7 +530,6 @@ void mm_network(state_t *state)
     if (ImGui::BeginMenu(STR_NETWORK)) {
         if (ImGui::MenuItem(STR_BROADCAST)) { action::broadcast(state); }
         if (ImGui::MenuItem(STR_RECEIVE  )) { action::listen   (state); }
-        if (ImGui::MenuItem("test wget"  )) { action::test_wget(); }
         ImGui::EndMenu();
     }
 }
@@ -399,8 +550,8 @@ void mm_integrator(workspace_t *ws)
             if (ImGui::BeginMenu("Integrator")) {
                 bool render = false;
                 if (ImGui::MenuItem("Depth"     )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
-                /*
                 if (ImGui::MenuItem("Stencil"   )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
+                /*
                 if (ImGui::MenuItem("Normal"    )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
                 */
                 if (ImGui::MenuItem("UV"        )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
@@ -609,7 +760,6 @@ void panel_log()
     ImGui::Checkbox("message" , &log_filter_msg);
     ImGui::Checkbox("warning" , &log_filter_wrn);
     ImGui::Checkbox("error"   , &log_filter_err);
-    ImGui::Separator();
     ImGui::EndChild();
     ImGui::NewLine();
     ImGui::Checkbox("autoscroll"   , &log_autoscroll);
@@ -702,13 +852,16 @@ void panel_workspaces(state_t *state)
     ImGui::Columns(2, "LST_WORKSPACES", false);
     {
         ImGui::SetColumnWidth(-1,100);
-        ImGui::BeginChild("LST_LOG_FILTERS", ImVec2(90, 150));
+        ImGui::BeginChild("LST_WSP_FILTERS", ImVec2(90, 125));
         ImGui::Text(STR_FILTERS);
         ImGui::Separator();
         ImGui::Checkbox("busy", &activity_filter_busy);
         ImGui::Checkbox("idle", &activity_filter_idle);
         ImGui::EndChild();
         ImGui::NextColumn();
+        ImDrawList *dl = ImGui::GetWindowDrawList();
+        ImVec2 p = ImGui::GetCursorScreenPos();
+        dl->AddRectFilled(p + ImVec2(1,1), p + ImGui::GetWindowSize(), ImColor(0.f,0.f,0.f,0.1f));
         int count = 0;
         for (auto& i : state->workspaces) {
             bool rendering = (i->is_rendering());

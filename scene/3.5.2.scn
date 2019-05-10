@@ -2,21 +2,22 @@ title = Cornell Box
 descr = Cornell Box
 versn = 0.5
 
-data = data/geometry/graphics.cs.williams.edu
+data = data
+path_model   = <data>/geometry/graphics.cs.williams.edu
+path_cubemap = <data>/image/envmap/hdr
 
 environment = {
-    type = gradient
+    type = erp
     config = {
-        a = col3(1.0,1.0,1.0)
-        b = col3(0.7,0.8,1.0)
+        source = <path_cubemap>/studio_small_03_2k.hdr
     }
 }
 
 camera = {
     default  = {
         type     = thin-lens
-		fov      = 45
-		position = vec3(0,1,4)
+		fov      = 120
+		position = vec3(0,1,2)
 		target   = vec3(0,1,0)
 		up       = vec3(0,1,0)
     }
@@ -24,7 +25,7 @@ camera = {
 
 object = {
 	scene = {
-		source = <data>/cornell/CornellBox-Glossy.obj
+		source = <path_model>/cornell/CornellBox-Glossy.obj
         prefix = cornell_
     }
 }

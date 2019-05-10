@@ -47,7 +47,7 @@ inline ColorRGBf operator *(const float s, const ColorRGBf &lhs);
 class ColorRGBAf
 {
 	public:
-		explicit ColorRGBAf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f, const float a = 1.0f);
+		explicit ColorRGBAf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f, const float a = 0.0f);
 		ColorRGBAf(const ColorRGBf &rhs);
 		ColorRGBAf(const ColorRGBAf &rhs);
 

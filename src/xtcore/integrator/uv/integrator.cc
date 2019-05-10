@@ -1,18 +1,6 @@
-#include <iostream>
-#include <vector>
-#include <iomanip>
-#include <omp.h>
-
 #include <nmath/precision.h>
-#include <nmath/mutil.h>
-#include <nmath/prng.h>
 #include <nmath/sample.h>
-#include <xtcore/math/plane.h>
-#include <nimg/luminance.h>
-#include <ncf/util.h>
-#include <xtcore/tile.h>
 #include <xtcore/aa.h>
-
 #include "integrator.h"
 
 namespace xtcore {

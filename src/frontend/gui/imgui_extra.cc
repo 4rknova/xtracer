@@ -3,6 +3,10 @@
 #include "imgui_extra.h"
 #include <imgui/imgui_internal.h>
 
+#define MIN(x,y) (x > y ? y : x)
+#define MAX(x,y) (x > y ? x : y)
+#define CLAMP(x,a,b) (MIN(MAX(x,a),b))
+
 void slider_float(const char *name, float &val, float a, float b)
 {
     float tmp = val;
@@ -41,35 +45,43 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
     }
 }
 
-void textedit_float2(const char *name, NMath::Vector2f &vec, float step)
+void textedit_float2(const char *name, NMath::Vector2f &vec, float step, float width)
 {
     float x = vec.x;
     float y = vec.y;
+
+//    float w2 = width / 2.f;
 
     std::string nx(name); nx.append(".x");
     std::string ny(name); ny.append(".y");
 
     ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
 
-    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x;
+//    ImGui::PushItemWidth(w2);
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; //ImGui::PopItemWidth();
     if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
+//    ImGui::PopItemWidth();
 }
 
-void textedit_float3(const char *name, NMath::Vector3f &vec, float step)
+void textedit_float3(const char *name, NMath::Vector3f &vec, float step, float width)
 {
     float x = vec.x;
     float y = vec.y;
     float z = vec.z;
 
-    std::string nx(name); nx.append(".x");
-    std::string ny(name); ny.append(".y");
-    std::string nz(name); nz.append(".z");
+//    float w3 = width / 3.f;
+
+    std::string nx("##"); nx.append(name); nx.append(".x");
+    std::string ny("##"); ny.append(name); ny.append(".y");
+    std::string nz("##"); nz.append(name); nz.append(".z");
 
     ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
 
-    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x;
-    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
+//    ImGui::PushItemWidth(w3);
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; //ImGui::SameLine();
+    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y; //ImGui::SameLine();
     if (ImGui::InputFloat(nz.c_str(), &z, step, 2 * step, f)) vec.z = z;
+//    ImGui::PopItemWidth();
 }
 
 void not_yet_implemented()

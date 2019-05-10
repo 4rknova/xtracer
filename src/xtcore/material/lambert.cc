@@ -33,8 +33,9 @@ bool Lambert::sample_path(
 ) const
 {
     hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
-    hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal);
-    hit_result.intensity     = get_sample("diffuse", hit_record.texcoord);
+    hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal).normalized();
+    hit_result.intensity     = get_sample("diffuse", hit_record.texcoord)
+                             * dot(hit_record.normal, hit_result.ray.direction);
     return true;
 }
 

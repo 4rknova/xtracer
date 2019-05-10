@@ -3,10 +3,6 @@
 #define NANOSVG_IMPLEMENTATION
 #include "nanosvg/nanosvg.h"
 #include <imgui/imgui.h>
-#include "graphics.h"
-#include "res_icon_camera.h"
-#include "res_icon_color.h"
-#include "res_logo.h"
 
 namespace gui {
     namespace graphics {
@@ -14,8 +10,6 @@ namespace gui {
 typedef struct {
     NSVGimage *img;
 } graphic_t;
-
-graphic_t _resources[6];
 
 int load(graphic_t *vec, const char *src, float size)
 {
@@ -36,26 +30,8 @@ int kill(graphic_t *vec)
     return 0;
 }
 
-void init()
+void draw(NSVGimage *image, float position_x, float position_y)
 {
-//    load(&_resources[GRAPHIC_LOGO   ], gui::resources::svg::logo        , 96.f);
-//    load(&_resources[GRAPHIC_CAMERA ], gui::resources::svg::icon_camera , 96.f);
-//    load(&_resources[GRAPHIC_OBJECT ], gui::resources::svg::icon_object , 96.f);
-//   load(&_resources[GRAPHIC_TEXTURE], gui::resources::svg::icon_texture, 96.f);
-    load(&_resources[GRAPHIC_COLOR  ], gui::resources::svg::icon_color  , 10.f);
-//    load(&_resources[GRAPHIC_VALUE  ], gui::resources::svg::icon_value  , 96.f);
-
-//    load(&icon_svg_cam, logo, 96.f);
-}
-
-void deinit()
-{
-    for (size_t i = 0; i < GRAPHIC_VALUE; ++i) kill(&_resources[i]);
-}
-
-void draw(GRAPHIC graphic, float position_x, float position_y)
-{
-    NSVGimage *image = _resources[graphic].img;
     ImVec2 pos = ImVec2(position_x, position_y);
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 

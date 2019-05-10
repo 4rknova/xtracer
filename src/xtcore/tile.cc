@@ -110,17 +110,18 @@ void order_random(Tileset &tiles)
 
 void order_scanline(Tileset &tiles)
 {
-    auto it = tiles.begin();
-    auto et = tiles.end();
+        auto it = tiles.begin();
+        auto et = tiles.end();
 
-    std::sort(it, et, [](const tile_t &a, const tile_t &b) -> bool {
-        float dy = a.y0() - (float)b.y0();
-        float dx = a.x0() - (float)b.x0();
+        std::stable_sort(it, et, [](const tile_t &a, const tile_t &b) -> bool {
+            return a.x0() < b.x0();
+        });
 
-        if (dy <= 0.f) return dx < 0.f;
-        return false;
+        auto jt = tiles.begin();
 
-    });
+        std::stable_sort(jt, et, [](const tile_t &a, const tile_t &b) -> bool {
+            return a.y0() < b.y0();
+        });
 }
 
 void order_radial(Tileset &tiles, bool outwards)

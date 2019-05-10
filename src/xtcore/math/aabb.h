@@ -11,33 +11,33 @@ using NMath::Vector3f;
 
 namespace xtcore {
 
-class BoundingBox2
+class AABB2
 {
 public:
-    BoundingBox2();
-    BoundingBox2(const Vector2f& a, const Vector2f& b);
+    AABB2();
+    AABB2(const Vector2f& a, const Vector2f& b);
 
     inline bool contains(const Vector2f& p) const; // returns true if the given point is within the bounds of the box, else false
     inline Vector2f center() const;                // returns the center coordinates of the box
 
     inline void augment(const Vector2f& v);        // augments the bounding box to include the given vector
-    inline void augment(const BoundingBox2& b);    // augments the bounding box to include the given bounding box
+    inline void augment(const AABB2& b);    // augments the bounding box to include the given bounding box
 
     Vector2f min, max;
 };
 
-class BoundingBox3
+class AABB3
 {
 public:
-    BoundingBox3();
-    BoundingBox3(const Vector3f& a, const Vector3f& b);
+    AABB3();
+    AABB3(const Vector3f& a, const Vector3f& b);
 
     inline bool contains(const Vector3f& p) const;        // returns true if the given point is within the bounds of the box, else false
-	inline bool contains(const BoundingBox3 &aabb) const;
+	inline bool contains(const AABB3 &aabb) const;
     inline Vector3f center() const;                       // returns the center coordinates of the box
 
     inline void augment(const Vector3f& v);               // augments the bounding box to include the given vector
-    inline void augment(const BoundingBox3& b);           // augments the bounding box to include the given bounding box
+    inline void augment(const AABB3& b);           // augments the bounding box to include the given bounding box
 
 	bool intersection(const Ray &ray) const;
 

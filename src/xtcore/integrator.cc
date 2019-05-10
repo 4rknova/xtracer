@@ -21,6 +21,11 @@ void IIntegrator::setup_auxiliary()
     // Do nothing
 }
 
+void IIntegrator::clean_auxiliary()
+{
+    // Do nothing
+}
+
 void IIntegrator::render()
 {
     if (!ctx) return;

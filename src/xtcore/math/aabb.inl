@@ -7,17 +7,17 @@
 
 namespace xtcore {
 
-inline bool BoundingBox2::contains(const Vector2f& p) const
+inline bool AABB2::contains(const Vector2f& p) const
 {
     return (p.x >= min.x) && (p.y>=min.y) && (p.x<=max.x) && (p.y<=max.y);
 }
 
-inline Vector2f BoundingBox2::center() const
+inline Vector2f AABB2::center() const
 {
     return (min + max) / 2;
 }
 
-inline void BoundingBox2::augment(const Vector2f& v)
+inline void AABB2::augment(const Vector2f& v)
 {
     if(v.x > max.x)	max.x = v.x;
     if(v.x < min.x)	min.x = v.x;
@@ -26,7 +26,7 @@ inline void BoundingBox2::augment(const Vector2f& v)
     if(v.y < min.y)	min.y = v.y;
 }
 
-inline void BoundingBox2::augment(const BoundingBox2& b)
+inline void AABB2::augment(const AABB2& b)
 {
     if(b.max.x > max.x)	max.x = b.max.x;
     if(b.min.x < min.x)	min.x = b.min.x;
@@ -35,12 +35,12 @@ inline void BoundingBox2::augment(const BoundingBox2& b)
     if(b.min.y < min.y)	min.y = b.min.y;
 }
 
-inline bool BoundingBox3::contains(const Vector3f& p) const
+inline bool AABB3::contains(const Vector3f& p) const
 {
     return (p.x>= min.x) && (p.y>=min.y) && (p.z>=min.z) && (p.x<=max.x) && (p.y<=max.y) && (p.z<=max.z);
 }
 
-inline bool BoundingBox3::contains(const BoundingBox3 &aabb) const
+inline bool AABB3::contains(const AABB3 &aabb) const
 {
 
 	if(min.x > aabb.max.x || aabb.min.x > max.x) {
@@ -58,12 +58,12 @@ inline bool BoundingBox3::contains(const BoundingBox3 &aabb) const
 	return true;
 }
 
-inline Vector3f BoundingBox3::center() const
+inline Vector3f AABB3::center() const
 {
     return (min + max) / 2.f;
 }
 
-inline void BoundingBox3::augment(const Vector3f& v)
+inline void AABB3::augment(const Vector3f& v)
 {
     if(v.x > max.x)	max.x = v.x;
     if(v.x < min.x)	min.x = v.x;
@@ -75,7 +75,7 @@ inline void BoundingBox3::augment(const Vector3f& v)
     if(v.z < min.z)	min.z = v.z;
 }
 
-inline void BoundingBox3::augment(const BoundingBox3& b)
+inline void AABB3::augment(const AABB3& b)
 {
     if(b.max.x > max.x)	max.x = b.max.x;
     if(b.min.x < min.x)	min.x = b.min.x;

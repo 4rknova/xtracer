@@ -13,7 +13,7 @@ template <typename T>
 class OctreeItem
 {
 	public:
-		BoundingBox3 aabb;
+		AABB3 aabb;
 		T data;
 };
 
@@ -24,7 +24,7 @@ class OctreeNode
 		OctreeNode();
 		size_t count_items();
 
-		BoundingBox3 aabb;
+		AABB3 aabb;
 		std::list<OctreeItem<T>*> items;
 		OctreeNode<T> *child[8];
 };
@@ -38,7 +38,7 @@ class Octree
 
 		void clear();
 		void build();
-		void add(const BoundingBox3 &aabb, const T &data);
+		void add(const AABB3 &aabb, const T &data);
 		OctreeItem<T> *intersection(const Ray &ray, hit_record_t *point) const;
 
 		void max_items_per_node(size_t count);
@@ -46,7 +46,7 @@ class Octree
 		size_t max_items_per_node();
 		size_t max_depth();
 
-        BoundingBox3 bbox();
+        AABB3 bbox();
 
 	private:
 		OctreeItem<T> *r_intersection(OctreeNode<T> *node, const Ray &ray, hit_record_t *point) const;
@@ -54,7 +54,7 @@ class Octree
 		void release(OctreeNode<T> *node);	// Release a sub-tree.
 
         OctreeNode<T> *m_root;
-		BoundingBox3 m_aabb;
+		AABB3 m_aabb;
 		std::vector<OctreeItem<T> > m_items;
 
 		size_t m_max_items_per_node;// Maximum number of items per node.

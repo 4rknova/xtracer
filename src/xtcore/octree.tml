@@ -95,7 +95,7 @@ void Octree<T>::clear()
 }
 
 template <typename T>
-void Octree<T>::add(const BoundingBox3 &aabb, const T &data)
+void Octree<T>::add(const AABB3 &aabb, const T &data)
 {
 	// Create the item.
 	OctreeItem<T> item;
@@ -110,7 +110,7 @@ void Octree<T>::add(const BoundingBox3 &aabb, const T &data)
 }
 
 template <typename T>
-BoundingBox3 Octree<T>::bbox()
+AABB3 Octree<T>::bbox()
 {
     return m_root->aabb;
 }
@@ -143,28 +143,27 @@ void Octree<T>::subdivide(OctreeNode<T> *node, size_t level)
 		return;
 	}
 
-	BoundingBox3 n_aabb = node->aabb;
+	AABB3 n_aabb = node->aabb;
 
-	BoundingBox3 c_aabb[8];
+	AABB3 c_aabb[8];
 
 	Vector3f center = n_aabb.center();
 
-	c_aabb[0] = BoundingBox3(n_aabb.min, center);
+	c_aabb[0] = AABB3(n_aabb.min, center);
 
-	c_aabb[1] = BoundingBox3(Vector3f(center.x, n_aabb.min.y, n_aabb.min.z),
-							 Vector3f(n_aabb.max.x, center.y, center.z));
-	c_aabb[2] = BoundingBox3(Vector3f(center.x, center.y, n_aabb.min.z),
-							 Vector3f(n_aabb.max.x, n_aabb.max.y, center.z));
-	c_aabb[3] = BoundingBox3(Vector3f(n_aabb.min.x, center.y, n_aabb.min.z),
-							 Vector3f(center.x, n_aabb.max.y, center.z));
-	c_aabb[4] = BoundingBox3(Vector3f(n_aabb.min.x, n_aabb.min.y, center.z),
-							 Vector3f(center.x, center.y, n_aabb.max.z));
-	c_aabb[5] = BoundingBox3(Vector3f(center.x, n_aabb.min.y, center.z),
-							 Vector3f(n_aabb.max.x, center.y, n_aabb.max.z));
-	c_aabb[6] = BoundingBox3(center, n_aabb.max);
-
-	c_aabb[7] = BoundingBox3(Vector3f(n_aabb.min.x, center.y, center.z),
-							 Vector3f(center.x, n_aabb.max.y, m_aabb.max.z));
+	c_aabb[1] = AABB3(Vector3f(center.x, n_aabb.min.y, n_aabb.min.z),
+					  Vector3f(n_aabb.max.x, center.y, center.z));
+	c_aabb[2] = AABB3(Vector3f(center.x, center.y, n_aabb.min.z),
+					  Vector3f(n_aabb.max.x, n_aabb.max.y, center.z));
+	c_aabb[3] = AABB3(Vector3f(n_aabb.min.x, center.y, n_aabb.min.z),
+					  Vector3f(center.x, n_aabb.max.y, center.z));
+	c_aabb[4] = AABB3(Vector3f(n_aabb.min.x, n_aabb.min.y, center.z),
+					  Vector3f(center.x, center.y, n_aabb.max.z));
+	c_aabb[5] = AABB3(Vector3f(center.x, n_aabb.min.y, center.z),
+					  Vector3f(n_aabb.max.x, center.y, n_aabb.max.z));
+	c_aabb[6] = AABB3(center, n_aabb.max);
+	c_aabb[7] = AABB3(Vector3f(n_aabb.min.x, center.y, center.z),
+					  Vector3f(center.x, n_aabb.max.y, m_aabb.max.z));
 
 	for (size_t i = 0; i < 8; ++i) {
 			OctreeNode<T> *c = new (std::nothrow) OctreeNode<T>;

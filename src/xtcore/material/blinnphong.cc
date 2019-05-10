@@ -48,7 +48,13 @@ bool BlinnPhong::sample_path(
     else {
         hit_result.intensity = get_sample("specular", hit_record.texcoord);
         scalar_t exp = get_scalar("exponent");
-        hit_result.ray.direction = NMath::Sample::lobe(hit_record.normal, -hit_record.incident_direction, exp);
+        hit_result.ray.direction = NMath::Sample::lobe(hit_record.normal, -hit_record.incident_direction, exp).normalized();
+/*
+        hit_result.ray.direction = (hit_result.ray.direction + 1.0) * 0.5;
+        nimg::ColorRGBf resc(hit_result.ray.direction.x, hit_result.ray.direction.y, hit_result.ray.direction.z);
+        hit_result.intensity = resc;
+        return false;
+*/
     }
 
     return true;

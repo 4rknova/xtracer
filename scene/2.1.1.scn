@@ -1,0 +1,199 @@
+title       = Room
+description = Three spheres in a room (diffuse, sphere lights).
+version     = 0.5
+
+camera = {
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,0,-2000)
+		up       = vec3(0,1,0)
+	}
+
+	side = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(300,300,-1400)
+		up       = vec3(0,1,0)
+	}
+}
+
+geometry = {
+	red_ball = {
+		type     = sphere
+		position = vec3(80,-305,-100)
+		radius   = 95
+	}
+
+	green_ball = {
+		type     = sphere
+		position = vec3(350,-330,350)
+       	radius   = 77
+	}
+
+	blue_ball = {
+		type     = sphere
+		position = vec3(-220, -245, 80)
+		radius   = 155
+	}
+
+	floor = {
+		type     = plane
+		normal   = vec3(0,1,0)
+		distance = -400
+	}
+
+	ceiling = {
+		type     = plane
+		normal   = vec3(0,-1,0)
+		distance = 400
+	}
+
+	back = {
+		type     = plane
+		normal   = vec3(0,0,-1)
+		distance = 500
+	}
+
+	left_wall = {
+		type     = plane
+		normal   = vec3(1,0,0)
+		distance = -500
+	}
+
+	right_wall = {
+		type     = plane
+		normal   = vec3(-1,0,0)
+		distance = 500
+	}
+
+	l0 = {
+		type     = sphere
+		radius   = 25
+		position = vec3(0,150,-400)
+	}
+}
+
+object = {
+	ball = {
+		geometry = red_ball
+		material = lambert_red
+	}
+	green_ball = {
+		geometry = green_ball
+		material = lambert_green
+	}
+	blue_ball = {
+		geometry = blue_ball
+		material = lambert_blue
+	}
+    floor = {
+		geometry = floor
+		material = lambert_grey
+	}
+	ceiling = {
+		geometry = ceiling
+		material = lambert_grey
+	}
+    back = {
+		geometry = back
+		material = light # lambert_grey
+	}
+	right_wall = {
+		geometry = right_wall
+        material = lambert_blue
+	}
+	left_wall = {
+		geometry = left_wall
+		material = light # lambert_green
+	}
+    light = {
+        geometry = l0
+        material = light
+    }
+}
+
+material = {
+	lambert_red = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(1,0,0)
+                }
+
+                diffuse = {
+                    type  = color
+                    value = col3(1,0,0)
+                }
+            }
+        }
+	}
+
+	lambert_green = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+                diffuse = {
+                    type = color
+                    value = col3(0,1,0)
+                }
+            }
+        }
+	}
+
+	lambert_blue = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(0.2,0.4,1)
+                }
+                diffuse = {
+                    type = color
+                    value = col3(0.2,0.4,1)
+                }
+            }
+        }
+	}
+
+	lambert_grey = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                ambient = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+                diffuse = {
+                    type = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
+	}
+
+    light = {
+        type = emissive
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+

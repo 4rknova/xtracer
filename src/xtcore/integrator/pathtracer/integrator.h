@@ -2,13 +2,10 @@
 #define XTCORE_INTEGRATOR_PATHTRACER_H_INCLUDED
 
 #include <nplatform/timer.h>
-
 #include <nmath/precision.h>
 #include <nmath/vector.h>
-
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
-
 #include <xtcore/math/hitrecord.h>
 #include <xtcore/math/ray.h>
 #include <xtcore/scene.h>

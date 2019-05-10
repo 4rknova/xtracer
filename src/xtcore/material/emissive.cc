@@ -13,7 +13,7 @@ bool Emissive::shade(
 {
     UNUSED(camera)
     UNUSED(emitter)
-    intensity = get_sample(MAT_SAMPLER_DIFFUSE , hit_record.texcoord);
+    intensity = get_sample(MAT_SAMPLER_EMISSIVE , hit_record.texcoord);
     return false;
 }
 

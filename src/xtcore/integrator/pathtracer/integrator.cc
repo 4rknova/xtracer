@@ -50,12 +50,9 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
     xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
 
-    size_t sample_count = tile->samples.count();
-
-    while (sample_count > 0) {
+    while (tile->samples.count() > 0) {
         xtcore::antialiasing::sample_rgba_t aa_sample;
         tile->samples.pop(aa_sample);
-        --sample_count;
 
         nimg::ColorRGBAf color_pixel;
         tile->read(aa_sample.pixel.x, aa_sample.pixel.y, color_pixel);

@@ -21,8 +21,7 @@ void task_render(workspace_t *ws)
 
 void task_load(workspace_t *ws)
 {
-    if (!ws) return;
-    ws->load();
+    if (ws) ws->load();
 }
 
 void task_broadcast(gui::state_t *state)
@@ -52,12 +51,6 @@ int listen(gui::state_t *state)
 {
     std::thread t(task_listen, state);
     t.detach();
-    return 0;
-}
-
-int test_wget()
-{
-    xtcore::network::wget(0,0);
     return 0;
 }
 

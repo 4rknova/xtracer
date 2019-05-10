@@ -1,9 +1,9 @@
-title = Scanned Face
+title = Scanned Hand
 descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
 
 path_data  = data
-path_model = <path_data>/hand/Hand 01 Claw
+path_model = <path_data>/geometry/ten24/Hand 01 Claw
 path_geo   = <path_model>/OBJ
 path_tex   = <path_model>/Texture
 
@@ -16,21 +16,25 @@ environment = {
 }
 
 camera = {
-	default = {
+	side = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(0,0,-0.1)
-		target   = vec3(0,0,100)
+		position = vec3(-0.699,1.99,36.9)
+		target   = vec3(0,0,8.99)
 		up       = vec3(0,1,0)
         aperture = 0
         flength  = 0
 	}
 
-    ods = {
-        type     = ods
-        ipd      = 1.5
-        position = vec3(0,0,1)
-    }
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-0.7,1.5,31)
+		target   = vec3(0,0,100)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+	}
 }
 
 geometry = {

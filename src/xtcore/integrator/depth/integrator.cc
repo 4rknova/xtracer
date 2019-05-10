@@ -1,18 +1,6 @@
 #include <iostream>
-#include <vector>
-#include <iomanip>
-#include <omp.h>
-
 #include <nmath/precision.h>
-#include <nmath/mutil.h>
-#include <nmath/prng.h>
-#include <nmath/sample.h>
-#include <xtcore/math/plane.h>
-#include <nimg/luminance.h>
-#include <ncf/util.h>
-#include <xtcore/tile.h>
 #include <xtcore/aa.h>
-
 #include "integrator.h"
 
 namespace xtcore {
@@ -28,7 +16,6 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
         tile->samples.pop(sample);
 
 		nimg::ColorRGBAf color_pixel;
-        nimg::ColorRGBf  color_sample;
 
         tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
@@ -42,12 +29,17 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         float depth = 0.f;
 
-        if (ctx->scene.intersection(ray, hit_record)) {
+        bool found_hit = ctx->scene.intersection(ray, hit_record);
+
+        if (found_hit) {
             depth = 1. / log((ray.origin - hit_record.point).length());
+            depth = color_pixel.r() + depth * sample.weight;
+            color_pixel = nimg::ColorRGBAf(depth, depth, depth, 1);
         }
 
-        color_sample += nimg::ColorRGBf(depth, depth, depth) * (1. / ctx->params.samples);
-        tile->write(floor(sample.pixel.x), floor(sample.pixel.y), nimg::ColorRGBf(color_pixel) + color_sample * sample.weight);
+        color_pixel.a(1);
+
+        tile->write(floor(sample.pixel.x), floor(sample.pixel.y), color_pixel);
     }
 }
 

@@ -17,6 +17,7 @@ class IIntegrator
 	void render();
 
     virtual void setup_auxiliary();
+    virtual void clean_auxiliary();
     virtual void render_tile(tile_t *tile) = 0;
 
     xtcore::render::context_t *ctx;

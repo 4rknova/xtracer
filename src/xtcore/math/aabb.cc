@@ -2,19 +2,19 @@
 
 namespace xtcore {
 
-BoundingBox2::BoundingBox2()
+AABB2::AABB2()
 {}
 
-BoundingBox2::BoundingBox2(const Vector2f& a, const Vector2f& b)
+AABB2::AABB2(const Vector2f& a, const Vector2f& b)
 {
     min=Vector2f((a.x<=b.x)? a.x : b.x, (a.y<=b.y)? a.y : b.y);
     max=Vector2f((a.x>=b.x)? a.x : b.x, (a.y>=b.y)? a.y : b.y);
 }
 
-BoundingBox3::BoundingBox3()
+AABB3::AABB3()
 {}
 
-BoundingBox3::BoundingBox3(const Vector3f& a, const Vector3f& b)
+AABB3::AABB3(const Vector3f& a, const Vector3f& b)
 {
     min=Vector3f((a.x<=b.x)? a.x : b.x, (a.y<=b.y)? a.y : b.y, (a.z<=b.z)? a.z : b.z);
     max=Vector3f((a.x>=b.x)? a.x : b.x, (a.y>=b.y)? a.y : b.y, (a.z>=b.z)? a.z : b.z);
@@ -29,7 +29,7 @@ BoundingBox3::BoundingBox3(const Vector3f& a, const Vector3f& b)
     https://dl.acm.org/citation.cfm?id=1198748
     http://people.csail.mit.edu/amy/papers/box-jgt.pdf
 */
-bool BoundingBox3::intersection(const Ray &ray) const
+bool AABB3::intersection(const Ray &ray) const
 {
 	if (ray.origin > min && ray.origin < max)
 		return true;
