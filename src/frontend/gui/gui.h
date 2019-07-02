@@ -12,8 +12,6 @@ void mm_export      (workspace_t *ws);
 void mm_renderer    (workspace_t *ws);
 void mm_zoom        (workspace_t *ws);
 
-void mm_dialog_load (state_t *state, bool &is_active);
-void mm_dialog_info (state_t *state, bool &is_active);
 void render_main_menu(state_t *state);
 
 void container(state_t *state);

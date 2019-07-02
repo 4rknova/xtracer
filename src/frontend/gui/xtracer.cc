@@ -59,9 +59,7 @@ int main(int argc, char** argv)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
     ImGui_ImplGlfwGL3_Init(window, true);
 
-    // Setup style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     gui::init(&state);
 

@@ -227,7 +227,7 @@ void init(state_t *state)
 {
 	// Load logo
     int w, h, comp;
-    unsigned char* image = stbi_load_from_memory(res_logo_png, res_logo_png_len, &w, &h, &comp, STBI_rgb_alpha);
+    unsigned char* image = stbi_load_from_memory(__res_logo_png, __res_logo_png_len, &w, &h, &comp, STBI_rgb_alpha);
     glGenTextures(1, &(state->textures.logo));
     glBindTexture(GL_TEXTURE_2D, state->textures.logo);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -672,33 +672,6 @@ void mm_dialog_load(state_t *state, bool &is_active)
 	}
 }
 
-void mm_dialog_info(state_t *state, bool &is_active)
-{
-    if (!is_active) return;
-
-    ImGui::OpenPopup("About");
-	if (ImGui::BeginPopupModal("About", 0, WIN_FLAGS_SET_2)) {
-        ImGui::SameLine(ImGui::GetWindowWidth() - 425);
-        ImGui::BeginGroup();
-        ImGui::NewLine();
-        ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(300,53));
-        ImGui::Text("v%s", xtcore::get_version());
-        ImGui::NewLine();
-        ImGui::EndGroup();
-        ImGui::NewLine();
-        ImGui::Text("%s",xtcore::get_license());
-        ImGui::NewLine();
-        ImGui::NewLine();
-        ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-	    if (ImGui::Button("OK", ImVec2(75,0))) {
-			ImGui::CloseCurrentPopup();
-            is_active = false;
-        }
-        ImGui::NewLine();
-	    ImGui::EndPopup();
-    }
-}
-
 void render_main_menu(state_t *state)
 {
 	static bool flag_dg_load = false;
@@ -722,7 +695,6 @@ void render_main_menu(state_t *state)
                     ImGui::EndMenu();
                 }
             }
-            if (ImGui::MenuItem("About")) { flag_dg_info = true; }
             if (ImGui::MenuItem("Exit" )) { action::quit();      }
             ImGui::EndMenu();
         }
@@ -735,12 +707,26 @@ void render_main_menu(state_t *state)
             ImGui::EndMenu();
         }
         gui::mm_network(state);
+        
+        ImGui::SameLine(ImGui::GetWindowWidth()-60);
+        if (ImGui::BeginMenu("About")) {
+            ImGui::SameLine(ImGui::GetWindowWidth() - 515);
+            ImGui::BeginGroup();
+            ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(481,159));
+            ImGui::SameLine(ImGui::GetWindowWidth() - 515);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 27.f);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 110.f);
+            ImGui::Text("version %s", xtcore::get_version());
+            ImGui::EndGroup();
+            ImGui::Text("%s",xtcore::get_license());
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
     ImGui::PopStyleVar();
 
     mm_dialog_load(state, flag_dg_load);
-	mm_dialog_info(state, flag_dg_info);
 }
 
 void panel_log()
