@@ -36,5 +36,5 @@ with open(commit_msg_filepath, 'r') as f:
 		sys.exit(1)
 
 	with open(commit_msg_filepath, 'w') as file:
-		file.write('ISSUE-' + issue + ': ' + desc_short + '\n\n' + desc_long + '\n')
-		file.write('https://github.com/4rknova/xtracer/issues/' + issue + '\n')
+		file.write(desc_short + '\n\n' + desc_long + '\n')
+		file.write('Fixes #' + issue + ' https://github.com/4rknova/xtracer/issues/' + issue + '\n')
