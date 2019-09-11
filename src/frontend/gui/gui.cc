@@ -709,15 +709,15 @@ void render_main_menu(state_t *state)
         
         ImGui::SameLine(ImGui::GetWindowWidth()-60);
         if (ImGui::BeginMenu("About")) {
-            ImGui::SameLine(ImGui::GetWindowWidth() - 515);
             ImGui::BeginGroup();
-            ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(481,159));
+            ImGui::Image((void*)(uintptr_t)state->textures.logo, ImVec2(563,159));
             ImGui::SameLine(ImGui::GetWindowWidth() - 515);
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 27.f);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 90.f);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 110.f);
             ImGui::Text("version %s", xtcore::get_version());
-            ImGui::EndGroup();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 90.f);
             ImGui::Text("%s",xtcore::get_license());
+            ImGui::EndGroup();
             ImGui::EndMenu();
         }
 
@@ -785,7 +785,13 @@ void panel_log()
 
 bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = false)
 {
+
     bool res = false;
+
+    ImGui::PushStyleColor(
+        ImGuiCol_FrameBg,
+        ImVec4(0.8f, 0.9f, 1.0f, is_current ? 0.075f : 0.00f)
+    );
 
     ImGui::BeginChildFrame(id, ImVec2(ImGui::GetWindowWidth() - 10, 135));
 
@@ -825,6 +831,7 @@ bool panel_workspace(state_t *state, workspace_t *ws, int id, bool is_current = 
     }
     ImGui::Columns(1, "ID_WORKSPACE");
     ImGui::EndChildFrame();
+    ImGui::PopStyleColor();
 
     return res;
 }
