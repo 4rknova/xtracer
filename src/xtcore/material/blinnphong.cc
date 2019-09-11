@@ -14,7 +14,7 @@ bool BlinnPhong::shade(
 {
     Vector3f light_dir = (emitter->position - hit_record.point).normalized();
 
-    NMath::scalar_t d = nmath_max(dot(light_dir, hit_record.normal), 0);
+    NMath::scalar_t d = NMath::max(dot(light_dir, hit_record.normal), 0);
 
     Vector3f ray = camera->position - hit_record.point;
     ray.normalize();
@@ -22,7 +22,7 @@ bool BlinnPhong::shade(
     Vector3f r = light_dir + ray;
     r.normalize();
 
-    NMath::scalar_t rmv = nmath_max(dot(r, hit_record.normal), 0);
+    NMath::scalar_t rmv = NMath::max(dot(r, hit_record.normal), 0);
 
     intensity = emitter->intensity;
     intensity *= (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))

@@ -23,15 +23,15 @@ NMath::scalar_t Triangle::distance(NMath::Vector3f p) const
     NMath::Vector3f ac = v[0] - v[2]; NMath::Vector3f pc = p - v[2];
     NMath::Vector3f nor = cross(ba, ac);
 
-    bool k = (nmath_sign(dot(cross(ba,nor),pa))
-            + nmath_sign(dot(cross(cb,nor),pb))
-            + nmath_sign(dot(cross(ac,nor),pc))) < 2.0;
+    bool k = (NMath::sign(dot(cross(ba,nor),pa))
+            + NMath::sign(dot(cross(cb,nor),pb))
+            + NMath::sign(dot(cross(ac,nor),pc))) < 2.0;
 
-    NMath::Vector3f v0 = ba * nmath_clamp(dot(ba,pa)/dot(ba,ba),0.0,1.0)-pa;
-    NMath::Vector3f v1 = cb * nmath_clamp(dot(cb,pb)/dot(cb,cb),0.0,1.0)-pb;
-    NMath::Vector3f v2 = ac * nmath_clamp(dot(ac,pc)/dot(ac,ac),0.0,1.0)-pc;
+    NMath::Vector3f v0 = ba * NMath::clamp(dot(ba,pa)/dot(ba,ba),0.0,1.0)-pa;
+    NMath::Vector3f v1 = cb * NMath::clamp(dot(cb,pb)/dot(cb,cb),0.0,1.0)-pb;
+    NMath::Vector3f v2 = ac * NMath::clamp(dot(ac,pc)/dot(ac,ac),0.0,1.0)-pc;
 
-    NMath::scalar_t m = nmath_min3(dot(v0, v0), dot(v1, v1), dot(v2, v2));
+    NMath::scalar_t m = NMath::min3(dot(v0, v0), dot(v1, v1), dot(v2, v2));
 
     return nmath_sqrt(k ? m : dot(nor,pa)*dot(nor,pa)/dot(nor,nor));
 }

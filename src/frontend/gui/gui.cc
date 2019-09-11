@@ -549,17 +549,16 @@ void mm_integrator(workspace_t *ws)
             if (ImGui::BeginMenu("Concurrency")) { mm_concurrency(ws); ImGui::EndMenu(); }
             if (ImGui::BeginMenu("Integrator")) {
                 bool render = false;
-                if (ImGui::MenuItem("Depth"     )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
-                if (ImGui::MenuItem("Stencil"   )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
+                if (ImGui::MenuItem("Pathtracer"       )) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
+                if (ImGui::MenuItem("Depth"            )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
+                if (ImGui::MenuItem("Stencil"          )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
+                if (ImGui::MenuItem("Normal"           )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
+                if (ImGui::MenuItem("UV"               )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
+                if (ImGui::MenuItem("Emission"         )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
+                if (ImGui::MenuItem("Ambient Occlusion")) { render = true; ws->integrator = new xtcore::integrator::ao::Integrator();   }
                 /*
-                if (ImGui::MenuItem("Normal"    )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
-                */
-                if (ImGui::MenuItem("UV"        )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
-                /*
-                if (ImGui::MenuItem("Emission"  )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
                 if (ImGui::MenuItem("Raytracer" )) { render = true; ws->integrator = new xtcore::integrator::raytracer::Integrator();  }
                 */
-                if (ImGui::MenuItem("Pathtracer")) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
                 /*
                 if (ImGui::MenuItem("Raymarcher")) { render = true; ws->integrator = new xtcore::integrator::raymarcher::Integrator(); }
                 */

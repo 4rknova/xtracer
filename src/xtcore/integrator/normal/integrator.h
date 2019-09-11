@@ -2,7 +2,6 @@
 #define XTCORE_INTEGRATOR_NORMAL_H_INCLUDED
 
 #include <nplatform/timer.h>
-
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 
@@ -24,13 +23,7 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	Integrator();
-
-	virtual void setup(xtcore::render::context_t &context);
-	virtual void render();
-
-	private:
-    xtcore::render::context_t *m_context;
+	virtual void render_tile(xtcore::render::tile_t *tile);
 };
 
         } /* namespace normal */

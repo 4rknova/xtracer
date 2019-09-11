@@ -1,0 +1,86 @@
+title = DOF
+descr = Depth of field
+versn = 0.4
+
+environment = {
+}
+
+camera = {
+	default = {
+		type     = thin-lens
+        fov      = 45
+		position = vec3(0,2,-3)
+		target   = vec3(0,0,0)
+		up       = vec3(0,1,0)
+		aperture = 0
+		flength  = 0
+	}
+}
+
+geometry = {
+	geo = {
+		type = mesh
+		source = data/geometry/yobi3d/streographic_projection.obj 
+	}
+
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = 0
+	}
+
+    l0 = {
+		type = sphere
+        radius = 0.01
+		position = {
+			x = 0
+			y = 1
+			z = 0
+		}
+	}
+}
+
+material = {
+	plastic = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+
+            }
+        }
+	}
+
+    light = {
+        type       = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	floor = {
+		geometry = floor
+		material = plastic
+	}
+    geo = {
+        geometry = geo
+        material = plastic
+    }
+    light = {
+        geometry = l0
+        material = light
+    }
+}

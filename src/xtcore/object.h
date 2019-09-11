@@ -12,8 +12,8 @@ class Object
 	HASH_UINT64 surface;
 	HASH_UINT64 material;
 
-    IMaterial *ptr_material;
-    ISurface  *ptr_surface;
+//    IMaterial *ptr_material;
+//    ISurface  *ptr_surface;
 };
 
     } /* namespace asset */

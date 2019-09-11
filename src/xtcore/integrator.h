@@ -31,8 +31,7 @@ class IIntegrator
 #include "integrator/normal/integrator.h"
 #include "integrator/uv/integrator.h"
 #include "integrator/emission/integrator.h"
-#include "integrator/raytracer/integrator.h"
 #include "integrator/pathtracer/integrator.h"
-#include "integrator/raymarcher/integrator.h"
+#include "integrator/ao/integrator.h"
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */

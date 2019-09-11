@@ -16,13 +16,13 @@ bool Phong::shade(
 {
     Vector3f light_dir = (emitter->position - hit_record.point).normalized();
 
-    NMath::scalar_t d = nmath_max(0, dot(light_dir, hit_record.normal));
+    NMath::scalar_t d = NMath::max(0, dot(light_dir, hit_record.normal));
 
     Vector3f ray = (camera->position - hit_record.point).normalized();
 
     Vector3f r = (light_dir.reflected(hit_record.normal)).normalized();
 
-    NMath::scalar_t rmv = nmath_max(0, dot(r, ray));
+    NMath::scalar_t rmv = NMath::max(0, dot(r, ray));
 
     intensity += emitter->intensity *
             (   (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))

@@ -1,8 +1,7 @@
-#ifndef XTCORE_INTEGRATOR_RAYMARCHER_H_INCLUDED
-#define XTCORE_INTEGRATOR_RAYMARCHER_H_INCLUDED
+#ifndef XTCORE_INTEGRATOR_AO_H_INCLUDED
+#define XTCORE_INTEGRATOR_AO_H_INCLUDED
 
 #include <nplatform/timer.h>
-
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 
@@ -19,24 +18,16 @@ using nimg::Pixmap;
 
 namespace xtcore {
     namespace integrator {
-        namespace raymarcher {
+        namespace ao {
 
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	Integrator();
-
-	virtual void setup(xtcore::render::context_t &context);
-	virtual void render();
-
-	private:
-    nimg::ColorRGBf eval(size_t depth, const xtcore::Ray &ray);
-
-    xtcore::render::context_t *m_context;
+	virtual void render_tile(xtcore::render::tile_t *tile);
 };
 
-        } /* namespace raymarcher */
+        } /* namespace ao */
     } /* namespace integrator */
 } /* namespace xtcore */
 
-#endif /* XTCORE_INTEGRATOR_RAYMARCHER_H_INCLUDED */
+#endif /* XTCORE_INTEGRATOR_AO_H_INCLUDED */

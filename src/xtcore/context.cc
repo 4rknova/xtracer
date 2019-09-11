@@ -21,7 +21,7 @@ params_t::params_t()
     , aa        (XTCORE_CONTEXT_DEFAULT_AA)
     , rdepth    (XTCORE_CONTEXT_DEFAULT_RDEPTH)
     , tile_size (XTCORE_CONTEXT_DEFAULT_TILESZ)
-    , tile_order(xtcore::render::TILE_ORDER_SCANLINE)
+    , tile_order(xtcore::render::TILE_ORDER_RANDOM)
     , sample_distribution(xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID)
     , camera    (0)
 {}

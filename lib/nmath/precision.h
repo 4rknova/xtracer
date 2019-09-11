@@ -42,17 +42,6 @@ namespace NMath {
 	extern "C" {
 #endif	/* __cplusplus */
 
-#define nmath_max(x,y)      (x > y ? x : y)
-#define nmath_max3(x,y,z)   (nmath_max(nmath_max(x,y),z))
-#define nmath_max4(x,y,z,w) (nmath_max(nmath_max(nmath_max(x,y),z),w))
-#define nmath_min(x,y)      (y > x ? x : y)
-#define nmath_min3(x,y,z)   (nmath_min(nmath_min(x,y),z))
-#define nmath_min4(x,y,z,w) (nmath_min(nmath_min(nmath_min(x,y),z),w))
-
-#define nmath_sign(x)       (x < 0.0 ? -1.0 : ( x > 0.0 ? 1.0 : 0.0))
-
-#define nmath_clamp(k,a,b) (k < a ? a : (k > b ? b : k))
-
 /* Floating point precision */
 #ifdef MATH_SINGLE_PRECISION
 	#define SCALAR_T_MAX FLT_MAX
@@ -125,6 +114,14 @@ const scalar_t RADIAN = 0.017453292519943;
 #ifdef __cplusplus
 	}   /* extern "C" */
 #endif
+
+inline scalar_t max  (scalar_t x, scalar_t y)                         { return (x > y ? x : y);                   }
+inline scalar_t max3 (scalar_t x, scalar_t y, scalar_t z)             { return (max(max(x,y),z));                 }
+inline scalar_t max4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (max(max(max(x,y),z),w));          }
+inline scalar_t min  (scalar_t x, scalar_t y)                         { return (y > x ? x : y);                   }
+inline scalar_t min3 (scalar_t x, scalar_t y, scalar_t z)             { return (min(min(x,y),z));                 }
+inline scalar_t min4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (min(min(min(x,y),z),w));          }
+inline scalar_t sign (scalar_t x)                                     { return (x < 0 ? -1 : ( x > 0 ? 1 : 0));   }
 
 } /* namespace NMath */
 
