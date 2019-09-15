@@ -7,6 +7,8 @@
 namespace util {
     namespace filesystem {
 
+const char PATH_DELIMITER = '/';
+
 enum FS_ENTRY_TYPE
 {
       FS_ENTRY_TYPE_UNKNOWN             = 0x01
@@ -25,6 +27,7 @@ struct fs_entry_t
 
 typedef std::vector<fs_entry_t> fsvec;
 
+void decompose_path(const char *path, std::string &base, std::string &file, const char delim = PATH_DELIMITER);
 int  ls(fsvec &fsv, const char *path);
 bool file_exists(const char *filepath);
 bool has_extension(fs_entry_t *entry, const char *extension);
