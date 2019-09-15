@@ -1,30 +1,33 @@
-title       = Simple Example Scene
-description = A sphere reflecting the environment
-version     = 0.5
+title       = Reflective icosahedron
+description = An icosahedron reflecting the environment
+version     = 1.0
 
 data = data
-env  = <data>/image/envmap/humus/Park
+env  = <data>/image/envmap/humus/VancouverConventionCentre
 
 camera = {
-	default = {
+	ods = {
         type = ods
 		ipd  = 1.5
+        position = vec3(0,0,-75)
     }
 
-    front = {
+    default = {
         type     = thin-lens
         up       = vec3(0,1,0)
-        position = vec3(0,0,-100)
-        target   = vec3(0,0, 100)
-        fov      = 90
+        position = vec3(10,-15,-40)
+        target   = vec3(0,0,0)
+        fov      = 45
     }
 }
 
 geometry = {
     ball = {
-        type     = sphere
-        radius   = 50
-        position = vec3(0,0,100)
+        type   = mesh
+        source = gen(icosahedron)
+        modifiers = {
+            scale = vec3(10,10,10)
+        }
     }
 }
 
@@ -46,7 +49,7 @@ material = {
 
             scalars = {
                 reflectance = 1
-                exponent    = 90
+                exponent    = 900
             }
         }
 	}
