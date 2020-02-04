@@ -118,7 +118,9 @@ static inline int gcd(const int a, const int b)
 /* Lowest Common Multiple */
 static inline int lcm(const int a, const int b)
 {
-   return b * a / lcm(a, b);
+    int min = (a > b) ? a : b;
+    while (!(min % a == 0 && min % b == 0)) ++min;
+    return min;
 }
 
 /* Check if an integer is a power of 2 */

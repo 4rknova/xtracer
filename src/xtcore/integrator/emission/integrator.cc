@@ -23,8 +23,6 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
         tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
         nimg::ColorRGBf acc_emission = nimg::ColorRGBf(color_pixel.r(), color_pixel.g(), color_pixel.b());
-        NMath::scalar_t  alpha  = color_pixel.a();
-
 
         xtcore::Ray ray = cam->get_primary_ray(
               sample.coords.x, sample.coords.y

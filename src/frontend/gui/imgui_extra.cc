@@ -1,8 +1,8 @@
 #include <string>
-#include "util.h"
 #include "imgui_extra.h"
 #include <imgui/imgui_internal.h>
 
+#define UNUSED(expr) {do{(void)(expr);}while(0);}
 #define MIN(x,y) (x > y ? y : x)
 #define MAX(x,y) (x > y ? x : y)
 #define CLAMP(x,a,b) (MIN(MAX(x,a),b))
@@ -47,24 +47,22 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
 
 void textedit_float2(const char *name, NMath::Vector2f &vec, float step, float width)
 {
+    UNUSED(width)
     float x = vec.x;
     float y = vec.y;
-
-//    float w2 = width / 2.f;
 
     std::string nx(name); nx.append(".x");
     std::string ny(name); ny.append(".y");
 
     ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
 
-//    ImGui::PushItemWidth(w2);
     if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; //ImGui::PopItemWidth();
     if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
-//    ImGui::PopItemWidth();
 }
 
 void textedit_float3(const char *name, NMath::Vector3f &vec, float step, float width)
 {
+    UNUSED(width)
     float x = vec.x;
     float y = vec.y;
     float z = vec.z;

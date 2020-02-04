@@ -14,6 +14,7 @@ bool Dielectric::shade(
 {
     UNUSED(camera)
     UNUSED(emitter)
+    UNUSED(hit_record)
     intensity = ColorRGBf(0.f,0.f,0.f);
     return true;
 }

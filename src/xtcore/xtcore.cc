@@ -21,7 +21,7 @@ int init()
 {
     xtcore::pool::str::init();
     xtcore::profiler::init();
-    xtcore::midi::init();
+//xtcore::midi::init();
     return 0;
 }
 

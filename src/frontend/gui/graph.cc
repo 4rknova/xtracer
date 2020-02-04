@@ -18,6 +18,8 @@
 #include "graph.h"
 #include "util.h"
 
+#define UNUSED(expr) {do{(void)(expr);}while(0);}
+
 #define COL_LINE_NORMAL   (ImColor(0.00f, 0.00f, 0.00f, 1.0f))
 #define COL_LINE_HOVERED  (ImColor(1.00f, 1.00f, 1.00f, 0.5f))
 #define COL_NODE_NORMAL   (ImColor(0.40f, 0.40f, 0.40f, 1.0f))
@@ -226,7 +228,6 @@ void node_geo_t::draw_properties()
             break;
         }
         case 4: {
-            xtcore::surface::Mesh *p = (xtcore::surface::Mesh*)data;
             break;
         }
     }
@@ -308,6 +309,8 @@ void graph_t::clear()
 
 bool node_t::draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset)
 {
+    UNUSED(circle_offset)
+
     bool node_hovered = false
         ,node_active  = false;
 
@@ -366,12 +369,12 @@ bool node_t::draw(ImDrawList *dl, ImVec2 offset, ImVec2 circle_offset)
             position = position + ImGui::GetIO().MouseDelta;
         }
 
-        for (int i = 0; i < inputs; ++i) {
+        for (int i = 0; i < int(inputs); ++i) {
             ImVec2 sp = offset + get_input_slot_position(i);
             dl->AddCircleFilled(sp, NODE_SLOT_RADIUS, col_sl);
             dl->AddCircle      (sp, NODE_SLOT_RADIUS, col_br);
         }
-        for (int i = 0; i < outputs; ++i) {
+        for (int i = 0; i < int(outputs); ++i) {
             ImVec2 sp = offset + get_output_slot_position(i);
             dl->AddCircleFilled(sp, NODE_SLOT_RADIUS, col_sl);
             dl->AddCircle      (sp, NODE_SLOT_RADIUS, col_br);
@@ -487,7 +490,7 @@ void build(graph_t *graph, const xtcore::Scene *scene)
     }
 }
 
-void draw(graph_t *graph, const xtcore::Scene *scene, uintptr_t tex)
+void draw(graph_t *graph, const xtcore::Scene *, uintptr_t tex)
 {
     ImVector<node_t*> *nodes = &(graph->nodes);
     ImVector<link_t*> *links = &(graph->links);

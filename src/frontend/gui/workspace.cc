@@ -48,7 +48,7 @@ void workspace_t::prepare()
         memset(data, 0, sizeof(float) * 4 * context.params.width * context.params.height);
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context.params.width, context.params.height, 0, GL_RGBA, GL_FLOAT, data);
-        delete data;
+        delete[] data;
     }
 }
 

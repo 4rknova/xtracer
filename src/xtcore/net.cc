@@ -152,8 +152,7 @@ void * get_in_addr(struct sockaddr *sa)
 int bind_socket(
     char * host, /* "192.168.1.255" */
     char * port  /* "5000"          */
-    )
-{
+){
     struct addrinfo * info;
     struct addrinfo hints = {
         .ai_family   = AF_INET,
@@ -187,7 +186,7 @@ int bind_socket(
     freeaddrinfo(info);
 
     int bcast = 1;
-    if (0 > (err == setsockopt(sck, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))) {
+    if (0 > (err = setsockopt(sck, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)))) {
         return -3;
     }
 

@@ -8,7 +8,7 @@ namespace xtcore {
     namespace midi {
 
 #if FEATURE_IS_INCLUDED(FEATURE_MIDI)
-
+#error "This should not happen"
 RtMidiIn *_midiin = 0;
 
 int init()
@@ -75,12 +75,12 @@ int close(device_t *dev)
 
 #else
 
-int init() {}
-int deinit() {}
-int detect(devices_t *devs) {}
-int open(device_t *dev)  {}
-int close(device_t *dev) {}
-int read(device_t *dev)  {}
+int init()             { return 0; }
+int deinit()           { return 0; }
+int detect(devices_t*) { return 0; }
+int open(device_t*)    { return 0; }
+int close(device_t*)   { return 0; }
+int read(device_t*)    { return 0; }
 
 #endif /* FEATURE_MIDI */
 
