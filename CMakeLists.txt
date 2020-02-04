@@ -142,10 +142,7 @@ target_include_directories(${OUT_EXE_GUI} PUBLIC
 )
 
 target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery rtmidi asound pthread)
-
-SET(LIBRARIES ${OPENGL_LIBRARY} glfw ${GLEW_LIBRARY} ${OpenMP_LIBRARY})
-
-target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static imgui remotery rtmidi asound pthread ssl crypto ${LIBRARIES})
+target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static remotery rtmidi asound pthread imgui ssl crypto GL glfw GLEW::GLEW ${OpenMP_LIBRARY})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unknown-pragmas")
