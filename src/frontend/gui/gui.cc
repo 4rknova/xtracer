@@ -20,10 +20,9 @@
 #include "logo.h"
 
 #define STRINGIFY(A) #A
+
 #define MIN(x,y) (x > y ? y : x)
 #define MAX(x,y) (x > y ? x : y)
-
-#define STRLEN_MAX (512)
 
 #define STR_CREATE              "Create"
 #define STR_CAMERA              "Camera"
@@ -66,9 +65,9 @@ enum ID {
     , ID_PANEL_PREVIEW
 };
 
-#define SIZE_MAIN_MENU         20
-#define SIZE_OFFSET            1
-
+#define STRLEN_MAX       (512)
+#define SIZE_MAIN_MENU   (20)
+#define SIZE_OFFSET      (1)
 #define LOG_HISTORY_SIZE (10000)
 
 #define WIN_FLAGS_SET_0 ( ImGuiWindowFlags_NoCollapse \
@@ -89,73 +88,89 @@ typedef struct
     const char * description;
 } resolution_t;
 
-#define RES(w,h,s) { w, h, s }
-
 // https://en.wikipedia.org/wiki/Graphics_display_resolution
 const resolution_t resolutions[] = {
-      RES(  128,  768, "VStrip"   ) // Cubemaps
-    , RES(  512, 3072, "VStrip"   )
-    , RES( 1024, 6144, "VStrip"   )
-    , RES(  768,  128, "HStrip"   )
-    , RES( 3072,  512, "HStrip"   )
-    , RES( 6144, 1024, "HStrip"   )
-    , RES(  500,  500, "Square"   ) // Square
-    , RES(  800,  800, "Square"   ) // Square
-    , RES( 1024, 1024, "Square"   ) // Square
-    , RES( 2048, 2048, "Square"   )
-    , RES( 4096, 4096, "Square"   )
-    , RES(  640,  360, "nHD"      ) // High Definition
-    , RES(  960,  540, "qHD"      )
-    , RES( 1280,  720, "HD"       )
-    , RES( 1600,  900, "HD+"      )
-    , RES( 1920, 1080, "FHD"      )
-    , RES( 2160, 1440, "FHD+"     )
-    , RES( 2048, 1080, "DCI 2K"   )
-    , RES( 2560, 1440, "QHD/WQHD" )
-    , RES( 3200, 1800, "QHD+"     )
-    , RES( 3440, 1440, "UWQHD"    )
-    , RES( 3840, 1600, "UW4K"     )
-    , RES( 3840, 2160, "4K UHD"   )
-    , RES( 4096, 2160, "DCI 4K"   )
-    , RES( 5120, 2160, "UW5K"     )
-    , RES( 5120, 2880, "5K UHD+"  )
-    , RES( 7680, 3200, "UW8K"     )
-    , RES( 7680, 4320, "8K UHD"   )
-    , RES(  160,  120, "QQVGA"    ) // Video Graphics Array
-    , RES(  240,  160, "HQVGA"    )
-    , RES(  320,  240, "QVGA"     )
-    , RES(  400,  240, "WQVGA"    )
-    , RES(  480,  320, "HVGA"     )
-    , RES(  640,  480, "VGA/SD"   )
-    , RES(  768,  480, "WVGA"     )
-    , RES(  854,  480, "FWVGA"    )
-    , RES(  800,  600, "SVGA"     )
-    , RES(  960,  640, "DVGA"     )
-    , RES( 1024,  576, "WSVGA 576")
-    , RES( 1024,  600, "WSVGA 600")
-    , RES( 1024,  768, "XGA"      ) // Extended Graphics Array
-    , RES( 1366,  768, "WXGA"     )
-    , RES( 1152,  864, "XGA+"     )
-    , RES( 1440,  900, "WXGA+"    )
-    , RES( 1280, 1024, "SXGA"     )
-    , RES( 1400, 1050, "SXGA+"    )
-    , RES( 1680, 1050, "WSXGA+"   )
-    , RES( 1600, 1200, "UXGA"     )
-    , RES( 1920, 1200, "WUXGA"    )
-    , RES( 2048, 1152, "QWXGA"    ) // Quad Extended Graphics Array
-    , RES( 2048, 1536, "QXGA"     )
-    , RES( 2560, 1600, "WQXGA"    )
-    , RES( 2560, 2048, "QSXGA"    )
-    , RES( 3200, 2048, "WQSXGA"   )
-    , RES( 3200, 2400, "QUXGA"    )
-    , RES( 3840, 2400, "WQUXGA"   )
-    , RES( 4096, 3072, "HXGA"     ) // Hyper Extended Graphics Array
-    , RES( 5120, 3200, "WHXGA"    )
-    , RES( 5120, 4096, "HSXGA"    )
-    , RES( 6400, 4096, "WHSXGA"   )
-    , RES( 6400, 4800, "HUXGA"    )
-    , RES( 7680, 4800, "WHUXGA"   )
+      {  128,  768, "VStrip"   } // Cubemaps
+    , {  512, 3072, "VStrip"   }
+    , { 1024, 6144, "VStrip"   }
+    , {  768,  128, "HStrip"   }
+    , { 3072,  512, "HStrip"   }
+    , { 6144, 1024, "HStrip"   }
+    , {  500,  500, "Square"   } // Square
+    , {  800,  800, "Square"   } // Square
+    , { 1024, 1024, "Square"   } // Square
+    , { 2048, 2048, "Square"   }
+    , { 4096, 4096, "Square"   }
+    , {  640,  360, "nHD"      } // High Definition
+    , {  960,  540, "qHD"      }
+    , { 1280,  720, "HD"       }
+    , { 1600,  900, "HD+"      }
+    , { 1920, 1080, "FHD"      }
+    , { 2160, 1440, "FHD+"     }
+    , { 2048, 1080, "DCI 2K"   }
+    , { 2560, 1440, "QHD/WQHD" }
+    , { 3200, 1800, "QHD+"     }
+    , { 3440, 1440, "UWQHD"    }
+    , { 3840, 1600, "UW4K"     }
+    , { 3840, 2160, "4K UHD"   }
+    , { 4096, 2160, "DCI 4K"   }
+    , { 5120, 2160, "UW5K"     }
+    , { 5120, 2880, "5K UHD+"  }
+    , { 7680, 3200, "UW8K"     }
+    , { 7680, 4320, "8K UHD"   }
+    , {  160,  120, "QQVGA"    } // Video Graphics Array
+    , {  240,  160, "HQVGA"    }
+    , {  320,  240, "QVGA"     }
+    , {  400,  240, "WQVGA"    }
+    , {  480,  320, "HVGA"     }
+    , {  640,  480, "VGA/SD"   }
+    , {  768,  480, "WVGA"     }
+    , {  854,  480, "FWVGA"    }
+    , {  800,  600, "SVGA"     }
+    , {  960,  640, "DVGA"     }
+    , { 1024,  576, "WSVGA 576"}
+    , { 1024,  600, "WSVGA 600"}
+    , { 1024,  768, "XGA"      } // Extended Graphics Array
+    , { 1366,  768, "WXGA"     }
+    , { 1152,  864, "XGA+"     }
+    , { 1440,  900, "WXGA+"    }
+    , { 1280, 1024, "SXGA"     }
+    , { 1400, 1050, "SXGA+"    }
+    , { 1680, 1050, "WSXGA+"   }
+    , { 1600, 1200, "UXGA"     }
+    , { 1920, 1200, "WUXGA"    }
+    , { 2048, 1152, "QWXGA"    } // Quad Extended Graphics Array
+    , { 2048, 1536, "QXGA"     }
+    , { 2560, 1600, "WQXGA"    }
+    , { 2560, 2048, "QSXGA"    }
+    , { 3200, 2048, "WQSXGA"   }
+    , { 3200, 2400, "QUXGA"    }
+    , { 3840, 2400, "WQUXGA"   }
+    , { 4096, 3072, "HXGA"     } // Hyper Extended Graphics Array
+    , { 5120, 3200, "WHXGA"    }
+    , { 5120, 4096, "HSXGA"    }
+    , { 6400, 4096, "WHSXGA"   }
+    , { 6400, 4800, "HUXGA"    }
+    , { 7680, 4800, "WHUXGA"   }
 };
+
+typedef struct
+{
+    const char *name;
+    xtcore::render::IIntegrator *integrator;
+} integrator_t;
+
+
+integrator_t integrators[] = {
+      { "Pathtracer"       , new xtcore::integrator::pathtracer::Integrator() }
+    , { "Depth"            , new xtcore::integrator::depth::Integrator()      }
+    , { "Stencil"          , new xtcore::integrator::stencil::Integrator()    }
+    , { "Normal"           , new xtcore::integrator::normal::Integrator()     }
+    , { "UV"               , new xtcore::integrator::uv::Integrator()         }
+    , { "Emission"         , new xtcore::integrator::emission::Integrator()   }
+    , { "Ambient Occlusion", new xtcore::integrator::ao::Integrator()         }
+};
+
 
 namespace gui {
 
@@ -334,46 +349,51 @@ void draw_edit_float(const char *label, float value)
 
 void mm_resolution (workspace_t *ws)
 {
-    ImGui::Text("Resolution");
-    textedit_int("Width" , ws->context.params.width , 1, 1);
-    textedit_int("Height", ws->context.params.height, 1, 1);
-    ImGui::NewLine();
-    ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
-    ImGui::NewLine();
-    size_t res_entries = sizeof(resolutions) / sizeof(resolution_t);
-    ImVec2 bd(100,0);
-    ImGui::Text(STR_PRESETS);
-    ImGui::Columns(4, "LST_RES_COLUMNS", false);
-    ImGui::Text("ID");     ImGui::NextColumn();
-    ImGui::Text("Type");   ImGui::NextColumn();
-    ImGui::Text("Width");  ImGui::NextColumn();
-    ImGui::Text("Height"); ImGui::NextColumn();
-    ImGui::Columns(1);
-    ImGui::BeginChild("LST_RES", ImVec2(300, 500), true);
-    {
-        ImGui::Columns(4, "LST_RES_COLUMNS_INNER");
-        for (size_t i = 0; i < res_entries; i++) {
-            const resolution_t *r = &resolutions[i];
-            char label[32];
-            sprintf(label, "%02lu", i);
-            bool selected = ((ws->context.params.width == r->width) && (ws->context.params.height == r->height));
-            if (ImGui::Selectable(label, selected, ImGuiSelectableFlags_SpanAllColumns)) {
-                ws->context.params.width  = r->width;
-                ws->context.params.height = r->height;
-            }
-            ImGui::NextColumn();
-            ImGui::Text("%s", r->description); ImGui::NextColumn();
-            ImGui::Text("%lu", r->width);       ImGui::NextColumn();
-            ImGui::Text("%lu", r->height);      ImGui::NextColumn();
-        }
+    if (ws->status == WS_STATUS_PROCESSING) return;
+
+    if (ImGui::BeginMenu("Surface")) {
+        ImGui::Text("Resolution");
+        textedit_int("Width" , ws->context.params.width , 1, 1);
+        textedit_int("Height", ws->context.params.height, 1, 1);
+        ImGui::NewLine();
+        ImGui::Checkbox("Clear Buffer", &(ws->clear_buffer));
+        ImGui::NewLine();
+        size_t res_entries = sizeof(resolutions) / sizeof(resolution_t);
+        ImVec2 bd(100,0);
+        ImGui::Text(STR_PRESETS);
+        ImGui::Columns(4, "LST_RES_COLUMNS", false);
+        ImGui::Text("ID");     ImGui::NextColumn();
+        ImGui::Text("Type");   ImGui::NextColumn();
+        ImGui::Text("Width");  ImGui::NextColumn();
+        ImGui::Text("Height"); ImGui::NextColumn();
         ImGui::Columns(1);
+        ImGui::BeginChild("LST_RES", ImVec2(300, 500), true);
+        {
+            ImGui::Columns(4, "LST_RES_COLUMNS_INNER");
+            for (size_t i = 0; i < res_entries; i++) {
+                const resolution_t *r = &resolutions[i];
+                char label[32];
+                sprintf(label, "%02lu", i);
+                bool selected = ((ws->context.params.width == r->width) && (ws->context.params.height == r->height));
+                if (ImGui::Selectable(label, selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                    ws->context.params.width  = r->width;
+                    ws->context.params.height = r->height;
+                }
+                ImGui::NextColumn();
+                ImGui::Text("%s", r->description); ImGui::NextColumn();
+                ImGui::Text("%lu", r->width);       ImGui::NextColumn();
+                ImGui::Text("%lu", r->height);      ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+        }
+        ImGui::EndChild();
+        ImGui::EndMenu();
     }
-    ImGui::EndChild();
 }
 
 void mm_export(workspace_t *ws)
 {
-    if (ws->is_rendering()) return;
+    if (ws && ws->is_rendering()) return;
 
     if (ImGui::BeginMenu("Export")) {
 
@@ -473,31 +493,31 @@ void mm_concurrency(workspace_t *ws)
 
 void mm_camera(workspace_t *ws)
 {
-    auto it = ws->context.scene.m_cameras.begin();
-    auto et = ws->context.scene.m_cameras.end();
-
-    HASH_ID current_cam = ws->context.params.camera;
-    int current_idx = 0;
-
-    for (auto tt = ws->context.scene.m_cameras.begin(); (tt != et) && (*tt).first != current_cam; ++tt) { ++current_idx; }
-    int selected_idx = current_idx;
-    for (int idx = -1; it != et; ++it) {
-        ImGui::RadioButton(xtcore::pool::str::get((*it).first), &selected_idx, ++idx);
-    }
-
-    if (current_idx != selected_idx) {
-        auto tt = ws->context.scene.m_cameras.begin();
-        for (int idx = 0; idx < selected_idx; ++idx) ++tt;
-        ws->context.params.camera = (*tt).first;
-    }
-}
-
-
-void wdg_conf(workspace_t *ws)
-{
     if (ws->status == WS_STATUS_PROCESSING) return;
-    if (ImGui::BeginMenu("Camera"     )) { mm_camera(ws);     ImGui::EndMenu(); }
-    if (ImGui::BeginMenu("Sensor"     )) { mm_resolution(ws); ImGui::EndMenu(); }
+
+    if (ws->context.scene.m_cameras.empty()) return;
+
+    if (ImGui::BeginMenu("Camera")) {
+        auto it = ws->context.scene.m_cameras.begin();
+        auto et = ws->context.scene.m_cameras.end();
+
+        HASH_ID current_cam = ws->context.params.camera;
+        int current_idx = 0;
+
+        for (; (it != et) && (*it).first != current_cam; ++it) { ++current_idx; }
+
+        int selected_idx = current_idx;
+        for (int idx = -1; it != et; ++it) {
+            ImGui::RadioButton(xtcore::pool::str::get((*it).first), &selected_idx, ++idx);
+        }
+
+        if (current_idx != selected_idx) {
+            auto tt = ws->context.scene.m_cameras.begin();
+            for (int idx = 0; idx < selected_idx; ++idx) ++tt;
+            ws->context.params.camera = (*tt).first;
+        }
+        ImGui::EndMenu();
+    }
 }
 
 void menu_workspaces(state_t *state)
@@ -536,6 +556,8 @@ void mm_network(state_t *state)
 
 void mm_integrator(workspace_t *ws)
 {
+    if (ws->status == WS_STATUS_PROCESSING) return;
+               
     if (ImGui::BeginMenu("Render")) {
         int rmode = (int)ws->rmode;
         ImGui::RadioButton(STR_RMODE_SINGLE    , &rmode, WS_RMODE_SINGLE);
@@ -548,51 +570,17 @@ void mm_integrator(workspace_t *ws)
             if (ImGui::BeginMenu("Sampling"   )) { mm_sampling(ws);    ImGui::EndMenu(); }
             if (ImGui::BeginMenu("Concurrency")) { mm_concurrency(ws); ImGui::EndMenu(); }
             if (ImGui::BeginMenu("Integrator")) {
-                bool render = false;
-                if (ImGui::MenuItem("Pathtracer"       )) { render = true; ws->integrator = new xtcore::integrator::pathtracer::Integrator(); }
-                if (ImGui::MenuItem("Depth"            )) { render = true; ws->integrator = new xtcore::integrator::depth::Integrator();      }
-                if (ImGui::MenuItem("Stencil"          )) { render = true; ws->integrator = new xtcore::integrator::stencil::Integrator();    }
-                if (ImGui::MenuItem("Normal"           )) { render = true; ws->integrator = new xtcore::integrator::normal::Integrator();     }
-                if (ImGui::MenuItem("UV"               )) { render = true; ws->integrator = new xtcore::integrator::uv::Integrator();         }
-                if (ImGui::MenuItem("Emission"         )) { render = true; ws->integrator = new xtcore::integrator::emission::Integrator();   }
-                if (ImGui::MenuItem("Ambient Occlusion")) { render = true; ws->integrator = new xtcore::integrator::ao::Integrator();   }
-                /*
-                if (ImGui::MenuItem("Raytracer" )) { render = true; ws->integrator = new xtcore::integrator::raytracer::Integrator();  }
-                */
-                /*
-                if (ImGui::MenuItem("Raymarcher")) { render = true; ws->integrator = new xtcore::integrator::raymarcher::Integrator(); }
-                */
-                if (render) action::render(ws);
+                size_t res_entries = sizeof(integrators) / sizeof(integrator_t);
+                for (int i = 0; i < res_entries; ++i) {
+                    integrator_t *ip = &integrators[i];
+                    if (ImGui::MenuItem(ip->name)) {
+                        ws->integrator = ip->integrator;
+                        action::render(ws);
+                    }
+                }
                 ImGui::EndMenu();
             }
         }
-        ImGui::EndMenu();
-    }
-}
-
-void mm_zoom(workspace_t *ws) {
-    if (!ws) return;
-
-    auto _button_lambda = [&, ws](const char *txt, float val, bool sameline = false) -> void {
-        static const ImVec2 bd(50,0);
-        if (ImGui::Button(txt, bd)) {
-            ws->zoom_multiplier = val;
-        }
-        if (sameline) { ImGui::SameLine();}
-    };
-
-    if (ImGui::BeginMenu("View")) {
-        _button_lambda("x0.1", 0.101f,  true);
-        _button_lambda("x0.2", 0.201f,  true);
-        _button_lambda("x0.4", 0.401f,  true);
-        _button_lambda("x0.5", 0.501f,  true);
-        _button_lambda("x1.0", 1.001f,  true);
-        _button_lambda("x2.0", 2.001f, false);
-        _button_lambda("x4.0", 4.001f,  true);
-        _button_lambda("x5.0", 5.001f,  true);
-        _button_lambda("x10.0",10.001f,false);
-
-        textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
         ImGui::EndMenu();
     }
 }
@@ -679,6 +667,7 @@ void render_main_menu(state_t *state)
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) { flag_dg_load = true; }
+            mm_export(state->workspace);
             if (state->workspaces.size() > 0) {
                 if  (ImGui::BeginMenu("Workspaces")) {
                     menu_workspaces(state);
@@ -696,13 +685,12 @@ void render_main_menu(state_t *state)
             if (ImGui::MenuItem("Exit" )) { action::quit();      }
             ImGui::EndMenu();
         }
-
-        if (state->workspace && ImGui::BeginMenu("Workspace")) {
-            gui::mm_zoom(state->workspace);
-            wdg_conf(state->workspace);
-            mm_integrator(state->workspace);
-            mm_export(state->workspace);
-            ImGui::EndMenu();
+        if (state->workspace) {
+            if (state->workspace->is_idle()) {
+                mm_camera(state->workspace);
+                mm_resolution(state->workspace);
+                mm_integrator(state->workspace);
+            }
         }
         gui::mm_network(state);
         
@@ -882,6 +870,27 @@ void panel_preview(workspace_t *ws)
 
     float zx = ws->zoom_multiplier * ws->context.params.width;
     float zy = ws->zoom_multiplier * ws->context.params.height;
+
+
+    auto _button_lambda = [&, ws](const char *txt, float val) -> void {
+        static const ImVec2 bd(50,0);
+        if (ImGui::Button(txt, bd)) {
+            ws->zoom_multiplier = val;
+        }
+        ImGui::SameLine();
+    };
+
+    _button_lambda("x0.1",  0.101f);
+    _button_lambda("x0.2",  0.201f);
+    _button_lambda("x0.4",  0.401f);
+    _button_lambda("x0.5",  0.501f);
+    _button_lambda("x1.0",  1.001f);
+    _button_lambda("x2.0",  2.001f);
+    _button_lambda("x4.0",  4.001f);
+    _button_lambda("x5.0",  5.001f);
+    _button_lambda("x10.0",10.001f);
+    textedit_float("Zoom", ws->zoom_multiplier, 0.1,0.1);
+
     ImGui::BeginChild(ID_PANEL_PREVIEW, ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     // Zooming
     ImGuiIO &io = ImGui::GetIO();

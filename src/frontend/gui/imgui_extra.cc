@@ -1,4 +1,5 @@
 #include <string>
+#include "util.h"
 #include "imgui_extra.h"
 #include <imgui/imgui_internal.h>
 
@@ -56,7 +57,7 @@ void textedit_float2(const char *name, NMath::Vector2f &vec, float step, float w
 
     ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
 
-    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; //ImGui::PopItemWidth();
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x;
     if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
 }
 
@@ -67,19 +68,15 @@ void textedit_float3(const char *name, NMath::Vector3f &vec, float step, float w
     float y = vec.y;
     float z = vec.z;
 
-//    float w3 = width / 3.f;
-
     std::string nx("##"); nx.append(name); nx.append(".x");
     std::string ny("##"); ny.append(name); ny.append(".y");
     std::string nz("##"); nz.append(name); nz.append(".z");
 
     ImGuiInputTextFlags f = ImGuiInputTextFlags_EnterReturnsTrue;
 
-//    ImGui::PushItemWidth(w3);
-    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; //ImGui::SameLine();
-    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y; //ImGui::SameLine();
+    if (ImGui::InputFloat(nx.c_str(), &x, step, 2 * step, f)) vec.x = x; 
+    if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
     if (ImGui::InputFloat(nz.c_str(), &z, step, 2 * step, f)) vec.z = z;
-//    ImGui::PopItemWidth();
 }
 
 void not_yet_implemented()

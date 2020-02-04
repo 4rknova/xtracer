@@ -10,6 +10,7 @@
 #include <xtcore/macro.h>
 #include "config.h"
 #include "state.h"
+#include "action.h"
 #include "profiler.h"
 #include "gui.h"
 
@@ -23,8 +24,6 @@ static void error_callback(int error, const char* description)
 
 int main(int argc, char** argv)
 {
-    UNUSED(argc)
-
     std::string title;
     title  = argv[0];
     title += " v";
@@ -65,6 +64,15 @@ int main(int argc, char** argv)
 
     xtcore::init();
     xtcore::Log::handle().echo(false);
+
+    for (size_t i = 1; i < (size_t)argc; ++i) {
+        workspace_t *ws = new workspace_t;
+        ws->source_file = argv[i];
+        xtcore::Log::handle().post_message("Loading: %s", argv[i]);
+        action::load(ws);
+        state.workspaces.push_back(ws);
+        state.workspace = ws;
+    }
 
     while (!glfwWindowShouldClose(window))
     {

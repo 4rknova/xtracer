@@ -9,7 +9,7 @@
 #include "structs.h"
 
 #define LIMITS_MAX_ITEMS_PER_NODE 10
-#define LIMITS_MAX_DEPTH          5
+#define LIMITS_MAX_DEPTH          10
 
 using NMath::Vector3f;
 using nmesh::shape_t;

@@ -50,6 +50,8 @@ struct workspace_t
     void render();
     void update();
     void setup_callbacks();
+
+    bool is_idle();
     bool is_rendering();
 
     float progress;

@@ -43,18 +43,9 @@ inline bool AABB3::contains(const Vector3f& p) const
 inline bool AABB3::contains(const AABB3 &aabb) const
 {
 
-	if(min.x > aabb.max.x || aabb.min.x > max.x) {
-		return false;
-	}
-
-	if(min.y > aabb.max.y || aabb.min.y > max.y) {
-		return false;
-	}
-
-	if(min.z > aabb.max.z || aabb.min.z > max.z) {
-		return false;
-	}
-
+	if(min.x > aabb.max.x || aabb.min.x > max.x) return false;
+	if(min.y > aabb.max.y || aabb.min.y > max.y) return false;
+	if(min.z > aabb.max.z || aabb.min.z > max.z) return false;
 	return true;
 }
 

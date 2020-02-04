@@ -90,6 +90,11 @@ void workspace_t::setup_callbacks()
     }
 }
 
+bool workspace_t::is_idle()
+{
+    return status == WS_STATUS_LOADED;
+}
+
 bool workspace_t::is_rendering()
 {
     return status == WS_STATUS_PROCESSING;
