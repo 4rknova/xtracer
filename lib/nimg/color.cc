@@ -14,8 +14,22 @@ ColorRGBf::ColorRGBf(const ColorRGBf &rhs)
 {}
 
 ColorRGBf::ColorRGBf(const ColorRGBAf &rhs)
-	: m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b())
+    : m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b())
 {}
+
+void ColorRGBf::operator=(const ColorRGBAf &rhs)
+{
+    m_r = rhs.r();
+    m_g = rhs.g();
+    m_b = rhs.b();
+}
+
+void ColorRGBf::operator=(const ColorRGBf &rhs)
+{
+    m_r = rhs.r();
+    m_g = rhs.g();
+    m_b = rhs.b();
+}
 
 // ColorRGBAf
 ColorRGBAf::ColorRGBAf(const float r, const float g, const float b, const float a)
@@ -25,12 +39,28 @@ ColorRGBAf::ColorRGBAf(const float r, const float g, const float b, const float 
 	  m_a(a < 0.f ? 0.f : (a > 1.f ? 1.f : a))
 {}
 
-ColorRGBAf::ColorRGBAf(const ColorRGBf &rhs)
-	: m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b()), m_a(1.0f)
-{}
-
 ColorRGBAf::ColorRGBAf(const ColorRGBAf &rhs)
 	: m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b()), m_a(rhs.a())
 {}
+
+ColorRGBAf::ColorRGBAf(const ColorRGBf &rhs)
+    : m_r(rhs.r()), m_g(rhs.g()), m_b(rhs.b()), m_a(1.0f)
+{}
+
+void ColorRGBAf::operator=(const ColorRGBf &rhs)
+{
+    m_r = rhs.r();
+    m_g = rhs.g();
+    m_b = rhs.b();
+    m_a = 1.0f;
+}
+
+void ColorRGBAf::operator=(const ColorRGBAf &rhs)
+{
+    m_r = rhs.r();
+    m_g = rhs.g();
+    m_b = rhs.b();
+    m_a = rhs.a();
+}
 
 } /* namespace nimg */

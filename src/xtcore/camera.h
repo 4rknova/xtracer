@@ -15,6 +15,7 @@ class ICamera
 
         virtual ~ICamera() {};
 		virtual Ray get_primary_ray(float x, float y, float width, float height) = 0;
+        virtual const char* get_type() const = 0;
 };
 
     } /* namespace asset */

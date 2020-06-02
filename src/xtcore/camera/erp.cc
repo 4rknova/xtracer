@@ -3,6 +3,11 @@
 namespace xtcore {
     namespace camera {
 
+const char* ERP::get_type() const
+{
+    return "Equirectangular Projection";
+}
+
 Ray ERP::get_primary_ray(float x, float y, float width, float height)
 {
     Ray ray;

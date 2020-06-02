@@ -14,6 +14,8 @@ class ERP : public xtcore::asset::ICamera
 {
 	public:
     Vector3f orientation;
+    
+    const char* get_type() const;
 
     Ray get_primary_ray(float x, float y, float width, float height);
 };

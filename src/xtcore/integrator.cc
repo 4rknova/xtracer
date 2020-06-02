@@ -35,10 +35,12 @@ void IIntegrator::render()
 
     if (!cam) return;
 
+    size_t count = ctx->tiles.size();
+
     if (p->threads) omp_set_num_threads(p->threads);
 
-    #pragma omp parallel for schedule(dynamic, 1)
-    for (size_t i = 0; i < ctx->tiles.size(); ++i) {
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < count; ++i) {
         xtcore::render::tile_t *tile = &(ctx->tiles[i]);
         tile->init();
 

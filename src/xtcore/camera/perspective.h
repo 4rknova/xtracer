@@ -24,6 +24,7 @@ class Perspective : public xtcore::asset::ICamera
 		float    flength;
 
 		Perspective();
+        const char* get_type() const;
 
 		Ray get_primary_ray(float x, float y, float width, float height);
 };

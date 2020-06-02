@@ -11,6 +11,11 @@ using NMath::Matrix4x4f;
 namespace xtcore {
     namespace camera {
 
+const char* Cubemap::get_type() const
+{
+    return "Cubemap Projection";
+}
+
 Ray Cubemap::get_primary_ray(float x, float y, float width, float height)
 {
     Ray ray;

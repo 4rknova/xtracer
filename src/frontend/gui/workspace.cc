@@ -77,7 +77,6 @@ void workspace_t::render()
         } break;
     }
 
-    xtcore::memory::safe_delete<xtcore::render::IIntegrator>(integrator);
     status = WS_STATUS_LOADED;
 }
 

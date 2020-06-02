@@ -11,12 +11,19 @@ temp/
 *.swp
 *.old
 CMakeCache.txt
+CMakeLists.txt.user
 CMakeFiles/
 Testing/
 cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 imgui.ini
+.cmake
+.idea
 
 # procedurally generated source code
 src/xtcore/license.h
+
+# other files
+*.cbp
+

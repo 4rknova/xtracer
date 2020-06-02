@@ -11,6 +11,7 @@ namespace xtcore {
 class Cubemap : public xtcore::asset::ICamera
 {
 	public:
+    const char* get_type() const;
     Ray get_primary_ray(float x, float y, float width, float height);
 };
 

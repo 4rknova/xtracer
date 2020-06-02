@@ -19,6 +19,7 @@ class ODS : public xtcore::asset::ICamera
     Vector3f orientation;
 
     ODS();
+    const char* get_type() const;
 
     Ray get_primary_ray(float x, float y, float width, float height);
 };

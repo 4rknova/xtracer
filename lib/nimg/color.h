@@ -12,10 +12,13 @@ class ColorRGBf
 {
 	public:
 		explicit ColorRGBf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f);
-		ColorRGBf(const ColorRGBf &rhs);
-		ColorRGBf(const ColorRGBAf &rhs);
+		ColorRGBf(const ColorRGBf   &rhs);
+        ColorRGBf(const ColorRGBAf  &rhs);
 
-		// Operators
+        void operator=(const ColorRGBf  &rhs);
+        void operator=(const ColorRGBAf &rhs);
+
+    // Operators
 		inline ColorRGBf &operator +=(const ColorRGBf &rhs);
 		inline ColorRGBf &operator -=(const ColorRGBf &rhs);
 		inline ColorRGBf &operator *=(const ColorRGBf &rhs);
@@ -48,8 +51,11 @@ class ColorRGBAf
 {
 	public:
 		explicit ColorRGBAf(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f, const float a = 0.0f);
-		ColorRGBAf(const ColorRGBf &rhs);
-		ColorRGBAf(const ColorRGBAf &rhs);
+        ColorRGBAf(const ColorRGBAf &rhs);
+        ColorRGBAf(const ColorRGBf  &rhs);
+
+        void operator=(const ColorRGBf  &rhs);
+        void operator=(const ColorRGBAf &rhs);
 
 		// Operators
 		inline ColorRGBAf &operator +=(const ColorRGBAf &rhs);

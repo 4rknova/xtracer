@@ -19,6 +19,11 @@ Perspective::Perspective()
     , flength(0)
 {}
 
+const char* Perspective::get_type() const
+{
+    return "Perspective";
+}
+
 Ray Perspective::get_primary_ray(float x, float y, float width, float height)
 {
     // Note that the direction vector of ray is not normalized. 

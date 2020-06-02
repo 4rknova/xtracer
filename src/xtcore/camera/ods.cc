@@ -7,6 +7,11 @@ ODS::ODS()
     : ipd(XT_CAM_DEFAULT_IPD)
 {}
 
+const char* ODS::get_type() const
+{
+    return "Omni-Directional Stereo";
+}
+
 Ray ODS::get_primary_ray(float x, float y, float width, float height)
 {
     Ray ray;

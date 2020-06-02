@@ -4,7 +4,6 @@
 #include <xtcore/context.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
-#include <xtcore/net.h>
 #include <xtcore/macro.h>
 #include "action.h"
 
@@ -22,36 +21,6 @@ void task_render(workspace_t *ws)
 void task_load(workspace_t *ws)
 {
     if (ws) ws->load();
-}
-
-void task_broadcast(gui::state_t *state)
-{
-    UNUSED(state)
-
-    xtcore::Log::handle().post_message("Broadcasting..");
-    int res = xtcore::network::broadcast();
-    xtcore::Log::handle().post_debug("Broadcasting returned %i", res);
-}
-
-void task_listen(gui::state_t *state)
-{
-    xtcore::Log::handle().post_message("Listening");
-	int res = xtcore::network::listen(&(state->network.is_listening));
-    xtcore::Log::handle().post_debug("Listening returned %i", res);
-}
-
-int broadcast(gui::state_t *state)
-{
-    std::thread t(task_broadcast, state);
-    t.detach();
-    return 0;
-}
-
-int listen(gui::state_t *state)
-{
-    std::thread t(task_listen, state);
-    t.detach();
-    return 0;
 }
 
 int render(workspace_t *ws)

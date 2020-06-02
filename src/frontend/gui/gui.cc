@@ -545,15 +545,6 @@ void menu_workspaces(state_t *state)
     }
 }
 
-void mm_network(state_t *state)
-{
-    if (ImGui::BeginMenu(STR_NETWORK)) {
-        if (ImGui::MenuItem(STR_BROADCAST)) { action::broadcast(state); }
-        if (ImGui::MenuItem(STR_RECEIVE  )) { action::listen   (state); }
-        ImGui::EndMenu();
-    }
-}
-
 void mm_integrator(workspace_t *ws)
 {
     if (ws->status == WS_STATUS_PROCESSING) return;
@@ -571,7 +562,7 @@ void mm_integrator(workspace_t *ws)
             if (ImGui::BeginMenu("Concurrency")) { mm_concurrency(ws); ImGui::EndMenu(); }
             if (ImGui::BeginMenu("Integrator")) {
                 size_t res_entries = sizeof(integrators) / sizeof(integrator_t);
-                for (int i = 0; i < res_entries; ++i) {
+                for (size_t i = 0; i < res_entries; ++i) {
                     integrator_t *ip = &integrators[i];
                     if (ImGui::MenuItem(ip->name)) {
                         ws->integrator = ip->integrator;
@@ -692,8 +683,7 @@ void render_main_menu(state_t *state)
                 mm_integrator(state->workspace);
             }
         }
-        gui::mm_network(state);
-        
+
         ImGui::SameLine(ImGui::GetWindowWidth()-60);
         if (ImGui::BeginMenu("About")) {
             ImGui::BeginGroup();
