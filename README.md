@@ -69,6 +69,7 @@ ImGui         | MIT License        | https://github.com/ocornut/imgui
 TinyObjLoader | MIT License        | https://github.com/syoyo/tinyobjloader
 TinyFiles     | Public Domain      | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
 STB           | Public Domain      | https://github.com/nothings/stb
+TinyEXR       | 3-clause BSD       | https://github.com/syoyo/tinyexr
 Remotery      | Apache License 2.0 | https://github.com/Celtoys/Remotery
 strpool       | Public Domain      | https://github.com/mattiasgustavsson/libs
 

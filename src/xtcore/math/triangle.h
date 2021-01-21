@@ -1,7 +1,6 @@
 #ifndef XTCORE_TRIANGLE_H_INCLUDED
 #define XTCORE_TRIANGLE_H_INCLUDED
 
-#include <nmath/defs.h>
 #include <nmath/precision.h>
 #include <nmath/types.h>
 #include <nmath/vector.h>

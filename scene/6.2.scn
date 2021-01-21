@@ -4,12 +4,12 @@ title = DOF
 descr = Depth of field
 versn = 0.4
 
-k_ambient = 0.01
-
-ambient = {
-	r = 1
-	g = 1
-	b = 1
+environment = {
+    type = gradient
+    config = {
+        a = col3(1.0,1.0,1.0)
+        b = col3(0.7,0.8,1.0)
+    }
 }
 
 camera = {
@@ -129,7 +129,7 @@ material = {
 	}
 
     light = {
-        type = lambert
+        type = emissive
 
         properties = {
             samplers = {

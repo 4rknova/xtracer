@@ -1,7 +1,6 @@
 #ifndef XTCORE_BBOX_H_INCLUDED
 #define XTCORE_BBOX_H_INCLUDED
 
-#include <nmath/defs.h>
 #include <nmath/types.h>
 #include <nmath/vector.h>
 #include "ray.h"

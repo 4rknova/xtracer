@@ -13,6 +13,7 @@ int image(const char *filename, Pixmap &map);
 
         namespace save {
 
+int exr(const char *filename, Pixmap &map);
 int png(const char *filename, Pixmap &map);
 int jpg(const char *filename, Pixmap &map);
 int bmp(const char *filename, Pixmap &map);

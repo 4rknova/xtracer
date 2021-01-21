@@ -8,7 +8,6 @@ find_package(OpenSSL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenMP REQUIRED)
-#FIND_PACKAGE(embree 3.0 REQUIRED)
 
 # PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})

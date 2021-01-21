@@ -106,23 +106,6 @@ static inline scalar_t clamp(const scalar_t value, const scalar_t a, const scala
 	return value < a ? a : (value > b ? b : value);
 }
 
-/* Greater Common Divisor */
-static inline int gcd(const int a, const int b)
-{
-	if (!b)
-		return a;
-
-   return gcd(b, a % b);
-}
-
-/* Lowest Common Multiple */
-static inline int lcm(const int a, const int b)
-{
-    int min = (a > b) ? a : b;
-    while (!(min % a == 0 && min % b == 0)) ++min;
-    return min;
-}
-
 /* Check if an integer is a power of 2 */
 static inline int is_power_of_2(const int v)
 {

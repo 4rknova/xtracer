@@ -42,6 +42,8 @@ class Scene
  	 Scene();
 	~Scene();
 
+    float time;
+
     const xtcore::asset::Object    *get_object   (HASH_ID obj_id);
     const xtcore::asset::IMaterial *get_material (HASH_ID obj_id);
     const xtcore::asset::ISurface  *get_surface  (HASH_ID obj_id);

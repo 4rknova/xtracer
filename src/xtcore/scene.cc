@@ -36,7 +36,8 @@ Scene &Scene::operator =(const Scene &)
 }
 
 Scene::Scene()
-    : m_environment(0)
+    : time(0)
+    , m_environment(0)
 {}
 
 Scene::~Scene()

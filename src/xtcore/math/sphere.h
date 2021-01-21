@@ -1,7 +1,6 @@
 #ifndef XTCORE_SPHERE_H_INCLUDED
 #define XTCORE_SPHERE_H_INCLUDED
 
-#include <nmath/defs.h>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include "surface.h"

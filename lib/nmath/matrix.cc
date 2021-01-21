@@ -1,43 +1,9 @@
-/*
-
-    This file is part of the libnmath.
-
-    matrix.cc
-    Matrix
-
-    Copyright (C) 2008, 2010, 2011
-    Papadopoulos Nikolaos
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this library; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-#ifdef __cplusplus
-    #include <cmath>
-	#include <cstdio>
-#else
-    #include <math.h>
-	#include <stdio.h>
-#endif  /* __cplusplus */
+#include <cmath>
+#include <cstdio>
 #include "matrix.h"
 #include "vector.h"
 
 namespace NMath {
-
-#ifdef __cplusplus
 
 const Matrix3x3f Matrix3x3f::identity = Matrix3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
@@ -53,11 +19,6 @@ Matrix3x3f::Matrix3x3f(	scalar_t m11, scalar_t m12, scalar_t m13,
 	data[0][0] = m11; data[0][1] = m12; data[0][2] = m13;
 	data[1][0] = m21; data[1][1] = m22; data[1][2] = m23;
 	data[2][0] = m31; data[2][1] = m32; data[2][2] = m33;
-}
-
-Matrix3x3f::Matrix3x3f(const mat3x3_t m)
-{
-	memcpy(data, m, sizeof(mat3x3_t));
 }
 
 Matrix3x3f::Matrix3x3f(const Matrix4x4f &mat4)
@@ -362,16 +323,6 @@ Matrix3x3f Matrix3x3f::inverse() const
 	Matrix3x3f adjMat = adjoint();
     return adjMat * (1.0f / determinant());
 }
-std::ostream &operator <<(std::ostream &out, const Matrix3x3f &mat)
-{
-    for(int i=0; i<3; i++)
-	{
-        char str[100];
-        sprintf(str, "[ %12.5f, %12.5f, %12.5f ]\n", (float)mat.data[i][0], (float)mat.data[i][1], (float)mat.data[i][2]);
-        out << str;
-    }
-    return out;
-}
 
 const Matrix4x4f Matrix4x4f::identity = Matrix4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
@@ -389,11 +340,6 @@ Matrix4x4f::Matrix4x4f( scalar_t m11, scalar_t m12, scalar_t m13, scalar_t m14,
     data[1][0] = m21; data[1][1] = m22; data[1][2] = m23; data[1][3] = m24;
     data[2][0] = m31; data[2][1] = m32; data[2][2] = m33; data[2][3] = m34;
     data[3][0] = m41; data[3][1] = m42; data[3][2] = m43; data[3][3] = m44;
-}
-
-Matrix4x4f::Matrix4x4f(const mat4x4_t m)
-{
-    memcpy(data, m, sizeof(mat4x4_t));
 }
 
 Matrix4x4f::Matrix4x4f(const Matrix3x3f &mat3)
@@ -763,18 +709,5 @@ Matrix4x4f Matrix4x4f::inverse() const
 	Matrix4x4f adjMat = adjoint();
     return adjMat * (1.0f / determinant());
 }
-
-std::ostream &operator <<(std::ostream &out, const Matrix4x4f &mat)
-{
-    for(int i=0; i<4; i++)
-	{
-        char str[100];
-        sprintf(str, "[ %12.5f, %12.5f, %12.5f, %12.5f ]\n", (float)mat.data[i][0], (float)mat.data[i][1], (float)mat.data[i][2], (float)mat.data[i][3]);
-        out << str;
-    }
-    return out;
-}
-
-#endif /* __cplusplus */
 
 } /* namespace NMath */

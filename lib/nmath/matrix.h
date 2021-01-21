@@ -1,61 +1,10 @@
-/*
-
-    This file is part of the libnmath.
-
-    matrix.h
-    Matrix
-
-    Copyright (C) 2008, 2010, 2011
-    Papadopoulos Nikolaos
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General
-    Public License along with this library; if not, write to the
-    Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    Boston, MA 02110-1301 USA
-
-*/
-
-/*
-	To do
-	-----
-
-	- Mat3x3:
-		- Adjoint
-
-	- Mat4x4:
-		- Arbitrary axis rotation
-
-	- Quaternions
-*/
-
 #ifndef NMATH_MATRIX_H_INCLUDED
 #define NMATH_MATRIX_H_INCLUDED
-
-#ifdef __cplusplus
-	#include <ostream>
-    #include <cstdio>
-#else
-    #include <stdio.h>
-#endif  /* __cplusplus */
-
-#include "defs.h"
 
 #include "precision.h"
 #include "types.h"
 
 namespace NMath {
-
-#ifdef __cplusplus
 
 class Matrix3x3f
 {
@@ -66,7 +15,6 @@ class Matrix3x3f
 		Matrix3x3f(	scalar_t m11, scalar_t m12, scalar_t m13,
 					scalar_t m21, scalar_t m22, scalar_t m23,
 					scalar_t m31, scalar_t m32, scalar_t m33);
-		Matrix3x3f(const mat3x3_t m);
 		Matrix3x3f(const Matrix4x4f &mat4);
 
 		/* Binary operators */
@@ -123,8 +71,6 @@ class Matrix3x3f
 		Matrix3x3f adjoint() const;
 		Matrix3x3f inverse() const;
 
-	    friend std::ostream &operator <<(std::ostream &out, const Matrix3x3f &mat);
-
 		static const Matrix3x3f identity;
 
 		scalar_t data[3][3];
@@ -140,7 +86,6 @@ class Matrix4x4f
 					scalar_t m21, scalar_t m22, scalar_t m23, scalar_t m24,
 					scalar_t m31, scalar_t m32, scalar_t m33, scalar_t m34,
 					scalar_t m41, scalar_t m42, scalar_t m43, scalar_t m44);
-		Matrix4x4f(const mat4x4_t m);
 		Matrix4x4f(const Matrix3x3f &mat3);
 
 		/* Binary operators */
@@ -194,14 +139,10 @@ class Matrix4x4f
 		Matrix4x4f adjoint() const;
 		Matrix4x4f inverse() const;
 
-		friend std::ostream &operator <<(std::ostream &out, const Matrix4x4f &mat);
-
 		static const Matrix4x4f identity;
 
 		scalar_t data[4][4];
 };
-
-#endif	/* __cplusplus */
 
 } /* namespace NMath */
 

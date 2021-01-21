@@ -408,33 +408,12 @@ void mm_export(workspace_t *ws)
         };
 
         if (strlen(filepath) > 0) {
+            _button_lambda("EXR", action::IMG_FORMAT_EXR, true);
             _button_lambda("HDR", action::IMG_FORMAT_HDR, true);
             _button_lambda("PNG", action::IMG_FORMAT_PNG, true);
             _button_lambda("JPG", action::IMG_FORMAT_JPG, true);
             _button_lambda("BMP", action::IMG_FORMAT_BMP, true);
             _button_lambda("TGA", action::IMG_FORMAT_TGA, true);
-/*
-            if (ImGui::Button("Y4M", bd)) {
-                size_t w = ws->context.params.width;
-                size_t h = ws->context.params.height;
-                start_video(filepath, w, h, 25);
-                nimg::Pixmap fb;
-                xtcore::render::assemble(fb, ws->context);
-                std::vector<float> rgb;
-                for (size_t y = 0; y < h; ++y) {
-                    for (size_t x = 0; x < w; ++x) {
-                        nimg::ColorRGBAf pixel = fb.pixel(x,y);
-                        rgb.push_back(pixel.r());
-                        rgb.push_back(pixel.g());
-                        rgb.push_back(pixel.b());
-                    }
-                }
-
-                for (size_t i = 0; i < 60; ++i) {
-                    write_frame(filepath, w, h, &rgb[0]);
-                }
-            }
-*/
         }
         ImGui::EndMenu();
     }

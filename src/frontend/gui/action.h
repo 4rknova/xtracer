@@ -8,15 +8,14 @@ namespace action {
 
 enum IMG_FORMAT
 {
-      IMG_FORMAT_HDR
+      IMG_FORMAT_EXR
+    , IMG_FORMAT_HDR
     , IMG_FORMAT_PNG
     , IMG_FORMAT_JPG
     , IMG_FORMAT_BMP
     , IMG_FORMAT_TGA
 };
 
-int broadcast (gui::state_t *state);
-int listen    (gui::state_t *state);
 int render    (workspace_t *ws);
 int load      (workspace_t *ws);
 int close     (gui::state_t *state, workspace_t *ws);
