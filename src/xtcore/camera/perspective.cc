@@ -1,4 +1,3 @@
-#include <nmath/matrix.h>
 #include <nmath/prng.h>
 #include "perspective.h"
 
@@ -22,6 +21,18 @@ Perspective::Perspective()
 const char* Perspective::get_type() const
 {
     return "Perspective";
+}
+
+void Perspective::calculate_transform(Matrix4x4f &mat)
+{
+	Vector3f rz = (target - position).normalized();
+	Vector3f rx = cross(up, rz).normalized();
+	Vector3f ry = cross(rx, rz).normalized();
+
+	mat = Matrix4x4f(rx.x, ry.x, rz.x, 0,
+		                 rx.y, ry.y, rz.y, 0,
+        		         rx.z, ry.z, rz.z, 0,
+		                    0,    0,    0, 1);
 }
 
 Ray Perspective::get_primary_ray(float x, float y, float width, float height)
@@ -55,22 +66,8 @@ Ray Perspective::get_primary_ray(float x, float y, float width, float height)
 	*/
 
 	// Calculate the camera direction vector and normalize it.
-	Vector3f camdir = target - position;
-	camdir.normalize();
 
-	Vector3f rx,ry,rz;
-
-	rz = camdir;
-	rx = cross(up, rz);
-	rx.normalize();
-	ry = cross(rx, rz);
-	ry.normalize();
-
-	Matrix4x4f mat(rx.x, ry.x, rz.x, 0,
-		           rx.y, ry.y, rz.y, 0,
-        		   rx.z, ry.z, rz.z, 0,
-		              0,    0,    0, 1);
-
+    calculate_transform(m_transform);
 
 	// Calculate the deviated ray direction for DoF
     if (flength > 0) {
@@ -88,12 +85,12 @@ Ray Perspective::get_primary_ray(float x, float y, float width, float height)
     }
 
 	// Transform the direction vector
-	ray.direction.transform(mat);
+	ray.direction.transform(m_transform);
 	ray.direction.normalize();
 
 	// Transform the origin of the ray for DoF
     if (flength > 0) {
-	    ray.origin.transform(mat);
+	    ray.origin.transform(m_transform);
 	    ray.origin += position;
     }
 
