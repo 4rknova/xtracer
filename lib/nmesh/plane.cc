@@ -1,17 +1,18 @@
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include "structs.h"
-#include "icosahedron.h"
+#include "plane.h"
 
 namespace nmesh {
     namespace generator {
 
-// Ref: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
-void icosahedron(object_t *obj)
+
+// Ref: https://www.danielsieger.com/blog/2021/05/03/generating-primitive-shapes.html
+void plane(object_t *obj)
 {
     if (!obj) return;
 
-    // create 12 vertices of a icosahedron
+    // create 12 vertices of a plane
     float k = (1.f + nmath_sqrt(5.f)) / 2.f;
 
     NMath::Vector3f v[12];
