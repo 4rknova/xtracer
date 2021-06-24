@@ -6,9 +6,11 @@
 #include "scene.h"
 #include "tile.h"
 #include "aa.h"
+#include "util/raygraph.h"
 
 using nimg::Pixmap;
 using nimg::ColorRGBf;
+using xtcore::raygraph::raygraph_t;
 
 namespace xtcore {
 	namespace render {
@@ -25,7 +27,6 @@ struct params_t
 
     xtcore::render::TILE_ORDER tile_order;
     xtcore::antialiasing::SAMPLE_DISTRIBUTION sample_distribution;
-
 
     HASH_UINT64 camera;
 
@@ -49,11 +50,11 @@ struct context_t
     context_t();
 };
 
-/* export: Assembles the context tiles
-**         and copies the data to the
-**         pixmap.
+/* export: Assembles the context tiles and copies the data
+** to the respective container.
 */
 void assemble(Pixmap &pixmap, const context_t &context);
+void assemble(raygraph_t &raygraph, const context_t &context);
 
 	} /* namespace render */
 } /* namespace xtcore */

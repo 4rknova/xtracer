@@ -62,6 +62,30 @@ int close(gui::state_t *state, workspace_t *ws)
     return 0;
 }
 
+int write_raygraph(const char *filepath, workspace_t *ws)
+{
+    xtcore::Log::handle().post_message("Exporting raygraph %s..", filepath);
+
+    xtcore::raygraph::raygraph_t raygraph;
+
+    xtcore::render::assemble(raygraph, ws->context);
+
+    xtcore::Log::handle().post_message("raygraph::bundles = %i", raygraph.bundles.size());
+
+    for (size_t i = 0; i < raygraph.bundles.size(); ++i) {
+        xtcore::Log::handle().post_debug(" -> bundle %i : %i paths", i, raygraph.bundles[i]->paths.size());
+      /*
+        for (size_t j = 0; j < raygraph.bundles[i]->paths.size(); ++j) {
+            xtcore::Log::handle().post_debug(" -> path %i : %i samples", i, raygraph.bundles[i]->paths[j].samples.size());
+        }
+      */
+    }
+     int res = xtcore::raygraph::write(filepath, raygraph);
+
+    if (res) xtcore::Log::handle().post_error("Failed to export %s", filepath);
+    return res;
+}
+
 int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
 {
     std::string fp = filepath;

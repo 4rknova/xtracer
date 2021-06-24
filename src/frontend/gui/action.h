@@ -16,10 +16,11 @@ enum IMG_FORMAT
     , IMG_FORMAT_TGA
 };
 
-int render    (workspace_t *ws);
-int load      (workspace_t *ws);
-int close     (gui::state_t *state, workspace_t *ws);
-int write     (IMG_FORMAT format, const char *filepath, workspace_t *ws);
+int render         (workspace_t *ws);
+int load           (workspace_t *ws);
+int close          (gui::state_t *state, workspace_t *ws);
+int write_raygraph (const char *filepath, workspace_t *ws);
+int write          (IMG_FORMAT format, const char *filepath, workspace_t *ws);
 
 void quit();
 

@@ -51,5 +51,15 @@ void assemble(Pixmap &pixmap, const context_t &context)
     }
 }
 
+void assemble(raygraph_t &raygraph, const context_t &context)
+{
+    raygraph.bundles.clear();
+
+    for (size_t i = 0; i < context.tiles.size(); ++i) {
+        const xtcore::render::tile_t *tile = &(context.tiles[i]);
+        raygraph.bundles.push_back(&(tile->raygraph_bundle));
+    }
+}
+
     } /* namespace render */
 } /* namespace xtcore */

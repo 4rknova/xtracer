@@ -2,6 +2,7 @@
 #include <nmath/precision.h>
 #include <xtcore/aa.h>
 #include "integrator.h"
+#include "util/raygraph.h"
 
 namespace xtcore {
     namespace integrator {
@@ -38,6 +39,16 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
         }
 
         color_pixel.a(1);
+
+        raygraph::path_t path;
+        raygraph::sample_t sample0, sample1;
+
+        sample0.position = ray.origin;
+        sample1.position = hit_record.point;
+        sample1.color = color_pixel;
+        path.samples.emplace_back(std::move(sample0));
+        path.samples.emplace_back(std::move(sample1));
+        tile->raygraph_bundle.paths.emplace_back(std::move(path));
 
         tile->write(floor(sample.pixel.x), floor(sample.pixel.y), color_pixel);
     }

@@ -414,6 +414,7 @@ void mm_export(workspace_t *ws)
             _button_lambda("JPG", action::IMG_FORMAT_JPG, true);
             _button_lambda("BMP", action::IMG_FORMAT_BMP, true);
             _button_lambda("TGA", action::IMG_FORMAT_TGA, true);
+            if (ImGui::Button("Raygraph (*ply)")) action::write_raygraph(filepath, ws);
         }
         ImGui::EndMenu();
     }

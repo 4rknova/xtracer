@@ -6,6 +6,7 @@
 #include <nimg/pixmap.h>
 #include "filter.h"
 #include "aa_sample.h"
+#include "raygraph.h"
 
 using xtcore::filter::IFilter;
 
@@ -26,6 +27,8 @@ struct tile_t {
     size_t y1()     const;
     size_t width()  const;
     size_t height() const;
+
+    raygraph::bundle_t raygraph_bundle;
 
     void setup_handler_on_init  (tile_event_handler_t *h);
     void setup_handler_on_done  (tile_event_handler_t *h);

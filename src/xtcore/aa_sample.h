@@ -1,5 +1,5 @@
-#ifndef XTCORE_AA_SAMPLEH_INCLUDED
-#define XTCORE_AA_SAMPLEH_INCLUDED
+#ifndef XTCORE_AA_SAMPLE_H_INCLUDED
+#define XTCORE_AA_SAMPLE_H_INCLUDED
 
 #include <queue>
 #include <nmath/vector.h>
@@ -32,4 +32,4 @@ struct sample_set_t {
     } /* namespace antialiasing */
 } /* namespace xtcore */
 
-#endif /* XTCORE_AA_SAMPLEH_INCLUDED */
+#endif /* XTCORE_AA_SAMPLE_H_INCLUDED */
