@@ -10,4 +10,4 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Build
-        run: cmake && make
+        run: ls && cmake && make
