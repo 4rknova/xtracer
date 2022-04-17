@@ -9,6 +9,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build
+      - name: Install dependencies
         run: apt update && apt install -y libopengl-dev
+      - name: Build
         run: cmake ./CMakeLists.txt && make
