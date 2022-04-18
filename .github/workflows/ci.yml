@@ -10,6 +10,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt update && sudo apt install -y libopengl-dev libglx-mesa0
+        run: sudo apt update && sudo apt install -y libgl1-mesa-dev libglx-mesa0
       - name: Build
         run: cmake ./CMakeLists.txt && make
