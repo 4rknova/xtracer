@@ -3,8 +3,6 @@ XTracer 2
 Copyright 2010 - 2013 (c)
 Papadopoulos Nikos <nikpapas@gmail.com>
 
-[![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
-
 About
 -----
 XTracer is a raytracer written in c and c++.
