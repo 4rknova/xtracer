@@ -5,8 +5,7 @@ XTRACER
 
 Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
 
-[![Build Status](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
-
+[![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
 XTracer is an experimental rendering framework written in c and c++.
 
 ## Samples
