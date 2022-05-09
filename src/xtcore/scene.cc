@@ -136,7 +136,7 @@ void Scene::release()
 
 int Scene::destroy_camera   (HASH_UINT64 id) { return purge(m_cameras  , id); }
 int Scene::destroy_material (HASH_UINT64 id) { return purge(m_materials, id); }
-int Scene::destroy_surface (HASH_UINT64 id) { return purge(m_surface , id); }
+int Scene::destroy_surface  (HASH_UINT64 id) { return purge(m_surface , id); }
 int Scene::destroy_object   (HASH_UINT64 id) { return purge(m_objects  , id); }
 
 nimg::ColorRGBf Scene::sample_environment(const Vector3f &direction) const

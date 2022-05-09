@@ -1,0 +1,78 @@
+title       = Reflective icosahedron
+description = An icosahedron reflecting the environment
+version     = 1.0
+
+data = data
+env  = <data>/image/envmap/humus/VancouverConventionCentre
+
+camera = {
+	ods = {
+        type = ods
+		ipd  = 1.5
+        position = vec3(0,0,-75)
+    }
+
+    default = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(4,-6,-8)
+        target   = vec3(0,0,0)
+        fov      = 45
+    }
+}
+
+geometry = {
+    ball = {
+        type   = mesh
+        source = gen(plane)
+        properties = {
+            resolution = 10
+        }
+        modifiers = {
+            scale = vec3(10,10,10)
+        }
+    }
+}
+
+material = {
+	ball = {
+		type = blinn_phong
+        properties = {
+            samplers = {
+        		diffuse  = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+
+            scalars = {
+                reflectance = 1
+                exponent    = 128
+            }
+        }
+	}
+}
+
+environment = {
+    type   = cubemap
+    config = {
+        posy = <env>/posy.jpg
+        negy = <env>/negy.jpg
+        negx = <env>/negx.jpg
+        posx = <env>/posx.jpg
+        posz = <env>/posz.jpg
+        negz = <env>/negz.jpg
+    }
+}
+
+object = {
+    ball = {
+        geometry = ball
+        material = ball
+    }
+}

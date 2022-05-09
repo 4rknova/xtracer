@@ -6,7 +6,7 @@
 namespace nmesh {
     namespace generator {
 
-void plane(object_t *obj);
+void plane(object_t *obj, size_t resolution = 1);
 
     } /* namespace generator */
 } /* namespace nmesh */

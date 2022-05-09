@@ -21,6 +21,7 @@ namespace xtcore {
 
 /* Default Values */
 #define DEFVAL_BOOL (false)
+#define DEFVAL_NUMI (0)
 #define DEFVAL_NUMF (0.f)
 #define DEFVAL_CSTR ("")
 #define DEFVAL_TEX2 (NMath::Vector2f(0.f,0.f))
@@ -28,6 +29,7 @@ namespace xtcore {
 #define DEFVAL_COL3 (nimg::ColorRGBf(0.f,0.f,0.f))
 
 bool            deserialize_bool(const char *val, const bool            def = DEFVAL_BOOL);
+int             deserialize_numi(const char *val, const int             def = DEFVAL_NUMI);
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def = DEFVAL_NUMF);
 std::string     deserialize_cstr(const char *val, const char*           def = DEFVAL_CSTR);
 NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const NMath::Vector2f def = DEFVAL_TEX2);

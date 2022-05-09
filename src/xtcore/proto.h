@@ -16,6 +16,7 @@
 #define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
+#define XTPROTO_LTRL_PLANE          "plane"             /* string     */ /* Plane */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -29,6 +30,7 @@
 #define XTPROTO_PROP_VRT_1			"v1"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_2			"v2"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_PROPERTIES     "properties"        /* string     */ /* properties */
+#define XTPROTO_PROP_RESOLUTION     "resolution"        /* string     */ /* resolution */
 #define XTPROTO_PROP_SCALARS        "scalars"           /* string     */ /* scalar properties */
 #define XTPROTO_PROP_COLORS         "colors"            /* string     */ /* color properties */
 #define XTPROTO_PROP_TEXTURES       "textures"          /* string     */ /* texture properties */

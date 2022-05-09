@@ -41,6 +41,9 @@ execute_process(
 
 SCAN_DIRS(ext_libs)
 
+set(IN_MAN_CLI  xtracer_cli.1)
+
+set(OUT_MAN_CLI xtracer_cli.1.gz)
 set(OUT_LIB     xtcore)
 set(OUT_EXE_CLI xtracer_cli)
 set(OUT_EXE_GUI xtracer_gui)
@@ -94,6 +97,10 @@ file(GLOB SRC_REMOTERY
 
 file(GLOB SRC_RTMIDI
     ${PATH_EXT}/rtmidi/*.cpp
+)
+
+add_custom_target(manpages_cli
+    gzip -c man/${IN_MAN_CLI} > ${PATH_BIN}/${OUT_MAN_CLI}
 )
 
 add_library(imgui STATIC ${SRC_IMGUI})
@@ -152,7 +159,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O0")
 set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
-add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic)
+add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_GUI} xtcore_static xtcore_dynamic)
 
 enable_testing()
@@ -165,3 +172,12 @@ foreach(file ${files})
         COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST} -renderer stencil
     )
 endforeach()
+
+
+install (TARGETS ${OUT_EXE_CLI} ${OUT_EXE_GUI} xtcore_static xtcore_dynamic
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install (FILES ${PATH_BIN}/xtracer.1.gz DESTINATION man/man1)

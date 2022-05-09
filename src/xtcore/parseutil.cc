@@ -6,6 +6,7 @@
 #include <nmesh/transform.h>
 #include <nmesh/invnormals.h>
 #include <nmesh/icosahedron.h>
+#include <nmesh/plane.h>
 #include <nimg/checkerboard.h>
 #include <nimg/transform.h>
 
@@ -38,6 +39,11 @@ bool deserialize_bool(const char *val, const bool def)
 	std::string s = val;
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return ( (s == "1") || (s == "yes") || (s == "true") ) ? true : false;
+}
+
+int deserialize_numi(const char *val, const int def)
+{
+    return val ? ncf::util::to_int(val) : def;
 }
 
 NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def)
@@ -288,11 +294,26 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 
     // Procedural meshes
     if (res > 0) {
-        if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) nmesh::generator::icosahedron(&obj);
+        if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
+            nmesh::generator::icosahedron(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_PLANE)) {
+            ncf::NCF *properties = p->get_group_by_name(XTPROTO_PROPERTIES);
+
+            int i = 0;
+
+            if (p) {
+                i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
+                if (i < 1) i = 1;
+            }
+
+            nmesh::generator::plane(&obj, i);
+        }
+
         else Log::handle().post_message("Invalid mesh generator: %s", token.c_str());
     }
     // External sources
-        else {
+    else {
         // Open source file from relative path
 	    std::string base, file, fsource = source;
 		ncf::util::path_comp(fsource, base, file);
