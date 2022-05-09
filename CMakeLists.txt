@@ -180,4 +180,4 @@ install (TARGETS ${OUT_EXE_CLI} ${OUT_EXE_GUI} xtcore_static xtcore_dynamic
     ARCHIVE DESTINATION lib
 )
 
-install (FILES ${PATH_BIN}/xtracer.1.gz DESTINATION man/man1)
+install (FILES ${PATH_BIN}/${OUT_MAN_CLI} DESTINATION man/man1)
