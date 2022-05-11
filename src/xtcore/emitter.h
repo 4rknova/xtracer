@@ -8,7 +8,7 @@ namespace xtcore {
     namespace asset {
 
 typedef struct {
-    NMath::Vector3f position;
+    nmath::Vector3f position;
     nimg::ColorRGBf intensity;
 
 } emitter_t;

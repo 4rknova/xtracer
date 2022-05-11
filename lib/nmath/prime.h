@@ -3,7 +3,7 @@
 
 #include "defs.h"
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +17,7 @@ static inline unsigned long getPrevPrime(unsigned long i);
 }   /* extern "C" */
 #endif
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #include "prime.inl"
 

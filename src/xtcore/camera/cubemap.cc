@@ -4,9 +4,9 @@
 ** The faces are ordered as: +x -x +y -y +z -z
 **/
 
-using NMath::scalar_t;
-using NMath::Vector3f;
-using NMath::Matrix4x4f;
+using nmath::scalar_t;
+using nmath::Vector3f;
+using nmath::Matrix4x4f;
 
 namespace xtcore {
     namespace camera {

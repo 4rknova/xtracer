@@ -6,7 +6,7 @@
 #include "surface.h"
 #include "ray.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 
 namespace xtcore {
     namespace surface {
@@ -20,7 +20,7 @@ class Sphere: public xtcore::asset::ISurface
         Sphere(const Vector3f &org, scalar_t rad);
 
 		bool intersection(const Ray &ray, hit_record_t* i_hit_record) const;
-        NMath::scalar_t distance(NMath::Vector3f p) const;
+        nmath::scalar_t distance(nmath::Vector3f p) const;
 		void calc_aabb();
 
         Vector3f point_sample() const;

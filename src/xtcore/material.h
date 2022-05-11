@@ -10,7 +10,7 @@
 #include "matdefs.h"
 #include "emitter.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nimg::ColorRGBf;
 using xtcore::sampler::ISampler;
 

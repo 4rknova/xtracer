@@ -308,7 +308,7 @@ void render_background(state_t *state)
 	}
 
     postprg->set_uniform("iWindowResolution"
-        , NMath::Vector2f((float)state->window.width
+        , nmath::Vector2f((float)state->window.width
                         , (float)state->window.height));
 
 	glBindVertexArray(vao);
@@ -581,9 +581,7 @@ void mm_dialog_load(state_t *state, bool &is_active)
             filepath[1] = 0;
         }
 
-
         if (needs_refreshing) {
-            xtcore::Log::handle().post_debug("Fetching directory listing..");
             util::filesystem::ls(fsv, filepath);
             valid_file = util::filesystem::file_exists(filepath);
             needs_refreshing = false;

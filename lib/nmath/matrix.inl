@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-namespace NMath {
+namespace nmath {
 
 inline scalar_t *Matrix3x3f::operator [](int index)
 {
@@ -39,6 +39,6 @@ inline void Matrix4x4f::reset_identity()
     memcpy(data, identity.data, 16 * sizeof(scalar_t));
 }
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_MATRIX_INL_INCLUDED */

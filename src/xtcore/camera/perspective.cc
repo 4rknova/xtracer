@@ -1,11 +1,11 @@
 #include <nmath/prng.h>
 #include "perspective.h"
 
-using NMath::RADIAN;
-using NMath::scalar_t;
-using NMath::prng_c;
-using NMath::Vector3f;
-using NMath::Matrix4x4f;
+using nmath::RADIAN;
+using nmath::scalar_t;
+using nmath::prng_c;
+using nmath::Vector3f;
+using nmath::Matrix4x4f;
 
 namespace xtcore {
     namespace camera {

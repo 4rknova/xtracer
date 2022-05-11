@@ -10,7 +10,7 @@ Plane::Plane()
 	: offset(XTCORE_PLANE_DEFAULT_DISTANCE)
 {}
 
-NMath::scalar_t Plane::distance(NMath::Vector3f p) const
+nmath::scalar_t Plane::distance(nmath::Vector3f p) const
 {
      return dot(p, normal) + offset;
 }

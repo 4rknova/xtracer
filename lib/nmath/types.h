@@ -3,7 +3,7 @@
 
 #include "precision.h"
 
-namespace NMath {
+namespace nmath {
 
 /* C++ equivalents - Forward declarations */
 class Vector2f;
@@ -13,6 +13,6 @@ class Vector4f;
 class Matrix3x3f;
 class Matrix4x4f;
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_TYPES_H_INCLUDED */

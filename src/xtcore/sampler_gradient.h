@@ -14,7 +14,7 @@ class Gradient : public ISampler
     nimg::ColorRGBf a;
     nimg::ColorRGBf b;
 
-    nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
+    nimg::ColorRGBf sample(const nmath::Vector3f &tc) const;
 };
 
     } /* namespace sampler */

@@ -4,7 +4,7 @@
 #include "precision.h"
 #include "types.h"
 
-namespace NMath {
+namespace nmath {
 
 class Matrix3x3f
 {
@@ -144,7 +144,7 @@ class Matrix4x4f
 		scalar_t data[4][4];
 };
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #include "matrix.inl"
 

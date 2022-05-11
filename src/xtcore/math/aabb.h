@@ -5,8 +5,8 @@
 #include <nmath/vector.h>
 #include "ray.h"
 
-using NMath::Vector2f;
-using NMath::Vector3f;
+using nmath::Vector2f;
+using nmath::Vector3f;
 
 namespace xtcore {
 

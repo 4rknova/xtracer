@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 
-namespace NMath {
+namespace nmath {
 
 Vector2f::Vector2f(scalar_t aX, scalar_t aY): x(aX), y(aY){}
 Vector2f::Vector2f(const Vector2f& v): x(v.x), y(v.y){}
@@ -19,4 +19,4 @@ Vector4f::Vector4f(const Vector3f& v): x(v.x), y(v.y), z(v.z), w(0.0f){}
 
 #endif  /* __cplusplus */
 
-} /* namespace NMath */
+} /* namespace nmath */

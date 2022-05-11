@@ -45,7 +45,7 @@
 #include "precision.h"
 #include "types.h"
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 extern "C" {
@@ -211,6 +211,6 @@ static inline scalar_t prng_multiplyWithCarry(const scalar_t a, const scalar_t b
 }   /* extern "C" */
 #endif
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_PRNG_INL_INCLUDED */

@@ -18,8 +18,8 @@
 #include "log.h"
 #include "scene.h"
 
-using NMath::Vector2f;
-using NMath::Vector3f;
+using nmath::Vector2f;
+using nmath::Vector3f;
 using xtcore::Log;
 
 namespace xtcore {
@@ -164,12 +164,12 @@ xtcore::asset::ICamera *Scene::get_camera(HASH_UINT64 id)
 	return 0;
 }
 
-NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
+nmath::scalar_t Scene::distance(nmath::Vector3f p, HASH_ID &object) const
 {
     auto it = m_objects.begin();
     auto et = m_objects.end();
 
-    NMath::scalar_t dist = INFINITY;
+    nmath::scalar_t dist = INFINITY;
 
     for (; it != et; ++it) {
         HASH_ID obj_id = (*it).first;
@@ -179,7 +179,7 @@ NMath::scalar_t Scene::distance(NMath::Vector3f p, HASH_ID &object) const
 
         asset::ISurface *s = (*geo).second;
 
-        NMath::scalar_t temp_dist = s->distance(p);
+        nmath::scalar_t temp_dist = s->distance(p);
         if (temp_dist < dist) {
             dist = temp_dist;
             object = obj_id;

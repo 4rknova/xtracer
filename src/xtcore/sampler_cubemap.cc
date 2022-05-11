@@ -10,9 +10,9 @@ int Cubemap::load(const char *file, CUBEMAP_FACE face)
     return m_textures[face].load(file);
 }
 
-nimg::ColorRGBf Cubemap::sample(const NMath::Vector3f &tc) const
+nimg::ColorRGBf Cubemap::sample(const nmath::Vector3f &tc) const
 {
-    NMath::Vector3f dir = tc.normalized();
+    nmath::Vector3f dir = tc.normalized();
 
     CUBEMAP_FACE face = CUBEMAP_FACE_TOP;
     float u = 0.f, v = 0.f;
@@ -30,7 +30,7 @@ nimg::ColorRGBf Cubemap::sample(const NMath::Vector3f &tc) const
         else if (dir.z < 0.0f) { face = CUBEMAP_FACE_FRONT;  u = 1.- (dir.x / dir.z+ 1.0f) * 0.5f; v =       (dir.y / dir.z+ 1.0f) * 0.5f; }
     }
 
-    NMath::Vector3f coords(u, v, 0);
+    nmath::Vector3f coords(u, v, 0);
     return m_textures[face].sample(coords);
 }
 

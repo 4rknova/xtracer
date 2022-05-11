@@ -11,8 +11,8 @@
 #define HASH_UINT64 uint64_t
 #define HASH_ID     HASH_UINT64
 
-using NMath::scalar_t;
-using NMath::Vector3f;
+using nmath::scalar_t;
+using nmath::Vector3f;
 using nimg::ColorRGBf;
 
 namespace xtcore {

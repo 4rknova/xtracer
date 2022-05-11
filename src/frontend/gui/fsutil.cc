@@ -53,9 +53,8 @@ int ls(fsvec &fsv, const char *path)
         if (file.is_dir) {
                  if (p->name.compare("." ) == 0) type = FS_ENTRY_TYPE_SPECIAL_DIR_CURRENT;
             else if (p->name.compare("..") == 0) type = FS_ENTRY_TYPE_SPECIAL_DIR_PARENT;
-            else                                 type = FS_ENTRY_TYPE_DIRECTORY;
+            else                                    type = FS_ENTRY_TYPE_DIRECTORY;
             p->path += PATH_DELIMITER;
-        printf("%s #  %s \n", p->path.c_str(), p->name.c_str());
         }
         else type = FS_ENTRY_TYPE_FILE;
 

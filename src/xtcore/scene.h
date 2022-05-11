@@ -16,7 +16,7 @@
 #include "sampler.h"
 #include "object.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nimg::ColorRGBf;
 
 namespace xtcore {
@@ -49,7 +49,7 @@ class Scene
     const xtcore::asset::ISurface  *get_surface  (HASH_ID obj_id);
 
 	void apply_modifiers();
-    NMath::scalar_t distance(NMath::Vector3f p, HASH_ID &object) const;
+    nmath::scalar_t distance(nmath::Vector3f p, HASH_ID &object) const;
 
 	const ColorRGBf &ambient();
 	void ambient(const ColorRGBf &ambient);

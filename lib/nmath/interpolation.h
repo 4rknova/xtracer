@@ -3,8 +3,8 @@
 
 #include "types.h"
 
-namespace NMath {
-	namespace Interpolation {
+namespace nmath {
+	namespace interpolation {
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,8 +52,8 @@ static inline scalar_t bezier_cubic(const scalar_t a, const scalar_t b, const sc
 }   /* extern "C" */
 #endif
 
-	} /* namespace Interpolation */
-} /* namespace NMath */
+	} /* namespace interpolation */
+} /* namespace nmath */
 
 #include "interpolation.inl"
 

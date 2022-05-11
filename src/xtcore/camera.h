@@ -3,7 +3,7 @@
 
 #include "math/ray.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 
 namespace xtcore {
     namespace asset {

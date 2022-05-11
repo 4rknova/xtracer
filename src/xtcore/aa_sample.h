@@ -10,9 +10,9 @@ namespace xtcore {
 
 struct sample_rgba_t
 {
-    NMath::scalar_t  weight;   // Contribution
-    NMath::Vector2f  pixel;    // Pixel indices
-    NMath::Vector2f  coords;   // Sample coordinates
+    nmath::scalar_t  weight;   // Contribution
+    nmath::Vector2f  pixel;    // Pixel indices
+    nmath::Vector2f  coords;   // Sample coordinates
 
     size_t           priority; // Layer
     nimg::ColorRGBAf value;    // Rendered value

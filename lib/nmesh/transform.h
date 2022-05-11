@@ -7,9 +7,9 @@
 namespace nmesh {
 	namespace mutator {
 
-void scale    (object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z);
-void translate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z);
-void rotate   (object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z);
+void scale    (object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z);
+void translate(object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z);
+void rotate   (object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z);
 
 	} /* namespace mutator */
 } /* namespace nmesh */

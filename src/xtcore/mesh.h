@@ -11,7 +11,7 @@
 #define LIMITS_MAX_ITEMS_PER_NODE 10
 #define LIMITS_MAX_DEPTH          10
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nmesh::shape_t;
 using nmesh::attrib_t;
 using nmesh::object_t;
@@ -26,7 +26,7 @@ class Mesh: public xtcore::asset::ISurface
 	~Mesh();
 
 	bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
-    NMath::scalar_t distance(NMath::Vector3f p) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
 	void calc_aabb();
     void build_octree(shape_t &shape, attrib_t &attributes);
     void build_octree(object_t &object);

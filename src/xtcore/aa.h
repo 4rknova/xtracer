@@ -8,8 +8,8 @@
 namespace xtcore {
     namespace antialiasing {
 
-void gen_samples_grid   (sample_set_t &samples, NMath::Vector2f pixel, size_t level);
-void gen_samples_random (sample_set_t &samples, NMath::Vector2f pixel, size_t level);
+void gen_samples_grid   (sample_set_t &samples, nmath::Vector2f pixel, size_t level);
+void gen_samples_random (sample_set_t &samples, nmath::Vector2f pixel, size_t level);
 
 enum SAMPLE_DISTRIBUTION
 {

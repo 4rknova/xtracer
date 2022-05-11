@@ -36,7 +36,7 @@
 	#include <math.h>
 #endif	/* __cplusplus */
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 	extern "C" {
@@ -115,23 +115,15 @@ const scalar_t RADIAN = 0.017453292519943;
 	}   /* extern "C" */
 #endif
 
-inline scalar_t max  (scalar_t x, scalar_t y)                         { return (x > y ? x : y);                   }
-inline scalar_t max3 (scalar_t x, scalar_t y, scalar_t z)             { return (max(max(x,y),z));                 }
-inline scalar_t max4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (max(max(max(x,y),z),w));          }
-inline scalar_t min  (scalar_t x, scalar_t y)                         { return (y > x ? x : y);                   }
-inline scalar_t min3 (scalar_t x, scalar_t y, scalar_t z)             { return (min(min(x,y),z));                 }
-inline scalar_t min4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (min(min(min(x,y),z),w));          }
-inline scalar_t sign (scalar_t x)                                     { return (x < 0 ? -1 : ( x > 0 ? 1 : 0));   }
-
-} /* namespace NMath */
+} /* namespace nmath */
 
 // Check for standard definitions
 #ifndef M_PI
-    #define M_PI NMath::PI
+    #define M_PI nmath::PI
 #endif /* M_PI */
 
 #ifndef M_E
-    #define M_E	NMath::EULER_E
+    #define M_E	nmath::EULER_E
 #endif /* M_E */
 
 #endif /* NMATH_PRECISION_H_INCLUDED */

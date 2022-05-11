@@ -3,11 +3,19 @@
 
 #include "precision.h"
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+static inline scalar_t max  (scalar_t x, scalar_t y);
+static inline scalar_t max3 (scalar_t x, scalar_t y, scalar_t z);
+static inline scalar_t max4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w);
+static inline scalar_t min  (scalar_t x, scalar_t y);
+static inline scalar_t min3 (scalar_t x, scalar_t y, scalar_t z);
+static inline scalar_t min4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w);
+static inline scalar_t sign (scalar_t x);
 
 /* Angle conversion */
 static inline scalar_t degree_to_radian(const scalar_t r);
@@ -26,7 +34,7 @@ static inline int is_power_of_2(const int v);
 }   /* extern "C" */
 #endif /* __cplusplus */
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #include "mutil.inl"
 

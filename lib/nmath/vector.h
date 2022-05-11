@@ -6,7 +6,7 @@
 #include <ostream>
 #include <cstdio>
 
-namespace NMath {
+namespace nmath {
 
 class Vector2f
 {
@@ -223,7 +223,7 @@ class Vector4f
 
 inline scalar_t dot(const Vector4f &v1, const Vector4f &v2);
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #include "vector.inl"
 

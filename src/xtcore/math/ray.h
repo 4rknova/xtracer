@@ -4,7 +4,7 @@
 #include <nmath/types.h>
 #include <nmath/vector.h>
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 
 namespace xtcore {
 

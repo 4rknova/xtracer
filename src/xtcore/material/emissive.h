@@ -6,7 +6,7 @@
 #include "math/hitrecord.h"
 #include "material.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nimg::ColorRGBf;
 using xtcore::asset::ICamera;
 

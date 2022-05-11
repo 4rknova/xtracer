@@ -20,7 +20,7 @@ void SolidColor::set(nimg::ColorRGBf &color)
     m_color = color;
 }
 
-nimg::ColorRGBf SolidColor::sample(const NMath::Vector3f &uvw) const
+nimg::ColorRGBf SolidColor::sample(const nmath::Vector3f &uvw) const
 {
     UNUSED(uvw)
     return m_color;

@@ -17,7 +17,7 @@ bool Lambert::shade(
     Vector3f light_dir = emitter->position - hit_record.point;
     light_dir.normalize();
 
-    NMath::scalar_t d = dot(light_dir, hit_record.normal);
+    nmath::scalar_t d = dot(light_dir, hit_record.normal);
 
     if (d > 0) {
         intensity += emitter->intensity *
@@ -33,7 +33,7 @@ bool Lambert::sample_path(
 ) const
 {
     hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
-    hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal).normalized();
+    hit_result.ray.direction = nmath::sample::diffuse(hit_record.normal).normalized();
     hit_result.intensity     = get_sample("diffuse", hit_record.texcoord)
                              * dot(hit_record.normal, hit_result.ray.direction);
     return true;

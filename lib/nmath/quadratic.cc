@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "quadratic.h"
 
-namespace NMath {
+namespace nmath {
 
 bool solve_quadratic(const scalar_t a, const scalar_t b, const scalar_t c, scalar_t &x0, scalar_t &x1)
 {
@@ -23,4 +23,4 @@ bool solve_quadratic(const scalar_t a, const scalar_t b, const scalar_t c, scala
     return true;
 }
 
-} /* namespace NMath */
+} /* namespace nmath */

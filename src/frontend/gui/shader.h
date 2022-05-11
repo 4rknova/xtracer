@@ -43,17 +43,17 @@ class Program {
 
 	void set_uniform(const char *name, int val);
 	void set_uniform(const char *name, float val);
-	void set_uniform(const char *name, const NMath::Vector2f &v);
-	void set_uniform(const char *name, const NMath::Vector3f &v);
-	void set_uniform(const char *name, const NMath::Vector4f &v);
-	void set_uniform(const char *name, const NMath::Matrix4x4f &mat);
+	void set_uniform(const char *name, const nmath::Vector2f &v);
+	void set_uniform(const char *name, const nmath::Vector3f &v);
+	void set_uniform(const char *name, const nmath::Vector4f &v);
+	void set_uniform(const char *name, const nmath::Matrix4x4f &mat);
 
 	void set_uniform(int loc, int val);
 	void set_uniform(int loc, float val);
-	void set_uniform(int loc, const NMath::Vector2f &v);
-	void set_uniform(int loc, const NMath::Vector3f &v);
-	void set_uniform(int loc, const NMath::Vector4f &v);
-	void set_uniform(int loc, const NMath::Matrix4x4f &mat);
+	void set_uniform(int loc, const nmath::Vector2f &v);
+	void set_uniform(int loc, const nmath::Vector3f &v);
+	void set_uniform(int loc, const nmath::Vector4f &v);
+	void set_uniform(int loc, const nmath::Matrix4x4f &mat);
 };
 
 bool bind_program(const Program *prog);

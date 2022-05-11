@@ -23,7 +23,7 @@ class Cubemap : public ISampler
     public:
     int load(const char *file, CUBEMAP_FACE face);
 
-    nimg::ColorRGBf sample(const NMath::Vector3f &tc) const;
+    nimg::ColorRGBf sample(const nmath::Vector3f &tc) const;
 
     private:
     Texture2D m_textures[6]; // The 6 faces for the cubemap

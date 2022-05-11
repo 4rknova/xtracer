@@ -15,7 +15,7 @@ void cone(object_t *obj, float height, float radius, size_t resolution)
     std::vector<float> *c = &(obj->attributes.v);
 
     for (size_t i = 0; i < resolution; ++i) {
-        float r = float(i) * NMath::PI * 2.0 / resolution;
+        float r = float(i) * nmath::PI * 2.0 / resolution;
         float x = nmath_cos(r) * radius;
         float z = nmath_sin(r) * radius;
         c->push_back(x);

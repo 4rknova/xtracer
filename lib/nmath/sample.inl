@@ -9,8 +9,8 @@
 #include "prng.h"
 #include "matrix.h"
 
-namespace NMath {
-	namespace Sample {
+namespace nmath {
+	namespace sample {
 
 inline Vector3f sphere()
 {
@@ -38,7 +38,7 @@ inline Vector3f hemisphere(const Vector3f &normal, const Vector3f &direction)
 	d.y = nmath_cos(phi);
 	d.z = nmath_sin(theta) * nmath_sin(phi);
 
-	NMath::Matrix3x3f mat;
+	nmath::Matrix3x3f mat;
 
 	Vector3f norm = normal.normalized();
 
@@ -106,7 +106,7 @@ inline Vector3f diffuse(const Vector3f &normal)
     return p;
 }
 
-	} /* namespace Sample */
-} /* namespace NMath */
+	} /* namespace sample */
+} /* namespace nmath */
 
 #endif /* NMATH_SAMPLE_INL_INCLUDED */

@@ -12,7 +12,7 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {}
 
-NMath::scalar_t Mesh::distance(NMath::Vector3f) const
+nmath::scalar_t Mesh::distance(nmath::Vector3f) const
 {
     return INFINITY;
 }
@@ -114,12 +114,13 @@ void Mesh::build_octree(object_t &object)
 
 Vector3f Mesh::point_sample() const
 {
-    // Not yet implemented.
+    // Not yet implemented
     return Vector3f(0,0,0);
 }
 
 Ray Mesh::ray_sample() const
 {
+    // Not yet implemented
     Ray ray;
 
     ray.origin    = Vector3f(0,0,0);

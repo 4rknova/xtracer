@@ -11,30 +11,73 @@ namespace xtcore {
 
 Triangle::Triangle()
 {
-    tc[0] = NMath::Vector2f(0.0f, 0.0f);
-    tc[1] = NMath::Vector2f(1.0f, 1.0f);
-    tc[1] = NMath::Vector2f(1.0f, 0.0f);
+    tc[0] = nmath::Vector2f(0.0f, 0.0f);
+    tc[1] = nmath::Vector2f(1.0f, 1.0f);
+    tc[1] = nmath::Vector2f(1.0f, 0.0f);
 }
 
-NMath::scalar_t Triangle::distance(NMath::Vector3f p) const
+nmath::scalar_t Triangle::distance(nmath::Vector3f p) const
 {
-    NMath::Vector3f ba = v[1] - v[0]; NMath::Vector3f pa = p - v[0];
-    NMath::Vector3f cb = v[2] - v[1]; NMath::Vector3f pb = p - v[1];
-    NMath::Vector3f ac = v[0] - v[2]; NMath::Vector3f pc = p - v[2];
-    NMath::Vector3f nor = cross(ba, ac);
+    nmath::Vector3f ba = v[1] - v[0]; nmath::Vector3f pa = p - v[0];
+    nmath::Vector3f cb = v[2] - v[1]; nmath::Vector3f pb = p - v[1];
+    nmath::Vector3f ac = v[0] - v[2]; nmath::Vector3f pc = p - v[2];
+    nmath::Vector3f nor = cross(ba, ac);
 
-    bool k = (NMath::sign(dot(cross(ba,nor),pa))
-            + NMath::sign(dot(cross(cb,nor),pb))
-            + NMath::sign(dot(cross(ac,nor),pc))) < 2.0;
+    bool k = (nmath::sign(dot(cross(ba, nor), pa))
+              + nmath::sign(dot(cross(cb, nor), pb))
+              + nmath::sign(dot(cross(ac, nor), pc))) < 2.0;
 
-    NMath::Vector3f v0 = ba * NMath::clamp(dot(ba,pa)/dot(ba,ba),0.0,1.0)-pa;
-    NMath::Vector3f v1 = cb * NMath::clamp(dot(cb,pb)/dot(cb,cb),0.0,1.0)-pb;
-    NMath::Vector3f v2 = ac * NMath::clamp(dot(ac,pc)/dot(ac,ac),0.0,1.0)-pc;
+    nmath::Vector3f v0 = ba * nmath::clamp(dot(ba, pa) / dot(ba, ba), 0.0, 1.0) - pa;
+    nmath::Vector3f v1 = cb * nmath::clamp(dot(cb, pb) / dot(cb, cb), 0.0, 1.0) - pb;
+    nmath::Vector3f v2 = ac * nmath::clamp(dot(ac, pc) / dot(ac, ac), 0.0, 1.0) - pc;
 
-    NMath::scalar_t m = NMath::min3(dot(v0, v0), dot(v1, v1), dot(v2, v2));
+    nmath::scalar_t m = nmath::min3(dot(v0, v0), dot(v1, v1), dot(v2, v2));
 
     return nmath_sqrt(k ? m : dot(nor,pa)*dot(nor,pa)/dot(nor,nor));
 }
+
+/* To do: replace with  Möller–Trumbore ray-triangle intersection algorithm
+ * from: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+ *
+ * bool RayIntersectsTriangle(Vector3D rayOrigin,
+                           Vector3D rayVector,
+                           Triangle* inTriangle,
+                           Vector3D& outIntersectionPoint)
+{
+    const float EPSILON = 0.0000001;
+    Vector3D vertex0 = inTriangle->vertex0;
+    Vector3D vertex1 = inTriangle->vertex1;
+    Vector3D vertex2 = inTriangle->vertex2;
+    Vector3D edge1, edge2, h, s, q;
+    float a,f,u,v;
+    edge1 = vertex1 - vertex0;
+    edge2 = vertex2 - vertex0;
+    h = rayVector.crossProduct(edge2);
+    a = edge1.dotProduct(h);
+    if (a > -EPSILON && a < EPSILON)
+        return false;    // This ray is parallel to this triangle.
+    f = 1.0/a;
+    s = rayOrigin - vertex0;
+    u = f * s.dotProduct(h);
+    if (u < 0.0 || u > 1.0)
+        return false;
+    q = s.crossProduct(edge1);
+    v = f * rayVector.dotProduct(q);
+    if (v < 0.0 || u + v > 1.0)
+        return false;
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    float t = f * edge2.dotProduct(q);
+    if (t > EPSILON) // ray intersection
+    {
+        outIntersectionPoint = rayOrigin + rayVector * t;
+        return true;
+    }
+    else // This means that there is a line intersection but not a ray intersection.
+        return false;
+}
+ 
+*/
+
 
 bool Triangle::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
@@ -144,9 +187,9 @@ Vector3f Triangle::point_sample() const
 {
     scalar_t b0, b1, b2;
 
-    b0 = NMath::prng_c(0, 1);
-    b1 = NMath::prng_c(0, 1);
-    b2 = NMath::prng_c(0, 1);
+    b0 = nmath::prng_c(0, 1);
+    b1 = nmath::prng_c(0, 1);
+    b2 = nmath::prng_c(0, 1);
 
     scalar_t bt = b0 + b1 + b2;
 
@@ -164,7 +207,7 @@ Ray Triangle::ray_sample() const
     ray.origin = point_sample();
 
     Vector3f normal = calc_normal();
-    ray.direction = NMath::Sample::hemisphere(normal, normal);
+    ray.direction = nmath::sample::hemisphere(normal, normal);
     ray.origin += ray.direction * EPSILON;
 
     return ray;

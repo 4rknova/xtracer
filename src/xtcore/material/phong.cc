@@ -16,13 +16,13 @@ bool Phong::shade(
 {
     Vector3f light_dir = (emitter->position - hit_record.point).normalized();
 
-    NMath::scalar_t d = NMath::max(0, dot(light_dir, hit_record.normal));
+    nmath::scalar_t d = nmath::max(0, dot(light_dir, hit_record.normal));
 
     Vector3f ray = (camera->position - hit_record.point).normalized();
 
     Vector3f r = (light_dir.reflected(hit_record.normal)).normalized();
 
-    NMath::scalar_t rmv = NMath::max(0, dot(r, ray));
+    nmath::scalar_t rmv = nmath::max(0, dot(r, ray));
 
     intensity += emitter->intensity *
             (   (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))
@@ -39,16 +39,16 @@ bool Phong::sample_path(
 {
     hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
     scalar_t s = get_scalar("reflectance");
-    scalar_t k = NMath::prng_c(0.0f, 1.0f);
+    scalar_t k = nmath::prng_c(0.0f, 1.0f);
 
     if (k > s) {
         hit_result.intensity = get_sample("diffuse", hit_record.texcoord);
-        hit_result.ray.direction = NMath::Sample::diffuse(hit_record.normal);
+        hit_result.ray.direction = nmath::sample::diffuse(hit_record.normal);
     }
     else {
         hit_result.intensity = get_sample("specular", hit_record.texcoord);
         scalar_t exp = get_scalar("exponent");
-        hit_result.ray.direction = NMath::Sample::lobe(hit_record.normal, -hit_record.incident_direction, exp);
+        hit_result.ray.direction = nmath::sample::lobe(hit_record.normal, -hit_record.incident_direction, exp);
     }
 
     return true;

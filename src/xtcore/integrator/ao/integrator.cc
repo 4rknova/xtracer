@@ -23,7 +23,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
-        NMath::Vector3f  acc_ao = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+        nmath::Vector3f  acc_ao = nmath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
 
         xtcore::Ray ray = cam->get_primary_ray(
               sample.coords.x, sample.coords.y
@@ -34,14 +34,14 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         if (ctx->scene.intersection(ray, hit_record)) {
             Ray ao_ray;
-            ao_ray.direction = NMath::Sample::hemisphere(hit_record.normal, hit_record.normal);
+            ao_ray.direction = nmath::sample::hemisphere(hit_record.normal, hit_record.normal);
             ao_ray.origin    = hit_record.point + hit_record.normal * EPSILON;
 
             xtcore::hit_record_t ao_hit_record;
 
             if (ctx->scene.intersection(ao_ray, ao_hit_record)) {
                 float dist = (ao_hit_record.point - ao_ray.origin).length();
-                w = NMath::min(dist, MAX_DISTANCE) / MAX_DISTANCE;
+                w = nmath::min(dist, MAX_DISTANCE) / MAX_DISTANCE;
             }
         }
 

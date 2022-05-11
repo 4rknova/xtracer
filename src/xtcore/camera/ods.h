@@ -7,7 +7,7 @@
 
 #define XT_CAM_DEFAULT_IPD 0.064f // 6.4 cm
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 
 namespace xtcore {
     namespace camera {

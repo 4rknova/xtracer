@@ -17,7 +17,7 @@ Sphere::Sphere(const Vector3f &org, scalar_t rad)
     , radius(rad > 0 ? rad : XTCORE_SPHERE_DEFAULT_RADIUS)
 {}
 
-NMath::scalar_t Sphere::distance(NMath::Vector3f p) const
+nmath::scalar_t Sphere::distance(nmath::Vector3f p) const
 {
     return (p - origin).length() - radius;
 }
@@ -50,8 +50,8 @@ bool Sphere::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 			i_hit_record->t = t;
 			i_hit_record->point = ray.origin + ray.direction * t;
 			i_hit_record->normal = (i_hit_record->point - origin) / radius * (t1*t2 > 0. ? 1. : -1);
-			i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5), 
-								(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
+			i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / nmath::PI + 0.5),
+								(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / nmath::PI + 0.5));
 
             i_hit_record->incident_direction = ray.direction;
 
@@ -80,8 +80,8 @@ bool Sphere::intersection(const Ray &ray, hit_record_t* i_hit_record) const
     i_hit_record->t = t0;
 	i_hit_record->point = ray.origin + ray.direction * t0;
 	i_hit_record->normal = (i_hit_record->point - origin) / radius;
-	i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / NMath::PI + 0.5),
-	    						(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / NMath::PI + 0.5));
+	i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / nmath::PI + 0.5),
+	    						(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / nmath::PI + 0.5));
 	i_hit_record->geometry = this;
 
     return true;
@@ -96,14 +96,14 @@ void Sphere::calc_aabb()
 
 Vector3f Sphere::point_sample() const
 {
-    return Vector3f(NMath::Sample::sphere() * radius) + origin;
+    return Vector3f(nmath::sample::sphere() * radius) + origin;
 }
 
 Ray Sphere::ray_sample() const
 {
     Ray ray;
 
-    Vector3f sphpoint = NMath::Sample::sphere();
+    Vector3f sphpoint = nmath::sample::sphere();
     Vector3f normal = sphpoint.normalized();
 
     ray.origin    = sphpoint * radius + origin;

@@ -8,9 +8,9 @@ namespace xtcore {
 ** b: (0.5,0.7,1.0)
 */
 
-nimg::ColorRGBf Gradient::sample(const NMath::Vector3f &tc) const
+nimg::ColorRGBf Gradient::sample(const nmath::Vector3f &tc) const
 {
-    NMath::Vector3f dir = tc.normalized();
+    nmath::Vector3f dir = tc.normalized();
 
     float t = 0.5f * dir.y + 1.0; // remap to [0, 1]
     return (1.0 - t) * a + t * b;

@@ -16,7 +16,7 @@ void plane(object_t *obj, size_t resolution)
     std::vector<float> *n = &(obj->attributes.n);
     std::vector<float> *t = &(obj->attributes.uv);
 
-    NMath::Vector3f p;
+    nmath::Vector3f p;
     p.x = -0.5;
     p.y =  0.0;
     p.z = -0.5;

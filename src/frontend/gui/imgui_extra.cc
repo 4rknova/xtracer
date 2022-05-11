@@ -46,7 +46,7 @@ void textedit_int(const char *name, size_t &val, int step, int lim_min, int lim_
     }
 }
 
-void textedit_float2(const char *name, NMath::Vector2f &vec, float step, float width)
+void textedit_float2(const char *name, nmath::Vector2f &vec, float step, float width)
 {
     UNUSED(width)
     float x = vec.x;
@@ -61,7 +61,7 @@ void textedit_float2(const char *name, NMath::Vector2f &vec, float step, float w
     if (ImGui::InputFloat(ny.c_str(), &y, step, 2 * step, f)) vec.y = y;
 }
 
-void textedit_float3(const char *name, NMath::Vector3f &vec, float step, float width)
+void textedit_float3(const char *name, nmath::Vector3f &vec, float step, float width)
 {
     UNUSED(width)
     float x = vec.x;

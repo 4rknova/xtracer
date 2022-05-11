@@ -10,8 +10,8 @@
 #define XT_CAM_DEFAULT_PROJECTION PERSPECTIVE_PROJECTION_PERSPECTIVE
 #define XT_CAM_DEFAULT_EYE        PERSPECTIVE_EYE_MONO
 
-using NMath::Vector3f;
-using NMath::Matrix4x4f;
+using nmath::Vector3f;
+using nmath::Matrix4x4f;
 
 namespace xtcore {
     namespace camera {

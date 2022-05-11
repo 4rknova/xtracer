@@ -33,7 +33,7 @@ int Texture2D::load(const nimg::Pixmap &map)
 	return 0;
 }
 
-nimg::ColorRGBf Texture2D::sample(const NMath::Vector3f &tc) const
+nimg::ColorRGBf Texture2D::sample(const nmath::Vector3f &tc) const
 {
     switch (m_filtering) {
         case FILTERING_NEAREST  : return nimg::sample::nearest  (m_map, tc.x, tc.y);

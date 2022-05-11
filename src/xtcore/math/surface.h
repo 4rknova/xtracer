@@ -16,7 +16,7 @@ public:
 	virtual ~ISurface();
 
 	virtual bool intersection(const Ray &ray, hit_record_t* i_info) const = 0;
-    virtual NMath::scalar_t distance(NMath::Vector3f p) const;
+    virtual nmath::scalar_t distance(nmath::Vector3f p) const;
 	virtual void calc_aabb() = 0;
 
     virtual Vector3f point_sample() const = 0;

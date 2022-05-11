@@ -8,8 +8,8 @@
 
 #define XTCORE_PLANE_DEFAULT_DISTANCE 1.0
 
-using NMath::scalar_t;
-using NMath::Vector3f;
+using nmath::scalar_t;
+using nmath::Vector3f;
 
 namespace xtcore {
     namespace surface {
@@ -20,7 +20,7 @@ class Plane: public xtcore::asset::ISurface
 	Plane();
 
 	bool intersection(const Ray &ray, hit_record_t* i_hit_record) const;
-    NMath::scalar_t distance(NMath::Vector3f p) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
 	void calc_aabb();
 
     Vector3f point_sample() const;

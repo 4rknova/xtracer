@@ -3,7 +3,7 @@
 #include "matrix.h"
 #include "vector.h"
 
-namespace NMath {
+namespace nmath {
 
 const Matrix3x3f Matrix3x3f::identity = Matrix3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
@@ -710,4 +710,4 @@ Matrix4x4f Matrix4x4f::inverse() const
     return adjMat * (1.0f / determinant());
 }
 
-} /* namespace NMath */
+} /* namespace nmath */

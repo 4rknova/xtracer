@@ -5,7 +5,7 @@
 namespace nmesh {
 	namespace mutator {
 
-void translate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+void translate(object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z)
 {
 	for (size_t i=0; i < object.attributes.v.size(); i+=3) {
         object.attributes.v[i  ] += x;
@@ -14,7 +14,7 @@ void translate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::sc
 	}
 }
 
-void scale(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+void scale(object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z)
 {
 	for (size_t i=0; i < object.attributes.v.size(); i+=3) {
         object.attributes.v[i  ] *= x;
@@ -23,13 +23,13 @@ void scale(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar
 	}
 }
 
-void rotate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scalar_t z)
+void rotate(object_t &object, nmath::scalar_t x, nmath::scalar_t y, nmath::scalar_t z)
 {
-    NMath::Matrix4x4f mat;
-	mat.set_rotation(NMath::Vector3f(x,y,z));
+    nmath::Matrix4x4f mat;
+	mat.set_rotation(nmath::Vector3f(x, y, z));
 
 	for (size_t i=0; i < object.attributes.v.size(); i+=3) {
-        NMath::Vector3f v(object.attributes.v[i  ]
+        nmath::Vector3f v(object.attributes.v[i  ]
                         , object.attributes.v[i+1]
                         , object.attributes.v[i+2]);
 
@@ -41,7 +41,7 @@ void rotate(object_t &object, NMath::scalar_t x, NMath::scalar_t y, NMath::scala
     }
 
     for (size_t i=0; i < object.attributes.n.size(); i+=3) {
-        NMath::Vector3f n(object.attributes.n[i  ]
+        nmath::Vector3f n(object.attributes.n[i  ]
                         , object.attributes.n[i+1]
                         , object.attributes.n[i+2]);
 

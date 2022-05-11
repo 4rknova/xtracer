@@ -32,11 +32,19 @@
     #error "mutil.h must be included before mutil.inl"
 #endif /* NMATH_MUTIL_H_INCLUDED */
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+static inline scalar_t max  (scalar_t x, scalar_t y)                         { return (x > y ? x : y);                   }
+static inline scalar_t max3 (scalar_t x, scalar_t y, scalar_t z)             { return (max(max(x,y),z));                 }
+static inline scalar_t max4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (max(max(max(x,y),z),w));          }
+static inline scalar_t min  (scalar_t x, scalar_t y)                         { return (y > x ? x : y);                   }
+static inline scalar_t min3 (scalar_t x, scalar_t y, scalar_t z)             { return (min(min(x,y),z));                 }
+static inline scalar_t min4 (scalar_t x, scalar_t y, scalar_t z, scalar_t w) { return (min(min(min(x,y),z),w));          }
+static inline scalar_t sign (scalar_t x)                                     { return (x < 0 ? -1 : ( x > 0 ? 1 : 0));   }
 
 /* Inverse square root */
 /*
@@ -116,6 +124,6 @@ static inline int is_power_of_2(const int v)
 }   /* extern "C" */
 #endif /* __cplusplus */
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_MUTIL_INL_INCLUDED */

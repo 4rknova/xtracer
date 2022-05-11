@@ -6,7 +6,7 @@
 #include <nimg/pixmap.h>
 #include "sampler.h"
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nimg::ColorRGBf;
 using nimg::Pixmap;
 

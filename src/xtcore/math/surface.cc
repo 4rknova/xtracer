@@ -11,7 +11,7 @@ ISurface::ISurface()
 ISurface::~ISurface()
 {}
 
-NMath::scalar_t ISurface::distance(NMath::Vector3f p) const
+nmath::scalar_t ISurface::distance(nmath::Vector3f p) const
 {
     UNUSED(p)
     return INFINITY;

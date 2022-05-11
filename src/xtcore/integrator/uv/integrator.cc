@@ -21,10 +21,10 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         tile->read(sample.pixel.x, sample.pixel.y, color_pixel);
 
-        NMath::Vector3f  acc_uv = NMath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
-        NMath::scalar_t  alpha  = color_pixel.a();
+        nmath::Vector3f  acc_uv = nmath::Vector3f(color_pixel.r(), color_pixel.g(), color_pixel.b());
+        nmath::scalar_t  alpha  = color_pixel.a();
 
-        NMath::scalar_t alpha_sample = 0.f;
+        nmath::scalar_t alpha_sample = 0.f;
 
         xtcore::Ray ray = cam->get_primary_ray(
               sample.coords.x, sample.coords.y

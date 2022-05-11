@@ -39,7 +39,7 @@
 #include <cmath>
 #include "matrix.h"
 
-namespace NMath {
+namespace nmath {
 
 /* Vector2f functions */
 inline scalar_t &Vector2f::operator [](unsigned int index)
@@ -750,6 +750,6 @@ inline scalar_t dot(const Vector4f& v1, const Vector4f& v2)
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
 }
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_VECTOR_INL_INCLUDED */

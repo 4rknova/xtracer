@@ -20,13 +20,13 @@ Ray ODS::get_primary_ray(float x, float y, float width, float height)
     if (y > h) y = y - h;
 
     // Calculate theta & phi angles
-    float theta = (x / width) * 2.f * NMath::PI;
-    float phi   = NMath::PI * .5f - (y/h) * NMath::PI;
+    float theta = (x / width) * 2.f * nmath::PI;
+    float phi   = nmath::PI * .5f - (y / h) * nmath::PI;
 
-    ray.origin    = NMath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
-    ray.direction = NMath::Vector3f(sin(theta) * cos(phi), sin(phi), -cos(theta) * cos(phi));
+    ray.origin    = nmath::Vector3f(cos(theta), 0, sin(theta)) * scale + position;
+    ray.direction = nmath::Vector3f(sin(theta) * cos(phi), sin(phi), -cos(theta) * cos(phi));
 
-    NMath::Matrix4x4f m;
+    nmath::Matrix4x4f m;
     m.rotate(orientation);
     ray.direction.transform(m);
 

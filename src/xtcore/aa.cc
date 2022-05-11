@@ -4,7 +4,7 @@
 namespace xtcore {
     namespace antialiasing {
 
-void gen_samples_grid(sample_set_t &samples, NMath::Vector2f pixel, size_t level)
+void gen_samples_grid(sample_set_t &samples, nmath::Vector2f pixel, size_t level)
 {
     if (level == 0) return;
 
@@ -12,7 +12,7 @@ void gen_samples_grid(sample_set_t &samples, NMath::Vector2f pixel, size_t level
         sample_rgba_t s;
         s.weight = 1.f;
         s.pixel  = pixel;
-        s.coords = pixel + NMath::Vector2f(0.5f, 0.5f);
+        s.coords = pixel + nmath::Vector2f(0.5f, 0.5f);
         samples.push(s);
         return;
     }
@@ -25,13 +25,13 @@ void gen_samples_grid(sample_set_t &samples, NMath::Vector2f pixel, size_t level
     s.weight = 1.f / (level * level);
     for (size_t y = 0; y < level; ++y) {
         for (size_t x = 0; x < level; ++x) {
-            s.coords = pixel + NMath::Vector2f(x, y) * sub_pixel + offset;
+            s.coords = pixel + nmath::Vector2f(x, y) * sub_pixel + offset;
             samples.push(s);
         }
     }
 }
 
-void gen_samples_random(sample_set_t &samples, NMath::Vector2f pixel, size_t level)
+void gen_samples_random(sample_set_t &samples, nmath::Vector2f pixel, size_t level)
 {
     if (level < 1) return;
 
@@ -40,9 +40,9 @@ void gen_samples_random(sample_set_t &samples, NMath::Vector2f pixel, size_t lev
     s.pixel  = pixel;
 
     for (size_t i = 0; i < level; ++i) {
-        float x = NMath::prng_c(0.0, 1.0);
-        float y = NMath::prng_c(0.0, 1.0);
-        s.coords = pixel + NMath::Vector2f(x, y);
+        float x = nmath::prng_c(0.0, 1.0);
+        float y = nmath::prng_c(0.0, 1.0);
+        s.coords = pixel + nmath::Vector2f(x, y);
         samples.push(s);
     }
 }
@@ -56,7 +56,7 @@ void produce(xtcore::render::tile_t *tile, SAMPLE_DISTRIBUTION sd, size_t aa_lev
         for (size_t y = 0; y < tile->height(); ++y) {
             sample_set_t offsets;
 
-            NMath::Vector2f p(x + tile->x0(),y + tile->y0());
+            nmath::Vector2f p(x + tile->x0(), y + tile->y0());
 
             switch (sd) {
                 case SAMPLE_DISTRIBUTION_GRID   : gen_samples_grid   (offsets, p, aa_level); break;

@@ -35,7 +35,7 @@
 #include <math.h>
 #include <limits.h>
 
-namespace NMath {
+namespace nmath {
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +83,6 @@ static inline unsigned long getPrevPrime(unsigned long i)
 }   /* extern "C" */
 #endif
 
-} /* namespace NMath */
+} /* namespace nmath */
 
 #endif /* NMATH_PRIME_INL_INCLUDED */

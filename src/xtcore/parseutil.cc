@@ -46,9 +46,9 @@ int deserialize_numi(const char *val, const int def)
     return val ? ncf::util::to_int(val) : def;
 }
 
-NMath::scalar_t deserialize_numf(const char *val, const NMath::scalar_t def)
+nmath::scalar_t deserialize_numf(const char *val, const nmath::scalar_t def)
 {
-	return val ? (NMath::scalar_t)ncf::util::to_double(val) : def;
+	return val ? (nmath::scalar_t)ncf::util::to_double(val) : def;
 }
 
 std::string deserialize_cstr(const char *val, const char* def)
@@ -56,9 +56,9 @@ std::string deserialize_cstr(const char *val, const char* def)
 	return val ? val : def;
 }
 
-NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const NMath::Vector2f def)
+nmath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const nmath::Vector2f def)
 {
-	NMath::Vector2f res = def;
+	nmath::Vector2f res = def;
 
 	if (node) {
         bool has_property = node->query_property(name);
@@ -69,15 +69,15 @@ NMath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const N
             const char *u = group->get_property_by_name(XTPROTO_PROP_CRD_U);
             const char *v = group->get_property_by_name(XTPROTO_PROP_CRD_V);
 
-    		res = NMath::Vector2f(
-	    		u ? (NMath::scalar_t)ncf::util::to_double(u) : def.x,
-		    	v ? (NMath::scalar_t)ncf::util::to_double(v) : def.y
+    		res = nmath::Vector2f(
+                    u ? (nmath::scalar_t)ncf::util::to_double(u) : def.x,
+                    v ? (nmath::scalar_t)ncf::util::to_double(v) : def.y
     		);
         }
         else if (has_property) {
             float u, v;
             std::string val = node->get_property_by_name(name);
-            if (2 == sscanf(val.c_str(), XTPROTO_FORMAT_TEX2, &u, &v)) res = NMath::Vector2f(u, v);
+            if (2 == sscanf(val.c_str(), XTPROTO_FORMAT_TEX2, &u, &v)) res = nmath::Vector2f(u, v);
         }
 	}
 
@@ -99,9 +99,9 @@ nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const n
 	    	const char *b = group->get_property_by_name(XTPROTO_PROP_COL_B);
 
 		    res = nimg::ColorRGBf(
-			    r ? (NMath::scalar_t)ncf::util::to_double(r) : def.r(),
-    			g ? (NMath::scalar_t)ncf::util::to_double(g) : def.g(),
-	    		b ? (NMath::scalar_t)ncf::util::to_double(b) : def.b()
+                    r ? (nmath::scalar_t)ncf::util::to_double(r) : def.r(),
+                    g ? (nmath::scalar_t)ncf::util::to_double(g) : def.g(),
+                    b ? (nmath::scalar_t)ncf::util::to_double(b) : def.b()
     		);
         }
         else if (has_property) {
@@ -114,9 +114,9 @@ nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const n
     return res;
 }
 
-NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const NMath::Vector3f def)
+nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const nmath::Vector3f def)
 {
-	NMath::Vector3f res = def;
+	nmath::Vector3f res = def;
 
 	if (node) {
         bool has_property = node->query_property(name);
@@ -128,16 +128,16 @@ NMath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const N
 	    	const char *y = group->get_property_by_name(XTPROTO_PROP_CRD_Y);
 		    const char *z = group->get_property_by_name(XTPROTO_PROP_CRD_Z);
 
-            res = NMath::Vector3f(
-                x ? (NMath::scalar_t)ncf::util::to_double(x) : def.x,
-                y ? (NMath::scalar_t)ncf::util::to_double(y) : def.y,
-                z ? (NMath::scalar_t)ncf::util::to_double(z) : def.z
+            res = nmath::Vector3f(
+                    x ? (nmath::scalar_t)ncf::util::to_double(x) : def.x,
+                    y ? (nmath::scalar_t)ncf::util::to_double(y) : def.y,
+                    z ? (nmath::scalar_t)ncf::util::to_double(z) : def.z
             );
         }
         else if (has_property) {
             float x, y, z;
             std::string val = node->get_property_by_name(name);
-            if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_VEC3, &x, &y, &z)) res = NMath::Vector3f(x, y, z);
+            if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_VEC3, &x, &y, &z)) res = nmath::Vector3f(x, y, z);
         }
 	}
 
@@ -332,9 +332,9 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     if (p->query_group(XTPROTO_MODIFIERS)) {
         ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
 
-    	NMath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , NMath::Vector3f(0,0,0));
-    	NMath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE       , NMath::Vector3f(1,1,1));
-    	NMath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , NMath::Vector3f(0,0,0));
+    	nmath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , nmath::Vector3f(0, 0, 0));
+    	nmath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE       , nmath::Vector3f(1, 1, 1));
+    	nmath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , nmath::Vector3f(0, 0, 0));
     	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
     	nmesh::mutator::scale    (obj, xform_scl.x, xform_scl.y, xform_scl.z);
     	nmesh::mutator::translate(obj, xform_tsl.x, xform_tsl.y, xform_tsl.z);
@@ -408,7 +408,7 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 	}
 
     if (data) {
-    	data->uv_scale = NMath::Vector2f(
+    	data->uv_scale = nmath::Vector2f(
     		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
 	    	deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
     	);
@@ -467,7 +467,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 
         for (size_t i = 0; i < gscalars->count_properties(); ++i) {
             std::string     name  = deserialize_cstr(gscalars->get_property_name_by_index(i));
-            NMath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
+            nmath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
             data->add_scalar(name.c_str(), value);
         }
     }

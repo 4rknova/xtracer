@@ -14,20 +14,20 @@ void icosahedron(object_t *obj)
     // create 12 vertices of a icosahedron
     float k = (1.f + nmath_sqrt(5.f)) / 2.f;
 
-    NMath::Vector3f v[12];
+    nmath::Vector3f v[12];
 
-    v[ 0] = NMath::Vector3f(-1,  k,  0).normalized();
-    v[ 1] = NMath::Vector3f( 1,  k,  0).normalized();
-    v[ 2] = NMath::Vector3f(-1, -k,  0).normalized();
-    v[ 3] = NMath::Vector3f( 1, -k,  0).normalized();
-    v[ 4] = NMath::Vector3f( 0, -1,  k).normalized();
-    v[ 5] = NMath::Vector3f( 0,  1,  k).normalized();
-    v[ 6] = NMath::Vector3f( 0, -1, -k).normalized();
-    v[ 7] = NMath::Vector3f( 0,  1, -k).normalized();
-    v[ 8] = NMath::Vector3f( k,  0, -1).normalized();
-    v[ 9] = NMath::Vector3f( k,  0,  1).normalized();
-    v[10] = NMath::Vector3f(-k,  0, -1).normalized();
-    v[11] = NMath::Vector3f(-k,  0,  1).normalized();
+    v[ 0] = nmath::Vector3f(-1, k, 0).normalized();
+    v[ 1] = nmath::Vector3f(1, k, 0).normalized();
+    v[ 2] = nmath::Vector3f(-1, -k, 0).normalized();
+    v[ 3] = nmath::Vector3f(1, -k, 0).normalized();
+    v[ 4] = nmath::Vector3f(0, -1, k).normalized();
+    v[ 5] = nmath::Vector3f(0, 1, k).normalized();
+    v[ 6] = nmath::Vector3f(0, -1, -k).normalized();
+    v[ 7] = nmath::Vector3f(0, 1, -k).normalized();
+    v[ 8] = nmath::Vector3f(k, 0, -1).normalized();
+    v[ 9] = nmath::Vector3f(k, 0, 1).normalized();
+    v[10] = nmath::Vector3f(-k, 0, -1).normalized();
+    v[11] = nmath::Vector3f(-k, 0, 1).normalized();
 
     std::vector<float> *c = &(obj->attributes.v);
 

@@ -196,22 +196,22 @@ void Program::set_uniform(const char *name, float val)
 	set_uniform(get_uniform_location(name), val);
 }
 
-void Program::set_uniform(const char *name, const NMath::Vector2f &v)
+void Program::set_uniform(const char *name, const nmath::Vector2f &v)
 {
 	set_uniform(get_uniform_location(name), v);
 }
 
-void Program::set_uniform(const char *name, const NMath::Vector3f &v)
+void Program::set_uniform(const char *name, const nmath::Vector3f &v)
 {
 	set_uniform(get_uniform_location(name), v);
 }
 
-void Program::set_uniform(const char *name, const NMath::Vector4f &v)
+void Program::set_uniform(const char *name, const nmath::Vector4f &v)
 {
 	set_uniform(get_uniform_location(name), v);
 }
 
-void Program::set_uniform(const char *name, const NMath::Matrix4x4f &mat)
+void Program::set_uniform(const char *name, const nmath::Matrix4x4f &mat)
 {
 	set_uniform(get_uniform_location(name), mat);
 }
@@ -233,7 +233,7 @@ void Program::set_uniform(int loc, float val)
 	}
 }
 
-void Program::set_uniform(int loc, const NMath::Vector2f &v)
+void Program::set_uniform(int loc, const nmath::Vector2f &v)
 {
 	if(loc >= 0) {
 		bind_program(this);
@@ -241,7 +241,7 @@ void Program::set_uniform(int loc, const NMath::Vector2f &v)
 	}
 }
 
-void Program::set_uniform(int loc, const NMath::Vector3f &v)
+void Program::set_uniform(int loc, const nmath::Vector3f &v)
 {
 	if(loc >= 0) {
 		bind_program(this);
@@ -249,7 +249,7 @@ void Program::set_uniform(int loc, const NMath::Vector3f &v)
 	}
 }
 
-void Program::set_uniform(int loc, const NMath::Vector4f &v)
+void Program::set_uniform(int loc, const nmath::Vector4f &v)
 {
 	if(loc >= 0) {
 		bind_program(this);
@@ -257,7 +257,7 @@ void Program::set_uniform(int loc, const NMath::Vector4f &v)
 	}
 }
 
-void Program::set_uniform(int loc, const NMath::Matrix4x4f &mat)
+void Program::set_uniform(int loc, const nmath::Matrix4x4f &mat)
 {
 	if(loc >= 0) {
 		bind_program(this);

@@ -5,7 +5,7 @@
 #include <nimg/color.h>
 #include <nmath/vector.h>
 
-using NMath::Vector3f;
+using nmath::Vector3f;
 using nimg::ColorRGBAf;
 
 namespace xtcore {

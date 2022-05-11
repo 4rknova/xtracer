@@ -35,8 +35,8 @@
 #include "precision.h"
 #include "defs.h"
 
-namespace NMath {
-	namespace Interpolation {
+namespace nmath {
+	namespace interpolation {
 
 #ifdef __cplusplus
 extern "C" {
@@ -272,7 +272,7 @@ static inline scalar_t bezier_cubic(const scalar_t a, const scalar_t b, const sc
 }   /* extern "C" */
 #endif
 
-	} /* namespace Interpolation */
-} /* namespace NMath */
+	} /* namespace interpolation */
+} /* namespace nmath */
 
 #endif /* NMATH_INTERPOLATION_INL_INCLUDED */
