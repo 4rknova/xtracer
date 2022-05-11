@@ -1,0 +1,30 @@
+title = Cornell Box
+descr = Cornell Box
+versn = 0.5
+
+data = data/geometry/graphics.cs.williams.edu
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1.0,1.0,1.0)
+        b = col3(0.7,0.8,1.0)
+    }
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,1,4)
+		target   = vec3(0,1,0)
+		up       = vec3(0,1,0)
+    }
+}
+
+object = {
+	scene = {
+		source = <data>/cornell/CornellBox-Sphere.obj
+        prefix = cornell_
+    }
+}

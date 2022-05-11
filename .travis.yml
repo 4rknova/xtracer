@@ -1,1 +1,21 @@
 language: cpp
+compiler: clang
+
+os:
+    - linux
+
+before_install:
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get install -y --no-install-recommends cmake libglew-dev libxrandr-dev libxi-dev libxxf86vm-dev libasound-dev; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get install -qq g++-4.8 gcc-4.8 libglew-dev libfreetype6-dev libharfbuzz-dev libxmu-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then wget -O glfw-3.2.1.zip https://github.com/glfw/glfw/archive/3.2.1.zip; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then unzip glfw-3.2.1.zip; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then cd glfw-3.2.1; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then cmake -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DLIB_SUFFIX=/x86_64-linux-gnu; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then make; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo make install; fi
+    - if [ $TRAVIS_OS_NAME == linux ]; then cd ..; fi
+
+script:
+    - ./configure
+    - make

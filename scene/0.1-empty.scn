@@ -1,0 +1,20 @@
+title = Empty Scene
+descr = A simple empty scene that renders the environment map
+versn = 1.0
+
+data         = data
+path_cubemap = <data>/image/envmap/hdr
+
+environment = {
+    type = erp
+    config = {
+        source = <path_cubemap>/studio_small_03_2k.hdr
+    }
+}
+
+camera = {
+    erp = {
+        type = erp
+    }
+}
+

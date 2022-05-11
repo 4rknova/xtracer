@@ -1,0 +1,161 @@
+title = Scanned Soldier
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.5
+
+data         = data
+path_cubemap = <data>/image/envmap/humus/HornstullsStrand
+path_cubemap = <data>/image/envmap/hdr
+path_model   = <data>/geometry/ten24/AOR 2 Ref Scan_Shoot Pose/Shoot Pose
+path_mesh    = <path_model>/OBJ
+path_texture = <path_model>/Texture
+
+environment = {
+#    type = cubemap
+#    config = {
+#        posy = <path_cubemap>/posy.jpg
+#        negy = <path_cubemap>/negy.jpg
+#        negx = <path_cubemap>/negx.jpg
+#        posx = <path_cubemap>/posx.jpg
+#        posz = <path_cubemap>/posz.jpg
+#        negz = <path_cubemap>/negz.jpg
+#    }
+    type = erp
+    config = {
+        source = <path_cubemap>/studio_small_03_2k.hdr
+    }
+}
+
+camera = {
+    default  = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-200)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 5
+        flength  = 175
+    }
+
+    wide_lens = {
+        type     = thin-lens
+		fov      = 120
+		position = vec3(-0,120,-80)
+		target   = vec3(-50,170,30)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 75
+    }
+
+    far = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-50,130,-330)
+		target   = vec3(-50,110,30)
+		up       = vec3(0,1,0)
+        aperture = 15
+        flength  = 300
+    }
+
+    head = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-130, 130, -100)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 120
+    }
+
+    head 2 = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-110, 130, -60)
+        target   = vec3(0, 150, 0)
+		up       = vec3(0,1,0)
+        aperture = 1
+        flength  = 110
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 1.5
+        position = vec3(0, 50, -100)
+    }
+}
+
+geometry = {
+	soldier = {
+		type = mesh
+		source = <path_mesh>/AOR_02_ReferenceScan_Shoot_Pose.OBJ
+
+        modifiers = {
+            scale = {
+                x = 100
+                y = 100
+                z = 100
+            }
+        }
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = -470
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	soldier = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+            		source    = <path_texture>/Shoot Pose Colour 16k.jpg
+                    filtering = bilinear
+                }
+            }
+
+            scalars = {
+                reflectance = 0
+            }
+        }
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	soldier = {
+		geometry = soldier
+		material = soldier
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

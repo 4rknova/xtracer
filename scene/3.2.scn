@@ -1,0 +1,57 @@
+title       = Conference Room
+description = Conference Room
+version     = 0.5
+
+data  = data
+model = <data>/geometry/graphics.cs.williams.edu/conference
+
+camera = {
+    default = {
+        type     = ods
+        ipd      = 3.2
+        position = vec3(200,300,-450)
+    }
+
+	cam0 = {
+        type     = thin-lens
+		fov      = 60
+		position = vec3(-500,400,100)
+		target   = vec3(0,150,0)
+		up       = vec3(0,1,0)
+	}
+}
+
+geometry = {
+	light = {
+		type     = sphere
+		position = vec3(400,400,0)
+        radius   = 2.5
+	}
+}
+
+material = {
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	3dmodel = {
+		source = <model>/conference.obj
+        prefix = conf_
+	}
+
+    light = {
+        geometry = light
+        material = light
+    }
+}

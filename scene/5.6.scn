@@ -1,0 +1,808 @@
+# Xtracer 2
+#
+# This scene describes the standard "Cornell Box" with some caveats.
+# These caveats will be raised as the development of the raytracer progresses.
+#
+# Caveats:
+#
+# 	- 	The light's color intensity is defined in arbitrary RGB units rather than
+# 		the physically measucol1 spectrum described on the Cornell Box page.
+#		(http://www.graphics.cornell.edu/online/box/data.html)
+#
+#	-	Materials are defined with RGB approximations to their spectral
+#		reflectance, not the 4 nm sampled spectra on the web page.
+#
+#	-	The walls are defined as ( clockwise ) triangles instead of quads
+#
+# Notes:
+#
+#	-	The original Cornell box is rendecol1 with an aspect ratio of 1:1.
+#	-	The final image appears flipped to the yy' axis. This is due to the
+#		different coordinate system used in the original data.
+
+title = Cornell box replica (based on the original radiosity dataset)
+descr = <name>. You will normally want to render this scene with a 1:1 aspect ratio.
+versn = 0.2
+
+environment = {
+    type = color
+    config = {
+        value = col3(1,1,1)
+    }
+}
+
+# The scene cameras.
+camera = {
+	# The front camera.
+	default = {
+        type = thin-lens
+
+		# Field of view.
+		fov = 38.39
+
+		# Camera position.
+		position = {
+			x = 278.0
+			y = 273.0
+			z = -800.0
+		}
+
+		# Target.
+		# This is equal to the direction (0, 1, 0)
+		# as defined in the original data.
+		target = {
+			x = 278.0
+			y = 273.0
+			z = -799.0
+		}
+
+		# Up vector.
+		up = {
+			x = 0
+			y = 1
+			z = 0
+		}
+	}
+}
+
+material = {
+	# The following three colors are RGB approximations to the spectral
+	# measurements of the white, col1, and col2 paints used in the Cornell Box.
+	white = {
+		type       = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+		}
+	}
+
+    sphere = {
+        type = dielectric
+        properties = {
+            scalars = {
+                ior = 1.5
+            }
+        }
+    }
+
+	col1 = {
+		type       = lambert
+        properties = {
+            samplers = {
+        		diffuse = {
+		            type  = color
+                    value = col3(0.33,0.46,1)
+                }
+            }
+		}
+	}
+
+	col2 = {
+		type       = lambert
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type  = color
+                    value = col3(0.74,0.94,0.09)
+                }
+            }
+		}
+	}
+
+	light = {
+		type       = emissive
+        properties = {
+            samplers = {
+        		emissive = {
+                    type = color
+                    value = col3(1,1,1)
+                }
+            }
+		}
+	}
+
+	glossy = {
+		type       = blinn_phong
+        properties = {
+            scalars = {
+                exponent    = 160
+		        reflectance = 1
+            }
+
+            samplers = {
+		        specular = {
+                    type  = color
+                    value = col3(1,1,1)
+        		}
+
+	        }
+        }
+    }
+}
+
+# The scene geometry
+geometry = {
+
+	# The room box
+	# - The light
+	# The light geometry is lowecol1 by a small number to avoid numeric errors
+	# The original height is 548.8
+	light_1 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7999
+				z = 227.0
+			}
+
+			v1 = {
+				x = 343.0
+				y = 548.7999
+				z = 332.0
+			}
+
+			v2 = {
+				x = 213.0
+				y = 548.7999
+				z = 332.0
+			}
+
+		}
+	}
+
+	light_2 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 343.0
+				y = 548.7999
+				z = 227.0
+			}
+
+			v1 = {
+				x = 213.0
+				y = 548.7999
+				z = 332.0
+			}
+
+			v2 = {
+				x = 213.0
+				y = 548.7999
+				z = 227.0
+			}
+		}
+	}
+
+	# - Floor
+	floor_1 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+		}
+	}
+
+	floor_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+		}
+	}
+
+	# - Ceiling
+	ceiling_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v1 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	ceiling_2 = {
+		type = triangle
+
+		vecdata = {
+			v0 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+
+	# - Back wall
+	back_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	back_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	# - Left wall
+	left_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+
+			v1 = {
+				x = 549.6
+				y = 0.0
+				z = 559.2
+			}
+
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	left_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 552.8
+				y = 0.0
+				z = 0.0
+			}
+			v1 = {
+				x = 556.0
+				y = 548.8
+				z = 559.2
+			}
+			v2 = {
+				x = 556.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+	# - Right wall
+	right_wall_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 0.0
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+		}
+	}
+
+	right_wall_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 0.0
+				y = 0.0
+				z = 559.2
+			}
+
+			v1 = {
+				x = 0.0
+				y = 548.8
+				z = 0.0
+			}
+
+			v2 = {
+				x = 0.0
+				y = 548.8
+				z = 559.2
+			}
+		}
+	}
+
+	# The props
+	# - Small sphere
+	sphere = {
+		type = sphere
+		radius = 100
+		position = {
+			x = 200
+			y = 100
+			z = 100
+		}
+	}
+
+	# - Big block
+	tall_block_1_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_1_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_2_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+		}
+	}
+
+	tall_block_3_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 472.0
+				y = 330.0
+				z = 406.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_3_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 472.0
+				y = 0.0
+				z = 406.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+		}
+	}
+
+	tall_block_4_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 314.0
+				y = 330.0
+				z = 456.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_4_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 314.0
+				y = 0.0
+				z = 456.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+		}
+	}
+
+	tall_block_5_1 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 265.0
+				y = 330.0
+				z = 296.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+		}
+	}
+
+	tall_block_5_2 = {
+		type = triangle
+		vecdata = {
+			v0 = {
+				x = 265.0
+				y = 0.0
+				z = 296.0
+			}
+
+			v1 = {
+				x = 423.0
+				y = 330.0
+				z = 247.0
+			}
+
+			v2 = {
+				x = 423.0
+				y = 0.0
+				z = 247.0
+			}
+		}
+	}
+}
+
+# The scene objects
+object = {
+	# Floor
+	floor_1 = {
+		geometry = floor_1
+		material = glossy
+	}
+
+	floor_2 = {
+		geometry = floor_2
+		material = glossy
+	}
+
+	# Ceiling
+	ceiling_1 = {
+		geometry = ceiling_1
+		material = light
+	}
+
+	ceiling_2 = {
+		geometry = ceiling_2
+		material = light
+	}
+
+	# Back wall
+	back_wall_1 = {
+		geometry = back_wall_1
+		material = white
+	}
+
+	back_wall_2 = {
+		geometry = back_wall_2
+		material = white
+	}
+
+	# Left wall
+	left_wall_1 = {
+		geometry = left_wall_1
+		material = col1
+	}
+
+	left_wall_2 = {
+		geometry = left_wall_2
+		material = col1
+	}
+
+	# Right wall
+	right_wall_1 = {
+		geometry = right_wall_1
+		material = col2
+	}
+
+	right_wall_2 = {
+		geometry = right_wall_2
+		material = col2
+	}
+
+	# Sphere
+	sphere = {
+		geometry = sphere
+		material = sphere
+	}
+
+
+	# Tall box
+	tall_block_1_1 = {
+    	geometry = tall_block_1_1
+		material = white
+	}
+
+	tall_block_1_2 = {
+		geometry = tall_block_1_2
+		material = white
+	}
+
+	tall_block_2_1 = {
+		geometry = tall_block_2_1
+		material = white
+	}
+
+	tall_block_2_2 = {
+		geometry = tall_block_2_2
+		material = white
+	}
+
+	tall_block_3_1 = {
+		geometry = tall_block_3_1
+		material = white
+	}
+
+	tall_block_3_2 = {
+		geometry = tall_block_3_2
+		material = white
+	}
+
+	tall_block_4_1 = {
+		geometry = tall_block_4_1
+		material = white
+	}
+
+	tall_block_4_2 = {
+		geometry = tall_block_4_2
+		material = white
+	}
+
+	tall_block_5_1 = {
+		geometry = tall_block_5_1
+		material = white
+	}
+
+	tall_block_5_2 = {
+		geometry = tall_block_5_2
+		material = white
+	}
+
+    light_1 = {
+        geometry = light_1
+        material = light
+    }
+
+    light_2 = {
+        geometry = light_2
+        material = light
+    }
+}

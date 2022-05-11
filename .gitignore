@@ -1,9 +1,30 @@
-ide/inc/
-ide/lib/
+scene/data
 bin/
 media/
 temp/
-src/*.o
+*.o
 *.pc
 *.ppm
+*.png
+*.jpg
+*.hdr
+*.swp
+*.old
+CMakeCache.txt
+CMakeLists.txt.user
+CMakeFiles/
+Testing/
+cmake_install.cmake
+CTestTestfile.cmake
 Makefile
+imgui.ini
+.cmake
+.idea
+install_manifest.txt
+
+# procedurally generated source code
+src/xtcore/license.h
+
+# other files
+*.cbp
+

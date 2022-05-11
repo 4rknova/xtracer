@@ -1,0 +1,294 @@
+title       = Room
+description = Three spheres in a room (specular, sphere lights).
+version     = 0.5
+
+camera = {
+
+	default = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			z = -2000
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	back = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			y = 100
+			z = 480
+		}
+
+		target = {
+			z = 300
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+	side = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			x = 300
+			y = 300
+			z = -1400
+		}
+
+		up = {
+			y = 1
+		}
+	}
+}
+
+geometry = {
+
+	red_ball = {
+		type = sphere
+		position = {
+			x = 80
+			y = -305
+			z = -100
+		}
+		radius = 95
+	}
+	green_ball = {
+		type = sphere
+		position = {
+			x = 350
+			y = -330
+			z = 350
+		}
+		radius = 77
+	}
+	blue_ball = {
+		type = sphere
+		position = {
+			x = -220
+			y = -245
+			z = 80
+		}
+		radius = 155
+	}
+	floor = {
+		type = plane
+		normal = {
+			y = 1
+		}
+		distance = -400
+	}
+	ceiling = {
+		type = plane
+		normal = {
+			y = -1
+		}
+		distance = 400
+	}
+	back = {
+		type = plane
+		normal = {
+			z = -1
+		}
+		distance = 500
+	}
+	left_wall = {
+		type = plane
+		normal = {
+			x = 1
+		}
+		distance = -500
+	}
+	right_wall = {
+		type = plane
+		normal = {
+			x = -1
+		}
+		distance = 500
+	}
+
+	l0 = {
+		type = sphere
+
+        radius = 25
+
+		position = {
+			x = 0
+			y = 150
+			z = -400
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+object = {
+	red_ball = {
+		geometry = red_ball
+		material = phong_red
+	}
+	green_ball = {
+		geometry = green_ball
+		material = phong_green
+	}
+	blue_ball = {
+		geometry = blue_ball
+		material = phong_blue
+	}
+	floor = {
+		geometry = floor
+		material = phong_grey
+	}
+	ceiling = {
+		geometry = ceiling
+		material = phong_grey
+	}
+	back = {
+		geometry = back
+		material = phong_grey
+	}
+	right_wall = {
+		geometry = right_wall
+		material = phong_blue
+	}
+	left_wall = {
+		geometry = left_wall
+		material = phong_green
+	}
+    light0 = {
+        geometry = l0
+        material = light
+    }
+}
+
+material = {
+	phong_red = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.5,0,0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.5,0,0)
+                }
+            }
+
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+	}
+
+	phong_green = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0,0.5,0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0,0.5,0)
+                }
+            }
+
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+    }
+
+	phong_blue = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.1,0.2,0.5)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.1,0.2,0.5)
+                }
+            }
+
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+	}
+
+	phong_grey = {
+		type = phong
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.5,0.5,0.5)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+            }
+
+            scalars = {
+                reflectance = 0.5
+                exponent    = 60
+            }
+        }
+	}
+
+	lambert_grey = {
+		type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+	        	}
+            }
+        }
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}

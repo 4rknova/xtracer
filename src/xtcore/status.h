@@ -1,0 +1,11 @@
+#ifndef XTCORE_STATUS_H_INCLUDED
+#define XTCORE_STATUS_H_INCLUDED
+
+typedef enum STATUS
+{
+	  STATUS_OK
+	, STATUS_ERROR
+
+} Status;
+
+#endif /* XTCORE_STATUS_H_INCLUDED */

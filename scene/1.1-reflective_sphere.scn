@@ -1,0 +1,72 @@
+title       = Reflective Sphere
+description = A sphere reflecting the environment
+version     = 1.0
+
+data = data
+env  = <data>/image/envmap/humus/Park
+
+camera = {
+	default = {
+        type = ods
+		ipd  = 1.5
+    }
+
+    front = {
+        type     = thin-lens
+        up       = vec3(0,1,0)
+        position = vec3(0,0,-100)
+        target   = vec3(0,0, 100)
+        fov      = 90
+    }
+}
+
+geometry = {
+    ball = {
+        type     = sphere
+        radius   = 50
+        position = vec3(0,0,100)
+    }
+}
+
+material = {
+	ball = {
+		type = blinn_phong
+        properties = {
+            samplers = {
+        		diffuse  = {
+                    type  = color
+                    value = col3(0,1,0)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+
+            scalars = {
+                reflectance = 1
+                exponent    = 90
+            }
+        }
+	}
+}
+
+environment = {
+    type   = cubemap
+    config = {
+        posy = <env>/posy.jpg
+        negy = <env>/negy.jpg
+        negx = <env>/negx.jpg
+        posx = <env>/posx.jpg
+        posz = <env>/posz.jpg
+        negz = <env>/negz.jpg
+    }
+}
+
+object = {
+    ball = {
+        geometry = ball
+        material = ball
+    }
+}

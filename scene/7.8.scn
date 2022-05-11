@@ -1,0 +1,108 @@
+title = Scanned Hand
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.1
+
+path_data  = data
+path_model = <path_data>/geometry/ten24/Hand 01 Claw
+path_geo   = <path_model>/OBJ
+path_tex   = <path_model>/Texture
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
+camera = {
+	side = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-0.699,1.99,36.9)
+		target   = vec3(0,0,8.99)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+	}
+
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(-0.7,1.5,31)
+		target   = vec3(0,0,100)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+	}
+}
+
+geometry = {
+	head = {
+		type = mesh
+		source = <path_geo>/Hand01_Claw.OBJ
+
+        modifiers = {
+            scale = vec3(10,10,10)
+        }
+	}
+
+	sat1 = {
+		type = sphere
+        radius = 10
+
+		position = {
+    		x = 100
+			y = 100
+			z = 100
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+	head = {
+	    type = lambert
+
+        properties = {
+            samplers = {
+                diffuse = {
+                    type      = texture
+            		source    = <path_tex>/Hand01_Claw_Colour_small.jpg
+                    filtering = bilinear
+                    flip_y    = true
+                }
+            }
+        }
+	}
+
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	head = {
+		geometry = head
+		material = head
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

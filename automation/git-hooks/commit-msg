@@ -1,0 +1,40 @@
+#!/usr/bin/env python2.7
+import sys, os, re
+from subprocess import check_output
+
+# Collect the parameters
+commit_msg_filepath = sys.argv[1]
+
+# Figure out which branch we're on
+branch = check_output(['git', 'symbolic-ref', '--short', 'HEAD']).strip()
+print "commit-msg: On branch '%s'" % branch
+
+with open(commit_msg_filepath, 'r') as f:
+	content = f.read();
+	# Check the commit message
+	result = re.match('ISSUE-([0-9]+):(.*?)\n(.*\n?.*)', content)
+
+	# Pattern is not matched
+	if not result:
+		print "commit-msg: ERROR! Invalid commit message format"
+		print "format:"
+		print " ISSUE-##: Short description"
+		print " Longer description"
+		sys.exit(1)
+
+	issue = result.group(1)
+	desc_short = result.group(2).strip().capitalize()
+	desc_long = result.group(3).strip().capitalize()
+
+	if not desc_short:
+		print "commit-msg: ERROR! Invalid commit message format"
+		print "Empty title string"
+		sys.exit(1)
+	if not desc_long:
+		print "commit-msg: ERROR! Invalid commit message format"
+		print "Empty long description string"
+		sys.exit(1)
+
+	with open(commit_msg_filepath, 'w') as file:
+		file.write(desc_short + '\n\n' + desc_long + '\n\n')
+		file.write('Fixes https://github.com/4rknova/xtracer/issues/' + issue + '\n')

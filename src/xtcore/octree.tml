@@ -1,0 +1,253 @@
+#ifndef XTCORE_OCTREE_TML_INCLUDED
+#define XTCORE_OCTREE_TML_INCLUDED
+
+#ifndef XTCORE_OCTREE_H_INCLUDED
+	#error "octree.h must be included before octree.tml"
+#endif /* XTCORE_OCTREE_H_INCLUDED */
+
+#include <cfloat>
+#include <cstring>
+#include <new>
+
+#include <nmath/vector.h>
+
+using nmath::Vector3f;
+
+namespace xtcore {
+
+/* OctreeNode */
+template <typename T>
+OctreeNode<T>::OctreeNode()
+{
+	memset(child, 0, 8 * sizeof(OctreeNode<T> *));
+}
+
+template <typename T>
+size_t OctreeNode<T>::count_items()
+{
+	return (size_t)(items.size());
+}
+
+/* Octree */
+template <typename T>
+Octree<T>::Octree()
+	: m_root(NULL)
+	, m_max_items_per_node(1)
+	, m_max_depth(10)
+{
+	clear();
+}
+
+template <typename T>
+Octree<T>::~Octree()
+{
+	clear();
+}
+
+template <typename T>
+void Octree<T>::max_items_per_node(size_t count)
+{
+	m_max_items_per_node = (count > 0 ? count : 1);
+}
+
+template <typename T>
+void Octree<T>::max_depth(size_t depth)
+{
+	m_max_depth = (depth > 0 ? depth : 1);
+}
+
+template <typename T>
+size_t Octree<T>::max_items_per_node()
+{
+	return m_max_items_per_node;
+}
+
+template <typename T>
+size_t Octree<T>::max_depth()
+{
+	return m_max_depth;
+}
+
+template <typename T>
+void Octree<T>::release(OctreeNode<T> *node)
+{
+	if (!node) {
+		return;
+	}
+
+	for (size_t i = 0; i < 8; ++i) {
+		release(node->child[i]);
+	}
+
+	node->items.clear();
+	delete node;
+}
+
+template <typename T>
+void Octree<T>::clear()
+{
+	release(m_root);
+
+	m_items.clear();
+	m_root = NULL;
+	m_aabb.max = Vector3f(0, 0, 0);
+	m_aabb.min = Vector3f(0, 0, 0);
+}
+
+template <typename T>
+void Octree<T>::add(const AABB3 &aabb, const T &data)
+{
+	// Create the item.
+	OctreeItem<T> item;
+	item.data = data;
+	item.aabb = aabb;
+
+	// Push it to the list.
+	m_items.push_back(item);
+
+	// Adjust the global bounding box.
+	m_aabb.augment(aabb);
+}
+
+template <typename T>
+AABB3 Octree<T>::bbox()
+{
+    return m_root->aabb;
+}
+
+template <typename T>
+void Octree<T>::build()
+{
+	release(m_root);
+
+	m_root = new (std::nothrow) OctreeNode<T>;
+
+	m_root->aabb = m_aabb;
+
+	// The root node references all the items.
+	for (size_t i = 0; i < (size_t)m_items.size(); ++i) {
+		m_root->items.push_back(&m_items[i]);
+	}
+
+	// Subdivide the tree.
+	if (m_root->count_items() > m_max_items_per_node) {
+		subdivide(m_root, 0);
+	}
+}
+
+template <typename T>
+void Octree<T>::subdivide(OctreeNode<T> *node, size_t level)
+{
+	// Check if either of the limits is met.
+	if (node->count_items() <= m_max_items_per_node || level >= m_max_depth) {
+		return;
+	}
+
+	AABB3 n_aabb = node->aabb;
+
+	AABB3 c_aabb[8];
+
+	Vector3f center = n_aabb.center();
+
+	c_aabb[0] = AABB3(n_aabb.min, center);
+
+	c_aabb[1] = AABB3(Vector3f(center.x, n_aabb.min.y, n_aabb.min.z),
+					  Vector3f(n_aabb.max.x, center.y, center.z));
+	c_aabb[2] = AABB3(Vector3f(center.x, center.y, n_aabb.min.z),
+					  Vector3f(n_aabb.max.x, n_aabb.max.y, center.z));
+	c_aabb[3] = AABB3(Vector3f(n_aabb.min.x, center.y, n_aabb.min.z),
+					  Vector3f(center.x, n_aabb.max.y, center.z));
+	c_aabb[4] = AABB3(Vector3f(n_aabb.min.x, n_aabb.min.y, center.z),
+					  Vector3f(center.x, center.y, n_aabb.max.z));
+	c_aabb[5] = AABB3(Vector3f(center.x, n_aabb.min.y, center.z),
+					  Vector3f(n_aabb.max.x, center.y, n_aabb.max.z));
+	c_aabb[6] = AABB3(center, n_aabb.max);
+	c_aabb[7] = AABB3(Vector3f(n_aabb.min.x, center.y, center.z),
+					  Vector3f(center.x, n_aabb.max.y, m_aabb.max.z));
+
+	for (size_t i = 0; i < 8; ++i) {
+			OctreeNode<T> *c = new (std::nothrow) OctreeNode<T>;
+
+			node->child[i] = c;
+
+			c->aabb = c_aabb[i];
+
+			typename std::list<OctreeItem<T>* >::iterator it = node->items.begin();
+            while (it != node->items.end()) {
+
+                bool v0 = c->aabb.contains((*it)->data.v[0]);
+                bool v1 = c->aabb.contains((*it)->data.v[1]);
+                bool v2 = c->aabb.contains((*it)->data.v[2]);
+
+				if (v0 && v1 && v2) {
+                    c->items.push_back(*it);
+                    it = node->items.erase(it);
+                }
+                else ++it;
+            }       
+	}
+
+/*
+			while (iter != node->items.end()) {
+				if (c->aabb.contains((*iter)->aabb)) c->items.push_back(*iter);
+                ++iter;
+            }
+*/
+
+	for (size_t i = 0; i < 8; ++i) subdivide(node->child[i], level + 1);
+}
+
+template <typename T>
+OctreeItem<T> *Octree<T>::intersection(const Ray &ray, hit_record_t *point) const
+{
+	return r_intersection(m_root, ray, point);
+}
+
+template <typename T>
+OctreeItem<T> *Octree<T>::r_intersection(OctreeNode<T> *node, const Ray &ray, hit_record_t *point) const
+{
+	if (!node || !node->aabb.intersection(ray)) {
+		return NULL;
+	}
+
+	hit_record_t pt0;
+	pt0.t = FLT_MAX;
+
+	OctreeItem<T> *closest = NULL;
+
+	if (node->count_items()) {
+		typename std::list<OctreeItem<T>*>::iterator iter = node->items.begin();
+		while (iter != node->items.end()) {
+			hit_record_t pt;
+
+			if (((*iter)->data.intersection(ray, &pt)) && pt.t < pt0.t) {
+				pt0 = pt;
+				closest = *iter;
+			}
+			++iter;
+		}
+	}
+	 
+    {
+		for (size_t i = 0; i < 8; ++i) {
+			hit_record_t pt;
+			OctreeItem<T> *item;
+
+			if ((item = r_intersection(node->child[i], ray, &pt)) && pt.t < pt0.t) {
+				pt0 = pt;
+				closest = item;
+			}
+		}
+	}
+
+
+	if (closest && point) {
+		*point = pt0;
+	}
+
+	return closest;
+}
+
+} /* namespace xtcore */
+
+#endif /* XTCORE_OCTREE_TML_INCLUDED */

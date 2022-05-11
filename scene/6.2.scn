@@ -1,0 +1,168 @@
+# Xtracer 2
+
+title = DOF
+descr = Depth of field
+versn = 0.4
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1.0,1.0,1.0)
+        b = col3(0.7,0.8,1.0)
+    }
+}
+
+camera = {
+	default = {
+        type     = thin-lens
+		position = vec3(-10,35,-155)
+		target   = vec3(0,12,0)
+		up       = vec3(0,1,0)
+		aperture = 2
+		fov      = 45
+		flength  = 100
+		# Other lengths to focus on.
+		# 80, 100, 155
+	}
+}
+
+geometry = {
+	sphere1 = {
+		type = sphere
+		position = vec3(0,15,-10)
+		radius = 15
+	}
+
+	sphere2 = {
+		type = sphere
+		position = vec3(-13,3,-80)
+		radius = 3
+	}
+
+	sphere3 = {
+		type = sphere
+		position = vec3(25,15,-60)
+		radius = 15
+	}
+
+	sphere4 = {
+		type = sphere
+		position = vec3(-40,5,40)
+		radius = 5
+	}
+
+	floor = {
+		type = plane
+		normal = vec3(0,1,0)
+		distance = 0
+	}
+}
+
+material = {
+	plane = {
+		type = blinn_phong
+
+        properties = {
+            scalars = {
+		        exponent    = 32
+                reflectance = 0.3
+            }
+
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(.9,.9,.9)
+                }
+            }
+        }
+	}
+
+	plastic1 = {
+		type = blinn_phong
+
+        properties = {
+            scalars = {
+		        exponent    = 256
+                reflectance = 0.3
+            }
+
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(.5,.5,.5)
+                }
+            }
+        }
+	}
+
+	plastic2 = {
+		type = blinn_phong
+
+        properties = {
+            scalars = {
+		        exponent    = 256
+                reflectance = 0.3
+            }
+
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(.1,.1,.1)
+                }
+
+                specular = {
+                    type  = color
+                    value = col3(.9,.9,.9)
+                }
+            }
+        }
+	}
+
+    light = {
+        type = emissive
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+	}
+}
+
+object = {
+	sphere1 = {
+		geometry = sphere1
+		material = plastic1
+	}
+	sphere2 = {
+		geometry = sphere2
+		material = light
+	}
+	sphere3 = {
+		geometry = sphere3
+		material = plastic2
+	}
+	sphere4 = {
+		geometry = sphere4
+		material = light
+	}
+
+	# planes
+	floor = {
+		geometry = floor
+		material = plane
+	}
+}

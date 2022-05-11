@@ -1,0 +1,69 @@
+title = Sponza Atrium
+descr = Sponza Atrium
+versn = 0.1
+
+data = data/geometry/
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
+camera = {
+    ods = {
+        type = ods
+        ipd  = 1.
+        position = vec3(0,10,0)
+    }
+
+    default = {
+        type     = cubemap
+        position = vec3(0,10,0)
+    }
+
+	cam0 = {
+        type     = thin-lens
+		fov      = 60
+		position = vec3(-5,5,0)
+		target   = vec3( 5,7,0)
+		up       = vec3(0,1,0)
+	}
+}
+
+geometry = {
+	light = {
+		type     = sphere
+		position = vec3(0,10,0)
+        radius   = .1
+	}
+}
+
+material = {
+    light = {
+        type = emissive
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	3dmodel = {
+		source = <data>/graphics.cs.williams.edu/dabrovic-sponza/sponza.obj
+        prefix = sponza_
+	}
+
+    light = {
+        geometry = light
+        material = light
+    }
+}

@@ -1,0 +1,88 @@
+title = Scanned Face
+descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
+versn = 0.1
+
+path_data     = data
+path_geometry = <path_data>/geometry/gl.ict.usc.edu/digital_emily
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
+camera = {
+	default = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,11,25)
+		target   = vec3(0,9,3)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 200
+	}
+
+    close = {
+        type     = thin-lens
+		fov      = 45
+		position = vec3(0,11,20)
+		target   = vec3(0,9,3)
+		up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 150
+    }
+
+    ods = {
+        type     = ods
+        ipd      = 1.5
+        position = vec3(0, 50,100)
+    }
+}
+
+geometry = {
+	sat1 = {
+		type = sphere
+        radius = 50
+
+		position = {
+    		x = 88
+			y = 15
+			z = 170
+		}
+
+		intensity = {
+			r = 1
+			g = 1
+			b = 1
+		}
+	}
+}
+
+material = {
+    light = {
+        type = lambert
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(1,1,1)
+                }
+            }
+        }
+    }
+}
+
+object = {
+	head = {
+		source = <path_geometry>/Emily_2_1_mod.obj
+        prefix = emily_
+	}
+
+    l0 = {
+        geometry = sat1
+        material = light
+    }
+}

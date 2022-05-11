@@ -1,0 +1,233 @@
+data  = data/geometry/stanford
+
+title = Stanford models
+descr = Stanford models
+versn = 0.1
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(1,1,1)
+        b = col3(0.5,0.7,1.0)
+    }
+}
+
+camera = {
+	default = {
+        type = thin-lens
+
+		fov = 45
+
+		position = {
+			x = -3
+			y = 3.5
+			z = -5
+		}
+
+		target = {
+			x = 0
+			y = 0
+			z = 0
+		}
+
+		up = {
+			y = 1
+		}
+	}
+
+    ods = {
+        type = ods
+
+        ipd = 0.064
+        position = {
+            x = 0
+            y = 1.5
+            z = -2
+        }
+    }
+}
+
+geometry = {
+	m0 = {
+		type   = mesh
+		source = <data>/bunny/bunny.obj
+        modifiers = {
+    		rotation    = vec3(0,0,1.5708)
+    		scale       = vec3(.75,.75,.75)
+	    	translation = vec3(0,.72,0)
+	    }
+    }
+
+	m1 = {
+		type   = mesh
+		source = <data>/dragon/dragon.obj
+        modifiers = {
+    		rotation    = vec3(0,0,1.5708)
+            translation = vec3(1.5,.7,0)
+        }
+	}
+
+	m2 = {
+		type   = mesh
+		source = <data>/happy_buddha/happy_buddha.obj
+        modifiers = {
+    		rotation    = vec3(0,-1.5708,1.5708)
+    		translation = vec3(-1.5,1,0)
+        }
+	}
+
+	floor = {
+		type     = plane
+		normal   = vec3(0,1,0)
+		distance = 0
+		u_scale  = 0.5
+		v_scale  = 0.5
+	}
+
+	l0 = {
+		type     = sphere
+        radius   = 1
+		position = vec3(-8,15,-8)
+	}
+}
+
+material = {
+	m0 = {
+		type = blinn_phong
+
+        properties = {
+
+            samplers = {
+        		diffuse = {
+                    type = color
+                    value = {
+            			r = 1
+            			g = 1
+		            	b = 1
+                    }
+        		}
+
+        		specular = {
+                    type = color
+                    value = {
+            			r = 1
+            			g = 1
+            			b = 1
+                    }
+		        }
+            }
+
+            scalars = {
+                exponent     = 60
+	    	    reflectance  = 0.0
+		        transparency = 1.0
+		        ior          = 1.51714
+            }
+        }
+	}
+
+	m1 = {
+		type = blinn_phong
+
+        properties = {
+            samplers = {
+        		diffuse = {
+                    type = color
+                    value = {
+    		        	r = 1
+            			g = 1
+            			b = 1
+                    }
+        		}
+
+        		specular = {
+                    type = color
+                    value = {
+            			r = 1
+        		    	g = 1
+        	    		b = 1
+                    }
+        		}
+            }
+            scalars = {
+                exponent    = 128
+        		reflectance = 0.07
+            }
+        }
+	}
+
+	floor = {
+		type = phong
+
+        properties = {
+            samplers = {
+            	diffuse = {
+                    type = color
+                    value = {
+                        r = 0.51
+               	        g = 0.51
+                  	    b = 0.51
+                    }
+           	    }
+
+               	specular = {
+                    type = color
+                    value = {
+                        r = 1
+                        g = 1
+                        b = 1
+                    }
+                }
+            }
+
+            scalars = {
+                exponent    = 1350
+                reflectance = 0.3
+            }
+        }
+	}
+
+    light_source = {
+        type = emissive
+
+        properties = {
+            samplers = {
+                emissive = {
+                    type = color
+                    value = {
+                        r = 1
+                        g = 1
+                        b = 1
+                    }
+                }
+            }
+        }
+    }
+}
+
+object = {
+	m0 = {
+		geometry = m0
+		material = m1
+	}
+
+	m1 = {
+		geometry = m1
+		material = m1
+	}
+
+	m2 = {
+		geometry = m2
+		material = m1
+	}
+
+	floor = {
+		geometry = floor
+		material = floor
+	}
+
+    light_source = {
+        geometry = l0
+        material = light_source
+    }
+}
