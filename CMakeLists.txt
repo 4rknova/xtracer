@@ -66,7 +66,7 @@ if(DEFINED ENV{XTRACER_ENABLE_GUI})
     )
 
     add_dependencies (${OUT_EXE_GUI} xtcore_static xtcore_dynamic)
-    target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static remotery rtmidi asound pthread imgui ssl crypto GL glfw GLEW::GLEW ${OpenMP_LIBRARY})
+    target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static rtmidi asound pthread imgui ssl crypto GL glfw GLEW::GLEW ${OpenMP_LIBRARY})
 
     install (TARGETS ${OUT_EXE_CLI}
         RUNTIME DESTINATION bin
@@ -91,10 +91,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
 set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
-
-file(GLOB SRC_REMOTERY
-    ${PATH_EXT}/remotery/lib/*.c
-)
 
 file(GLOB SRC_RTMIDI
     ${PATH_EXT}/rtmidi/*.cpp    
@@ -146,10 +142,6 @@ target_include_directories(xtcore_dynamic PUBLIC
     ${ext_libs}
 )
 
-add_library(remotery STATIC ${SRC_REMOTERY})
-set_target_properties(remotery PROPERTIES OUTPUT_NAME remotery)
-set_target_properties(remotery PROPERTIES COMPILE_FLAGS "-std=gnu99 -I{PATH_EXT}/remotery/lib/ -pthread -lm")
-
 add_library(rtmidi STATIC ${SRC_RTMIDI})
 set_target_properties(rtmidi PROPERTIES OUTPUT_NAME rtmidi)
 set_target_properties(rtmidi PROPERTIES COMPILE_FLAGS "-I{PATH_EXT}/rtmidi/ -D__LINUX_ALSA__")
@@ -162,7 +154,7 @@ target_include_directories(${OUT_EXE_CLI} PUBLIC
     ${ext_libs}
 )
 
-target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static remotery rtmidi asound pthread)
+target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi asound pthread)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unknown-pragmas")
