@@ -11,7 +11,6 @@
 #include "config.h"
 #include "state.h"
 #include "action.h"
-#include "profiler.h"
 #include "gui.h"
 
 

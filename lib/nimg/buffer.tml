@@ -6,6 +6,7 @@
 #endif /* BUFFER_H_INCLUDED */
 
 #include <new>
+#include <algorithm>
 #include <string.h>
 
 namespace nimg {
@@ -26,7 +27,7 @@ Buffer<T>::Buffer(const Buffer &rhs)
 
 	if(init(rhs.count())) return;
 
-	memcpy(m_data, rhs.m_data, m_count * sizeof(T));
+	std::copy(rhs.m_data, rhs.m_data + m_count, m_data);
 	m_count = rhs.count();
 }
 
@@ -41,7 +42,7 @@ Buffer<T> &Buffer<T>::operator =(const Buffer<T> &rhs)
 
 	if(init(rhs.count())) return *this;
 
-	memcpy(m_data, rhs.m_data, m_count * sizeof(T));
+	std::copy(rhs.m_data, rhs.m_data + m_count, m_data);
 	m_count = rhs.count();
 
 	return *this;

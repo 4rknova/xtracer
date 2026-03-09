@@ -298,8 +298,6 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             nmesh::generator::icosahedron(&obj);
         }
         else if (!token.compare(XTPROTO_LTRL_PLANE)) {
-            ncf::NCF *properties = p->get_group_by_name(XTPROTO_PROPERTIES);
-
             int i = 0;
 
             if (p) {
