@@ -33,5 +33,6 @@ class IIntegrator
 #include "integrator/emission/integrator.h"
 #include "integrator/pathtracer/integrator.h"
 #include "integrator/ao/integrator.h"
+#include "integrator/realtime_gl/integrator.h"
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */

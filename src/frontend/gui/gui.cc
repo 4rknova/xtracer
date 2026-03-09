@@ -169,6 +169,7 @@ integrator_t integrators[] = {
     , { "UV"               , new xtcore::integrator::uv::Integrator()         }
     , { "Emission"         , new xtcore::integrator::emission::Integrator()   }
     , { "Ambient Occlusion", new xtcore::integrator::ao::Integrator()         }
+    , { "Realtime (OpenGL) [WIP]", new xtcore::integrator::realtime_gl::Integrator() }
 };
 
 
