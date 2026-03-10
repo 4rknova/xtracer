@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 void start_video(const char *file, int width, int height, int frame_rate);
-void write_frame(const char *file, int width, int height, float *rgb);
+void write_frame(const char *file, int width, int height, const float *rgb);
 
 #ifdef __cplusplus
 }

@@ -104,6 +104,61 @@ Short version:
 - Realtime GL implementation plan: `docs/REALTIME_GL_PLAN.md`
 - Web UI/feature behavior: `res/web/index.html`, `res/web/app.js`, `res/web/styles.css`
 
+## Scene Format Reference (Parser-Backed)
+
+Canonical scene fields parsed in `src/xtcore/parseutil.cc` / `src/xtcore/proto.h`:
+
+- Header:
+  - `title`, `description`, `version`
+- Top-level groups:
+  - `environment`, `camera`, `geometry`, `material`, `object`
+
+Supported environment `type` values:
+
+- `gradient` (`config.a`, `config.b` as `col3(...)`)
+- `color` (`config.value` as `col3(...)`)
+- `cubemap` (`config.posx/posy/posz/negx/negy/negz`)
+- `erp` (`config.source`)
+
+Supported camera `type` values:
+
+- `thin-lens` (position/target/up/fov/flength/aperture)
+- `ods` (position/orientation/ipd)
+- `erp` (position/orientation)
+- `cubemap` (position)
+
+Supported geometry `type` values:
+
+- `plane` (`normal`, `distance`)
+- `sphere` (`position`, `radius`)
+- `point` (`position`) (internally a zero-radius sphere)
+- `triangle` (`vecdata.v0/v1/v2`)
+- `mesh`:
+  - external source: `source = <path>.obj`
+  - procedural generators: `source = gen(plane|icosahedron|tetrahedron|cube|hexahedron|octahedron|dodecahedron|capsule|cylinder|capped_cylinder|cone|truncated_cone|ring|torus_knot|icosphere|geodesic_dome|menger_sponge|sierpinski_tetrahedron|mobius_strip|klein_bottle|snowflake)`
+  - optional: `resolution` (mesh complexity / iterations for generated meshes), `modifiers` (`rotation`, `scale`, `translation`, `flip_normals`, `extrude`)
+
+Supported material `type` values:
+
+- `lambert`, `phong`, `blinn_phong`, `emissive`, `dielectric`
+
+Sampler `type` values in `material.properties.samplers`:
+
+- `color`, `texture`, `cubemap`, `erp`, `gradient`
+
+Object forms:
+
+- In-scene reference form:
+  - `object.<name> = { geometry = <geometry_id>, material = <material_id> }`
+- External OBJ import form:
+  - `object.<name> = { source = <path>.obj, prefix = <string> }`
+
+Notes:
+
+- Many legacy scenes use ad-hoc extra keys; parser ignores unknown fields.
+- Prefer canonical `description` / `version` keys for new scenes.
+- `point` is represented internally as a sphere; parser now maps it to an epsilon radius to avoid zero-radius runtime issues.
+
 ## Working Conventions For Agents
 
 - Prefer minimal, surgical changes.

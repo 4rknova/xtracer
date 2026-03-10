@@ -56,6 +56,28 @@ xtcore       |    X    |         |         |
 frontend cli |    X    |         |         |
 frontend gui |    X    |         |         |
 
+### Debian/Ubuntu Build Dependencies
+
+Base toolchain (CLI/core):
+
+    sudo apt update
+    sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
+
+GUI frontend (`XTRACER_ENABLE_GUI=ON`):
+
+    sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev libglew-dev libglfw3-dev
+
+RtMidi/ALSA support (`XTRACER_ENABLE_RTMIDI=ON`):
+
+    sudo apt install -y libasound2-dev
+
+Standalone WASM frontend (`XTRACER_ENABLE_WASM=ON`):
+
+    sudo apt install -y emscripten
+
+If your distro package is too old, install the upstream Emscripten SDK and use
+`emcmake`/`emcc` from that SDK in your shell.
+
 Use the following commands to build:
 
     ./configure
@@ -92,6 +114,57 @@ Run from repo root:
 Open:
 
     http://127.0.0.1:8080
+
+## WASM Frontend (Standalone Worker Runtime)
+
+Build `xtracer_wasm` with Emscripten so the output is emitted to `res/web/`:
+
+    emcmake cmake -S . -B build-wasm -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON
+    cmake --build build-wasm -j --target xtracer_wasm
+
+Expected artifacts:
+
+- `res/web/xtracer_wasm.js`
+- `res/web/xtracer_wasm.wasm`
+
+Run the normal web server and enable the WASM adapter mode:
+
+    ./bin/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web
+
+Open:
+
+    http://127.0.0.1:8080/?backend=wasm
+
+Create a fully standalone static bundle (no `/api/*` backend required):
+
+    ./util/package_wasm_standalone.sh
+
+This creates `dist-wasm/` with:
+
+- web app assets
+- `xtracer_wasm.js` and `xtracer_wasm.wasm`
+- `scene/*.scn` copied to `dist-wasm/scenes/`
+- `dist-wasm/scenes/index.json`
+
+Serve it with any static server:
+
+    cd dist-wasm
+    python3 -m http.server 8080
+
+Open:
+
+    http://127.0.0.1:8080/?backend=wasm
+
+Build standalone WASM dist as part of the normal native build:
+
+    cmake -S . -B build -DXTRACER_ENABLE_WASM_DIST=ON
+    cmake --build build -j
+
+This automatically:
+
+- configures `build-wasm/` with Emscripten
+- builds `xtracer_wasm`
+- packages standalone output into `bin/wasm-dist/`
 
 Web UI includes:
 
