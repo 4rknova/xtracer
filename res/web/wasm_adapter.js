@@ -6,19 +6,16 @@
     { id: "pathtracer", label: "Pathtracer (Brute Force)" },
     { id: "pathtracer_is", label: "Pathtracer (IS)" },
     { id: "photon_mapping", label: "Photon Mapping" },
-    { id: "depth", label: "Depth" },
-    { id: "stencil", label: "Stencil" },
-    { id: "normal", label: "Normal" },
-    { id: "uv", label: "UV" },
-    { id: "emission", label: "Emission" },
+    { id: "debug_views", label: "Debug Views" },
     { id: "ao", label: "Ambient Occlusion" },
   ];
   const DEFAULT_RESOLUTIONS = [
-    { id: 0, description: "VGA/SD", width: 640, height: 480 },
-    { id: 1, description: "HD", width: 1280, height: 720 },
-    { id: 2, description: "FHD", width: 1920, height: 1080 },
-    { id: 3, description: "QHD/WQHD", width: 2560, height: 1440 },
-    { id: 4, description: "4K UHD", width: 3840, height: 2160 },
+    { id: 0, description: "Square", width: 500, height: 500 },
+    { id: 1, description: "VGA/SD", width: 640, height: 480 },
+    { id: 2, description: "HD", width: 1280, height: 720 },
+    { id: 3, description: "FHD", width: 1920, height: 1080 },
+    { id: 4, description: "QHD/WQHD", width: 2560, height: 1440 },
+    { id: 5, description: "4K UHD", width: 3840, height: 2160 },
   ];
 
   function makeError(message, status) {

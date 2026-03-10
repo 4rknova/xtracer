@@ -368,8 +368,8 @@ function setProgress(value) {
 function currentRenderSize() {
   const w = parseInt(el.width.value || "0", 10);
   const h = parseInt(el.height.value || "0", 10);
-  const width = Number.isFinite(w) ? Math.max(32, Math.min(8192, w)) : 640;
-  const height = Number.isFinite(h) ? Math.max(32, Math.min(8192, h)) : 480;
+  const width = Number.isFinite(w) ? Math.max(32, Math.min(8192, w)) : 500;
+  const height = Number.isFinite(h) ? Math.max(32, Math.min(8192, h)) : 500;
   return { width, height };
 }
 
