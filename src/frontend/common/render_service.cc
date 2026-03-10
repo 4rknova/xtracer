@@ -58,6 +58,14 @@ struct progress_handler_t : public xtcore::render::tile_event_handler_t
 
 static const integrator_control_info_t k_no_controls[] = {};
 
+static const integrator_control_option_t k_debug_mode_options[] = {
+      { "depth", "Depth" }
+    , { "stencil", "Stencil" }
+    , { "normal", "Normal" }
+    , { "uv", "UV" }
+    , { "emission", "Emission" }
+};
+
 static const integrator_control_option_t k_depth_encoding_options[] = {
       { "legacy", "Legacy (1/log(z))" }
     , { "linear", "Linear" }
@@ -65,19 +73,20 @@ static const integrator_control_option_t k_depth_encoding_options[] = {
     , { "inverse", "Inverse (1/(1+z))" }
 };
 
-static const integrator_control_info_t k_depth_controls[] = {
-      { "depth_encoding", "Depth Encoding", "enum", "Depth output encoding", "legacy", nullptr, nullptr, nullptr, k_depth_encoding_options, sizeof(k_depth_encoding_options) / sizeof(k_depth_encoding_options[0]) }
-    , { "max_distance", "Max Distance", "float", "Used by linear/log depth encoding", "1000", "0.01", "1000000", "0.01", nullptr, 0 }
+static const integrator_control_info_t k_debug_views_controls[] = {
+      { "mode", "Mode", "enum", "Debug output mode", "normal", nullptr, nullptr, nullptr, nullptr, nullptr, k_debug_mode_options, sizeof(k_debug_mode_options) / sizeof(k_debug_mode_options[0]) }
+    , { "depth_encoding", "Depth Encoding", "enum", "Depth output encoding", "legacy", nullptr, nullptr, nullptr, "mode", "depth", k_depth_encoding_options, sizeof(k_depth_encoding_options) / sizeof(k_depth_encoding_options[0]) }
+    , { "max_distance", "Max Distance", "float", "Used by depth mode", "1000", "0.01", "1000000", "0.01", "mode", "depth", nullptr, 0 }
 };
 
 static const integrator_control_info_t k_ao_controls[] = {
-      { "max_distance", "Max Distance", "float", "Maximum AO ray distance", "100", "0.1", "1000", "0.1", nullptr, 0 }
+      { "max_distance", "Max Distance", "float", "Maximum AO ray distance", "100", "0.1", "1000", "0.1", nullptr, nullptr, nullptr, 0 }
 };
 
 static const integrator_control_info_t k_photon_mapping_controls[] = {
-      { "emit_photons", "Emit Photons", "int", "Photon emission count", "20000", "1000", "500000", "1000", nullptr, 0 }
-    , { "gather_radius", "Gather Radius", "float", "Radius used for radiance estimate", "0.25", "0.001", "100", "0.001", nullptr, 0 }
-    , { "gather_k", "Gather K", "int", "Maximum photons to gather", "64", "1", "1024", "1", nullptr, 0 }
+      { "emit_photons", "Emit Photons", "int", "Photon emission count", "20000", "1000", "500000", "1000", nullptr, nullptr, nullptr, 0 }
+    , { "gather_radius", "Gather Radius", "float", "Radius used for radiance estimate", "0.25", "0.001", "100", "0.001", nullptr, nullptr, nullptr, 0 }
+    , { "gather_k", "Gather K", "int", "Maximum photons to gather", "64", "1", "1024", "1", nullptr, nullptr, nullptr, 0 }
 };
 
 static const integrator_info_t k_integrators[] = {
@@ -85,11 +94,7 @@ static const integrator_info_t k_integrators[] = {
     , { "pathtracer_is", "Pathtracer (IS)", k_no_controls, 0 }
     , { "pathtracer", "Pathtracer (Brute Force)", k_no_controls, 0 }
     , { "photon_mapping", "Photon Mapping", k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
-    , { "depth"     , "Depth", k_depth_controls, sizeof(k_depth_controls) / sizeof(k_depth_controls[0]) }
-    , { "stencil"   , "Stencil", k_no_controls, 0 }
-    , { "normal"    , "Normal", k_no_controls, 0 }
-    , { "uv"        , "UV", k_no_controls, 0 }
-    , { "emission"  , "Emission", k_no_controls, 0 }
+    , { "debug_views", "Debug Views", k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
     , { "ao"        , "Ambient Occlusion", k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
 };
 
@@ -99,11 +104,12 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     else if (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
     else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
     else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
-    else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::depth::Integrator());
-    else if (name == "stencil")    return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::stencil::Integrator());
-    else if (name == "normal")     return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::normal::Integrator());
-    else if (name == "uv")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::uv::Integrator());
-    else if (name == "emission")   return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::emission::Integrator());
+    else if (name == "debug_views") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator());
+    else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
+    else if (name == "stencil")    return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_STENCIL));
+    else if (name == "normal")     return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_NORMAL));
+    else if (name == "uv")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
+    else if (name == "emission")   return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (name == "ao")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::ao::Integrator());
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }

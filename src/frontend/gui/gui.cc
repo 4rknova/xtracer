@@ -94,15 +94,12 @@ integrator_t integrators[] = {
     , { "Pathtracer (Brute Force)", new xtcore::integrator::pathtracer::Integrator() }
     , { "Pathtracer (IS)"  , new xtcore::integrator::pathtracer_is::Integrator() }
     , { "Photon Mapping"   , new xtcore::integrator::photon_mapping::Integrator() }
-    , { "Depth"            , new xtcore::integrator::depth::Integrator()      }
-    , { "Stencil"          , new xtcore::integrator::stencil::Integrator()    }
-    , { "Normal"           , new xtcore::integrator::normal::Integrator()     }
-    , { "UV"               , new xtcore::integrator::uv::Integrator()         }
-    , { "Emission"         , new xtcore::integrator::emission::Integrator()   }
+    , { "Depth"            , new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH)      }
+    , { "Stencil"          , new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_STENCIL)    }
+    , { "Normal"           , new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_NORMAL)     }
+    , { "UV"               , new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV)         }
+    , { "Emission"         , new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION)   }
     , { "Ambient Occlusion", new xtcore::integrator::ao::Integrator()         }
-#if defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL
-    , { "Realtime (OpenGL) [WIP]", new xtcore::integrator::realtime_gl::Integrator() }
-#endif
 };
 
 

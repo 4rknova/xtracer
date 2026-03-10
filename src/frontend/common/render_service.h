@@ -28,6 +28,8 @@ struct integrator_control_info_t
     const char *min_value;
     const char *max_value;
     const char *step_value;
+    const char *visible_when_id;
+    const char *visible_when_value;
     const integrator_control_option_t *options;
     size_t options_count;
 };

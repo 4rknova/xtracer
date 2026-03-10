@@ -109,11 +109,12 @@ int main(int argc, char **argv)
     if (integrator_name.empty()) integrator_name = "pathtracer";
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
-    if      (RENDERER("depth"         )) integrator.reset(new xtcore::integrator::depth::Integrator());
-    else if (RENDERER("stencil"       )) integrator.reset(new xtcore::integrator::stencil::Integrator());
-    else if (RENDERER("normal"        )) integrator.reset(new xtcore::integrator::normal::Integrator());
-    else if (RENDERER("uv"            )) integrator.reset(new xtcore::integrator::uv::Integrator());
-    else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::emission::Integrator());
+    if      (RENDERER("debug_views"   )) integrator.reset(new xtcore::integrator::debug_views::Integrator());
+    else if (RENDERER("depth"         )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
+    else if (RENDERER("stencil"       )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_STENCIL));
+    else if (RENDERER("normal"        )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_NORMAL));
+    else if (RENDERER("uv"            )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
+    else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (RENDERER("ao"            )) integrator.reset(new xtcore::integrator::ao::Integrator());
     else if (RENDERER("pathtracer"    )) integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     else if (RENDERER("pathtracer_is" )) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());

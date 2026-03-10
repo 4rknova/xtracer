@@ -28,14 +28,6 @@ int render(workspace_t *ws)
     if (!ws) return 1;
 
     ws->prepare();
-    ws->stop_realtime_gl();
-
-#if defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL
-    if (ws->uses_realtime_gl()) {
-        ws->start_realtime_gl();
-        return 0;
-    }
-#endif
 
     std::thread t(task_render, ws);
     t.detach();

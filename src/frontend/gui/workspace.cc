@@ -3,20 +3,6 @@
 #include <nimg/conversion.h>
 #include "workspace.h"
 
-namespace {
-
-bool is_realtime_gl_integrator(const xtcore::render::IIntegrator *integrator)
-{
-#if defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL
-    return dynamic_cast<const xtcore::integrator::realtime_gl::Integrator*>(integrator) != nullptr;
-#else
-    (void)integrator;
-    return false;
-#endif
-}
-
-} // namespace
-
 ws_handler_t::ws_handler_t(std::mutex *m)
     : mut(m)
 {}
@@ -113,16 +99,11 @@ bool workspace_t::is_idle()
 
 bool workspace_t::is_rendering()
 {
-    return status == WS_STATUS_PROCESSING || realtime_gl_active;
+    return status == WS_STATUS_PROCESSING;
 }
 
 void workspace_t::update()
 {
-    if (realtime_gl_active) {
-        render_realtime_gl_frame();
-        return;
-    }
-
     float pu = 1.f/context.tiles.size();
 
     m.lock();
@@ -167,67 +148,6 @@ void workspace_t::update()
     m.unlock();
 }
 
-bool workspace_t::uses_realtime_gl() const
-{
-    return is_realtime_gl_integrator(integrator);
-}
-
-void workspace_t::stop_realtime_gl()
-{
-    if (gui_renderer) {
-        gui::destroy_gui_renderer(gui_renderer, this);
-        gui_renderer = 0;
-    }
-    realtime_gl_active = false;
-}
-
-void workspace_t::start_realtime_gl()
-{
-#if !(defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL)
-    return;
-#else
-    if (!uses_realtime_gl()) return;
-
-    context.init();
-    status = WS_STATUS_LOADED;
-    progress = 0.f;
-    timer.start();
-
-    if (gui_renderer) {
-        gui::destroy_gui_renderer(gui_renderer, this);
-        gui_renderer = 0;
-    }
-    gui_renderer = gui::create_gui_renderer(this);
-    if (!gui_renderer) return;
-    if (!gui_renderer->begin(this)) {
-        gui::destroy_gui_renderer(gui_renderer, this);
-        gui_renderer = 0;
-        return;
-    }
-
-    if (rmode == WS_RMODE_SINGLE) {
-        render_realtime_gl_frame();
-        timer.stop();
-        progress = 1.f;
-        realtime_gl_active = false;
-    } else {
-        realtime_gl_active = true;
-    }
-#endif
-}
-
-void workspace_t::render_realtime_gl_frame()
-{
-#if !(defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL)
-    return;
-#else
-    if (!gui_renderer) return;
-    gui_renderer->render_frame(this);
-
-    progress = 1.f;
-#endif
-}
-
 workspace_t::workspace_t()
     : status(WS_STATUS_INVALID)
     , texture(0)
@@ -239,8 +159,6 @@ workspace_t::workspace_t()
     , clear_buffer(true)
     , show_tile_updates(true)
     , rmode(WS_RMODE_SINGLE)
-    , realtime_gl_active(false)
-    , gui_renderer(0)
 {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -253,6 +171,5 @@ workspace_t::workspace_t()
 
 workspace_t::~workspace_t()
 {
-    stop_realtime_gl();
     glDeleteTextures(1, &texture);
 }

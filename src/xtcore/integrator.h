@@ -30,18 +30,11 @@ class IIntegrator
 	} /* namespace render */
 } /* namespace xtcore  */
 
-#include "integrator/stencil/integrator.h"
-#include "integrator/depth/integrator.h"
-#include "integrator/normal/integrator.h"
-#include "integrator/uv/integrator.h"
-#include "integrator/emission/integrator.h"
+#include "integrator/debug_views/integrator.h"
 #include "integrator/raytracer/integrator.h"
 #include "integrator/pathtracer/integrator.h"
 #include "integrator/pathtracer_is/integrator.h"
 #include "integrator/photon_mapping/integrator.h"
 #include "integrator/ao/integrator.h"
-#if defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL
-#include "integrator/realtime_gl/integrator.h"
-#endif
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */

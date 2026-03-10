@@ -9,7 +9,6 @@
 #include <xtcore/context.h>
 #include <xtcore/tile.h>
 #include <xtcore/integrator.h>
-#include "gui_renderer.h"
 #include "graph.h"
 #include "opengl.h"
 
@@ -51,10 +50,6 @@ struct workspace_t
     void render();
     void update();
     void setup_callbacks();
-    void start_realtime_gl();
-    void stop_realtime_gl();
-    void render_realtime_gl_frame();
-    bool uses_realtime_gl() const;
 
     bool is_idle();
     bool is_rendering();
@@ -77,9 +72,6 @@ struct workspace_t
     bool show_tile_updates;
 
     WS_RMODE rmode;
-
-    bool             realtime_gl_active;
-    gui::IGuiRenderer *gui_renderer;
 
      workspace_t();
     ~workspace_t();

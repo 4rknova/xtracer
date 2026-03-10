@@ -40,15 +40,30 @@
       ]
     },
     {
-      "id": "depth",
-      "label": "Depth",
+      "id": "debug_views",
+      "label": "Debug Views",
       "controls": [
+        {
+          "id": "mode",
+          "label": "Mode",
+          "type": "enum",
+          "description": "Debug output mode",
+          "default": "normal",
+          "options": [
+            { "value": "depth", "label": "Depth" },
+            { "value": "stencil", "label": "Stencil" },
+            { "value": "normal", "label": "Normal" },
+            { "value": "uv", "label": "UV" },
+            { "value": "emission", "label": "Emission" }
+          ]
+        },
         {
           "id": "depth_encoding",
           "label": "Depth Encoding",
           "type": "enum",
           "description": "Depth output encoding",
           "default": "legacy",
+          "visible_when": { "id": "mode", "value": "depth" },
           "options": [
             { "value": "legacy", "label": "Legacy (1/log(z))" },
             { "value": "linear", "label": "Linear" },
@@ -60,18 +75,15 @@
           "id": "max_distance",
           "label": "Max Distance",
           "type": "float",
-          "description": "Used by linear/log depth encoding",
+          "description": "Used by depth mode",
           "default": "1000",
           "min": "0.01",
           "max": "1000000",
-          "step": "0.01"
+          "step": "0.01",
+          "visible_when": { "id": "mode", "value": "depth" }
         }
       ]
     },
-    { "id": "stencil", "label": "Stencil" },
-    { "id": "normal", "label": "Normal" },
-    { "id": "uv", "label": "UV" },
-    { "id": "emission", "label": "Emission" },
     {
       "id": "ao",
       "label": "Ambient Occlusion",

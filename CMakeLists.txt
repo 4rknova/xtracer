@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(xtracer)
 
-option(XTRACER_ENABLE_REALTIME_GL "Enable realtime OpenGL integrator scaffolding" ON)
 option(XTRACER_ENABLE_RTMIDI "Build with RtMidi/ALSA support" ON)
 option(XTRACER_ENABLE_GUI "Build GUI frontend" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
@@ -172,15 +171,6 @@ file(GLOB SRC_XTCORE
     ${PATH_SRC_XTCORE}/*/*/*.cc
     ${PATH_SRC_XTCORE}/*/*/*.cpp
 )
-
-if (NOT XTRACER_ENABLE_REALTIME_GL)
-    file(GLOB SRC_XTCORE_REALTIME_GL
-        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.c
-        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.cc
-        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.cpp
-    )
-    list(REMOVE_ITEM SRC_XTCORE ${SRC_XTCORE_REALTIME_GL})
-endif()
 
 file(GLOB SRC_FRONTEND_CLI
     ${PATH_SRC_FRONTEND_CLI}/*.c
@@ -449,11 +439,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O0")
 
 set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
-if (XTRACER_ENABLE_REALTIME_GL)
-    set(DEFS ${DEFS} XTRACER_ENABLE_REALTIME_GL=1)
-else()
-    set(DEFS ${DEFS} XTRACER_ENABLE_REALTIME_GL=0)
-endif()
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
 if (XTRACER_ENABLE_GUI)

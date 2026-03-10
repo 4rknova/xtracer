@@ -68,25 +68,6 @@ This file is the orientation and operating guide for coding agents working in th
 - Job execution is serialized via a global render mutex in web backend (avoids OpenMP oversubscription from concurrent jobs).
 - PNG responses are currently produced by rendering to `nimg::Pixmap` then encoding via temporary file path.
 
-## Realtime Integrator Initiative
-
-A new `realtime_gl` integrator scaffold has been added:
-
-- `src/xtcore/integrator/realtime_gl/integrator.h`
-- `src/xtcore/integrator/realtime_gl/integrator.cc`
-
-Current status:
-
-- It participates in the tile-based pipeline.
-- It is currently a CPU preview implementation (normal-based shading) used as scaffold.
-- It is listed in GUI as `Realtime (OpenGL) [WIP]`.
-
-Important architectural constraint:
-
-- Existing render jobs run in a detached worker thread.
-- OpenGL context is owned by GUI thread.
-- True OpenGL tile rendering must move GL draw execution to GUI thread (or explicitly establish shared context strategy).
-
 ## Branch Relationship Reminder
 
 See: `docs/BRANCH_RELATIONSHIP.md`
@@ -101,7 +82,6 @@ Short version:
 
 - Architecture notes: `docs/ARCHITECTURE_NOTES.md`
 - Renderer/integrator inventory: `docs/RENDERERS.md`
-- Realtime GL implementation plan: `docs/REALTIME_GL_PLAN.md`
 - Web UI/feature behavior: `res/web/index.html`, `res/web/app.js`, `res/web/styles.css`
 
 ## Scene Format Reference (Parser-Backed)
