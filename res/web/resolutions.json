@@ -1,0 +1,376 @@
+{
+  "presets": [
+    {
+      "id": 0,
+      "description": "VStrip",
+      "width": 128,
+      "height": 768
+    },
+    {
+      "id": 1,
+      "description": "VStrip",
+      "width": 512,
+      "height": 3072
+    },
+    {
+      "id": 2,
+      "description": "VStrip",
+      "width": 1024,
+      "height": 6144
+    },
+    {
+      "id": 3,
+      "description": "HStrip",
+      "width": 768,
+      "height": 128
+    },
+    {
+      "id": 4,
+      "description": "HStrip",
+      "width": 3072,
+      "height": 512
+    },
+    {
+      "id": 5,
+      "description": "HStrip",
+      "width": 6144,
+      "height": 1024
+    },
+    {
+      "id": 6,
+      "description": "Square",
+      "width": 500,
+      "height": 500
+    },
+    {
+      "id": 7,
+      "description": "Square",
+      "width": 800,
+      "height": 800
+    },
+    {
+      "id": 8,
+      "description": "Square",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "id": 9,
+      "description": "Square",
+      "width": 2048,
+      "height": 2048
+    },
+    {
+      "id": 10,
+      "description": "Square",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 11,
+      "description": "nHD",
+      "width": 640,
+      "height": 360
+    },
+    {
+      "id": 12,
+      "description": "qHD",
+      "width": 960,
+      "height": 540
+    },
+    {
+      "id": 13,
+      "description": "HD",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "id": 14,
+      "description": "HD+",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "id": 15,
+      "description": "FHD",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": 16,
+      "description": "FHD+",
+      "width": 2160,
+      "height": 1440
+    },
+    {
+      "id": 17,
+      "description": "DCI 2K",
+      "width": 2048,
+      "height": 1080
+    },
+    {
+      "id": 18,
+      "description": "QHD/WQHD",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "id": 19,
+      "description": "QHD+",
+      "width": 3200,
+      "height": 1800
+    },
+    {
+      "id": 20,
+      "description": "UWQHD",
+      "width": 3440,
+      "height": 1440
+    },
+    {
+      "id": 21,
+      "description": "UW4K",
+      "width": 3840,
+      "height": 1600
+    },
+    {
+      "id": 22,
+      "description": "4K UHD",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "id": 23,
+      "description": "DCI 4K",
+      "width": 4096,
+      "height": 2160
+    },
+    {
+      "id": 24,
+      "description": "UW5K",
+      "width": 5120,
+      "height": 2160
+    },
+    {
+      "id": 25,
+      "description": "5K UHD+",
+      "width": 5120,
+      "height": 2880
+    },
+    {
+      "id": 26,
+      "description": "UW8K",
+      "width": 7680,
+      "height": 3200
+    },
+    {
+      "id": 27,
+      "description": "8K UHD",
+      "width": 7680,
+      "height": 4320
+    },
+    {
+      "id": 28,
+      "description": "QQVGA",
+      "width": 160,
+      "height": 120
+    },
+    {
+      "id": 29,
+      "description": "HQVGA",
+      "width": 240,
+      "height": 160
+    },
+    {
+      "id": 30,
+      "description": "QVGA",
+      "width": 320,
+      "height": 240
+    },
+    {
+      "id": 31,
+      "description": "WQVGA",
+      "width": 400,
+      "height": 240
+    },
+    {
+      "id": 32,
+      "description": "HVGA",
+      "width": 480,
+      "height": 320
+    },
+    {
+      "id": 33,
+      "description": "VGA/SD",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": 34,
+      "description": "WVGA",
+      "width": 768,
+      "height": 480
+    },
+    {
+      "id": 35,
+      "description": "FWVGA",
+      "width": 854,
+      "height": 480
+    },
+    {
+      "id": 36,
+      "description": "SVGA",
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": 37,
+      "description": "DVGA",
+      "width": 960,
+      "height": 640
+    },
+    {
+      "id": 38,
+      "description": "WSVGA 576",
+      "width": 1024,
+      "height": 576
+    },
+    {
+      "id": 39,
+      "description": "WSVGA 600",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "id": 40,
+      "description": "XGA",
+      "width": 1024,
+      "height": 768
+    },
+    {
+      "id": 41,
+      "description": "WXGA",
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "id": 42,
+      "description": "XGA+",
+      "width": 1152,
+      "height": 864
+    },
+    {
+      "id": 43,
+      "description": "WXGA+",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "id": 44,
+      "description": "SXGA",
+      "width": 1280,
+      "height": 1024
+    },
+    {
+      "id": 45,
+      "description": "SXGA+",
+      "width": 1400,
+      "height": 1050
+    },
+    {
+      "id": 46,
+      "description": "WSXGA+",
+      "width": 1680,
+      "height": 1050
+    },
+    {
+      "id": 47,
+      "description": "UXGA",
+      "width": 1600,
+      "height": 1200
+    },
+    {
+      "id": 48,
+      "description": "WUXGA",
+      "width": 1920,
+      "height": 1200
+    },
+    {
+      "id": 49,
+      "description": "QWXGA",
+      "width": 2048,
+      "height": 1152
+    },
+    {
+      "id": 50,
+      "description": "QXGA",
+      "width": 2048,
+      "height": 1536
+    },
+    {
+      "id": 51,
+      "description": "WQXGA",
+      "width": 2560,
+      "height": 1600
+    },
+    {
+      "id": 52,
+      "description": "QSXGA",
+      "width": 2560,
+      "height": 2048
+    },
+    {
+      "id": 53,
+      "description": "WQSXGA",
+      "width": 3200,
+      "height": 2048
+    },
+    {
+      "id": 54,
+      "description": "QUXGA",
+      "width": 3200,
+      "height": 2400
+    },
+    {
+      "id": 55,
+      "description": "WQUXGA",
+      "width": 3840,
+      "height": 2400
+    },
+    {
+      "id": 56,
+      "description": "HXGA",
+      "width": 4096,
+      "height": 3072
+    },
+    {
+      "id": 57,
+      "description": "WHXGA",
+      "width": 5120,
+      "height": 3200
+    },
+    {
+      "id": 58,
+      "description": "HSXGA",
+      "width": 5120,
+      "height": 4096
+    },
+    {
+      "id": 59,
+      "description": "WHSXGA",
+      "width": 6400,
+      "height": 4096
+    },
+    {
+      "id": 60,
+      "description": "HUXGA",
+      "width": 6400,
+      "height": 4800
+    },
+    {
+      "id": 61,
+      "description": "WHUXGA",
+      "width": 7680,
+      "height": 4800
+    }
+  ]
+}

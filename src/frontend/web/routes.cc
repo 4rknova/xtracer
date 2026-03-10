@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
+#include <iterator>
+#include <ctime>
 #include <vector>
 
 #include <cpp-httplib/httplib.h>
@@ -47,11 +50,19 @@ void send_json(httplib::Response &res, const std::string &json, int status = 200
     res.set_content(json, "application/json");
 }
 
-bool read_text_file(const std::string &path, std::string &out)
+bool read_binary_file(const std::string &path, std::vector<char> &out)
 {
     std::ifstream in(path.c_str(), std::ios::binary);
     if (!in.good()) return false;
-    out.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    out.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    return true;
+}
+
+bool read_text_file(const std::string &path, std::string &out)
+{
+    std::vector<char> bytes;
+    if (!read_binary_file(path, bytes)) return false;
+    out.assign(bytes.begin(), bytes.end());
     return true;
 }
 
@@ -92,6 +103,54 @@ bool has_suffix(const std::string &s, const std::string &suffix)
 {
     if (s.size() < suffix.size()) return false;
     return s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+bool has_prefix(const std::string &s, const char *prefix)
+{
+    if (!prefix) return false;
+    const size_t n = std::strlen(prefix);
+    return s.size() >= n && s.compare(0, n, prefix) == 0;
+}
+
+void append_integrator_controls_json(std::ostringstream &ss, const common::integrator_info_t &integrator)
+{
+    ss << "\"controls\":[";
+    for (size_t j = 0; j < integrator.controls_count; ++j) {
+        const common::integrator_control_info_t &ctrl = integrator.controls[j];
+        if (j) ss << ',';
+        ss << "{"
+           << "\"id\":\"" << json_escape(ctrl.id ? ctrl.id : "") << "\","
+           << "\"label\":\"" << json_escape(ctrl.label ? ctrl.label : "") << "\","
+           << "\"type\":\"" << json_escape(ctrl.type ? ctrl.type : "") << "\"";
+        if (ctrl.description && *(ctrl.description)) {
+            ss << ",\"description\":\"" << json_escape(ctrl.description) << "\"";
+        }
+        if (ctrl.default_value && *(ctrl.default_value)) {
+            ss << ",\"default\":\"" << json_escape(ctrl.default_value) << "\"";
+        }
+        if (ctrl.min_value && *(ctrl.min_value)) {
+            ss << ",\"min\":\"" << json_escape(ctrl.min_value) << "\"";
+        }
+        if (ctrl.max_value && *(ctrl.max_value)) {
+            ss << ",\"max\":\"" << json_escape(ctrl.max_value) << "\"";
+        }
+        if (ctrl.step_value && *(ctrl.step_value)) {
+            ss << ",\"step\":\"" << json_escape(ctrl.step_value) << "\"";
+        }
+
+        if (ctrl.options_count > 0 && ctrl.options) {
+            ss << ",\"options\":[";
+            for (size_t k = 0; k < ctrl.options_count; ++k) {
+                if (k) ss << ',';
+                const common::integrator_control_option_t &opt = ctrl.options[k];
+                ss << "{\"value\":\"" << json_escape(opt.value ? opt.value : "")
+                   << "\",\"label\":\"" << json_escape(opt.label ? opt.label : "") << "\"}";
+            }
+            ss << "]";
+        }
+        ss << "}";
+    }
+    ss << "]";
 }
 
 bool is_scene_name_safe(const std::string &scene)
@@ -178,12 +237,12 @@ const char *job_state_name(job_state_t state)
 
 void serve_static_file(const std::string &path, const char *mime, httplib::Response &res)
 {
-    std::string content;
-    if (!read_text_file(path, content)) {
+    std::vector<char> content;
+    if (!read_binary_file(path, content)) {
         res.status = 404;
         return;
     }
-    res.set_content(content, mime);
+    res.set_content(content.data(), content.size(), mime);
 }
 
 } // namespace
@@ -200,13 +259,20 @@ void setup_routes(httplib::Server &server,
     });
 
     server.Get("/api/about", [](const httplib::Request &, httplib::Response &res) {
+        std::time_t now = std::time(nullptr);
+        std::tm *utc = std::gmtime(&now);
+        int year = utc ? (utc->tm_year + 1900) : 2010;
+        if (year < 2010) year = 2010;
+
         std::ostringstream ss;
         ss << "{"
            << "\"name\":\"XTRACER WEB\","
            << "\"version\":\"" << json_escape(xtcore::get_version()) << "\","
            << "\"author_name\":\"Nikos Papadopoulos\","
            << "\"author_email\":\"nikpapas@gmail.com\","
-           << "\"copyright\":\"Copyright 2010 (c) Nikos Papadopoulos\","
+           << "\"homepage\":\"https://www.4rknova.com\","
+           << "\"website\":\"https://github.com/4rknova/xtracer\","
+           << "\"copyright\":\"Copyright 2010-" << year << " (c) Nikos Papadopoulos\","
            << "\"license\":\"" << json_escape(xtcore::get_license()) << "\""
            << "}";
         send_json(res, ss.str());
@@ -301,6 +367,12 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
+    server.Get("/api/scenes/template/empty", [](const httplib::Request &, httplib::Response &res) {
+        std::ostringstream ss;
+        ss << "{\"source\":\"" << json_escape(xtcore::get_empty_scene_template()) << "\"}";
+        send_json(res, ss.str());
+    });
+
     server.Post("/api/scenes/save", [scene_dir](const httplib::Request &req, httplib::Response &res) {
         if (!req.has_param("name")) {
             backend_log_t::handle().add("warn", "scene save rejected: name missing");
@@ -355,7 +427,9 @@ void setup_routes(httplib::Server &server,
         for (size_t i = 0; i < list.size(); ++i) {
             if (i) ss << ',';
             ss << "{\"id\":\"" << json_escape(list[i].id)
-               << "\",\"label\":\"" << json_escape(list[i].label) << "\"}";
+               << "\",\"label\":\"" << json_escape(list[i].label) << "\",";
+            append_integrator_controls_json(ss, list[i]);
+            ss << "}";
         }
         ss << "]}";
         send_json(res, ss.str());
@@ -398,6 +472,18 @@ void setup_routes(httplib::Server &server,
         if (!common::is_integrator_supported(rr.integrator)) {
             backend_log_t::handle().add("warn", "render rejected: unsupported integrator=" + rr.integrator);
             send_json(res, "{\"error\":\"integrator not supported\"}", 400);
+            return;
+        }
+        for (auto it = req.params.begin(); it != req.params.end(); ++it) {
+            if (!has_prefix((*it).first, "iopt.")) continue;
+            const std::string key = (*it).first.substr(5);
+            if (key.empty()) continue;
+            rr.integrator_options[key] = (*it).second;
+        }
+        std::string integrator_opt_error;
+        if (!common::validate_integrator_options(rr.integrator, rr.integrator_options, integrator_opt_error)) {
+            backend_log_t::handle().add("warn", "render rejected: " + integrator_opt_error);
+            send_json(res, "{\"error\":\"" + json_escape(integrator_opt_error) + "\"}", 400);
             return;
         }
 
@@ -496,8 +582,53 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
     });
 
+    server.Get("/wasm_adapter.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "wasm_adapter.js"), "application/javascript", res);
+    });
+
+    server.Get("/wasm_worker.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "wasm_worker.js"), "application/javascript", res);
+    });
+
+    server.Get("/xtracer_wasm.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "xtracer_wasm.js"), "application/javascript", res);
+    });
+
+    server.Get("/xtracer_wasm.wasm", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "xtracer_wasm.wasm"), "application/wasm", res);
+    });
+
+    server.Get("/integrators.json", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "integrators.json"), "application/json", res);
+    });
+
+    server.Get("/resolutions.json", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "resolutions.json"), "application/json", res);
+    });
+
+    server.Get("/scenes/index.json", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "scenes/index.json"), "application/json", res);
+    });
+
+    server.Get(R"(/scenes/([A-Za-z0-9_.-]+\.scn))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        serve_static_file(join_path(web_root, "scenes/" + scene), "text/plain", res);
+    });
+
     server.Get("/styles.css", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "styles.css"), "text/css", res);
+    });
+
+    server.Get("/preview.jpg", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "preview.jpg"), "image/jpeg", res);
+    });
+
+    server.Get("/logo.png", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "logo.png"), "image/png", res);
+    });
+
+    server.Get("/license.txt", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "license.txt"), "text/plain; charset=utf-8", res);
     });
 }
 

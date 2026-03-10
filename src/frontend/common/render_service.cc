@@ -2,9 +2,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <xtcore/strpool.h>
 #include <xtcore/parseutil.h>
@@ -16,6 +18,26 @@ namespace frontend {
 namespace common {
 
 namespace {
+
+bool parse_u64_text(const std::string &s, size_t &out)
+{
+    if (s.empty()) return false;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] < '0' || s[i] > '9') return false;
+    }
+    unsigned long long v = std::strtoull(s.c_str(), nullptr, 10);
+    out = (size_t)v;
+    return true;
+}
+
+bool parse_f64_text(const std::string &s, double &out)
+{
+    if (s.empty()) return false;
+    char *end = nullptr;
+    out = std::strtod(s.c_str(), &end);
+    if (end == s.c_str() || !end || *end != '\0') return false;
+    return true;
+}
 
 struct progress_handler_t : public xtcore::render::tile_event_handler_t
 {
@@ -34,21 +56,47 @@ struct progress_handler_t : public xtcore::render::tile_event_handler_t
     }
 };
 
+static const integrator_control_info_t k_no_controls[] = {};
+
+static const integrator_control_option_t k_depth_encoding_options[] = {
+      { "legacy", "Legacy (1/log(z))" }
+    , { "linear", "Linear" }
+    , { "log", "Logarithmic" }
+    , { "inverse", "Inverse (1/(1+z))" }
+};
+
+static const integrator_control_info_t k_depth_controls[] = {
+      { "depth_encoding", "Depth Encoding", "enum", "Depth output encoding", "legacy", nullptr, nullptr, nullptr, k_depth_encoding_options, sizeof(k_depth_encoding_options) / sizeof(k_depth_encoding_options[0]) }
+    , { "max_distance", "Max Distance", "float", "Used by linear/log depth encoding", "1000", "0.01", "1000000", "0.01", nullptr, 0 }
+};
+
+static const integrator_control_info_t k_ao_controls[] = {
+      { "max_distance", "Max Distance", "float", "Maximum AO ray distance", "100", "0.1", "1000", "0.1", nullptr, 0 }
+};
+
+static const integrator_control_info_t k_photon_mapping_controls[] = {
+      { "emit_photons", "Emit Photons", "int", "Photon emission count", "20000", "1000", "500000", "1000", nullptr, 0 }
+    , { "gather_radius", "Gather Radius", "float", "Radius used for radiance estimate", "0.25", "0.001", "100", "0.001", nullptr, 0 }
+    , { "gather_k", "Gather K", "int", "Maximum photons to gather", "64", "1", "1024", "1", nullptr, 0 }
+};
+
 static const integrator_info_t k_integrators[] = {
-      { "pathtracer", "Pathtracer (Brute Force)" }
-    , { "pathtracer_is", "Pathtracer (IS)" }
-    , { "photon_mapping", "Photon Mapping" }
-    , { "depth"     , "Depth" }
-    , { "stencil"   , "Stencil" }
-    , { "normal"    , "Normal" }
-    , { "uv"        , "UV" }
-    , { "emission"  , "Emission" }
-    , { "ao"        , "Ambient Occlusion" }
+      { "raytracer", "Raytracer (Whitted)", k_no_controls, 0 }
+    , { "pathtracer_is", "Pathtracer (IS)", k_no_controls, 0 }
+    , { "pathtracer", "Pathtracer (Brute Force)", k_no_controls, 0 }
+    , { "photon_mapping", "Photon Mapping", k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
+    , { "depth"     , "Depth", k_depth_controls, sizeof(k_depth_controls) / sizeof(k_depth_controls[0]) }
+    , { "stencil"   , "Stencil", k_no_controls, 0 }
+    , { "normal"    , "Normal", k_no_controls, 0 }
+    , { "uv"        , "UV", k_no_controls, 0 }
+    , { "emission"  , "Emission", k_no_controls, 0 }
+    , { "ao"        , "Ambient Occlusion", k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
 };
 
 std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name)
 {
-    if      (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
+    if      (name == "raytracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::raytracer::Integrator());
+    else if (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
     else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
     else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
     else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::depth::Integrator());
@@ -70,6 +118,24 @@ bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
 
 bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, std::string &error)
 {
+#ifdef __EMSCRIPTEN__
+    const char *tmp_path = "/tmp/xtracer_wasm.png";
+    mkdir("/tmp", 0777);
+
+    int png_err = nimg::io::save::png(tmp_path, pixmap);
+    if (png_err != 0) {
+        error = "failed to encode png";
+        return false;
+    }
+
+    bool ok = read_file_bytes(tmp_path, out);
+    unlink(tmp_path);
+    if (!ok) {
+        error = "failed to read generated png";
+        return false;
+    }
+    return true;
+#else
     char tmp_path[] = "/tmp/xtracer_web_png_XXXXXX";
     int fd = mkstemp(tmp_path);
     if (fd < 0) {
@@ -93,13 +159,14 @@ bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, st
     }
 
     return true;
+#endif
 }
 
 } // namespace
 
 render_request_t::render_request_t()
     : scene_path()
-    , integrator("pathtracer")
+    , integrator("pathtracer_is")
     , camera()
     , width(640)
     , height(480)
@@ -128,6 +195,108 @@ std::vector<integrator_info_t> list_integrators()
 bool is_integrator_supported(const std::string &name)
 {
     return create_integrator(name).get() != nullptr;
+}
+
+const integrator_info_t *find_integrator_info(const std::string &name)
+{
+    for (size_t i = 0; i < sizeof(k_integrators) / sizeof(k_integrators[0]); ++i) {
+        if (name == k_integrators[i].id) return &k_integrators[i];
+    }
+    return nullptr;
+}
+
+bool validate_integrator_options(const std::string &integrator,
+                                 const std::map<std::string, std::string> &options,
+                                 std::string &error)
+{
+    const integrator_info_t *info = find_integrator_info(integrator);
+    if (!info) {
+        error = "integrator not supported";
+        return false;
+    }
+
+    for (auto it = options.begin(); it != options.end(); ++it) {
+        const std::string &key = it->first;
+        const std::string &value = it->second;
+
+        const integrator_control_info_t *control = nullptr;
+        for (size_t i = 0; i < info->controls_count; ++i) {
+            if (key == info->controls[i].id) {
+                control = &(info->controls[i]);
+                break;
+            }
+        }
+
+        if (!control) {
+            error = "unsupported integrator option: " + key;
+            return false;
+        }
+
+        const std::string type = control->type ? control->type : "";
+        if (type == "int") {
+            size_t iv = 0;
+            if (!parse_u64_text(value, iv)) {
+                error = "invalid integer integrator option: " + key;
+                return false;
+            }
+            if (control->min_value && *(control->min_value)) {
+                size_t min_v = 0;
+                if (parse_u64_text(control->min_value, min_v) && iv < min_v) {
+                    error = "integrator option below minimum: " + key;
+                    return false;
+                }
+            }
+            if (control->max_value && *(control->max_value)) {
+                size_t max_v = 0;
+                if (parse_u64_text(control->max_value, max_v) && iv > max_v) {
+                    error = "integrator option above maximum: " + key;
+                    return false;
+                }
+            }
+        } else if (type == "float") {
+            double fv = 0.0;
+            if (!parse_f64_text(value, fv)) {
+                error = "invalid numeric integrator option: " + key;
+                return false;
+            }
+            if (control->min_value && *(control->min_value)) {
+                double min_v = 0.0;
+                if (parse_f64_text(control->min_value, min_v) && fv < min_v) {
+                    error = "integrator option below minimum: " + key;
+                    return false;
+                }
+            }
+            if (control->max_value && *(control->max_value)) {
+                double max_v = 0.0;
+                if (parse_f64_text(control->max_value, max_v) && fv > max_v) {
+                    error = "integrator option above maximum: " + key;
+                    return false;
+                }
+            }
+        } else if (type == "bool") {
+            if (value != "1" && value != "0" && value != "true" && value != "false") {
+                error = "invalid boolean integrator option: " + key;
+                return false;
+            }
+        } else if (type == "enum") {
+            bool ok = false;
+            for (size_t i = 0; i < control->options_count; ++i) {
+                if (value == control->options[i].value) {
+                    ok = true;
+                    break;
+                }
+            }
+            if (!ok) {
+                error = "invalid enum integrator option: " + key;
+                return false;
+            }
+        } else {
+            error = "unknown integrator option type: " + key;
+            return false;
+        }
+    }
+
+    return true;
 }
 
 render_result_t render_scene_to_png(const render_request_t &request, progress_callback_t on_progress)
@@ -185,6 +354,7 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
     }
 
     integrator->setup(context);
+    integrator->configure(request.integrator_options);
     xtcore::render::order(context.tiles, context.params.tile_order);
 
     auto t0 = std::chrono::steady_clock::now();

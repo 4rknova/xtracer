@@ -3,34 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>XTRACER WEB</title>
+  <title>XTRACER</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <main class="page">
-    <header class="topbar">
-      <div>
-        <h1>XTRACER WEB</h1>
-        <p class="sub">Simple local frontend for scene rendering</p>
-      </div>
-    </header>
+    <div class="masthead">
+      <nav class="tabs">
+        <button class="tab active" id="tabRender" type="button">Render</button>
+        <button class="tab" id="tabEditor" type="button">Editor</button>
+        <button class="tab" id="tabSettings" type="button">Settings</button>
+        <button class="tab" id="tabLogs" type="button">Logs</button>
+        <button class="tab" id="tabAbout" type="button">About</button>
+      </nav>
 
-    <nav class="tabs">
-      <button class="tab active" id="tabRender" type="button">Render</button>
-      <button class="tab" id="tabEditor" type="button">Editor</button>
-      <button class="tab" id="tabSettings" type="button">Settings</button>
-      <button class="tab" id="tabLogs" type="button">Logs</button>
-      <button class="tab" id="tabAbout" type="button">About</button>
-    </nav>
+      <header class="topbar">
+        <div>
+          <h1>XTRACER</h1>
+        </div>
+      </header>
+    </div>
 
     <div class="tab-stage">
       <section class="tab-pane active" id="paneRender">
         <div class="render-grid">
           <section class="panel panel-controls">
-            <h2 class="panel-title">Render Setup</h2>
-
             <div class="control-section">
-              <label>Scene
+              <label>
+                <span class="field-label-row">
+                  <span>Scene</span>
+                  <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
+                </span>
                 <select id="scene"></select>
               </label>
 
@@ -41,6 +44,11 @@
               <label>Integrator
                 <select id="integrator"></select>
               </label>
+            </div>
+
+            <div class="control-section" id="integratorControlsSection" hidden>
+              <p class="control-subtitle">Integrator Controls</p>
+              <div id="integratorControls"></div>
             </div>
 
             <div class="control-section">
@@ -65,14 +73,21 @@
             </div>
 
             <button id="renderBtn" type="button">Start Render</button>
-            <p id="status" class="status-chip">Idle</p>
-            <div class="bar"><div id="progress"></div></div>
           </section>
 
           <section class="panel panel-preview">
             <div class="preview-toolbar">
-              <h2 class="panel-title">Preview</h2>
-              <a id="download" class="action-btn is-disabled" download="xtracer.png" aria-disabled="true">Download PNG</a>
+              <div class="preview-headline">
+                <p id="status" class="status-chip">Idle</p>
+                <span id="renderTimer" class="status-timer" hidden>00:00</span>
+                <div id="progressBar" class="bar" hidden><div id="progress"></div></div>
+              </div>
+              <a id="download" class="action-btn action-btn-icon is-disabled" download="xtracer.png" aria-disabled="true" aria-label="Save PNG" title="Save PNG">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M5 3h11l3 3v15H5zM7 5v4h8V5zm0 8v6h10v-6z"/>
+                </svg>
+                <span class="sr-only">Save PNG</span>
+              </a>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
@@ -127,6 +142,10 @@
             <input id="autoLoadEditor" type="checkbox" checked>
             Auto-load scene source in editor when scene changes
           </label>
+          <label class="inline-check">
+            <input id="autoScrollLogs" type="checkbox" checked>
+            Auto-scroll frontend log output
+          </label>
         </section>
       </section>
 
@@ -141,30 +160,53 @@
       </section>
 
       <section class="tab-pane" id="paneAbout">
-        <section class="panel">
-          <h2>About XTRACER WEB</h2>
-          <p class="about-copy" id="aboutSummary">
-            XTRACER WEB is a local browser frontend for the xtracer rendering framework.
-          </p>
-          <div class="about-meta">
-            <div><strong>Version:</strong> <code id="aboutVersion">loading...</code></div>
-            <div><strong>Author:</strong> <code id="aboutAuthor">loading...</code></div>
-            <div><strong>Contact:</strong> <code id="aboutEmail">loading...</code></div>
-            <div><strong>Copyright:</strong> <code id="aboutCopyright">loading...</code></div>
+        <section class="panel about-panel">
+          <div class="about-hero">
+            <div class="about-hero-info">
+              <div class="about-meta">
+                <div id="aboutVersionRow"><code id="aboutVersion">loading...</code></div>
+                <div><a id="aboutHomepage" href="https://www.4rknova.com" target="_blank" rel="noopener noreferrer">https://www.4rknova.com</a></div>
+                <div><a id="aboutWebsite" href="https://github.com/4rknova/xtracer" target="_blank" rel="noopener noreferrer">https://github.com/4rknova/xtracer</a></div>
+                <div><code id="aboutCopyright">loading...</code></div>
+              </div>
+            </div>
+            <img id="aboutBanner" class="about-banner" src="/logo.png" alt="XTRACER logo">
           </div>
+
+          <div class="about-grid">
+            <section class="about-card">
+              <div class="about-card-head">
+                <span id="aboutBuildPill" class="about-pill" hidden>WASM BUILD</span>
+              </div>
+              <div class="about-runtime">
+                <div class="runtime-row">
+                  <strong class="runtime-key">Backend</strong>
+                  <code id="aboutBackend" class="runtime-value">loading...</code>
+                </div>
+                <div class="runtime-row">
+                  <strong class="runtime-key">Default URL</strong>
+                  <code id="aboutDefaultUrl" class="runtime-value">loading...</code>
+                </div>
+                <div class="runtime-row">
+                  <strong class="runtime-key">Scene Directory</strong>
+                  <code id="aboutSceneDir" class="runtime-value">loading...</code>
+                </div>
+                <div class="runtime-row">
+                  <strong class="runtime-key">Static Assets</strong>
+                  <code id="aboutStaticAssets" class="runtime-value">loading...</code>
+                </div>
+              </div>
+            </section>
+          </div>
+
           <h2 class="about-license-title">License</h2>
           <pre id="aboutLicense" class="about-license">loading...</pre>
-          <div class="about-meta">
-            <div><strong>Backend:</strong> <code>xtracer_web</code></div>
-            <div><strong>Default URL:</strong> <code>http://127.0.0.1:8080</code></div>
-            <div><strong>Scene Directory:</strong> <code>scene/</code></div>
-            <div><strong>Static Assets:</strong> <code>res/web/</code></div>
-          </div>
         </section>
       </section>
     </div>
   </main>
 
+  <script src="/wasm_adapter.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <map>
 
 #include <xtcore/context.h>
 
@@ -11,10 +12,32 @@ namespace xtracer {
 namespace frontend {
 namespace common {
 
+struct integrator_control_option_t
+{
+    const char *value;
+    const char *label;
+};
+
+struct integrator_control_info_t
+{
+    const char *id;
+    const char *label;
+    const char *type;
+    const char *description;
+    const char *default_value;
+    const char *min_value;
+    const char *max_value;
+    const char *step_value;
+    const integrator_control_option_t *options;
+    size_t options_count;
+};
+
 struct integrator_info_t
 {
     const char *id;
     const char *label;
+    const integrator_control_info_t *controls;
+    size_t controls_count;
 };
 
 struct render_request_t
@@ -22,6 +45,7 @@ struct render_request_t
     std::string scene_path;
     std::string integrator;
     std::string camera;
+    std::map<std::string, std::string> integrator_options;
 
     size_t width;
     size_t height;
@@ -52,6 +76,10 @@ typedef std::function<void(size_t, size_t, const xtcore::render::tile_t*)> progr
 
 std::vector<integrator_info_t> list_integrators();
 bool is_integrator_supported(const std::string &name);
+const integrator_info_t *find_integrator_info(const std::string &name);
+bool validate_integrator_options(const std::string &integrator,
+                                 const std::map<std::string, std::string> &options,
+                                 std::string &error);
 render_result_t render_scene_to_png(const render_request_t &request, progress_callback_t on_progress);
 
 } /* namespace common */
