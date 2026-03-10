@@ -1,5 +1,6 @@
 #include <string>
 #include <mutex>
+#include <memory>
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
@@ -65,10 +66,11 @@ int main(int argc, char **argv)
 	xtcore::Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
     std::string integrator_name, outdir, scene_path;
-    HASH_UINT64 camera;
+    HASH_UINT64 camera = HASH_ID_INVALID;
     xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
+    xtcore::init();
 	if (setup(argc, argv
             , integrator_name
             , outdir
@@ -76,29 +78,53 @@ int main(int argc, char **argv)
             , modifiers
             , camera
             , params
-    )) return 1;
+    )) {
+        xtcore::deinit();
+        return 1;
+    }
 
-    xtcore::init();
 	xtcore::render::context_t context;
+    context.params = params;
 	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
         if (context.scene.m_cameras.size() == 0) {
             xtcore::Log::handle().post_error("no cameras found");
+            xtcore::deinit();
+            return 2;
+        }
+
+        if (camera == HASH_ID_INVALID) {
+            camera = context.scene.m_cameras.begin()->first;
+        }
+        if (!context.scene.get_camera(camera)) {
+            xtcore::Log::handle().post_error("invalid active camera");
+            xtcore::deinit();
             return 2;
         }
         context.params.camera = camera;
-    } else return 1;
+    } else {
+        xtcore::deinit();
+        return 1;
+    }
 
-	xtcore::render::IIntegrator *integrator = NULL;
-/*
-    if      (RENDERER("depth"     )) integrator = new xtcore::integrator::depth::Integrator();
-    else if (RENDERER("stencil"   )) integrator = new xtcore::integrator::stencil::Integrator();
-    else if (RENDERER("normal"    )) integrator = new xtcore::integrator::normal::Integrator();
-    else if (RENDERER("uv"        )) integrator = new xtcore::integrator::uv::Integrator();
-    else if (RENDERER("raytracer" )) integrator = new xtcore::integrator::raytracer::Integrator();
-    else if (RENDERER("pathtracer")) integrator = new xtcore::integrator::pathtracer::Integrator();
-    else return 0;
-*/
-    context.params = params;
+    if (integrator_name.empty()) integrator_name = "pathtracer";
+
+    std::unique_ptr<xtcore::render::IIntegrator> integrator;
+    if      (RENDERER("depth"         )) integrator.reset(new xtcore::integrator::depth::Integrator());
+    else if (RENDERER("stencil"       )) integrator.reset(new xtcore::integrator::stencil::Integrator());
+    else if (RENDERER("normal"        )) integrator.reset(new xtcore::integrator::normal::Integrator());
+    else if (RENDERER("uv"            )) integrator.reset(new xtcore::integrator::uv::Integrator());
+    else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::emission::Integrator());
+    else if (RENDERER("ao"            )) integrator.reset(new xtcore::integrator::ao::Integrator());
+    else if (RENDERER("pathtracer"    )) integrator.reset(new xtcore::integrator::pathtracer::Integrator());
+    else if (RENDERER("pathtracer_is" )) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+    else if (RENDERER("photon_mapping")) integrator.reset(new xtcore::integrator::photon_mapping::Integrator());
+    else if (RENDERER("raytracer"     )) integrator.reset(new xtcore::integrator::raytracer::Integrator());
+    else {
+        xtcore::Log::handle().post_error("unsupported renderer: %s", integrator_name.c_str());
+        xtcore::deinit();
+        return 2;
+    }
+
     context.init();
 
     xtcore::render::Tileset::iterator it = context.tiles.begin();
@@ -134,7 +160,7 @@ int main(int argc, char **argv)
     	ncf::util::path_comp(scene_path, base, file, path_delim);
     	ncf::util::path_comp(file, filename, extension, '.');
 
-    	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
+    	if (!outdir.empty() && outdir[outdir.length()-1] != path_delim) {
 			outdir.append(1, path_delim);
 		}
 
@@ -145,8 +171,6 @@ int main(int argc, char **argv)
 		int res = nimg::io::save::png(file.c_str(), fb);
         if (res) xtcore::Log::handle().post_error("Failed to export image file");
     }
-
-	delete integrator;
 
     xtcore::deinit();
 

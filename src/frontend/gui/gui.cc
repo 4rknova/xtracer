@@ -90,7 +90,8 @@ typedef struct
 
 
 integrator_t integrators[] = {
-      { "Pathtracer (Brute Force)", new xtcore::integrator::pathtracer::Integrator() }
+      { "Raytracer (Whitted)" , new xtcore::integrator::raytracer::Integrator()   }
+    , { "Pathtracer (Brute Force)", new xtcore::integrator::pathtracer::Integrator() }
     , { "Pathtracer (IS)"  , new xtcore::integrator::pathtracer_is::Integrator() }
     , { "Photon Mapping"   , new xtcore::integrator::photon_mapping::Integrator() }
     , { "Depth"            , new xtcore::integrator::depth::Integrator()      }
