@@ -66,6 +66,21 @@ Or with CMake:
     cmake -S . -B build -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=ON
     cmake --build build -j
 
+## Colorspace Tests
+
+Build only the colorspace test targets:
+
+    cmake --build build -j --target nimg_colorspace_test nimg_colorspace_vectors_test
+
+Run only colorspace tests with CTest:
+
+    ctest --test-dir build -R '^colorspace::' --output-on-failure
+
+Run test binaries directly:
+
+    ./build/bin/nimg_colorspace_test
+    ./build/bin/nimg_colorspace_vectors_test
+
 ## Web Frontend (Simple)
 
 Build target: `xtracer_web`

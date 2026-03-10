@@ -104,12 +104,15 @@ set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
+set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
 set(IN_MAN_CLI  xtracer_cli.1)
 
 set(OUT_MAN_CLI xtracer_cli.1.gz)
 set(OUT_LIB     xtcore)
 set(OUT_EXE_CLI xtracer_cli)
+set(OUT_EXE_COLORSPACE_TEST nimg_colorspace_test)
+set(OUT_EXE_COLORSPACE_VECTORS_TEST nimg_colorspace_vectors_test)
 
 set(iCMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -140,6 +143,15 @@ file(GLOB SRC_XTCORE
     ${PATH_SRC_XTCORE}/*/*/*.cc
     ${PATH_SRC_XTCORE}/*/*/*.cpp
 )
+
+if (NOT XTRACER_ENABLE_REALTIME_GL)
+    file(GLOB SRC_XTCORE_REALTIME_GL
+        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.c
+        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.cc
+        ${PATH_SRC_XTCORE}/integrator/realtime_gl/*.cpp
+    )
+    list(REMOVE_ITEM SRC_XTCORE ${SRC_XTCORE_REALTIME_GL})
+endif()
 
 file(GLOB SRC_FRONTEND_CLI
     ${PATH_SRC_FRONTEND_CLI}/*.c
@@ -198,6 +210,8 @@ if (XTRACER_ENABLE_RTMIDI)
 endif()
 
 add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
+add_executable(${OUT_EXE_COLORSPACE_TEST} ${PATH_SRC_TESTS}/colorspace_test.cc)
+add_executable(${OUT_EXE_COLORSPACE_VECTORS_TEST} ${PATH_SRC_TESTS}/colorspace_vectors_test.cc)
 
 target_include_directories(${OUT_EXE_CLI} PUBLIC
     ${PATH_LIB}
@@ -206,12 +220,28 @@ target_include_directories(${OUT_EXE_CLI} PUBLIC
 target_include_directories(${OUT_EXE_CLI} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_COLORSPACE_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_COLORSPACE_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_COLORSPACE_VECTORS_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_COLORSPACE_VECTORS_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 
 if (XTRACER_ENABLE_RTMIDI)
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
 else()
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static pthread)
 endif()
+target_link_libraries(${OUT_EXE_COLORSPACE_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_COLORSPACE_VECTORS_TEST} PRIVATE xtcore_static pthread)
 
 if (XTRACER_ENABLE_WEB)
     set(OUT_EXE_WEB xtracer_web)
@@ -244,7 +274,14 @@ else()
 endif()
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
+if (XTRACER_ENABLE_GUI)
+    target_compile_definitions(${OUT_EXE_GUI} PRIVATE ${DEFS})
+endif()
+target_compile_definitions(${OUT_EXE_COLORSPACE_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_COLORSPACE_VECTORS_TEST} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
+add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_COLORSPACE_VECTORS_TEST} xtcore_static)
 
 enable_testing()
 file(MAKE_DIRECTORY ${PATH_TEST})
@@ -256,6 +293,15 @@ foreach(file ${files})
         COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${file} -outdir ${PATH_TEST} -renderer stencil
     )
 endforeach()
+
+add_test(
+    NAME colorspace::roundtrip
+    COMMAND ${PATH_BIN}/${OUT_EXE_COLORSPACE_TEST}
+)
+add_test(
+    NAME colorspace::vectors
+    COMMAND ${PATH_BIN}/${OUT_EXE_COLORSPACE_VECTORS_TEST}
+)
 
 
 install (TARGETS xtcore_static xtcore_dynamic

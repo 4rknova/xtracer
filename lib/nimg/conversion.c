@@ -1,4 +1,5 @@
 #include "conversion.h"
+#include <math.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +28,22 @@ void rgb_to_yuv(float r, float g, float b, float *y, float *u, float *v)
     *y = .299 * r + .587 * g + .114 * b; // Luma
     *u =-.147 * r - .289 * g + .436 * b; // Delta Blue
     *v = .615 * r - .515 * g - .100 * b; // Delta Red
+}
+
+float srgb_to_linear(float v)
+{
+    if (v <= 0.0f) return 0.0f;
+    if (v >= 1.0f) return 1.0f;
+    if (v <= 0.04045f) return v / 12.92f;
+    return powf((v + 0.055f) / 1.055f, 2.4f);
+}
+
+float linear_to_srgb(float v)
+{
+    if (v <= 0.0f) return 0.0f;
+    if (v >= 1.0f) return 1.0f;
+    if (v <= 0.0031308f) return v * 12.92f;
+    return 1.055f * powf(v, 1.0f / 2.4f) - 0.055f;
 }
 
 #ifdef __cplusplus

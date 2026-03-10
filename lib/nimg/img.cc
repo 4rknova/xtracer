@@ -9,6 +9,7 @@
 #include <stb_image_write.h>
 #include <tinyexr.h>
 #include "img.h"
+#include "conversion.h"
 
 namespace nimg {
     namespace io {
@@ -33,9 +34,9 @@ int image(const char *filename, Pixmap &map)
                 size_t i = 3 * (y * w + x);
 
                 ColorRGBAf pixel;
-                pixel.r(data[i  ] / 255.f);
-                pixel.g(data[i+1] / 255.f);
-                pixel.b(data[i+2] / 255.f);
+                pixel.r(srgb_to_linear(data[i  ] / 255.f));
+                pixel.g(srgb_to_linear(data[i+1] / 255.f));
+                pixel.b(srgb_to_linear(data[i+2] / 255.f));
                 pixel.a(1.f);
                 map.pixel(x, y) = pixel;
             }
@@ -47,9 +48,9 @@ int image(const char *filename, Pixmap &map)
                 size_t i = 4 * (y * w + x);
 
                 ColorRGBAf pixel;
-                pixel.r(data[i  ] / 255.f);
-                pixel.g(data[i+1] / 255.f);
-                pixel.b(data[i+2] / 255.f);
+                pixel.r(srgb_to_linear(data[i  ] / 255.f));
+                pixel.g(srgb_to_linear(data[i+1] / 255.f));
+                pixel.b(srgb_to_linear(data[i+2] / 255.f));
                 pixel.a(data[i+3] / 255.f);
 
                 map.pixel(x, y) = pixel;
@@ -68,6 +69,25 @@ int image(const char *filename, Pixmap &map)
         } /* namespace load */
 
         namespace save {
+
+namespace {
+
+unsigned char to_u8(float v)
+{
+    if (v <= 0.0f) return 0;
+    if (v >= 1.0f) return 255;
+    return (unsigned char)(v * 255.0f + 0.5f);
+}
+
+void pack_rgba8_srgb(const ColorRGBAf &pixel, unsigned char out[4])
+{
+    out[0] = to_u8(linear_to_srgb(pixel.r()));
+    out[1] = to_u8(linear_to_srgb(pixel.g()));
+    out[2] = to_u8(linear_to_srgb(pixel.b()));
+    out[3] = to_u8(pixel.a());
+}
+
+} // namespace
 
 int exr(const char *filename, Pixmap &map)
 {
@@ -159,15 +179,12 @@ int png(const char *filename, Pixmap &map)
         for (int x = 0; x < w; ++x) {
             for (int y = 0; y < h; ++y) {
                 size_t idx = (y*w+x)*4;
-                float r = map.pixel(x,y).r()*255.f;
-                float g = map.pixel(x,y).g()*255.f;
-                float b = map.pixel(x,y).b()*255.f;
-                float a = map.pixel(x,y).a()*255.f;
-
-                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
-                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
-                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
-                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+                unsigned char pixel[4];
+                pack_rgba8_srgb(map.pixel(x, y), pixel);
+                data[idx  ] = pixel[0];
+                data[idx+1] = pixel[1];
+                data[idx+2] = pixel[2];
+                data[idx+3] = pixel[3];
             }
         }
         res = stbi_write_png(filename, w, h, 4, data, w*4);
@@ -194,15 +211,12 @@ int jpg(const char *filename, Pixmap &map)
         for (int x = 0; x < w; ++x) {
             for (int y = 0; y < h; ++y) {
                 size_t idx = (y*w+x)*4;
-                float r = map.pixel(x,y).r()*255.f;
-                float g = map.pixel(x,y).g()*255.f;
-                float b = map.pixel(x,y).b()*255.f;
-                float a = map.pixel(x,y).a()*255.f;
-
-                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
-                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
-                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
-                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+                unsigned char pixel[4];
+                pack_rgba8_srgb(map.pixel(x, y), pixel);
+                data[idx  ] = pixel[0];
+                data[idx+1] = pixel[1];
+                data[idx+2] = pixel[2];
+                data[idx+3] = pixel[3];
             }
         }
         res = stbi_write_jpg(filename, w, h, 4, data, w*4);
@@ -229,15 +243,12 @@ int bmp(const char *filename, Pixmap &map)
         for (int x = 0; x < w; ++x) {
             for (int y = 0; y < h; ++y) {
                 size_t idx = (y*w+x)*4;
-                float r = map.pixel(x,y).r()*255.f;
-                float g = map.pixel(x,y).g()*255.f;
-                float b = map.pixel(x,y).b()*255.f;
-                float a = map.pixel(x,y).a()*255.f;
-
-                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
-                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
-                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
-                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+                unsigned char pixel[4];
+                pack_rgba8_srgb(map.pixel(x, y), pixel);
+                data[idx  ] = pixel[0];
+                data[idx+1] = pixel[1];
+                data[idx+2] = pixel[2];
+                data[idx+3] = pixel[3];
             }
         }
 
@@ -265,15 +276,12 @@ int tga(const char *filename, Pixmap &map)
         for (int x = 0; x < w; ++x) {
             for (int y = 0; y < h; ++y) {
                 size_t idx = (y*w+x)*4;
-                float r = map.pixel(x,y).r()*255.f;
-                float g = map.pixel(x,y).g()*255.f;
-                float b = map.pixel(x,y).b()*255.f;
-                float a = map.pixel(x,y).a()*255.f;
-
-                data[idx  ] = (unsigned char)(r > 255.f ? 255.f : r);
-                data[idx+1] = (unsigned char)(g > 255.f ? 255.f : g);
-                data[idx+2] = (unsigned char)(b > 255.f ? 255.f : b);
-                data[idx+3] = (unsigned char)(a > 255.f ? 255.f : a);
+                unsigned char pixel[4];
+                pack_rgba8_srgb(map.pixel(x, y), pixel);
+                data[idx  ] = pixel[0];
+                data[idx+1] = pixel[1];
+                data[idx+2] = pixel[2];
+                data[idx+3] = pixel[3];
             }
         }
 

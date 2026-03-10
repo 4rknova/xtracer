@@ -8,6 +8,8 @@ extern "C" {
 void rgb_to_ycbcr  (float r, float g, float b, float *y, float *cb, float *cr);
 void rgb_to_ycgco  (float r, float g, float b, float *y, float *cg, float *co);
 void rgb_to_yuv    (float r, float g, float b, float *y, float * u, float * v);
+float srgb_to_linear(float v);
+float linear_to_srgb(float v);
 
 #ifdef __cplusplus
 }
