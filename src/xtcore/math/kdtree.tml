@@ -1,0 +1,121 @@
+#ifndef XTCORE_MATH_KDTREE_TML_INCLUDED
+#define XTCORE_MATH_KDTREE_TML_INCLUDED
+
+#ifndef XTCORE_MATH_KDTREE_H_INCLUDED
+#error "kdtree.h must be included before kdtree.tml"
+#endif
+
+#include <algorithm>
+#include <utility>
+
+namespace xtcore {
+namespace math {
+
+template <typename T, typename Accessor>
+KDTree3<T, Accessor>::KDTree3()
+    : m_root(-1)
+    , m_accessor(Accessor())
+{}
+
+template <typename T, typename Accessor>
+void KDTree3<T, Accessor>::clear()
+{
+    m_items.clear();
+    m_nodes.clear();
+    m_root = -1;
+}
+
+template <typename T, typename Accessor>
+bool KDTree3<T, Accessor>::empty() const
+{
+    return m_root < 0 || m_nodes.empty();
+}
+
+template <typename T, typename Accessor>
+void KDTree3<T, Accessor>::build(std::vector<T> items)
+{
+    build(std::move(items), Accessor());
+}
+
+template <typename T, typename Accessor>
+void KDTree3<T, Accessor>::build(std::vector<T> items, const Accessor &accessor)
+{
+    m_items = std::move(items);
+    m_accessor = accessor;
+    m_nodes.clear();
+    m_root = -1;
+
+    if (m_items.empty()) return;
+
+    m_nodes.reserve(m_items.size());
+    m_root = build_recursive(0, m_items.size(), 0);
+}
+
+template <typename T, typename Accessor>
+int KDTree3<T, Accessor>::build_recursive(size_t begin, size_t end, int axis)
+{
+    if (begin >= end) return -1;
+
+    const size_t mid = begin + (end - begin) / 2;
+    std::nth_element(
+        m_items.begin() + begin,
+        m_items.begin() + mid,
+        m_items.begin() + end,
+        [this, axis](const T &a, const T &b) {
+            return m_accessor(a)[axis] < m_accessor(b)[axis];
+        }
+    );
+
+    Node node;
+    node.data = m_items[mid];
+    node.left = -1;
+    node.right = -1;
+    node.axis = axis;
+
+    const int idx = (int)m_nodes.size();
+    m_nodes.push_back(node);
+
+    const int next_axis = (axis + 1) % 3;
+    m_nodes[idx].left = build_recursive(begin, mid, next_axis);
+    m_nodes[idx].right = build_recursive(mid + 1, end, next_axis);
+    return idx;
+}
+
+template <typename T, typename Accessor>
+template <typename Visitor>
+void KDTree3<T, Accessor>::radius_search(const nmath::Vector3f &point,
+                                         nmath::scalar_t radius,
+                                         Visitor visitor) const
+{
+    if (empty() || radius <= (nmath::scalar_t)0.0) return;
+
+    const nmath::scalar_t r2 = radius * radius;
+    std::vector<int> stack;
+    stack.push_back(m_root);
+
+    while (!stack.empty()) {
+        const int node_idx = stack.back();
+        stack.pop_back();
+        if (node_idx < 0) continue;
+
+        const Node &node = m_nodes[(size_t)node_idx];
+        const nmath::Vector3f p = m_accessor(node.data);
+        const nmath::Vector3f d = p - point;
+        const nmath::scalar_t d2 = d.length_squared();
+        if (d2 <= r2) {
+            visitor(node.data);
+        }
+
+        const nmath::scalar_t delta = point[node.axis] - p[node.axis];
+        const int near_node = delta < (nmath::scalar_t)0.0 ? node.left : node.right;
+        const int far_node = delta < (nmath::scalar_t)0.0 ? node.right : node.left;
+
+        if (near_node >= 0) stack.push_back(near_node);
+        if (far_node >= 0 && delta * delta <= r2) stack.push_back(far_node);
+    }
+}
+
+} // namespace math
+} // namespace xtcore
+
+#endif /* XTCORE_MATH_KDTREE_TML_INCLUDED */

@@ -11,9 +11,15 @@ namespace xtcore {
 
 Triangle::Triangle()
 {
+    v[0] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    v[1] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    v[2] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    n[0] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    n[1] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    n[2] = nmath::Vector3f(0.0f, 0.0f, 0.0f);
     tc[0] = nmath::Vector2f(0.0f, 0.0f);
-    tc[1] = nmath::Vector2f(1.0f, 1.0f);
     tc[1] = nmath::Vector2f(1.0f, 0.0f);
+    tc[2] = nmath::Vector2f(0.0f, 1.0f);
 }
 
 nmath::scalar_t Triangle::distance(nmath::Vector3f p) const
@@ -81,45 +87,41 @@ nmath::scalar_t Triangle::distance(nmath::Vector3f p) const
 
 bool Triangle::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
-	Vector3f normal = calc_normal();
-	scalar_t n_dot_dir = dot(normal, ray.direction);
+    // Moller-Trumbore intersection (two-sided).
+    const Vector3f edge1 = v[1] - v[0];
+    const Vector3f edge2 = v[2] - v[0];
+    const Vector3f pvec = cross(ray.direction, edge2);
+    const scalar_t det = dot(edge1, pvec);
 
-	if (fabs(n_dot_dir) < EPSILON) return false; // parallel to the plane
+    if (nmath_abs(det) < EPSILON) return false;
 
-	// translation of v[0] to axis origin
-	Vector3f vo_vec = ray.origin - v[0];
+    const scalar_t inv_det = 1.0f / det;
+    const Vector3f tvec = ray.origin - v[0];
+    const scalar_t u = dot(tvec, pvec) * inv_det;
+    if (u < 0.0f || u > 1.0f) return false;
 
-	// calc intersection distance
-	scalar_t t = -dot(normal, vo_vec) / n_dot_dir;
+    const Vector3f qvec = cross(tvec, edge1);
+    const scalar_t vv = dot(ray.direction, qvec) * inv_det;
+    if (vv < 0.0f || (u + vv) > 1.0f) return false;
 
-	if (t < EPSILON) return false; // plane in the opposite subspace
+    const scalar_t t = dot(edge2, qvec) * inv_det;
+    if (t < EPSILON) return false;
 
-	// intersection point ( on the plane ).
-	Vector3f pos = ray.origin + ray.direction * t;
+    if (i_hit_record) {
+        const scalar_t w = 1.0f - u - vv;
+        const Vector3f pos = ray.origin + ray.direction * t;
+        const Vector3f face_n = cross(edge1, edge2).normalized();
 
-	// calculate barycentric
-	Vector3f bc = calc_barycentric(pos);
-	scalar_t bc_sum = bc.x + bc.y + bc.z;
+        i_hit_record->t = t;
+        i_hit_record->point = pos;
+        i_hit_record->texcoord = tc[0] * w + tc[1] * u + tc[2] * vv;
 
-	// check for triangle boundaries
-	if (bc_sum < 1.0 - EPSILON || bc_sum > 1.0 + EPSILON) return false;
-
-	if (i_hit_record)
-	{
-		i_hit_record->t = t;
-		i_hit_record->point = pos;
-
-		// Texcoords
-		Vector2f texcoord = tc[0] * bc.x + tc[1] * bc.y + tc[2] * bc.z;
-		i_hit_record->texcoord = texcoord;
-
-		// Normal
-		Vector3f pn = n[0] * bc.x + n[1] * bc.y + n[2] * bc.z;
-		i_hit_record->normal = pn.length() ? pn : normal;
+        Vector3f pn = n[0] * w + n[1] * u + n[2] * vv;
+        i_hit_record->normal = pn.length() ? pn.normalized() : face_n;
         i_hit_record->incident_direction = ray.direction;
-	}
+    }
 
-	return true;
+    return true;
 }
 
 void Triangle::calc_aabb()

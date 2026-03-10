@@ -131,6 +131,7 @@
 #define XTPROTO_CUBEMAP             "cubemap"
 #define XTPROTO_ERP                 "erp"
 #define XTPROTO_COLOR               "color"
+#define XTPROTO_GRAPHPAPER          "graphpaper"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"

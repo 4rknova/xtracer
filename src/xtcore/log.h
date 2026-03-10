@@ -31,6 +31,8 @@ struct log_entry_t
 class Log
 {
 	public:
+        typedef void (*callback_t)(LOGENTRY_TYPE type, const std::string &message, void *user);
+
 		static Log &handle();
 
 		// Logging functions.
@@ -62,6 +64,7 @@ class Log
 
 		log_entry_t get_entry(size_t idx) const;
         size_t      get_size() const;
+        void        callback(callback_t fn, void *user = nullptr);
 
 	private:
 		Log();
@@ -74,6 +77,8 @@ class Log
 		bool         m_flag_echo;
 		bool         m_flag_rewind;
         size_t       m_level;
+        callback_t   m_callback;
+        void        *m_callback_user;
 
 		std::vector<log_entry_t*> m_log;
 		static Log m_log_manager;

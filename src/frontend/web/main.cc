@@ -24,6 +24,26 @@ void print_usage(const char *argv0)
     std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>]\n", argv0);
 }
 
+const char *to_backend_level(xtcore::LOGENTRY_TYPE type)
+{
+    switch (type) {
+    case xtcore::LOGENTRY_DEBUG:
+        return "debug";
+    case xtcore::LOGENTRY_MESSAGE:
+        return "info";
+    case xtcore::LOGENTRY_WARNING:
+        return "warn";
+    case xtcore::LOGENTRY_ERROR:
+        return "error";
+    }
+    return "info";
+}
+
+void forward_xtcore_log(xtcore::LOGENTRY_TYPE type, const std::string &message, void *)
+{
+    xtracer::frontend::web::backend_log_t::handle().add(to_backend_level(type), message);
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -78,6 +98,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    xtcore::Log::handle().callback(&forward_xtcore_log, nullptr);
     xtcore::init();
     xtcore::Log::handle().echo(false);
     xtracer::frontend::web::backend_log_t::handle().add("info", "xtracer_web boot");
@@ -95,11 +116,13 @@ int main(int argc, char **argv)
     if (!ok) {
         std::printf("Failed to listen on %s:%d\n", host.c_str(), port);
         xtracer::frontend::web::backend_log_t::handle().add("error", "listen failed host=" + host + " port=" + std::to_string(port));
+        xtcore::Log::handle().callback(nullptr, nullptr);
         xtcore::deinit();
         return 1;
     }
 
     xtracer::frontend::web::backend_log_t::handle().add("info", "listen stopped");
+    xtcore::Log::handle().callback(nullptr, nullptr);
     xtcore::deinit();
     return 0;
 }

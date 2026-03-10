@@ -1,5 +1,6 @@
 #include <nmath/vector.h>
 #include <cmath>
+#include <algorithm>
 
 #include "math/hitrecord.h"
 #include "mesh.h"
@@ -8,6 +9,7 @@ namespace xtcore {
     namespace surface {
 
 Mesh::Mesh()
+    : m_uv_projection(UV_PROJECTION_SOURCE)
 {}
 
 Mesh::~Mesh()
@@ -20,7 +22,23 @@ nmath::scalar_t Mesh::distance(nmath::Vector3f) const
 
 bool Mesh::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
-	return m_octree.intersection(ray, i_hit_record) != NULL;
+    OctreeItem<Triangle> *hit = m_octree.intersection(ray, i_hit_record);
+    if (!hit) return false;
+
+    if (i_hit_record && m_uv_projection != UV_PROJECTION_SOURCE) {
+        const nmath::scalar_t cx = (aabb.min.x + aabb.max.x) * 0.5f;
+        const nmath::scalar_t cz = (aabb.min.z + aabb.max.z) * 0.5f;
+        const nmath::scalar_t dx = i_hit_record->point.x - cx;
+        const nmath::scalar_t dz = i_hit_record->point.z - cz;
+
+        const nmath::scalar_t h = std::max((nmath::scalar_t)EPSILON, aabb.max.y - aabb.min.y);
+        nmath::scalar_t u = (nmath::scalar_t)0.5 + (nmath::scalar_t)(std::atan2((double)dz, (double)dx) / (2.0 * nmath::PI_DOUBLE));
+        u = u - (nmath::scalar_t)std::floor((double)u);
+        const nmath::scalar_t v = (i_hit_record->point.y - aabb.min.y) / h;
+        i_hit_record->texcoord = Vector3f(u, v, 0.0f);
+    }
+
+    return true;
 }
 
 void Mesh::calc_aabb()
@@ -151,6 +169,16 @@ void Mesh::build_octree(object_t &object)
 	m_octree.max_depth(LIMITS_MAX_DEPTH);
 	m_octree.build();
     aabb = m_octree.bbox();
+}
+
+void Mesh::set_uv_projection(uv_projection_t projection)
+{
+    m_uv_projection = projection;
+}
+
+Mesh::uv_projection_t Mesh::uv_projection() const
+{
+    return m_uv_projection;
 }
 
 const std::vector<xtcore::surface::Triangle> &Mesh::triangles() const

@@ -50,13 +50,15 @@ bool Dielectric::sample_path(
 
     const bool choose_reflection = (nmath::prng_c(0.0f, 1.0f) < reflectance);
     if (choose_reflection) {
+        const float p = (reflectance > EPSILON) ? reflectance : 1.0f;
         hit_result.ray.direction = wi.reflected(n).normalized();
         hit_result.ior = ior_src;
-        hit_result.intensity = ColorRGBf(reflectance, reflectance, reflectance);
+        hit_result.intensity = ColorRGBf(reflectance / p, reflectance / p, reflectance / p);
     } else {
+        const float p = ((1.0f - reflectance) > EPSILON) ? (1.0f - reflectance) : 1.0f;
         hit_result.ray.direction = wi.refracted(n, ior_src, ior_dst).normalized();
         hit_result.ior = ior_dst;
-        hit_result.intensity = ColorRGBf(transparency, transparency, transparency);
+        hit_result.intensity = ColorRGBf(transparency / p, transparency / p, transparency / p);
     }
 
     hit_result.ray.origin = hit_record.point + hit_result.ray.direction * EPSILON;

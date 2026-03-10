@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <limits>
 #include <map>
+#include <utility>
 #include <vector>
 
 #include <nmath/precision.h>
@@ -177,8 +178,7 @@ inline bool is_finite_scalar(nmath::scalar_t v)
 } // namespace
 
 Integrator::Integrator()
-    : m_root(-1)
-    , m_scene_diag(10.0)
+    : m_scene_diag(10.0)
     , m_gather_radius(0.25)
     , m_gather_k(64)
     , m_emit_photons(20000)
@@ -233,42 +233,18 @@ void Integrator::setup_auxiliary()
 
 void Integrator::clean_auxiliary()
 {
-    m_photons.clear();
-    m_nodes.clear();
+    m_global_photons.clear();
+    m_caustic_photons.clear();
+    m_global_map.clear();
+    m_caustic_map.clear();
     m_lights.clear();
-    m_root = -1;
 }
 
-int Integrator::build_kdtree(size_t begin, size_t end, int axis)
-{
-    if (begin >= end) return -1;
-
-    const size_t mid = begin + (end - begin) / 2;
-    std::nth_element(
-        m_photons.begin() + begin,
-        m_photons.begin() + mid,
-        m_photons.begin() + end,
-        [axis](const Photon &a, const Photon &b) {
-            return a.position[axis] < b.position[axis];
-        }
-    );
-
-    PhotonNode node;
-    node.photon = m_photons[mid];
-    node.axis = axis;
-    node.left = -1;
-    node.right = -1;
-
-    const int idx = (int)m_nodes.size();
-    m_nodes.push_back(node);
-
-    const int next_axis = (axis + 1) % 3;
-    m_nodes[idx].left = build_kdtree(begin, mid, next_axis);
-    m_nodes[idx].right = build_kdtree(mid + 1, end, next_axis);
-    return idx;
-}
-
-void Integrator::trace_photon(const xtcore::Ray &in_ray, const nimg::ColorRGBf &in_power, nmath::scalar_t in_ior, size_t depth)
+void Integrator::trace_photon(const xtcore::Ray &in_ray,
+                              const nimg::ColorRGBf &in_power,
+                              nmath::scalar_t in_ior,
+                              size_t depth,
+                              bool has_specular_bounce)
 {
     if (depth == 0) return;
 
@@ -294,7 +270,8 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray, const nimg::ColorRGBf &
             ph.normal = hit.normal.normalized();
             ph.incident = -ray.direction.normalized();
             ph.power = power;
-            m_photons.push_back(ph);
+            if (has_specular_bounce) m_caustic_photons.push_back(ph);
+            else m_global_photons.push_back(ph);
 
             nmath::scalar_t pdf = 0.0;
             nmath::Vector3f wo = sample_cosine_hemisphere(hit.normal, pdf);
@@ -303,6 +280,7 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray, const nimg::ColorRGBf &
             power *= kd;
             ray.origin = hit.point + hit.normal * EPSILON;
             ray.direction = wo;
+            has_specular_bounce = false;
         } else {
             xtcore::hit_result_t next_hit;
             next_hit.ior = ior;
@@ -311,6 +289,7 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray, const nimg::ColorRGBf &
             ray = next_hit.ray;
             ior = next_hit.ior;
             if (!cont) return;
+            has_specular_bounce = true;
         }
 
         if (bounce >= 3) {
@@ -324,10 +303,11 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray, const nimg::ColorRGBf &
 
 void Integrator::build_photon_map()
 {
-    m_photons.clear();
-    m_nodes.clear();
+    m_global_photons.clear();
+    m_caustic_photons.clear();
+    m_global_map.clear();
+    m_caustic_map.clear();
     m_lights.clear();
-    m_root = -1;
 
     nmath::Vector3f bmin( std::numeric_limits<nmath::scalar_t>::max(),
                           std::numeric_limits<nmath::scalar_t>::max(),
@@ -392,7 +372,8 @@ void Integrator::build_photon_map()
     m_emit_photons = std::max((size_t)20000, ctx->params.samples * (size_t)8000);
     m_emit_photons = std::min((size_t)120000, m_emit_photons);
     if (m_override_emit_photons) m_emit_photons = std::max((size_t)1, m_config_emit_photons);
-    m_photons.reserve(m_emit_photons);
+    m_global_photons.reserve(m_emit_photons);
+    m_caustic_photons.reserve(m_emit_photons);
 
     const nmath::scalar_t total_cdf = m_lights.back().weight_cdf;
 
@@ -422,51 +403,33 @@ void Integrator::build_photon_map()
         pr.origin = lp + ln * EPSILON;
         pr.direction = dir;
 
-        trace_photon(pr, power, 1.0, ctx->params.rdepth);
+        trace_photon(pr, power, 1.0, ctx->params.rdepth, false);
     }
 
-    if (m_photons.empty()) return;
-
-    m_nodes.reserve(m_photons.size());
-    m_root = build_kdtree(0, m_photons.size(), 0);
+    if (!m_global_photons.empty()) {
+        m_global_map.build(std::move(m_global_photons), PhotonPositionAccessor());
+    }
+    if (!m_caustic_photons.empty()) {
+        m_caustic_map.build(std::move(m_caustic_photons), PhotonPositionAccessor());
+    }
 }
 
-nimg::ColorRGBf Integrator::estimate_indirect(const xtcore::hit_record_t &hit, const nimg::ColorRGBf &kd) const
+nimg::ColorRGBf Integrator::estimate_indirect(const xtcore::math::KDTree3<Photon, PhotonPositionAccessor> &map,
+                                              nmath::scalar_t gather_radius,
+                                              const xtcore::hit_record_t &hit,
+                                              const nimg::ColorRGBf &kd) const
 {
-    if (m_root < 0 || m_nodes.empty()) return nimg::ColorRGBf(0, 0, 0);
+    if (map.empty()) return nimg::ColorRGBf(0, 0, 0);
 
-    const nmath::scalar_t r2 = m_gather_radius * m_gather_radius;
+    const nmath::scalar_t r2 = gather_radius * gather_radius;
     nimg::ColorRGBf flux(0, 0, 0);
-    size_t count = 0;
-
-    struct stack_item_t { int node; };
-    std::vector<stack_item_t> stack;
-    stack.push_back({m_root});
-
-    while (!stack.empty()) {
-        const int node_idx = stack.back().node;
-        stack.pop_back();
-        if (node_idx < 0) continue;
-
-        const PhotonNode &node = m_nodes[(size_t)node_idx];
-        const Photon &ph = node.photon;
-
-        const nmath::Vector3f d = ph.position - hit.point;
-        const nmath::scalar_t d2 = d.length_squared();
-        if (d2 <= r2 && nmath::dot(ph.normal, hit.normal) > (nmath::scalar_t)0.0) {
+    map.radius_search(hit.point, gather_radius, [&](const Photon &ph) {
+        if (nmath::dot(ph.normal, hit.normal) > (nmath::scalar_t)0.0) {
             flux += ph.power;
-            ++count;
         }
+    });
 
-        const nmath::scalar_t delta = hit.point[node.axis] - ph.position[node.axis];
-        const int near_node = delta < (nmath::scalar_t)0.0 ? node.left : node.right;
-        const int far_node = delta < (nmath::scalar_t)0.0 ? node.right : node.left;
-
-        if (near_node >= 0) stack.push_back({near_node});
-        if (far_node >= 0 && delta * delta <= r2) stack.push_back({far_node});
-    }
-
-    if (count == 0) return nimg::ColorRGBf(0, 0, 0);
+    if (nimg::eval::luminance(flux) <= (nmath::scalar_t)EPSILON) return nimg::ColorRGBf(0, 0, 0);
 
     // Jensen radiance estimate for Lambertian surfaces: L ~= (kd / pi) * (sum Phi / (pi r^2)).
     return kd * ((nmath::scalar_t)1.0 / (nmath::PI * nmath::PI * r2)) * flux;
@@ -541,8 +504,11 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                 }
             }
 
-            const nimg::ColorRGBf indirect = estimate_indirect(hit, kd);
-            radiance += throughput * (direct + indirect);
+            const nimg::ColorRGBf indirect_global =
+                estimate_indirect(m_global_map, m_gather_radius, hit, kd);
+            const nimg::ColorRGBf indirect_caustic =
+                estimate_indirect(m_caustic_map, m_gather_radius, hit, kd);
+            radiance += throughput * (direct + indirect_global + indirect_caustic);
             break;
         }
 

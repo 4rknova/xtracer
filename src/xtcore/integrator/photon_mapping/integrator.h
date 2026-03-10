@@ -8,6 +8,7 @@
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
 #include <xtcore/math/hitrecord.h>
+#include <xtcore/math/kdtree.h>
 #include <xtcore/math/ray.h>
 #include <xtcore/scene.h>
 #include <xtcore/integrator.h>
@@ -38,11 +39,10 @@ class Integrator : public xtcore::render::IIntegrator
         nimg::ColorRGBf power;
     };
 
-    struct PhotonNode {
-        Photon photon;
-        int left;
-        int right;
-        int axis;
+    struct PhotonPositionAccessor {
+        const nmath::Vector3f &operator()(const Photon &photon) const {
+            return photon.position;
+        }
     };
 
     struct AreaLight {
@@ -54,10 +54,11 @@ class Integrator : public xtcore::render::IIntegrator
     };
 
     private:
-    std::vector<Photon> m_photons;
-    std::vector<PhotonNode> m_nodes;
+    std::vector<Photon> m_global_photons;
+    std::vector<Photon> m_caustic_photons;
+    xtcore::math::KDTree3<Photon, PhotonPositionAccessor> m_global_map;
+    xtcore::math::KDTree3<Photon, PhotonPositionAccessor> m_caustic_map;
     std::vector<AreaLight> m_lights;
-    int m_root;
     nmath::scalar_t m_scene_diag;
     nmath::scalar_t m_gather_radius;
     size_t m_gather_k;
@@ -70,9 +71,15 @@ class Integrator : public xtcore::render::IIntegrator
     size_t m_config_emit_photons;
 
     void build_photon_map();
-    void trace_photon(const xtcore::Ray &ray, const nimg::ColorRGBf &power, nmath::scalar_t ior, size_t depth);
-    int build_kdtree(size_t begin, size_t end, int axis);
-    nimg::ColorRGBf estimate_indirect(const xtcore::hit_record_t &hit, const nimg::ColorRGBf &kd) const;
+    void trace_photon(const xtcore::Ray &ray,
+                      const nimg::ColorRGBf &power,
+                      nmath::scalar_t ior,
+                      size_t depth,
+                      bool has_specular_bounce);
+    nimg::ColorRGBf estimate_indirect(const xtcore::math::KDTree3<Photon, PhotonPositionAccessor> &map,
+                                      nmath::scalar_t gather_radius,
+                                      const xtcore::hit_record_t &hit,
+                                      const nimg::ColorRGBf &kd) const;
 };
 
         } /* namespace photon_mapping */

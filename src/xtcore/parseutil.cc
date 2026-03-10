@@ -29,6 +29,7 @@
 #include "material.h"
 #include "sampler.h"
 #include "sampler_erp.h"
+#include "sampler_graphpaper.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -521,8 +522,8 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
 
     if (data) {
     	data->uv_scale = nmath::Vector2f(
-    		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE)),
-	    	deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE))
+    		deserialize_numf(p->get_property_by_name(XTPROTO_PROP_USCALE), data->uv_scale.x),
+	    	deserialize_numf(p->get_property_by_name(XTPROTO_PROP_VSCALE), data->uv_scale.y)
     	);
 
         data->calc_aabb();
@@ -536,6 +537,21 @@ xtcore::sampler::ISampler *deserialize_rgba(const ncf::NCF *p)
     xtcore::sampler::SolidColor *sampler = new (std::nothrow) xtcore::sampler::SolidColor();
     nimg::ColorRGBf col = deserialize_col3(p, XTPROTO_VALUE);
     ((xtcore::sampler::SolidColor *)sampler)->set(col);
+    return sampler;
+}
+
+xtcore::sampler::ISampler *deserialize_graphpaper(const ncf::NCF *p)
+{
+    xtcore::sampler::GraphPaper *sampler = new (std::nothrow) xtcore::sampler::GraphPaper();
+    if (!sampler || !p) return sampler;
+
+    sampler->base_color = deserialize_col3(p, "base", sampler->base_color);
+    sampler->minor_color = deserialize_col3(p, "minor", sampler->minor_color);
+    sampler->major_color = deserialize_col3(p, "major", sampler->major_color);
+    sampler->scale = deserialize_numf(p->get_property_by_name("scale"), sampler->scale);
+    sampler->minor_width = deserialize_numf(p->get_property_by_name("minor_width"), sampler->minor_width);
+    sampler->major_width = deserialize_numf(p->get_property_by_name("major_width"), sampler->major_width);
+    sampler->major_every = deserialize_numi(p->get_property_by_name("major_every"), sampler->major_every);
     return sampler;
 }
 
@@ -572,6 +588,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
             else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
             else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
             else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
+            else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
             else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
             data->add_sampler(entry->get_name(), sampler);

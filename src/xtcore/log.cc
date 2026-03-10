@@ -20,6 +20,8 @@ Log::Log()
 	, m_flag_echo(true)
 	, m_flag_rewind(false)
     , m_level(LOGENTRY_DEBUG)
+    , m_callback(nullptr)
+    , m_callback_user(nullptr)
 {}
 
 Log::~Log()
@@ -83,6 +85,12 @@ log_entry_t Log::get_entry(size_t idx) const
 size_t Log::get_size() const
 {
     return m_log.size();
+}
+
+void Log::callback(callback_t fn, void *user)
+{
+    m_callback = fn;
+    m_callback_user = user;
 }
 
 Log &Log::handle()
@@ -185,6 +193,10 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
     if (m_flag_rewind) m_log.pop_back();
 
 	m_log.push_back(entry);
+
+    if (m_callback && !m_flag_rewind) {
+        m_callback(type, entry->message, m_callback_user);
+    }
 
 	std::vector<log_entry_t *>::reverse_iterator it = m_log.rbegin();
 

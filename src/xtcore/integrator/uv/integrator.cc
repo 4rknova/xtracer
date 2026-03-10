@@ -1,11 +1,23 @@
 #include <nmath/precision.h>
 #include <nmath/sample.h>
+#include <cmath>
 #include <xtcore/aa.h>
 #include "integrator.h"
 
 namespace xtcore {
     namespace integrator {
         namespace uv {
+
+namespace {
+
+inline nmath::scalar_t wrap01(nmath::scalar_t v)
+{
+    v = v - (nmath::scalar_t)std::floor((double)v);
+    if (v < (nmath::scalar_t)0.0) v += (nmath::scalar_t)1.0;
+    return v;
+}
+
+} // namespace
 
 void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
@@ -32,7 +44,8 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             , (float)(ctx->params.height));
 
         if (ctx->scene.intersection(ray, hit_record)) {
-            acc_uv += (hit_record.texcoord * 0.5f + 0.5f) * sample.weight;
+            const nmath::Vector2f uv(wrap01(hit_record.texcoord.x), wrap01(hit_record.texcoord.y));
+            acc_uv += nmath::Vector3f(uv.x, uv.y, 0.0f) * sample.weight;
             alpha_sample += sample.weight;
         }
 
