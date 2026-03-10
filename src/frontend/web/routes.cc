@@ -99,6 +99,29 @@ bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v,
     return true;
 }
 
+bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore::render::TILE_ORDER &out)
+{
+    if (!req.has_param(key)) return false;
+    std::string s = req.get_param_value(key);
+    if (s == "scanline") {
+        out = xtcore::render::TILE_ORDER_SCANLINE;
+        return true;
+    }
+    if (s == "random") {
+        out = xtcore::render::TILE_ORDER_RANDOM;
+        return true;
+    }
+    if (s == "radial_in") {
+        out = xtcore::render::TILE_ORDER_RADIAL_IN;
+        return true;
+    }
+    if (s == "radial_out") {
+        out = xtcore::render::TILE_ORDER_RADIAL_OUT;
+        return true;
+    }
+    return false;
+}
+
 bool has_suffix(const std::string &s, const std::string &suffix)
 {
     if (s.size() < suffix.size()) return false;
@@ -136,6 +159,12 @@ void append_integrator_controls_json(std::ostringstream &ss, const common::integ
         }
         if (ctrl.step_value && *(ctrl.step_value)) {
             ss << ",\"step\":\"" << json_escape(ctrl.step_value) << "\"";
+        }
+        if (ctrl.visible_when_id && *(ctrl.visible_when_id)
+            && ctrl.visible_when_value && *(ctrl.visible_when_value)) {
+            ss << ",\"visible_when\":{"
+               << "\"id\":\"" << json_escape(ctrl.visible_when_id) << "\","
+               << "\"value\":\"" << json_escape(ctrl.visible_when_value) << "\"}";
         }
 
         if (ctrl.options_count > 0 && ctrl.options) {
@@ -530,6 +559,11 @@ void setup_routes(httplib::Server &server,
         else if (req.has_param("threads")) {
             backend_log_t::handle().add("warn", "render rejected: invalid threads");
             send_json(res, "{\"error\":\"invalid threads\"}", 400);
+            return;
+        }
+        if (!parse_tile_order_param(req, "tile_order", rr.tile_order) && req.has_param("tile_order")) {
+            backend_log_t::handle().add("warn", "render rejected: invalid tile_order");
+            send_json(res, "{\"error\":\"invalid tile_order\"}", 400);
             return;
         }
 

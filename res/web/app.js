@@ -40,6 +40,7 @@ const el = {
   samples: $("samples"),
   aa: $("aa"),
   tileSize: $("tile_size"),
+  tileOrder: $("tile_order"),
   threads: $("threads"),
   renderBtn: $("renderBtn"),
   status: $("status"),
@@ -320,9 +321,7 @@ function detectRequestedBackendMode() {
     localStorage.setItem(BACKEND_MODE_KEY, queryMode);
     return queryMode;
   }
-
-  const saved = localStorage.getItem(BACKEND_MODE_KEY);
-  if (saved === "server" || saved === "wasm") return saved;
+  // Prefer server by default; only use wasm when explicitly requested.
   return "server";
 }
 
@@ -440,6 +439,20 @@ function parseIntegratorNumber(raw, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function getIntegratorControlValue(state, ctrl) {
+  const id = ctrl && ctrl.id ? ctrl.id : "";
+  if (!id) return "";
+  if (Object.prototype.hasOwnProperty.call(state, id)) return String(state[id] ?? "");
+  if (ctrl.default !== undefined && ctrl.default !== null) return String(ctrl.default);
+  return "";
+}
+
+function isIntegratorControlVisible(ctrl, state) {
+  const vw = ctrl && ctrl.visible_when ? ctrl.visible_when : null;
+  if (!vw || !vw.id) return true;
+  return getIntegratorControlValue(state, { id: vw.id, default: "" }) === String(vw.value ?? "");
+}
+
 function renderIntegratorControls() {
   const selected = el.integrator.value || "";
   const info = integratorById.get(selected) || null;
@@ -452,11 +465,21 @@ function renderIntegratorControls() {
   }
 
   el.integratorControlsSection.hidden = false;
-  const saved = integratorControlState.get(selected) || {};
+  const saved = { ...(integratorControlState.get(selected) || {}) };
 
   controls.forEach((ctrl) => {
     const id = ctrl.id || "";
     if (!id) return;
+    if (!Object.prototype.hasOwnProperty.call(saved, id) && ctrl.default !== undefined) {
+      saved[id] = String(ctrl.default);
+    }
+  });
+  integratorControlState.set(selected, saved);
+
+  controls.forEach((ctrl) => {
+    const id = ctrl.id || "";
+    if (!id) return;
+    if (!isIntegratorControlVisible(ctrl, saved)) return;
 
     const label = document.createElement("label");
     label.className = "integrator-control";
@@ -487,15 +510,14 @@ function renderIntegratorControls() {
 
     input.dataset.ioptId = id;
     input.dataset.ioptType = ctrl.type || "string";
-    const value = Object.prototype.hasOwnProperty.call(saved, id)
-      ? saved[id]
-      : (ctrl.default !== undefined ? ctrl.default : "");
+    const value = getIntegratorControlValue(saved, ctrl);
     input.value = String(value);
 
     input.addEventListener("change", () => {
       const curr = integratorControlState.get(selected) || {};
       curr[id] = input.value;
       integratorControlState.set(selected, curr);
+      renderIntegratorControls();
     });
 
     label.appendChild(input);
@@ -740,8 +762,10 @@ async function loadAbout() {
   el.aboutWebsite.textContent = repository;
   el.aboutCopyright.textContent = data.copyright || "unknown";
   el.aboutLicense.textContent = data.license || "Unavailable";
-  el.aboutBuildPill.hidden = backendMode !== "wasm";
-  el.aboutBackend.textContent = data.backend || (backendMode === "wasm" ? "xtracer_wasm_adapter" : "xtracer_web");
+  const backendLabel = data.backend || (backendMode === "wasm" ? "xtracer_wasm_adapter" : "xtracer_web");
+  const isWasmBackend = String(backendLabel).toLowerCase().indexOf("wasm") >= 0;
+  el.aboutBuildPill.hidden = !isWasmBackend;
+  el.aboutBackend.textContent = backendLabel;
   el.aboutDefaultUrl.textContent = data.default_url || window.location.origin;
   el.aboutSceneDir.textContent = data.scene_dir || (backendMode === "wasm" ? "scenes/" : "scene/");
   el.aboutStaticAssets.textContent = data.static_assets || "/";
@@ -765,6 +789,7 @@ async function startRender() {
     samples: el.samples.value,
     aa: el.aa.value,
     tile_size: el.tileSize.value,
+    tile_order: el.tileOrder.value,
     threads: el.threads.value,
     ...gatherIntegratorOptionParams(),
   });
@@ -829,7 +854,7 @@ async function handleRender() {
   setRenderActive(true);
   setProgress(0);
   setStatus("submitting job...");
-  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value}`);
+  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
   try {
     const jobId = await startRender();
     appendLog(`job accepted: ${jobId}`);
@@ -886,6 +911,10 @@ async function boot() {
   el.integrator.addEventListener("change", () => {
     renderIntegratorControls();
     appendLog(`integrator=${el.integrator.value}`);
+  });
+
+  el.tileOrder.addEventListener("change", () => {
+    appendLog(`tile_order=${el.tileOrder.value}`);
   });
 
   const onSizeChanged = () => {
