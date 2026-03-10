@@ -35,6 +35,8 @@ void IIntegrator::render()
 
     if (!cam) return;
 
+    setup_auxiliary();
+
     size_t count = ctx->tiles.size();
 
     if (p->threads) omp_set_num_threads(p->threads);
@@ -50,6 +52,8 @@ void IIntegrator::render()
 
         tile->submit();
     }
+
+    clean_auxiliary();
 }
 
 	} /* namespace render */

@@ -35,7 +35,9 @@ struct progress_handler_t : public xtcore::render::tile_event_handler_t
 };
 
 static const integrator_info_t k_integrators[] = {
-      { "pathtracer", "Pathtracer" }
+      { "pathtracer", "Pathtracer (Brute Force)" }
+    , { "pathtracer_is", "Pathtracer (IS)" }
+    , { "photon_mapping", "Photon Mapping" }
     , { "depth"     , "Depth" }
     , { "stencil"   , "Stencil" }
     , { "normal"    , "Normal" }
@@ -47,6 +49,8 @@ static const integrator_info_t k_integrators[] = {
 std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name)
 {
     if      (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
+    else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
+    else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
     else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::depth::Integrator());
     else if (name == "stencil")    return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::stencil::Integrator());
     else if (name == "normal")     return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::normal::Integrator());

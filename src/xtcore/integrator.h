@@ -32,7 +32,11 @@ class IIntegrator
 #include "integrator/uv/integrator.h"
 #include "integrator/emission/integrator.h"
 #include "integrator/pathtracer/integrator.h"
+#include "integrator/pathtracer_is/integrator.h"
+#include "integrator/photon_mapping/integrator.h"
 #include "integrator/ao/integrator.h"
+#if defined(XTRACER_ENABLE_REALTIME_GL) && XTRACER_ENABLE_REALTIME_GL
 #include "integrator/realtime_gl/integrator.h"
+#endif
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */
