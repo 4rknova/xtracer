@@ -9,6 +9,7 @@
 
 #include <cpp-httplib/httplib.h>
 #include <xtcore/parseutil.h>
+#include <xtcore/resolution_preset.h>
 #include <xtcore/strpool.h>
 #include <xtcore/xtcore.h>
 
@@ -355,6 +356,22 @@ void setup_routes(httplib::Server &server,
             if (i) ss << ',';
             ss << "{\"id\":\"" << json_escape(list[i].id)
                << "\",\"label\":\"" << json_escape(list[i].label) << "\"}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Get("/api/resolutions", [](const httplib::Request &, httplib::Response &res) {
+        size_t count = 0;
+        const xtcore::render::resolution_preset_t *presets = xtcore::render::resolution_presets(count);
+        std::ostringstream ss;
+        ss << "{\"presets\":[";
+        for (size_t i = 0; i < count; ++i) {
+            if (i) ss << ',';
+            ss << "{\"id\":" << i
+               << ",\"description\":\"" << json_escape(presets[i].description) << "\""
+               << ",\"width\":" << presets[i].width
+               << ",\"height\":" << presets[i].height << "}";
         }
         ss << "]}";
         send_json(res, ss.str());
