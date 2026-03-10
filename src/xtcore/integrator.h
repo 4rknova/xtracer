@@ -1,6 +1,9 @@
 #ifndef XTCORE_INTEGRATOR_H_INCLUDED
 #define XTCORE_INTEGRATOR_H_INCLUDED
 
+#include <map>
+#include <string>
+
 #include "tile.h"
 #include "context.h"
 
@@ -15,6 +18,7 @@ class IIntegrator
 
 	void setup(context_t &context);
 	void render();
+    virtual void configure(const std::map<std::string, std::string> &options);
 
     virtual void setup_auxiliary();
     virtual void clean_auxiliary();
@@ -31,6 +35,7 @@ class IIntegrator
 #include "integrator/normal/integrator.h"
 #include "integrator/uv/integrator.h"
 #include "integrator/emission/integrator.h"
+#include "integrator/raytracer/integrator.h"
 #include "integrator/pathtracer/integrator.h"
 #include "integrator/pathtracer_is/integrator.h"
 #include "integrator/photon_mapping/integrator.h"

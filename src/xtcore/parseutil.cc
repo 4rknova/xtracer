@@ -1,12 +1,18 @@
 #include <cstdio>
 #include <algorithm>
+#include <cctype>
 
+#include <nmath/precision.h>
 #include <ncf/util.h>
 
 #include <nmesh/transform.h>
 #include <nmesh/invnormals.h>
 #include <nmesh/icosahedron.h>
 #include <nmesh/plane.h>
+#include <nmesh/extras.h>
+#include <nmesh/polyhedra.h>
+#include <nmesh/ring.h>
+#include <nmesh/snowflake.h>
 #include <nimg/checkerboard.h>
 #include <nimg/transform.h>
 
@@ -291,11 +297,99 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     int res = sscanf(f.c_str(), XTPROTO_FORMAT_GENERATE, (char*)buffer);
     if (buffer && *((char*)buffer)) token = (char*)buffer;
     free(buffer);
+    std::transform(token.begin(), token.end(), token.begin(), [](unsigned char c) {
+        return (char)std::tolower(c);
+    });
+    token.erase(std::remove_if(token.begin(), token.end(), [](unsigned char c) {
+        return std::isspace(c) != 0;
+    }), token.end());
 
     // Procedural meshes
     if (res > 0) {
         if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
             nmesh::generator::icosahedron(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_TETRAHEDRON)) {
+            nmesh::generator::tetrahedron(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CUBE) || !token.compare(XTPROTO_LTRL_HEXAHEDRON)) {
+            nmesh::generator::cube(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_OCTAHEDRON)) {
+            nmesh::generator::octahedron(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_DODECAHEDRON)) {
+            nmesh::generator::dodecahedron(&obj);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CAPSULE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 12) i = 12;
+            nmesh::generator::capsule(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CYLINDER)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 12) i = 12;
+            nmesh::generator::cylinder(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CAPPED_CYLINDER)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 12) i = 12;
+            nmesh::generator::capped_cylinder(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CONE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 12) i = 12;
+            nmesh::generator::cone(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_TRUNCATED_CONE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 12) i = 12;
+            nmesh::generator::truncated_cone(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_RING)) {
+            int i = 0;
+
+            if (p) {
+                i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
+                if (i < 16) i = 16;
+            }
+
+            nmesh::generator::ring(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_TORUS_KNOT)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 48);
+            if (i < 24) i = 24;
+            nmesh::generator::torus_knot(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_ICOSPHERE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 4) i = 4;
+            nmesh::generator::icosphere(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_GEODESIC_DOME)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 4) i = 4;
+            nmesh::generator::geodesic_dome(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_MENGER_SPONGE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
+            if (i < 1) i = 1;
+            nmesh::generator::menger_sponge(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
+            if (i < 1) i = 1;
+            nmesh::generator::sierpinski_tetrahedron(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_MOBIUS_STRIP)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (i < 24) i = 24;
+            nmesh::generator::mobius_strip(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_KLEIN_BOTTLE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (i < 24) i = 24;
+            nmesh::generator::klein_bottle(&obj, (size_t)i);
         }
         else if (!token.compare(XTPROTO_LTRL_PLANE)) {
             int i = 0;
@@ -307,8 +401,18 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 
             nmesh::generator::plane(&obj, i);
         }
+        else if (!token.compare(XTPROTO_LTRL_SNOWFLAKE)) {
+            int i = 0;
 
-        else Log::handle().post_message("Invalid mesh generator: %s", token.c_str());
+            if (p) {
+                i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
+                if (i < 0) i = 0;
+            }
+
+            nmesh::generator::snowflake(&obj, (size_t)i);
+        }
+
+        else Log::handle().post_message("Invalid mesh generator: %s (%s)", token.c_str(), f.c_str());
     }
     // External sources
     else {
@@ -350,8 +454,18 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
     }
 
+    if (obj.shapes.empty()) {
+        Log::handle().post_warning("Mesh source produced no shape data: %s", f.c_str());
+        delete data;
+        return 0;
+    }
+
     Log::handle().post_message("Building octree..");
-	((xtcore::surface::Mesh *)data)->build_octree(obj);
+    if (obj.shapes.size() == 1) {
+        ((xtcore::surface::Mesh *)data)->build_octree(obj.shapes[0], obj.attributes);
+    } else {
+	    ((xtcore::surface::Mesh *)data)->build_octree(obj);
+    }
 
     return data;
 }
@@ -377,7 +491,7 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
     else if (!type.compare(XTPROTO_LTRL_POINT)) {
         data = new (std::nothrow) xtcore::surface::Sphere;
 		((xtcore::surface::Sphere *)data)->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION);
-		((xtcore::surface::Sphere *)data)->radius = 0;
+		((xtcore::surface::Sphere *)data)->radius = (nmath::scalar_t)EPSILON;
     }
 	else if (!type.compare(XTPROTO_LTRL_TRIANGLE)) {
 		data = new (std::nothrow) xtcore::surface::Triangle;

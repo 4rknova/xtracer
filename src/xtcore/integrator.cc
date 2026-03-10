@@ -1,4 +1,6 @@
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include "integrator.h"
 
 namespace xtcore {
@@ -14,6 +16,11 @@ IIntegrator::~IIntegrator()
 void IIntegrator::setup(context_t &context)
 {
     ctx = &context;
+}
+
+void IIntegrator::configure(const std::map<std::string, std::string> &)
+{
+    // Do nothing by default.
 }
 
 void IIntegrator::setup_auxiliary()
@@ -39,7 +46,9 @@ void IIntegrator::render()
 
     size_t count = ctx->tiles.size();
 
+    #ifdef _OPENMP
     if (p->threads) omp_set_num_threads(p->threads);
+    #endif
 
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < count; ++i) {

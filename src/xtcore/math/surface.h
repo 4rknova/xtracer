@@ -21,6 +21,8 @@ public:
 
     virtual Vector3f point_sample() const = 0;
     virtual Ray ray_sample() const = 0;
+    // Representative deterministic position for emissive/shadow queries.
+    virtual Vector3f emitter_position() const;
 
 	AABB3 aabb;
 	Vector2f uv_scale;

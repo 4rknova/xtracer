@@ -5,6 +5,7 @@ namespace xtcore {
 
 const char *get_version();
 const char *get_license();
+const char *get_empty_scene_template();
 
 int init();   // Initialize subsystems
 int deinit(); // Release subsystems

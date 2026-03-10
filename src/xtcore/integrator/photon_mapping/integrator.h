@@ -24,6 +24,7 @@ class Integrator : public xtcore::render::IIntegrator
     public:
     Integrator();
 
+    virtual void configure(const std::map<std::string, std::string> &options);
     virtual void setup_auxiliary();
     virtual void clean_auxiliary();
     virtual void render_tile(xtcore::render::tile_t *tile);
@@ -61,6 +62,12 @@ class Integrator : public xtcore::render::IIntegrator
     nmath::scalar_t m_gather_radius;
     size_t m_gather_k;
     size_t m_emit_photons;
+    bool m_override_gather_radius;
+    bool m_override_gather_k;
+    bool m_override_emit_photons;
+    nmath::scalar_t m_config_gather_radius;
+    size_t m_config_gather_k;
+    size_t m_config_emit_photons;
 
     void build_photon_map();
     void trace_photon(const xtcore::Ray &ray, const nimg::ColorRGBf &power, nmath::scalar_t ior, size_t depth);

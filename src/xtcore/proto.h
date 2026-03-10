@@ -9,7 +9,7 @@
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */
 #define XTPROTO_FORMAT_TEX2         "tex2(%f,%f)"       /* string     */ /* Format for tex2 */
 #define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
-#define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
+#define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z_])"   /* string     */ /* Format for generate function */
 
 #define XTPROTO_CONFIG              "config"            /* N/A        */ /* Config */
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
@@ -17,6 +17,23 @@
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
 #define XTPROTO_LTRL_PLANE          "plane"             /* string     */ /* Plane */
+#define XTPROTO_LTRL_TETRAHEDRON    "tetrahedron"       /* string     */ /* Tetrahedron */
+#define XTPROTO_LTRL_HEXAHEDRON     "hexahedron"        /* string     */ /* Hexahedron (cube) */
+#define XTPROTO_LTRL_CUBE           "cube"              /* string     */ /* Cube */
+#define XTPROTO_LTRL_OCTAHEDRON     "octahedron"        /* string     */ /* Octahedron */
+#define XTPROTO_LTRL_DODECAHEDRON   "dodecahedron"      /* string     */ /* Dodecahedron */
+#define XTPROTO_LTRL_RING           "ring"              /* string     */ /* Ring (torus) */
+#define XTPROTO_LTRL_SNOWFLAKE      "snowflake"         /* string     */ /* Koch snowflake */
+#define XTPROTO_LTRL_CAPSULE        "capsule"           /* string     */ /* Capsule */
+#define XTPROTO_LTRL_CAPPED_CYLINDER "capped_cylinder"  /* string     */ /* Capped cylinder */
+#define XTPROTO_LTRL_TRUNCATED_CONE "truncated_cone"    /* string     */ /* Truncated cone */
+#define XTPROTO_LTRL_TORUS_KNOT     "torus_knot"        /* string     */ /* Torus knot */
+#define XTPROTO_LTRL_ICOSPHERE      "icosphere"         /* string     */ /* Icosphere */
+#define XTPROTO_LTRL_GEODESIC_DOME  "geodesic_dome"     /* string     */ /* Geodesic dome */
+#define XTPROTO_LTRL_MENGER_SPONGE  "menger_sponge"     /* string     */ /* Menger sponge */
+#define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON "sierpinski_tetrahedron" /* string */ /* Sierpinski tetrahedron */
+#define XTPROTO_LTRL_MOBIUS_STRIP   "mobius_strip"      /* string     */ /* Mobius strip */
+#define XTPROTO_LTRL_KLEIN_BOTTLE   "klein_bottle"      /* string     */ /* Klein bottle */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -79,6 +96,7 @@
 #define XTPROTO_LTRL_POINT			"point"	    		/* string     */ /* Point */
 #define XTPROTO_LTRL_SPHERE			"sphere"			/* string     */ /* Sphere */
 #define XTPROTO_LTRL_HULL			"hull"  			/* string     */ /* Hull */
+#define XTPROTO_LTRL_CONE           "cone"             /* string     */ /* Cone */
 #define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */ /* Cylinder */
 #define XTPROTO_LTRL_MESH			"mesh"				/* string     */ /* Mesh */
 #define XTPROTO_PROP_UP				"up"	            /* Vector3f   */ /* Up vector */

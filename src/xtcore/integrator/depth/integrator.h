@@ -14,7 +14,20 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
+    Integrator();
+    virtual void configure(const std::map<std::string, std::string> &options);
     void render_tile(xtcore::render::tile_t *tile);
+
+    private:
+    enum depth_encoding_t {
+        DEPTH_ENCODING_LEGACY = 0,
+        DEPTH_ENCODING_LINEAR,
+        DEPTH_ENCODING_LOG,
+        DEPTH_ENCODING_INVERSE
+    };
+
+    depth_encoding_t m_encoding;
+    nmath::scalar_t m_max_distance;
 };
 
         } /* namespace depth */

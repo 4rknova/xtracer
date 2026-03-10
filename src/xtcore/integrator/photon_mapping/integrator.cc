@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <map>
 #include <vector>
@@ -181,7 +182,49 @@ Integrator::Integrator()
     , m_gather_radius(0.25)
     , m_gather_k(64)
     , m_emit_photons(20000)
+    , m_override_gather_radius(false)
+    , m_override_gather_k(false)
+    , m_override_emit_photons(false)
+    , m_config_gather_radius(0.25)
+    , m_config_gather_k(64)
+    , m_config_emit_photons(20000)
 {}
+
+void Integrator::configure(const std::map<std::string, std::string> &options)
+{
+    auto it_emit = options.find("emit_photons");
+    m_override_emit_photons = false;
+    if (it_emit != options.end()) {
+        char *end = nullptr;
+        unsigned long long v = std::strtoull(it_emit->second.c_str(), &end, 10);
+        if (!(end == it_emit->second.c_str() || !end || *end != '\0') && v > 0) {
+            m_config_emit_photons = (size_t)v;
+            m_override_emit_photons = true;
+        }
+    }
+
+    auto it_radius = options.find("gather_radius");
+    m_override_gather_radius = false;
+    if (it_radius != options.end()) {
+        char *end = nullptr;
+        double v = std::strtod(it_radius->second.c_str(), &end);
+        if (!(end == it_radius->second.c_str() || !end || *end != '\0') && v > 0.0) {
+            m_config_gather_radius = (nmath::scalar_t)v;
+            m_override_gather_radius = true;
+        }
+    }
+
+    auto it_k = options.find("gather_k");
+    m_override_gather_k = false;
+    if (it_k != options.end()) {
+        char *end = nullptr;
+        unsigned long long v = std::strtoull(it_k->second.c_str(), &end, 10);
+        if (!(end == it_k->second.c_str() || !end || *end != '\0') && v > 0) {
+            m_config_gather_k = (size_t)v;
+            m_override_gather_k = true;
+        }
+    }
+}
 
 void Integrator::setup_auxiliary()
 {
@@ -341,12 +384,14 @@ void Integrator::build_photon_map()
     m_scene_diag = has_bounds ? (bmax - bmin).length() : (nmath::scalar_t)10.0;
     if (m_scene_diag <= (nmath::scalar_t)EPSILON) m_scene_diag = (nmath::scalar_t)10.0;
     m_gather_radius = std::max((nmath::scalar_t)0.05, m_scene_diag * (nmath::scalar_t)0.02);
-    m_gather_k = 64;
+    if (m_override_gather_radius) m_gather_radius = std::max((nmath::scalar_t)0.001, m_config_gather_radius);
+    m_gather_k = m_override_gather_k ? std::max((size_t)1, m_config_gather_k) : (size_t)64;
 
     if (m_lights.empty()) return;
 
     m_emit_photons = std::max((size_t)20000, ctx->params.samples * (size_t)8000);
     m_emit_photons = std::min((size_t)120000, m_emit_photons);
+    if (m_override_emit_photons) m_emit_photons = std::max((size_t)1, m_config_emit_photons);
     m_photons.reserve(m_emit_photons);
 
     const nmath::scalar_t total_cdf = m_lights.back().weight_cdf;

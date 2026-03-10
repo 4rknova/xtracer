@@ -1,4 +1,5 @@
 #include <nmath/sample.h>
+#include <nmath/prng.h>
 #include "macro.h"
 #include "lambert.h"
 
@@ -25,8 +26,40 @@ bool Dielectric::sample_path(
 ) const
 {
     float mat_ior = get_scalar("ior");
-    hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
-    hit_result.ray.direction = hit_record.incident_direction.refracted(hit_record.normal, hit_result.ior, mat_ior);
+    if (mat_ior <= EPSILON) mat_ior = 1.5f;
+
+    float transparency = get_scalar("transparency");
+    if (transparency <= 0.0f) transparency = 1.0f;
+    if (transparency > 1.0f) transparency = 1.0f;
+
+    float reflectance = get_scalar("reflectance");
+    if (reflectance < 0.0f) reflectance = 0.0f;
+    if (reflectance > 1.0f) reflectance = 1.0f;
+
+    const float ior_src = (hit_record.ior > EPSILON) ? hit_record.ior : 1.0f;
+    float ior_dst = mat_ior;
+
+    nmath::Vector3f n = hit_record.normal.normalized();
+    const nmath::Vector3f wi = hit_record.incident_direction.normalized();
+
+    // If the ray is leaving the medium, invert normal and target air IOR.
+    if (dot(wi, n) > 0.0f) {
+        n = -n;
+        ior_dst = 1.0f;
+    }
+
+    const bool choose_reflection = (nmath::prng_c(0.0f, 1.0f) < reflectance);
+    if (choose_reflection) {
+        hit_result.ray.direction = wi.reflected(n).normalized();
+        hit_result.ior = ior_src;
+        hit_result.intensity = ColorRGBf(reflectance, reflectance, reflectance);
+    } else {
+        hit_result.ray.direction = wi.refracted(n, ior_src, ior_dst).normalized();
+        hit_result.ior = ior_dst;
+        hit_result.intensity = ColorRGBf(transparency, transparency, transparency);
+    }
+
+    hit_result.ray.origin = hit_record.point + hit_result.ray.direction * EPSILON;
     return true;
 }
 

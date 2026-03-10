@@ -23,6 +23,7 @@ class Triangle: public xtcore::asset::ISurface
 
     Vector3f point_sample() const;
     Ray ray_sample() const;
+    Vector3f emitter_position() const;
 
     Vector3f  v[3]; // position
     Vector3f  n[3]; // normal

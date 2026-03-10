@@ -25,6 +25,7 @@ class Sphere: public xtcore::asset::ISurface
 
         Vector3f point_sample() const;
         Ray ray_sample() const;
+        Vector3f emitter_position() const;
 
         Vector3f origin;
         scalar_t radius;

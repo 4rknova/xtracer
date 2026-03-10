@@ -213,5 +213,10 @@ Ray Triangle::ray_sample() const
     return ray;
 }
 
+Vector3f Triangle::emitter_position() const
+{
+    return (v[0] + v[1] + v[2]) / 3.0f;
+}
+
     } /* namespace surface */
 } /* namespace xtcore */

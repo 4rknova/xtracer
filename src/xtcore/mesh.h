@@ -30,12 +30,15 @@ class Mesh: public xtcore::asset::ISurface
 	void calc_aabb();
     void build_octree(shape_t &shape, attrib_t &attributes);
     void build_octree(object_t &object);
+    const std::vector<xtcore::surface::Triangle> &triangles() const;
 
     Vector3f point_sample() const;
     Ray ray_sample() const;
+    Vector3f emitter_position() const;
 
 	private:
 	Octree<Triangle> m_octree;
+    std::vector<xtcore::surface::Triangle> m_triangles;
 };
 
     } /* namespace surface */
