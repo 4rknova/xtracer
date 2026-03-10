@@ -1,0 +1,49 @@
+title       = Furnace Lambert White
+description = White furnace test with a unit-albedo Lambert sphere under uniform white environment.
+version     = 1.0
+
+environment = {
+    type = color
+    config = {
+        value = col3(1.0,1.0,1.0)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,0,0)
+        target   = vec3(0,0,1)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    sphere = {
+        type     = sphere
+        position = vec3(0,0,3)
+        radius   = 1.0
+    }
+}
+
+material = {
+    lambert_white = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    sphere = {
+        geometry = sphere
+        material = lambert_white
+    }
+}

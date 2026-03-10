@@ -1,0 +1,140 @@
+title = Ring Cardioid Caustics
+description = Minimal cardioid caustics setup matching the classic reflective ring photograph.
+version     = 1.3
+
+# Suggested integrators:
+# - photon_mapping: fast, stable caustic visualization
+# - pathtracer_is: unbiased reference, slower convergence
+
+environment = {
+    type = color
+    config = {
+        value = col3(0.94,0.94,0.94)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 31
+        position = vec3(-1.35,1.42,-4.20)
+        target   = vec3(0.10,0.28,1.92)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    receiver_floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    receiver_wall = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 2
+        modifiers = {
+            scale       = vec3(10,10,10)
+            rotation    = vec3(90,0,0)
+            translation = vec3(0,3.9,8.6)
+        }
+    }
+
+    ring_mirror = {
+        type       = mesh
+        source     = gen(cylinder)
+        resolution = 320
+        modifiers = {
+            scale       = vec3(2.12,0.14,2.12)
+            rotation    = vec3(0,-8,0)
+            translation = vec3(0.0,0.07,1.95)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(3.65,4.35,-0.65)
+        radius   = 0.08
+    }
+}
+
+material = {
+    receiver_floor = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.975,0.975,0.975)
+                }
+            }
+        }
+    }
+
+    receiver_wall = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.90,0.90,0.90)
+                }
+            }
+        }
+    }
+
+    ring_mirror = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.0,0.0,0.0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                exponent    = 420
+                reflectance = 1.0
+            }
+        }
+    }
+
+    light_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(520.0,500.0,450.0)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    receiver_floor = {
+        geometry = receiver_floor
+        material = receiver_floor
+    }
+
+    receiver_wall = {
+        geometry = receiver_wall
+        material = receiver_wall
+    }
+
+    ring_mirror = {
+        geometry = ring_mirror
+        material = ring_mirror
+    }
+
+    key_light = {
+        geometry = key_light
+        material = light_key
+    }
+}

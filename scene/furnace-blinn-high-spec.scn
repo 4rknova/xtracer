@@ -1,0 +1,57 @@
+title       = Furnace Blinn High Spec
+description = Furnace sanity scene with a high-specular Blinn-Phong sphere under uniform white environment.
+version     = 1.0
+
+environment = {
+    type = color
+    config = {
+        value = col3(1.0,1.0,1.0)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,0,0)
+        target   = vec3(0,0,1)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    sphere = {
+        type     = sphere
+        position = vec3(0,0,3)
+        radius   = 1.0
+    }
+}
+
+material = {
+    blinn_spec = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.0,0.0,0.0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                exponent    = 256
+                reflectance = 0.98
+            }
+        }
+    }
+}
+
+object = {
+    sphere = {
+        geometry = sphere
+        material = blinn_spec
+    }
+}
