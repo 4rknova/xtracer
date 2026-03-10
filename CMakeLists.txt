@@ -4,6 +4,7 @@ project(xtracer)
 option(XTRACER_ENABLE_REALTIME_GL "Enable realtime OpenGL integrator scaffolding" ON)
 option(XTRACER_ENABLE_RTMIDI "Build with RtMidi/ALSA support" ON)
 option(XTRACER_ENABLE_GUI "Build GUI frontend" ON)
+option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 
 # PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
@@ -101,6 +102,8 @@ endif()
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
+set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web)
+set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
 
 set(IN_MAN_CLI  xtracer_cli.1)
 
@@ -142,6 +145,18 @@ file(GLOB SRC_FRONTEND_CLI
     ${PATH_SRC_FRONTEND_CLI}/*.c
     ${PATH_SRC_FRONTEND_CLI}/*.cc
     ${PATH_SRC_FRONTEND_CLI}/*.cpp
+)
+
+file(GLOB SRC_FRONTEND_WEB
+    ${PATH_SRC_FRONTEND_WEB}/*.c
+    ${PATH_SRC_FRONTEND_WEB}/*.cc
+    ${PATH_SRC_FRONTEND_WEB}/*.cpp
+)
+
+file(GLOB SRC_FRONTEND_COMMON
+    ${PATH_SRC_FRONTEND_COMMON}/*.c
+    ${PATH_SRC_FRONTEND_COMMON}/*.cc
+    ${PATH_SRC_FRONTEND_COMMON}/*.cpp
 )
 
 add_custom_target(manpages_cli
@@ -196,6 +211,23 @@ if (XTRACER_ENABLE_RTMIDI)
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
 else()
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static pthread)
+endif()
+
+if (XTRACER_ENABLE_WEB)
+    set(OUT_EXE_WEB xtracer_web)
+    add_executable(${OUT_EXE_WEB} ${SRC_FRONTEND_WEB} ${SRC_FRONTEND_COMMON})
+    target_include_directories(${OUT_EXE_WEB} PUBLIC
+        ${PATH_LIB}
+        ${PATH_SRC}
+    )
+    target_include_directories(${OUT_EXE_WEB} SYSTEM PUBLIC
+        ${ext_libs}
+    )
+    if (XTRACER_ENABLE_RTMIDI)
+        target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
+    else()
+        target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
+    endif()
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")

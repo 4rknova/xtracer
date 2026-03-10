@@ -61,6 +61,46 @@ Use the following commands to build:
     ./configure
     make
 
+Or with CMake:
+
+    cmake -S . -B build -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=ON
+    cmake --build build -j
+
+## Web Frontend (Simple)
+
+Build target: `xtracer_web`
+
+Run from repo root:
+
+    ./bin/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web
+
+Open:
+
+    http://127.0.0.1:8080
+
+Web UI includes:
+
+- Render tab: scene/integrator/camera selection and render preview.
+  - Progressive preview updates while render jobs are running.
+- Editor tab: inspect selected scene source, create a new scene, and save as `.scn`.
+- Settings tab: theme and frontend-only options.
+- Logs tab: backend log stream with clear action.
+- About tab: version, author metadata, and full project license text.
+
+Web API includes:
+
+- `GET /api/health`
+- `GET /api/about`
+- `GET /api/scenes`
+- `GET /api/scenes/{scene}/cameras`
+- `GET /api/scenes/{scene}/source`
+- `POST /api/scenes/save`
+- `GET /api/integrators`
+- `POST /api/render`
+- `GET /api/jobs/{id}`
+- `GET /api/jobs/{id}/image` (`?final=1` for final-only image)
+- `GET /api/logs?since=<id>`
+
 ## Dependencies
 
 Name          | License            | URL

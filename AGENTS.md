@@ -7,13 +7,16 @@ This file is the orientation and operating guide for coding agents working in th
 - Name: `xtracer`
 - Language: C/C++ (CMake)
 - Branch context: this workspace is currently on `develop`.
-- Core purpose: experimental rendering framework with a shared rendering core and two frontends.
+- Core purpose: experimental rendering framework with a shared rendering core and multiple frontends (CLI, GUI, Web).
 
 ## Repository Map
 
 - Core renderer and scene system: `src/xtcore/`
 - CLI frontend: `src/frontend/cli/`
 - GUI frontend (OpenGL + ImGui): `src/frontend/gui/`
+- Web frontend backend: `src/frontend/web/`
+- Frontend shared helpers: `src/frontend/common/`
+- Web static assets: `res/web/`
 - Supporting libraries: `lib/`
 - Third-party dependencies: `ext/`
 - Scene examples: `scene/`
@@ -26,6 +29,7 @@ This file is the orientation and operating guide for coding agents working in th
   - `make`
 - Practical modern flow is CMake-driven.
 - GUI build is optional (see `XTRACER_ENABLE_GUI` usage in `CMakeLists.txt`).
+- Web build is optional (see `XTRACER_ENABLE_WEB` usage in `CMakeLists.txt`).
 - In this workspace, in-source CMake artifacts exist (`CMakeCache.txt`, `CMakeFiles/`, etc.). Prefer out-of-tree builds for new runs.
 
 ## Known Current State (Develop)
@@ -33,6 +37,36 @@ This file is the orientation and operating guide for coding agents working in th
 - Integrator implementations exist under `src/xtcore/integrator/`.
 - GUI exposes several integrators via menu in `src/frontend/gui/gui.cc`.
 - CLI integrator selection code in `src/frontend/cli/xtracer.cc` is currently commented out; treat CLI rendering path as needing repair before relying on it.
+- Web frontend is implemented as `xtracer_web`:
+  - HTTP server via `ext/cpp-httplib/httplib.h`
+  - Async render jobs managed in `src/frontend/web/job_manager.*`
+  - Shared render pipeline in `src/frontend/common/render_service.*`
+  - Backend log stream in `src/frontend/web/backend_log.*`
+  - Static SPA in `res/web/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
+
+### Web API Surface (Current)
+
+- `GET /api/health`
+- `GET /api/about`
+- `GET /api/scenes`
+- `GET /api/scenes/{scene}/cameras`
+- `GET /api/scenes/{scene}/source`
+- `POST /api/scenes/save`
+- `GET /api/integrators`
+- `POST /api/render`
+- `GET /api/jobs/{id}`
+- `GET /api/jobs/{id}/image`
+- `GET /api/logs?since=<id>`
+
+### Web Runtime Notes
+
+- `xtracer_web` defaults:
+  - host: `127.0.0.1`
+  - port: `8080`
+  - scene dir: `scene/`
+  - web root: `res/web/`
+- Job execution is serialized via a global render mutex in web backend (avoids OpenMP oversubscription from concurrent jobs).
+- PNG responses are currently produced by rendering to `nimg::Pixmap` then encoding via temporary file path.
 
 ## Realtime Integrator Initiative
 
@@ -68,6 +102,7 @@ Short version:
 - Architecture notes: `docs/ARCHITECTURE_NOTES.md`
 - Renderer/integrator inventory: `docs/RENDERERS.md`
 - Realtime GL implementation plan: `docs/REALTIME_GL_PLAN.md`
+- Web UI/feature behavior: `res/web/index.html`, `res/web/app.js`, `res/web/styles.css`
 
 ## Working Conventions For Agents
 
@@ -75,6 +110,9 @@ Short version:
 - Do not revert unrelated working tree changes.
 - Keep tile-based architecture unless intentionally redesigning it.
 - When changing rendering flow, validate GUI-thread vs worker-thread behavior.
+- When changing web API responses, update both:
+  - backend route handlers in `src/frontend/web/routes.cc`
+  - frontend consumers in `res/web/app.js`
 - If adding new integrators, update both:
   - `src/xtcore/integrator.h`
   - GUI integrator registry in `src/frontend/gui/gui.cc`
