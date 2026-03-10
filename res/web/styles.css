@@ -50,6 +50,37 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+/* Prevent accidental text highlighting on control-heavy UI surfaces. */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Render-screen UX: avoid accidental highlight drags on UI chrome. */
+.masthead,
+#paneRender {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Keep form controls editable/selectable. */
+#paneRender input,
+#paneRender select,
+#paneRender textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
 html {
   overflow-y: scroll;
 }
@@ -124,6 +155,10 @@ h2 {
   width: auto;
   padding: 0 4px;
   background: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .tab {
@@ -137,6 +172,10 @@ h2 {
   font-weight: 600;
   position: relative;
   transition: background-color 0.15s ease, color 0.15s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .tab:hover {
@@ -200,6 +239,10 @@ h2 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .panel-controls {
@@ -271,6 +314,10 @@ h2 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 label {
@@ -297,6 +344,10 @@ label {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border: 1px solid transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .scene-kind-self {
@@ -351,6 +402,10 @@ button {
   cursor: pointer;
   font-weight: 600;
   letter-spacing: 0.01em;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 textarea {
@@ -471,6 +526,10 @@ textarea {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .inline-check input {
@@ -629,6 +688,10 @@ textarea {
   text-transform: uppercase;
   background: color-mix(in srgb, var(--accent) 24%, transparent);
   color: color-mix(in srgb, var(--accent) 85%, #ffffff);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .about-meta {
@@ -708,6 +771,10 @@ button:disabled {
   font-weight: 600;
   font-size: 0.86rem;
   letter-spacing: 0.01em;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .status-chip::before {
@@ -749,6 +816,10 @@ button:disabled {
   color: var(--muted);
   white-space: nowrap;
   min-width: 3.6rem;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .bar {
@@ -818,6 +889,10 @@ button:disabled {
   text-decoration: none;
   font-weight: 600;
   transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .action-btn-icon {
