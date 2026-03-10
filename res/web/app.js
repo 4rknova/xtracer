@@ -25,6 +25,7 @@ const el = {
   scene: $("scene"),
   camera: $("camera"),
   integrator: $("integrator"),
+  resolutionPreset: $("resolutionPreset"),
   width: $("width"),
   height: $("height"),
   samples: $("samples"),
@@ -52,6 +53,7 @@ const uiOptions = {
   pollMs: 300,
   autoLoadEditor: true,
 };
+let resolutionPresets = [];
 let lastBackendLogId = 0;
 let previewObjectUrl = "";
 
@@ -174,6 +176,36 @@ function addOption(select, value, label) {
   opt.value = value;
   opt.textContent = label || value;
   select.appendChild(opt);
+}
+
+function presetId(index) {
+  return String(index).padStart(2, "0");
+}
+
+function syncResolutionPresetFromInputs() {
+  const { width, height } = currentRenderSize();
+  const index = resolutionPresets.findIndex((p) => p.width === width && p.height === height);
+  el.resolutionPreset.value = index >= 0 ? String(index) : "custom";
+}
+
+async function loadResolutionPresets() {
+  const data = await getJSON("/api/resolutions");
+  resolutionPresets = (data.presets || []).map((p) => ({
+    width: parseInt(p.width, 10),
+    height: parseInt(p.height, 10),
+    description: p.description || "",
+  })).filter((p) => Number.isFinite(p.width) && Number.isFinite(p.height) && p.width > 0 && p.height > 0);
+
+  el.resolutionPreset.innerHTML = "";
+  addOption(el.resolutionPreset, "custom", "Custom");
+  resolutionPresets.forEach((preset, index) => {
+    addOption(
+      el.resolutionPreset,
+      String(index),
+      `${presetId(index)} ${preset.description} ${preset.width}x${preset.height}`,
+    );
+  });
+  syncResolutionPresetFromInputs();
 }
 
 function setActiveTab(mode) {
@@ -373,10 +405,11 @@ async function boot() {
   el.theme.value = savedTheme;
   applyTheme(savedTheme);
   loadUIOptions();
+  pollBackendLogs();
 
   setStatus("loading...");
   appendLog("boot");
-  await Promise.all([loadScenes(), loadIntegrators()]);
+  await Promise.all([loadScenes(), loadIntegrators(), loadResolutionPresets()]);
   await loadCameras(el.scene.value);
   await loadSceneSource(el.scene.value);
   await loadAbout();
@@ -405,8 +438,18 @@ async function boot() {
   });
 
   const onSizeChanged = () => {
+    syncResolutionPresetFromInputs();
     updatePreviewSizing();
   };
+  el.resolutionPreset.addEventListener("change", () => {
+    if (el.resolutionPreset.value === "custom") return;
+    const index = parseInt(el.resolutionPreset.value, 10);
+    if (!Number.isFinite(index) || index < 0 || index >= resolutionPresets.length) return;
+    const preset = resolutionPresets[index];
+    el.width.value = String(preset.width);
+    el.height.value = String(preset.height);
+    updatePreviewSizing();
+  });
   el.width.addEventListener("input", onSizeChanged);
   el.width.addEventListener("change", onSizeChanged);
   el.height.addEventListener("input", onSizeChanged);
@@ -489,8 +532,6 @@ async function boot() {
   el.sceneSource.addEventListener("click", syncEditorScroll);
   updateEditorMetrics();
   syncEditorScroll();
-
-  pollBackendLogs();
 }
 
 boot().catch((err) => {
