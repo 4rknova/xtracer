@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     httplib::Server server;
     if (verbose) {
         server.set_logger([](const httplib::Request &req, const httplib::Response &res) {
-            std::printf("[http] %s %s -> %d\n", req.method.c_str(), req.path.c_str(), res.status);
+            std::printf("[http] %3d %-6s %s\n", res.status, req.method.c_str(), req.path.c_str());
             std::fflush(stdout);
         });
     }
