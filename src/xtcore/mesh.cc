@@ -37,6 +37,12 @@ bool Mesh::intersection(const Ray &ray, hit_record_t* i_hit_record) const
         const nmath::scalar_t v = (i_hit_record->point.y - aabb.min.y) / h;
         i_hit_record->texcoord = Vector3f(u, v, 0.0f);
     }
+    if (i_hit_record) {
+        const nmath::scalar_t sx = (uv_scale.x != 0.0f) ? uv_scale.x : 1.0f;
+        const nmath::scalar_t sy = (uv_scale.y != 0.0f) ? uv_scale.y : 1.0f;
+        i_hit_record->texcoord.x *= sx;
+        i_hit_record->texcoord.y *= sy;
+    }
 
     return true;
 }

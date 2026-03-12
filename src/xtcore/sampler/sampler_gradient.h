@@ -3,7 +3,7 @@
 
 #include <nmath/vector.h>
 #include <nimg/color.h>
-#include "sampler.h"
+#include <xtcore/sampler.h>
 
 namespace xtcore {
     namespace sampler {

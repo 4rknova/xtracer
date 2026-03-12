@@ -1,12 +1,12 @@
 title = Ring Cardioid Caustics
-description = Cardioid caustic study with a specular ring, single key light, and diffuse catch plane.
+description = Cardioid caustic study with a specular ring, single key light, and diffuse ground plane.
 version     = 1.4
 
 environment = {
     type = gradient
     config = {
-        a = col3(0.2,0.2,0.2)
-        b = col3(0.01,0.01,0.01)
+        a = col3(0.92,0.95,1.00)
+        b = col3(0.32,0.52,0.90)
     }
 }
 
@@ -23,34 +23,41 @@ camera = {
 }
 
 geometry = {
-    catch_plane = {
-        type     = plane
-        normal   = vec3(0,1,0)
-        distance = 0
-        u_scale  = 1
-        v_scale  = 1
+    ground_plane = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        u_scale    = 8
+        v_scale    = 8
+        modifiers = {
+            scale       = vec3(10,1,10)
+            rotation    = vec3(0,0,0)
+            translation = vec3(0,0,0)
+        }
     }
 
     ring_mirror = {
         type       = mesh
         source     = gen(ring)
         resolution = 100
+	radius     = 1.0
+	height     = 0.5
         modifiers = {
             scale       = vec3(1,1,1)
             rotation    = vec3(0,0,0)
-            translation = vec3(0,0,0)
+            translation = vec3(0,0.25,0)
         }
     }
 
     key_light = {
         type     = sphere
-        position = vec3(1,20,16)
-        radius   = 10
+        position = vec3(1,15,10)
+        radius   = 2.0
     }
 }
 
 material = {
-    catch_plane = {
+    ground_plane = {
         type = blinn_phong
         properties = {
             samplers = {
@@ -102,7 +109,7 @@ material = {
             samplers = {
                 emissive = {
                     type  = color
-                    value = col3(1.0,1.0,1.0)
+                    value = col3(200,200,200)
                 }
             }
         }
@@ -110,9 +117,9 @@ material = {
 }
 
 object = {
-    catch_plane = {
-        geometry = catch_plane
-        material = catch_plane
+    ground_plane = {
+        geometry = ground_plane
+        material = ground_plane
     }
 
     ring_mirror = {

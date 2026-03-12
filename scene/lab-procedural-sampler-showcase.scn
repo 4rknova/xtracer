@@ -1,0 +1,251 @@
+title = Procedural Sampler Showcase
+description = Four cubes using checker, weave, graphpaper, and fbm_marble samplers for quick procedural texture validation.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.96,0.98,1.00)
+        b = col3(0.45,0.62,0.92)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 38
+        position = vec3(0,3,-14)
+        target   = vec3(0,1,0)
+        up       = vec3(0,1,0)
+        flength  = 45
+        aperture = 0
+    }
+}
+
+geometry = {
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        u_scale    = 5
+        v_scale    = 5
+        modifiers = {
+            scale       = vec3(20,1,20)
+            translation = vec3(0,0,0)
+            rotation    = vec3(0,0,0)
+        }
+    }
+
+    cube_checker = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(1.8,1.8,1.8)
+            translation = vec3(-3.3,0.9,0)
+            rotation    = vec3(0,20,0)
+        }
+    }
+
+    cube_weave = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(1.8,1.8,1.8)
+            translation = vec3(-1.1,0.9,0)
+            rotation    = vec3(0,25,0)
+        }
+    }
+
+    cube_graphpaper = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(1.8,1.8,1.8)
+            translation = vec3(1.1,0.9,0)
+            rotation    = vec3(0,30,0)
+        }
+    }
+
+    cube_marble = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(1.8,1.8,1.8)
+            translation = vec3(3.3,0.9,0)
+            rotation    = vec3(0,35,0)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(0,10,4)
+        radius   = 0.6
+    }
+}
+
+material = {
+    floor = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.78,0.79,0.80)
+                }
+            }
+            scalars = {}
+        }
+    }
+
+    cube_checker = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type    = checker
+                    a       = col3(0.92,0.92,0.92)
+                    b       = col3(0.10,0.12,0.14)
+                    scale_u = 10
+                    scale_v = 6
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.30,0.30,0.30)
+                }
+            }
+            scalars = {
+                exponent    = 90
+                reflectance = 0.16
+            }
+        }
+    }
+
+    cube_weave = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type       = weave
+                    base       = col3(0.12,0.10,0.08)
+                    warp       = col3(0.90,0.78,0.62)
+                    weft       = col3(0.26,0.58,0.66)
+                    scale      = 14
+                    band_width = 0.62
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.14,0.14,0.14)
+                }
+            }
+            scalars = {
+                exponent    = 64
+                reflectance = 0.08
+            }
+        }
+    }
+
+    cube_marble = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type          = fbm_marble
+                    a             = col3(0.95,0.93,0.90)
+                    b             = col3(0.58,0.56,0.54)
+                    vein          = col3(0.15,0.13,0.12)
+                    scale         = 5.5
+                    vein_frequency = 9.5
+                    turbulence    = 4.0
+                    octaves       = 6
+                    lacunarity    = 2.0
+                    gain          = 0.5
+                    vein_strength = 0.9
+                    vein_sharpness = 5.0
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.22,0.22,0.22)
+                }
+            }
+            scalars = {
+                exponent    = 80
+                reflectance = 0.12
+            }
+        }
+    }
+
+    cube_graphpaper = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.92,0.93,0.94)
+                    minor       = col3(0.35,0.60,0.76)
+                    major       = col3(0.07,0.30,0.48)
+                    scale       = 10
+                    major_every = 5
+                    minor_width = 0.045
+                    major_width = 0.085
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.18,0.18,0.18)
+                }
+            }
+            scalars = {
+                exponent    = 78
+                reflectance = 0.10
+            }
+        }
+    }
+
+    key_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(90,90,90)
+                }
+            }
+            scalars = {}
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor
+    }
+
+    cube_checker = {
+        geometry = cube_checker
+        material = cube_checker
+    }
+
+    cube_weave = {
+        geometry = cube_weave
+        material = cube_weave
+    }
+
+    cube_graphpaper = {
+        geometry = cube_graphpaper
+        material = cube_graphpaper
+    }
+
+    cube_marble = {
+        geometry = cube_marble
+        material = cube_marble
+    }
+
+    key_light = {
+        geometry = key_light
+        material = key_light
+    }
+}

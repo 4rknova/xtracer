@@ -1,7 +1,7 @@
 #ifndef XTCORE_SAMPLER_GRAPHPAPER_H_INCLUDED
 #define XTCORE_SAMPLER_GRAPHPAPER_H_INCLUDED
 
-#include "sampler.h"
+#include <xtcore/sampler.h>
 
 namespace xtcore {
     namespace sampler {

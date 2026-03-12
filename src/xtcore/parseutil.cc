@@ -28,8 +28,11 @@
 #include "camera.h"
 #include "material.h"
 #include "sampler.h"
-#include "sampler_erp.h"
-#include "sampler_graphpaper.h"
+#include "sampler/sampler_erp.h"
+#include "sampler/sampler_graphpaper.h"
+#include "sampler/sampler_checker.h"
+#include "sampler/sampler_weave.h"
+#include "sampler/sampler_fbm_marble.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -349,13 +352,29 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_RING)) {
             int i = 0;
+            float radius = 1.0f;
+            float height = 0.64f;
+            float thickness = -1.0f;
+            int hres = 1;
 
             if (p) {
                 i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
                 if (i < 16) i = 16;
+
+                radius = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), radius);
+                if (radius <= 0.0f) radius = 1.0f;
+
+                height = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_HEIGHT), height);
+                if (height <= 0.0f) height = 0.64f;
+
+                thickness = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_THICKNESS), thickness);
+                if (thickness <= 0.0f) thickness = -1.0f;
+
+                hres = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_HEIGHT_RESOLUTION), hres);
+                if (hres < 1) hres = 1;
             }
 
-            nmesh::generator::ring(&obj, (size_t)i);
+            nmesh::generator::ring(&obj, (size_t)i, radius, height, thickness, (size_t)hres);
         }
         else if (!token.compare(XTPROTO_LTRL_TORUS_KNOT)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 48);
@@ -371,6 +390,11 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
             if (i < 4) i = 4;
             nmesh::generator::geodesic_dome(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_ICOSA_CAGE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 8) i = 8;
+            nmesh::generator::icosa_cage(&obj, (size_t)i);
         }
         else if (!token.compare(XTPROTO_LTRL_MENGER_SPONGE)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
@@ -555,6 +579,52 @@ xtcore::sampler::ISampler *deserialize_graphpaper(const ncf::NCF *p)
     return sampler;
 }
 
+xtcore::sampler::ISampler *deserialize_checker(const ncf::NCF *p)
+{
+    xtcore::sampler::Checker *sampler = new (std::nothrow) xtcore::sampler::Checker();
+    if (!sampler || !p) return sampler;
+
+    sampler->color_a  = deserialize_col3(p, "a", sampler->color_a);
+    sampler->color_b  = deserialize_col3(p, "b", sampler->color_b);
+    sampler->scale_u  = deserialize_numf(p->get_property_by_name("scale_u"), sampler->scale_u);
+    sampler->scale_v  = deserialize_numf(p->get_property_by_name("scale_v"), sampler->scale_v);
+    sampler->offset_u = deserialize_numf(p->get_property_by_name("offset_u"), sampler->offset_u);
+    sampler->offset_v = deserialize_numf(p->get_property_by_name("offset_v"), sampler->offset_v);
+    return sampler;
+}
+
+xtcore::sampler::ISampler *deserialize_weave(const ncf::NCF *p)
+{
+    xtcore::sampler::Weave *sampler = new (std::nothrow) xtcore::sampler::Weave();
+    if (!sampler || !p) return sampler;
+
+    sampler->base_color = deserialize_col3(p, "base", sampler->base_color);
+    sampler->warp_color = deserialize_col3(p, "warp", sampler->warp_color);
+    sampler->weft_color = deserialize_col3(p, "weft", sampler->weft_color);
+    sampler->scale = deserialize_numf(p->get_property_by_name("scale"), sampler->scale);
+    sampler->band_width = deserialize_numf(p->get_property_by_name("band_width"), sampler->band_width);
+    return sampler;
+}
+
+xtcore::sampler::ISampler *deserialize_fbm_marble(const ncf::NCF *p)
+{
+    xtcore::sampler::FBMMarble *sampler = new (std::nothrow) xtcore::sampler::FBMMarble();
+    if (!sampler || !p) return sampler;
+
+    sampler->color_a = deserialize_col3(p, "a", sampler->color_a);
+    sampler->color_b = deserialize_col3(p, "b", sampler->color_b);
+    sampler->vein_color = deserialize_col3(p, "vein", sampler->vein_color);
+    sampler->scale = deserialize_numf(p->get_property_by_name("scale"), sampler->scale);
+    sampler->vein_frequency = deserialize_numf(p->get_property_by_name("vein_frequency"), sampler->vein_frequency);
+    sampler->turbulence = deserialize_numf(p->get_property_by_name("turbulence"), sampler->turbulence);
+    sampler->octaves = deserialize_numi(p->get_property_by_name("octaves"), sampler->octaves);
+    sampler->lacunarity = deserialize_numf(p->get_property_by_name("lacunarity"), sampler->lacunarity);
+    sampler->gain = deserialize_numf(p->get_property_by_name("gain"), sampler->gain);
+    sampler->vein_strength = deserialize_numf(p->get_property_by_name("vein_strength"), sampler->vein_strength);
+    sampler->vein_sharpness = deserialize_numf(p->get_property_by_name("vein_sharpness"), sampler->vein_sharpness);
+    return sampler;
+}
+
 xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
@@ -589,6 +659,9 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
             else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
             else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
             else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
+            else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
+            else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
+            else if (!type.compare(XTPROTO_FBM_MARBLE)) sampler = deserialize_fbm_marble(entry);
             else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
             data->add_sampler(entry->get_name(), sampler);

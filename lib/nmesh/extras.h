@@ -14,6 +14,7 @@ void truncated_cone(object_t *obj, size_t resolution = 32);
 void torus_knot(object_t *obj, size_t resolution = 48);
 void icosphere(object_t *obj, size_t resolution = 32);
 void geodesic_dome(object_t *obj, size_t resolution = 32);
+void icosa_cage(object_t *obj, size_t resolution = 32);
 void menger_sponge(object_t *obj, size_t resolution = 2);
 void sierpinski_tetrahedron(object_t *obj, size_t resolution = 2);
 void mobius_strip(object_t *obj, size_t resolution = 64);

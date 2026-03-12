@@ -27,6 +27,14 @@ static int append_vertex(object_t *obj, const Vec3 &p, const Vec3 &n)
     return idx;
 }
 
+static int append_vertex_uv(object_t *obj, const Vec3 &p, const Vec3 &n, float u, float v)
+{
+    const int idx = append_vertex(obj, p, n);
+    obj->attributes.uv.push_back(u);
+    obj->attributes.uv.push_back(v);
+    return idx;
+}
+
 static void append_triangle(shape_t &shape, int a, int b, int c)
 {
     index_t ia;
@@ -35,6 +43,20 @@ static void append_triangle(shape_t &shape, int a, int b, int c)
     ib.v = b; ib.n = b; ib.uv = -1;
     index_t ic;
     ic.v = c; ic.n = c; ic.uv = -1;
+
+    shape.mesh.indices.push_back(ia);
+    shape.mesh.indices.push_back(ib);
+    shape.mesh.indices.push_back(ic);
+}
+
+static void append_triangle_uv(shape_t &shape, int a, int b, int c)
+{
+    index_t ia;
+    ia.v = a; ia.n = a; ia.uv = a;
+    index_t ib;
+    ib.v = b; ib.n = b; ib.uv = b;
+    index_t ic;
+    ic.v = c; ic.n = c; ic.uv = c;
 
     shape.mesh.indices.push_back(ia);
     shape.mesh.indices.push_back(ib);
@@ -82,32 +104,37 @@ void cube(object_t *obj)
     obj->shapes.push_back(shape);
     shape_t &out = obj->shapes.back();
 
-    const Vec3 vertices[8] = {
-        Vec3(-0.5f, -0.5f, -0.5f),
-        Vec3( 0.5f, -0.5f, -0.5f),
-        Vec3( 0.5f,  0.5f, -0.5f),
-        Vec3(-0.5f,  0.5f, -0.5f),
-        Vec3(-0.5f, -0.5f,  0.5f),
-        Vec3( 0.5f, -0.5f,  0.5f),
-        Vec3( 0.5f,  0.5f,  0.5f),
-        Vec3(-0.5f,  0.5f,  0.5f)
+    const Vec3 p000(-0.5f, -0.5f, -0.5f);
+    const Vec3 p100( 0.5f, -0.5f, -0.5f);
+    const Vec3 p110( 0.5f,  0.5f, -0.5f);
+    const Vec3 p010(-0.5f,  0.5f, -0.5f);
+    const Vec3 p001(-0.5f, -0.5f,  0.5f);
+    const Vec3 p101( 0.5f, -0.5f,  0.5f);
+    const Vec3 p111( 0.5f,  0.5f,  0.5f);
+    const Vec3 p011(-0.5f,  0.5f,  0.5f);
+
+    auto add_face = [&](const Vec3 &n, const Vec3 &a, const Vec3 &b, const Vec3 &c, const Vec3 &d, bool reverse_winding) {
+        const int i0 = append_vertex_uv(obj, a, n, 0.0f, 0.0f);
+        const int i1 = append_vertex_uv(obj, b, n, 1.0f, 0.0f);
+        const int i2 = append_vertex_uv(obj, c, n, 1.0f, 1.0f);
+        const int i3 = append_vertex_uv(obj, d, n, 0.0f, 1.0f);
+
+        if (reverse_winding) {
+            append_triangle_uv(out, i0, i2, i1);
+            append_triangle_uv(out, i0, i3, i2);
+            return;
+        }
+
+        append_triangle_uv(out, i0, i1, i2);
+        append_triangle_uv(out, i0, i2, i3);
     };
 
-    int vi[8];
-    for (int i = 0; i < 8; ++i) vi[i] = append_vertex(obj, vertices[i], vertices[i].normalized());
-
-    const int idx[] = {
-        0, 2, 1, 0, 3, 2, // -Z
-        4, 5, 6, 4, 6, 7, // +Z
-        0, 1, 5, 0, 5, 4, // -Y
-        3, 7, 6, 3, 6, 2, // +Y
-        1, 2, 6, 1, 6, 5, // +X
-        0, 4, 7, 0, 7, 3  // -X
-    };
-
-    for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
-        append_triangle(out, vi[idx[i]], vi[idx[i + 1]], vi[idx[i + 2]]);
-    }
+    add_face(Vec3( 0.0f,  0.0f, -1.0f), p000, p100, p110, p010, true);  // -Z
+    add_face(Vec3( 0.0f,  0.0f,  1.0f), p001, p101, p111, p011, false); // +Z
+    add_face(Vec3( 0.0f, -1.0f,  0.0f), p000, p100, p101, p001, false); // -Y
+    add_face(Vec3( 0.0f,  1.0f,  0.0f), p010, p011, p111, p110, false); // +Y
+    add_face(Vec3( 1.0f,  0.0f,  0.0f), p100, p110, p111, p101, false); // +X
+    add_face(Vec3(-1.0f,  0.0f,  0.0f), p000, p001, p011, p010, false); // -X
 }
 
 void octahedron(object_t *obj)

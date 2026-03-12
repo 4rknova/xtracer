@@ -12,8 +12,8 @@
 #include <xtcore/material/blinnphong.h>
 #include <xtcore/material/phong.h>
 #include <xtcore/material/emissive.h>
-#include <xtcore/sampler_col.h>
-#include <xtcore/sampler_tex.h>
+#include <xtcore/sampler/sampler_col.h>
+#include <xtcore/sampler/sampler_tex.h>
 #include <xtcore/mesh.h>
 #include "graph.h"
 #include "util.h"

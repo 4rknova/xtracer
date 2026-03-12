@@ -9,7 +9,7 @@
 #include <xtcore/object.h>
 #include <xtcore/math/surface.h>
 #include <xtcore/material.h>
-#include <xtcore/sampler_col.h>
+#include <xtcore/sampler/sampler_col.h>
 #include "imgui_extra.h"
 
 namespace gui {

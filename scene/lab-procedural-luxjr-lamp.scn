@@ -1,0 +1,271 @@
+title = Procedural Lux Jr Lamp
+description = Stylized desk lamp from procedural primitives with twin linkage arms and an emissive bulb.
+version = 1.1
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.22,0.24,0.30)
+        b = col3(0.05,0.06,0.08)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 42
+        position = vec3(-3.8,2.4,-6.4)
+        target   = vec3(1.2,1.6,0.0)
+        up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+    }
+
+    close = {
+        type     = thin-lens
+        fov      = 36
+        position = vec3(-1.9,2.2,-4.1)
+        target   = vec3(2.0,2.3,0.0)
+        up       = vec3(0,1,0)
+        aperture = 0
+        flength  = 0
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    base = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 56
+        modifiers = {
+            scale       = vec3(1.35,0.17,1.35)
+            translation = vec3(0,0.17,0)
+        }
+    }
+
+    base_joint = {
+        type     = sphere
+        position = vec3(0,0.36,0)
+        radius   = 0.13
+    }
+
+    # Lower linkage (pair)
+    arm_lower_a = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 48
+        modifiers = {
+            scale       = vec3(0.070,1.80,0.070)
+            rotation    = vec3(0,0,-35)
+            translation = vec3(0.78,1.05,0.14)
+        }
+    }
+
+    arm_lower_b = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 48
+        modifiers = {
+            scale       = vec3(0.070,1.80,0.070)
+            rotation    = vec3(0,0,-35)
+            translation = vec3(0.78,1.05,-0.14)
+        }
+    }
+
+    elbow_joint = {
+        type     = sphere
+        position = vec3(1.30,1.79,0)
+        radius   = 0.11
+    }
+
+    # Upper linkage (pair)
+    arm_upper_a = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 48
+        modifiers = {
+            scale       = vec3(0.064,1.45,0.064)
+            rotation    = vec3(0,0,-38)
+            translation = vec3(1.70,2.30,0.12)
+        }
+    }
+
+    arm_upper_b = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 48
+        modifiers = {
+            scale       = vec3(0.064,1.45,0.064)
+            rotation    = vec3(0,0,-38)
+            translation = vec3(1.70,2.30,-0.12)
+        }
+    }
+
+    head_joint = {
+        type     = sphere
+        position = vec3(2.15,2.87,0)
+        radius   = 0.10
+    }
+
+    neck = {
+        type       = mesh
+        source     = gen(capped_cylinder)
+        resolution = 40
+        modifiers = {
+            scale       = vec3(0.055,0.34,0.055)
+            rotation    = vec3(0,0,-58)
+            translation = vec3(2.30,2.79,0)
+        }
+    }
+
+    lamp_head = {
+        type       = mesh
+        source     = gen(truncated_cone)
+        resolution = 56
+        modifiers = {
+            scale       = vec3(0.44,0.60,0.44)
+            rotation    = vec3(0,0,58)
+            translation = vec3(2.48,2.74,0)
+        }
+    }
+
+    bulb = {
+        type     = sphere
+        position = vec3(2.20,2.62,0)
+        radius   = 0.11
+    }
+}
+
+material = {
+    floor = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.67,0.69,0.73)
+                }
+            }
+        }
+    }
+
+    lamp_paint = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.89,0.80,0.24)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.97,0.94,0.84)
+                }
+            }
+            scalars = {
+                exponent    = 132
+                reflectance = 0.20
+            }
+        }
+    }
+
+    joint_dark = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.14,0.14,0.15)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.62,0.62,0.66)
+                }
+            }
+            scalars = {
+                exponent    = 96
+                reflectance = 0.16
+            }
+        }
+    }
+
+    bulb_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(14.0,12.5,9.5)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor
+    }
+
+    base = {
+        geometry = base
+        material = lamp_paint
+    }
+
+    base_joint = {
+        geometry = base_joint
+        material = joint_dark
+    }
+
+    arm_lower_a = {
+        geometry = arm_lower_a
+        material = lamp_paint
+    }
+
+    arm_lower_b = {
+        geometry = arm_lower_b
+        material = lamp_paint
+    }
+
+    elbow_joint = {
+        geometry = elbow_joint
+        material = joint_dark
+    }
+
+    arm_upper_a = {
+        geometry = arm_upper_a
+        material = lamp_paint
+    }
+
+    arm_upper_b = {
+        geometry = arm_upper_b
+        material = lamp_paint
+    }
+
+    head_joint = {
+        geometry = head_joint
+        material = joint_dark
+    }
+
+    neck = {
+        geometry = neck
+        material = joint_dark
+    }
+
+    lamp_head = {
+        geometry = lamp_head
+        material = lamp_paint
+    }
+
+    bulb = {
+        geometry = bulb
+        material = bulb_light
+    }
+}

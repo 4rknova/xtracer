@@ -4,7 +4,7 @@
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
-#include "sampler.h"
+#include <xtcore/sampler.h>
 
 using nmath::Vector3f;
 using nimg::ColorRGBf;

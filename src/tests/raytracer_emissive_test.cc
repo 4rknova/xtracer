@@ -12,7 +12,7 @@
 #include <xtcore/camera/perspective.h>
 #include <xtcore/math/triangle.h>
 #include <xtcore/material/emissive.h>
-#include <xtcore/sampler_col.h>
+#include <xtcore/sampler/sampler_col.h>
 
 namespace {
 

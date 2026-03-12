@@ -12,7 +12,7 @@
 #include "strpool.h"
 #include "camera.h"
 #include "material.h"
-#include "sampler_tex.h"
+#include "sampler/sampler_tex.h"
 #include "sampler.h"
 #include "object.h"
 

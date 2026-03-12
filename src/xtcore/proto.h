@@ -30,6 +30,7 @@
 #define XTPROTO_LTRL_TORUS_KNOT     "torus_knot"        /* string     */ /* Torus knot */
 #define XTPROTO_LTRL_ICOSPHERE      "icosphere"         /* string     */ /* Icosphere */
 #define XTPROTO_LTRL_GEODESIC_DOME  "geodesic_dome"     /* string     */ /* Geodesic dome */
+#define XTPROTO_LTRL_ICOSA_CAGE     "icosa_cage"        /* string     */ /* Icosahedral cage */
 #define XTPROTO_LTRL_MENGER_SPONGE  "menger_sponge"     /* string     */ /* Menger sponge */
 #define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON "sierpinski_tetrahedron" /* string */ /* Sierpinski tetrahedron */
 #define XTPROTO_LTRL_MOBIUS_STRIP   "mobius_strip"      /* string     */ /* Mobius strip */
@@ -110,6 +111,9 @@
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
+#define XTPROTO_PROP_HEIGHT			"height"			/* scalar_t   */ /* Height */
+#define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
+#define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
@@ -132,6 +136,9 @@
 #define XTPROTO_ERP                 "erp"
 #define XTPROTO_COLOR               "color"
 #define XTPROTO_GRAPHPAPER          "graphpaper"
+#define XTPROTO_CHECKER             "checker"
+#define XTPROTO_WEAVE               "weave"
+#define XTPROTO_FBM_MARBLE          "fbm_marble"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"

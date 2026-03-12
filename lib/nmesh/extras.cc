@@ -586,6 +586,85 @@ void geodesic_dome(object_t *obj, size_t resolution)
     }
 }
 
+void icosa_cage(object_t *obj, size_t resolution)
+{
+    if (!obj) return;
+
+    // Keep tessellation bounded: this generator creates prism struts per edge.
+    const int iters = clampi((int)(resolution / 12), 0, 3);
+
+    std::vector<Vec3> verts;
+    std::vector<tri_t> faces;
+    build_icosphere_data(verts, faces, iters);
+
+    std::set<std::pair<int, int> > edges;
+    for (size_t i = 0; i < faces.size(); ++i) {
+        const tri_t &t = faces[i];
+        const int ab0 = std::min(t.a, t.b);
+        const int ab1 = std::max(t.a, t.b);
+        const int bc0 = std::min(t.b, t.c);
+        const int bc1 = std::max(t.b, t.c);
+        const int ca0 = std::min(t.c, t.a);
+        const int ca1 = std::max(t.c, t.a);
+        edges.insert(std::make_pair(ab0, ab1));
+        edges.insert(std::make_pair(bc0, bc1));
+        edges.insert(std::make_pair(ca0, ca1));
+    }
+
+    if (edges.empty()) return;
+
+    float avg_len = 0.0f;
+    for (std::set<std::pair<int, int> >::const_iterator it = edges.begin(); it != edges.end(); ++it) {
+        avg_len += (verts[it->second] - verts[it->first]).length();
+    }
+    avg_len /= (float)edges.size();
+    const float strut_radius = std::max(0.01f, avg_len * 0.16f);
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    const float c60 = 0.5f;
+    const float s60 = 0.8660254f;
+
+    for (std::set<std::pair<int, int> >::const_iterator it = edges.begin(); it != edges.end(); ++it) {
+        const Vec3 pa = verts[it->first];
+        const Vec3 pb = verts[it->second];
+        Vec3 axis = pb - pa;
+        if (axis.length() <= 1e-6f) continue;
+        axis.normalize();
+
+        Vec3 radial = (pa + pb) * 0.5f;
+        if (radial.length() <= 1e-6f) radial = Vec3(0, 1, 0);
+        radial.normalize();
+
+        Vec3 u = nmath::cross(axis, radial);
+        if (u.length() <= 1e-6f) u = nmath::cross(axis, Vec3(0, 1, 0));
+        if (u.length() <= 1e-6f) u = nmath::cross(axis, Vec3(1, 0, 0));
+        if (u.length() <= 1e-6f) continue;
+        u.normalize();
+        Vec3 v = nmath::cross(axis, u).normalized();
+
+        Vec3 dirs[3];
+        dirs[0] = u;
+        dirs[1] = (u * -c60 + v * s60).normalized();
+        dirs[2] = (u * -c60 - v * s60).normalized();
+
+        int ia[3];
+        int ib[3];
+        for (int k = 0; k < 3; ++k) {
+            ia[k] = append_vertex(obj, pa + dirs[k] * strut_radius, dirs[k], 0);
+            ib[k] = append_vertex(obj, pb + dirs[k] * strut_radius, dirs[k], 0);
+        }
+
+        for (int k = 0; k < 3; ++k) {
+            const int kn = (k + 1) % 3;
+            append_triangle(out, ia[k], ib[k], ib[kn], false);
+            append_triangle(out, ia[k], ib[kn], ia[kn], false);
+        }
+    }
+}
+
 void sierpinski_tetrahedron(object_t *obj, size_t resolution)
 {
     if (!obj) return;
