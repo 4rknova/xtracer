@@ -1,10 +1,73 @@
 #include <cstdio>
+#include <deque>
 #include <fstream>
 #include <list>
 #include "util.h"
 #include "ncf.h"
 
 namespace ncf {
+
+namespace {
+
+static bool is_inline_group_literal(const std::string &value)
+{
+    if (value.size() < 2) return false;
+    return value.front() == '{' && value.back() == '}';
+}
+
+static bool split_inline_block_items(const std::string &body, std::deque<std::string> &items)
+{
+    size_t start = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    bool in_quotes = false;
+
+    for (size_t i = 0; i < body.size(); ++i) {
+        const char c = body[i];
+
+        if (c == '"') {
+            in_quotes = !in_quotes;
+            continue;
+        }
+        if (in_quotes) continue;
+
+        if (c == '(') {
+            ++paren_depth;
+            continue;
+        }
+        if (c == ')') {
+            --paren_depth;
+            if (paren_depth < 0) return false;
+            continue;
+        }
+        if (c == '{') {
+            ++brace_depth;
+            continue;
+        }
+        if (c == '}') {
+            --brace_depth;
+            if (brace_depth < 0) return false;
+            continue;
+        }
+
+        if ((c == ',') && (paren_depth == 0) && (brace_depth == 0)) {
+            std::string entry = body.substr(start, i - start);
+            util::trim(entry);
+            if (!entry.empty()) items.push_back(entry);
+            start = i + 1;
+        }
+    }
+
+    if (in_quotes || paren_depth != 0 || brace_depth != 0) return false;
+
+    std::string tail = body.substr(start);
+    util::trim(tail);
+    if (!tail.empty()) items.push_back(tail);
+
+    return true;
+}
+
+} // namespace
 
 // ERROR MESSAGES
 const char* g_error_messages[] = {
@@ -88,20 +151,6 @@ void NCF::release()
 
 int NCF::parse(error_t *error)
 {
-	// Sanity check
-	{
-		int c;
-		std::ifstream in(m_p_filepath.c_str());
-
-		if (!in.good()) return err(error, ERROR_CODE_IO, 0);
-
-		while((c = in.get()) != EOF && c <= 127);
-
-		in.close();
-
-		if (c != EOF) return err(error, ERROR_CODE_NOT_ASCII_FILE, 0);
-	}
-
 	// Stack of groups for parsing.
 	std::list<NCF*> group_stack;
 
@@ -115,110 +164,140 @@ int NCF::parse(error_t *error)
 	int linep = 0;
 	int sectionp = 0;
 
-	std::string input;
-	while (getline(in, input))
+    std::deque<std::pair<int, std::string> > pending_lines;
+
+	std::string raw_input;
+	while (getline(in, raw_input))
 	{
 		++linep;
+        pending_lines.push_back(std::make_pair(linep, raw_input));
 
-		std::string line, comment;
+        while (!pending_lines.empty())
+        {
+            const std::pair<int, std::string> current = pending_lines.front();
+            pending_lines.pop_front();
 
-		util::split(input, line, comment, '#'); // Strip comments.
-		util::trim(line); // Trim spaces and unused characters.
+            std::string line, comment;
+            util::split(current.second, line, comment, '#'); // Strip comments.
+            util::trim(line); // Trim spaces and unused characters.
 
-		if (!line.length())
-		{
-			// Empty line - do nothing.
-		}
-		else if((line.length() > 1) && (line.find('%') != std::string::npos))
-		{
-			// get the identifier and its value.
-			std::string com;
-			std::string value;
-			util::split(line, com, value, ' ');
-			// Trim the com and its value from unused characters and spaces.
-			util::trim(com);
-			util::trim(value);
+            if (!line.length())
+            {
+                // Empty line - do nothing.
+            }
+            else if((line.length() > 1) && (line.find('%') != std::string::npos))
+            {
+                // get the identifier and its value.
+                std::string com;
+                std::string value;
+                util::split(line, com, value, ' ');
+                // Trim the com and its value from unused characters and spaces.
+                util::trim(com);
+                util::trim(value);
 
-			if (!com.compare("%include"))
-			{
-				std::string base, file;
-				// Extract base path and file name of the active script.
-				util::path_comp(m_p_filepath, base, file);
+                if (!com.compare("%include"))
+                {
+                    std::string base, file;
+                    // Extract base path and file name of the active script.
+                    util::path_comp(m_p_filepath, base, file);
 
-				// Append the inclusion value to the base.
-				base.append(value);
+                    // Append the inclusion value to the base.
+                    base.append(value);
 
-				group_stack.front()->m_p_filepath = base;
+                    group_stack.front()->m_p_filepath = base;
 
-				if (group_stack.front()->parse()) {
-                    return err(error, ERROR_CODE_EXTERNAL_FILE, linep);
+                    if (group_stack.front()->parse()) {
+                        return err(error, ERROR_CODE_EXTERNAL_FILE, current.first);
+                    }
                 }
-			}
-			else
-			{
-                return err(error, ERROR_CODE_SYNTAX, linep);
-			}
-		}
-		else if (line.length() > 2 && (line.find('=') != std::string::npos))
-		{
-			// Get the identifier and its value.
-			std::string name, value;
-			util::split(line, name, value, '=');
+                else
+                {
+                    return err(error, ERROR_CODE_SYNTAX, current.first);
+                }
+            }
+            else if (line.length() > 2 && (line.find('=') != std::string::npos))
+            {
+                // Get the identifier and its value.
+                std::string name, value;
+                util::split(line, name, value, '=');
 
-			// Trim the name and its value from unused characters and spaces.
-			util::trim(name);
-			util::trim(value);
+                // Trim the name and its value from unused characters and spaces.
+                util::trim(name);
+                util::trim(value);
 
-			// If this is a section start.
-			if (value == "{")
-			{
-				sectionp++;
+                // If this is an inline group declaration, rewrite to multiline form and re-parse.
+                if (is_inline_group_literal(value))
+                {
+                    pending_lines.push_front(std::make_pair(current.first, "}"));
 
-				std::map<std::string,NCF*>::iterator it = group_stack.front()->m_p_groups.find(name);
+                    std::string body = value.substr(1, value.length() - 2);
+                    util::trim(body);
+                    if (!body.empty())
+                    {
+                        std::deque<std::string> items;
+                        if (!split_inline_block_items(body, items)) {
+                            return err(error, ERROR_CODE_SYNTAX, current.first);
+                        }
+                        while (!items.empty()) {
+                            pending_lines.push_front(std::make_pair(current.first, items.back()));
+                            items.pop_back();
+                        }
+                    }
+                    pending_lines.push_front(std::make_pair(current.first, name + " = {"));
+                    continue;
+                }
 
-				// Check whether the group name already exists and create a new node, if needed.
-				if (it == group_stack.front()->m_p_groups.end())
-				{
-					NCF *new_group = new NCF();
-					new_group->m_p_level = group_stack.front()->m_p_level + 1;
-					group_stack.front()->m_p_groups[name] = new_group;
-					new_group->m_p_name = name;
+                // If this is a section start.
+                if (value == "{")
+                {
+                    sectionp++;
 
-#ifdef CONFIG_DEBUG
-					printf("NCF parser: [+node: %p]\n", (void *)new_group);
-#endif /* CONFIG_DEBUG */
-				}
+                    std::map<std::string,NCF*>::iterator it = group_stack.front()->m_p_groups.find(name);
 
-				// Make it the active node.
-                if (group_stack.front()->query_property(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_GROUP, linep);
-				group_stack.push_front(group_stack.front()->m_p_groups[name]);
-			}
-			// If this is a regular assignment.
-			else
-			{
-				std::list<NCF*>::reverse_iterator end = group_stack.rend();
-				for (std::list<NCF*>::reverse_iterator it = group_stack.rbegin(); it != end; ++it) {
-					(*it)->expand_symbol(m_p_symbols, value);
-				}
+                    // Check whether the group name already exists and create a new node, if needed.
+                    if (it == group_stack.front()->m_p_groups.end())
+                    {
+                        NCF *new_group = new NCF();
+                        new_group->m_p_level = group_stack.front()->m_p_level + 1;
+                        group_stack.front()->m_p_groups[name] = new_group;
+                        new_group->m_p_name = name;
 
-                if (group_stack.front()->query_group(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_PROPERTY, linep);
-                group_stack.front()->m_p_symbols[name] = value;
-			}
-		}
-		// If this is a section end.
-		else if( (line.length() == 1) && (line.find('}') != std::string::npos) )
-		{
-			--sectionp;
+    #ifdef CONFIG_DEBUG
+                        printf("NCF parser: [+node: %p]\n", (void *)new_group);
+    #endif /* CONFIG_DEBUG */
+                    }
 
-			// Check for unbalanced sections.
-			if (sectionp < 0) return err(error, ERROR_CODE_UNBALANCED_GROUPS, linep);
+                    // Make it the active node.
+                    if (group_stack.front()->query_property(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_GROUP, current.first);
+                    group_stack.push_front(group_stack.front()->m_p_groups[name]);
+                }
+                // If this is a regular assignment.
+                else
+                {
+                    std::list<NCF*>::reverse_iterator end = group_stack.rend();
+                    for (std::list<NCF*>::reverse_iterator it = group_stack.rbegin(); it != end; ++it) {
+                        (*it)->expand_symbol(m_p_symbols, value);
+                    }
 
-			group_stack.pop_front();
-		}
-		else
-		{
-			return err(error, ERROR_CODE_SYNTAX, linep);
-		}
+                    if (group_stack.front()->query_group(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_PROPERTY, current.first);
+                    group_stack.front()->m_p_symbols[name] = value;
+                }
+            }
+            // If this is a section end.
+            else if( (line.length() == 1) && (line.find('}') != std::string::npos) )
+            {
+                --sectionp;
+
+                // Check for unbalanced sections.
+                if (sectionp < 0) return err(error, ERROR_CODE_UNBALANCED_GROUPS, current.first);
+
+                group_stack.pop_front();
+            }
+            else
+            {
+                return err(error, ERROR_CODE_SYNTAX, current.first);
+            }
+        }
 	}
 
 	in.close();

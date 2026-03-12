@@ -16,6 +16,7 @@ endif()
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
 set(PATH_BIN  ${PATH_ROOT}/bin)
+set(PATH_WEB  ${PATH_ROOT}/res/web)
 if (XTRACER_USING_EMSCRIPTEN)
     set(PATH_BIN ${PATH_ROOT}/bin-wasm)
 endif()
@@ -26,6 +27,19 @@ set(PATH_TEST ${PATH_BIN}/test)
 # Ensure output directories exist for all build modes.
 file(MAKE_DIRECTORY ${PATH_BIN})
 file(MAKE_DIRECTORY ${PATH_TEST})
+
+if (XTRACER_ENABLE_WEB OR XTRACER_ENABLE_WASM OR XTRACER_ENABLE_WASM_DIST)
+    set(PATH_WEB_LICENSE ${PATH_WEB}/license.txt)
+    add_custom_command(
+        OUTPUT ${PATH_WEB_LICENSE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PATH_WEB}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PATH_ROOT}/LICENSE ${PATH_WEB_LICENSE}
+        DEPENDS ${PATH_ROOT}/LICENSE
+        COMMENT "Generating ${PATH_WEB_LICENSE} from root LICENSE"
+        VERBATIM
+    )
+    add_custom_target(web_license_asset DEPENDS ${PATH_WEB_LICENSE})
+endif()
 
 MACRO(SCAN_DIRS return_list)
     FILE(GLOB_RECURSE new_list *.h)
@@ -141,6 +155,7 @@ set(OUT_EXE_TRIANGLE_TEST test_xtcore_triangle)
 set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
+set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -244,6 +259,7 @@ add_executable(${OUT_EXE_TRIANGLE_TEST} ${PATH_SRC_TESTS}/triangle_test.cc)
 add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_test.cc)
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
+add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
 set_target_properties(${OUT_EXE_COLORSPACE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
@@ -269,6 +285,9 @@ set_target_properties(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_NCF_PARSER_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 
@@ -342,6 +361,13 @@ target_include_directories(${OUT_EXE_CLI_SETUP_TEST} PUBLIC
 target_include_directories(${OUT_EXE_CLI_SETUP_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_NCF_PARSER_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NCF_PARSER_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 
 if (XTRACER_ENABLE_RTMIDI)
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
@@ -357,6 +383,7 @@ target_link_libraries(${OUT_EXE_TRIANGLE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
 
 if (XTRACER_ENABLE_WEB)
     set(OUT_EXE_WEB xtracer_web)
@@ -372,6 +399,9 @@ if (XTRACER_ENABLE_WEB)
         target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
     else()
         target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
+    endif()
+    if (TARGET web_license_asset)
+        add_dependencies(${OUT_EXE_WEB} web_license_asset)
     endif()
 endif()
 
@@ -398,9 +428,12 @@ if (XTRACER_ENABLE_WASM)
         "SHELL:-sALLOW_MEMORY_GROWTH=1"
         "SHELL:-sFORCE_FILESYSTEM=1"
         "SHELL:-sENVIRONMENT=worker,web"
-        "SHELL:-sEXPORTED_FUNCTIONS=['_xtracer_wasm_render_png','_xtracer_wasm_render_begin','_xtracer_wasm_render_step','_xtracer_wasm_render_tiles_done','_xtracer_wasm_render_tiles_total','_xtracer_wasm_render_is_done','_xtracer_wasm_render_snapshot_png','_xtracer_wasm_free','_xtracer_wasm_get_last_error','_malloc','_free']"
+        "SHELL:-sEXPORTED_FUNCTIONS=['_xtracer_wasm_render_png','_xtracer_wasm_render_begin','_xtracer_wasm_render_step','_xtracer_wasm_render_tiles_done','_xtracer_wasm_render_tiles_total','_xtracer_wasm_render_is_done','_xtracer_wasm_render_snapshot_png','_xtracer_wasm_render_snapshot_exr','_xtracer_wasm_render_snapshot_hdr','_xtracer_wasm_free','_xtracer_wasm_get_last_error','_malloc','_free']"
         "SHELL:-sEXPORTED_RUNTIME_METHODS=['cwrap','ccall','FS','UTF8ToString']"
     )
+    if (TARGET web_license_asset)
+        add_dependencies(${OUT_EXE_WASM} web_license_asset)
+    endif()
 endif()
 
 if (XTRACER_ENABLE_WASM_DIST)
@@ -456,6 +489,7 @@ target_compile_definitions(${OUT_EXE_TRIANGLE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_COLORSPACE_VECTORS_TEST} xtcore_static)
@@ -466,6 +500,7 @@ add_dependencies (${OUT_EXE_TRIANGLE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
 
 enable_testing()
 
@@ -504,6 +539,10 @@ add_test(
 add_test(
     NAME cli::setup_parse
     COMMAND ${PATH_TEST}/${OUT_EXE_CLI_SETUP_TEST}
+)
+add_test(
+    NAME ncf::inline_and_utf8
+    COMMAND ${PATH_TEST}/${OUT_EXE_NCF_PARSER_TEST}
 )
 add_test(
     NAME cli::stencil_smoke
