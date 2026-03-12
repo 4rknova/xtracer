@@ -42,3 +42,11 @@ src/xtcore/license.h
 
 # other files
 *.cbp
+
+# generated web assets
+res/web/license.txt
+res/web/xtracer_wasm.js
+res/web/xtracer_wasm.wasm
+res/web/xtracer_wasm.js.map
+res/web/xtracer_wasm.wasm.map
+res/web/*.symbols
