@@ -10,6 +10,7 @@
 
 #include <frontend/common/render_service.h>
 #include <nimg/pixmap.h>
+#include <xtcore/tonemapping/tonemapping.h>
 
 namespace xtracer {
 namespace frontend {
@@ -42,7 +43,19 @@ class job_manager_t
 
     std::string create(const common::render_request_t &request, const std::string &scene_name);
     bool snapshot(const std::string &id, job_snapshot_t &out);
-    bool image(const std::string &id, std::vector<unsigned char> &out, bool allow_partial);
+    bool image(const std::string &id,
+               std::vector<unsigned char> &out,
+               bool allow_partial,
+               const xtcore::tonemapping::settings_t &tm_settings);
+    bool image_export(const std::string &id,
+                      const std::string &format,
+                      std::vector<unsigned char> &out,
+                      std::string &mime_type,
+                      std::string &extension);
+    bool photons(const std::string &id,
+                 std::vector<common::render_result_t::point3_t> &diffuse_out,
+                 std::vector<common::render_result_t::point3_t> &caustic_out,
+                 size_t limit_per_set);
 
     private:
     struct job_t
@@ -57,10 +70,22 @@ class job_manager_t
         std::string error;
         double elapsed_ms;
         std::vector<unsigned char> image_png;
+        nimg::Pixmap final_fb;
+        std::vector<unsigned char> image_exr;
+        std::vector<unsigned char> image_hdr;
         nimg::Pixmap progressive_fb;
+        std::vector<common::render_result_t::point3_t> photon_diffuse_points;
+        std::vector<common::render_result_t::point3_t> photon_caustic_points;
         bool progressive_ready;
-        size_t last_encoded_done;
-        std::vector<unsigned char> progressive_png_cache;
+        size_t preview_last_encoded_done;
+        bool preview_last_from_final;
+        xtcore::tonemapping::operator_t preview_last_tm_op;
+        float preview_last_tm_exposure;
+        float preview_last_tm_white_point;
+        float preview_last_tm_mantiuk_contrast;
+        float preview_last_tm_mantiuk_saturation;
+        float preview_last_tm_mantiuk_detail;
+        std::vector<unsigned char> preview_png_cache;
         common::render_request_t request;
 
         job_t();

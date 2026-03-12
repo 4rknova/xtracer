@@ -187,6 +187,7 @@ Web API includes:
 - `POST /api/render`
 - `GET /api/jobs/{id}`
 - `GET /api/jobs/{id}/image` (`?final=1` for final-only image)
+- `GET /api/jobs/{id}/export?format=png|exr|hdr`
 - `GET /api/logs?since=<id>`
 
 ## Dependencies

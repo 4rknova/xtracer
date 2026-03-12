@@ -1,5 +1,6 @@
 #include "job_manager.h"
 
+#include <cmath>
 #include <iomanip>
 #include <fstream>
 #include <iterator>
@@ -8,6 +9,7 @@
 #include <unistd.h>
 
 #include <nimg/img.h>
+#include <xtcore/tonemapping/tonemapping.h>
 
 #include "backend_log.h"
 
@@ -25,15 +27,17 @@ bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
     return true;
 }
 
-bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out)
+typedef int (*save_fn_t)(const char *, nimg::Pixmap &);
+
+bool encode_memory(nimg::Pixmap &pixmap, save_fn_t save_fn, std::vector<unsigned char> &out)
 {
-    char tmp_path[] = "/tmp/xtracer_web_job_png_XXXXXX";
+    char tmp_path[] = "/tmp/xtracer_web_job_img_XXXXXX";
     int fd = mkstemp(tmp_path);
     if (fd < 0) return false;
     close(fd);
 
-    int png_err = nimg::io::save::png(tmp_path, pixmap);
-    if (png_err != 0) {
+    int save_err = save_fn(tmp_path, pixmap);
+    if (save_err != 0) {
         unlink(tmp_path);
         return false;
     }
@@ -41,6 +45,15 @@ bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out)
     bool ok = read_file_bytes(tmp_path, out);
     unlink(tmp_path);
     return ok;
+}
+
+bool encode_png_memory(nimg::Pixmap &pixmap,
+                       const xtcore::tonemapping::settings_t &tm_settings,
+                       std::vector<unsigned char> &out)
+{
+    nimg::Pixmap ldr = pixmap;
+    xtcore::tonemapping::apply(ldr, tm_settings);
+    return encode_memory(ldr, nimg::io::save::png, out);
 }
 
 void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &fb)
@@ -68,10 +81,22 @@ job_manager_t::job_t::job_t()
     , error()
     , elapsed_ms(0.0)
     , image_png()
+    , final_fb()
+    , image_exr()
+    , image_hdr()
     , progressive_fb()
+    , photon_diffuse_points()
+    , photon_caustic_points()
     , progressive_ready(false)
-    , last_encoded_done(0)
-    , progressive_png_cache()
+    , preview_last_encoded_done(0)
+    , preview_last_from_final(false)
+    , preview_last_tm_op(xtcore::tonemapping::OP_ACES_FITTED)
+    , preview_last_tm_exposure(1.0f)
+    , preview_last_tm_white_point(1.0f)
+    , preview_last_tm_mantiuk_contrast(0.1f)
+    , preview_last_tm_mantiuk_saturation(0.8f)
+    , preview_last_tm_mantiuk_detail(1.0f)
+    , preview_png_cache()
     , request()
 {}
 
@@ -96,7 +121,8 @@ std::string job_manager_t::create(const common::render_request_t &request, const
     job->progressive_fb.init(request.width, request.height);
     for (size_t y = 0; y < request.height; ++y) {
         for (size_t x = 0; x < request.width; ++x) {
-            job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 1);
+            // Start unfinished pixels as fully transparent in progressive previews.
+            job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 0);
         }
     }
 
@@ -142,10 +168,22 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
     job->elapsed_ms = rr.elapsed_ms;
     if (rr.ok) {
         job->image_png.swap(rr.image_png);
+        job->final_fb = rr.framebuffer;
+        job->image_exr.clear();
+        job->image_hdr.clear();
+        job->photon_diffuse_points = rr.photon_diffuse_points;
+        job->photon_caustic_points = rr.photon_caustic_points;
         job->tiles_done = rr.tiles_done;
         job->tiles_total = rr.tiles_total;
-        job->progressive_png_cache = job->image_png;
-        job->last_encoded_done = job->tiles_done.load();
+        job->preview_png_cache.clear();
+        job->preview_last_encoded_done = 0;
+        job->preview_last_from_final = false;
+        job->preview_last_tm_op = xtcore::tonemapping::OP_ACES_FITTED;
+        job->preview_last_tm_exposure = 1.0f;
+        job->preview_last_tm_white_point = 1.0f;
+        job->preview_last_tm_mantiuk_contrast = 0.1f;
+        job->preview_last_tm_mantiuk_saturation = 0.8f;
+        job->preview_last_tm_mantiuk_detail = 1.0f;
         job->state = JOB_DONE;
         std::ostringstream log;
         log << "job completed id=" << job->id
@@ -193,26 +231,127 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     return true;
 }
 
-bool job_manager_t::image(const std::string &id, std::vector<unsigned char> &out, bool allow_partial)
+bool job_manager_t::image(const std::string &id,
+                          std::vector<unsigned char> &out,
+                          bool allow_partial,
+                          const xtcore::tonemapping::settings_t &tm_settings)
 {
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) return false;
 
     std::lock_guard<std::mutex> lock(job->mut);
-    if (job->state == JOB_DONE && !job->image_png.empty()) {
+
+    const bool use_final = (job->state == JOB_DONE
+                            && job->final_fb.width() > 0
+                            && job->final_fb.height() > 0);
+    if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
+
+    const nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
+    const size_t done = use_final ? job->tiles_total.load() : job->tiles_done.load();
+    const bool cache_invalid = job->preview_png_cache.empty()
+                            || job->preview_last_encoded_done != done
+                            || job->preview_last_from_final != use_final
+                            || job->preview_last_tm_op != tm_settings.op
+                            || std::fabs(job->preview_last_tm_exposure - tm_settings.exposure) > 1e-6f
+                            || std::fabs(job->preview_last_tm_white_point - tm_settings.white_point) > 1e-6f
+                            || std::fabs(job->preview_last_tm_mantiuk_contrast - tm_settings.mantiuk_contrast) > 1e-6f
+                            || std::fabs(job->preview_last_tm_mantiuk_saturation - tm_settings.mantiuk_saturation) > 1e-6f
+                            || std::fabs(job->preview_last_tm_mantiuk_detail - tm_settings.mantiuk_detail) > 1e-6f;
+
+    if (cache_invalid) {
+        nimg::Pixmap work = src;
+        if (!encode_png_memory(work, tm_settings, job->preview_png_cache)) return false;
+        job->preview_last_encoded_done = done;
+        job->preview_last_from_final = use_final;
+        job->preview_last_tm_op = tm_settings.op;
+        job->preview_last_tm_exposure = tm_settings.exposure;
+        job->preview_last_tm_white_point = tm_settings.white_point;
+        job->preview_last_tm_mantiuk_contrast = tm_settings.mantiuk_contrast;
+        job->preview_last_tm_mantiuk_saturation = tm_settings.mantiuk_saturation;
+        job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
+    }
+
+    out = job->preview_png_cache;
+    return true;
+}
+
+bool job_manager_t::image_export(const std::string &id,
+                                 const std::string &format,
+                                 std::vector<unsigned char> &out,
+                                 std::string &mime_type,
+                                 std::string &extension)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+
+    std::lock_guard<std::mutex> lock(job->mut);
+    if (job->state != JOB_DONE) return false;
+
+    if (format == "png") {
+        if (job->image_png.empty()) return false;
         out = job->image_png;
+        mime_type = "image/png";
+        extension = "png";
         return true;
     }
 
-    if (!allow_partial || !job->progressive_ready) return false;
+    if (job->final_fb.width() == 0 || job->final_fb.height() == 0) return false;
 
-    size_t done = job->tiles_done.load();
-    if (job->progressive_png_cache.empty() || job->last_encoded_done != done) {
-        if (!encode_png_memory(job->progressive_fb, job->progressive_png_cache)) return false;
-        job->last_encoded_done = done;
+    if (format == "exr") {
+        if (job->image_exr.empty()) {
+            if (!encode_memory(job->final_fb, nimg::io::save::exr, job->image_exr)) return false;
+        }
+        out = job->image_exr;
+        mime_type = "image/x-exr";
+        extension = "exr";
+        return true;
     }
 
-    out = job->progressive_png_cache;
+    if (format == "hdr") {
+        if (job->image_hdr.empty()) {
+            if (!encode_memory(job->final_fb, nimg::io::save::hdr, job->image_hdr)) return false;
+        }
+        out = job->image_hdr;
+        mime_type = "image/vnd.radiance";
+        extension = "hdr";
+        return true;
+    }
+
+    return false;
+}
+
+bool job_manager_t::photons(const std::string &id,
+                            std::vector<common::render_result_t::point3_t> &diffuse_out,
+                            std::vector<common::render_result_t::point3_t> &caustic_out,
+                            size_t limit_per_set)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+
+    std::lock_guard<std::mutex> lock(job->mut);
+    if (job->state != JOB_DONE) return false;
+    if (job->integrator != "photon_mapping") return false;
+
+    const size_t cap = (limit_per_set == 0) ? (size_t)100000 : limit_per_set;
+    auto append_capped = [cap](const std::vector<common::render_result_t::point3_t> &src,
+                               std::vector<common::render_result_t::point3_t> &dst) {
+        dst.clear();
+        if (src.empty()) return;
+        if (src.size() <= cap) {
+            dst = src;
+            return;
+        }
+        dst.reserve(cap);
+        const double step = (double)src.size() / (double)cap;
+        for (size_t i = 0; i < cap; ++i) {
+            size_t idx = (size_t)(i * step);
+            if (idx >= src.size()) idx = src.size() - 1;
+            dst.push_back(src[idx]);
+        }
+    };
+
+    append_capped(job->photon_diffuse_points, diffuse_out);
+    append_capped(job->photon_caustic_points, caustic_out);
     return true;
 }
 

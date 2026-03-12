@@ -4,7 +4,8 @@
   const LOCAL_SCENES_KEY = "xtracer-wasm-local-scenes-v1";
   const DEFAULT_INTEGRATORS = [
     { id: "pathtracer", label: "Pathtracer (Brute Force)" },
-    { id: "pathtracer_is", label: "Pathtracer (IS)" },
+    { id: "pathtracer_mis", label: "Pathtracer (MIS Diffuse)" },
+    { id: "pathtracer_mis_full", label: "Pathtracer (MIS Full)" },
     { id: "photon_mapping", label: "Photon Mapping" },
     { id: "debug_views", label: "Debug Views" },
     { id: "ao", label: "Ambient Occlusion" },
@@ -372,6 +373,16 @@
         });
         if (!result || !result.bytes || !result.bytes.byteLength) return null;
         return new Blob([result.bytes], { type: result.mime || "image/png" });
+      },
+      async getJobExport(jobId, format) {
+        const result = await callWorker("getJobExport", {
+          job_id: jobId,
+          format: format || "png",
+        });
+        if (!result || !result.bytes || !result.bytes.byteLength) {
+          throw makeError("export not available", 404);
+        }
+        return new Blob([result.bytes], { type: result.mime || "application/octet-stream" });
       },
       async saveScene(name, source, overwrite) {
         const sceneName = normalizeSceneName(name);

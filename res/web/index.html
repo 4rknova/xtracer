@@ -11,6 +11,7 @@
     <div class="masthead">
       <nav class="tabs">
         <button class="tab active" id="tabRender" type="button">Render</button>
+        <button class="tab" id="tabVisual" type="button">Visual</button>
         <button class="tab" id="tabEditor" type="button">Editor</button>
         <button class="tab" id="tabSettings" type="button">Settings</button>
         <button class="tab" id="tabLogs" type="button">Logs</button>
@@ -46,11 +47,6 @@
               </label>
             </div>
 
-            <div class="control-section" id="integratorControlsSection" hidden>
-              <p class="control-subtitle">Integrator Controls</p>
-              <div id="integratorControls"></div>
-            </div>
-
             <div class="control-section">
               <p class="control-subtitle">Frame</p>
               <label>Resolution Preset
@@ -64,6 +60,7 @@
               <div class="row">
                 <label>Samples <input id="samples" type="number" min="1" max="1024" value="1"></label>
                 <label>AA <input id="aa" type="number" min="1" max="16" value="1"></label>
+                <label>Ray Depth <input id="rdepth" type="number" min="1" max="4096" value="3"></label>
               </div>
 
               <div class="row">
@@ -78,9 +75,36 @@
                 </label>
                 <label>Threads <input id="threads" type="number" min="0" max="256" value="0"></label>
               </div>
+
+              <label>Tone Mapping
+                <select id="toneMapping">
+                  <option value="aces">ACES (Fitted)</option>
+                  <option value="reinhard">Reinhard</option>
+                  <option value="reinhard_luma">Reinhard (Luma)</option>
+                  <option value="mantiuk_2006">Mantiuk 2006</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+              <div class="row" id="toneMappingParamsRow">
+                <label id="toneMappingExposureControl">TM Exposure <input id="toneMappingExposure" type="number" min="0.001" max="64" step="0.1" value="1.0"></label>
+                <label id="toneMappingWhitePointControl">TM White Point <input id="toneMappingWhitePoint" type="number" min="0.001" max="64" step="0.1" value="1.0"></label>
+                <label id="toneMappingMantiukContrastControl">TM Contrast <input id="toneMappingMantiukContrast" type="number" min="0" max="1" step="0.01" value="0.1"></label>
+                <label id="toneMappingMantiukSaturationControl">TM Saturation <input id="toneMappingMantiukSaturation" type="number" min="0" max="2" step="0.01" value="0.8"></label>
+                <label id="toneMappingMantiukDetailControl">TM Detail <input id="toneMappingMantiukDetail" type="number" min="1" max="99" step="1" value="1"></label>
+              </div>
+
+              <label class="inline-check">
+                <input id="clearPreviewOnRender" type="checkbox">
+                Clear preview before starting a new render
+              </label>
             </div>
 
             <button id="renderBtn" type="button">Start Render</button>
+
+            <div class="control-section" id="integratorControlsSection" hidden>
+              <p class="control-subtitle">Integrator Controls</p>
+              <div id="integratorControls"></div>
+            </div>
           </section>
 
           <section class="panel panel-preview">
@@ -90,19 +114,55 @@
                 <span id="renderTimer" class="status-timer" hidden>00:00</span>
                 <div id="progressBar" class="bar" hidden><div id="progress"></div></div>
               </div>
-              <a id="download" class="action-btn action-btn-icon is-disabled" download="xtracer.png" aria-disabled="true" aria-label="Save PNG" title="Save PNG">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M5 3h11l3 3v15H5zM7 5v4h8V5zm0 8v6h10v-6z"/>
-                </svg>
-                <span class="sr-only">Save PNG</span>
-              </a>
+              <div class="export-controls">
+                <button id="resetViewBtn" class="action-btn reset-view-btn is-disabled" type="button" aria-disabled="true" title="Reset preview view">Reset View</button>
+                <label class="sr-only" for="previewSampling">Preview sampling</label>
+                <select id="previewSampling" class="preview-sampling" aria-label="Preview sampling">
+                  <option value="nearest">Nearest</option>
+                  <option value="smooth">Smooth</option>
+                </select>
+                <label class="sr-only" for="exportFormat">Export format</label>
+                <select id="exportFormat" class="export-format" aria-label="Export format">
+                  <option value="png">PNG</option>
+                  <option value="exr">EXR</option>
+                  <option value="hdr">HDR</option>
+                </select>
+                <a id="download" class="action-btn action-btn-icon is-disabled" href="#" aria-disabled="true" aria-label="Export Render" title="Export Render">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M5 3h11l3 3v15H5zM7 5v4h8V5zm0 8v6h10v-6z"/>
+                  </svg>
+                  <span class="sr-only">Export Render</span>
+                </a>
+              </div>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
+              <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
             </div>
           </section>
         </div>
+      </section>
+
+      <section class="tab-pane" id="paneVisual">
+        <section class="panel panel-preview">
+          <div class="preview-toolbar">
+            <div class="preview-headline">
+              <p class="status-chip">Visual</p>
+              <span id="visualStatus" class="visual-status">Selection: none (Ctrl+Click)</span>
+            </div>
+            <div class="export-controls">
+              <label class="sr-only" for="visualCamera">Visual camera</label>
+              <select id="visualCamera" class="visual-camera-inline" aria-label="Visual camera"></select>
+              <button id="visualLoadBtn" class="action-btn visual-load-btn" type="button" title="Reload visual scene">Load Visual</button>
+              <label class="inline-check" title="Show or hide visual grid">
+                <input id="visualShowGrid" type="checkbox" checked>
+                Grid
+              </label>
+            </div>
+          </div>
+          <div id="visualViewport" class="visual-viewport-top" aria-label="3D scene viewport"></div>
+        </section>
       </section>
 
       <section class="tab-pane" id="paneEditor">
@@ -126,7 +186,7 @@
 
           <div class="editor-actions sticky-actions">
             <button id="loadSceneBtn" type="button">Load Selected Scene</button>
-            <button id="saveSceneBtn" type="button">Save As</button>
+            <button id="saveSceneBtn" type="button">Save</button>
           </div>
         </section>
       </section>
@@ -146,6 +206,13 @@
               <input id="pollInterval" type="number" min="100" max="10000" step="50" value="300">
             </label>
           </div>
+          <label>UI Font Size
+            <div class="font-size-stepper">
+              <button id="fontSizeDown" type="button" class="font-size-stepper-btn" aria-label="Decrease font size">-</button>
+              <output id="fontSizeValue" class="font-size-stepper-value" aria-live="polite">100%</output>
+              <button id="fontSizeUp" type="button" class="font-size-stepper-btn" aria-label="Increase font size">+</button>
+            </div>
+          </label>
           <label class="inline-check">
             <input id="autoLoadEditor" type="checkbox" checked>
             Auto-load scene source in editor when scene changes
@@ -215,6 +282,8 @@
   </main>
 
   <script src="/wasm_adapter.js"></script>
+  <script src="/vendor/three.min.js"></script>
+  <script src="/visual_editor.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

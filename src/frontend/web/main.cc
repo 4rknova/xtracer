@@ -21,7 +21,7 @@ bool arg_eq(const char *arg, const char *name)
 
 void print_usage(const char *argv0)
 {
-    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>]\n", argv0);
+    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--verbose]\n", argv0);
 }
 
 const char *to_backend_level(xtcore::LOGENTRY_TYPE type)
@@ -52,6 +52,7 @@ int main(int argc, char **argv)
     int port = 8080;
     std::string scene_dir = "scene";
     std::string web_root = "res/web";
+    bool verbose = false;
 
     for (int i = 1; i < argc; ++i) {
         if (arg_eq(argv[i], "--host")) {
@@ -86,6 +87,9 @@ int main(int argc, char **argv)
             print_usage(argv[0]);
             return 0;
         }
+        else if (arg_eq(argv[i], "--verbose") || arg_eq(argv[i], "-v")) {
+            verbose = true;
+        }
         else {
             std::printf("Unknown argument: %s\n", argv[i]);
             print_usage(argv[0]);
@@ -104,6 +108,12 @@ int main(int argc, char **argv)
     xtracer::frontend::web::backend_log_t::handle().add("info", "xtracer_web boot");
 
     httplib::Server server;
+    if (verbose) {
+        server.set_logger([](const httplib::Request &req, const httplib::Response &res) {
+            std::printf("[http] %s %s -> %d\n", req.method.c_str(), req.path.c_str(), res.status);
+            std::fflush(stdout);
+        });
+    }
     xtracer::frontend::web::job_manager_t jobs;
     xtracer::frontend::web::setup_routes(server, jobs, scene_dir, web_root);
 

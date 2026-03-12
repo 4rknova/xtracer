@@ -50,6 +50,7 @@ function createJob(params) {
     started_at_ms: now,
     has_image: false,
     image_bytes: null,
+    export_cache: {},
     remote_job_id: "",
   };
   jobs.set(id, job);
@@ -74,6 +75,17 @@ function clampProgress(v) {
   if (v < 0) return 0;
   if (v > 1) return 1;
   return v;
+}
+
+function toneMappingControlSpec(opRaw) {
+  const op = String(opRaw || "").toLowerCase();
+  if (op === "none") return { usesExposure: false, usesWhitePoint: false, usesMantiuk: false };
+  if (op === "aces") return { usesExposure: true, usesWhitePoint: false, usesMantiuk: false };
+  if (op === "mantiuk_2006") return { usesExposure: false, usesWhitePoint: false, usesMantiuk: true };
+  if (op === "reinhard" || op === "reinhard_luma") {
+    return { usesExposure: true, usesWhitePoint: true, usesMantiuk: false };
+  }
+  return { usesExposure: true, usesWhitePoint: false, usesMantiuk: false };
 }
 
 function sleep(ms) {
@@ -160,6 +172,8 @@ async function initWasmFunctions() {
     renderTilesTotal: mod.cwrap("xtracer_wasm_render_tiles_total", "number", []),
     renderIsDone: mod.cwrap("xtracer_wasm_render_is_done", "number", []),
     renderSnapshotPng: mod.cwrap("xtracer_wasm_render_snapshot_png", "number", ["number", "number"]),
+    renderSnapshotExr: mod.cwrap("xtracer_wasm_render_snapshot_exr", "number", ["number", "number"]),
+    renderSnapshotHdr: mod.cwrap("xtracer_wasm_render_snapshot_hdr", "number", ["number", "number"]),
     freeBuffer: mod.cwrap("xtracer_wasm_free", null, ["number"]),
     getLastError: mod.cwrap("xtracer_wasm_get_last_error", "string", []),
   };
@@ -261,6 +275,7 @@ async function runProxyRender(job, params) {
       const finalBuf = await finalRes.arrayBuffer();
       if (finalBuf.byteLength > 0) {
         job.image_bytes = finalBuf;
+        job.export_cache.png = finalBuf;
         job.has_image = true;
       }
       job.progress = 1;
@@ -343,6 +358,7 @@ async function runWasmRender(job, params) {
   const finalPng = snapshotPng(true);
   if (finalPng && finalPng.byteLength > 0) {
     job.image_bytes = finalPng;
+    job.export_cache.png = finalPng;
     job.has_image = true;
   }
   job.progress = 1;
@@ -389,10 +405,59 @@ function handleGetJob(payload) {
   return toPublicJob(job);
 }
 
-function handleGetJobImage(payload) {
+async function handleGetJobImage(payload) {
   const id = payload && payload.job_id ? String(payload.job_id) : "";
   const job = jobs.get(id);
-  if (!job || !job.image_bytes || !job.image_bytes.byteLength) {
+  if (!job) {
+    return { bytes: new ArrayBuffer(0), mime: "image/png" };
+  }
+
+  const opts = (payload && payload.opts) ? payload.opts : {};
+  if (backendEngine === "proxy-http" && job.remote_job_id) {
+    const parts = [];
+    if (opts && opts.partial) parts.push("partial=1");
+    if (opts && opts.final) parts.push("final=1");
+    const tm = String((opts && opts.toneMapping) || "aces").toLowerCase();
+    if (tm === "aces" || tm === "reinhard" || tm === "reinhard_luma" || tm === "mantiuk_2006" || tm === "none") {
+      parts.push(`tm=${encodeURIComponent(tm)}`);
+    } else {
+      parts.push("tm=aces");
+    }
+    const spec = toneMappingControlSpec(tm);
+    const exposure = Number((opts && opts.toneMappingExposure) || 1.0);
+    const whitePoint = Number((opts && opts.toneMappingWhitePoint) || 1.0);
+    const mantiukContrast = Number((opts && opts.toneMappingMantiukContrast) || 0.1);
+    const mantiukSaturation = Number((opts && opts.toneMappingMantiukSaturation) || 0.8);
+    const mantiukDetail = Number((opts && opts.toneMappingMantiukDetail) || 1.0);
+    const effectiveExposure = spec.usesExposure
+      ? (Number.isFinite(exposure) && exposure > 0 ? exposure : 1.0)
+      : 1.0;
+    const effectiveWhitePoint = spec.usesWhitePoint
+      ? (Number.isFinite(whitePoint) && whitePoint > 0 ? whitePoint : 1.0)
+      : 1.0;
+    const effectiveMantiukContrast = spec.usesMantiuk
+      ? (Number.isFinite(mantiukContrast) ? Math.min(1.0, Math.max(0.0, mantiukContrast)) : 0.1)
+      : 0.1;
+    const effectiveMantiukSaturation = spec.usesMantiuk
+      ? (Number.isFinite(mantiukSaturation) ? Math.min(2.0, Math.max(0.0, mantiukSaturation)) : 0.8)
+      : 0.8;
+    const effectiveMantiukDetail = spec.usesMantiuk
+      ? (Number.isFinite(mantiukDetail) ? Math.min(99.0, Math.max(1.0, mantiukDetail)) : 1.0)
+      : 1.0;
+    parts.push(`tm_exposure=${encodeURIComponent(effectiveExposure)}`);
+    parts.push(`tm_white_point=${encodeURIComponent(effectiveWhitePoint)}`);
+    parts.push(`tm_mantiuk_contrast=${encodeURIComponent(effectiveMantiukContrast)}`);
+    parts.push(`tm_mantiuk_saturation=${encodeURIComponent(effectiveMantiukSaturation)}`);
+    parts.push(`tm_mantiuk_detail=${encodeURIComponent(effectiveMantiukDetail)}`);
+    parts.push(`t=${Date.now()}`);
+    const qs = parts.length ? `?${parts.join("&")}` : "";
+    const res = await fetch(`/api/jobs/${encodeURIComponent(job.remote_job_id)}/image${qs}`);
+    if (!res.ok) return { bytes: new ArrayBuffer(0), mime: "image/png" };
+    const buf = await res.arrayBuffer();
+    if (buf && buf.byteLength > 0) job.image_bytes = buf;
+  }
+
+  if (!job.image_bytes || !job.image_bytes.byteLength) {
     return { bytes: new ArrayBuffer(0), mime: "image/png" };
   }
   const copy = job.image_bytes.slice(0);
@@ -400,6 +465,64 @@ function handleGetJobImage(payload) {
     bytes: copy,
     mime: "image/png",
   };
+}
+
+function exportMimeForFormat(format) {
+  if (format === "exr") return "image/x-exr";
+  if (format === "hdr") return "image/vnd.radiance";
+  return "image/png";
+}
+
+async function handleGetJobExport(payload) {
+  const id = payload && payload.job_id ? String(payload.job_id) : "";
+  const rawFormat = payload && payload.format ? String(payload.format) : "png";
+  const format = rawFormat.toLowerCase();
+  if (format !== "png" && format !== "exr" && format !== "hdr") {
+    throw new Error("unsupported format");
+  }
+
+  const job = jobs.get(id);
+  if (!job) throw new Error("job not found");
+  if (job.state !== "done") throw new Error("export not available");
+
+  const cached = job.export_cache && job.export_cache[format];
+  if (cached && cached.byteLength > 0) {
+    return { bytes: cached.slice(0), mime: exportMimeForFormat(format) };
+  }
+
+  if (backendEngine === "proxy-http") {
+    if (!job.remote_job_id) throw new Error("remote job id missing");
+    const res = await fetch(`/api/jobs/${encodeURIComponent(job.remote_job_id)}/export?format=${encodeURIComponent(format)}&t=${Date.now()}`);
+    if (!res.ok) throw new Error(`export failed: HTTP ${res.status}`);
+    const bytes = await res.arrayBuffer();
+    if (!bytes || bytes.byteLength <= 0) throw new Error("empty export payload");
+    job.export_cache[format] = bytes;
+    return { bytes: bytes.slice(0), mime: exportMimeForFormat(format) };
+  }
+
+  const fns = await initWasmFunctions();
+  const mod = fns.module;
+  const outSizePtr = mod._malloc(4);
+  let imgPtr = 0;
+  try {
+    if (format === "png") imgPtr = fns.renderSnapshotPng(1, outSizePtr);
+    else if (format === "exr") imgPtr = fns.renderSnapshotExr(1, outSizePtr);
+    else imgPtr = fns.renderSnapshotHdr(1, outSizePtr);
+
+    const size = mod.HEAP32[outSizePtr >> 2] | 0;
+    if (!imgPtr || size <= 0) {
+      throw new Error(fns.getLastError() || "export failed");
+    }
+
+    const copy = new Uint8Array(size);
+    copy.set(mod.HEAPU8.subarray(imgPtr, imgPtr + size));
+    const bytes = copy.buffer;
+    job.export_cache[format] = bytes;
+    return { bytes: bytes.slice(0), mime: exportMimeForFormat(format) };
+  } finally {
+    if (imgPtr) fns.freeBuffer(imgPtr);
+    mod._free(outSizePtr);
+  }
 }
 
 self.onmessage = async (ev) => {
@@ -421,7 +544,12 @@ self.onmessage = async (ev) => {
       return;
     }
     if (op === "getJobImage") {
-      const result = handleGetJobImage(payload);
+      const result = await handleGetJobImage(payload);
+      responseOk(requestId, result, [result.bytes]);
+      return;
+    }
+    if (op === "getJobExport") {
+      const result = await handleGetJobExport(payload);
       responseOk(requestId, result, [result.bytes]);
       return;
     }

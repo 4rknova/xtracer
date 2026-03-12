@@ -11,9 +11,14 @@
 #include <vector>
 
 #include <cpp-httplib/httplib.h>
+#include <xtcore/camera.h>
+#include <xtcore/math/triangle.h>
+#include <xtcore/mesh.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/resolution_preset.h>
+#include <xtcore/scene.h>
 #include <xtcore/strpool.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
 
 #include "backend_log.h"
@@ -122,6 +127,31 @@ bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore
     return false;
 }
 
+bool parse_tonemapping_operator(const std::string &s, xtcore::tonemapping::operator_t &out)
+{
+    if (s == "aces") {
+        out = xtcore::tonemapping::OP_ACES_FITTED;
+        return true;
+    }
+    if (s == "reinhard") {
+        out = xtcore::tonemapping::OP_REINHARD;
+        return true;
+    }
+    if (s == "reinhard_luma") {
+        out = xtcore::tonemapping::OP_REINHARD_LUMINANCE;
+        return true;
+    }
+    if (s == "mantiuk_2006") {
+        out = xtcore::tonemapping::OP_MANTIUK_2006;
+        return true;
+    }
+    if (s == "none") {
+        out = xtcore::tonemapping::OP_NONE;
+        return true;
+    }
+    return false;
+}
+
 bool has_suffix(const std::string &s, const std::string &suffix)
 {
     if (s.size() < suffix.size()) return false;
@@ -133,6 +163,30 @@ bool has_prefix(const std::string &s, const char *prefix)
     if (!prefix) return false;
     const size_t n = std::strlen(prefix);
     return s.size() >= n && s.compare(0, n, prefix) == 0;
+}
+
+std::string utc_timestamp_for_filename()
+{
+    const std::time_t now = std::time(nullptr);
+    std::tm tm_utc;
+#if defined(_WIN32)
+    gmtime_s(&tm_utc, &now);
+#else
+    gmtime_r(&now, &tm_utc);
+#endif
+    char buf[32];
+    if (std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", &tm_utc) == 0) {
+        return "unknown_time";
+    }
+    return std::string(buf);
+}
+
+std::string lower_ascii(std::string s)
+{
+    for (size_t i = 0; i < s.size(); ++i) {
+        s[i] = (char)std::tolower((unsigned char)s[i]);
+    }
+    return s;
 }
 
 void append_integrator_controls_json(std::ostringstream &ss, const common::integrator_info_t &integrator)
@@ -217,6 +271,25 @@ std::string join_path(const std::string &a, const std::string &b)
     return a + "/" + b;
 }
 
+std::string dirname_path(const std::string &path)
+{
+    if (path.empty()) return "";
+    size_t slash = path.find_last_of('/');
+    if (slash == std::string::npos) return "";
+    if (slash == 0) return "/";
+    return path.substr(0, slash);
+}
+
+bool is_asset_relpath_safe(const std::string &path)
+{
+    if (path.empty()) return false;
+    if (path[0] == '/' || path[0] == '\\') return false;
+    if (path.find("..") != std::string::npos) return false;
+    if (path.find('\\') != std::string::npos) return false;
+    if (path.find(':') != std::string::npos) return false;
+    return true;
+}
+
 std::vector<std::string> list_scenes(const std::string &scene_dir)
 {
     std::vector<std::string> out;
@@ -251,6 +324,121 @@ std::vector<std::string> list_cameras(const std::string &scene_path, std::string
 
     std::sort(out.begin(), out.end());
     return out;
+}
+
+std::string scene_geometry_json(const std::string &scene_path, std::string &error)
+{
+    xtcore::Scene scene;
+    int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
+    if (load_err) {
+        error = "failed to load scene";
+        return std::string();
+    }
+
+    std::ostringstream ss;
+    ss << "{\"meshes\":{";
+    bool first_mesh = true;
+
+    for (auto it = scene.m_surface.begin(); it != scene.m_surface.end(); ++it) {
+        const xtcore::asset::ISurface *surface = (*it).second;
+        const xtcore::surface::Mesh *mesh = dynamic_cast<const xtcore::surface::Mesh *>(surface);
+        if (!mesh) continue;
+
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+
+        if (!first_mesh) ss << ",";
+        first_mesh = false;
+
+        ss << "\"" << json_escape(name) << "\":{";
+        ss << "\"positions\":[";
+
+        const std::vector<xtcore::surface::Triangle> &tris = mesh->triangles();
+        bool first_value = true;
+        for (size_t i = 0; i < tris.size(); ++i) {
+            const xtcore::surface::Triangle &tri = tris[i];
+            for (size_t v = 0; v < 3; ++v) {
+                if (!first_value) ss << ",";
+                first_value = false;
+                ss << tri.v[v].x << "," << tri.v[v].y << "," << tri.v[v].z;
+            }
+        }
+        ss << "],\"normals\":[";
+
+        first_value = true;
+        for (size_t i = 0; i < tris.size(); ++i) {
+            const xtcore::surface::Triangle &tri = tris[i];
+            for (size_t v = 0; v < 3; ++v) {
+                if (!first_value) ss << ",";
+                first_value = false;
+                ss << tri.n[v].x << "," << tri.n[v].y << "," << tri.n[v].z;
+            }
+        }
+        ss << "]}";
+    }
+
+    ss << "}}";
+    return ss.str();
+}
+
+std::string scene_resolved_camera_json(const std::string &scene_path,
+                                       const std::string &requested_camera,
+                                       std::string &error)
+{
+    xtcore::Scene scene;
+    int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
+    if (load_err) {
+        error = "failed to load scene";
+        return std::string();
+    }
+
+    HASH_ID resolved_id = HASH_ID_INVALID;
+    HASH_ID requested_id = HASH_ID_INVALID;
+    bool release_requested_id = false;
+
+    if (!requested_camera.empty()) {
+        requested_id = xtcore::pool::str::add(requested_camera.c_str());
+        release_requested_id = true;
+        if (scene.get_camera(requested_id)) resolved_id = requested_id;
+    }
+    if (resolved_id == HASH_ID_INVALID) {
+        auto first_cam = scene.m_cameras.begin();
+        if (first_cam != scene.m_cameras.end()) resolved_id = (*first_cam).first;
+    }
+
+    if (resolved_id == HASH_ID_INVALID || !scene.get_camera(resolved_id)) {
+        if (release_requested_id) xtcore::pool::str::del(requested_id);
+        error = "no valid camera found";
+        return std::string();
+    }
+
+    const char *resolved_name = xtcore::pool::str::get(resolved_id);
+    xtcore::asset::ICamera *cam = scene.get_camera(resolved_id);
+    xtcore::camera::Perspective *pcam = dynamic_cast<xtcore::camera::Perspective *>(cam);
+
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"resolved\":\"" << json_escape(resolved_name ? resolved_name : "") << "\",";
+    ss << "\"type\":\"" << json_escape(cam ? cam->get_type() : "") << "\"";
+    if (pcam) {
+        nmath::Vector3f rz = (pcam->target - pcam->position).normalized();
+        nmath::Vector3f rx = cross(pcam->up, rz).normalized();
+        nmath::Vector3f ry = cross(rx, rz).normalized();
+
+        ss << ",\"position\":[" << pcam->position.x << "," << pcam->position.y << "," << pcam->position.z << "]";
+        ss << ",\"target\":[" << pcam->target.x << "," << pcam->target.y << "," << pcam->target.z << "]";
+        ss << ",\"up\":[" << pcam->up.x << "," << pcam->up.y << "," << pcam->up.z << "]";
+        ss << ",\"hfov\":" << pcam->fov;
+        ss << ",\"basis\":{";
+        ss << "\"rx\":[" << rx.x << "," << rx.y << "," << rx.z << "],";
+        ss << "\"ry\":[" << ry.x << "," << ry.y << "," << ry.z << "],";
+        ss << "\"rz\":[" << rz.x << "," << rz.y << "," << rz.z << "]";
+        ss << "}";
+    }
+    ss << "}";
+
+    if (release_requested_id) xtcore::pool::str::del(requested_id);
+    return ss.str();
 }
 
 const char *job_state_name(job_state_t state)
@@ -394,6 +582,79 @@ void setup_routes(httplib::Server &server,
            << "\"source\":\"" << json_escape(source) << "\""
            << "}";
         send_json(res, ss.str());
+    });
+
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/geometry)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "geometry rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+
+        std::string error;
+        std::string payload = scene_geometry_json(join_path(scene_dir, scene), error);
+        if (!error.empty()) {
+            backend_log_t::handle().add("error", "geometry export failed for scene=" + scene);
+            send_json(res, "{\"error\":\"failed to load scene\"}", 400);
+            return;
+        }
+
+        send_json(res, payload);
+    });
+
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/camera_resolve)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "camera_resolve rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+
+        std::string requested_camera;
+        if (req.has_param("camera")) requested_camera = req.get_param_value("camera");
+
+        std::string error;
+        std::string payload = scene_resolved_camera_json(join_path(scene_dir, scene), requested_camera, error);
+        if (!error.empty()) {
+            backend_log_t::handle().add("error", "camera_resolve failed for scene=" + scene);
+            send_json(res, "{\"error\":\"failed to resolve camera\"}", 400);
+            return;
+        }
+        send_json(res, payload);
+    });
+
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/asset)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "asset read rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+        if (!req.has_param("path")) {
+            send_json(res, "{\"error\":\"path is required\"}", 400);
+            return;
+        }
+
+        std::string relpath = req.get_param_value("path");
+        if (!is_asset_relpath_safe(relpath)) {
+            backend_log_t::handle().add("warn", "asset read rejected: invalid path");
+            send_json(res, "{\"error\":\"invalid asset path\"}", 400);
+            return;
+        }
+
+        std::string root_dir = dirname_path(scene_dir);
+        if (root_dir.empty()) root_dir = ".";
+        std::string full_path = join_path(root_dir, relpath);
+
+        std::vector<char> content;
+        if (!read_binary_file(full_path, content)) {
+            backend_log_t::handle().add("warn", "asset read failed scene=" + scene + " path=" + relpath);
+            send_json(res, "{\"error\":\"asset not found\"}", 404);
+            return;
+        }
+
+        res.set_content(content.data(), content.size(), "text/plain; charset=utf-8");
     });
 
     server.Get("/api/scenes/template/empty", [](const httplib::Request &, httplib::Response &res) {
@@ -576,13 +837,128 @@ void setup_routes(httplib::Server &server,
     server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/image)", [&](const httplib::Request &req, httplib::Response &res) {
         std::string id = req.matches[1];
         bool final_only = req.has_param("final") && req.get_param_value("final") == "1";
+        xtcore::tonemapping::settings_t tm_settings;
+        if (req.has_param("tm")) {
+            const std::string tm = lower_ascii(req.get_param_value("tm"));
+            if (!parse_tonemapping_operator(tm, tm_settings.op)) {
+                send_json(res, "{\"error\":\"invalid tone mapping operator\"}", 400);
+                return;
+            }
+        }
+        if (req.has_param("tm_exposure")) {
+            std::istringstream es(req.get_param_value("tm_exposure"));
+            float exposure = 1.0f;
+            es >> exposure;
+            if (es.fail() || exposure <= 0.0f) {
+                send_json(res, "{\"error\":\"invalid tone mapping exposure\"}", 400);
+                return;
+            }
+            tm_settings.exposure = exposure;
+        }
+        if (req.has_param("tm_white_point")) {
+            std::istringstream ws(req.get_param_value("tm_white_point"));
+            float white_point = 1.0f;
+            ws >> white_point;
+            if (ws.fail() || white_point <= 0.0f) {
+                send_json(res, "{\"error\":\"invalid tone mapping white point\"}", 400);
+                return;
+            }
+            tm_settings.white_point = white_point;
+        }
+        if (req.has_param("tm_mantiuk_contrast")) {
+            std::istringstream cs(req.get_param_value("tm_mantiuk_contrast"));
+            float v = 0.1f;
+            cs >> v;
+            if (cs.fail() || v < 0.0f || v > 1.0f) {
+                send_json(res, "{\"error\":\"invalid mantiuk contrast\"}", 400);
+                return;
+            }
+            tm_settings.mantiuk_contrast = v;
+        }
+        if (req.has_param("tm_mantiuk_saturation")) {
+            std::istringstream ss(req.get_param_value("tm_mantiuk_saturation"));
+            float v = 0.8f;
+            ss >> v;
+            if (ss.fail() || v < 0.0f || v > 2.0f) {
+                send_json(res, "{\"error\":\"invalid mantiuk saturation\"}", 400);
+                return;
+            }
+            tm_settings.mantiuk_saturation = v;
+        }
+        if (req.has_param("tm_mantiuk_detail")) {
+            std::istringstream ds(req.get_param_value("tm_mantiuk_detail"));
+            float v = 1.0f;
+            ds >> v;
+            if (ds.fail() || v < 1.0f || v > 99.0f) {
+                send_json(res, "{\"error\":\"invalid mantiuk detail\"}", 400);
+                return;
+            }
+            tm_settings.mantiuk_detail = v;
+        }
         std::vector<unsigned char> image;
-        if (!jobs.image(id, image, !final_only)) {
+        if (!jobs.image(id, image, !final_only, tm_settings)) {
             backend_log_t::handle().add("warn", "job image missing id=" + id);
             send_json(res, "{\"error\":\"image not available\"}", 404);
             return;
         }
         res.set_content((const char *)image.data(), image.size(), "image/png");
+    });
+
+    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/export)", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        std::string format = "png";
+        if (req.has_param("format")) format = lower_ascii(req.get_param_value("format"));
+        if (format != "png" && format != "exr" && format != "hdr") {
+            send_json(res, "{\"error\":\"unsupported format\"}", 400);
+            return;
+        }
+
+        std::vector<unsigned char> image;
+        std::string mime_type;
+        std::string extension;
+        if (!jobs.image_export(id, format, image, mime_type, extension)) {
+            backend_log_t::handle().add("warn", "job export unavailable id=" + id + " format=" + format);
+            send_json(res, "{\"error\":\"export not available\"}", 404);
+            return;
+        }
+
+        const std::string filename = "xtracer_" + id + "_" + utc_timestamp_for_filename() + "." + extension;
+        const std::string content_disposition = "attachment; filename=\"" + filename + "\"";
+        res.set_header("Cache-Control", "no-store");
+        res.set_header("Content-Disposition", content_disposition.c_str());
+        res.set_content((const char *)image.data(), image.size(), mime_type.c_str());
+    });
+
+    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/photons)", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        size_t limit = 100000;
+        size_t v = 0;
+        if (parse_u64_param(req, "limit", 1, 500000, v)) limit = v;
+        else if (req.has_param("limit")) {
+            send_json(res, "{\"error\":\"invalid limit\"}", 400);
+            return;
+        }
+
+        std::vector<common::render_result_t::point3_t> diffuse;
+        std::vector<common::render_result_t::point3_t> caustic;
+        if (!jobs.photons(id, diffuse, caustic, limit)) {
+            send_json(res, "{\"error\":\"photon data not available\"}", 404);
+            return;
+        }
+
+        std::ostringstream ss;
+        ss << "{\"diffuse\":[";
+        for (size_t i = 0; i < diffuse.size(); ++i) {
+            if (i) ss << ',';
+            ss << "[" << diffuse[i].x << "," << diffuse[i].y << "," << diffuse[i].z << "]";
+        }
+        ss << "],\"caustic\":[";
+        for (size_t i = 0; i < caustic.size(); ++i) {
+            if (i) ss << ',';
+            ss << "[" << caustic[i].x << "," << caustic[i].y << "," << caustic[i].z << "]";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
     });
 
     server.Get(R"(/api/jobs/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
@@ -614,6 +990,14 @@ void setup_routes(httplib::Server &server,
 
     server.Get("/app.js", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
+    });
+
+    server.Get("/visual_editor.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "visual_editor.js"), "application/javascript", res);
+    });
+
+    server.Get("/vendor/three.min.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "vendor/three.min.js"), "application/javascript", res);
     });
 
     server.Get("/wasm_adapter.js", [web_root](const httplib::Request &, httplib::Response &res) {
