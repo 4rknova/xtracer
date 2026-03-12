@@ -7,6 +7,7 @@
 #include <map>
 
 #include <xtcore/context.h>
+#include <nimg/pixmap.h>
 
 namespace xtracer {
 namespace frontend {
@@ -64,9 +65,18 @@ struct render_request_t
 
 struct render_result_t
 {
+    struct point3_t {
+        float x;
+        float y;
+        float z;
+    };
+
     bool ok;
     std::string error;
+    nimg::Pixmap framebuffer;
     std::vector<unsigned char> image_png;
+    std::vector<point3_t> photon_diffuse_points;
+    std::vector<point3_t> photon_caustic_points;
     size_t tiles_done;
     size_t tiles_total;
     double elapsed_ms;

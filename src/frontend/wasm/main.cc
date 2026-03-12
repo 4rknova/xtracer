@@ -12,6 +12,7 @@
 #include <xtcore/integrator.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/strpool.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
 
 namespace {
@@ -63,7 +64,9 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
 {
     if      (name == "raytracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::raytracer::Integrator());
     else if (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
+    else if (name == "pathtracer_mis") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
     else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
+    else if (name == "pathtracer_mis_full") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_mis_full::Integrator());
     else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
     else if (name == "debug_views") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator());
     else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
@@ -83,24 +86,97 @@ bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
     return true;
 }
 
-bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, std::string &error)
-{
-    const char *tmp_path = "/tmp/xtracer_wasm.png";
-    mkdir("/tmp", 0777);
+typedef int (*save_fn_t)(const char *, nimg::Pixmap &);
 
-    int png_err = nimg::io::save::png(tmp_path, pixmap);
-    if (png_err != 0) {
-        error = "failed to encode png";
+bool encode_image_memory(nimg::Pixmap &pixmap,
+                         const char *format_ext,
+                         save_fn_t save_fn,
+                         std::vector<unsigned char> &out,
+                         std::string &error)
+{
+    if (!format_ext || !(*format_ext) || !save_fn) {
+        error = "invalid image encoder";
         return false;
     }
 
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
+    const std::string tmp_path = std::string("/tmp/xtracer_wasm.") + format_ext;
+    mkdir("/tmp", 0777);
+
+    nimg::Pixmap ldr;
+    nimg::Pixmap *to_encode = &pixmap;
+    if (std::strcmp(format_ext, "png") == 0) {
+        ldr = pixmap;
+        xtcore::tonemapping::apply(ldr);
+        to_encode = &ldr;
+    }
+
+    int save_err = save_fn(tmp_path.c_str(), *to_encode);
+    if (save_err != 0) {
+        error = std::string("failed to encode ") + format_ext;
+        return false;
+    }
+
+    bool ok = read_file_bytes(tmp_path.c_str(), out);
+    unlink(tmp_path.c_str());
     if (!ok) {
-        error = "failed to read generated png";
+        error = std::string("failed to read generated ") + format_ext;
         return false;
     }
     return true;
+}
+
+unsigned char *snapshot_image_encoded(int final_only,
+                                      int *out_size,
+                                      const char *format_ext,
+                                      save_fn_t save_fn)
+{
+    if (!out_size) {
+        g_last_error = "out_size pointer is required";
+        return nullptr;
+    }
+
+    *out_size = 0;
+    g_last_error.clear();
+
+    if (g_session.failed) {
+        g_last_error = g_session.error.empty() ? "render failed" : g_session.error;
+        return nullptr;
+    }
+
+    if (g_session.tiles_total == 0) {
+        g_last_error = "no active render session";
+        return nullptr;
+    }
+
+    if (final_only && !g_session.done) {
+        g_last_error = "final image not ready";
+        return nullptr;
+    }
+
+    nimg::Pixmap framebuffer;
+    xtcore::render::assemble(framebuffer, g_session.context);
+
+    std::vector<unsigned char> image;
+    std::string error;
+    if (!encode_image_memory(framebuffer, format_ext, save_fn, image, error)) {
+        g_last_error = error.empty() ? "failed to encode image" : error;
+        return nullptr;
+    }
+
+    if (image.empty()) {
+        g_last_error = "render produced no image";
+        return nullptr;
+    }
+
+    unsigned char *out = static_cast<unsigned char *>(std::malloc(image.size()));
+    if (!out) {
+        g_last_error = "out of memory";
+        return nullptr;
+    }
+
+    std::memcpy(out, image.data(), image.size());
+    *out_size = static_cast<int>(image.size());
+    return out;
 }
 
 void clear_session()
@@ -311,53 +387,17 @@ int xtracer_wasm_render_is_done()
 
 unsigned char *xtracer_wasm_render_snapshot_png(int final_only, int *out_size)
 {
-    if (!out_size) {
-        g_last_error = "out_size pointer is required";
-        return nullptr;
-    }
+    return snapshot_image_encoded(final_only, out_size, "png", nimg::io::save::png);
+}
 
-    *out_size = 0;
-    g_last_error.clear();
+unsigned char *xtracer_wasm_render_snapshot_exr(int final_only, int *out_size)
+{
+    return snapshot_image_encoded(final_only, out_size, "exr", nimg::io::save::exr);
+}
 
-    if (g_session.failed) {
-        g_last_error = g_session.error.empty() ? "render failed" : g_session.error;
-        return nullptr;
-    }
-
-    if (g_session.tiles_total == 0) {
-        g_last_error = "no active render session";
-        return nullptr;
-    }
-
-    if (final_only && !g_session.done) {
-        g_last_error = "final image not ready";
-        return nullptr;
-    }
-
-    nimg::Pixmap framebuffer;
-    xtcore::render::assemble(framebuffer, g_session.context);
-
-    std::vector<unsigned char> png;
-    std::string error;
-    if (!encode_png_memory(framebuffer, png, error)) {
-        g_last_error = error.empty() ? "failed to encode image" : error;
-        return nullptr;
-    }
-
-    if (png.empty()) {
-        g_last_error = "render produced no image";
-        return nullptr;
-    }
-
-    unsigned char *out = static_cast<unsigned char *>(std::malloc(png.size()));
-    if (!out) {
-        g_last_error = "out of memory";
-        return nullptr;
-    }
-
-    std::memcpy(out, png.data(), png.size());
-    *out_size = static_cast<int>(png.size());
-    return out;
+unsigned char *xtracer_wasm_render_snapshot_hdr(int final_only, int *out_size)
+{
+    return snapshot_image_encoded(final_only, out_size, "hdr", nimg::io::save::hdr);
 }
 
 unsigned char *xtracer_wasm_render_png(const char *scene_path,

@@ -1,7 +1,8 @@
 {
   "integrators": [
     { "id": "raytracer", "label": "Raytracer (Whitted)" },
-    { "id": "pathtracer_is", "label": "Pathtracer (IS)" },
+    { "id": "pathtracer_mis", "label": "Pathtracer (MIS Diffuse)" },
+    { "id": "pathtracer_mis_full", "label": "Pathtracer (MIS Full)" },
     { "id": "pathtracer", "label": "Pathtracer (Brute Force)" },
     {
       "id": "photon_mapping",
@@ -14,7 +15,17 @@
           "description": "Photon emission count",
           "default": "20000",
           "min": "1000",
-          "max": "500000",
+          "max": "10000000",
+          "step": "1000"
+        },
+        {
+          "id": "caustic_emit_photons",
+          "label": "Caustic Emit",
+          "type": "int",
+          "description": "Caustic photon emission count",
+          "default": "20000",
+          "min": "1000",
+          "max": "10000000",
           "step": "1000"
         },
         {
@@ -28,6 +39,16 @@
           "step": "0.001"
         },
         {
+          "id": "caustic_gather_radius",
+          "label": "Caustic Radius",
+          "type": "float",
+          "description": "Radius used for caustic estimate",
+          "default": "0.125",
+          "min": "0.0001",
+          "max": "100",
+          "step": "0.0001"
+        },
+        {
           "id": "gather_k",
           "label": "Gather K",
           "type": "int",
@@ -35,6 +56,16 @@
           "default": "64",
           "min": "1",
           "max": "1024",
+          "step": "1"
+        },
+        {
+          "id": "caustic_gather_k",
+          "label": "Caustic Gather K",
+          "type": "int",
+          "description": "Maximum caustic photons to gather",
+          "default": "32",
+          "min": "1",
+          "max": "2048",
           "step": "1"
         }
       ]

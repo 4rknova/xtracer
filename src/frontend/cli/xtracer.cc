@@ -11,6 +11,7 @@
 #include <xtcore/timeutil.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/integrator.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/macro.h>
 #include "argparse.h"
 
@@ -117,7 +118,9 @@ int main(int argc, char **argv)
     else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (RENDERER("ao"            )) integrator.reset(new xtcore::integrator::ao::Integrator());
     else if (RENDERER("pathtracer"    )) integrator.reset(new xtcore::integrator::pathtracer::Integrator());
+    else if (RENDERER("pathtracer_mis")) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
     else if (RENDERER("pathtracer_is" )) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+    else if (RENDERER("pathtracer_mis_full")) integrator.reset(new xtcore::integrator::pathtracer_mis_full::Integrator());
     else if (RENDERER("photon_mapping")) integrator.reset(new xtcore::integrator::photon_mapping::Integrator());
     else if (RENDERER("raytracer"     )) integrator.reset(new xtcore::integrator::raytracer::Integrator());
     else {
@@ -168,8 +171,10 @@ int main(int argc, char **argv)
 	    file = outdir + filename + "_" + integrator_name + ".png";
         nimg::Pixmap fb;
         xtcore::render::assemble(fb, context);
-		xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
-		int res = nimg::io::save::png(file.c_str(), fb);
+        nimg::Pixmap ldr = fb;
+        xtcore::tonemapping::apply(ldr);
+			xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
+			int res = nimg::io::save::png(file.c_str(), ldr);
         if (res) xtcore::Log::handle().post_error("Failed to export image file");
     }
 

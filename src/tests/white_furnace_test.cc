@@ -12,7 +12,7 @@
 #include <xtcore/camera/perspective.h>
 #include <xtcore/math/sphere.h>
 #include <xtcore/material/lambert.h>
-#include <xtcore/sampler_col.h>
+#include <xtcore/sampler/sampler_col.h>
 #include <xtcore/xtcore.h>
 #include <xtcore/log.h>
 
@@ -205,7 +205,7 @@ int main()
 
     int rc = 0;
     if (verify_renderer("pathtracer", false) != 0) rc = 1;
-    if (verify_renderer("pathtracer_is", true) != 0) rc = 1;
+    if (verify_renderer("pathtracer_mis", true) != 0) rc = 1;
     xtcore::deinit();
     if (rc != 0) return rc;
 

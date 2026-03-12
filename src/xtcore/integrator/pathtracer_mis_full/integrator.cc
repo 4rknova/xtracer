@@ -1,22 +1,24 @@
 #include <algorithm>
 #include <map>
 #include <vector>
+
 #include <nmath/precision.h>
 #include <nmath/prng.h>
 #include <nimg/luminance.h>
-#include <xtcore/tile.h>
+
 #include <xtcore/aa.h>
 #include <xtcore/matdefs.h>
-#include <xtcore/math/sampling_util.h>
+#include <xtcore/material.h>
 #include <xtcore/math/sphere.h>
 #include <xtcore/math/triangle.h>
 #include <xtcore/mesh.h>
+#include <xtcore/tile.h>
 
 #include "integrator.h"
 
 namespace xtcore {
     namespace integrator {
-        namespace pathtracer_is {
+        namespace pathtracer_mis_full {
 
 namespace {
 
@@ -26,9 +28,12 @@ struct area_light_t
     const xtcore::asset::ISurface *surface;
     const xtcore::asset::IMaterial *material;
     nmath::scalar_t area;
+    nmath::scalar_t select_weight;
 };
 
-inline nmath::scalar_t triangle_area(const nmath::Vector3f &a, const nmath::Vector3f &b, const nmath::Vector3f &c)
+inline nmath::scalar_t triangle_area(const nmath::Vector3f &a,
+                                     const nmath::Vector3f &b,
+                                     const nmath::Vector3f &c)
 {
     const nmath::Vector3f cr = nmath::cross(b - a, c - a);
     return (nmath::scalar_t)0.5 * cr.length();
@@ -57,34 +62,43 @@ inline nmath::scalar_t light_area(const xtcore::asset::ISurface *surface)
     return 0.0;
 }
 
-inline void collect_area_lights(xtcore::render::context_t *ctx, std::vector<area_light_t> &lights)
+inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
 {
-    lights.clear();
-    if (!ctx) return;
+    return std::max(lo, std::min(v, hi));
+}
 
-    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
-        const HASH_ID obj_id = (*it).first;
-        const xtcore::asset::Object *obj = (*it).second;
-        if (!obj) continue;
+inline nmath::scalar_t safe_luma(const nimg::ColorRGBf &c)
+{
+    return (nmath::scalar_t)nimg::eval::luminance(c);
+}
 
-        auto sit = ctx->scene.m_surface.find(obj->surface);
-        auto mit = ctx->scene.m_materials.find(obj->material);
-        if (sit == ctx->scene.m_surface.end() || mit == ctx->scene.m_materials.end()) continue;
+inline nmath::scalar_t power_heuristic(nmath::scalar_t p_a, nmath::scalar_t p_b)
+{
+    const nmath::scalar_t a2 = p_a * p_a;
+    const nmath::scalar_t b2 = p_b * p_b;
+    const nmath::scalar_t denom = a2 + b2;
+    if (denom <= (nmath::scalar_t)EPSILON) return 0.0;
+    return a2 / denom;
+}
 
-        const xtcore::asset::ISurface *surface = (*sit).second;
-        const xtcore::asset::IMaterial *material = (*mit).second;
-        if (!surface || !material || !material->is_emissive()) continue;
+inline bool visible_to_light(xtcore::render::context_t *ctx,
+                             const nmath::Vector3f &origin,
+                             const nmath::Vector3f &target,
+                             HASH_ID light_object_id)
+{
+    const nmath::Vector3f v = target - origin;
+    const nmath::scalar_t dist = v.length();
+    if (dist <= (nmath::scalar_t)EPSILON) return false;
 
-        const nmath::scalar_t area = light_area(surface);
-        if (area <= (nmath::scalar_t)EPSILON) continue;
+    xtcore::Ray shadow_ray;
+    shadow_ray.origin = origin + v.normalized() * EPSILON;
+    shadow_ray.direction = v / dist;
 
-        area_light_t light;
-        light.object_id = obj_id;
-        light.surface = surface;
-        light.material = material;
-        light.area = area;
-        lights.push_back(light);
-    }
+    xtcore::hit_record_t occ;
+    if (!ctx->scene.intersection(shadow_ray, occ)) return false;
+    if (occ.id_object != light_object_id) return false;
+
+    return occ.t >= dist - (nmath::scalar_t)1e-4;
 }
 
 inline void sample_barycentric(nmath::scalar_t &b0, nmath::scalar_t &b1, nmath::scalar_t &b2)
@@ -100,7 +114,11 @@ inline void sample_barycentric(nmath::scalar_t &b0, nmath::scalar_t &b1, nmath::
     }
 }
 
-inline bool sample_light_point(const area_light_t &light, nmath::Vector3f &point, nmath::Vector3f &normal, nmath::Vector3f &texcoord, nmath::scalar_t &pdf_area)
+inline bool sample_light_point(const area_light_t &light,
+                               nmath::Vector3f &point,
+                               nmath::Vector3f &normal,
+                               nmath::Vector3f &texcoord,
+                               nmath::scalar_t &pdf_area)
 {
     if (!light.surface || light.area <= (nmath::scalar_t)EPSILON) return false;
 
@@ -113,8 +131,7 @@ inline bool sample_light_point(const area_light_t &light, nmath::Vector3f &point
         texcoord = nmath::Vector3f(
             (nmath_asin(normal.x / uvsx) / nmath::PI + 0.5),
             (nmath_asin(normal.y / uvsy) / nmath::PI + 0.5),
-            0.0
-        );
+            0.0);
         pdf_area = 1.0 / light.area;
         return true;
     }
@@ -168,35 +185,73 @@ inline bool sample_light_point(const area_light_t &light, nmath::Vector3f &point
     return false;
 }
 
-inline nmath::scalar_t power_heuristic(nmath::scalar_t p_a, nmath::scalar_t p_b)
+inline void collect_area_lights(xtcore::render::context_t *ctx, std::vector<area_light_t> &lights)
 {
-    const nmath::scalar_t a2 = p_a * p_a;
-    const nmath::scalar_t b2 = p_b * p_b;
-    const nmath::scalar_t denom = a2 + b2;
-    if (denom <= (nmath::scalar_t)EPSILON) return 0.0;
-    return a2 / denom;
+    lights.clear();
+    if (!ctx) return;
+
+    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
+        const HASH_ID obj_id = (*it).first;
+        const xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+
+        auto sit = ctx->scene.m_surface.find(obj->surface);
+        auto mit = ctx->scene.m_materials.find(obj->material);
+        if (sit == ctx->scene.m_surface.end() || mit == ctx->scene.m_materials.end()) continue;
+
+        const xtcore::asset::ISurface *surface = (*sit).second;
+        const xtcore::asset::IMaterial *material = (*mit).second;
+        if (!surface || !material || !material->is_emissive()) continue;
+
+        const nmath::scalar_t area = light_area(surface);
+        if (area <= (nmath::scalar_t)EPSILON) continue;
+
+        const nimg::ColorRGBf le_probe = material->get_sample(MAT_SAMPLER_EMISSIVE, nmath::Vector3f(0.0f, 0.0f, 0.0f));
+        const nmath::scalar_t le_luma = std::max((nmath::scalar_t)1e-4, safe_luma(le_probe));
+
+        area_light_t light;
+        light.object_id = obj_id;
+        light.surface = surface;
+        light.material = material;
+        light.area = area;
+        light.select_weight = area * le_luma;
+        lights.push_back(light);
+    }
 }
 
-inline bool visible_to_light(xtcore::render::context_t *ctx, const nmath::Vector3f &origin, const nmath::Vector3f &target, HASH_ID light_object_id)
+inline void prepare_light_distribution(const std::vector<area_light_t> &lights,
+                                       std::vector<nmath::scalar_t> &cdf,
+                                       nmath::scalar_t &total_weight,
+                                       std::map<HASH_ID, nmath::scalar_t> &select_pdf)
 {
-    const nmath::Vector3f v = target - origin;
-    const nmath::scalar_t dist = v.length();
-    if (dist <= (nmath::scalar_t)EPSILON) return false;
+    cdf.clear();
+    select_pdf.clear();
+    total_weight = 0.0;
 
-    xtcore::Ray shadow_ray;
-    shadow_ray.origin = origin + v.normalized() * EPSILON;
-    shadow_ray.direction = v / dist;
+    cdf.reserve(lights.size());
+    for (size_t i = 0; i < lights.size(); ++i) {
+        total_weight += std::max((nmath::scalar_t)0.0, lights[i].select_weight);
+        cdf.push_back(total_weight);
+    }
 
-    xtcore::hit_record_t occ;
-    if (!ctx->scene.intersection(shadow_ray, occ)) return false;
-    if (occ.id_object != light_object_id) return false;
+    if (total_weight <= (nmath::scalar_t)EPSILON) return;
 
-    return occ.t >= dist - (nmath::scalar_t)1e-4;
+    for (size_t i = 0; i < lights.size(); ++i) {
+        const nmath::scalar_t p = lights[i].select_weight / total_weight;
+        select_pdf[lights[i].object_id] = p;
+    }
 }
 
-inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
+inline bool sample_light_index(const std::vector<nmath::scalar_t> &cdf,
+                               nmath::scalar_t total_weight,
+                               size_t &out_idx)
 {
-    return std::max(lo, std::min(v, hi));
+    if (cdf.empty() || total_weight <= (nmath::scalar_t)EPSILON) return false;
+
+    const nmath::scalar_t u = nmath::prng_c(0.0, 1.0) * total_weight;
+    out_idx = std::lower_bound(cdf.begin(), cdf.end(), u) - cdf.begin();
+    if (out_idx >= cdf.size()) out_idx = cdf.size() - 1;
+    return true;
 }
 
 } // namespace
@@ -207,23 +262,24 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
     std::vector<area_light_t> lights;
     collect_area_lights(ctx, lights);
-    std::map<HASH_ID, size_t> light_index_by_objid;
-    for (size_t i = 0; i < lights.size(); ++i) {
-        light_index_by_objid[lights[i].object_id] = i;
-    }
+
+    std::vector<nmath::scalar_t> light_cdf;
+    std::map<HASH_ID, nmath::scalar_t> light_select_pdf;
+    nmath::scalar_t light_weight_sum = 0.0;
+    prepare_light_distribution(lights, light_cdf, light_weight_sum, light_select_pdf);
 
     nimg::ColorRGBf radiance(0, 0, 0);
     nimg::ColorRGBf throughput = in.intensity;
     xtcore::Ray ray = in.ray;
     nmath::scalar_t ior = in.ior;
-    bool prev_was_diffuse_sample = false;
+
+    bool prev_bsdf_delta = true;
     nmath::scalar_t prev_bsdf_pdf = 0.0;
     nmath::Vector3f prev_point;
 
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit_record;
-        bool hit = ctx->scene.intersection(ray, hit_record);
-        if (!hit) {
+        if (!ctx->scene.intersection(ray, hit_record)) {
             radiance += throughput * ctx->scene.sample_environment(ray.direction);
             break;
         }
@@ -236,18 +292,20 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             nimg::ColorRGBf le = m->get_sample(MAT_SAMPLER_EMISSIVE, hit_record.texcoord);
             nmath::scalar_t mis_w = 1.0;
 
-            if (bounce > 0 && prev_was_diffuse_sample && !lights.empty()) {
-                auto lit = light_index_by_objid.find(hit_record.id_object);
-                if (lit != light_index_by_objid.end()) {
-                    const area_light_t &light = lights[(*lit).second];
+            if (bounce > 0 && !prev_bsdf_delta && !lights.empty()) {
+                auto lit = light_select_pdf.find(hit_record.id_object);
+                if (lit != light_select_pdf.end()) {
                     const nmath::scalar_t cos_light = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, -ray.direction));
                     const nmath::Vector3f d = hit_record.point - prev_point;
                     const nmath::scalar_t dist2 = d.length_squared();
                     if (cos_light > (nmath::scalar_t)EPSILON && dist2 > (nmath::scalar_t)EPSILON) {
-                        const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
-                        const nmath::scalar_t p_area = 1.0 / light.area;
-                        const nmath::scalar_t p_light = p_select * p_area * dist2 / cos_light;
-                        mis_w = power_heuristic(prev_bsdf_pdf, p_light);
+                        const xtcore::asset::ISurface *surface = ctx->scene.get_surface(hit_record.id_object);
+                        const nmath::scalar_t area = light_area(surface);
+                        if (area > (nmath::scalar_t)EPSILON) {
+                            const nmath::scalar_t p_area = (nmath::scalar_t)1.0 / area;
+                            const nmath::scalar_t p_light = lit->second * p_area * dist2 / cos_light;
+                            mis_w = power_heuristic(prev_bsdf_pdf, p_light);
+                        }
                     }
                 }
             }
@@ -256,15 +314,13 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             break;
         }
 
-        const nimg::ColorRGBf kd = m->get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord);
-        const nmath::scalar_t kd_luma = nimg::eval::luminance(kd);
+        const nmath::Vector3f wo = (-ray.direction).normalized();
 
-        if (kd_luma > (nmath::scalar_t)0.0) {
-            if (!lights.empty()) {
-                const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
-                size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)lights.size());
-                if (light_idx >= lights.size()) light_idx = lights.size() - 1;
+        if (!lights.empty() && light_weight_sum > (nmath::scalar_t)EPSILON && !m->bsdf_is_delta()) {
+            size_t light_idx = 0;
+            if (sample_light_index(light_cdf, light_weight_sum, light_idx)) {
                 const area_light_t &light = lights[light_idx];
+                const nmath::scalar_t p_select = light.select_weight / light_weight_sum;
 
                 nmath::Vector3f lp, ln, ltc;
                 nmath::scalar_t p_area = 0.0;
@@ -279,44 +335,47 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                         if (cos_s > (nmath::scalar_t)EPSILON &&
                             cos_l > (nmath::scalar_t)EPSILON &&
                             visible_to_light(ctx, hit_record.point + hit_record.normal * EPSILON, lp, light.object_id)) {
-                            const nimg::ColorRGBf le = light.material->get_sample(MAT_SAMPLER_EMISSIVE, ltc);
-                            const nimg::ColorRGBf f = kd * (1.0 / nmath::PI);
-                            const nmath::scalar_t p_light = p_select * p_area * dist2 / cos_l;
-                            if (p_light > (nmath::scalar_t)EPSILON) {
-                                const nmath::scalar_t p_bsdf = cos_s / nmath::PI;
-                                const nmath::scalar_t mis_w = power_heuristic(p_light, p_bsdf);
-                                radiance += throughput * f * le * (cos_s / p_light) * mis_w;
+                            nimg::ColorRGBf f;
+                            nmath::scalar_t p_bsdf = 0.0;
+                            if (m->bsdf_eval(hit_record, wo, wi, f, p_bsdf)) {
+                                const nimg::ColorRGBf le = light.material->get_sample(MAT_SAMPLER_EMISSIVE, ltc);
+                                const nmath::scalar_t p_light = p_select * p_area * dist2 / cos_l;
+                                if (p_light > (nmath::scalar_t)EPSILON) {
+                                    const nmath::scalar_t mis_w = power_heuristic(p_light, p_bsdf);
+                                    radiance += throughput * f * le * (cos_s / p_light) * mis_w;
+                                }
                             }
                         }
                     }
                 }
             }
+        }
 
-            nmath::scalar_t pdf = 0.0;
-            nmath::Vector3f wo = xtcore::math::sampling::sample_cosine_hemisphere(hit_record.normal, pdf);
-            const nmath::scalar_t cos_theta = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, wo));
+        nmath::Vector3f wi;
+        nimg::ColorRGBf f;
+        nmath::scalar_t bsdf_pdf = 0.0;
+        if (!m->bsdf_is_delta() && m->bsdf_sample(hit_record, wo, wi, f, bsdf_pdf)) {
+            const nmath::scalar_t cos_theta = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, wi));
+            if (cos_theta <= (nmath::scalar_t)EPSILON || bsdf_pdf <= (nmath::scalar_t)EPSILON) break;
 
-            if (pdf <= (nmath::scalar_t)EPSILON || cos_theta <= (nmath::scalar_t)0.0) break;
-
-            nimg::ColorRGBf bsdf = kd * (1.0 / nmath::PI);
-            throughput *= bsdf * (cos_theta / pdf);
-
+            throughput *= f * (cos_theta / bsdf_pdf);
+            prev_bsdf_delta = false;
+            prev_bsdf_pdf = bsdf_pdf;
             prev_point = hit_record.point;
-            prev_bsdf_pdf = pdf;
-            prev_was_diffuse_sample = true;
 
             ray.origin = hit_record.point + hit_record.normal * EPSILON;
-            ray.direction = wo;
+            ray.direction = wi;
         } else {
             xtcore::hit_result_t next_hit;
             next_hit.ior = ior;
-            bool path_continues = m->sample_path(next_hit, hit_record);
+            if (!m->sample_path(next_hit, hit_record)) break;
+
             throughput *= next_hit.intensity;
             ray = next_hit.ray;
             ior = next_hit.ior;
-            prev_was_diffuse_sample = false;
+            prev_bsdf_delta = true;
             prev_bsdf_pdf = 0.0;
-            if (!path_continues) break;
+            prev_point = hit_record.point;
         }
 
         if (bounce >= 3) {
@@ -356,6 +415,6 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
     }
 }
 
-        } /* namespace pathtracer_is */
+        } /* namespace pathtracer_mis_full */
     } /* namespace integrator */
 } /* namespace xtcore */

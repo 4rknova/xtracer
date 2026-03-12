@@ -1,0 +1,291 @@
+# Conversion decisions and where we may need to tune for cross-renderer parity:
+# Camera — FOV 28°, positioned at (0, 2, 15) looking toward (0, -2, 0), matching Veach's original slightly downward-angled view of the floor plates.
+# Geometry fidelity — The four glossy plates are placed symmetrically at X = ±1.5, ±4.5, flush with the floor plane (y=0). The four area lights hang near the ceiling at y≈10, spaced to match the plates below. Box meshes via gen(cube) + modifiers stand in for the original quads since the parser has no native quad primitive.
+# Material accuracy — Glossy plates use blinn_phong with exponents 5 / 50 / 500 / 5000 (left to right, roughest to smoothest), approximating the Phong-lobe roughness progression in the original. If your renderer exposes a Beckmann/GGX path instead, the equivalent roughness values would be roughly α = 0.45 / 0.18 / 0.06 / 0.02.
+# Lighting / environment — Environment is pure black (no ambient). The four emissive panels use radiances scaled so that radiance × area is approximately equal across all four lights (equal total power, varying intensity per steradian) — this is the core of the MIS test. If your renderer does not weight emissive by area automatically, you'll want to manually adjust the radiance values by the inverse area ratio.
+# Known approximations to watch for:
+# - blinn_phong is not phong — lobe shape differs; compare against a renderer also using Blinn-Phong for apples-to-apples.
+# - gen(cube) produces a closed box, not an open quad — normals on non-facing faces won't matter for the floor plates but you may want flip_normals on the light boxes if emittance is one-sided in your runtime.
+
+title       = Veach MIS
+description = Eric Veach's Multiple Importance Sampling reference scene. Glossy floor plates with varying roughness, four area lights of varying size and intensity. Faithful to the original dissertation geometry and camera.
+version     = 1.0
+
+environment = {
+  type = color
+  config = {
+    value = col3(0,0,0)
+  }
+}
+
+camera = {
+  cam_main = {
+    type     = thin-lens
+    position = vec3(0, 2.0, 15.0)
+    target   = vec3(0, -2.0, 0)
+    up       = vec3(0, 1, 0)
+    fov      = 28
+    flength  = 50
+    aperture = 0
+  }
+}
+
+geometry = {
+
+  geo_floor = {
+    type     = plane
+    normal   = vec3(0, 1, 0)
+    distance = 0
+  }
+
+  geo_ceil = {
+    type     = plane
+    normal   = vec3(0, -1, 0)
+    distance = -10
+  }
+
+  geo_wall_back = {
+    type     = plane
+    normal   = vec3(0, 0, 1)
+    distance = -10
+  }
+
+  geo_wall_left = {
+    type     = plane
+    normal   = vec3(1, 0, 0)
+    distance = -7
+  }
+
+  geo_wall_right = {
+    type     = plane
+    normal   = vec3(-1, 0, 0)
+    distance = -7
+  }
+
+  # --- Glossy floor plates (four horizontal slabs, each 3 wide x 0.04 tall x 14 deep)
+  # Represented as meshes (box geometry scaled appropriately)
+
+  geo_plate0 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(2.8, 0.04, 13.0)
+      translation = vec3(-4.5, 0.02, 0)
+    }
+  }
+
+  geo_plate1 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(2.8, 0.04, 13.0)
+      translation = vec3(-1.5, 0.02, 0)
+    }
+  }
+
+  geo_plate2 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(2.8, 0.04, 13.0)
+      translation = vec3(1.5, 0.02, 0)
+    }
+  }
+
+  geo_plate3 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(2.8, 0.04, 13.0)
+      translation = vec3(4.5, 0.02, 0)
+    }
+  }
+
+  # --- Area lights (four rectangular emitters hanging from ceiling at y=10)
+  # Sizes: 0.5, 0.2, 0.067, 0.02 wide (half-widths 0.25..0.01); all same height slab
+  # Intensities (power) are inversely proportional to area so total power varies:
+  #   light0: large,  dim   (size 0.5  x 0.5,  intensity 1)
+  #   light1: medium, med   (size 0.2  x 0.2,  intensity 10)
+  #   light2: small,  brig  (size 0.067x 0.067, intensity 100)
+  #   light3: tiny,   vbrig (size 0.02 x 0.02,  intensity 500)
+  # All positioned along X at y=10, z=-3
+
+  geo_light0 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(0.5, 0.5, 0.02)
+      translation = vec3(-4.5, 9.75, -3.0)
+    }
+  }
+
+  geo_light1 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(0.2, 0.2, 0.02)
+      translation = vec3(-1.5, 9.9, -3.0)
+    }
+  }
+
+  geo_light2 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(0.067, 0.067, 0.02)
+      translation = vec3(1.5, 9.967, -3.0)
+    }
+  }
+
+  geo_light3 = {
+    type   = mesh
+    source = gen(cube)
+    modifiers = {
+      scale       = vec3(0.02, 0.02, 0.02)
+      translation = vec3(4.5, 9.99, -3.0)
+    }
+  }
+}
+
+material = {
+
+  mat_white = {
+    type = lambert
+    properties = {
+      samplers = {
+        diffuse = { type = color, value = col3(0.7, 0.7, 0.7) }
+      }
+      scalars = { }
+    }
+  }
+
+  # Glossy plates: blinn_phong with varying exponent to approximate roughness.
+  # Plate 0: roughest  (exponent ~  5)
+  # Plate 1: moderate  (exponent ~ 50)
+  # Plate 2: smooth    (exponent ~500)
+  # Plate 3: near-spec (exponent ~5000)
+  # Diffuse tint matches Veach original (dark grey base).
+
+  mat_gloss0 = {
+    type = blinn_phong
+    properties = {
+      samplers = {
+        diffuse  = { type = color, value = col3(0.1, 0.1, 0.1) }
+        specular = { type = color, value = col3(0.9, 0.9, 0.9) }
+      }
+      scalars = {
+        exponent     = 5
+        reflectance  = 0.9
+        transparency = 0
+      }
+    }
+  }
+
+  mat_gloss1 = {
+    type = blinn_phong
+    properties = {
+      samplers = {
+        diffuse  = { type = color, value = col3(0.1, 0.1, 0.1) }
+        specular = { type = color, value = col3(0.9, 0.9, 0.9) }
+      }
+      scalars = {
+        exponent     = 50
+        reflectance  = 0.9
+        transparency = 0
+      }
+    }
+  }
+
+  mat_gloss2 = {
+    type = blinn_phong
+    properties = {
+      samplers = {
+        diffuse  = { type = color, value = col3(0.1, 0.1, 0.1) }
+        specular = { type = color, value = col3(0.9, 0.9, 0.9) }
+      }
+      scalars = {
+        exponent     = 500
+        reflectance  = 0.9
+        transparency = 0
+      }
+    }
+  }
+
+  mat_gloss3 = {
+    type = blinn_phong
+    properties = {
+      samplers = {
+        diffuse  = { type = color, value = col3(0.1, 0.1, 0.1) }
+        specular = { type = color, value = col3(0.9, 0.9, 0.9) }
+      }
+      scalars = {
+        exponent     = 5000
+        reflectance  = 0.9
+        transparency = 0
+      }
+    }
+  }
+
+  # Emissive materials scaled to preserve power-per-area relationship.
+  # Renderer is assumed to multiply emissive value by surface area internally;
+  # if not, these values approximate equal-power intent visually.
+
+  mat_light0 = {
+    type = emissive
+    properties = {
+      samplers = {
+        emissive = { type = color, value = col3(4.0, 4.0, 4.0) }
+      }
+      scalars = { }
+    }
+  }
+
+  mat_light1 = {
+    type = emissive
+    properties = {
+      samplers = {
+        emissive = { type = color, value = col3(25.0, 25.0, 25.0) }
+      }
+      scalars = { }
+    }
+  }
+
+  mat_light2 = {
+    type = emissive
+    properties = {
+      samplers = {
+        emissive = { type = color, value = col3(225.0, 225.0, 225.0) }
+      }
+      scalars = { }
+    }
+  }
+
+  mat_light3 = {
+    type = emissive
+    properties = {
+      samplers = {
+        emissive = { type = color, value = col3(2500.0, 2500.0, 2500.0) }
+      }
+      scalars = { }
+    }
+  }
+}
+
+object = {
+
+  obj_floor      = { geometry = geo_floor,       material = mat_white  }
+  obj_ceil       = { geometry = geo_ceil,        material = mat_white  }
+  obj_wall_back  = { geometry = geo_wall_back,   material = mat_white  }
+  obj_wall_left  = { geometry = geo_wall_left,   material = mat_white  }
+  obj_wall_right = { geometry = geo_wall_right,  material = mat_white  }
+
+  obj_plate0     = { geometry = geo_plate0,      material = mat_gloss0 }
+  obj_plate1     = { geometry = geo_plate1,      material = mat_gloss1 }
+  obj_plate2     = { geometry = geo_plate2,      material = mat_gloss2 }
+  obj_plate3     = { geometry = geo_plate3,      material = mat_gloss3 }
+
+  obj_light0     = { geometry = geo_light0,      material = mat_light0 }
+  obj_light1     = { geometry = geo_light1,      material = mat_light1 }
+  obj_light2     = { geometry = geo_light2,      material = mat_light2 }
+  obj_light3     = { geometry = geo_light3,      material = mat_light3 }
+}

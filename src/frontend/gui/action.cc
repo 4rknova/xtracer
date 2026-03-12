@@ -5,6 +5,7 @@
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/macro.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include "action.h"
 
 namespace action {
@@ -99,8 +100,20 @@ int write(IMG_FORMAT format, const char *filepath, workspace_t *ws)
     switch (format) {
         case IMG_FORMAT_EXR: fp += ".exr"; res = nimg::io::save::exr(fp.c_str(), fb); break;
         case IMG_FORMAT_HDR: fp += ".hdr"; res = nimg::io::save::hdr(fp.c_str(), fb); break;
-        case IMG_FORMAT_PNG: fp += ".png"; res = nimg::io::save::png(fp.c_str(), fb); break;
-        case IMG_FORMAT_JPG: fp += ".jpg"; res = nimg::io::save::jpg(fp.c_str(), fb); break;
+        case IMG_FORMAT_PNG:
+        {
+            fp += ".png";
+            nimg::Pixmap ldr = fb;
+            xtcore::tonemapping::apply(ldr);
+            res = nimg::io::save::png(fp.c_str(), ldr);
+        } break;
+        case IMG_FORMAT_JPG:
+        {
+            fp += ".jpg";
+            nimg::Pixmap ldr = fb;
+            xtcore::tonemapping::apply(ldr);
+            res = nimg::io::save::jpg(fp.c_str(), ldr);
+        } break;
         case IMG_FORMAT_BMP: fp += ".bmp"; res = nimg::io::save::bmp(fp.c_str(), fb); break;
         case IMG_FORMAT_TGA: fp += ".tga"; res = nimg::io::save::tga(fp.c_str(), fb); break;
     }

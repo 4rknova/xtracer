@@ -31,6 +31,8 @@ class Integrator : public xtcore::render::IIntegrator
     virtual void render_tile(xtcore::render::tile_t *tile);
 
     nimg::ColorRGBf eval(size_t depth, hit_result_t &in);
+    const std::vector<nmath::Vector3f> &debug_global_points() const;
+    const std::vector<nmath::Vector3f> &debug_caustic_points() const;
 
     struct Photon {
         nmath::Vector3f position;
@@ -53,31 +55,51 @@ class Integrator : public xtcore::render::IIntegrator
         nmath::scalar_t weight_cdf;
     };
 
+    struct CausticGuide {
+        const xtcore::asset::ISurface *surface;
+        nmath::scalar_t weight_cdf;
+    };
+
     private:
     std::vector<Photon> m_global_photons;
     std::vector<Photon> m_caustic_photons;
+    std::vector<nmath::Vector3f> m_debug_global_points;
+    std::vector<nmath::Vector3f> m_debug_caustic_points;
     xtcore::math::KDTree3<Photon, PhotonPositionAccessor> m_global_map;
     xtcore::math::KDTree3<Photon, PhotonPositionAccessor> m_caustic_map;
     std::vector<AreaLight> m_lights;
+    std::vector<CausticGuide> m_caustic_guides;
     nmath::scalar_t m_scene_diag;
     nmath::scalar_t m_gather_radius;
+    nmath::scalar_t m_caustic_gather_radius;
     size_t m_gather_k;
+    size_t m_caustic_gather_k;
     size_t m_emit_photons;
+    size_t m_caustic_emit_photons;
     bool m_override_gather_radius;
+    bool m_override_caustic_gather_radius;
     bool m_override_gather_k;
+    bool m_override_caustic_gather_k;
     bool m_override_emit_photons;
+    bool m_override_caustic_emit_photons;
     nmath::scalar_t m_config_gather_radius;
+    nmath::scalar_t m_config_caustic_gather_radius;
     size_t m_config_gather_k;
+    size_t m_config_caustic_gather_k;
     size_t m_config_emit_photons;
+    size_t m_config_caustic_emit_photons;
 
     void build_photon_map();
     void trace_photon(const xtcore::Ray &ray,
                       const nimg::ColorRGBf &power,
                       nmath::scalar_t ior,
                       size_t depth,
-                      bool has_specular_bounce);
+                      bool has_specular_bounce,
+                      bool collect_global,
+                      bool collect_caustic);
     nimg::ColorRGBf estimate_indirect(const xtcore::math::KDTree3<Photon, PhotonPositionAccessor> &map,
                                       nmath::scalar_t gather_radius,
+                                      size_t gather_k,
                                       const xtcore::hit_record_t &hit,
                                       const nimg::ColorRGBf &kd) const;
 };

@@ -27,6 +27,8 @@ class Emissive : public xtcore::asset::IMaterial
                 hit_result_t &hit_result
         , const hit_record_t &hit_record
     ) const;
+
+    virtual bool bsdf_is_delta() const;
 };
 
         } /* namespace material */

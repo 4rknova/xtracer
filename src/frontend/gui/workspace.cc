@@ -1,5 +1,6 @@
 #include <xtcore/memutil.tml>
 #include <xtcore/parseutil.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <nimg/conversion.h>
 #include "workspace.h"
 
@@ -134,10 +135,11 @@ void workspace_t::update()
             for (size_t x = t->x0(); x < t->x1(); ++x) {
                 nimg::ColorRGBAf col;
                 t->read(x, y, col);
+                nimg::ColorRGBf tm = xtcore::tonemapping::apply(nimg::ColorRGBf(col));
                 float data[4] = {
-                    linear_to_srgb(col.r()),
-                    linear_to_srgb(col.g()),
-                    linear_to_srgb(col.b()),
+                    linear_to_srgb(tm.r()),
+                    linear_to_srgb(tm.g()),
+                    linear_to_srgb(tm.b()),
                     col.a()
                 };
                 glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_FLOAT, data);

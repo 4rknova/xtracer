@@ -11,6 +11,7 @@
 #include <xtcore/strpool.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/integrator.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <nimg/img.h>
 
 namespace xtracer {
@@ -84,14 +85,18 @@ static const integrator_control_info_t k_ao_controls[] = {
 };
 
 static const integrator_control_info_t k_photon_mapping_controls[] = {
-      { "emit_photons", "Emit Photons", "int", "Photon emission count", "20000", "1000", "500000", "1000", nullptr, nullptr, nullptr, 0 }
+      { "emit_photons", "Emit Photons", "int", "Photon emission count", "20000", "1000", "10000000", "1000", nullptr, nullptr, nullptr, 0 }
+    , { "caustic_emit_photons", "Caustic Emit", "int", "Caustic photon emission count", "20000", "1000", "10000000", "1000", nullptr, nullptr, nullptr, 0 }
     , { "gather_radius", "Gather Radius", "float", "Radius used for radiance estimate", "0.25", "0.001", "100", "0.001", nullptr, nullptr, nullptr, 0 }
+    , { "caustic_gather_radius", "Caustic Radius", "float", "Radius used for caustic estimate", "0.125", "0.0001", "100", "0.0001", nullptr, nullptr, nullptr, 0 }
     , { "gather_k", "Gather K", "int", "Maximum photons to gather", "64", "1", "1024", "1", nullptr, nullptr, nullptr, 0 }
+    , { "caustic_gather_k", "Caustic Gather K", "int", "Maximum caustic photons to gather", "32", "1", "2048", "1", nullptr, nullptr, nullptr, 0 }
 };
 
 static const integrator_info_t k_integrators[] = {
       { "raytracer", "Raytracer (Whitted)", k_no_controls, 0 }
-    , { "pathtracer_is", "Pathtracer (IS)", k_no_controls, 0 }
+    , { "pathtracer_mis", "Pathtracer (MIS Diffuse)", k_no_controls, 0 }
+    , { "pathtracer_mis_full", "Pathtracer (MIS Full)", k_no_controls, 0 }
     , { "pathtracer", "Pathtracer (Brute Force)", k_no_controls, 0 }
     , { "photon_mapping", "Photon Mapping", k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
     , { "debug_views", "Debug Views", k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
@@ -102,7 +107,9 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
 {
     if      (name == "raytracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::raytracer::Integrator());
     else if (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
+    else if (name == "pathtracer_mis") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
     else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
+    else if (name == "pathtracer_mis_full") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_mis_full::Integrator());
     else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
     else if (name == "debug_views") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator());
     else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
@@ -172,7 +179,7 @@ bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, st
 
 render_request_t::render_request_t()
     : scene_path()
-    , integrator("pathtracer_is")
+    , integrator("pathtracer_mis")
     , camera()
     , width(640)
     , height(480)
@@ -187,6 +194,7 @@ render_request_t::render_request_t()
 render_result_t::render_result_t()
     : ok(false)
     , error()
+    , framebuffer()
     , image_png()
     , tiles_done(0)
     , tiles_total(0)
@@ -368,9 +376,35 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
     auto t1 = std::chrono::steady_clock::now();
     result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
 
+    xtcore::integrator::photon_mapping::Integrator *pm =
+        dynamic_cast<xtcore::integrator::photon_mapping::Integrator *>(integrator.get());
+    if (pm) {
+        const std::vector<nmath::Vector3f> &diffuse = pm->debug_global_points();
+        const std::vector<nmath::Vector3f> &caustic = pm->debug_caustic_points();
+        result.photon_diffuse_points.reserve(diffuse.size());
+        result.photon_caustic_points.reserve(caustic.size());
+        for (size_t i = 0; i < diffuse.size(); ++i) {
+            common::render_result_t::point3_t p;
+            p.x = (float)diffuse[i].x;
+            p.y = (float)diffuse[i].y;
+            p.z = (float)diffuse[i].z;
+            result.photon_diffuse_points.push_back(p);
+        }
+        for (size_t i = 0; i < caustic.size(); ++i) {
+            common::render_result_t::point3_t p;
+            p.x = (float)caustic[i].x;
+            p.y = (float)caustic[i].y;
+            p.z = (float)caustic[i].z;
+            result.photon_caustic_points.push_back(p);
+        }
+    }
+
     nimg::Pixmap framebuffer;
     xtcore::render::assemble(framebuffer, context);
-    if (!encode_png_memory(framebuffer, result.image_png, result.error)) {
+    result.framebuffer = framebuffer;
+    nimg::Pixmap ldr_framebuffer = framebuffer;
+    xtcore::tonemapping::apply(ldr_framebuffer);
+    if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
         return result;
     }
 

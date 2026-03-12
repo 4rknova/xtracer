@@ -65,6 +65,11 @@ bool Dielectric::sample_path(
     return true;
 }
 
+bool Dielectric::bsdf_is_delta() const
+{
+    return true;
+}
+
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */

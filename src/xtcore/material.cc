@@ -55,6 +55,43 @@ bool IMaterial::is_emissive() const
     return (has_emissive_scl || has_emissive_tex);
 }
 
+bool IMaterial::bsdf_is_delta() const
+{
+    return false;
+}
+
+bool IMaterial::bsdf_eval(
+            const hit_record_t &hit_record
+    , const Vector3f &wo
+    , const Vector3f &wi
+    , ColorRGBf &f
+    , scalar_t &pdf
+) const
+{
+    (void)hit_record;
+    (void)wo;
+    (void)wi;
+    f = ColorRGBf(0.0f, 0.0f, 0.0f);
+    pdf = 0.0f;
+    return false;
+}
+
+bool IMaterial::bsdf_sample(
+            const hit_record_t &hit_record
+    , const Vector3f &wo
+    , Vector3f &wi
+    , ColorRGBf &f
+    , scalar_t &pdf
+) const
+{
+    (void)hit_record;
+    (void)wo;
+    wi = Vector3f(0.0f, 0.0f, 0.0f);
+    f = ColorRGBf(0.0f, 0.0f, 0.0f);
+    pdf = 0.0f;
+    return false;
+}
+
 float IMaterial::get_scalar(const char *name) const
 {
     const std::map<std::string, float>::const_iterator it = m_scalars.find(name);

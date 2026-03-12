@@ -34,6 +34,7 @@ class IIntegrator
 #include "integrator/raytracer/integrator.h"
 #include "integrator/pathtracer/integrator.h"
 #include "integrator/pathtracer_is/integrator.h"
+#include "integrator/pathtracer_mis_full/integrator.h"
 #include "integrator/photon_mapping/integrator.h"
 #include "integrator/ao/integrator.h"
 

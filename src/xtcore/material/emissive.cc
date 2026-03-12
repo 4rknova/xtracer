@@ -26,6 +26,11 @@ bool Emissive::sample_path(
     return false;
 }
 
+bool Emissive::bsdf_is_delta() const
+{
+    return true;
+}
+
         } /* namespace material */
     } /* namespace asset */
 } /* namespace xtcore */
