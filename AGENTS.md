@@ -13,10 +13,10 @@ This file is the orientation and operating guide for coding agents working in th
 
 - Core renderer and scene system: `src/xtcore/`
 - CLI frontend: `src/frontend/cli/`
-- Web frontend backend: `src/web-server/`
+- Web frontend backend: `src/frontend/web-server/`
 - WASM frontend runtime: `src/frontend/wasm/`
 - Frontend shared helpers: `src/frontend/common/`
-- Web static assets: `src/web-client/`
+- Web static assets: `src/frontend/web-client/`
 - Supporting libraries: `lib/`
 - Third-party dependencies: `ext/`
 - Scene examples: `scene/`
@@ -39,10 +39,10 @@ This file is the orientation and operating guide for coding agents working in th
 - CLI integrator selection code in `src/frontend/cli/xtracer.cc` is currently commented out; treat CLI rendering path as needing repair before relying on it.
 - Web frontend is implemented as `xtracer_web`:
   - HTTP server via `ext/cpp-httplib/httplib.h`
-  - Async render jobs managed in `src/web-server/job_manager.*`
+  - Async render jobs managed in `src/frontend/web-server/job_manager.*`
   - Shared render pipeline in `src/frontend/common/render_service.*`
-  - Backend log stream in `src/web-server/backend_log.*`
-  - Static SPA in `src/web-client/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
+  - Backend log stream in `src/frontend/web-server/backend_log.*`
+  - Static SPA in `src/frontend/web-client/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
 
 ### Web API Surface (Current)
 
@@ -64,7 +64,7 @@ This file is the orientation and operating guide for coding agents working in th
   - host: `127.0.0.1`
   - port: `8080`
   - scene dir: `scene/`
-  - web root: `src/web-client/`
+  - web root: `src/frontend/web-client/`
 - Job execution is serialized via a global render mutex in web backend (avoids OpenMP oversubscription from concurrent jobs).
 - PNG responses are currently produced by rendering to `nimg::Pixmap` then encoding via temporary file path.
 
@@ -82,7 +82,7 @@ Short version:
 
 - Architecture notes: `docs/ARCHITECTURE_NOTES.md`
 - Renderer/integrator inventory: `docs/RENDERERS.md`
-- Web UI/feature behavior: `src/web-client/index.html`, `src/web-client/app.js`, `src/web-client/styles.css`
+- Web UI/feature behavior: `src/frontend/web-client/index.html`, `src/frontend/web-client/app.js`, `src/frontend/web-client/styles.css`
 
 ## Scene Format Reference (Parser-Backed)
 
@@ -147,8 +147,8 @@ Notes:
 - When a code/config/API/feature change affects documented behavior, update `README.md` in the same task so it reflects the current repository state.
 - When changing rendering flow, validate worker-thread behavior in web/WASM frontends.
 - When changing web API responses, update both:
-  - backend route handlers in `src/web-server/routes.cc`
-  - frontend consumers in `src/web-client/app.js`
+  - backend route handlers in `src/frontend/web-server/routes.cc`
+  - frontend consumers in `src/frontend/web-client/app.js`
 - If adding new integrators, update both:
   - `src/xtcore/integrator.h`
   - Integrator registry in `src/frontend/common/render_service.cc`

@@ -32,7 +32,7 @@ cmake --build build -j
 Run web server:
 
 ```bash
-./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/web-client --verbose
+./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -49,9 +49,9 @@ Run CLI:
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
 | CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
-| Web frontend backend | `src/web-server/` | HTTP API, job manager, log stream |
+| Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
-| Web static app | `src/web-client/` | SPA for Render / Editor / Settings / Logs / About |
+| Web static app | `src/frontend/web-client/` | SPA for Render / Editor / Settings / Logs / About |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies |
@@ -247,7 +247,7 @@ cmake --build build -j
 ### Web Server
 
 ```bash
-./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/web-client --verbose
+./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -270,8 +270,8 @@ cmake --build build-wasm -j --target xtracer_wasm
 
 Expected output:
 
-- `src/web-client/xtracer_wasm.js`
-- `src/web-client/xtracer_wasm.wasm`
+- `src/frontend/web-client/xtracer_wasm.js`
+- `src/frontend/web-client/xtracer_wasm.wasm`
 
 Optional static packaging:
 
