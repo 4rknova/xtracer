@@ -41,10 +41,11 @@ geometry = {
             p5 = tex2(0.22,0.80)
             p6 = tex2(0.20,1.00)
         }
-        modifiers = {
-            translation = vec3(-4.2,1.0,2.6)
-            rotation    = vec3(0,16,0)
-        }
+            	    	modifiers = {
+    		rotation = vec3(0, 0, 0)
+    		scale = vec3(1, 1, 1)
+    		translation = vec3(1.416563, -0.149561, -6.826684)
+    	}
     }
 
     lathe_vase_marble = {
@@ -61,10 +62,11 @@ geometry = {
             p5 = tex2(0.30,0.90)
             p6 = tex2(0.22,1.00)
         }
-        modifiers = {
-            translation = vec3(-1.3,1.0,3.1)
-            rotation    = vec3(0,-10,0)
-        }
+            	modifiers = {
+    		rotation = vec3(0, 0, 0)
+    		scale = vec3(1, 1, 1)
+    		translation = vec3(0.695911, 0.045275, -1.066356)
+    	}
     }
 
     lathe_goblet_open = {
@@ -82,10 +84,11 @@ geometry = {
             p6 = tex2(0.50,0.76)
             p7 = tex2(0.42,1.00)
         }
-        modifiers = {
-            translation = vec3(1.8,1.0,2.4)
-            rotation    = vec3(0,20,0)
-        }
+            	modifiers = {
+    		rotation = vec3(0, 0, 0)
+    		scale = vec3(1, 1, 1)
+    		translation = vec3(0.066146, 0.044401, -0.010251)
+    	}
     }
 
     lathe_decanter_marble = {
@@ -103,10 +106,11 @@ geometry = {
             p6 = tex2(0.30,0.92)
             p7 = tex2(0.16,1.00)
         }
-        modifiers = {
-            translation = vec3(4.6,1.0,3.5)
-            rotation    = vec3(0,-24,0)
-        }
+            	    	    	    	    	    	    	modifiers = {
+    		rotation = vec3(0, 0, 0)
+    		scale = vec3(1, 1, 1)
+    		translation = vec3(-6.614731, -0.033032, -4.194781)
+    	}
     }
 
     key_light = {

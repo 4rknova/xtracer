@@ -18,7 +18,7 @@ geometry = {
     cage = {
         type       = mesh
         source     = gen(icosa_cage)
-        resolution = 16
+        resolution = 64
         modifiers = {
             scale = vec3(1.4,1.4,1.4)
         }
