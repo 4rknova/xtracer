@@ -1,213 +1,301 @@
 <img align="center" src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
 
-XTRACER
--------
+# XTRACER
 
-Copyright 2010 (c) Nikos Papadopoulos [nikpapas@gmail.com]
-
-XTracer is an experimental rendering framework written in c and c++.
-
+Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, GUI, Web, WASM runtime).
 
 [![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
 
-## Samples
+## Current Status (`develop`)
 
-You can find sample scenes in the scene directory. Note that some of the
-scenes require textures or meshes that are not included in the repository.
+- Build system is CMake-driven (legacy `./configure && make` still exists, but CMake is the maintained path).
+- Core renderer and scene parsing are active under `src/xtcore/`.
+- GUI frontend is optional via `XTRACER_ENABLE_GUI`.
+- HTTP web frontend is optional via `XTRACER_ENABLE_WEB`.
+- Standalone WASM renderer runtime is optional via `XTRACER_ENABLE_WASM`.
 
-Sample renders can be found in [this page](https://www.artstation.com/artwork/xkaGO).
+## Repository Layout
 
-## Features
+| Area | Path | Purpose |
+|---|---|---|
+| Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
+| CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
+| GUI frontend | `src/frontend/gui/` | OpenGL + ImGui interactive frontend |
+| Web frontend backend | `src/frontend/web/` | HTTP API, job manager, log stream |
+| Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
+| Web static app | `res/web/` | SPA for Render / Editor / Settings / Logs / About |
+| Scenes | `scene/` | Example scene files (`.scn`) |
+| Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
+| Third-party deps | `ext/` | Vendored external dependencies |
 
-* Renderers
-    * Distributed ray-tracing
-    * Depth
-    * Stencil
-* Primitives
-    * Plane
-    * Triangle
-    * Sphere
-    * Mesh
-* Materials
-    * Lambert
-    * Phong
-    * Blinn-Phong
-* Light sources
-    * Point
-    * Sphere
-    * Box
-    * Triangle
-    * Mesh
-* Cameras
-    * Pinhole
-    * Thin lens
-* Acceleration
-    * Threading
-    * Octrees
-    * KD-trees
-* Anti-Aliasing
-    * Multi Sampling
+## Feature Matrix
 
-## Compilation / Installation
+### Frontends
 
-Component    | Linux   | Windows | OSX     |
-:------------|:-------:|:-------:|:-------:|
-xtcore       |    X    |         |         |
-frontend cli |    X    |         |         |
-frontend gui |    X    |         |         |
+| Capability | CLI (`xtracer_cli`) | GUI (`xtracer_gui`) | Web (`xtracer_web`) | WASM (`xtracer_wasm`) |
+|---|---:|---:|---:|---:|
+| Load `.scn` scenes | Yes | Yes | Yes | Yes |
+| Select camera | Yes (`-cam`) | Yes | Yes | Yes |
+| Integrator selection | Yes (`-renderer`) | Yes (menu) | Yes (`/api/integrators`) | Yes (through web app adapter) |
+| Progressive updates | Terminal progress | Tile updates in UI | Job progress + preview API | Progressive snapshots |
+| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR | PNG/HDR/EXR (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
+| HTTP API | No | No | Yes | No |
 
-### Debian/Ubuntu Build Dependencies
+### Integrators
 
-Base toolchain (CLI/core):
+| Integrator ID | Type | Exposed In GUI | Exposed In `/api/integrators` |
+|---|---|---:|---:|
+| `raytracer` | Whitted-style | Yes | Yes |
+| `pathtracer` | Brute-force path tracing | Yes | Yes |
+| `pathtracer_mis` | MIS diffuse path tracing | Yes | Yes |
+| `pathtracer_mis_full` | MIS full path tracing | Yes | Yes |
+| `photon_mapping` | Photon mapping | Yes | Yes |
+| `ao` | Ambient occlusion | Yes | Yes |
+| `debug_views` | Multi-mode debug integrator | Yes | Yes |
+| `depth` | Debug depth alias | Yes | No (alias accepted in `/api/render`) |
+| `stencil` | Debug stencil alias | Yes | No (alias accepted in `/api/render`) |
+| `normal` | Debug normal alias | Yes | No (alias accepted in `/api/render`) |
+| `uv` | Debug UV alias | Yes | No (alias accepted in `/api/render`) |
+| `emission` | Debug emission alias | Yes | No (alias accepted in `/api/render`) |
 
-    sudo apt update
-    sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
+### Scene Schema Support (`.scn`)
+
+#### Environment Types
+
+| Type | Notes |
+|---|---|
+| `gradient` | Uses `config.a`, `config.b` colors |
+| `color` | Uses `config.value` |
+| `cubemap` | Uses face sources: `posx/posy/posz/negx/negy/negz` |
+| `erp` | Uses panoramic source texture |
+
+#### Camera Types
+
+| Type | Notes |
+|---|---|
+| `thin-lens` | Position/target/up/fov/flength/aperture |
+| `ods` | Omni-directional stereo camera |
+| `erp` | Equirectangular camera |
+| `cubemap` | Cubemap camera |
+
+#### Geometry Types
+
+| Type | Notes |
+|---|---|
+| `plane` | Analytic plane |
+| `sphere` | Analytic sphere |
+| `point` | Parsed as epsilon-radius sphere |
+| `triangle` | Triangle via `vecdata.v0/v1/v2` |
+| `mesh` | External OBJ or procedural generator |
+
+#### Procedural Mesh Generators (`geometry.type = mesh`, `source = gen(...)`)
+
+| Generator | Generator | Generator | Generator |
+|---|---|---|---|
+| `plane` | `icosahedron` | `tetrahedron` | `cube` |
+| `hexahedron` | `octahedron` | `dodecahedron` | `capsule` |
+| `cylinder` | `capped_cylinder` | `cone` | `truncated_cone` |
+| `ring` | `torus_knot` | `icosphere` | `geodesic_dome` |
+| `icosa_cage` | `menger_sponge` | `sierpinski_tetrahedron` | `mobius_strip` |
+| `klein_bottle` | `hairball` | `shell_spiral` | `rock` |
+| `chain_link` | `lathe` | `snowflake` | - |
+
+#### Material Types
+
+| Type |
+|---|
+| `lambert` |
+| `phong` |
+| `blinn_phong` |
+| `emissive` |
+| `dielectric` |
+
+#### Sampler Types
+
+| Type | Notes |
+|---|---|
+| `color` | Solid color |
+| `texture` | 2D texture |
+| `cubemap` | Cubemap texture |
+| `erp` | Equirectangular texture |
+| `gradient` | Gradient sampler |
+| `graphpaper` | Procedural graph paper |
+| `checker` | Procedural checker |
+| `weave` | Procedural weave |
+| `fbm_marble` | Procedural marble |
+
+#### Mesh Modifiers
+
+| Modifier |
+|---|
+| `rotation` |
+| `scale` |
+| `translation` |
+| `flip_normals` |
+| `extrude` |
+
+## Web App + API
+
+### Web App Tabs
+
+| Tab | Key Capabilities |
+|---|---|
+| Render | Scene/camera/integrator selection, render settings, preview, export |
+| Editor | Scene source editor, scene save, visual viewport integration |
+| Settings | Frontend behavior toggles and polling controls |
+| Logs | Backend log stream with incremental polling |
+| About | Build/backend metadata and license text |
+
+### Web API Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/health` | Health probe |
+| GET | `/api/about` | Backend/app metadata |
+| GET | `/api/scenes` | List available scenes |
+| GET | `/api/scenes/{scene}/cameras` | List cameras in scene |
+| GET | `/api/scenes/{scene}/source` | Fetch scene source |
+| GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload |
+| GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata |
+| GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
+| GET | `/api/scenes/template/empty` | Empty scene template |
+| POST | `/api/scenes/save` | Save scene source |
+| GET | `/api/integrators` | List backend integrators + controls |
+| GET | `/api/resolutions` | Resolution presets |
+| POST | `/api/render` | Create render job |
+| GET | `/api/jobs/{id}` | Job status snapshot |
+| GET | `/api/jobs/{id}/image` | PNG preview/final image |
+| GET | `/api/jobs/{id}/export?format=png|exr|hdr` | Download final export |
+| GET | `/api/jobs/{id}/photons` | Photon debug points |
+| GET | `/api/logs?since=<id>` | Incremental backend logs |
+
+## Build
+
+### Prerequisites (Debian/Ubuntu)
+
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
+```
 
 GUI frontend (`XTRACER_ENABLE_GUI=ON`):
 
-    sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev libglew-dev libglfw3-dev
+```bash
+sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev libglew-dev libglfw3-dev
+```
 
 RtMidi/ALSA support (`XTRACER_ENABLE_RTMIDI=ON`):
 
-    sudo apt install -y libasound2-dev
+```bash
+sudo apt install -y libasound2-dev
+```
 
-Standalone WASM frontend (`XTRACER_ENABLE_WASM=ON`):
+WASM toolchain (`XTRACER_ENABLE_WASM=ON`):
 
-    sudo apt install -y emscripten
+```bash
+sudo apt install -y emscripten
+```
 
-If your distro package is too old, install the upstream Emscripten SDK and use
-`emcmake`/`emcc` from that SDK in your shell.
+### Recommended Native Build (Out-of-Tree)
 
-Use the following commands to build:
+```bash
+cmake -S . -B build -DXTRACER_ENABLE_GUI=ON -DXTRACER_ENABLE_WEB=ON
+cmake --build build -j
+```
 
-    ./configure
-    make
+> Note: native binaries are configured to output under repo-local `bin/debug` (Debug) or `bin/release` (non-Debug).
 
-Or with CMake:
+### CMake Options
 
-    cmake -S . -B build -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=ON
-    cmake --build build -j
+| Option | Default | Description |
+|---|---:|---|
+| `XTRACER_ENABLE_RTMIDI` | `ON` | Build RtMidi/ALSA support |
+| `XTRACER_ENABLE_GUI` | `ON` | Build GUI frontend |
+| `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
+| `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
+| `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
 
-## Colorspace Tests
+## Run
 
-Build only the colorspace test targets:
+### CLI
 
-    cmake --build build -j --target nimg_colorspace_test nimg_colorspace_vectors_test
+```bash
+./bin/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+```
 
-Run only colorspace tests with CTest:
+### Web Server
 
-    ctest --test-dir build -R '^colorspace::' --output-on-failure
+```bash
+./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web --verbose
+```
 
-Run test binaries directly:
+Open: `http://127.0.0.1:8080`
 
-    ./build/bin/nimg_colorspace_test
-    ./build/bin/nimg_colorspace_vectors_test
+### Math Microbenchmark
 
-## Web Frontend (Simple)
+```bash
+./bin/release/bench_nmath
+```
 
-Build target: `xtracer_web`
+### WASM Runtime Build
 
-Run from repo root:
+```bash
+emcmake cmake -S . -B build-wasm \
+  -DXTRACER_ENABLE_GUI=OFF \
+  -DXTRACER_ENABLE_WEB=OFF \
+  -DXTRACER_ENABLE_RTMIDI=OFF \
+  -DXTRACER_ENABLE_WASM=ON
+cmake --build build-wasm -j --target xtracer_wasm
+```
 
-    ./bin/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web
-
-Open:
-
-    http://127.0.0.1:8080
-
-## WASM Frontend (Standalone Worker Runtime)
-
-Build `xtracer_wasm` with Emscripten so the output is emitted to `res/web/`:
-
-    emcmake cmake -S . -B build-wasm -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON
-    cmake --build build-wasm -j --target xtracer_wasm
-
-Expected artifacts:
+Expected output:
 
 - `res/web/xtracer_wasm.js`
 - `res/web/xtracer_wasm.wasm`
 
-Run the normal web server and enable the WASM adapter mode:
+Optional static packaging:
 
-    ./bin/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web
+```bash
+./util/package_wasm_standalone.sh
+```
 
-Open:
+## Test Targets
 
-    http://127.0.0.1:8080/?backend=wasm
+| Test Name (CTest) | Binary |
+|---|---|
+| `colorspace::roundtrip` | `bin/<debug|release>/test/test_nimg_colorspace` |
+| `colorspace::vectors` | `bin/<debug|release>/test/test_nimg_colorspace_vectors` |
+| `xtcore::tile` | `bin/<debug|release>/test/test_xtcore_tile` |
+| `xtcore::context` | `bin/<debug|release>/test/test_xtcore_context` |
+| `xtcore::sphere` | `bin/<debug|release>/test/test_xtcore_sphere` |
+| `xtcore::triangle` | `bin/<debug|release>/test/test_xtcore_triangle` |
+| `xtcore::white_furnace` | `bin/<debug|release>/test/test_xtcore_white_furnace` |
+| `xtcore::raytracer_emissive` | `bin/<debug|release>/test/test_xtcore_raytracer_emissive` |
+| `cli::setup_parse` | `bin/<debug|release>/test/test_xtracer_cli_setup` |
+| `ncf::inline_and_utf8` | `bin/<debug|release>/test/test_ncf_parser` |
+| `cli::stencil_smoke` | `bin/<debug|release>/xtracer_cli` smoke render |
 
-Create a fully standalone static bundle (no `/api/*` backend required):
+Run all tests:
 
-    ./util/package_wasm_standalone.sh
+```bash
+ctest --test-dir build --output-on-failure
+```
 
-This creates `dist-wasm/` with:
+## Third-Party Dependencies
 
-- web app assets
-- `xtracer_wasm.js` and `xtracer_wasm.wasm`
-- `scene/*.scn` copied to `dist-wasm/scenes/`
-- `dist-wasm/scenes/index.json`
-
-Serve it with any static server:
-
-    cd dist-wasm
-    python3 -m http.server 8080
-
-Open:
-
-    http://127.0.0.1:8080/?backend=wasm
-
-Build standalone WASM dist as part of the normal native build:
-
-    cmake -S . -B build -DXTRACER_ENABLE_WASM_DIST=ON
-    cmake --build build -j
-
-This automatically:
-
-- configures `build-wasm/` with Emscripten
-- builds `xtracer_wasm`
-- packages standalone output into `bin/wasm-dist/`
-
-Web UI includes:
-
-- Render tab: scene/integrator/camera selection and render preview.
-  - Progressive preview updates while render jobs are running.
-- Editor tab: inspect selected scene source, create a new scene, and save as `.scn`.
-- Settings tab: theme and frontend-only options.
-- Logs tab: backend log stream with clear action.
-- About tab: version, author metadata, and full project license text.
-
-Web API includes:
-
-- `GET /api/health`
-- `GET /api/about`
-- `GET /api/scenes`
-- `GET /api/scenes/{scene}/cameras`
-- `GET /api/scenes/{scene}/source`
-- `POST /api/scenes/save`
-- `GET /api/integrators`
-- `POST /api/render`
-- `GET /api/jobs/{id}`
-- `GET /api/jobs/{id}/image` (`?final=1` for final-only image)
-- `GET /api/jobs/{id}/export?format=png|exr|hdr`
-- `GET /api/logs?since=<id>`
-
-## Dependencies
-
-Name          | License            | URL
---------------|--------------------|-----------------------------------------------------------------
-ImGui         | MIT License        | https://github.com/ocornut/imgui
-TinyObjLoader | MIT License        | https://github.com/syoyo/tinyobjloader
-TinyFiles     | Public Domain      | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h
-STB           | Public Domain      | https://github.com/nothings/stb
-TinyEXR       | 3-clause BSD       | https://github.com/syoyo/tinyexr
-Remotery      | Apache License 2.0 | https://github.com/Celtoys/Remotery
-strpool       | Public Domain      | https://github.com/mattiasgustavsson/libs
+| Name | License | URL |
+|---|---|---|
+| ImGui | MIT | https://github.com/ocornut/imgui |
+| TinyObjLoader | MIT | https://github.com/syoyo/tinyobjloader |
+| TinyFiles | Public Domain | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h |
+| STB | Public Domain / MIT | https://github.com/nothings/stb |
+| TinyEXR | BSD-3-Clause | https://github.com/syoyo/tinyexr |
+| strpool | Public Domain | https://github.com/mattiasgustavsson/libs |
+| cpp-httplib | MIT | https://github.com/yhirose/cpp-httplib |
+| RtMidi | MIT-style | https://github.com/thestk/rtmidi |
 
 ## License
 
-<a href="http://opensource.org/licenses/BSD-3-Clause" target="_blank">
-<img align="right" src="http://opensource.org/trademarks/opensource/OSI-Approved-License-100x137.png">
-</a>
+BSD 3-Clause. See `LICENSE`.
 
-BSD 3-Clause License.
-
-Please see License File for more information.
+Copyright (c) 2010-present Nikos Papadopoulos.

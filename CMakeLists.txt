@@ -15,7 +15,11 @@ endif()
 # PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
-set(PATH_BIN  ${PATH_ROOT}/bin)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PATH_BIN ${PATH_ROOT}/bin/debug)
+else()
+    set(PATH_BIN ${PATH_ROOT}/bin/release)
+endif()
 set(PATH_WEB  ${PATH_ROOT}/res/web)
 if (XTRACER_USING_EMSCRIPTEN)
     set(PATH_BIN ${PATH_ROOT}/bin-wasm)
@@ -156,6 +160,7 @@ set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
 set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
+set(OUT_EXE_NMATH_BENCH bench_nmath)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -260,6 +265,7 @@ add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_tes
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
 add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
+add_executable(${OUT_EXE_NMATH_BENCH} ${PATH_SRC_TESTS}/nmath_bench.cc)
 set_target_properties(${OUT_EXE_COLORSPACE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
@@ -289,6 +295,9 @@ set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
 )
 set_target_properties(${OUT_EXE_NCF_PARSER_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_NMATH_BENCH} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
 )
 
 target_include_directories(${OUT_EXE_CLI} PUBLIC
@@ -368,6 +377,13 @@ target_include_directories(${OUT_EXE_NCF_PARSER_TEST} PUBLIC
 target_include_directories(${OUT_EXE_NCF_PARSER_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_NMATH_BENCH} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH} SYSTEM PUBLIC
+    ${ext_libs}
+)
 
 if (XTRACER_ENABLE_RTMIDI)
     target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
@@ -384,6 +400,7 @@ target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthrea
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_NMATH_BENCH} PRIVATE xtcore_static pthread)
 
 if (XTRACER_ENABLE_WEB)
     set(OUT_EXE_WEB xtracer_web)
@@ -469,7 +486,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unknown-pragmas")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
@@ -490,6 +507,7 @@ target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_BENCH} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_COLORSPACE_VECTORS_TEST} xtcore_static)
@@ -501,6 +519,7 @@ add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_NMATH_BENCH} xtcore_static)
 
 enable_testing()
 
