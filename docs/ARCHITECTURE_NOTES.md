@@ -26,9 +26,9 @@
   - Entrypoint: `src/frontend/cli/xtracer.cc`
   - Arg parsing: `src/frontend/cli/argparse.cc`
 - Web:
-  - Entrypoint: `src/frontend/web/main.cc`
-  - HTTP routing/API: `src/frontend/web/routes.cc`
-  - Job lifecycle: `src/frontend/web/job_manager.cc`
+  - Entrypoint: `src/web-server/main.cc`
+  - HTTP routing/API: `src/web-server/routes.cc`
+  - Job lifecycle: `src/web-server/job_manager.cc`
 - WASM:
   - Entrypoint: `src/frontend/wasm/main.cc`
   - Shared render bridge: `src/frontend/common/render_service.cc`

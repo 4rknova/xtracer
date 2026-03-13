@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     std::string host = "127.0.0.1";
     int port = 8080;
     std::string scene_dir = "scene";
-    std::string web_root = "res/web";
+    std::string web_root = "src/web-client";
     bool verbose = false;
 
     for (int i = 1; i < argc; ++i) {

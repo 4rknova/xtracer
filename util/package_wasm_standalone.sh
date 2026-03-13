@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WEB_DIR="$ROOT_DIR/res/web"
+WEB_DIR="$ROOT_DIR/src/web-client"
 SCENE_DIR="$ROOT_DIR/scene"
 DIST_DIR="${1:-$ROOT_DIR/dist-wasm}"
 PREVIEW_SRC="$ROOT_DIR/res/preview.jpg"

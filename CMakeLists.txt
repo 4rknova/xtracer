@@ -19,7 +19,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
     set(PATH_BIN ${PATH_ROOT}/bin/release)
 endif()
-set(PATH_WEB  ${PATH_ROOT}/res/web)
+set(PATH_WEB  ${PATH_SRC}/web-client)
 if (XTRACER_USING_EMSCRIPTEN)
     set(PATH_BIN ${PATH_ROOT}/bin-wasm)
 endif()
@@ -82,7 +82,7 @@ endif()
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
-set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web)
+set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/web-server)
 set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
@@ -380,7 +380,7 @@ if (XTRACER_ENABLE_WASM)
     )
     target_link_libraries(${OUT_EXE_WASM} PRIVATE xtcore_static)
     set_target_properties(${OUT_EXE_WASM} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${PATH_ROOT}/res/web
+        RUNTIME_OUTPUT_DIRECTORY ${PATH_WEB}
     )
     target_link_options(${OUT_EXE_WASM} PRIVATE
         "SHELL:-sWASM=1"

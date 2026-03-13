@@ -13,15 +13,45 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 - HTTP web frontend is optional via `XTRACER_ENABLE_WEB`.
 - Standalone WASM renderer runtime is optional via `XTRACER_ENABLE_WASM`.
 
+## Quick Start (Install + Run)
+
+Install dependencies (Debian/Ubuntu):
+
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+```
+
+Configure + build:
+
+```bash
+cmake -S . -B build -DXTRACER_ENABLE_WEB=ON
+cmake --build build -j
+```
+
+Run web server:
+
+```bash
+./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/web-client --verbose
+```
+
+Open: `http://127.0.0.1:8080`
+
+Run CLI:
+
+```bash
+./bin/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+```
+
 ## Repository Layout
 
 | Area | Path | Purpose |
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
 | CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
-| Web frontend backend | `src/frontend/web/` | HTTP API, job manager, log stream |
+| Web frontend backend | `src/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
-| Web static app | `res/web/` | SPA for Render / Editor / Settings / Logs / About |
+| Web static app | `src/web-client/` | SPA for Render / Editor / Settings / Logs / About |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies |
@@ -217,7 +247,7 @@ cmake --build build -j
 ### Web Server
 
 ```bash
-./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root res/web --verbose
+./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/web-client --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -240,8 +270,8 @@ cmake --build build-wasm -j --target xtracer_wasm
 
 Expected output:
 
-- `res/web/xtracer_wasm.js`
-- `res/web/xtracer_wasm.wasm`
+- `src/web-client/xtracer_wasm.js`
+- `src/web-client/xtracer_wasm.wasm`
 
 Optional static packaging:
 
