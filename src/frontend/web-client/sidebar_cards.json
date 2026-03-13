@@ -7,11 +7,25 @@
     "toneMappingControlsCard",
     "exportControlsCard"
   ],
-  "visual": [
-    "sceneControlsCard",
-    "frameControlsCard",
-    "visualControlsCard"
-  ],
+  "visual": {
+    "visual": [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "visualControlsCard",
+      "sceneEditControlsCard"
+    ],
+    "graph": [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "sceneEditControlsCard"
+    ],
+    "text": [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "textEditorControlsCard",
+      "sceneEditControlsCard"
+    ]
+  },
   "logs": [
     "logsControlsCard"
   ],

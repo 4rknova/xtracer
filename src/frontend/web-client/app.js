@@ -79,6 +79,7 @@ const el = {
   exportFormat: $("exportFormat"),
   download: $("download"),
   sceneName: $("sceneName"),
+  editorOpStatus: $("editorOpStatus"),
   editObjectSelect: $("editObjectSelect"),
   editGeometryType: $("editGeometryType"),
   editTranslateX: $("editTranslateX"),
@@ -107,7 +108,7 @@ const el = {
   visualLoadBtn: $("visualLoadBtn"),
   visualCamera: $("visualCamera"),
   visualProjection: $("visualProjection"),
-  visualStatus: $("visualStatus"),
+  visualSelectionTag: $("visualSelectionTag"),
   visualShowGrid: $("visualShowGrid"),
   visualViewport: $("visualViewport"),
   visualPanel: $("visualPanel"),
@@ -190,9 +191,28 @@ const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
   ],
   visual: [
     "sceneControlsCard",
-    "visualControlsCard",
     "frameControlsCard",
+    "sceneEditControlsCard",
   ],
+  visual_by_editor: {
+    visual: [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "visualControlsCard",
+      "sceneEditControlsCard",
+    ],
+    graph: [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "sceneEditControlsCard",
+    ],
+    text: [
+      "sceneControlsCard",
+      "frameControlsCard",
+      "textEditorControlsCard",
+      "sceneEditControlsCard",
+    ],
+  },
   logs: [
     "sceneControlsCard",
     "logsControlsCard",
@@ -351,6 +371,18 @@ function setStatus(text) {
   el.status.textContent = statusText;
   el.status.classList.remove("is-idle", "is-running", "is-error");
   el.status.classList.add(`is-${state}`);
+}
+
+function setEditorOpStatus(kind, text) {
+  if (!el.editorOpStatus) return;
+  const msg = String(text || "").trim();
+  el.editorOpStatus.hidden = !msg;
+  el.editorOpStatus.textContent = msg;
+  el.editorOpStatus.classList.remove("is-success", "is-error", "is-info");
+  if (!msg) return;
+  if (kind === "success") el.editorOpStatus.classList.add("is-success");
+  else if (kind === "error") el.editorOpStatus.classList.add("is-error");
+  else el.editorOpStatus.classList.add("is-info");
 }
 
 function formatElapsed(ms) {
@@ -2266,6 +2298,13 @@ function presetId(index) {
   return String(index).padStart(2, "0");
 }
 
+function formatResolutionPresetLabel(index, preset, descWidth) {
+  const baseDesc = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+  const paddedDesc = baseDesc.padEnd(Math.max(1, descWidth), " ");
+  const sizeLabel = `${preset.width}x${preset.height}`;
+  return `${paddedDesc}   ${sizeLabel}`;
+}
+
 function syncResolutionPresetFromInputs() {
   const { width, height } = currentRenderSize();
   const index = resolutionPresets.findIndex((p) => p.width === width && p.height === height);
@@ -2288,11 +2327,15 @@ async function loadResolutionPresets() {
 
   el.resolutionPreset.innerHTML = "";
   addOption(el.resolutionPreset, "custom", "Custom");
+  const descWidth = resolutionPresets.reduce((max, preset, index) => {
+    const desc = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+    return Math.max(max, desc.length);
+  }, 0);
   resolutionPresets.forEach((preset, index) => {
     addOption(
       el.resolutionPreset,
       String(index),
-      `${presetId(index)} ${preset.description} ${preset.width}x${preset.height}`,
+      formatResolutionPresetLabel(index, preset, descWidth),
     );
   });
   syncResolutionPresetFromInputs();
@@ -2310,21 +2353,45 @@ function normalizeTabMode(mode) {
 }
 
 function normalizeSidebarCardVisibilityConfig(rawConfig) {
-  const normalized = {};
+  const normalizeIds = (source) => (source || [])
+    .filter((id) => typeof id === "string" && id.trim())
+    .map((id) => id.trim())
+    .filter((id, idx, arr) => arr.indexOf(id) === idx);
+  const normalized = {
+    visual_by_editor: {},
+  };
+
+  const visualModeRaw = rawConfig
+    && ((rawConfig.visual && typeof rawConfig.visual === "object" && !Array.isArray(rawConfig.visual))
+      ? rawConfig.visual
+      : (rawConfig.visual_by_editor && typeof rawConfig.visual_by_editor === "object" ? rawConfig.visual_by_editor : null));
+  if (visualModeRaw) {
+    const visual3d = Array.isArray(visualModeRaw.visual) ? visualModeRaw.visual : (Array.isArray(visualModeRaw["3d"]) ? visualModeRaw["3d"] : []);
+    const graph = Array.isArray(visualModeRaw.graph) ? visualModeRaw.graph : [];
+    const text = Array.isArray(visualModeRaw.text) ? visualModeRaw.text : [];
+    if (visual3d.length > 0) normalized.visual_by_editor.visual = normalizeIds(visual3d);
+    if (graph.length > 0) normalized.visual_by_editor.graph = normalizeIds(graph);
+    if (text.length > 0) normalized.visual_by_editor.text = normalizeIds(text);
+  }
+
   TAB_MODES.forEach((mode) => {
     let source = [];
-    if (rawConfig && Array.isArray(rawConfig[mode])) {
+    if (rawConfig && mode === "visual" && rawConfig.visual && typeof rawConfig.visual === "object" && !Array.isArray(rawConfig.visual)) {
+      source = Array.isArray(rawConfig.visual.default) ? rawConfig.visual.default : [];
+    } else if (rawConfig && Array.isArray(rawConfig[mode])) {
       source = rawConfig[mode];
     } else if (rawConfig && mode === "visual" && Array.isArray(rawConfig.editor)) {
       source = rawConfig.editor;
     } else if (rawConfig && mode === "settings" && Array.isArray(rawConfig.about)) {
       source = rawConfig.about;
     }
-    const ids = source
-      .filter((id) => typeof id === "string" && id.trim())
-      .map((id) => id.trim());
-    normalized[mode] = Array.from(new Set(ids));
+    normalized[mode] = normalizeIds(source);
   });
+
+  if (!normalized.visual_by_editor.visual && Array.isArray(normalized.visual) && normalized.visual.length > 0) {
+    normalized.visual_by_editor.visual = [...normalized.visual];
+  }
+
   return normalized;
 }
 
@@ -2400,6 +2467,9 @@ function setEditorViewMode(mode, persist) {
   setActive(el.editorViewTextBtn, !isVisual && !isGraph);
 
   if (persist !== false) localStorage.setItem(EDITOR_VIEW_MODE_KEY, nextMode);
+  if (activeTabMode === "visual") {
+    applySidebarCardLayout("visual");
+  }
   if (isVisual && visualEditor) {
     if (visualEditor.onShow) visualEditor.onShow();
     if (visualEditor.resize) visualEditor.resize();
@@ -2441,7 +2511,11 @@ function applySidebarCardLayout(mode) {
   const container = document.querySelector(".panel-controls");
   if (!container) return;
 
-  const visibleIds = sidebarCardVisibility[mode] || [];
+  let visibleIds = sidebarCardVisibility[mode] || [];
+  if (mode === "visual" && sidebarCardVisibility.visual_by_editor) {
+    const byEditor = sidebarCardVisibility.visual_by_editor;
+    visibleIds = byEditor[editorViewMode] || byEditor.visual || visibleIds;
+  }
   const visibleSet = new Set(visibleIds);
   const cards = Array.from(container.querySelectorAll("details.control-section"));
   const cardById = new Map(cards.map((card) => [card.id, card]));
@@ -2965,15 +3039,18 @@ function triggerSceneSave() {
         })
         .then(() => {
           setStatus(`saved ${scene}`);
+          setEditorOpStatus("success", `Saved: ${scene}`);
           appendLog(`saved scene: ${scene}`);
         })
         .catch((err) => {
           setStatus(`error: ${err.message}`);
+          setEditorOpStatus("error", `Save failed: ${err.message}`);
           appendLog(`post-save error: ${err.message}`);
         });
     })
     .catch((err) => {
       setStatus(`error: ${err.message}`);
+      setEditorOpStatus("error", `Save failed: ${err.message}`);
       appendLog(`save error: ${err.message}`);
     });
 }
@@ -3137,7 +3214,7 @@ async function boot() {
   if (el.visualViewport && window.SceneVisualEditor) {
     visualEditor = new window.SceneVisualEditor(
       el.visualViewport,
-      el.visualStatus || null,
+      el.visualSelectionTag || null,
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneGeometry")) throw new Error("geometry endpoint unavailable");
         return api.getSceneGeometry(sceneName);
@@ -3477,10 +3554,12 @@ async function boot() {
     loadSceneSource(el.scene.value)
       .then(() => {
         setStatus(`loaded ${el.scene.value}`);
+        setEditorOpStatus("success", `Loaded: ${el.scene.value}`);
         appendLog(`loaded source: ${el.scene.value}`);
       })
       .catch((err) => {
         setStatus(`error: ${err.message}`);
+        setEditorOpStatus("error", `Load failed: ${err.message}`);
         appendLog(`load source error: ${err.message}`);
       });
   });
@@ -3495,10 +3574,12 @@ async function boot() {
         syncEditorScroll();
         renderSceneGraphView();
         setStatus("new scene initialized");
+        setEditorOpStatus("info", "New scene template initialized");
         appendLog("new scene template");
       })
       .catch((err) => {
         setStatus(`error: ${err.message}`);
+        setEditorOpStatus("error", `New scene failed: ${err.message}`);
         appendLog(`new scene template error: ${err.message}`);
       });
   });

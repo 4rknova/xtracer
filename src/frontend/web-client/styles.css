@@ -206,7 +206,7 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 2rem;
 }
 
 .topbar {
@@ -461,6 +461,7 @@ h2 {
   cursor: pointer;
   user-select: none;
   padding: 11px 12px;
+  border-radius: 10px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -511,11 +512,13 @@ h2 {
   border-bottom: 2px solid color-mix(in srgb, var(--muted) 88%, transparent);
   transform: rotate(45deg);
   transition: transform 0.16s ease, border-color 0.16s ease;
-  margin-right: 4px;
+  margin-right: 9px;
 }
 
 .control-card[open] summary {
   border-bottom-color: color-mix(in srgb, var(--line) 76%, transparent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .control-card[open] summary::after {
@@ -687,6 +690,11 @@ button:focus-visible,
   outline-offset: 1px;
 }
 
+select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--line-strong) 76%, var(--accent));
+}
+
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -816,7 +824,7 @@ button:focus-visible,
 }
 
 .visual-controls-card-body .inline-check {
-  margin: 0;
+  margin-block: 6px;
 }
 
 #settingsControlsCard .inline-check {
@@ -953,6 +961,28 @@ textarea {
   margin-top: 6px;
 }
 
+#sceneEditControlsCard .scene-edit-panel {
+  grid-template-columns: 1fr;
+}
+
+#sceneEditControlsCard .scene-edit-group {
+  padding: 9px;
+}
+
+#sceneEditControlsCard .scene-edit-title {
+  margin-bottom: 7px;
+}
+
+#sceneEditControlsCard .scene-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+#sceneEditControlsCard .scene-edit-actions button {
+  width: 100%;
+}
+
 .editor-shell {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -1072,12 +1102,12 @@ textarea {
 .inline-check {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 6px 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--field-bg) 58%, transparent);
+  gap: 1rem;
+  justify-content: flex-start;
+  padding-block: 0.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -1088,9 +1118,10 @@ textarea {
 .inline-check input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
+  order: 2;
   width: 18px;
   height: 18px;
-  margin: 0;
+  margin: 0 0 0 auto;
   padding: 0;
   flex: 0 0 18px;
   border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
@@ -1103,11 +1134,12 @@ textarea {
 
 .inline-check input[type="checkbox"]::before {
   content: "";
-  width: 5px;
-  height: 9px;
+  box-sizing: border-box;
+  width: 6px;
+  height: 10px;
   border-right: 2px solid #ffffff;
   border-bottom: 2px solid #ffffff;
-  transform: rotate(45deg) scale(0);
+  transform: translateY(-1px) rotate(45deg) scale(0);
   transform-origin: center;
   transition: transform 0.12s ease;
 }
@@ -1119,7 +1151,7 @@ textarea {
 }
 
 .inline-check input[type="checkbox"]:checked::before {
-  transform: rotate(45deg) scale(1);
+  transform: translateY(-1px) rotate(45deg) scale(1);
 }
 
 .inline-check input[type="checkbox"]:focus-visible {
@@ -1201,10 +1233,63 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--accent) 66%, transparent);
 }
 
-#clearLogsBtn {
-  width: auto;
-  margin-top: 0;
-  padding-inline: 12px;
+.editor-op-status {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--muted);
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-wrap: anywhere;
+}
+
+.editor-op-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: 0 0 7px;
+  background: color-mix(in srgb, var(--muted) 72%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--line) 56%, transparent);
+}
+
+.editor-op-status.is-success {
+  color: color-mix(in srgb, #95e2b5 90%, #ffffff);
+  border-color: color-mix(in srgb, #5cb687 52%, var(--line));
+  background: color-mix(in srgb, #2d7e5b 24%, transparent);
+}
+
+.editor-op-status.is-success::before {
+  background: color-mix(in srgb, #7fdaaa 90%, #ffffff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #4a9d74 34%, transparent);
+}
+
+.editor-op-status.is-error {
+  color: color-mix(in srgb, #f2a0a0 92%, #ffffff);
+  border-color: color-mix(in srgb, #c86a6a 56%, var(--line));
+  background: color-mix(in srgb, #7c2d2d 22%, transparent);
+}
+
+.editor-op-status.is-error::before {
+  background: color-mix(in srgb, #ee8f8f 92%, #ffffff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #b85f5f 34%, transparent);
+}
+
+.editor-op-status.is-info {
+  color: var(--muted);
+  border-color: color-mix(in srgb, var(--line) 76%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+}
+
+.editor-op-status.is-info::before {
+  background: color-mix(in srgb, var(--accent) 72%, #ffffff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
 .log-output {
@@ -1212,16 +1297,7 @@ textarea {
   min-height: 0;
   max-height: none;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
-  border-radius: 10px;
-  padding: 12px 13px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--field-bg) 88%, transparent) 0%,
-      color-mix(in srgb, var(--field-bg) 72%, transparent) 100%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 5%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #000 6%, transparent);
+  padding: 1rem 0.5rem;
   color: var(--ink);
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.84rem;
@@ -1582,36 +1658,83 @@ button:disabled {
 .editor-view-toolbar {
   display: flex;
   justify-content: flex-start;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
 .editor-view-switch {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--field-bg) 85%, transparent);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--panel) 90%, transparent) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 2px 10px color-mix(in srgb, #000000 16%, transparent);
 }
 
 .editor-view-btn {
   width: auto;
   margin: 0;
-  padding: 6px 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 9px 12px;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.12s ease;
+}
+
+.editor-view-btn:first-child {
+  border-top-left-radius: 9px;
+  border-bottom-left-radius: 9px;
+}
+
+.editor-view-btn:last-child {
+  border-top-right-radius: 9px;
+  border-bottom-right-radius: 9px;
+}
+
+.editor-view-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 86%, var(--accent) 14%);
+}
+
+.editor-view-btn:active {
+  transform: translateY(1px);
+}
+
+.editor-view-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 76%, #ffffff);
+  outline-offset: 1px;
 }
 
 .editor-view-btn.active {
-  background: color-mix(in srgb, var(--accent) 86%, #ffffff);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--accent) 78%, #ffffff) 100%
+    );
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 28%, transparent),
+    0 2px 8px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
 .graph-panel {
@@ -1695,69 +1818,83 @@ button:disabled {
   width: 100%;
 }
 
+#resolutionPreset {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
 .visual-camera-inline {
-  width: 170px;
+  width: 100%;
   margin: 0;
   padding: 7px 8px;
 }
 
 .visual-projection-inline {
-  width: 130px;
+  width: 100%;
   margin: 0;
   padding: 7px 8px;
 }
 
 .visual-load-btn {
-  margin: 0;
-  padding: 7px 10px;
   white-space: nowrap;
 }
 
 .visual-controls-info {
-  margin: 0 0 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--field-bg) 68%, transparent);
+  margin: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.visual-controls-info summary {
-  list-style: none;
-  cursor: pointer;
-  user-select: none;
-  padding: 8px 10px;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
+.visual-controls-title {
+  margin: 2px 0 5px;
+  padding: 0;
+  font-size: 0.77rem;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
   font-weight: 700;
   color: var(--muted);
 }
 
-.visual-controls-info summary::-webkit-details-marker {
-  display: none;
-}
-
-.visual-controls-grid {
+.visual-controls-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
-  padding: 0 10px 10px;
-  font-size: 0.82rem;
-  color: var(--muted);
+  gap: 4px;
+  width: 100%;
 }
 
-.visual-controls-grid p {
-  margin: 0;
+.visual-controls-item {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: baseline;
+  column-gap: 10px;
+  width: 100%;
 }
 
-.visual-controls-grid kbd {
-  display: inline-block;
-  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.76rem;
+.visual-controls-key {
   color: var(--ink);
-  background: color-mix(in srgb, var(--field-bg) 86%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.visual-controls-item .control-hint {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.25;
+}
+
+.visual-controls-key kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 6px;
+  padding: 0 4px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 78%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--line) 64%, transparent);
 }
 
 #exportControlsCard .control-section-body {
@@ -1773,51 +1910,65 @@ button:disabled {
   text-decoration: none;
 }
 
-#exportControlsCard .reset-view-btn,
-#exportControlsCard .export-download-link {
+.control-section-body > button:not(.aa-pill),
+.control-section-body .post-filters-toolbar > button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 40px;
+  min-height: 36px;
   margin: 0;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--accent) 75%, var(--line));
+  margin-block: 0.25rem;
+  padding: 7px 11px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 62%, var(--line));
   background: var(--accent);
   color: #fff;
   text-align: center;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;
-  transition: transform 0.12s ease, opacity 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
+  box-shadow: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
 }
 
-#exportControlsCard .reset-view-btn:focus-visible,
-#exportControlsCard .export-download-link:focus-visible {
+.control-section-body > button:not(.aa-pill):focus-visible,
+.control-section-body .post-filters-toolbar > button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 75%, white);
   outline-offset: 1px;
 }
 
-#exportControlsCard .reset-view-btn:not(:disabled):not(.is-disabled):hover,
-#exportControlsCard .export-download-link:not(.is-disabled):hover {
-  transform: translateY(-1px);
+.control-section-body > button:not(.aa-pill):not(:disabled):not(.is-disabled):hover,
+.control-section-body .post-filters-toolbar > button:not(:disabled):not(.is-disabled):hover {
+  background: color-mix(in srgb, var(--accent) 92%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 86%, #ffffff);
 }
 
-#exportControlsCard .reset-view-btn:disabled,
-#exportControlsCard .reset-view-btn.is-disabled,
-#exportControlsCard .export-download-link.is-disabled {
+.control-section-body > button:not(.aa-pill):active,
+.control-section-body .post-filters-toolbar > button:active {
+  background: color-mix(in srgb, var(--accent) 78%, #0a0d12);
+  border-color: color-mix(in srgb, var(--accent) 94%, #ffffff);
+  color: color-mix(in srgb, #ffffff 96%, var(--accent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000000 24%, transparent);
+}
+
+.control-section-body > button:not(.aa-pill):disabled,
+.control-section-body > button:not(.aa-pill).is-disabled,
+.control-section-body > button:not(.aa-pill)[aria-disabled="true"],
+.control-section-body .post-filters-toolbar > button:disabled,
+.control-section-body .post-filters-toolbar > button.is-disabled,
+.control-section-body .post-filters-toolbar > button[aria-disabled="true"] {
   background: color-mix(in srgb, var(--muted) 58%, var(--bg-2));
   border-color: color-mix(in srgb, var(--line) 72%, transparent);
   color: color-mix(in srgb, #ffffff 88%, var(--muted));
   cursor: not-allowed;
   pointer-events: none;
   opacity: 1;
-  transform: none;
+  box-shadow: none;
 }
 
 .preview-headline {
@@ -1841,7 +1992,8 @@ button:disabled {
   color: #fff;
   text-decoration: none;
   font-weight: 600;
-  transition: transform 0.12s ease, opacity 0.12s ease;
+  box-shadow: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -1873,7 +2025,15 @@ button:disabled {
 }
 
 .action-btn:not(.is-disabled):hover {
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent) 92%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 86%, #ffffff);
+}
+
+.action-btn:not(.is-disabled):active {
+  background: color-mix(in srgb, var(--accent) 78%, #0a0d12);
+  border-color: color-mix(in srgb, var(--accent) 94%, #ffffff);
+  color: color-mix(in srgb, #ffffff 96%, var(--accent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000000 24%, transparent);
 }
 
 .action-btn.is-disabled {
@@ -1894,6 +2054,7 @@ button:disabled {
 }
 
 .visual-viewport-top {
+  position: relative;
   width: 100%;
   height: clamp(520px, 84vh, 1040px);
   min-height: 440px;
@@ -1908,6 +2069,27 @@ button:disabled {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.visual-selection-tag {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  max-width: min(60%, 420px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  color: color-mix(in srgb, var(--ink) 92%, #ffffff);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  box-shadow: 0 8px 22px color-mix(in srgb, #000000 26%, transparent);
 }
 
 #paneVisual.active {
@@ -2095,8 +2277,9 @@ button:disabled {
     justify-content: flex-start;
   }
 
-  .visual-controls-grid {
-    grid-template-columns: 1fr;
+  .visual-controls-item {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
   }
 
   .log-head {
@@ -2132,6 +2315,19 @@ button:disabled {
 
   .scene-edit-panel {
     grid-template-columns: 1fr;
+  }
+
+  .editor-view-switch {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .editor-view-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
   }
 
   #paneVisual .panel-preview {
