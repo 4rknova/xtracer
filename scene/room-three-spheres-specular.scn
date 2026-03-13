@@ -10,7 +10,7 @@ camera = {
 		fov = 45
 
 		position = {
-			z = -2000
+			z = -20
 		}
 
 		up = {
@@ -24,12 +24,12 @@ camera = {
 		fov = 45
 
 		position = {
-			y = 100
-			z = 480
+			y = 1
+			z = 4.8
 		}
 
 		target = {
-			z = 300
+			z = 3
 		}
 
 		up = {
@@ -43,9 +43,9 @@ camera = {
 		fov = 45
 
 		position = {
-			x = 300
-			y = 300
-			z = -1400
+			x = 3
+			y = 3
+			z = -14
 		}
 
 		up = {
@@ -59,75 +59,75 @@ geometry = {
 	red_ball = {
 		type = sphere
 		position = {
-			x = 80
-			y = -305
-			z = -100
+			x = 0.8
+			y = -3.05
+			z = -1
 		}
-		radius = 95
+		radius = 0.95
 	}
 	green_ball = {
 		type = sphere
 		position = {
-			x = 350
-			y = -330
-			z = 350
+			x = 3.5
+			y = -3.3
+			z = 3.5
 		}
-		radius = 77
+		radius = 0.77
 	}
 	blue_ball = {
 		type = sphere
 		position = {
-			x = -220
-			y = -245
-			z = 80
+			x = -2.2
+			y = -2.45
+			z = 0.8
 		}
-		radius = 155
+		radius = 1.55
 	}
 	floor = {
 		type = plane
 		normal = {
 			y = 1
 		}
-		distance = -400
+		distance = -4
 	}
 	ceiling = {
 		type = plane
 		normal = {
 			y = -1
 		}
-		distance = 400
+		distance = 4
 	}
 	back = {
 		type = plane
 		normal = {
 			z = -1
 		}
-		distance = 500
+		distance = 5
 	}
 	left_wall = {
 		type = plane
 		normal = {
 			x = 1
 		}
-		distance = -500
+		distance = -5
 	}
 	right_wall = {
 		type = plane
 		normal = {
 			x = -1
 		}
-		distance = 500
+		distance = 5
 	}
 
 	l0 = {
 		type = sphere
 
-        radius = 25
+        radius = 0.25
 
 		position = {
 			x = 0
-			y = 150
-			z = -400
+			y = 1.5
+			z = -4
 		}
 
 		intensity = {

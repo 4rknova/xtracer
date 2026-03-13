@@ -6,14 +6,14 @@ camera = {
 	default = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(0,0,-2000)
+		position = vec3(0,0,-20)
 		up       = vec3(0,1,0)
 	}
 
 	side = {
         type     = thin-lens
 		fov      = 45
-		position = vec3(300,300,-1400)
+		position = vec3(3,3,-14)
 		up       = vec3(0,1,0)
 	}
 }
@@ -21,56 +21,56 @@ camera = {
 geometry = {
 	red_ball = {
 		type     = sphere
-		position = vec3(80,-305,-100)
-		radius   = 95
+		position = vec3(0.8,-3.05,-1)
+		radius   = 0.95
 	}
 
 	green_ball = {
 		type     = sphere
-		position = vec3(350,-330,350)
-       	radius   = 77
+		position = vec3(3.5,-3.3,3.5)
+       	radius   = 0.77
 	}
 
 	blue_ball = {
 		type     = sphere
-		position = vec3(-220, -245, 80)
-		radius   = 155
+		position = vec3(-2.2,-2.45,0.8)
+		radius   = 1.55
 	}
 
 	floor = {
 		type     = plane
 		normal   = vec3(0,1,0)
-		distance = -400
+		distance = -4
 	}
 
 	ceiling = {
 		type     = plane
 		normal   = vec3(0,-1,0)
-		distance = 400
+		distance = 4
 	}
 
 	back = {
 		type     = plane
 		normal   = vec3(0,0,-1)
-		distance = 500
+		distance = 5
 	}
 
 	left_wall = {
 		type     = plane
 		normal   = vec3(1,0,0)
-		distance = -500
+		distance = -5
 	}
 
 	right_wall = {
 		type     = plane
 		normal   = vec3(-1,0,0)
-		distance = 500
+		distance = 5
 	}
 
 	l0 = {
 		type     = sphere
-		radius   = 25
-		position = vec3(0,150,-400)
+		radius   = 0.25
+		position = vec3(0,1.5,-4)
 	}
 }
 
