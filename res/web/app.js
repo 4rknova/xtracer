@@ -5,20 +5,23 @@ const el = {
   tabVisual: $("tabVisual"),
   tabSettings: $("tabSettings"),
   tabLogs: $("tabLogs"),
-  tabAbout: $("tabAbout"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
   paneSettings: $("paneSettings"),
   paneLogs: $("paneLogs"),
-  paneAbout: $("paneAbout"),
+  qualityControlsCard: $("qualityControlsCard"),
+  exportControlsCard: $("exportControlsCard"),
   theme: $("theme"),
+  darkPalette: $("darkPalette"),
   pollInterval: $("pollInterval"),
   autoLoadEditor: $("autoLoadEditor"),
   autoScrollLogs: $("autoScrollLogs"),
-  fontSizeDown: $("fontSizeDown"),
-  fontSizeUp: $("fontSizeUp"),
-  fontSizeValue: $("fontSizeValue"),
+  fontSizePreset: $("fontSizePreset"),
   clearLogsBtn: $("clearLogsBtn"),
+  logFilterDebug: $("logFilterDebug"),
+  logFilterMessage: $("logFilterMessage"),
+  logFilterWarning: $("logFilterWarning"),
+  logFilterError: $("logFilterError"),
   logOutput: $("logOutput"),
   aboutVersionRow: $("aboutVersionRow"),
   aboutVersion: $("aboutVersion"),
@@ -31,6 +34,7 @@ const el = {
   aboutDefaultUrl: $("aboutDefaultUrl"),
   aboutSceneDir: $("aboutSceneDir"),
   aboutStaticAssets: $("aboutStaticAssets"),
+  aboutThirdPartyList: $("aboutThirdPartyList"),
   sceneDependencyPill: $("sceneDependencyPill"),
   scene: $("scene"),
   camera: $("camera"),
@@ -42,6 +46,8 @@ const el = {
   height: $("height"),
   samples: $("samples"),
   aa: $("aa"),
+  sampleDistribution: $("sample_distribution"),
+  aaPills: Array.from(document.querySelectorAll(".aa-pill")),
   rdepth: $("rdepth"),
   tileSize: $("tile_size"),
   tileOrder: $("tile_order"),
@@ -104,7 +110,31 @@ const el = {
   visualStatus: $("visualStatus"),
   visualShowGrid: $("visualShowGrid"),
   visualViewport: $("visualViewport"),
+  visualPanel: $("visualPanel"),
+  graphPanel: $("graphPanel"),
+  graphCanvas: $("graphCanvas"),
+  graphLegend: $("graphLegend"),
+  textEditorPanel: $("textEditorPanel"),
+  editorView3dBtn: $("editorView3dBtn"),
+  editorViewGraphBtn: $("editorViewGraphBtn"),
+  editorViewTextBtn: $("editorViewTextBtn"),
 };
+
+const DEFAULT_THIRD_PARTY_LICENSES = [
+  { name: "ImGui", license: "MIT", url: "https://github.com/ocornut/imgui" },
+  { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
+  {
+    name: "TinyFiles",
+    license: "Public Domain",
+    url: "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h",
+  },
+  { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
+  { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
+  { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
+  { name: "cpp-httplib", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
+  { name: "RtMidi", license: "MIT-style", url: "https://github.com/thestk/rtmidi" },
+  { name: "Three.js", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+];
 
 const uiOptions = {
   pollMs: 300,
@@ -112,7 +142,10 @@ const uiOptions = {
   autoScrollLogs: true,
   clearPreviewOnRender: false,
   previewSampling: "smooth",
+  fontSizePreset: "default",
   fontScale: 1.0,
+  darkPalette: "slate",
+  lightPalette: "coastal",
 };
 let resolutionPresets = [];
 let sceneDependencyByFile = new Map();
@@ -122,7 +155,18 @@ let previewPendingRevokeUrl = "";
 let previewPinnedBaseUrl = "";
 let previewPinnedBaseBitmapPromise = null;
 let preservePreviewUnderlay = false;
+let activePreviewTiles = [];
+let activePreviewTileWidth = 0;
+let activePreviewTileHeight = 0;
 let pendingLogScroll = false;
+const LOG_HISTORY_LIMIT = 10000;
+const logEntries = [];
+const logFilters = {
+  debug: false,
+  message: true,
+  warning: true,
+  error: true,
+};
 let renderActive = false;
 let renderStartMs = 0;
 let renderTimerInterval = null;
@@ -134,10 +178,60 @@ let integratorCatalog = [];
 let integratorById = new Map();
 const integratorControlState = new Map();
 const BACKEND_MODE_KEY = "xtracer-backend-mode";
+const ACTIVE_TAB_KEY = "xtracer-active-tab";
+const EDITOR_VIEW_MODE_KEY = "xtracer-editor-view-mode";
+const LAST_SCENE_KEY = "xtracer-last-scene";
+const LOG_FILTERS_KEY = "xtracer-log-filters";
+const SIDEBAR_VISIBILITY_CONFIG_URL = "/sidebar_cards.json";
+const TAB_MODES = ["render", "visual", "logs", "settings"];
+// Fallback sidebar visibility matrix per top-level tab.
+const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
+  render: [
+    "sceneControlsCard",
+    "integratorControlsCard",
+    "frameControlsCard",
+    "qualityControlsCard",
+    "exportControlsCard",
+  ],
+  visual: [
+    "sceneControlsCard",
+    "visualControlsCard",
+    "frameControlsCard",
+  ],
+  logs: [
+    "sceneControlsCard",
+    "logsControlsCard",
+  ],
+  settings: [
+    "sceneControlsCard",
+    "settingsControlsCard",
+  ],
+};
+let sidebarCardVisibility = { ...DEFAULT_SIDEBAR_CARD_VISIBILITY };
+let sidebarCardVisibilityRaw = "";
 let api = null;
 let backendMode = "server";
 let visualEditor = null;
 let visualLoadedSceneName = "";
+let editorViewMode = "visual";
+let activeTabMode = "render";
+const graphView = {
+  scale: 1,
+  tx: 0,
+  ty: 0,
+  minScale: 0.35,
+  maxScale: 3.0,
+  panning: false,
+  pointerId: null,
+  lastX: 0,
+  lastY: 0,
+  worldW: 0,
+  worldH: 0,
+  userAdjusted: false,
+  bound: false,
+  hoverKey: "",
+  data: null,
+};
 const previewView = {
   scale: 1,
   tx: 0,
@@ -149,6 +243,35 @@ const previewView = {
   lastX: 0,
   lastY: 0,
 };
+
+const DARK_PALETTE_OPTIONS = [
+  { value: "slate", label: "Slate" },
+  { value: "crimson", label: "Crimson" },
+  { value: "graphite", label: "Graphite" },
+];
+const LIGHT_PALETTE_OPTIONS = [
+  { value: "coastal", label: "Coastal" },
+  { value: "amber", label: "Amber" },
+  { value: "sage", label: "Sage" },
+];
+const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
+const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
+const FONT_SIZE_PRESET_DEFAULT = "default";
+const FONT_SIZE_PRESET_LARGE = "large";
+
+function normalizeFontSizePreset(value) {
+  const preset = String(value || "").toLowerCase();
+  if (preset === FONT_SIZE_PRESET_LARGE) return FONT_SIZE_PRESET_LARGE;
+  return FONT_SIZE_PRESET_DEFAULT;
+}
+
+function scaleForFontSizePreset(preset) {
+  return normalizeFontSizePreset(preset) === FONT_SIZE_PRESET_LARGE ? 1.1 : 1.0;
+}
+
+function fontSizePresetFromScale(scale) {
+  return Number(scale) > 1.02 ? FONT_SIZE_PRESET_LARGE : FONT_SIZE_PRESET_DEFAULT;
+}
 
 function nowStamp() {
   const d = new Date();
@@ -171,19 +294,55 @@ function scrollLogToBottom(force) {
   });
 }
 
+function normalizeLogLevel(levelRaw) {
+  const level = String(levelRaw || "").toLowerCase();
+  if (level === "debug") return "debug";
+  if (level === "warn" || level === "warning") return "warning";
+  if (level === "err" || level === "error") return "error";
+  return "message";
+}
+
+function isLogLevelEnabled(level) {
+  if (level === "debug") return !!logFilters.debug;
+  if (level === "warning") return !!logFilters.warning;
+  if (level === "error") return !!logFilters.error;
+  return !!logFilters.message;
+}
+
+function renderLogOutput() {
+  if (!el.logOutput) return;
+  const text = logEntries
+    .filter((entry) => isLogLevelEnabled(entry.level))
+    .map((entry) => entry.line)
+    .join("\n");
+  el.logOutput.textContent = text ? `${text}\n` : "";
+  scrollLogToBottom(false);
+}
+
+function appendLogEntry(level, line) {
+  if (!line) return;
+  logEntries.push({
+    level: normalizeLogLevel(level),
+    line: String(line),
+  });
+  if (logEntries.length > LOG_HISTORY_LIMIT) {
+    logEntries.splice(0, logEntries.length - LOG_HISTORY_LIMIT);
+  }
+  renderLogOutput();
+}
+
 function appendLog(message) {
   if (!message) return;
-  el.logOutput.textContent += `[UI ${nowStamp()}] ${message}\n`;
-  scrollLogToBottom(false);
+  appendLogEntry("message", `[UI ${nowStamp()}] ${message}`);
 }
 
 function appendBackendLog(entry) {
   const id = entry.id || 0;
   const ts = entry.ts || "";
-  const level = (entry.level || "info").toUpperCase();
+  const level = normalizeLogLevel(entry.level || "info");
+  const levelLabel = String(entry.level || "info").toUpperCase();
   const msg = entry.message || "";
-  el.logOutput.textContent += `#${id} ${ts} ${level} ${msg}\n`;
-  scrollLogToBottom(false);
+  appendLogEntry(level, `#${id} ${ts} ${levelLabel} ${msg}`);
 }
 
 function setStatus(text) {
@@ -605,6 +764,49 @@ function drawPreviewCanvas() {
   ctx.imageSmoothingEnabled = !nearest;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(el.preview, x, y, drawW, drawH);
+  drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
+}
+
+function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
+  if (!ctx || !activePreviewTiles.length) return;
+  const srcW = Number(activePreviewTileWidth) || el.preview.naturalWidth || 0;
+  const srcH = Number(activePreviewTileHeight) || el.preview.naturalHeight || 0;
+  if (srcW <= 0 || srcH <= 0 || imageW <= 0 || imageH <= 0) return;
+
+  const sx = imageW / srcW;
+  const sy = imageH / srcH;
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 48, 48, 0.22)";
+  ctx.strokeStyle = "rgba(255, 90, 90, 0.95)";
+  ctx.lineWidth = 1;
+  for (const t of activePreviewTiles) {
+    if (!Array.isArray(t) || t.length < 4) continue;
+    const x0 = Number(t[0]);
+    const y0 = Number(t[1]);
+    const x1 = Number(t[2]);
+    const y1 = Number(t[3]);
+    if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) continue;
+    const ox = imageX + x0 * sx;
+    const oy = imageY + y0 * sy;
+    const ow = Math.max(1, (x1 - x0) * sx);
+    const oh = Math.max(1, (y1 - y0) * sy);
+    ctx.fillRect(ox, oy, ow, oh);
+    ctx.strokeRect(ox + 0.5, oy + 0.5, Math.max(0, ow - 1), Math.max(0, oh - 1));
+  }
+  ctx.restore();
+}
+
+function updateActivePreviewTilesFromJob(data) {
+  const nextTiles = Array.isArray(data && data.active_tiles) ? data.active_tiles : [];
+  activePreviewTiles = nextTiles;
+  activePreviewTileWidth = Number(data && data.width) || 0;
+  activePreviewTileHeight = Number(data && data.height) || 0;
+}
+
+function clearActivePreviewTiles() {
+  activePreviewTiles = [];
+  activePreviewTileWidth = 0;
+  activePreviewTileHeight = 0;
 }
 
 function clampPreviewPan() {
@@ -1043,12 +1245,20 @@ function removeNamedSceneBlock(block, key) {
 
 function parseSceneEditModel(source) {
   const text = String(source || "");
+  const cameraGroup = findSceneGroupRange(text, "camera");
   const geometryGroup = findSceneGroupRange(text, "geometry");
   const objectGroup = findSceneGroupRange(text, "object");
   const materialGroup = findSceneGroupRange(text, "material");
+  const cameras = [];
   const geometries = new Map();
   const objects = new Map();
-  const materials = [];
+  const materials = new Map();
+  splitTopLevelSceneEntries(text, cameraGroup).forEach((entry) => {
+    cameras.push({
+      ...entry,
+      type: readSceneStringProp(entry.body, "type").replace(/["']/g, "").toLowerCase(),
+    });
+  });
   splitTopLevelSceneEntries(text, geometryGroup).forEach((entry) => {
     geometries.set(entry.id, {
       ...entry,
@@ -1065,17 +1275,370 @@ function parseSceneEditModel(source) {
     });
   });
   splitTopLevelSceneEntries(text, materialGroup).forEach((entry) => {
-    materials.push(entry.id);
+    materials.set(entry.id, {
+      ...entry,
+      type: readSceneStringProp(entry.body, "type").replace(/["']/g, "").toLowerCase(),
+    });
   });
   return {
     source: text,
+    cameraGroup,
     geometryGroup,
     objectGroup,
     materialGroup,
+    cameras,
     geometries,
     objects,
     materials,
   };
+}
+
+function ensureGraphCanvasSize() {
+  if (!el.graphCanvas) return null;
+  const cssW = Math.max(1, Math.floor(el.graphCanvas.clientWidth));
+  const cssH = Math.max(1, Math.floor(el.graphCanvas.clientHeight));
+  const dpr = window.devicePixelRatio || 1;
+  const pxW = Math.max(1, Math.floor(cssW * dpr));
+  const pxH = Math.max(1, Math.floor(cssH * dpr));
+  if (el.graphCanvas.width !== pxW || el.graphCanvas.height !== pxH) {
+    el.graphCanvas.width = pxW;
+    el.graphCanvas.height = pxH;
+  }
+  return { cssW, cssH, dpr };
+}
+
+function drawGraphCanvas() {
+  if (!el.graphCanvas) return;
+  const dims = ensureGraphCanvasSize();
+  const ctx = el.graphCanvas.getContext("2d");
+  if (!dims || !ctx) return;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, el.graphCanvas.width, el.graphCanvas.height);
+
+  const data = graphView.data;
+  if (!data) return;
+
+  const hoveredKey = graphView.hoverKey || "";
+  const linkedKeys = new Set();
+  if (hoveredKey) {
+    linkedKeys.add(hoveredKey);
+    (data.links || []).forEach((ln) => {
+      if (ln.from.key === hoveredKey) linkedKeys.add(ln.to.key);
+      if (ln.to.key === hoveredKey) linkedKeys.add(ln.from.key);
+    });
+  }
+
+  const { cssW, cssH, dpr } = dims;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "rgba(9,15,21,0.22)";
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  // Miro-like infinite grid in screen space derived from world transform.
+  const baseStep = 40;
+  const step = baseStep * graphView.scale;
+  if (step >= 12) {
+    const ox = ((graphView.tx % step) + step) % step;
+    const oy = ((graphView.ty % step) + step) % step;
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(120,145,170,0.14)";
+    ctx.lineWidth = 1;
+    for (let x = ox; x <= cssW; x += step) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, cssH);
+    }
+    for (let y = oy; y <= cssH; y += step) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(cssW, y);
+    }
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.translate(graphView.tx, graphView.ty);
+  ctx.scale(graphView.scale, graphView.scale);
+
+  ctx.fillStyle = "rgba(9,15,21,0.22)";
+  ctx.fillRect(0, 0, data.viewW, data.viewH);
+
+  ctx.font = "700 14px IBM Plex Sans, sans-serif";
+  data.columns.forEach((c) => {
+    ctx.fillStyle = c.color;
+    ctx.fillText(String(c.title || "").toUpperCase(), c.x, 36);
+  });
+
+  data.links.forEach((ln) => {
+    const x1 = ln.from.x + ln.from.w;
+    const y1 = ln.from.y + ln.from.h / 2;
+    const x2 = ln.to.x;
+    const y2 = ln.to.y + ln.to.h / 2;
+    const c1 = x1 + 60;
+    const c2 = x2 - 60;
+    const active = !!hoveredKey && (ln.from.key === hoveredKey || ln.to.key === hoveredKey);
+    ctx.strokeStyle = active ? "rgba(238,246,255,0.92)" : "rgba(179,195,214,0.55)";
+    ctx.lineWidth = active ? 2.8 : 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(c1, y1, c2, y2, x2, y2);
+    ctx.stroke();
+  });
+
+  data.nodes.forEach((n) => {
+    const isHovered = hoveredKey && n.key === hoveredKey;
+    const isLinked = hoveredKey && linkedKeys.has(n.key);
+    const dimmed = hoveredKey && !isLinked;
+    const r = 9;
+    ctx.beginPath();
+    ctx.moveTo(n.x + r, n.y);
+    ctx.lineTo(n.x + n.w - r, n.y);
+    ctx.quadraticCurveTo(n.x + n.w, n.y, n.x + n.w, n.y + r);
+    ctx.lineTo(n.x + n.w, n.y + n.h - r);
+    ctx.quadraticCurveTo(n.x + n.w, n.y + n.h, n.x + n.w - r, n.y + n.h);
+    ctx.lineTo(n.x + r, n.y + n.h);
+    ctx.quadraticCurveTo(n.x, n.y + n.h, n.x, n.y + n.h - r);
+    ctx.lineTo(n.x, n.y + r);
+    ctx.quadraticCurveTo(n.x, n.y, n.x + r, n.y);
+    ctx.closePath();
+    ctx.fillStyle = isHovered
+      ? "rgba(46,71,99,0.96)"
+      : (dimmed ? "rgba(15,22,29,0.55)" : "rgba(17,27,36,0.86)");
+    ctx.fill();
+    ctx.strokeStyle = isHovered ? "#ecf6ff" : n.color;
+    ctx.globalAlpha = isHovered ? 1 : (dimmed ? 0.35 : 0.68);
+    ctx.lineWidth = isHovered ? 2.2 : 1.2;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = dimmed ? "rgba(180,194,208,0.45)" : "#e6eff7";
+    ctx.font = "600 13px IBM Plex Sans, sans-serif";
+    ctx.fillText(n.id, n.x + 10, n.y + 20);
+
+    ctx.fillStyle = dimmed ? "rgba(145,160,176,0.42)" : "rgba(170,186,202,0.9)";
+    ctx.font = "11px IBM Plex Sans, sans-serif";
+    ctx.fillText(n.subtitle, n.x + 10, n.y + 37);
+  });
+
+  ctx.restore();
+  el.graphCanvas.classList.toggle("is-panning", !!graphView.panning);
+}
+
+function applyGraphTransform() {
+  drawGraphCanvas();
+}
+
+function graphWorldPointFromClient(clientX, clientY) {
+  if (!el.graphCanvas) return null;
+  const rect = el.graphCanvas.getBoundingClientRect();
+  const x = (clientX - rect.left - graphView.tx) / graphView.scale;
+  const y = (clientY - rect.top - graphView.ty) / graphView.scale;
+  return { x, y };
+}
+
+function findGraphNodeAt(clientX, clientY) {
+  const data = graphView.data;
+  if (!data || !data.nodes || !data.nodes.length) return "";
+  const p = graphWorldPointFromClient(clientX, clientY);
+  if (!p) return "";
+  for (let i = data.nodes.length - 1; i >= 0; i -= 1) {
+    const n = data.nodes[i];
+    if (p.x >= n.x && p.x <= n.x + n.w && p.y >= n.y && p.y <= n.y + n.h) return n.key;
+  }
+  return "";
+}
+
+function fitGraphToViewport() {
+  if (!el.graphCanvas || !graphView.worldW || !graphView.worldH) return;
+  const rect = el.graphCanvas.getBoundingClientRect();
+  const cw = Math.max(1, rect.width);
+  const ch = Math.max(1, rect.height);
+  const fit = Math.min(cw / graphView.worldW, ch / graphView.worldH);
+  graphView.scale = clamp(fit, graphView.minScale, graphView.maxScale);
+  graphView.tx = (cw - graphView.worldW * graphView.scale) * 0.5;
+  graphView.ty = (ch - graphView.worldH * graphView.scale) * 0.5;
+}
+
+function resetGraphView() {
+  graphView.userAdjusted = false;
+  fitGraphToViewport();
+  applyGraphTransform();
+}
+
+function bindGraphInteraction() {
+  if (!el.graphCanvas || graphView.bound) return;
+  graphView.bound = true;
+
+  el.graphCanvas.addEventListener("wheel", (evt) => {
+    if (!graphView.worldW || !graphView.worldH) return;
+    evt.preventDefault();
+    const rect = el.graphCanvas.getBoundingClientRect();
+    const cx = evt.clientX - rect.left;
+    const cy = evt.clientY - rect.top;
+    const k = Math.exp((-evt.deltaY) * 0.0015);
+    const nextScale = clamp(graphView.scale * k, graphView.minScale, graphView.maxScale);
+    if (!Number.isFinite(nextScale) || Math.abs(nextScale - graphView.scale) < 1e-6) return;
+    const ratio = nextScale / graphView.scale;
+    graphView.tx = cx - (cx - graphView.tx) * ratio;
+    graphView.ty = cy - (cy - graphView.ty) * ratio;
+    graphView.scale = nextScale;
+    graphView.userAdjusted = true;
+    applyGraphTransform();
+  }, { passive: false });
+
+  el.graphCanvas.addEventListener("dblclick", (evt) => {
+    evt.preventDefault();
+    resetGraphView();
+  });
+
+  el.graphCanvas.addEventListener("pointerdown", (evt) => {
+    if (evt.button !== 0 && evt.button !== 1) return;
+    evt.preventDefault();
+    graphView.panning = true;
+    graphView.pointerId = evt.pointerId;
+    graphView.lastX = evt.clientX;
+    graphView.lastY = evt.clientY;
+    el.graphCanvas.setPointerCapture(evt.pointerId);
+    applyGraphTransform();
+  });
+
+  el.graphCanvas.addEventListener("pointermove", (evt) => {
+    if (graphView.panning && graphView.pointerId === evt.pointerId) {
+      const dx = evt.clientX - graphView.lastX;
+      const dy = evt.clientY - graphView.lastY;
+      graphView.lastX = evt.clientX;
+      graphView.lastY = evt.clientY;
+      graphView.tx += dx;
+      graphView.ty += dy;
+      graphView.userAdjusted = true;
+      applyGraphTransform();
+      return;
+    }
+
+    const nextHover = findGraphNodeAt(evt.clientX, evt.clientY);
+    if (nextHover === graphView.hoverKey) return;
+    graphView.hoverKey = nextHover;
+    drawGraphCanvas();
+  });
+
+  const endPan = (evt) => {
+    if (!graphView.panning || graphView.pointerId !== evt.pointerId) return;
+    graphView.panning = false;
+    graphView.pointerId = null;
+    try {
+      el.graphCanvas.releasePointerCapture(evt.pointerId);
+    } catch (_) {
+      // ignore release errors
+    }
+    applyGraphTransform();
+  };
+
+  el.graphCanvas.addEventListener("pointerup", endPan);
+  el.graphCanvas.addEventListener("pointercancel", endPan);
+  el.graphCanvas.addEventListener("pointerleave", (evt) => {
+    endPan(evt);
+    if (!graphView.hoverKey) return;
+    graphView.hoverKey = "";
+    drawGraphCanvas();
+  });
+}
+
+function renderSceneGraphView() {
+  if (!el.graphCanvas) return;
+
+  const source = el.sceneSource ? String(el.sceneSource.value || "") : "";
+  const model = parseSceneEditModel(source);
+  const cameras = (model.cameras || []).slice().sort((a, b) => a.id.localeCompare(b.id));
+  const objects = Array.from(model.objects.values()).sort((a, b) => a.id.localeCompare(b.id));
+  const geometries = Array.from(model.geometries.values()).sort((a, b) => a.id.localeCompare(b.id));
+  const materials = Array.from((model.materials || new Map()).values())
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const columns = [
+    { key: "camera", title: "Camera", x: 40, color: "#5a88cf" },
+    { key: "object", title: "Object", x: 320, color: "#9a6846" },
+    { key: "geometry", title: "Surface", x: 600, color: "#4f9a8f" },
+    { key: "material", title: "Material", x: 880, color: "#5a9a4f" },
+  ];
+
+  const nodeW = 210;
+  const nodeH = 48;
+  const topPad = 70;
+  const rowStep = 64;
+  const bottomPad = 40;
+  const viewW = 1140;
+  const maxRows = Math.max(cameras.length, objects.length, geometries.length, materials.length, 1);
+  const viewH = topPad + rowStep * maxRows + bottomPad;
+
+  const nodes = [];
+  const pos = new Map();
+
+  const pushNode = (kind, id, subtitle, row) => {
+    const col = columns.find((c) => c.key === kind);
+    if (!col) return;
+    const y = topPad + row * rowStep;
+    const node = {
+      key: `${kind}:${id}`,
+      id,
+      kind,
+      subtitle: subtitle || "",
+      x: col.x,
+      y,
+      w: nodeW,
+      h: nodeH,
+      color: col.color,
+    };
+    nodes.push(node);
+    pos.set(node.key, node);
+  };
+
+  cameras.forEach((c, i) => pushNode("camera", c.id, c.type || "camera", i));
+  objects.forEach((o, i) => pushNode("object", o.id, "scene object", i));
+  geometries.forEach((g, i) => pushNode("geometry", g.id, g.type || "surface", i));
+  materials.forEach((m, i) => pushNode("material", m.id, m.type || "material", i));
+
+  const links = [];
+  objects.forEach((o) => {
+    const src = pos.get(`object:${o.id}`);
+    const geo = pos.get(`geometry:${o.geometry || ""}`);
+    const mat = pos.get(`material:${o.material || ""}`);
+    if (src && geo) links.push({ from: src, to: geo });
+    if (src && mat) links.push({ from: src, to: mat });
+  });
+
+  graphView.data = {
+    columns,
+    nodes,
+    links,
+    viewW,
+    viewH,
+  };
+  graphView.worldW = viewW;
+  graphView.worldH = viewH;
+  if (!graphView.userAdjusted) {
+    fitGraphToViewport();
+  }
+  applyGraphTransform();
+  if (el.graphLegend) {
+    const tbody = el.graphLegend.querySelector("tbody");
+    if (tbody) {
+      tbody.innerHTML = "";
+      const rows = [
+        ["Camera", cameras.length],
+        ["Object", objects.length],
+        ["Surface", geometries.length],
+        ["Material", materials.length],
+      ];
+      rows.forEach(([label, count]) => {
+        const tr = document.createElement("tr");
+        const tdLabel = document.createElement("td");
+        const tdCount = document.createElement("td");
+        tdLabel.textContent = String(label);
+        tdCount.textContent = String(count);
+        tr.appendChild(tdLabel);
+        tr.appendChild(tdCount);
+        tbody.appendChild(tr);
+      });
+    }
+  }
 }
 
 function getObjectTransformFromSource(source, objectId) {
@@ -1236,7 +1799,8 @@ function addMeshObjectToSceneSource(source, options) {
   const objectBase = sanitizeSceneId(options.objectId, "obj_new");
   const geometryId = uniqueSceneId(geometryIds, geometryBase);
   const objectId = uniqueSceneId(objectIds, objectBase);
-  const material = String(options.material || "").trim() || (model.materials[0] || "");
+  const materialIds = Array.from((model.materials || new Map()).keys());
+  const material = String(options.material || "").trim() || (materialIds[0] || "");
   if (!material) throw new Error("no material available; create a material first");
 
   const transform = {
@@ -1266,6 +1830,7 @@ function updateSceneSourceText(nextSource) {
   updateEditorMetrics();
   syncEditorScroll();
   refreshSceneEditControls();
+  renderSceneGraphView();
 }
 
 function refreshSceneEditControls() {
@@ -1288,12 +1853,13 @@ function refreshSceneEditControls() {
   else el.editObjectSelect.value = "";
 
   el.createMaterialSelect.innerHTML = "";
-  if (!model.materials.length) {
+  const materialIds = Array.from((model.materials || new Map()).keys());
+  if (!materialIds.length) {
     addOption(el.createMaterialSelect, "", "No material");
   } else {
-    model.materials.forEach((id) => addOption(el.createMaterialSelect, id, id));
-    if (prevMaterial && model.materials.includes(prevMaterial)) el.createMaterialSelect.value = prevMaterial;
-    else el.createMaterialSelect.value = model.materials[0];
+    materialIds.forEach((id) => addOption(el.createMaterialSelect, id, id));
+    if (prevMaterial && materialIds.includes(prevMaterial)) el.createMaterialSelect.value = prevMaterial;
+    else el.createMaterialSelect.value = materialIds[0];
   }
   syncTransformInputsFromObject(el.editObjectSelect.value || "");
 }
@@ -1349,7 +1915,7 @@ async function rebuildVisualFromEditorSource() {
 
 function selectedExportFormat() {
   const raw = String(el.exportFormat && el.exportFormat.value ? el.exportFormat.value : "png").toLowerCase();
-  if (raw === "exr" || raw === "hdr") return raw;
+  if (raw === "png" || raw === "jpg" || raw === "bmp" || raw === "tga" || raw === "exr" || raw === "hdr" || raw === "ply") return raw;
   return "png";
 }
 
@@ -1358,11 +1924,13 @@ function updateDownloadUi() {
   const enabled = hasExportApi && !!lastCompletedJobId;
   const fmt = selectedExportFormat().toUpperCase();
   if (enabled) {
+    el.download.disabled = false;
     el.download.setAttribute("aria-disabled", "false");
     el.download.classList.remove("is-disabled");
     el.download.setAttribute("title", `Export ${fmt}`);
     el.download.setAttribute("aria-label", `Export ${fmt}`);
   } else {
+    el.download.disabled = true;
     el.download.setAttribute("aria-disabled", "true");
     el.download.classList.add("is-disabled");
     if (!hasExportApi) {
@@ -1735,31 +2303,289 @@ async function loadResolutionPresets() {
   syncResolutionPresetFromInputs();
 }
 
+function normalizeTabMode(mode) {
+  const raw = String(mode || "").toLowerCase();
+  if (raw === "editor") return "visual";
+  // Backward compatibility for previously stored "about" tab.
+  if (raw === "about") return "settings";
+  if (raw === "render" || raw === "visual" || raw === "settings" || raw === "logs") {
+    return raw;
+  }
+  return "render";
+}
+
+function normalizeSidebarCardVisibilityConfig(rawConfig) {
+  const normalized = {};
+  TAB_MODES.forEach((mode) => {
+    let source = [];
+    if (rawConfig && Array.isArray(rawConfig[mode])) {
+      source = rawConfig[mode];
+    } else if (rawConfig && mode === "visual" && Array.isArray(rawConfig.editor)) {
+      source = rawConfig.editor;
+    } else if (rawConfig && mode === "settings" && Array.isArray(rawConfig.about)) {
+      source = rawConfig.about;
+    }
+    const ids = source
+      .filter((id) => typeof id === "string" && id.trim())
+      .map((id) => id.trim());
+    normalized[mode] = Array.from(new Set(ids));
+  });
+  return normalized;
+}
+
+async function fetchSidebarCardConfigJson() {
+  const sep = SIDEBAR_VISIBILITY_CONFIG_URL.includes("?") ? "&" : "?";
+  const url = `${SIDEBAR_VISIBILITY_CONFIG_URL}${sep}t=${Date.now()}`;
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+async function loadSidebarCardVisibilityConfig() {
+  try {
+    const data = await fetchSidebarCardConfigJson();
+    sidebarCardVisibilityRaw = JSON.stringify(data);
+    sidebarCardVisibility = normalizeSidebarCardVisibilityConfig(data);
+    appendLog(`loaded sidebar config from ${SIDEBAR_VISIBILITY_CONFIG_URL}`);
+  } catch (err) {
+    sidebarCardVisibilityRaw = "";
+    sidebarCardVisibility = { ...DEFAULT_SIDEBAR_CARD_VISIBILITY };
+    appendLog(`sidebar config fallback: ${err.message}`);
+  }
+}
+
+async function refreshSidebarCardVisibilityConfig(activeMode) {
+  try {
+    const data = await fetchSidebarCardConfigJson();
+    const raw = JSON.stringify(data);
+    if (raw === sidebarCardVisibilityRaw) return;
+    sidebarCardVisibilityRaw = raw;
+    sidebarCardVisibility = normalizeSidebarCardVisibilityConfig(data);
+    applySidebarCardLayout(activeMode || activeTabMode);
+    appendLog(`reloaded sidebar config from ${SIDEBAR_VISIBILITY_CONFIG_URL}`);
+  } catch (err) {
+    // Keep last known good config during refresh failures.
+  }
+}
+
+function normalizeEditorViewMode(mode) {
+  const raw = String(mode || "").toLowerCase();
+  if (raw === "3d") return "visual";
+  if (raw === "visual" || raw === "graph" || raw === "text") return raw;
+  return "visual";
+}
+
+function syncAaPresetUi() {
+  if (!el.aaPills || el.aaPills.length === 0) return;
+  const current = String(el.aa && el.aa.value ? el.aa.value : "");
+  el.aaPills.forEach((btn) => {
+    const value = String(btn.getAttribute("data-aa") || "");
+    btn.classList.toggle("active", value === current);
+  });
+}
+
+function setEditorViewMode(mode, persist) {
+  const nextMode = normalizeEditorViewMode(mode);
+  const isVisual = nextMode === "visual";
+  const isGraph = nextMode === "graph";
+  editorViewMode = nextMode;
+
+  if (el.visualPanel) el.visualPanel.hidden = !isVisual;
+  if (el.graphPanel) el.graphPanel.hidden = !isGraph;
+  if (el.textEditorPanel) el.textEditorPanel.hidden = (isVisual || isGraph);
+
+  const setActive = (node, state) => {
+    if (!node) return;
+    node.classList.toggle("active", state);
+    node.setAttribute("aria-selected", state ? "true" : "false");
+    node.setAttribute("aria-pressed", state ? "true" : "false");
+  };
+  setActive(el.editorView3dBtn, isVisual);
+  setActive(el.editorViewGraphBtn, isGraph);
+  setActive(el.editorViewTextBtn, !isVisual && !isGraph);
+
+  if (persist !== false) localStorage.setItem(EDITOR_VIEW_MODE_KEY, nextMode);
+  if (isVisual && visualEditor) {
+    if (visualEditor.onShow) visualEditor.onShow();
+    if (visualEditor.resize) visualEditor.resize();
+  }
+  if (isGraph) renderSceneGraphView();
+}
+
+function setSidebarCardVisibility(card, visible) {
+  if (!card) return;
+  const reduceMotion = window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (card._visibilityTimer) {
+    clearTimeout(card._visibilityTimer);
+    card._visibilityTimer = null;
+  }
+  if (reduceMotion) {
+    card.hidden = !visible;
+    card.classList.remove("is-visibility-animated", "is-visibility-hidden");
+    return;
+  }
+  if (visible && !card.hidden && !card.classList.contains("is-visibility-hidden")) return;
+  card.classList.add("is-visibility-animated");
+  if (visible) {
+    card.hidden = false;
+    card.classList.add("is-visibility-hidden");
+    requestAnimationFrame(() => {
+      card.classList.remove("is-visibility-hidden");
+    });
+    return;
+  }
+  if (card.hidden) return;
+  card.classList.add("is-visibility-hidden");
+  card._visibilityTimer = setTimeout(() => {
+    card.hidden = true;
+  }, 180);
+}
+
+function applySidebarCardLayout(mode) {
+  const container = document.querySelector(".panel-controls");
+  if (!container) return;
+
+  const visibleIds = sidebarCardVisibility[mode] || [];
+  const visibleSet = new Set(visibleIds);
+  const cards = Array.from(container.querySelectorAll("details.control-section"));
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+
+  // Order is config-driven: listed cards first (in listed order), then remaining cards.
+  const orderedCards = [];
+  visibleIds.forEach((id) => {
+    const card = cardById.get(id);
+    if (card) orderedCards.push(card);
+  });
+  cards.forEach((card) => {
+    if (!visibleSet.has(card.id)) orderedCards.push(card);
+  });
+
+  orderedCards.forEach((card) => {
+    container.appendChild(card);
+    setSidebarCardVisibility(card, visibleSet.has(card.id));
+  });
+
+  // On tab switch, keep at least one visible card expanded.
+  const visibleCards = visibleIds
+    .map((id) => cardById.get(id))
+    .filter((card) => !!card);
+  if (visibleCards.length > 0 && !visibleCards.some((card) => card.open)) {
+    visibleCards[0].open = true;
+  }
+}
+
 function setActiveTab(mode) {
-  const isRender = mode === "render";
-  const isVisual = mode === "visual" || mode === "editor";
-  const isSettings = mode === "settings";
-  const isLogs = mode === "logs";
-  const isAbout = mode === "about";
+  const nextMode = normalizeTabMode(mode);
+  activeTabMode = nextMode;
+  const isRender = nextMode === "render";
+  const isVisual = nextMode === "visual";
+  const isSettings = nextMode === "settings";
+  const isLogs = nextMode === "logs";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabSettings, isSettings);
   setActive(el.tabLogs, isLogs);
-  setActive(el.tabAbout, isAbout);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneSettings, isSettings);
   setActive(el.paneLogs, isLogs);
-  setActive(el.paneAbout, isAbout);
-  document.body.classList.toggle("visual-tab-active", isVisual);
-  document.documentElement.classList.toggle("visual-tab-active", isVisual);
-  document.body.classList.toggle("logs-tab-active", isLogs);
-  document.documentElement.classList.toggle("logs-tab-active", isLogs);
-  if (isVisual && visualEditor) visualEditor.onShow();
+  applySidebarCardLayout(nextMode);
+  void refreshSidebarCardVisibilityConfig(nextMode);
+  localStorage.setItem(ACTIVE_TAB_KEY, nextMode);
+  if (isVisual && editorViewMode === "visual" && visualEditor) visualEditor.onShow();
   if (isLogs && (uiOptions.autoScrollLogs || pendingLogScroll)) {
     scrollLogToBottom(true);
   }
+}
+
+function initSidebarAccordion() {
+  const container = document.querySelector(".panel-controls");
+  if (!container) return;
+
+  const cards = Array.from(container.querySelectorAll("details.control-section"));
+  if (cards.length < 2) return;
+  const reduceMotion = window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const clearBodyAnimStyles = (body) => {
+    if (!body) return;
+    if (body._accordionTimer) {
+      clearTimeout(body._accordionTimer);
+      body._accordionTimer = null;
+    }
+    body.style.transition = "";
+    body.style.overflow = "";
+    body.style.maxHeight = "";
+    body.style.opacity = "";
+  };
+
+  const animateOpen = (card) => {
+    if (!card || card.open) return;
+    const body = card.querySelector(".control-section-body");
+    card.open = true;
+    if (!body || reduceMotion) return;
+
+    clearBodyAnimStyles(body);
+    const target = body.scrollHeight;
+    body.style.overflow = "hidden";
+    body.style.maxHeight = "0px";
+    body.style.opacity = "0";
+    void body.offsetHeight;
+    body.style.transition = "max-height 190ms ease, opacity 160ms ease";
+    body.style.maxHeight = `${target}px`;
+    body.style.opacity = "1";
+    body._accordionTimer = setTimeout(() => {
+      clearBodyAnimStyles(body);
+    }, 220);
+  };
+
+  const animateClose = (card) => {
+    if (!card || !card.open) return;
+    const body = card.querySelector(".control-section-body");
+    if (!body || reduceMotion) {
+      card.open = false;
+      return;
+    }
+
+    clearBodyAnimStyles(body);
+    const start = body.scrollHeight;
+    body.style.overflow = "hidden";
+    body.style.maxHeight = `${start}px`;
+    body.style.opacity = "1";
+    void body.offsetHeight;
+    body.style.transition = "max-height 190ms ease, opacity 150ms ease";
+    body.style.maxHeight = "0px";
+    body.style.opacity = "0";
+    body._accordionTimer = setTimeout(() => {
+      card.open = false;
+      clearBodyAnimStyles(body);
+    }, 220);
+  };
+
+  // Enforce one-open initial state.
+  const firstOpen = cards.find((card) => card.open) || cards[0];
+  cards.forEach((card) => {
+    card.open = card === firstOpen;
+  });
+
+  cards.forEach((card) => {
+    const summary = card.querySelector("summary");
+    if (!summary) return;
+    summary.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (card.open) {
+        animateClose(card);
+        return;
+      }
+      cards.forEach((other) => {
+        if (other === card) return;
+        animateClose(other);
+      });
+      animateOpen(card);
+    });
+  });
 }
 
 async function loadVisualSceneFromSelected() {
@@ -1846,13 +2672,52 @@ function applyTheme(mode) {
   localStorage.setItem("xtracer-theme", mode);
 }
 
+function effectiveThemeMode(mode) {
+  const value = String(mode || "").toLowerCase();
+  if (value === "dark" || value === "light") return value;
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+  return "light";
+}
+
+function normalizeDarkPalette(value) {
+  const palette = String(value || "").toLowerCase();
+  return DARK_PALETTES.has(palette) ? palette : "slate";
+}
+
+function normalizeLightPalette(value) {
+  const palette = String(value || "").toLowerCase();
+  return LIGHT_PALETTES.has(palette) ? palette : "coastal";
+}
+
+function applyDarkPalette(palette) {
+  const normalized = normalizeDarkPalette(palette);
+  uiOptions.darkPalette = normalized;
+  document.documentElement.setAttribute("data-dark-palette", normalized);
+}
+
+function applyLightPalette(palette) {
+  const normalized = normalizeLightPalette(palette);
+  uiOptions.lightPalette = normalized;
+  document.documentElement.setAttribute("data-light-palette", normalized);
+}
+
+function refreshPaletteOptions() {
+  if (!el.darkPalette) return;
+  const mode = effectiveThemeMode(el.theme ? el.theme.value : "system");
+  const options = mode === "dark" ? DARK_PALETTE_OPTIONS : LIGHT_PALETTE_OPTIONS;
+  const selected = mode === "dark" ? uiOptions.darkPalette : uiOptions.lightPalette;
+  el.darkPalette.innerHTML = "";
+  options.forEach((opt) => addOption(el.darkPalette, opt.value, opt.label));
+  el.darkPalette.value = selected;
+}
+
 function clampFontScale(v) {
   return Math.max(0.8, Math.min(1.4, Number(v) || 1.0));
 }
 
 function updateFontScaleUI() {
-  if (!el.fontSizeValue) return;
-  el.fontSizeValue.textContent = `${Math.round(uiOptions.fontScale * 100)}%`;
+  if (!el.fontSizePreset) return;
+  el.fontSizePreset.value = normalizeFontSizePreset(uiOptions.fontSizePreset);
 }
 
 function applyFontScale(scale) {
@@ -1867,8 +2732,15 @@ function loadUIOptions() {
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
-  const fontScaleRaw = parseFloat(localStorage.getItem("xtracer-ui-font-scale") || "1");
-  uiOptions.fontScale = Number.isFinite(fontScaleRaw) ? clampFontScale(fontScaleRaw) : 1.0;
+  const presetRaw = localStorage.getItem("xtracer-ui-font-size-preset");
+  if (presetRaw) {
+    uiOptions.fontSizePreset = normalizeFontSizePreset(presetRaw);
+  } else {
+    const fontScaleRaw = parseFloat(localStorage.getItem("xtracer-ui-font-scale") || "1");
+    const legacyScale = Number.isFinite(fontScaleRaw) ? clampFontScale(fontScaleRaw) : 1.0;
+    uiOptions.fontSizePreset = fontSizePresetFromScale(legacyScale);
+  }
+  uiOptions.fontScale = scaleForFontSizePreset(uiOptions.fontSizePreset);
   const previewSamplingRaw = String(localStorage.getItem("xtracer-preview-sampling") || "smooth").toLowerCase();
   const previewSampling = (previewSamplingRaw === "linear" || previewSamplingRaw === "bilinear")
     ? "smooth"
@@ -1876,12 +2748,32 @@ function loadUIOptions() {
   uiOptions.previewSampling = (previewSampling === "nearest" || previewSampling === "smooth")
     ? previewSampling
     : "smooth";
+  uiOptions.darkPalette = normalizeDarkPalette(localStorage.getItem("xtracer-dark-palette") || "slate");
+  uiOptions.lightPalette = normalizeLightPalette(localStorage.getItem("xtracer-light-palette") || "coastal");
   el.pollInterval.value = String(uiOptions.pollMs);
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
   if (el.previewSampling) el.previewSampling.value = uiOptions.previewSampling;
+  applyDarkPalette(uiOptions.darkPalette);
+  applyLightPalette(uiOptions.lightPalette);
+  refreshPaletteOptions();
   applyFontScale(uiOptions.fontScale);
+
+  try {
+    const raw = localStorage.getItem(LOG_FILTERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.debug === "boolean") logFilters.debug = parsed.debug;
+        if (typeof parsed.message === "boolean") logFilters.message = parsed.message;
+        if (typeof parsed.warning === "boolean") logFilters.warning = parsed.warning;
+        if (typeof parsed.error === "boolean") logFilters.error = parsed.error;
+      }
+    }
+  } catch (_) {
+    // keep defaults if local storage has invalid JSON
+  }
 }
 
 function persistUIOptions() {
@@ -1890,19 +2782,27 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");
   localStorage.setItem("xtracer-preview-sampling", uiOptions.previewSampling);
+  localStorage.setItem("xtracer-ui-font-size-preset", uiOptions.fontSizePreset);
   localStorage.setItem("xtracer-ui-font-scale", String(uiOptions.fontScale));
+  localStorage.setItem("xtracer-dark-palette", uiOptions.darkPalette);
+  localStorage.setItem("xtracer-light-palette", uiOptions.lightPalette);
+  localStorage.setItem(LOG_FILTERS_KEY, JSON.stringify(logFilters));
 }
 
 async function loadScenes() {
   const scenes = await api.getScenes();
   const sceneItems = await buildSceneLabels(scenes);
   const prev = el.scene.value;
+  const saved = String(localStorage.getItem(LAST_SCENE_KEY) || "").trim();
   el.scene.innerHTML = "";
   sceneDependencyByFile = new Map(sceneItems.map((item) => [item.sceneFile, !!item.dependsExternal]));
   sceneItems.forEach((item) => addOption(el.scene, item.sceneFile, item.label));
-  if (prev) el.scene.value = prev;
+  const preferred = prev || saved;
+  if (preferred) el.scene.value = preferred;
   if (!el.scene.value && el.scene.options.length > 0) el.scene.selectedIndex = 0;
   updateSceneDependencyPill(el.scene.value);
+  if (el.scene.value) localStorage.setItem(LAST_SCENE_KEY, el.scene.value);
+  else localStorage.removeItem(LAST_SCENE_KEY);
 }
 
 async function loadCameras(scene) {
@@ -1946,6 +2846,7 @@ async function loadSceneSource(scene) {
     el.sceneSource.value = "";
     updateEditorMetrics();
     refreshSceneEditControls();
+    renderSceneGraphView();
     return;
   }
   const data = await api.getSceneSource(scene);
@@ -1954,6 +2855,46 @@ async function loadSceneSource(scene) {
   updateEditorMetrics();
   refreshSceneEditControls();
   syncEditorScroll();
+  renderSceneGraphView();
+}
+
+function renderThirdPartyLicenses(rawItems) {
+  const items = Array.isArray(rawItems) && rawItems.length
+    ? rawItems
+    : DEFAULT_THIRD_PARTY_LICENSES;
+  if (!el.aboutThirdPartyList) return;
+  el.aboutThirdPartyList.replaceChildren();
+
+  items.forEach((item) => {
+    const name = item && item.name ? String(item.name) : "Unknown";
+    const license = item && item.license ? String(item.license) : "Unknown";
+    const url = item && item.url ? String(item.url) : "";
+
+    const row = document.createElement("div");
+    row.className = "about-third-party-row";
+
+    const nameNode = document.createElement("span");
+    nameNode.className = "about-third-party-name";
+    nameNode.textContent = name;
+    row.appendChild(nameNode);
+
+    const licenseNode = document.createElement("code");
+    licenseNode.className = "about-third-party-license";
+    licenseNode.textContent = license;
+    row.appendChild(licenseNode);
+
+    if (url) {
+      const link = document.createElement("a");
+      link.className = "about-third-party-link";
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = url;
+      row.appendChild(link);
+    }
+
+    el.aboutThirdPartyList.appendChild(row);
+  });
 }
 
 async function loadAbout() {
@@ -1978,6 +2919,7 @@ async function loadAbout() {
   el.aboutDefaultUrl.textContent = data.default_url || window.location.origin;
   el.aboutSceneDir.textContent = data.scene_dir || (backendMode === "wasm" ? "scenes/" : "scene/");
   el.aboutStaticAssets.textContent = data.static_assets || "/";
+  renderThirdPartyLicenses(data.third_party_licenses);
 }
 
 async function loadEmptySceneTemplate() {
@@ -1997,6 +2939,7 @@ async function startRender() {
     height: el.height.value,
     samples: el.samples.value,
     aa: el.aa.value,
+    sample_distribution: el.sampleDistribution.value,
     rdepth: el.rdepth.value,
     tile_size: el.tileSize.value,
     tile_order: el.tileOrder.value,
@@ -2019,6 +2962,7 @@ function triggerSceneSave() {
       loadScenes()
         .then(() => {
           el.scene.value = scene;
+          localStorage.setItem(LAST_SCENE_KEY, scene);
           const tasks = [loadCameras(scene)];
           if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));
           if (visualEditor) tasks.push(loadVisualSceneFromSelected());
@@ -2045,9 +2989,11 @@ async function pollJob(jobId) {
     const data = await api.getJob(jobId);
     const state = data.state || "unknown";
     const progress = data.progress || 0;
+    updateActivePreviewTilesFromJob(data);
     setProgress(progress);
     const stateLabel = state === "running" ? "rendering" : state;
     setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
+    applyPreviewTransform();
 
     if (state !== lastState) {
       appendLog(`job ${jobId} -> ${state}`);
@@ -2057,6 +3003,7 @@ async function pollJob(jobId) {
     await refreshProgressivePreview(jobId);
 
     if (state === "done") {
+      clearActivePreviewTiles();
       const finalBlob = await api.getJobImage(jobId, {
         final: true,
         cacheBust: true,
@@ -2081,6 +3028,8 @@ async function pollJob(jobId) {
     }
 
     if (state === "error") {
+      clearActivePreviewTiles();
+      applyPreviewTransform();
       throw new Error(data.error || "render failed");
     }
 
@@ -2118,6 +3067,7 @@ async function handleExportClick(event) {
 }
 
 async function handleRender() {
+  setActiveTab("render");
   el.renderBtn.disabled = true;
   lastCompletedJobId = "";
   lastCompletedJobScene = "";
@@ -2136,6 +3086,8 @@ async function handleRender() {
     previewPinnedBaseUrl = previewObjectUrl || el.preview.getAttribute("src") || "";
   }
   setRenderActive(true);
+  clearActivePreviewTiles();
+  applyPreviewTransform();
   setProgress(0);
   setStatus("submitting job...");
   appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
@@ -2162,6 +3114,8 @@ async function handleRender() {
 
 async function boot() {
   api = initializeBackendApi();
+  initSidebarAccordion();
+  await loadSidebarCardVisibilityConfig();
   const savedTheme = localStorage.getItem("xtracer-theme") || "system";
   el.theme.value = savedTheme;
   applyTheme(savedTheme);
@@ -2170,19 +3124,21 @@ async function boot() {
 
   setStatus("loading...");
   appendLog(`boot (backend=${backendMode})`);
+  setEditorViewMode(localStorage.getItem(EDITOR_VIEW_MODE_KEY) || "visual", false);
   await Promise.all([loadScenes(), loadIntegrators(), loadResolutionPresets()]);
   await loadCameras(el.scene.value);
   await loadSceneSource(el.scene.value);
   await loadAbout();
   updatePreviewSizing();
   bindPreviewInteraction();
+  bindGraphInteraction();
   applyPreviewSampling();
   setPreviewEmptyState(true);
   setRenderActive(false);
   if (!el.scene.value) setStatus("no scenes found in scene/ directory");
   else setStatus("idle");
 
-  setActiveTab("render");
+  setActiveTab(localStorage.getItem(ACTIVE_TAB_KEY) || "render");
   if (el.visualViewport && window.SceneVisualEditor) {
     visualEditor = new window.SceneVisualEditor(
       el.visualViewport,
@@ -2303,6 +3259,7 @@ async function boot() {
   }
 
   el.scene.addEventListener("change", () => {
+    localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
     updateSceneDependencyPill(el.scene.value);
     const tasks = [loadCameras(el.scene.value)];
     if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
@@ -2326,8 +3283,32 @@ async function boot() {
 
   el.theme.addEventListener("change", () => {
     applyTheme(el.theme.value);
+    refreshPaletteOptions();
+    persistUIOptions();
     appendLog(`theme=${el.theme.value}`);
   });
+
+  if (el.darkPalette) {
+    el.darkPalette.addEventListener("change", () => {
+      const mode = effectiveThemeMode(el.theme ? el.theme.value : "system");
+      if (mode === "dark") applyDarkPalette(el.darkPalette.value);
+      else applyLightPalette(el.darkPalette.value);
+      refreshPaletteOptions();
+      persistUIOptions();
+      appendLog(`${mode} palette=${el.darkPalette.value}`);
+    });
+  }
+
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onSchemeChange = () => {
+      if (el.theme && el.theme.value === "system") {
+        refreshPaletteOptions();
+      }
+    };
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onSchemeChange);
+    else if (typeof mq.addListener === "function") mq.addListener(onSchemeChange);
+  }
 
   el.integrator.addEventListener("change", () => {
     renderIntegratorControls();
@@ -2338,6 +3319,32 @@ async function boot() {
   el.tileOrder.addEventListener("change", () => {
     appendLog(`tile_order=${el.tileOrder.value}`);
   });
+  if (el.sampleDistribution) {
+    el.sampleDistribution.addEventListener("change", () => {
+      appendLog(`sample_distribution=${el.sampleDistribution.value}`);
+    });
+  }
+  if (el.aaPills && el.aaPills.length > 0) {
+    el.aaPills.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const value = String(btn.getAttribute("data-aa") || "");
+        if (!el.aa || !value) return;
+        el.aa.value = value;
+        syncAaPresetUi();
+        appendLog(`aa=${el.aa.value}`);
+      });
+    });
+  }
+  if (el.aa) {
+    el.aa.addEventListener("input", () => {
+      syncAaPresetUi();
+    });
+    el.aa.addEventListener("change", () => {
+      syncAaPresetUi();
+      appendLog(`aa=${el.aa.value}`);
+    });
+  }
+  syncAaPresetUi();
 
   if (el.toneMapping) {
     el.toneMapping.addEventListener("change", () => {
@@ -2415,6 +3422,10 @@ async function boot() {
   window.addEventListener("resize", () => {
     applyPreviewTransform();
     if (visualEditor) visualEditor.resize();
+    if (editorViewMode === "graph") {
+      if (!graphView.userAdjusted) fitGraphToViewport();
+      applyGraphTransform();
+    }
   });
 
   el.pollInterval.addEventListener("change", () => {
@@ -2444,19 +3455,12 @@ async function boot() {
     appendLog(`clear preview before render=${uiOptions.clearPreviewOnRender ? "on" : "off"}`);
   });
 
-  if (el.fontSizeDown) {
-    el.fontSizeDown.addEventListener("click", () => {
-      applyFontScale(uiOptions.fontScale - 0.05);
+  if (el.fontSizePreset) {
+    el.fontSizePreset.addEventListener("change", () => {
+      uiOptions.fontSizePreset = normalizeFontSizePreset(el.fontSizePreset.value);
+      applyFontScale(scaleForFontSizePreset(uiOptions.fontSizePreset));
       persistUIOptions();
-      appendLog(`ui font size=${Math.round(uiOptions.fontScale * 100)}%`);
-    });
-  }
-
-  if (el.fontSizeUp) {
-    el.fontSizeUp.addEventListener("click", () => {
-      applyFontScale(uiOptions.fontScale + 0.05);
-      persistUIOptions();
-      appendLog(`ui font size=${Math.round(uiOptions.fontScale * 100)}%`);
+      appendLog(`ui font size=${uiOptions.fontSizePreset}`);
     });
   }
 
@@ -2464,7 +3468,15 @@ async function boot() {
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
-  el.tabAbout.addEventListener("click", () => setActiveTab("about"));
+  if (el.editorView3dBtn) {
+    el.editorView3dBtn.addEventListener("click", () => setEditorViewMode("visual"));
+  }
+  if (el.editorViewGraphBtn) {
+    el.editorViewGraphBtn.addEventListener("click", () => setEditorViewMode("graph"));
+  }
+  if (el.editorViewTextBtn) {
+    el.editorViewTextBtn.addEventListener("click", () => setEditorViewMode("text"));
+  }
 
   el.loadSceneBtn.addEventListener("click", () => {
     loadSceneSource(el.scene.value)
@@ -2486,6 +3498,7 @@ async function boot() {
         updateEditorMetrics();
         refreshSceneEditControls();
         syncEditorScroll();
+        renderSceneGraphView();
         setStatus("new scene initialized");
         appendLog("new scene template");
       })
@@ -2573,12 +3586,28 @@ async function boot() {
   }
 
   el.clearLogsBtn.addEventListener("click", () => {
-    el.logOutput.textContent = "";
+    logEntries.length = 0;
+    renderLogOutput();
   });
+
+  const bindLogFilter = (node, key) => {
+    if (!node) return;
+    node.checked = !!logFilters[key];
+    node.addEventListener("change", () => {
+      logFilters[key] = !!node.checked;
+      persistUIOptions();
+      renderLogOutput();
+    });
+  };
+  bindLogFilter(el.logFilterDebug, "debug");
+  bindLogFilter(el.logFilterMessage, "message");
+  bindLogFilter(el.logFilterWarning, "warning");
+  bindLogFilter(el.logFilterError, "error");
 
   el.sceneSource.addEventListener("input", () => {
     updateEditorMetrics();
     refreshSceneEditControls();
+    renderSceneGraphView();
   });
   el.sceneSource.addEventListener("keydown", handleEditorTabKey);
   el.sceneSource.addEventListener("scroll", syncEditorScroll);

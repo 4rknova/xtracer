@@ -18,6 +18,21 @@
     { id: 4, description: "QHD/WQHD", width: 2560, height: 1440 },
     { id: 5, description: "4K UHD", width: 3840, height: 2160 },
   ];
+  const THIRD_PARTY_LICENSES = [
+    { name: "ImGui", license: "MIT", url: "https://github.com/ocornut/imgui" },
+    { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
+    {
+      name: "TinyFiles",
+      license: "Public Domain",
+      url: "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h",
+    },
+    { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
+    { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
+    { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
+    { name: "cpp-httplib", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
+    { name: "RtMidi", license: "MIT-style", url: "https://github.com/thestk/rtmidi" },
+    { name: "Three.js", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+  ];
 
   function makeError(message, status) {
     const err = new Error(message || "request failed");
@@ -210,13 +225,6 @@
 
     async function loadResolutions() {
       try {
-        const data = await fetchJson("/resolutions.json");
-        const list = Array.isArray(data.presets) ? data.presets : [];
-        if (list.length > 0) return list;
-      } catch (_) {
-        // fallback below
-      }
-      try {
         return await serverApi.getResolutionPresets();
       } catch (_) {
         return DEFAULT_RESOLUTIONS;
@@ -325,24 +333,22 @@
             default_url: window.location.origin,
             scene_dir: "scenes/",
             static_assets: "/",
+            third_party_licenses: Array.isArray(about.third_party_licenses)
+              ? about.third_party_licenses
+              : THIRD_PARTY_LICENSES,
           });
         } catch (_) {
-          let licenseText = "BSD 3-Clause";
           const currentYear = Math.max(2010, new Date().getFullYear());
-          try {
-            licenseText = await fetchText("/license.txt");
-          } catch (_) {
-            // Keep short fallback text if static license file is missing.
-          }
           return {
             name: "XTRACER WEB",
             version: "",
-            author_name: "Nikos Papadopoulos",
+            author_name: "Nikolaos Papadopoulos",
             author_email: "nikpapas@gmail.com",
             homepage: "https://www.4rknova.com",
             website: "https://github.com/4rknova/xtracer",
-            copyright: `Copyright 2010-${currentYear} (c) Nikos Papadopoulos`,
-            license: licenseText,
+            copyright: `Copyright 2010-${currentYear} (c) Nikolaos Papadopoulos`,
+            license: "Unavailable",
+            third_party_licenses: THIRD_PARTY_LICENSES,
             backend: "xtracer_wasm_adapter",
             default_url: window.location.origin,
             scene_dir: "scenes/",
