@@ -6,7 +6,8 @@ mkdir -p $DIR_RES
 xxd -i ./LICENSE | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
 BUILD=${BUILD:-Debug}
 XTRACER_ENABLE_RTMIDI=${XTRACER_ENABLE_RTMIDI:-ON}
+BUILD_DIR=${BUILD_DIR:-build/intermediate/build}
 make -C ./automation
-cmake -S . -B . \
+cmake -S . -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD" \
     -DXTRACER_ENABLE_RTMIDI="$XTRACER_ENABLE_RTMIDI"

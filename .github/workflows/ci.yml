@@ -3,11 +3,15 @@ name: ci
 on:
   push:
     branches: [ develop ]
+    tags:
+      - "v*"
   pull_request:
     branches: [ develop ]
+  workflow_dispatch:
 
 jobs:
   build:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,7 +23,54 @@ jobs:
           sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
 
       - name: Configure
-        run: cmake -S . -B build -DXTRACER_ENABLE_WEB=ON -DXTRACER_ENABLE_WASM=OFF
+        run: cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON -DXTRACER_ENABLE_WASM=OFF
 
       - name: Build
-        run: cmake --build build -j --target xtracer_cli xtracer_web
+        run: cmake --build build/intermediate/build -j --target xtracer_cli xtracer_web
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+
+      - name: Configure (Release)
+        run: |
+          cmake -S . -B build/intermediate/build-release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DXTRACER_ENABLE_WEB=ON \
+            -DXTRACER_ENABLE_WASM=OFF
+
+      - name: Build release binaries
+        run: cmake --build build/intermediate/build-release -j --target xtracer_cli xtracer_web
+
+      - name: Package release archive
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          STAGE="build/intermediate/release-stage"
+          ARCHIVE="xtracer-${VERSION}-linux-x86_64.tar.gz"
+          mkdir -p "${STAGE}/bin" "${STAGE}/web-client"
+          cp build/release/xtracer_cli "${STAGE}/bin/"
+          cp build/release/xtracer_web "${STAGE}/bin/"
+          cp -r src/frontend/web-client "${STAGE}/"
+          cp -r scene "${STAGE}/"
+          cp LICENSE README.md "${STAGE}/"
+          tar -C "${STAGE}" -czf "${ARCHIVE}" .
+          sha256sum "${ARCHIVE}" > "${ARCHIVE}.sha256"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            xtracer-*-linux-x86_64.tar.gz
+            xtracer-*-linux-x86_64.tar.gz.sha256

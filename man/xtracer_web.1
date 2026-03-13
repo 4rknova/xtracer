@@ -1,0 +1,89 @@
+.TH XTRACER_WEB 1 "March 2026" UNIX "User Manuals"
+.SH NAME
+xtracer_web \- HTTP web server frontend for XTRACER
+.SH SYNOPSIS
+.B xtracer_web
+[
+.B --host
+.I ip
+]
+[
+.B --port
+.I num
+]
+[
+.B --scene-dir
+.I path
+]
+[
+.B --web-root
+.I path
+]
+[
+.B --verbose
+]
+[
+.B --help
+]
+.SH DESCRIPTION
+.B xtracer_web
+runs the HTTP backend and serves the web client assets.
+It exposes scene, render, jobs, logs, and metadata API endpoints used by the browser UI.
+.SH OPTIONS
+.IP "\fB--host\fR \fIip\fR"
+Bind address for the HTTP server.
+Default: \fB127.0.0.1\fR.
+.IP "\fB--port\fR \fInum\fR"
+Bind port (1 to 65535).
+Default: \fB8080\fR.
+.IP "\fB--scene-dir\fR \fIpath\fR"
+Directory containing \fB.scn\fR files served by scene APIs.
+Default: \fBscene\fR.
+.IP "\fB--web-root\fR \fIpath\fR"
+Directory containing static web client assets.
+Default: \fBsrc/frontend/web-client\fR.
+.IP "\fB--verbose\fR, \fB-v\fR"
+Enable per-request HTTP logging to stdout.
+.IP "\fB--help\fR"
+Print usage and exit.
+.SH EXAMPLES
+.PP
+Start server with defaults:
+.PP
+.EX
+./build/release/xtracer_web
+.EE
+.PP
+Start server with explicit host/port and paths:
+.PP
+.EX
+./build/release/xtracer_web \\
+  --host 127.0.0.1 \\
+  --port 8080 \\
+  --scene-dir scene \\
+  --web-root src/frontend/web-client \\
+  --verbose
+.EE
+.SH API OVERVIEW
+Common endpoints:
+.IP "\fBGET /api/health\fR"
+Health probe.
+.IP "\fBGET /api/scenes\fR"
+List available scenes.
+.IP "\fBGET /api/scenes/{scene}/source\fR"
+Get scene source.
+.IP "\fBPOST /api/render\fR"
+Create render job.
+.IP "\fBGET /api/jobs/{id}\fR"
+Get job snapshot.
+.IP "\fBGET /api/jobs/{id}/image\fR"
+Get preview/final image.
+.IP "\fBGET /api/logs?since={id}\fR"
+Get incremental backend logs.
+.SH EXIT STATUS
+.IP "0"
+Success.
+.IP "1"
+Argument/validation error or listen failure.
+.SH AUTHOR
+Nikolaos Papadopoulos <nikpapas at gmail dot com>

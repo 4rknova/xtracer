@@ -25,14 +25,14 @@ sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libas
 Configure + build:
 
 ```bash
-cmake -S . -B build -DXTRACER_ENABLE_WEB=ON
-cmake --build build -j
+cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON
+cmake --build build/intermediate/build -j
 ```
 
 Run web server:
 
 ```bash
-./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -40,7 +40,7 @@ Open: `http://127.0.0.1:8080`
 Run CLI:
 
 ```bash
-./bin/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
 ## Repository Layout
@@ -221,11 +221,11 @@ sudo apt install -y emscripten
 ### Recommended Native Build (Out-of-Tree)
 
 ```bash
-cmake -S . -B build -DXTRACER_ENABLE_WEB=ON
-cmake --build build -j
+cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON
+cmake --build build/intermediate/build -j
 ```
 
-> Note: native binaries are configured to output under repo-local `bin/debug` (Debug) or `bin/release` (non-Debug).
+> Note: native binaries are configured to output under repo-local `build/debug` (Debug) or `build/release` (non-Debug).
 
 ### CMake Options
 
@@ -235,19 +235,20 @@ cmake --build build -j
 | `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
 | `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
 | `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
+| `XTRACER_ENABLE_VIZ` | `OFF` | Build OpenGL sampling visualization tool (`xtracer_viz_sampling`) |
 
 ## Run
 
 ### CLI
 
 ```bash
-./bin/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
 ### Web Server
 
 ```bash
-./bin/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -255,23 +256,39 @@ Open: `http://127.0.0.1:8080`
 ### Math Microbenchmark
 
 ```bash
-./bin/release/bench_nmath
+./build/release/bench_nmath
+```
+
+### Sampling Visualization Tool
+
+Build with visualization enabled:
+
+```bash
+cmake -S . -B build/intermediate/build-viz -DXTRACER_ENABLE_VIZ=ON
+cmake --build build/intermediate/build-viz -j --target xtracer_viz_sampling
+```
+
+Run:
+
+```bash
+./build/release/xtracer_viz_sampling
 ```
 
 ### WASM Runtime Build
 
 ```bash
-emcmake cmake -S . -B build-wasm \
+emcmake cmake -S . -B build/intermediate/build-wasm \
   -DXTRACER_ENABLE_WEB=OFF \
   -DXTRACER_ENABLE_RTMIDI=OFF \
   -DXTRACER_ENABLE_WASM=ON
-cmake --build build-wasm -j --target xtracer_wasm
+cmake --build build/intermediate/build-wasm -j --target xtracer_wasm
 ```
 
 Expected output:
 
 - `src/frontend/web-client/xtracer_wasm.js`
 - `src/frontend/web-client/xtracer_wasm.wasm`
+- copied self-contained scenes from `scene/` into build output `build/release/scenes/` (or `build/debug/scenes/` for Debug-native builds)
 
 Optional static packaging:
 
@@ -283,22 +300,23 @@ Optional static packaging:
 
 | Test Name (CTest) | Binary |
 |---|---|
-| `colorspace::roundtrip` | `bin/debug/test/test_nimg_colorspace` or `bin/release/test/test_nimg_colorspace` |
-| `colorspace::vectors` | `bin/debug/test/test_nimg_colorspace_vectors` or `bin/release/test/test_nimg_colorspace_vectors` |
-| `xtcore::tile` | `bin/debug/test/test_xtcore_tile` or `bin/release/test/test_xtcore_tile` |
-| `xtcore::context` | `bin/debug/test/test_xtcore_context` or `bin/release/test/test_xtcore_context` |
-| `xtcore::sphere` | `bin/debug/test/test_xtcore_sphere` or `bin/release/test/test_xtcore_sphere` |
-| `xtcore::triangle` | `bin/debug/test/test_xtcore_triangle` or `bin/release/test/test_xtcore_triangle` |
-| `xtcore::white_furnace` | `bin/debug/test/test_xtcore_white_furnace` or `bin/release/test/test_xtcore_white_furnace` |
-| `xtcore::raytracer_emissive` | `bin/debug/test/test_xtcore_raytracer_emissive` or `bin/release/test/test_xtcore_raytracer_emissive` |
-| `cli::setup_parse` | `bin/debug/test/test_xtracer_cli_setup` or `bin/release/test/test_xtracer_cli_setup` |
-| `ncf::inline_and_utf8` | `bin/debug/test/test_ncf_parser` or `bin/release/test/test_ncf_parser` |
-| `cli::stencil_smoke` | `bin/debug/xtracer_cli` or `bin/release/xtracer_cli` smoke render |
+| `colorspace::roundtrip` | `build/debug/test/test_nimg_colorspace` or `build/release/test/test_nimg_colorspace` |
+| `colorspace::vectors` | `build/debug/test/test_nimg_colorspace_vectors` or `build/release/test/test_nimg_colorspace_vectors` |
+| `xtcore::tile` | `build/debug/test/test_xtcore_tile` or `build/release/test/test_xtcore_tile` |
+| `xtcore::context` | `build/debug/test/test_xtcore_context` or `build/release/test/test_xtcore_context` |
+| `xtcore::sphere` | `build/debug/test/test_xtcore_sphere` or `build/release/test/test_xtcore_sphere` |
+| `xtcore::triangle` | `build/debug/test/test_xtcore_triangle` or `build/release/test/test_xtcore_triangle` |
+| `xtcore::white_furnace` | `build/debug/test/test_xtcore_white_furnace` or `build/release/test/test_xtcore_white_furnace` |
+| `xtcore::raytracer_emissive` | `build/debug/test/test_xtcore_raytracer_emissive` or `build/release/test/test_xtcore_raytracer_emissive` |
+| `cli::setup_parse` | `build/debug/test/test_xtracer_cli_setup` or `build/release/test/test_xtracer_cli_setup` |
+| `ncf::inline_and_utf8` | `build/debug/test/test_ncf_parser` or `build/release/test/test_ncf_parser` |
+| `nmath::sampling` | `build/debug/test/test_nmath_sampling` or `build/release/test/test_nmath_sampling` |
+| `cli::stencil_smoke` | `build/debug/xtracer_cli` or `build/release/xtracer_cli` smoke render |
 
 Run all tests:
 
 ```bash
-ctest --test-dir build --output-on-failure
+ctest --test-dir build/intermediate/build --output-on-failure
 ```
 
 ## Third-Party Dependencies
@@ -306,7 +324,6 @@ ctest --test-dir build --output-on-failure
 | Name | License | URL |
 |---|---|---|
 | TinyObjLoader | MIT | https://github.com/syoyo/tinyobjloader |
-| TinyFiles | Public Domain | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h |
 | STB | Public Domain / MIT | https://github.com/nothings/stb |
 | TinyEXR | BSD-3-Clause | https://github.com/syoyo/tinyexr |
 | strpool | Public Domain | https://github.com/mattiasgustavsson/libs |

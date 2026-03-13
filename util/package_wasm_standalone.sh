@@ -29,8 +29,8 @@ for f in "${required_files[@]}"; do
   if [[ ! -f "$WEB_DIR/$f" ]]; then
     echo "Missing required file: $WEB_DIR/$f"
     echo "Build WASM first with:"
-    echo "  emcmake cmake -S . -B build-wasm -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON"
-    echo "  cmake --build build-wasm -j --target xtracer_wasm"
+    echo "  emcmake cmake -S . -B build/intermediate/build-wasm -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON"
+    echo "  cmake --build build/intermediate/build-wasm -j --target xtracer_wasm"
     exit 1
   fi
 done
@@ -63,57 +63,8 @@ cp "$PREVIEW_SRC" "$DIST_DIR/preview.jpg"
 cp "$LOGO_SRC" "$DIST_DIR/logo.png"
 cp "$LICENSE_SRC" "$DIST_DIR/license.txt"
 
-is_self_contained_scene() {
-  local scene_path="$1"
-  perl -0777 -e '
-    my $p = shift @ARGV;
-    open my $fh, "<", $p or exit 1;
-    local $/;
-    my $t = <$fh>;
-    close $fh;
-
-    $t =~ s/#.*$//mg;
-
-    if ($t =~ /\bpath_[A-Za-z0-9_]*\s*=/i
-      || $t =~ /=\s*<[^>\n]+>\s*\/[^\s#]+/i
-      || $t =~ /^\s*source\s*=\s*(?!gen\s*\()[^\n#]*\//im
-      || $t =~ /^\s*source\s*=\s*(?!gen\s*\()[^\n#]*\.(obj|ply|fbx|gltf|glb|hdr|exr|png|jpg|jpeg|bmp|tga)\b/im
-      || $t =~ /\bext\s*\(/i) {
-      exit 1;
-    }
-    exit 0;
-  ' "$scene_path"
-}
-
-copied_count=0
-for s in "$SCENE_DIR"/*.scn; do
-  if is_self_contained_scene "$s"; then
-    cp "$s" "$DIST_DIR/scenes/"
-    copied_count=$((copied_count + 1))
-  fi
-done
-
-if [[ $copied_count -eq 0 ]]; then
-  echo "No self-contained scenes were found to package for WASM."
-  exit 1
-fi
-
-{
-  echo "{"
-  echo "  \"scenes\": ["
-  i=0
-  for s in "$DIST_DIR"/scenes/*.scn; do
-    name="$(basename "$s")"
-    if [[ $i -gt 0 ]]; then
-      echo "    ,\"$name\""
-    else
-      echo "    \"$name\""
-    fi
-    i=$((i + 1))
-  done
-  echo "  ]"
-  echo "}"
-} > "$DIST_DIR/scenes/index.json"
+"$ROOT_DIR/util/sync_wasm_scenes.sh" "$DIST_DIR/scenes" "$SCENE_DIR"
+copied_count="$(find "$DIST_DIR/scenes" -maxdepth 1 -type f -name "*.scn" | wc -l | tr -d ' ')"
 
 echo "Done."
 echo "Packaged self-contained scenes: $copied_count"

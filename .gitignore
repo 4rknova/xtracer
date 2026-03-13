@@ -1,5 +1,4 @@
 scene/data
-bin/
 media/
 temp/
 *.o

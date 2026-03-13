@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR "In-source builds are disabled. Use: cmake -S . -B build/intermediate/build")
+endif()
 project(xtracer)
+include(GNUInstallDirs)
 
 option(XTRACER_ENABLE_RTMIDI "Build with RtMidi/ALSA support" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
-option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into bin/wasm-dist during native builds" OFF)
+option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into build/wasm-dist during native builds" OFF)
+option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
 
 set(XTRACER_USING_EMSCRIPTEN OFF)
 if (EMSCRIPTEN OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
@@ -15,13 +20,13 @@ endif()
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(PATH_BIN ${PATH_ROOT}/bin/debug)
+    set(PATH_BIN ${PATH_ROOT}/build/debug)
 else()
-    set(PATH_BIN ${PATH_ROOT}/bin/release)
+    set(PATH_BIN ${PATH_ROOT}/build/release)
 endif()
 set(PATH_WEB  ${PATH_SRC}/frontend/web-client)
 if (XTRACER_USING_EMSCRIPTEN)
-    set(PATH_BIN ${PATH_ROOT}/bin-wasm)
+    set(PATH_BIN ${PATH_ROOT}/build/release)
 endif()
 set(PATH_LIB  ${PATH_ROOT}/lib)
 set(PATH_EXT  ${PATH_ROOT}/ext)
@@ -85,11 +90,14 @@ set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
 set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
+set(PATH_SRC_UTIL_VIZ     ${PATH_SRC}/util/viz)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
 set(IN_MAN_CLI  xtracer_cli.1)
+set(IN_MAN_WEB  xtracer_web.1)
 
 set(OUT_MAN_CLI xtracer_cli.1.gz)
+set(OUT_MAN_WEB xtracer_web.1.gz)
 set(OUT_LIB     xtcore)
 set(OUT_EXE_CLI xtracer_cli)
 set(OUT_EXE_COLORSPACE_TEST test_nimg_colorspace)
@@ -102,6 +110,7 @@ set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
 set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
+set(OUT_EXE_SAMPLING_TEST test_nmath_sampling)
 set(OUT_EXE_NMATH_BENCH bench_nmath)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -159,7 +168,9 @@ file(GLOB SRC_FRONTEND_COMMON
 )
 
 add_custom_target(manpages_cli
-    gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN_CLI} > ${PATH_BIN}/${OUT_MAN_CLI}
+    COMMAND gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN_CLI} > ${PATH_BIN}/${OUT_MAN_CLI}
+    COMMAND gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN_WEB} > ${PATH_BIN}/${OUT_MAN_WEB}
+    VERBATIM
 )
 
 add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
@@ -207,6 +218,7 @@ add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_tes
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
 add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
+add_executable(${OUT_EXE_SAMPLING_TEST} ${PATH_SRC_TESTS}/sampling_test.cc)
 add_executable(${OUT_EXE_NMATH_BENCH} ${PATH_SRC_TESTS}/nmath_bench.cc)
 set_target_properties(${OUT_EXE_COLORSPACE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
@@ -236,6 +248,9 @@ set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_NCF_PARSER_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_SAMPLING_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_NMATH_BENCH} PROPERTIES
@@ -319,6 +334,13 @@ target_include_directories(${OUT_EXE_NCF_PARSER_TEST} PUBLIC
 target_include_directories(${OUT_EXE_NCF_PARSER_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_SAMPLING_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_SAMPLING_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_NMATH_BENCH} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -342,7 +364,28 @@ target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthrea
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_SAMPLING_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH} PRIVATE xtcore_static pthread)
+
+if (XTRACER_ENABLE_VIZ)
+    find_package(OpenGL REQUIRED)
+    find_package(glfw3 REQUIRED)
+    find_package(GLEW REQUIRED)
+
+    set(OUT_EXE_SAMPLING_VIZ xtracer_viz_sampling)
+    add_executable(${OUT_EXE_SAMPLING_VIZ} ${PATH_SRC_UTIL_VIZ}/sampling/main.cc)
+    target_include_directories(${OUT_EXE_SAMPLING_VIZ} PUBLIC
+        ${PATH_LIB}
+        ${PATH_SRC}
+    )
+    target_include_directories(${OUT_EXE_SAMPLING_VIZ} SYSTEM PUBLIC
+        ${ext_libs}
+    )
+    target_link_libraries(${OUT_EXE_SAMPLING_VIZ} PRIVATE xtcore_static OpenGL::GL glfw GLEW::GLEW pthread)
+    set_target_properties(${OUT_EXE_SAMPLING_VIZ} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+    )
+endif()
 
 if (XTRACER_ENABLE_WEB)
     set(OUT_EXE_WEB xtracer_web)
@@ -390,6 +433,20 @@ if (XTRACER_ENABLE_WASM)
         "SHELL:-sEXPORTED_FUNCTIONS=['_xtracer_wasm_render_png','_xtracer_wasm_render_begin','_xtracer_wasm_render_step','_xtracer_wasm_render_tiles_done','_xtracer_wasm_render_tiles_total','_xtracer_wasm_render_is_done','_xtracer_wasm_render_snapshot_png','_xtracer_wasm_render_snapshot_exr','_xtracer_wasm_render_snapshot_hdr','_xtracer_wasm_free','_xtracer_wasm_get_last_error','_malloc','_free']"
         "SHELL:-sEXPORTED_RUNTIME_METHODS=['cwrap','ccall','FS','UTF8ToString']"
     )
+    set(WASM_SCENE_OUTPUT_DIR ${PATH_BIN}/scenes)
+    set(WASM_SCENE_SYNC_STAMP ${WASM_SCENE_OUTPUT_DIR}/.sync_stamp)
+    file(GLOB WASM_SCENE_SOURCES ${PATH_ROOT}/scene/*.scn)
+    add_custom_command(
+        OUTPUT ${WASM_SCENE_SYNC_STAMP}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${WASM_SCENE_OUTPUT_DIR}
+        COMMAND bash ${PATH_ROOT}/util/sync_wasm_scenes.sh ${WASM_SCENE_OUTPUT_DIR} ${PATH_ROOT}/scene
+        COMMAND ${CMAKE_COMMAND} -E touch ${WASM_SCENE_SYNC_STAMP}
+        DEPENDS ${PATH_ROOT}/util/sync_wasm_scenes.sh ${WASM_SCENE_SOURCES}
+        COMMENT "Syncing self-contained scenes for WASM frontend"
+        VERBATIM
+    )
+    add_custom_target(xtracer_wasm_scenes DEPENDS ${WASM_SCENE_SYNC_STAMP})
+    add_dependencies(${OUT_EXE_WASM} xtracer_wasm_scenes)
     if (TARGET web_license_asset)
         add_dependencies(${OUT_EXE_WASM} web_license_asset)
     endif()
@@ -404,7 +461,7 @@ if (XTRACER_ENABLE_WASM_DIST)
             message(FATAL_ERROR "XTRACER_ENABLE_WASM_DIST requires emcmake in PATH")
         endif()
 
-        set(WASM_DIST_BUILD_DIR ${PATH_ROOT}/build-wasm)
+        set(WASM_DIST_BUILD_DIR ${PATH_ROOT}/build/intermediate/build-wasm)
         set(WASM_DIST_OUTPUT_DIR ${PATH_BIN}/wasm-dist)
 
         add_custom_target(xtracer_wasm_dist ALL
@@ -445,6 +502,7 @@ target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_SAMPLING_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
@@ -457,6 +515,7 @@ add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_SAMPLING_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_BENCH} xtcore_static)
 
 enable_testing()
@@ -502,6 +561,10 @@ add_test(
     COMMAND ${PATH_TEST}/${OUT_EXE_NCF_PARSER_TEST}
 )
 add_test(
+    NAME nmath::sampling
+    COMMAND ${PATH_TEST}/${OUT_EXE_SAMPLING_TEST}
+)
+add_test(
     NAME cli::stencil_smoke
     COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${PATH_ROOT}/scene/lab-camera-modes-showcase.scn -renderer stencil -res 32x32 -aa 2 -samples 1 -rdepth 1 -outdir ${PATH_TEST}
 )
@@ -519,4 +582,13 @@ install (TARGETS ${OUT_EXE_CLI}
     ARCHIVE DESTINATION lib
 )
 
-install (FILES ${PATH_BIN}/${OUT_MAN_CLI} DESTINATION man/man1)
+install (FILES ${PATH_BIN}/${OUT_MAN_CLI} ${PATH_BIN}/${OUT_MAN_WEB} DESTINATION man/man1)
+
+if (UNIX)
+    install (FILES ${PATH_ROOT}/src/util/bash/autocomplete/xtcli
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/bash-completion/completions
+        RENAME xtracer_cli)
+    install (FILES ${PATH_ROOT}/src/util/bash/autocomplete/xtcli
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/bash-completion/completions
+        RENAME xtracer_web)
+endif()
