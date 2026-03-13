@@ -5,14 +5,21 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ develop ]
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
       - name: Install dependencies
-        run: sudo apt update && sudo apt install -y libgl1-mesa-dev libglx-mesa0 libglew-dev libglfw3-dev libasound2-dev
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DXTRACER_ENABLE_WEB=ON -DXTRACER_ENABLE_WASM=OFF
+
       - name: Build
-        run: cmake ./CMakeLists.txt && make
+        run: cmake --build build -j --target xtracer_cli xtracer_web
