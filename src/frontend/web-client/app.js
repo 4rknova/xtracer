@@ -122,11 +122,6 @@ const el = {
 
 const DEFAULT_THIRD_PARTY_LICENSES = [
   { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
-  {
-    name: "TinyFiles",
-    license: "Public Domain",
-    url: "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h",
-  },
   { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
   { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
   { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
@@ -190,6 +185,7 @@ const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
     "integratorControlsCard",
     "frameControlsCard",
     "qualityControlsCard",
+    "toneMappingControlsCard",
     "exportControlsCard",
   ],
   visual: [

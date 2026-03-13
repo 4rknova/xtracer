@@ -202,7 +202,6 @@ void append_third_party_licenses_json(std::ostringstream &ss)
 {
     static const third_party_dep_t deps[] = {
         { "TinyObjLoader", "MIT", "https://github.com/syoyo/tinyobjloader" },
-        { "TinyFiles", "Public Domain", "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h" },
         { "STB", "Public Domain / MIT", "https://github.com/nothings/stb" },
         { "TinyEXR", "BSD-3-Clause", "https://github.com/syoyo/tinyexr" },
         { "strpool", "Public Domain", "https://github.com/mattiasgustavsson/libs" },
@@ -1120,10 +1119,6 @@ void setup_routes(httplib::Server &server,
 
     server.Get("/sidebar_cards.json", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "sidebar_cards.json"), "application/json", res);
-    });
-
-    server.Get("/scenes/index.json", [web_root](const httplib::Request &, httplib::Response &res) {
-        serve_static_file(join_path(web_root, "scenes/index.json"), "application/json", res);
     });
 
     server.Get(R"(/scenes/([A-Za-z0-9_.-]+\.scn))", [web_root](const httplib::Request &req, httplib::Response &res) {

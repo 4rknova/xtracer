@@ -123,7 +123,7 @@
             <details class="control-section control-card" id="qualityControlsCard" open>
               <summary>
                 <span class="control-card-title">Quality</span>
-                <span class="control-card-note">Sampling, depth, and tone mapping</span>
+                <span class="control-card-note">Sampling and ray depth</span>
               </summary>
               <div class="control-section-body">
                 <div class="row">
@@ -147,7 +147,15 @@
                   </label>
                   <label>Ray Depth <input id="rdepth" type="number" min="1" max="4096" value="3"></label>
                 </div>
+              </div>
+            </details>
 
+            <details class="control-section control-card" id="toneMappingControlsCard" open>
+              <summary>
+                <span class="control-card-title">Tone Mapping</span>
+                <span class="control-card-note">Operator and response controls</span>
+              </summary>
+              <div class="control-section-body">
                 <label>Tone Mapping
                   <select id="toneMapping">
                     <option value="aces">ACES (Fitted)</option>
@@ -164,7 +172,6 @@
                   <label id="toneMappingMantiukSaturationControl">TM Saturation <input id="toneMappingMantiukSaturation" type="number" min="0" max="2" step="0.01" value="0.8"></label>
                   <label id="toneMappingMantiukDetailControl">TM Detail <input id="toneMappingMantiukDetail" type="number" min="1" max="99" step="1" value="1"></label>
                 </div>
-
               </div>
             </details>
 

@@ -20,11 +20,6 @@
   ];
   const THIRD_PARTY_LICENSES = [
     { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
-    {
-      name: "TinyFiles",
-      license: "Public Domain",
-      url: "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h",
-    },
     { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
     { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
     { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
@@ -142,7 +137,6 @@
     let logSeq = 1;
     const localLogs = [];
     const sceneCache = new Map();
-    let staticScenes = null;
 
     function pushLog(level, message) {
       const entry = {
@@ -194,18 +188,6 @@
     window.addEventListener("beforeunload", () => {
       worker.terminate();
     });
-
-    async function loadStaticSceneIndex() {
-      if (staticScenes) return staticScenes;
-      try {
-        const data = await fetchJson("/scenes/index.json");
-        staticScenes = mergeUniqueSorted(data.scenes || []);
-      } catch (err) {
-        pushLog("warn", `static scene index unavailable (${err.message})`);
-        staticScenes = [];
-      }
-      return staticScenes;
-    }
 
     async function loadIntegrators() {
       try {
@@ -267,7 +249,6 @@
       async getScenes() {
         const localMap = loadLocalSceneMap();
         const localNames = Object.keys(localMap);
-        const staticNames = await loadStaticSceneIndex();
 
         let serverNames = [];
         try {
@@ -275,7 +256,7 @@
         } catch (_) {
           serverNames = [];
         }
-        const merged = mergeUniqueSorted([].concat(staticNames, localNames, serverNames));
+        const merged = mergeUniqueSorted([].concat(localNames, serverNames));
         const filtered = await Promise.all(merged.map(async (sceneName) => {
           try {
             const data = await getSceneSourceHybrid(sceneName);
@@ -394,9 +375,14 @@
         if (!safeSceneFile(sceneName)) throw makeError("invalid scene name", 400);
 
         const localMap = loadLocalSceneMap();
-        const staticNames = await loadStaticSceneIndex();
+        let serverNames = [];
+        try {
+          serverNames = await serverApi.getScenes();
+        } catch (_) {
+          serverNames = [];
+        }
         const exists = Object.prototype.hasOwnProperty.call(localMap, sceneName)
-          || staticNames.indexOf(sceneName) >= 0;
+          || serverNames.indexOf(sceneName) >= 0;
 
         if (exists && !overwrite) {
           throw makeError("scene already exists", 409);

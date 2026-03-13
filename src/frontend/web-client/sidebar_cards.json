@@ -4,6 +4,7 @@
     "frameControlsCard",
     "integratorControlsCard",
     "qualityControlsCard",
+    "toneMappingControlsCard",
     "exportControlsCard"
   ],
   "visual": [
