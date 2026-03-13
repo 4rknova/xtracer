@@ -78,6 +78,7 @@ class Scene
 	std::string m_source;
     std::string m_description;
     std::string m_version;
+    std::string m_default_camera;
 
     xtcore::sampler::ISampler *m_environment;
 

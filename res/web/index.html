@@ -11,8 +11,7 @@
     <div class="masthead">
       <nav class="tabs">
         <button class="tab active" id="tabRender" type="button">Render</button>
-        <button class="tab" id="tabVisual" type="button">Visual</button>
-        <button class="tab" id="tabEditor" type="button">Editor</button>
+        <button class="tab" id="tabVisual" type="button">Editor</button>
         <button class="tab" id="tabSettings" type="button">Settings</button>
         <button class="tab" id="tabLogs" type="button">Logs</button>
         <button class="tab" id="tabAbout" type="button">About</button>
@@ -148,12 +147,17 @@
         <section class="panel panel-preview">
           <div class="preview-toolbar">
             <div class="preview-headline">
-              <p class="status-chip">Visual</p>
+              <p class="status-chip">Editor</p>
               <span id="visualStatus" class="visual-status">Selection: none (Ctrl+Click)</span>
             </div>
             <div class="export-controls">
               <label class="sr-only" for="visualCamera">Visual camera</label>
               <select id="visualCamera" class="visual-camera-inline" aria-label="Visual camera"></select>
+              <label class="sr-only" for="visualProjection">Visual projection</label>
+              <select id="visualProjection" class="visual-projection-inline" aria-label="Visual projection">
+                <option value="perspective">Perspective</option>
+                <option value="isometric">Isometric</option>
+              </select>
               <button id="visualLoadBtn" class="action-btn visual-load-btn" type="button" title="Reload visual scene">Load Visual</button>
               <label class="inline-check" title="Show or hide visual grid">
                 <input id="visualShowGrid" type="checkbox" checked>
@@ -163,9 +167,6 @@
           </div>
           <div id="visualViewport" class="visual-viewport-top" aria-label="3D scene viewport"></div>
         </section>
-      </section>
-
-      <section class="tab-pane" id="paneEditor">
         <section class="panel editor-panel">
           <div class="editor-toolbar">
             <label>Scene Name

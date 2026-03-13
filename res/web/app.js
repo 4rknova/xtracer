@@ -3,13 +3,11 @@ const $ = (id) => document.getElementById(id);
 const el = {
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
-  tabEditor: $("tabEditor"),
   tabSettings: $("tabSettings"),
   tabLogs: $("tabLogs"),
   tabAbout: $("tabAbout"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
-  paneEditor: $("paneEditor"),
   paneSettings: $("paneSettings"),
   paneLogs: $("paneLogs"),
   paneAbout: $("paneAbout"),
@@ -84,6 +82,7 @@ const el = {
   saveSceneBtn: $("saveSceneBtn"),
   visualLoadBtn: $("visualLoadBtn"),
   visualCamera: $("visualCamera"),
+  visualProjection: $("visualProjection"),
   visualStatus: $("visualStatus"),
   visualShowGrid: $("visualShowGrid"),
   visualViewport: $("visualViewport"),
@@ -305,9 +304,12 @@ function createServerApi() {
       return data.scenes || [];
     },
     async getCameras(scene) {
-      if (!scene) return [];
+      if (!scene) return { cameras: [], defaultCamera: "" };
       const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/cameras`);
-      return data.cameras || [];
+      return {
+        cameras: data.cameras || [],
+        defaultCamera: data.default_camera || "",
+      };
     },
     async getIntegrators() {
       const data = await getJSON("/api/integrators");
@@ -1221,23 +1223,21 @@ async function loadResolutionPresets() {
 
 function setActiveTab(mode) {
   const isRender = mode === "render";
-  const isVisual = mode === "visual";
-  const isEditor = mode === "editor";
+  const isVisual = mode === "visual" || mode === "editor";
   const isSettings = mode === "settings";
   const isLogs = mode === "logs";
   const isAbout = mode === "about";
-  el.tabRender.classList.toggle("active", isRender);
-  el.tabVisual.classList.toggle("active", isVisual);
-  el.tabEditor.classList.toggle("active", isEditor);
-  el.tabSettings.classList.toggle("active", isSettings);
-  el.tabLogs.classList.toggle("active", isLogs);
-  el.tabAbout.classList.toggle("active", isAbout);
-  el.paneRender.classList.toggle("active", isRender);
-  el.paneVisual.classList.toggle("active", isVisual);
-  el.paneEditor.classList.toggle("active", isEditor);
-  el.paneSettings.classList.toggle("active", isSettings);
-  el.paneLogs.classList.toggle("active", isLogs);
-  el.paneAbout.classList.toggle("active", isAbout);
+  const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
+  setActive(el.tabRender, isRender);
+  setActive(el.tabVisual, isVisual);
+  setActive(el.tabSettings, isSettings);
+  setActive(el.tabLogs, isLogs);
+  setActive(el.tabAbout, isAbout);
+  setActive(el.paneRender, isRender);
+  setActive(el.paneVisual, isVisual);
+  setActive(el.paneSettings, isSettings);
+  setActive(el.paneLogs, isLogs);
+  setActive(el.paneAbout, isAbout);
   document.body.classList.toggle("visual-tab-active", isVisual);
   document.documentElement.classList.toggle("visual-tab-active", isVisual);
   if (isVisual && visualEditor) visualEditor.onShow();
@@ -1389,8 +1389,18 @@ async function loadScenes() {
 async function loadCameras(scene) {
   el.camera.innerHTML = "";
   addOption(el.camera, "", "Auto (first camera)");
-  const cameras = await api.getCameras(scene);
-  (cameras || []).forEach((name) => addOption(el.camera, name, name));
+  const info = await api.getCameras(scene);
+  const cameras = (info && info.cameras) || [];
+  const defaultCamera = (info && info.defaultCamera) || "";
+  cameras.forEach((name) => addOption(el.camera, name, name));
+
+  if (defaultCamera && cameras.includes(defaultCamera)) {
+    el.camera.value = defaultCamera;
+  } else {
+    el.camera.value = "";
+  }
+
+  syncVisualCameraFromRenderSelection();
 }
 
 async function loadIntegrators() {
@@ -1478,14 +1488,7 @@ async function saveScene() {
   const name = (el.sceneName.value || "").trim();
   const source = el.sceneSource.value || "";
   if (!name) throw new Error("scene name is required");
-
-  try {
-    return await api.saveScene(name, source, false);
-  } catch (err) {
-    if (err.status !== 409) throw err;
-    if (!window.confirm("Scene exists. Overwrite it?")) return null;
-    return api.saveScene(name, source, true);
-  }
+  return api.saveScene(name, source, true);
 }
 
 function triggerSceneSave() {
@@ -1497,6 +1500,7 @@ function triggerSceneSave() {
           el.scene.value = scene;
           const tasks = [loadCameras(scene)];
           if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));
+          if (visualEditor) tasks.push(loadVisualSceneFromSelected());
           return Promise.all(tasks);
         })
         .then(() => {
@@ -1669,6 +1673,9 @@ async function boot() {
     );
     if (visualEditor.init()) {
       syncVisualFrameAspect();
+      if (el.visualProjection && visualEditor.setProjectionMode) {
+        visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
+      }
       try {
         await loadVisualSceneFromSelected();
       } catch (err) {
@@ -1692,6 +1699,14 @@ async function boot() {
       if (!visualEditor || !visualEditor.setActiveCamera) return;
       visualEditor.setActiveCamera(el.visualCamera.value || "");
       appendLog(`visual camera=${el.visualCamera.value || "free"}`);
+    });
+  }
+  if (el.visualProjection) {
+    el.visualProjection.addEventListener("change", () => {
+      if (!visualEditor || !visualEditor.setProjectionMode) return;
+      const mode = String(el.visualProjection.value || "perspective").toLowerCase();
+      visualEditor.setProjectionMode(mode);
+      appendLog(`visual projection=${mode}`);
     });
   }
   if (el.visualShowGrid) {
@@ -1889,7 +1904,6 @@ async function boot() {
 
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
-  el.tabEditor.addEventListener("click", () => setActiveTab("editor"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
   el.tabAbout.addEventListener("click", () => setActiveTab("about"));

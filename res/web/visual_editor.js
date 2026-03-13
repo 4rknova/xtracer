@@ -18,36 +18,6 @@
     return new THREE.Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0);
   }
 
-  function makeAxisLabelSprite(text, colorHex) {
-    var canvas = document.createElement("canvas");
-    canvas.width = 128;
-    canvas.height = 64;
-    var ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "700 34px 'IBM Plex Sans', 'Avenir Next', sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#0f1822";
-    ctx.fillText(String(text || ""), canvas.width * 0.5 + 1, canvas.height * 0.5 + 1);
-    ctx.fillStyle = new THREE.Color(colorHex || 0xffffff).getStyle();
-    ctx.fillText(String(text || ""), canvas.width * 0.5, canvas.height * 0.5);
-
-    var tex = new THREE.CanvasTexture(canvas);
-    tex.needsUpdate = true;
-    var mat = new THREE.SpriteMaterial({
-      map: tex,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    });
-    var sprite = new THREE.Sprite(mat);
-    sprite.scale.set(0.56, 0.28, 1.0);
-    return sprite;
-  }
-
   function sanitizeSource(src) {
     return String(src || "")
       .replace(/\r\n/g, "\n")
@@ -206,9 +176,13 @@
           depth -= 1;
           if (depth === 0) {
             var body = block.slice(start + 1, i);
-            var x = readNumberProp(body, "x", fallback.x);
-            var y = readNumberProp(body, "y", fallback.y);
-            var z = readNumberProp(body, "z", fallback.z);
+            var hasX = new RegExp("\\bx\\s*=", "i").test(body);
+            var hasY = new RegExp("\\by\\s*=", "i").test(body);
+            var hasZ = new RegExp("\\bz\\s*=", "i").test(body);
+            var any = hasX || hasY || hasZ;
+            var x = readNumberProp(body, "x", any ? 0 : fallback.x);
+            var y = readNumberProp(body, "y", any ? 0 : fallback.y);
+            var z = readNumberProp(body, "z", any ? 0 : fallback.z);
             return vec3(x, y, z);
           }
         }
@@ -338,6 +312,8 @@
         up: readVec3Prop(body, "up", vec3(0, 1, 0)),
         orientation: readVec3Prop(body, "orientation", vec3(0, 0, 0)),
         fov: readNumberProp(body, "fov", 45),
+        flength: readNumberProp(body, "flength", 0),
+        aperture: readNumberProp(body, "aperture", 0),
       });
     });
 
@@ -515,6 +491,10 @@ function materialForDef(matDef) {
     this.renderer = null;
     this.scene = null;
     this.camera = null;
+    this.perspectiveCamera = null;
+    this.orthoCamera = null;
+    this.projectionMode = "perspective";
+    this.orthoViewScale = 1.0;
     this.modelRoot = null;
     this.grid = null;
     this.keyLight = null;
@@ -526,6 +506,9 @@ function materialForDef(matDef) {
     this.selectedCameraPose = null;
     this.selectedObjectName = "";
     this.selectedCameraHFov = 45;
+    this.selectedCameraAperture = 0;
+    this.selectedCameraFLength = 0;
+    this.selectedCameraType = "";
     this.cameraWidgetRoot = null;
     this.cameraWidget = null;
     this.axisWidgetScene = null;
@@ -569,6 +552,7 @@ function materialForDef(matDef) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     this.renderer.setClearColor(0x121820, 1);
+    this.renderer.autoClear = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.viewportEl.innerHTML = "";
@@ -576,7 +560,9 @@ function materialForDef(matDef) {
 
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 500);
+    this.perspectiveCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 500);
+    this.orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 500);
+    this.camera = this.perspectiveCamera;
 
     this.modelRoot = new THREE.Group();
     this.scene.add(this.modelRoot);
@@ -620,8 +606,62 @@ function materialForDef(matDef) {
 
     this.bindInput();
     this.resize();
+    this.setProjectionMode(this.projectionMode);
     requestAnimationFrame(this._animateBound);
     return true;
+  };
+
+  SceneVisualEditor.prototype.updateProjectionForDistance = function () {
+    var aspect = (this.renderViewport && this.renderViewport.h > 0)
+      ? (this.renderViewport.w / this.renderViewport.h)
+      : 1;
+    var dist = clamp(this.distance, 0.3, 120);
+
+    if (this.projectionMode === "isometric" && this.orthoCamera) {
+      // Keep scene scale comparable to perspective zoom by mapping distance to ortho span.
+      var baseFov = 45.0;
+      var halfH = Math.max(0.01, Math.tan(degToRad(baseFov) * 0.5) * dist * this.orthoViewScale);
+      var halfW = Math.max(0.01, halfH * Math.max(1e-6, aspect));
+      this.orthoCamera.left = -halfW;
+      this.orthoCamera.right = halfW;
+      this.orthoCamera.top = halfH;
+      this.orthoCamera.bottom = -halfH;
+      this.orthoCamera.near = 0.01;
+      this.orthoCamera.far = 500;
+      this.orthoCamera.updateProjectionMatrix();
+      return;
+    }
+
+    if (this.perspectiveCamera) {
+      this.perspectiveCamera.aspect = Math.max(1e-6, aspect);
+      this.perspectiveCamera.near = 0.01;
+      this.perspectiveCamera.far = 500;
+      this.perspectiveCamera.updateProjectionMatrix();
+    }
+  };
+
+  SceneVisualEditor.prototype.getProjectionMode = function () {
+    return this.projectionMode;
+  };
+
+  SceneVisualEditor.prototype.setProjectionMode = function (mode) {
+    var next = String(mode || "perspective").toLowerCase();
+    if (next !== "isometric" && next !== "perspective") next = "perspective";
+    this.projectionMode = next;
+
+    if (next === "isometric") {
+      if (!this.orthoCamera) return;
+      this.camera = this.orthoCamera;
+      if (Math.abs(this.elevation) < 1e-5) {
+        this.elevation = degToRad(35.26438968);
+      }
+      this.updateProjectionForDistance();
+      return;
+    }
+
+    if (!this.perspectiveCamera) return;
+    this.camera = this.perspectiveCamera;
+    this.updateProjectionForDistance();
   };
 
   SceneVisualEditor.prototype.bindInput = function () {
@@ -799,8 +839,13 @@ function materialForDef(matDef) {
 
   SceneVisualEditor.prototype.clearCameraWidget = function () {
     if (this.cameraWidget) {
-      if (this.cameraWidget.geometry) this.cameraWidget.geometry.dispose();
-      if (this.cameraWidget.material) this.cameraWidget.material.dispose();
+      this.cameraWidget.traverse(function (node) {
+        if (node && node.geometry) node.geometry.dispose();
+        if (node && node.material) {
+          if (Array.isArray(node.material)) node.material.forEach(function (m) { if (m) m.dispose(); });
+          else node.material.dispose();
+        }
+      });
       this.cameraWidgetRoot.remove(this.cameraWidget);
       this.cameraWidget = null;
     }
@@ -852,12 +897,6 @@ function materialForDef(matDef) {
       this.axisWidgetRoot.add(pSphere);
       this.axisWidgetPickables.push(pSphere);
 
-      var pLabel = makeAxisLabelSprite(a.label, a.color);
-      if (pLabel) {
-        pLabel.position.copy(a.dir).multiplyScalar(1.34);
-        this.axisWidgetRoot.add(pLabel);
-      }
-
       var nSphere = new THREE.Mesh(
         new THREE.SphereGeometry(0.18, 16, 12),
         new THREE.MeshBasicMaterial({ color: 0x90a0b2 })
@@ -870,11 +909,6 @@ function materialForDef(matDef) {
       this.axisWidgetRoot.add(nSphere);
       this.axisWidgetPickables.push(nSphere);
 
-      var nLabel = makeAxisLabelSprite("-" + a.label.slice(1), 0x9fb0c2);
-      if (nLabel) {
-        nLabel.position.copy(a.dir).multiplyScalar(-1.34);
-        this.axisWidgetRoot.add(nLabel);
-      }
     }
   };
 
@@ -1016,7 +1050,8 @@ function materialForDef(matDef) {
     var span = clamp((this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
     var g = this.buildCameraWidgetGeometry(this.selectedCameraHFov, aspect, span);
     var m = new THREE.LineBasicMaterial({ color: 0x55d3ff });
-    this.cameraWidget = new THREE.LineSegments(g, m);
+    this.cameraWidget = new THREE.Group();
+    this.cameraWidget.add(new THREE.LineSegments(g, m));
 
     var position = this.selectedCameraPose.position.clone();
     var target = this.selectedCameraPose.target.clone();
@@ -1040,6 +1075,55 @@ function materialForDef(matDef) {
 
     this.cameraWidget.position.copy(this.selectedCameraPose.position);
     this.cameraWidget.quaternion.copy(q);
+
+    if (this.selectedCameraType === "thin-lens") {
+      var fl = Math.max(0, Number(this.selectedCameraFLength) || 0);
+      var ap = Math.max(0, Number(this.selectedCameraAperture) || 0);
+
+      if (ap > 0) {
+        var ar = Math.max(ap * 0.5, span * 0.04);
+        var ringGeo = new THREE.RingGeometry(ar * 0.92, ar, 48, 1);
+        var ringMat = new THREE.MeshBasicMaterial({
+          color: 0xffb347,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false,
+        });
+        var ring = new THREE.Mesh(ringGeo, ringMat);
+        this.cameraWidget.add(ring);
+      }
+
+      if (fl > 0) {
+        var halfWf = Math.tan(degToRad(clamp(this.selectedCameraHFov, 1, 179)) * 0.5) * fl;
+        var halfHf = halfWf / Math.max(1e-6, aspect);
+        var p0 = vec3(-halfWf, -halfHf, fl);
+        var p1 = vec3(halfWf, -halfHf, fl);
+        var p2 = vec3(halfWf, halfHf, fl);
+        var p3 = vec3(-halfWf, halfHf, fl);
+        var seg = [p0, p1, p1, p2, p2, p3, p3, p0];
+        var arr = new Float32Array(seg.length * 3);
+        for (var si = 0; si < seg.length; si += 1) {
+          arr[si * 3 + 0] = seg[si].x;
+          arr[si * 3 + 1] = seg[si].y;
+          arr[si * 3 + 2] = seg[si].z;
+        }
+        var fg = new THREE.BufferGeometry();
+        fg.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+        var fm = new THREE.LineBasicMaterial({
+          color: 0xff8f5e,
+          transparent: true,
+          opacity: 0.9,
+        });
+        this.cameraWidget.add(new THREE.LineSegments(fg, fm));
+
+        var ag = new THREE.BufferGeometry();
+        ag.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0, 0, 0, fl]), 3));
+        var am = new THREE.LineBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.85 });
+        this.cameraWidget.add(new THREE.LineSegments(ag, am));
+      }
+    }
+
     this.cameraWidgetRoot.add(this.cameraWidget);
   };
 
@@ -1048,8 +1132,8 @@ function materialForDef(matDef) {
     var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
       ? this.frameAspect
       : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
-    var vfov = (this.camera && Number.isFinite(this.camera.fov) && this.camera.fov > 1 && this.camera.fov < 179)
-      ? this.camera.fov
+    var vfov = (this.perspectiveCamera && Number.isFinite(this.perspectiveCamera.fov) && this.perspectiveCamera.fov > 1 && this.perspectiveCamera.fov < 179)
+      ? this.perspectiveCamera.fov
       : 45;
     var hfov = radToDeg(2.0 * Math.atan(Math.tan(degToRad(vfov) * 0.5) * Math.max(1e-6, aspect)));
     var lim = Math.min(vfov, hfov);
@@ -1083,7 +1167,11 @@ function materialForDef(matDef) {
       n.normalize();
       var q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
       mesh.quaternion.multiply(q);
-      mesh.position.add(n.multiplyScalar(def.distance || 0));
+      // Mirror xtcore plane convention used in intersection:
+      // reference point v = abs(normal) * distance.
+      var d0 = Number(def.distance) || 0;
+      var v0 = new THREE.Vector3(Math.abs(n.x), Math.abs(n.y), Math.abs(n.z)).multiplyScalar(d0);
+      mesh.position.add(v0);
     }
   };
 
@@ -1308,6 +1396,9 @@ function materialForDef(matDef) {
       this.activeSceneCamera = "";
       this.selectedCameraPose = null;
       this.selectedCameraHFov = 45;
+      this.selectedCameraAperture = 0;
+      this.selectedCameraFLength = 0;
+      this.selectedCameraType = "";
       this.updateCameraWidget();
       return;
     }
@@ -1330,6 +1421,9 @@ function materialForDef(matDef) {
 
     var hfov = (Number.isFinite(c.fov) && c.fov > 1 && c.fov < 179) ? c.fov : 45;
     this.selectedCameraHFov = hfov;
+    this.selectedCameraAperture = Math.max(0, Number(c.aperture) || 0);
+    this.selectedCameraFLength = Math.max(0, Number(c.flength) || 0);
+    this.selectedCameraType = String(c.type || "").toLowerCase();
     this.selectedCameraPose = {
       position: pos.clone(),
       target: target.clone(),
@@ -1350,8 +1444,11 @@ function materialForDef(matDef) {
       w: w,
       h: h,
     };
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    if (this.perspectiveCamera) {
+      this.perspectiveCamera.aspect = w / h;
+      this.perspectiveCamera.updateProjectionMatrix();
+    }
+    this.updateProjectionForDistance();
   };
 
   SceneVisualEditor.prototype.setFrameAspect = function (width, height) {
@@ -1417,7 +1514,9 @@ function materialForDef(matDef) {
       var n = p.normal;
       var d = p.distance;
 
-      var signed = anchor.dot(n) - d;
+      // Mirror xtcore plane convention: v = abs(n) * d, plane through v with normal n.
+      var v = new THREE.Vector3(Math.abs(n.x), Math.abs(n.y), Math.abs(n.z)).multiplyScalar(d);
+      var signed = anchor.clone().sub(v).dot(n);
       var center = anchor.clone().addScaledVector(n, -signed);
 
       var dist = Math.abs(camPos.clone().sub(center).dot(n));
@@ -1436,11 +1535,18 @@ function materialForDef(matDef) {
     cp.x = this.target.x + this.distance * Math.cos(this.elevation) * Math.sin(this.azimuth);
     cp.y = this.target.y + this.distance * Math.sin(this.elevation);
     cp.z = this.target.z + this.distance * Math.cos(this.elevation) * Math.cos(this.azimuth);
+    this.updateProjectionForDistance();
     this.applyXtcoreCameraBasis(cp, this.target, this.viewUp);
     this.updateInfinitePlanes();
 
     var vp = this.renderViewport || { x: 0, y: 0, w: 1, h: 1 };
+    var canvas = this.renderer.domElement;
+    var fullW = canvas ? canvas.width : 1;
+    var fullH = canvas ? canvas.height : 1;
     this.renderer.setScissorTest(true);
+    this.renderer.setViewport(0, 0, fullW, fullH);
+    this.renderer.setScissor(0, 0, fullW, fullH);
+    this.renderer.clear(true, true, true);
     this.renderer.setViewport(vp.x, vp.y, vp.w, vp.h);
     this.renderer.setScissor(vp.x, vp.y, vp.w, vp.h);
     this.renderer.render(this.scene, this.camera);

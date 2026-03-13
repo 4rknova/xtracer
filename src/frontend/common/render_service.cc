@@ -40,6 +40,16 @@ bool parse_f64_text(const std::string &s, double &out)
     return true;
 }
 
+HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &name)
+{
+    if (name.empty()) return HASH_ID_INVALID;
+    for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
+        const char *camera_name = xtcore::pool::str::get((*it).first);
+        if (camera_name && name == camera_name) return (*it).first;
+    }
+    return HASH_ID_INVALID;
+}
+
 struct progress_handler_t : public xtcore::render::tile_event_handler_t
 {
     std::atomic<size_t> done;
@@ -332,11 +342,14 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
     if (!request.camera.empty()) {
         context.params.camera = xtcore::pool::str::add(request.camera.c_str());
     } else {
-        auto first_cam = context.scene.m_cameras.begin();
-        if (first_cam != context.scene.m_cameras.end()) {
-            context.params.camera = (*first_cam).first;
-        } else {
-            context.params.camera = HASH_ID_INVALID;
+        context.params.camera = find_camera_id_by_name(context.scene, context.scene.m_default_camera);
+        if (context.params.camera == HASH_ID_INVALID) {
+            auto first_cam = context.scene.m_cameras.begin();
+            if (first_cam != context.scene.m_cameras.end()) {
+                context.params.camera = (*first_cam).first;
+            } else {
+                context.params.camera = HASH_ID_INVALID;
+            }
         }
     }
 

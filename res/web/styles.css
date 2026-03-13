@@ -664,6 +664,28 @@ textarea {
   line-height: 1.35;
 }
 
+#paneLogs.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#paneLogs .panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#paneLogs .log-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
 .about-panel {
   display: grid;
   gap: 16px;
@@ -1003,6 +1025,12 @@ button:disabled {
   padding: 7px 8px;
 }
 
+.visual-projection-inline {
+  width: 130px;
+  margin: 0;
+  padding: 7px 8px;
+}
+
 .visual-load-btn {
   margin: 0;
   padding: 7px 10px;
@@ -1107,9 +1135,11 @@ button:disabled {
 
 #paneVisual.active {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 #paneVisual .panel-preview {
@@ -1117,16 +1147,17 @@ button:disabled {
   flex-direction: column;
   width: 100%;
   min-height: 0;
-  height: 100%;
   margin: 0;
 }
 
 #paneVisual .visual-viewport-top {
-  flex: 1 1 auto;
-  height: auto;
-  max-height: none;
-  min-height: 0;
-  margin: 0 0 2rem;
+  height: clamp(260px, 42vh, 520px);
+  min-height: 220px;
+  margin: 0;
+}
+
+#paneVisual .editor-panel {
+  margin: 0;
 }
 
 .preview-empty {

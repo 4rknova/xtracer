@@ -307,9 +307,25 @@ std::vector<std::string> list_scenes(const std::string &scene_dir)
     return out;
 }
 
-std::vector<std::string> list_cameras(const std::string &scene_path, std::string &error)
+struct camera_list_info_t
 {
-    std::vector<std::string> out;
+    std::vector<std::string> cameras;
+    std::string default_camera;
+};
+
+HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &name)
+{
+    if (name.empty()) return HASH_ID_INVALID;
+    for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
+        const char *camera_name = xtcore::pool::str::get((*it).first);
+        if (camera_name && name == camera_name) return (*it).first;
+    }
+    return HASH_ID_INVALID;
+}
+
+camera_list_info_t list_cameras(const std::string &scene_path, std::string &error)
+{
+    camera_list_info_t out;
     xtcore::Scene scene;
     int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
     if (load_err) {
@@ -319,10 +335,11 @@ std::vector<std::string> list_cameras(const std::string &scene_path, std::string
 
     for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
         const char *name = xtcore::pool::str::get((*it).first);
-        if (name && *name) out.push_back(name);
+        if (name && *name) out.cameras.push_back(name);
     }
 
-    std::sort(out.begin(), out.end());
+    std::sort(out.cameras.begin(), out.cameras.end());
+    out.default_camera = scene.m_default_camera;
     return out;
 }
 
@@ -402,8 +419,11 @@ std::string scene_resolved_camera_json(const std::string &scene_path,
         if (scene.get_camera(requested_id)) resolved_id = requested_id;
     }
     if (resolved_id == HASH_ID_INVALID) {
-        auto first_cam = scene.m_cameras.begin();
-        if (first_cam != scene.m_cameras.end()) resolved_id = (*first_cam).first;
+        resolved_id = find_camera_id_by_name(scene, scene.m_default_camera);
+        if (resolved_id == HASH_ID_INVALID) {
+            auto first_cam = scene.m_cameras.begin();
+            if (first_cam != scene.m_cameras.end()) resolved_id = (*first_cam).first;
+        }
     }
 
     if (resolved_id == HASH_ID_INVALID || !scene.get_camera(resolved_id)) {
@@ -544,7 +564,7 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string error;
-        std::vector<std::string> cameras = list_cameras(join_path(scene_dir, scene), error);
+        camera_list_info_t cameras = list_cameras(join_path(scene_dir, scene), error);
         if (!error.empty()) {
             backend_log_t::handle().add("error", "camera list failed for scene=" + scene);
             send_json(res, "{\"error\":\"failed to load scene\"}", 400);
@@ -553,11 +573,11 @@ void setup_routes(httplib::Server &server,
 
         std::ostringstream ss;
         ss << "{\"cameras\":[";
-        for (size_t i = 0; i < cameras.size(); ++i) {
+        for (size_t i = 0; i < cameras.cameras.size(); ++i) {
             if (i) ss << ',';
-            ss << '"' << json_escape(cameras[i]) << '"';
+            ss << '"' << json_escape(cameras.cameras[i]) << '"';
         }
-        ss << "]}";
+        ss << "],\"default_camera\":\"" << json_escape(cameras.default_camera) << "\"}";
         send_json(res, ss.str());
     });
 
