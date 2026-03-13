@@ -1240,6 +1240,8 @@ function setActiveTab(mode) {
   setActive(el.paneAbout, isAbout);
   document.body.classList.toggle("visual-tab-active", isVisual);
   document.documentElement.classList.toggle("visual-tab-active", isVisual);
+  document.body.classList.toggle("logs-tab-active", isLogs);
+  document.documentElement.classList.toggle("logs-tab-active", isLogs);
   if (isVisual && visualEditor) visualEditor.onShow();
   if (isLogs && (uiOptions.autoScrollLogs || pendingLogScroll)) {
     scrollLogToBottom(true);

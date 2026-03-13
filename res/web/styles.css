@@ -92,6 +92,14 @@ body.visual-tab-active {
   overflow: hidden;
 }
 
+html.logs-tab-active,
+body.logs-tab-active {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
 body {
   margin: 0;
   font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
@@ -116,6 +124,14 @@ body {
 }
 
 body.visual-tab-active .page {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  padding-bottom: 0;
+}
+
+body.logs-tab-active .page {
   height: 100vh;
   height: 100dvh;
   max-height: 100vh;
@@ -670,6 +686,7 @@ textarea {
   gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 #paneLogs .panel {
