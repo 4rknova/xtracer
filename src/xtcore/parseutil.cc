@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 #include <nmath/precision.h>
 #include <ncf/util.h>
@@ -153,6 +154,137 @@ nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const n
 
 	return res;
 }
+
+namespace {
+
+static bool parse_trailing_index(const std::string &name, int &index)
+{
+    if (name.empty()) return false;
+    int i = (int)name.size() - 1;
+    while (i >= 0 && std::isdigit((unsigned char)name[(size_t)i])) --i;
+    if (i == (int)name.size() - 1) return false;
+    const std::string tail = name.substr((size_t)(i + 1));
+    if (tail.empty()) return false;
+    index = ncf::util::to_int(tail.c_str());
+    return true;
+}
+
+static std::vector<nmath::Vector2f> deserialize_lathe_profile(const ncf::NCF *profile)
+{
+    struct point_entry_t {
+        std::string name;
+        int index;
+        bool has_index;
+        nmath::Vector2f value;
+    };
+
+    std::vector<point_entry_t> entries;
+    if (!profile) return std::vector<nmath::Vector2f>();
+
+    const size_t prop_count = profile->count_properties();
+    for (size_t i = 0; i < prop_count; ++i) {
+        const char *name_c = profile->get_property_name_by_index(i);
+        if (!name_c || !*name_c) continue;
+        const std::string name = name_c;
+
+        point_entry_t e;
+        e.name = name;
+        e.has_index = parse_trailing_index(name, e.index);
+        e.value = deserialize_tex2(profile, name.c_str(), nmath::Vector2f(0.0f, 0.0f));
+        entries.push_back(e);
+    }
+
+    const size_t group_count = profile->count_groups();
+    for (size_t i = 0; i < group_count; ++i) {
+        ncf::NCF *g = profile->get_group_by_index(i);
+        if (!g) continue;
+        const char *name_c = g->get_name();
+        if (!name_c || !*name_c) continue;
+        const std::string name = name_c;
+
+        point_entry_t e;
+        e.name = name;
+        e.has_index = parse_trailing_index(name, e.index);
+
+        if (g->query_property(XTPROTO_PROP_CRD_U) || g->query_property(XTPROTO_PROP_CRD_V)) {
+            e.value = deserialize_tex2(profile, name.c_str(), nmath::Vector2f(0.0f, 0.0f));
+        } else {
+            const float x = (float)deserialize_numf(g->get_property_by_name(XTPROTO_PROP_CRD_X), 0.0f);
+            const float y = (float)deserialize_numf(g->get_property_by_name(XTPROTO_PROP_CRD_Y), 0.0f);
+            e.value = nmath::Vector2f(x, y);
+        }
+
+        entries.push_back(e);
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const point_entry_t &a, const point_entry_t &b) {
+        if (a.has_index && b.has_index && a.index != b.index) return a.index < b.index;
+        if (a.has_index != b.has_index) return a.has_index;
+        return a.name < b.name;
+    });
+
+    std::vector<nmath::Vector2f> profile_points;
+    profile_points.reserve(entries.size());
+    for (size_t i = 0; i < entries.size(); ++i) profile_points.push_back(entries[i].value);
+    return profile_points;
+}
+
+static std::vector<nmath::Vector3f> deserialize_spline_points(const ncf::NCF *spline)
+{
+    struct point_entry_t {
+        std::string name;
+        int index;
+        bool has_index;
+        nmath::Vector3f value;
+    };
+
+    std::vector<point_entry_t> entries;
+    if (!spline) return std::vector<nmath::Vector3f>();
+
+    const size_t prop_count = spline->count_properties();
+    for (size_t i = 0; i < prop_count; ++i) {
+        const char *name_c = spline->get_property_name_by_index(i);
+        if (!name_c || !*name_c) continue;
+        const std::string name = name_c;
+
+        point_entry_t e;
+        e.name = name;
+        e.has_index = parse_trailing_index(name, e.index);
+        e.value = deserialize_vec3(spline, name.c_str(), nmath::Vector3f(0.0f, 0.0f, 0.0f));
+        entries.push_back(e);
+    }
+
+    const size_t group_count = spline->count_groups();
+    for (size_t i = 0; i < group_count; ++i) {
+        ncf::NCF *g = spline->get_group_by_index(i);
+        if (!g) continue;
+        const char *name_c = g->get_name();
+        if (!name_c || !*name_c) continue;
+        const std::string name = name_c;
+
+        point_entry_t e;
+        e.name = name;
+        e.has_index = parse_trailing_index(name, e.index);
+        const float x = (float)deserialize_numf(g->get_property_by_name(XTPROTO_PROP_CRD_X), 0.0f);
+        const float y = (float)deserialize_numf(g->get_property_by_name(XTPROTO_PROP_CRD_Y), 0.0f);
+        const float z = (float)deserialize_numf(g->get_property_by_name(XTPROTO_PROP_CRD_Z), 0.0f);
+        e.value = nmath::Vector3f(x, y, z);
+        entries.push_back(e);
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const point_entry_t &a, const point_entry_t &b) {
+        if (a.has_index && b.has_index && a.index != b.index) return a.index < b.index;
+        if (a.has_index != b.has_index) return a.has_index;
+        return a.name < b.name;
+    });
+
+    std::vector<nmath::Vector3f> points;
+    points.reserve(entries.size());
+    for (size_t i = 0; i < entries.size(); ++i) points.push_back(entries[i].value);
+    return points;
+}
+
+} /* namespace */
 
 xtcore::sampler::Gradient *deserialize_gradient(const ncf::NCF *p)
 {
@@ -415,6 +547,99 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
             if (i < 24) i = 24;
             nmesh::generator::klein_bottle(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_HAIRBALL)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (i < 8) i = 8;
+            if (i > 2048) i = 2048;
+
+            int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
+            float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, 1.0f);
+            if (radius <= 0.0f) radius = 1.0f;
+
+            int fibers_i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_FIBERS) : 0, 0);
+            if (fibers_i < 0) fibers_i = 0;
+            size_t fibers = (size_t)fibers_i;
+
+            nmesh::generator::hairball(&obj, (size_t)i, seed, radius, fibers);
+        }
+        else if (!token.compare(XTPROTO_LTRL_SHELL_SPIRAL)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (i < 16) i = 16;
+            if (i > 4096) i = 4096;
+
+            float turns = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TURNS) : 0, 4.0f);
+            if (turns < 0.5f) turns = 0.5f;
+            if (turns > 24.0f) turns = 24.0f;
+
+            float growth = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_GROWTH) : 0, 0.22f);
+            if (growth < 0.01f) growth = 0.01f;
+            if (growth > 1.0f) growth = 1.0f;
+
+            float tube_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TUBE_RADIUS) : 0, 0.14f);
+            if (tube_radius <= 0.0f) tube_radius = 0.14f;
+            if (tube_radius > 2.0f) tube_radius = 2.0f;
+
+            nmesh::generator::shell_spiral(&obj, (size_t)i, turns, growth, tube_radius);
+        }
+        else if (!token.compare(XTPROTO_LTRL_ROCK)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 48);
+            if (i < 8) i = 8;
+            if (i > 2048) i = 2048;
+
+            int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
+            float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, 1.0f);
+            if (radius <= 0.0f) radius = 1.0f;
+
+            float roughness = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_ROUGH) : 0, 0.35f);
+            if (roughness < 0.0f) roughness = 0.0f;
+            if (roughness > 2.0f) roughness = 2.0f;
+
+            int octaves_i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_OCTAVES) : 0, 4);
+            if (octaves_i < 1) octaves_i = 1;
+            if (octaves_i > 8) octaves_i = 8;
+
+            nmesh::generator::rock(&obj, (size_t)i, seed, radius, roughness, (size_t)octaves_i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CHAIN_LINK)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (i < 12) i = 12;
+            if (i > 2048) i = 2048;
+
+            int count_i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_COUNT) : 0, 6);
+            if (count_i < 1) count_i = 1;
+            if (count_i > 128) count_i = 128;
+
+            float major_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_MAJOR_RADIUS) : 0, 0.55f);
+            if (major_radius <= 0.0f) major_radius = 0.55f;
+
+            float minor_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_MINOR_RADIUS) : 0, 0.16f);
+            if (minor_radius <= 0.0f) minor_radius = 0.16f;
+
+            float spacing = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_SPACING) : 0, 1.05f);
+            if (spacing < 0.5f) spacing = 0.5f;
+            if (spacing > 2.0f) spacing = 2.0f;
+
+            std::vector<nmath::Vector3f> spline;
+            if (p && p->query_group(XTPROTO_PROP_SPLINE)) {
+                spline = deserialize_spline_points(p->get_group_by_name(XTPROTO_PROP_SPLINE));
+            }
+
+            nmesh::generator::chain_link(&obj, (size_t)i, (size_t)count_i, major_radius, minor_radius, spacing, spline);
+        }
+        else if (!token.compare(XTPROTO_LTRL_LATHE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (i < 12) i = 12;
+            if (i > 4096) i = 4096;
+
+            bool cap_ends = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_CAP_ENDS) : 0, true);
+
+            std::vector<nmath::Vector2f> profile;
+            if (p && p->query_group(XTPROTO_PROP_PROFILE)) {
+                profile = deserialize_lathe_profile(p->get_group_by_name(XTPROTO_PROP_PROFILE));
+            }
+
+            nmesh::generator::lathe(&obj, profile, (size_t)i, cap_ends);
         }
         else if (!token.compare(XTPROTO_LTRL_PLANE)) {
             int i = 0;
@@ -942,9 +1167,10 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     Log::handle().post_message("Building the scene..");
 
     scene->m_source      = deserialize_cstr(filename);
-	scene->m_name        = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_TITLE));
+    scene->m_name        = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_TITLE));
     scene->m_description = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_DESCR));
     scene->m_version     = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_VERSN));
+    scene->m_default_camera = deserialize_cstr(root.get_property_by_name(XTPROTO_PROP_DEFAULT_CAMERA));
 	scene->m_ambient     = deserialize_col3(&root, XTPROTO_PROP_IAMBN)
 			             * deserialize_numf(root.get_property_by_name(XTPROTO_PROP_KAMBN), 1.);
 

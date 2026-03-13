@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cmath>
 #include <map>
@@ -872,6 +873,479 @@ void klein_bottle(object_t *obj, size_t resolution)
             const int i3 = i0 + stride;
             append_quad(out, i0, i3, i2, i1, true);
         }
+    }
+}
+
+namespace {
+
+struct rng_t {
+    uint32_t state;
+};
+
+static uint32_t rng_next_u32(rng_t &rng)
+{
+    uint32_t x = rng.state;
+    if (x == 0u) x = 0x9e3779b9u;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    rng.state = x;
+    return x;
+}
+
+static float rng_next_unit(rng_t &rng)
+{
+    return (float)((rng_next_u32(rng) & 0x00ffffffu) / 16777215.0);
+}
+
+static Vec3 random_unit_vec3(rng_t &rng)
+{
+    const float z = rng_next_unit(rng) * 2.0f - 1.0f;
+    const float a = (float)(nmath::PI_DOUBLE * 2.0) * rng_next_unit(rng);
+    const float r = nmath_sqrt(std::max(0.0f, 1.0f - z * z));
+    return Vec3(r * nmath_cos(a), z, r * nmath_sin(a));
+}
+
+static float fractf(float x)
+{
+    return x - std::floor(x);
+}
+
+static float hash_noise3(const Vec3 &p, uint32_t seed)
+{
+    const float s = (float)(seed & 0xffffu) * 0.013517f;
+    const float v = p.x * 12.9898f + p.y * 78.233f + p.z * 37.719f + s;
+    return fractf(nmath_sin(v) * 43758.5453f) * 2.0f - 1.0f;
+}
+
+static float fbm_noise(const Vec3 &p, uint32_t seed, size_t octaves)
+{
+    float sum = 0.0f;
+    float amp = 1.0f;
+    float f = 1.0f;
+    float norm = 0.0f;
+    for (size_t i = 0; i < octaves; ++i) {
+        const Vec3 pp = p * f + Vec3((float)i * 1.37f, (float)i * 2.11f, (float)i * 0.73f);
+        sum += amp * hash_noise3(pp, seed + (uint32_t)(i * 1664525u));
+        norm += amp;
+        amp *= 0.5f;
+        f *= 2.03f;
+    }
+    if (norm <= 1e-8f) return 0.0f;
+    return sum / norm;
+}
+
+static void append_torus_link(object_t *obj, shape_t &shape, const Vec3 &center, const Vec3 &axis,
+                              float major_radius, float minor_radius, size_t seg_u, size_t seg_v)
+{
+    if (!obj) return;
+    if (major_radius <= 0.0f || minor_radius <= 0.0f) return;
+    seg_u = std::max((size_t)24, seg_u);
+    seg_v = std::max((size_t)12, seg_v);
+
+    Vec3 n = axis;
+    if (n.length() <= 1e-8f) n = Vec3(0, 1, 0);
+    n.normalize();
+    Vec3 u = nmath::cross(n, Vec3(0, 1, 0));
+    if (u.length() <= 1e-8f) u = nmath::cross(n, Vec3(1, 0, 0));
+    if (u.length() <= 1e-8f) return;
+    u.normalize();
+    Vec3 v = nmath::cross(n, u).normalized();
+
+    const int base_index = (int)(obj->attributes.v.size() / 3);
+    for (size_t iu = 0; iu <= seg_u; ++iu) {
+        const float tu = (float)iu / (float)seg_u;
+        const float au = (float)(nmath::PI_DOUBLE * 2.0) * tu;
+        const float cu = nmath_cos(au);
+        const float su = nmath_sin(au);
+        const Vec3 radial = (u * cu + v * su).normalized();
+        const Vec3 ring_center = center + radial * major_radius;
+
+        for (size_t iv = 0; iv <= seg_v; ++iv) {
+            const float tv = (float)iv / (float)seg_v;
+            const float av = (float)(nmath::PI_DOUBLE * 2.0) * tv;
+            const float cv = nmath_cos(av);
+            const float sv = nmath_sin(av);
+            Vec3 normal = (radial * cv + n * sv);
+            if (normal.length() <= 1e-8f) normal = radial;
+            normal.normalize();
+            const Vec3 pos = ring_center + normal * minor_radius;
+            uv_t uv = {tu, tv};
+            append_vertex(obj, pos, normal, &uv);
+        }
+    }
+
+    const int stride = (int)(seg_v + 1);
+    for (size_t iu = 0; iu < seg_u; ++iu) {
+        for (size_t iv = 0; iv < seg_v; ++iv) {
+            const int i0 = base_index + (int)(iu * (seg_v + 1) + iv);
+            const int i1 = i0 + 1;
+            const int i2 = i0 + stride + 1;
+            const int i3 = i0 + stride;
+            append_quad(shape, i0, i3, i2, i1, true);
+        }
+    }
+}
+
+static Vec3 safe_normalized(const Vec3 &v, const Vec3 &fallback)
+{
+    Vec3 out = v;
+    if (out.length() <= 1e-8f) return fallback;
+    out.normalize();
+    return out;
+}
+
+static void build_polyline_lengths(const std::vector<Vec3> &pts, std::vector<float> &cum_lengths)
+{
+    cum_lengths.clear();
+    if (pts.empty()) return;
+    cum_lengths.resize(pts.size(), 0.0f);
+    for (size_t i = 1; i < pts.size(); ++i) {
+        cum_lengths[i] = cum_lengths[i - 1] + (pts[i] - pts[i - 1]).length();
+    }
+}
+
+static Vec3 sample_polyline(const std::vector<Vec3> &pts, const std::vector<float> &cum_lengths, float s)
+{
+    if (pts.empty()) return Vec3(0, 0, 0);
+    if (pts.size() == 1) return pts[0];
+
+    const float total = cum_lengths.back();
+    if (s <= 0.0f) return pts.front();
+    if (s >= total) return pts.back();
+
+    size_t seg = 1;
+    while (seg < cum_lengths.size() && cum_lengths[seg] < s) ++seg;
+    if (seg >= pts.size()) return pts.back();
+
+    const float a = cum_lengths[seg - 1];
+    const float b = cum_lengths[seg];
+    const float den = std::max(1e-8f, b - a);
+    const float t = (s - a) / den;
+    return pts[seg - 1] * (1.0f - t) + pts[seg] * t;
+}
+
+} /* namespace */
+
+void hairball(object_t *obj, size_t resolution, int seed, float radius, size_t fibers)
+{
+    if (!obj) return;
+    if (radius <= 0.0f) radius = 1.0f;
+
+    const int iters = clampi((int)(resolution / 16), 0, 3);
+    size_t fiber_count = fibers;
+    if (fiber_count == 0) fiber_count = std::max((size_t)64, resolution * 10);
+    fiber_count = std::min((size_t)20000, std::max((size_t)16, fiber_count));
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<Vec3> sphere_verts;
+    std::vector<tri_t> sphere_faces;
+    build_icosphere_data(sphere_verts, sphere_faces, iters);
+    const float core_radius = radius * 0.72f;
+
+    std::vector<int> remap(sphere_verts.size(), -1);
+    for (size_t i = 0; i < sphere_verts.size(); ++i) {
+        const Vec3 n = sphere_verts[i].normalized();
+        remap[i] = append_vertex(obj, n * core_radius, n, 0);
+    }
+    for (size_t i = 0; i < sphere_faces.size(); ++i) {
+        const tri_t &t = sphere_faces[i];
+        append_triangle(out, remap[t.a], remap[t.b], remap[t.c], false);
+    }
+
+    rng_t rng;
+    rng.state = (uint32_t)seed ^ 0xa3c59ac3u;
+    if (rng.state == 0u) rng.state = 1u;
+
+    for (size_t i = 0; i < fiber_count; ++i) {
+        const Vec3 dir = random_unit_vec3(rng);
+        const Vec3 base = dir * core_radius;
+
+        Vec3 tangent0 = nmath::cross(dir, Vec3(0, 1, 0));
+        if (tangent0.length() <= 1e-6f) tangent0 = nmath::cross(dir, Vec3(1, 0, 0));
+        if (tangent0.length() <= 1e-6f) continue;
+        tangent0.normalize();
+        Vec3 tangent1 = nmath::cross(dir, tangent0).normalized();
+
+        const float twist = (float)(nmath::PI_DOUBLE * 2.0) * rng_next_unit(rng);
+        const float c = nmath_cos(twist);
+        const float s = nmath_sin(twist);
+        Vec3 t0 = (tangent0 * c + tangent1 * s).normalized();
+        Vec3 t1 = nmath::cross(dir, t0).normalized();
+
+        const float base_r = radius * (0.006f + 0.02f * rng_next_unit(rng));
+        const float len = radius * (0.12f + 0.38f * rng_next_unit(rng));
+        const float bend_amt = len * (0.02f + 0.22f * rng_next_unit(rng));
+        const float bend_ang = (float)(nmath::PI_DOUBLE * 2.0) * rng_next_unit(rng);
+        const Vec3 bend = (t0 * nmath_cos(bend_ang) + t1 * nmath_sin(bend_ang)) * bend_amt;
+        const Vec3 tip = base + dir * len + bend;
+
+        const Vec3 b0 = base + t0 * base_r;
+        const Vec3 b1 = base + (t0 * -0.5f + t1 * 0.8660254f) * base_r;
+        const Vec3 b2 = base + (t0 * -0.5f - t1 * 0.8660254f) * base_r;
+
+        add_triangle_flat(obj, out, b0, b1, tip);
+        add_triangle_flat(obj, out, b1, b2, tip);
+        add_triangle_flat(obj, out, b2, b0, tip);
+    }
+}
+
+void shell_spiral(object_t *obj, size_t resolution, float turns, float growth, float tube_radius)
+{
+    if (!obj) return;
+    turns = std::max(0.5f, std::min(24.0f, turns));
+    growth = std::max(0.01f, std::min(1.0f, growth));
+    tube_radius = std::max(0.01f, std::min(1.0f, tube_radius));
+
+    const size_t seg_u = std::max((size_t)96, (size_t)(resolution * turns * 2.0f));
+    const size_t seg_v = std::max((size_t)12, resolution / 5);
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<Vec3> centers(seg_u + 1);
+    std::vector<Vec3> tangents(seg_u + 1);
+    std::vector<Vec3> normals(seg_u + 1);
+    std::vector<Vec3> binormals(seg_u + 1);
+    std::vector<float> tube(seg_u + 1);
+
+    for (size_t i = 0; i <= seg_u; ++i) {
+        const float u = (float)i / (float)seg_u;
+        const float a = (float)(nmath::PI_DOUBLE * 2.0) * turns * u;
+        const float radial = 0.25f + growth * a * 0.18f;
+        const float y = 0.08f * a;
+        centers[i] = Vec3(radial * nmath_cos(a), y, radial * nmath_sin(a));
+        tube[i] = tube_radius * (1.0f - 0.65f * u);
+        if (tube[i] < tube_radius * 0.2f) tube[i] = tube_radius * 0.2f;
+    }
+
+    for (size_t i = 0; i <= seg_u; ++i) {
+        const size_t ip = std::min(seg_u, i + 1);
+        const size_t im = (i == 0) ? 0 : i - 1;
+        Vec3 t = centers[ip] - centers[im];
+        if (t.length() <= 1e-8f) t = Vec3(1, 0, 0);
+        t.normalize();
+        tangents[i] = t;
+    }
+
+    Vec3 prev_n(0, 1, 0);
+    for (size_t i = 0; i <= seg_u; ++i) {
+        Vec3 n = nmath::cross(prev_n, tangents[i]);
+        if (n.length() <= 1e-8f) n = nmath::cross(Vec3(0, 1, 0), tangents[i]);
+        if (n.length() <= 1e-8f) n = nmath::cross(Vec3(1, 0, 0), tangents[i]);
+        if (n.length() <= 1e-8f) n = Vec3(0, 1, 0);
+        n.normalize();
+        Vec3 b = nmath::cross(tangents[i], n);
+        if (b.length() <= 1e-8f) b = Vec3(0, 0, 1);
+        b.normalize();
+        n = nmath::cross(b, tangents[i]).normalized();
+        normals[i] = n;
+        binormals[i] = b;
+        prev_n = n;
+    }
+
+    for (size_t i = 0; i <= seg_u; ++i) {
+        const float u = (float)i / (float)seg_u;
+        for (size_t j = 0; j <= seg_v; ++j) {
+            const float v = (float)j / (float)seg_v;
+            const float a = (float)(nmath::PI_DOUBLE * 2.0) * v;
+            const float ca = nmath_cos(a);
+            const float sa = nmath_sin(a);
+            Vec3 dir = normals[i] * ca + binormals[i] * sa;
+            if (dir.length() <= 1e-8f) dir = normals[i];
+            dir.normalize();
+            const Vec3 p = centers[i] + dir * tube[i];
+            uv_t uv = {u, v};
+            append_vertex(obj, p, dir, &uv);
+        }
+    }
+
+    const int stride = (int)(seg_v + 1);
+    for (size_t i = 0; i < seg_u; ++i) {
+        for (size_t j = 0; j < seg_v; ++j) {
+            const int i0 = (int)(i * (seg_v + 1) + j);
+            const int i1 = i0 + 1;
+            const int i2 = i0 + stride + 1;
+            const int i3 = i0 + stride;
+            append_quad(out, i0, i3, i2, i1, true);
+        }
+    }
+}
+
+void rock(object_t *obj, size_t resolution, int seed, float radius, float roughness, size_t octaves)
+{
+    if (!obj) return;
+    if (radius <= 0.0f) radius = 1.0f;
+    roughness = std::max(0.0f, std::min(2.0f, roughness));
+    octaves = (size_t)clampi((int)octaves, 1, 8);
+
+    const int iters = clampi((int)(resolution / 16), 1, 3);
+    std::vector<Vec3> sphere_verts;
+    std::vector<tri_t> sphere_faces;
+    build_icosphere_data(sphere_verts, sphere_faces, iters);
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<int> remap(sphere_verts.size(), -1);
+    const uint32_t u_seed = (uint32_t)seed ^ 0x7f4a7c15u;
+    for (size_t i = 0; i < sphere_verts.size(); ++i) {
+        const Vec3 n = sphere_verts[i].normalized();
+        const float nval = fbm_noise(n * 2.7f, u_seed, octaves);
+        float rr = radius * (1.0f + roughness * 0.55f * nval);
+        rr = std::max(radius * 0.18f, rr);
+        const Vec3 p = n * rr;
+        remap[i] = append_vertex(obj, p, p.normalized(), 0);
+    }
+
+    for (size_t i = 0; i < sphere_faces.size(); ++i) {
+        const tri_t &t = sphere_faces[i];
+        append_triangle(out, remap[t.a], remap[t.b], remap[t.c], false);
+    }
+}
+
+void chain_link(object_t *obj, size_t resolution, size_t count, float major_radius, float minor_radius, float spacing, const std::vector<nmath::Vector3f> &spline)
+{
+    if (!obj) return;
+    count = (size_t)clampi((int)count, 1, 128);
+    major_radius = std::max(0.05f, major_radius);
+    minor_radius = std::max(0.01f, std::min(minor_radius, major_radius * 0.95f));
+    spacing = std::max(0.5f, std::min(2.0f, spacing));
+
+    const size_t seg_u = std::max((size_t)24, resolution);
+    const size_t seg_v = std::max((size_t)12, resolution / 2);
+    // Use center pitch near major radius so orthogonal neighbors truly thread through.
+    const float base_pitch = major_radius * 1.02f + minor_radius * 0.10f;
+    const float pitch = std::max(1e-4f, base_pitch * spacing);
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<Vec3> path_pts;
+    if (spline.size() >= 2) {
+        path_pts.reserve(spline.size());
+        for (size_t i = 0; i < spline.size(); ++i) path_pts.push_back(Vec3(spline[i].x, spline[i].y, spline[i].z));
+    }
+
+    if (path_pts.size() >= 2) {
+        std::vector<float> cum_lengths;
+        build_polyline_lengths(path_pts, cum_lengths);
+        const float total_len = cum_lengths.empty() ? 0.0f : cum_lengths.back();
+        if (total_len > 1e-6f) {
+            const float used_len = pitch * (float)(count > 0 ? (count - 1) : 0);
+            const float start_s = std::max(0.0f, 0.5f * (total_len - used_len));
+            Vec3 prev_n(0, 1, 0);
+
+            for (size_t i = 0; i < count; ++i) {
+                float s = start_s + pitch * (float)i;
+                if (s < 0.0f) s = 0.0f;
+                if (s > total_len) s = total_len;
+
+                const Vec3 center = sample_polyline(path_pts, cum_lengths, s);
+                const float eps = std::max(1e-3f, pitch * 0.2f);
+                const Vec3 p0 = sample_polyline(path_pts, cum_lengths, std::max(0.0f, s - eps));
+                const Vec3 p1 = sample_polyline(path_pts, cum_lengths, std::min(total_len, s + eps));
+                const Vec3 tangent = safe_normalized(p1 - p0, Vec3(1, 0, 0));
+
+                Vec3 n = prev_n - tangent * nmath::dot(prev_n, tangent);
+                n = safe_normalized(n, nmath::cross(tangent, Vec3(0, 1, 0)));
+                if (n.length() <= 1e-8f) n = safe_normalized(nmath::cross(tangent, Vec3(1, 0, 0)), Vec3(0, 1, 0));
+                Vec3 b = safe_normalized(nmath::cross(tangent, n), Vec3(0, 0, 1));
+                n = safe_normalized(nmath::cross(b, tangent), n);
+                prev_n = n;
+
+                const Vec3 axis = (i % 2 == 0) ? n : b;
+                append_torus_link(obj, out, center, axis, major_radius, minor_radius, seg_u, seg_v);
+            }
+            return;
+        }
+    }
+
+    const float center_offset = ((float)count - 1.0f) * 0.5f;
+    for (size_t i = 0; i < count; ++i) {
+        const float x = ((float)i - center_offset) * pitch;
+        const Vec3 center(x, 0.0f, 0.0f);
+        const Vec3 axis = (i % 2 == 0) ? Vec3(0, 1, 0) : Vec3(0, 0, 1);
+        append_torus_link(obj, out, center, axis, major_radius, minor_radius, seg_u, seg_v);
+    }
+}
+
+void lathe(object_t *obj, const std::vector<nmath::Vector2f> &profile, size_t resolution, bool cap_ends)
+{
+    if (!obj) return;
+    const size_t seg_u = std::max((size_t)12, resolution);
+
+    std::vector<Vec3> pts;
+    if (profile.size() >= 2) {
+        pts.reserve(profile.size());
+        for (size_t i = 0; i < profile.size(); ++i) {
+            const float r = std::max(0.0f, (float)profile[i].x);
+            pts.push_back(Vec3(r, profile[i].y, 0.0f));
+        }
+    } else {
+        // Fallback vase-like profile.
+        pts.push_back(Vec3(0.00f, -1.00f, 0.0f));
+        pts.push_back(Vec3(0.34f, -0.94f, 0.0f));
+        pts.push_back(Vec3(0.52f, -0.55f, 0.0f));
+        pts.push_back(Vec3(0.42f, -0.10f, 0.0f));
+        pts.push_back(Vec3(0.58f,  0.35f, 0.0f));
+        pts.push_back(Vec3(0.26f,  0.84f, 0.0f));
+        pts.push_back(Vec3(0.18f,  1.00f, 0.0f));
+    }
+
+    if (pts.size() < 2) return;
+
+    std::vector<Vec3> nrms(pts.size(), Vec3(1, 0, 0));
+    for (size_t i = 0; i < pts.size(); ++i) {
+        const size_t im = (i == 0) ? 0 : i - 1;
+        const size_t ip = (i + 1 < pts.size()) ? i + 1 : pts.size() - 1;
+        const Vec3 t = pts[ip] - pts[im];
+        Vec3 n(t.y, -t.x, 0.0f);
+        if (n.length() <= 1e-8f) n = Vec3(1, 0, 0);
+        n.normalize();
+        nrms[i] = n;
+    }
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+    build_revolution_band(obj, out, seg_u, pts.size() - 1, pts, nrms);
+
+    if (!cap_ends) return;
+
+    const float y0 = pts.front().y;
+    const float r0 = std::max(0.0f, (float)pts.front().x);
+    const float y1 = pts.back().y;
+    const float r1 = std::max(0.0f, (float)pts.back().x);
+
+    if (r0 > 1e-6f) {
+        const int c0 = append_vertex(obj, Vec3(0, y0, 0), Vec3(0, -1, 0), 0);
+        std::vector<int> ring;
+        ring.reserve(seg_u + 1);
+        for (size_t i = 0; i <= seg_u; ++i) {
+            const float u = (float)i / (float)seg_u;
+            const float a = (float)(nmath::PI_DOUBLE * 2.0) * u;
+            ring.push_back(append_vertex(obj, Vec3(r0 * nmath_cos(a), y0, r0 * nmath_sin(a)), Vec3(0, -1, 0), 0));
+        }
+        for (size_t i = 0; i < seg_u; ++i) append_triangle(out, c0, ring[i + 1], ring[i], false);
+    }
+
+    if (r1 > 1e-6f) {
+        const int c1 = append_vertex(obj, Vec3(0, y1, 0), Vec3(0, 1, 0), 0);
+        std::vector<int> ring;
+        ring.reserve(seg_u + 1);
+        for (size_t i = 0; i <= seg_u; ++i) {
+            const float u = (float)i / (float)seg_u;
+            const float a = (float)(nmath::PI_DOUBLE * 2.0) * u;
+            ring.push_back(append_vertex(obj, Vec3(r1 * nmath_cos(a), y1, r1 * nmath_sin(a)), Vec3(0, 1, 0), 0));
+        }
+        for (size_t i = 0; i < seg_u; ++i) append_triangle(out, c1, ring[i], ring[i + 1], false);
     }
 }
 

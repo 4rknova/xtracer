@@ -15,6 +15,7 @@
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
 #define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
+#define XTPROTO_PROP_DEFAULT_CAMERA "default_camera"    /* string     */ /* Scene default camera */
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
 #define XTPROTO_LTRL_PLANE          "plane"             /* string     */ /* Plane */
 #define XTPROTO_LTRL_TETRAHEDRON    "tetrahedron"       /* string     */ /* Tetrahedron */
@@ -35,6 +36,11 @@
 #define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON "sierpinski_tetrahedron" /* string */ /* Sierpinski tetrahedron */
 #define XTPROTO_LTRL_MOBIUS_STRIP   "mobius_strip"      /* string     */ /* Mobius strip */
 #define XTPROTO_LTRL_KLEIN_BOTTLE   "klein_bottle"      /* string     */ /* Klein bottle */
+#define XTPROTO_LTRL_HAIRBALL       "hairball"          /* string     */ /* Hairball */
+#define XTPROTO_LTRL_SHELL_SPIRAL   "shell_spiral"      /* string     */ /* Shell spiral */
+#define XTPROTO_LTRL_ROCK           "rock"              /* string     */ /* Rock */
+#define XTPROTO_LTRL_CHAIN_LINK     "chain_link"        /* string     */ /* Chain links */
+#define XTPROTO_LTRL_LATHE          "lathe"             /* string     */ /* Lathe */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -111,9 +117,22 @@
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
+#define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
+#define XTPROTO_PROP_FIBERS         "fibers"            /* integer    */ /* Fiber count */
+#define XTPROTO_PROP_TURNS          "turns"             /* scalar_t   */ /* Turn count */
+#define XTPROTO_PROP_GROWTH         "growth"            /* scalar_t   */ /* Growth */
+#define XTPROTO_PROP_TUBE_RADIUS    "tube_radius"       /* scalar_t   */ /* Tube radius */
 #define XTPROTO_PROP_HEIGHT			"height"			/* scalar_t   */ /* Height */
 #define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
 #define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
+#define XTPROTO_PROP_OCTAVES        "octaves"           /* integer    */ /* Octave count */
+#define XTPROTO_PROP_COUNT          "count"             /* integer    */ /* Count */
+#define XTPROTO_PROP_MAJOR_RADIUS   "major_radius"      /* scalar_t   */ /* Major radius */
+#define XTPROTO_PROP_MINOR_RADIUS   "minor_radius"      /* scalar_t   */ /* Minor radius */
+#define XTPROTO_PROP_SPACING        "spacing"           /* scalar_t   */ /* Spacing */
+#define XTPROTO_PROP_PROFILE        "profile"           /* group      */ /* Lathe profile */
+#define XTPROTO_PROP_CAP_ENDS       "cap_ends"          /* bool       */ /* Cap ends */
+#define XTPROTO_PROP_SPLINE         "spline"            /* group      */ /* Spline */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */

@@ -1,0 +1,84 @@
+title = Procedural Rock Showcase
+description = Demonstrates gen(rock) with seed, radius, roughness, and octaves.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.88,0.91,0.96)
+        b = col3(0.11,0.12,0.14)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 46
+        position = vec3(0.0,2.2,-7.5)
+        target   = vec3(0.0,0.9,0.8)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    rock_main = {
+        type       = mesh
+        source     = gen(rock)
+        resolution = 96
+        seed       = 4242
+        radius     = 1.25
+        roughness  = 0.58
+        octaves    = 5
+        modifiers = {
+            rotation    = vec3(0,24,0)
+            translation = vec3(0,1.25,1.0)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(3.7,4.4,-2.3)
+        radius   = 0.75
+    }
+}
+
+material = {
+    floor_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.57,0.58,0.60) }
+            }
+        }
+    }
+
+    rock_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.41,0.40,0.38) }
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(3.4,3.0,2.4) }
+            }
+        }
+    }
+}
+
+object = {
+    floor = { geometry = floor, material = floor_matte }
+    rock_main = { geometry = rock_main, material = rock_matte }
+    key_light = { geometry = key_light, material = emissive_key }
+}

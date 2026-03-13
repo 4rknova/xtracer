@@ -1,0 +1,88 @@
+title = Procedural Shell Spiral Showcase
+description = Demonstrates gen(shell_spiral) with turns, growth, and tube_radius controls.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.90,0.94,1.00)
+        b = col3(0.10,0.12,0.16)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 44
+        position = vec3(0.0,2.1,-8.2)
+        target   = vec3(0.0,1.1,0.8)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    shell = {
+        type        = mesh
+        source      = gen(shell_spiral)
+        resolution  = 84
+        turns       = 4.8
+        growth      = 0.26
+        tube_radius = 0.22
+        modifiers = {
+            rotation    = vec3(0,-25,0)
+            translation = vec3(0,0.15,1.2)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(4.0,4.8,-2.7)
+        radius   = 0.8
+    }
+}
+
+material = {
+    floor_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.58,0.60,0.63) }
+            }
+        }
+    }
+
+    shell_matte = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.66,0.44,0.30) }
+                specular = { type = color, value = col3(0.90,0.88,0.82) }
+            }
+            scalars = {
+                exponent    = 96
+                reflectance = 0.16
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(3.6,3.1,2.6) }
+            }
+        }
+    }
+}
+
+object = {
+    floor = { geometry = floor, material = floor_matte }
+    shell = { geometry = shell, material = shell_matte }
+    key_light = { geometry = key_light, material = emissive_key }
+}
