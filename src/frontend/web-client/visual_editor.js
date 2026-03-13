@@ -555,7 +555,19 @@ function materialForDef(matDef) {
   }
 
   SceneVisualEditor.prototype.setStatus = function (msg) {
-    if (this.statusEl) this.statusEl.textContent = String(msg || "");
+    if (!this.statusEl) return;
+    var text = String(msg || "");
+    var prefix = "Selected: ";
+    if (text.indexOf(prefix) === 0) {
+      var objectName = text.slice(prefix.length).trim();
+      if (objectName) {
+        this.statusEl.textContent = objectName;
+        this.statusEl.hidden = false;
+        return;
+      }
+    }
+    this.statusEl.textContent = "";
+    this.statusEl.hidden = true;
   };
 
   SceneVisualEditor.prototype.setSelectionChangeHandler = function (handler) {
@@ -602,6 +614,7 @@ function materialForDef(matDef) {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.viewportEl.innerHTML = "";
     this.viewportEl.appendChild(this.renderer.domElement);
+    if (this.statusEl) this.viewportEl.appendChild(this.statusEl);
 
     this.scene = new THREE.Scene();
 
@@ -1028,7 +1041,7 @@ function materialForDef(matDef) {
       }
       this.setStatus("Selected: " + this.selectedObjectName);
     } else {
-      this.setStatus("Selection: none (click to select, Ctrl+drag to move)");
+      this.setStatus("");
     }
     this.notifySelectionChanged();
   };
