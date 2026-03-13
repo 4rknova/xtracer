@@ -73,6 +73,24 @@ const el = {
   exportFormat: $("exportFormat"),
   download: $("download"),
   sceneName: $("sceneName"),
+  editObjectSelect: $("editObjectSelect"),
+  editGeometryType: $("editGeometryType"),
+  editTranslateX: $("editTranslateX"),
+  editTranslateY: $("editTranslateY"),
+  editTranslateZ: $("editTranslateZ"),
+  editRotateX: $("editRotateX"),
+  editRotateY: $("editRotateY"),
+  editRotateZ: $("editRotateZ"),
+  editScaleX: $("editScaleX"),
+  editScaleY: $("editScaleY"),
+  editScaleZ: $("editScaleZ"),
+  editApplyTransformBtn: $("editApplyTransformBtn"),
+  editSyncFromVisualBtn: $("editSyncFromVisualBtn"),
+  createGeometryType: $("createGeometryType"),
+  createMaterialSelect: $("createMaterialSelect"),
+  createGeometryId: $("createGeometryId"),
+  createObjectId: $("createObjectId"),
+  createGeometryBtn: $("createGeometryBtn"),
   lineNumbers: $("lineNumbers"),
   lineCount: $("lineCount"),
   charCount: $("charCount"),
@@ -833,6 +851,502 @@ function handleEditorTabKey(event) {
   syncEditorScroll();
 }
 
+function formatSceneNumber(v, fallback) {
+  const n = Number(v);
+  const x = Number.isFinite(n) ? n : (fallback || 0);
+  const s = x.toFixed(6);
+  return s.replace(/\.?0+$/, "") || "0";
+}
+
+function readSceneNumber(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function findSceneGroupRange(source, groupName) {
+  const re = new RegExp(`\\b${groupName}\\s*=\\s*\\{`, "m");
+  const m = re.exec(source || "");
+  if (!m) return null;
+  const open = source.indexOf("{", m.index);
+  if (open < 0) return null;
+  let depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          groupStart: m.index,
+          groupEnd: i + 1,
+          bodyStart: open + 1,
+          bodyEnd: i,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function splitTopLevelSceneEntries(source, range) {
+  const out = [];
+  if (!range) return out;
+  const body = source.slice(range.bodyStart, range.bodyEnd);
+  let i = 0;
+  while (i < body.length) {
+    while (i < body.length && /\s/.test(body[i])) i += 1;
+    const m = /^([A-Za-z0-9_\-]+)\s*=\s*\{/.exec(body.slice(i));
+    if (!m) {
+      i += 1;
+      continue;
+    }
+    const name = m[1];
+    const localStart = i;
+    const openLocal = i + m[0].lastIndexOf("{");
+    let depth = 0;
+    let endLocal = -1;
+    for (let j = openLocal; j < body.length; j += 1) {
+      const ch = body[j];
+      if (ch === "{") depth += 1;
+      else if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          endLocal = j + 1;
+          break;
+        }
+      }
+    }
+    if (endLocal < 0) break;
+    const entryStart = range.bodyStart + localStart;
+    const entryEnd = range.bodyStart + endLocal;
+    const bodyStart = range.bodyStart + openLocal + 1;
+    const bodyEnd = entryEnd - 1;
+    out.push({
+      id: name,
+      entryStart,
+      entryEnd,
+      bodyStart,
+      bodyEnd,
+      body: source.slice(bodyStart, bodyEnd),
+    });
+    i = endLocal;
+  }
+  return out;
+}
+
+function readSceneRefProp(block, key) {
+  const m = new RegExp(`\\b${key}\\s*=\\s*([A-Za-z0-9_.\\-]+)`, "i").exec(block || "");
+  return m ? String(m[1] || "").trim() : "";
+}
+
+function readSceneStringProp(block, key) {
+  const m = new RegExp(`\\b${key}\\s*=\\s*([^\\n\\r]+)`, "i").exec(block || "");
+  return m ? String(m[1] || "").trim() : "";
+}
+
+function findNamedBlockRange(block, key) {
+  const m = new RegExp(`\\b${key}\\s*=\\s*\\{`, "i").exec(block || "");
+  if (!m) return null;
+  const open = block.indexOf("{", m.index);
+  if (open < 0) return null;
+  let depth = 0;
+  for (let i = open; i < block.length; i += 1) {
+    const ch = block[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          start: m.index,
+          end: i + 1,
+          bodyStart: open + 1,
+          bodyEnd: i,
+          body: block.slice(open + 1, i),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function readSceneVec3Prop(block, key, fallback) {
+  const fb = fallback || [0, 0, 0];
+  const inline = new RegExp(`\\b${key}\\s*=\\s*vec3\\(([^\\)]*)\\)`, "i").exec(block || "");
+  if (inline) {
+    const p = String(inline[1] || "").split(",").map((x) => Number(x.trim()));
+    if (p.length >= 3 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2])) {
+      return [p[0], p[1], p[2]];
+    }
+  }
+  const group = findNamedBlockRange(block || "", key);
+  if (group) {
+    const x = readSceneNumber(readSceneStringProp(group.body, "x"), fb[0]);
+    const y = readSceneNumber(readSceneStringProp(group.body, "y"), fb[1]);
+    const z = readSceneNumber(readSceneStringProp(group.body, "z"), fb[2]);
+    return [x, y, z];
+  }
+  return fb.slice();
+}
+
+function addVec3(a, b) {
+  return [
+    (Number(a && a[0]) || 0) + (Number(b && b[0]) || 0),
+    (Number(a && a[1]) || 0) + (Number(b && b[1]) || 0),
+    (Number(a && a[2]) || 0) + (Number(b && b[2]) || 0),
+  ];
+}
+
+function subVec3(a, b) {
+  return [
+    (Number(a && a[0]) || 0) - (Number(b && b[0]) || 0),
+    (Number(a && a[1]) || 0) - (Number(b && b[1]) || 0),
+    (Number(a && a[2]) || 0) - (Number(b && b[2]) || 0),
+  ];
+}
+
+function scaleVec3(a, s) {
+  const k = Number(s) || 0;
+  return [
+    (Number(a && a[0]) || 0) * k,
+    (Number(a && a[1]) || 0) * k,
+    (Number(a && a[2]) || 0) * k,
+  ];
+}
+
+function vec3Literal(v, fallback) {
+  const fb = fallback || [0, 0, 0];
+  return `vec3(${formatSceneNumber(v && v[0], fb[0])}, ${formatSceneNumber(v && v[1], fb[1])}, ${formatSceneNumber(v && v[2], fb[2])})`;
+}
+
+function upsertSceneVec3Prop(block, key, vec, indent) {
+  const baseIndent = String(indent || "");
+  const lit = vec3Literal(vec, [0, 0, 0]);
+  const inlineRe = new RegExp(`(\\b${key}\\s*=\\s*)vec3\\([^\\)]*\\)`, "i");
+  if (inlineRe.test(block || "")) return String(block || "").replace(inlineRe, `$1${lit}`);
+  const nested = findNamedBlockRange(block || "", key);
+  if (nested) {
+    return `${block.slice(0, nested.start)}${key} = ${lit}${block.slice(nested.end)}`;
+  }
+  const trimmed = String(block || "").replace(/\s*$/, "");
+  const suffix = String(block || "").slice(trimmed.length);
+  const join = trimmed.length > 0 ? (trimmed.endsWith("\n") ? "" : "\n") : "";
+  return `${trimmed}${join}${baseIndent}${key} = ${lit}${suffix}`;
+}
+
+function removeNamedSceneBlock(block, key) {
+  const found = findNamedBlockRange(block || "", key);
+  if (!found) return String(block || "");
+  let out = `${block.slice(0, found.start)}${block.slice(found.end)}`;
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out;
+}
+
+function parseSceneEditModel(source) {
+  const text = String(source || "");
+  const geometryGroup = findSceneGroupRange(text, "geometry");
+  const objectGroup = findSceneGroupRange(text, "object");
+  const materialGroup = findSceneGroupRange(text, "material");
+  const geometries = new Map();
+  const objects = new Map();
+  const materials = [];
+  splitTopLevelSceneEntries(text, geometryGroup).forEach((entry) => {
+    geometries.set(entry.id, {
+      ...entry,
+      type: readSceneStringProp(entry.body, "type").replace(/["']/g, "").toLowerCase(),
+    });
+  });
+  splitTopLevelSceneEntries(text, objectGroup).forEach((entry) => {
+    const geometry = readSceneRefProp(entry.body, "geometry");
+    if (!geometry) return;
+    objects.set(entry.id, {
+      ...entry,
+      geometry,
+      material: readSceneRefProp(entry.body, "material"),
+    });
+  });
+  splitTopLevelSceneEntries(text, materialGroup).forEach((entry) => {
+    materials.push(entry.id);
+  });
+  return {
+    source: text,
+    geometryGroup,
+    objectGroup,
+    materialGroup,
+    geometries,
+    objects,
+    materials,
+  };
+}
+
+function getObjectTransformFromSource(source, objectId) {
+  const model = parseSceneEditModel(source);
+  const obj = model.objects.get(objectId);
+  if (!obj) return null;
+  const geo = model.geometries.get(obj.geometry);
+  if (!geo) return null;
+  const geoType = String(geo.type || "").toLowerCase();
+  const modifiers = findNamedBlockRange(geo.body, "modifiers");
+  const modsBody = modifiers ? modifiers.body : "";
+  let translation = readSceneVec3Prop(modsBody, "translation", [0, 0, 0]);
+  if (geoType === "sphere" || geoType === "point") {
+    translation = readSceneVec3Prop(geo.body, "position", [0, 0, 0]);
+  } else if (geoType === "triangle") {
+    const vecData = findNamedBlockRange(geo.body, "vecdata");
+    const vBody = vecData ? vecData.body : geo.body;
+    const v0 = readSceneVec3Prop(vBody, "v0", [0, 0, 0]);
+    const v1 = readSceneVec3Prop(vBody, "v1", [0, 0, 0]);
+    const v2 = readSceneVec3Prop(vBody, "v2", [0, 0, 0]);
+    translation = scaleVec3(addVec3(addVec3(v0, v1), v2), 1 / 3);
+  }
+  return {
+    objectId,
+    geometryId: obj.geometry,
+    materialId: obj.material || "",
+    geometryType: geoType,
+    translation,
+    rotation: readSceneVec3Prop(modsBody, "rotation", [0, 0, 0]),
+    scale: readSceneVec3Prop(modsBody, "scale", [1, 1, 1]),
+  };
+}
+
+function geometryEntryIndent(source, entryStart) {
+  const lineStart = source.lastIndexOf("\n", Math.max(0, entryStart - 1)) + 1;
+  const linePrefix = source.slice(lineStart, entryStart);
+  const m = /^(\s*)/.exec(linePrefix);
+  return m ? m[1] : "";
+}
+
+function replaceGeometryBody(source, geo, newGeoBody) {
+  return `${source.slice(0, geo.bodyStart)}${newGeoBody}${source.slice(geo.bodyEnd)}`;
+}
+
+function buildModifiersBlock(indent, transform) {
+  const inner = `${indent}\t`;
+  const t = transform.translation || [0, 0, 0];
+  const r = transform.rotation || [0, 0, 0];
+  const s = transform.scale || [1, 1, 1];
+  return `${indent}modifiers = {\n`
+    + `${inner}rotation = vec3(${formatSceneNumber(r[0], 0)}, ${formatSceneNumber(r[1], 0)}, ${formatSceneNumber(r[2], 0)})\n`
+    + `${inner}scale = vec3(${formatSceneNumber(s[0], 1)}, ${formatSceneNumber(s[1], 1)}, ${formatSceneNumber(s[2], 1)})\n`
+    + `${inner}translation = vec3(${formatSceneNumber(t[0], 0)}, ${formatSceneNumber(t[1], 0)}, ${formatSceneNumber(t[2], 0)})\n`
+    + `${indent}}`;
+}
+
+function updateObjectTransformInSource(source, objectId, transform, options) {
+  const model = parseSceneEditModel(source);
+  const obj = model.objects.get(String(objectId || ""));
+  if (!obj) throw new Error("object not found");
+  const geo = model.geometries.get(obj.geometry);
+  if (!geo) throw new Error("geometry not found");
+  const geoType = String(geo.type || "").toLowerCase();
+  const deltaTranslation = Array.isArray(options && options.deltaTranslation)
+    ? options.deltaTranslation.slice(0, 3).map((v) => Number(v) || 0)
+    : null;
+  const useDelta = !!(options && options.useDelta && deltaTranslation);
+
+  const geoBody = source.slice(geo.bodyStart, geo.bodyEnd);
+  const entryIndent = `${geometryEntryIndent(source, geo.entryStart)}\t`;
+
+  if (geoType === "mesh") {
+    const existingModifiers = findNamedBlockRange(geoBody, "modifiers");
+    const block = buildModifiersBlock(entryIndent, transform);
+    let newGeoBody = geoBody;
+    if (existingModifiers) {
+      newGeoBody = `${geoBody.slice(0, existingModifiers.start)}${block}${geoBody.slice(existingModifiers.end)}`;
+    } else {
+      const trimmed = geoBody.replace(/\s*$/, "");
+      const suffix = geoBody.slice(trimmed.length);
+      const leadNewline = trimmed.length > 0 && !trimmed.endsWith("\n") ? "\n" : "";
+      newGeoBody = `${trimmed}${leadNewline}${block}\n${suffix.replace(/^\s*/, "")}`;
+    }
+    return replaceGeometryBody(source, geo, newGeoBody);
+  }
+
+  if (geoType === "sphere" || geoType === "point") {
+    const currPos = readSceneVec3Prop(geoBody, "position", [0, 0, 0]);
+    const nextPos = useDelta ? addVec3(currPos, deltaTranslation) : (transform.translation || currPos);
+    let newGeoBody = upsertSceneVec3Prop(geoBody, "position", nextPos, entryIndent);
+    newGeoBody = removeNamedSceneBlock(newGeoBody, "modifiers");
+    return replaceGeometryBody(source, geo, newGeoBody);
+  }
+
+  if (geoType === "triangle") {
+    const vecData = findNamedBlockRange(geoBody, "vecdata");
+    if (!vecData) throw new Error("triangle vecdata not found");
+    const vBody = vecData.body;
+    const v0 = readSceneVec3Prop(vBody, "v0", [0, 0, 0]);
+    const v1 = readSceneVec3Prop(vBody, "v1", [0, 0, 0]);
+    const v2 = readSceneVec3Prop(vBody, "v2", [0, 0, 0]);
+    const centroid = scaleVec3(addVec3(addVec3(v0, v1), v2), 1 / 3);
+    const delta = useDelta
+      ? deltaTranslation
+      : subVec3(transform.translation || centroid, centroid);
+    let nextVBody = vBody;
+    nextVBody = upsertSceneVec3Prop(nextVBody, "v0", addVec3(v0, delta), `${entryIndent}\t`);
+    nextVBody = upsertSceneVec3Prop(nextVBody, "v1", addVec3(v1, delta), `${entryIndent}\t`);
+    nextVBody = upsertSceneVec3Prop(nextVBody, "v2", addVec3(v2, delta), `${entryIndent}\t`);
+    let newGeoBody = `${geoBody.slice(0, vecData.bodyStart)}${nextVBody}${geoBody.slice(vecData.bodyEnd)}`;
+    newGeoBody = removeNamedSceneBlock(newGeoBody, "modifiers");
+    return replaceGeometryBody(source, geo, newGeoBody);
+  }
+
+  throw new Error(`move/edit not supported for geometry type: ${geoType}`);
+}
+
+function ensureSceneGroup(source, groupName) {
+  const existing = findSceneGroupRange(source, groupName);
+  if (existing) return source;
+  const suffix = source.endsWith("\n") ? "" : "\n";
+  return `${source}${suffix}\n${groupName} = {\n}\n`;
+}
+
+function appendEntryToSceneGroup(source, groupName, entryText) {
+  const text = ensureSceneGroup(source, groupName);
+  const range = findSceneGroupRange(text, groupName);
+  if (!range) return text;
+  const body = text.slice(range.bodyStart, range.bodyEnd);
+  const pre = body.replace(/\s*$/, "");
+  const post = body.slice(pre.length);
+  const join = pre.length > 0 ? (pre.endsWith("\n") ? "" : "\n") : "";
+  const nextBody = `${pre}${join}${entryText}\n${post.replace(/^\s*/, "")}`;
+  return `${text.slice(0, range.bodyStart)}${nextBody}${text.slice(range.bodyEnd)}`;
+}
+
+function sanitizeSceneId(raw, fallback) {
+  const cleaned = String(raw || "").trim().replace(/[^A-Za-z0-9_\-]/g, "_");
+  if (cleaned) return cleaned;
+  return fallback;
+}
+
+function uniqueSceneId(existing, base) {
+  let id = base;
+  let i = 1;
+  while (existing.has(id)) {
+    id = `${base}_${i}`;
+    i += 1;
+  }
+  return id;
+}
+
+function addMeshObjectToSceneSource(source, options) {
+  const model = parseSceneEditModel(source);
+  const geometryIds = new Set(Array.from(model.geometries.keys()));
+  const objectIds = new Set(Array.from(model.objects.keys()));
+  const geometryBase = sanitizeSceneId(options.geometryId, "geo_new");
+  const objectBase = sanitizeSceneId(options.objectId, "obj_new");
+  const geometryId = uniqueSceneId(geometryIds, geometryBase);
+  const objectId = uniqueSceneId(objectIds, objectBase);
+  const material = String(options.material || "").trim() || (model.materials[0] || "");
+  if (!material) throw new Error("no material available; create a material first");
+
+  const transform = {
+    translation: options.translation || [0, 0, 0],
+    rotation: options.rotation || [0, 0, 0],
+    scale: options.scale || [1, 1, 1],
+  };
+  const modifiers = buildModifiersBlock("\t\t", transform);
+  const geometryEntry = `\t${geometryId} = {\n`
+    + `\t\ttype = mesh\n`
+    + `\t\tsource = gen(${options.generator || "cube"})\n`
+    + `\t\tresolution = 24\n`
+    + `${modifiers}\n`
+    + `\t}`;
+  const objectEntry = `\t${objectId} = {\n`
+    + `\t\tgeometry = ${geometryId}\n`
+    + `\t\tmaterial = ${material}\n`
+    + `\t}`;
+
+  let next = appendEntryToSceneGroup(source, "geometry", geometryEntry);
+  next = appendEntryToSceneGroup(next, "object", objectEntry);
+  return { source: next, objectId, geometryId };
+}
+
+function updateSceneSourceText(nextSource) {
+  el.sceneSource.value = String(nextSource || "");
+  updateEditorMetrics();
+  syncEditorScroll();
+  refreshSceneEditControls();
+}
+
+function refreshSceneEditControls() {
+  if (!el.editObjectSelect || !el.createMaterialSelect) return;
+  const source = el.sceneSource ? (el.sceneSource.value || "") : "";
+  const model = parseSceneEditModel(source);
+  const prevObject = String(el.editObjectSelect.value || "");
+  const prevMaterial = String(el.createMaterialSelect.value || "");
+
+  el.editObjectSelect.innerHTML = "";
+  addOption(el.editObjectSelect, "", "Select object...");
+  Array.from(model.objects.values())
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .forEach((obj) => {
+      const g = model.geometries.get(obj.geometry);
+      const type = g ? (g.type || "?") : "?";
+      addOption(el.editObjectSelect, obj.id, `${obj.id} (${type})`);
+    });
+  if (prevObject && model.objects.has(prevObject)) el.editObjectSelect.value = prevObject;
+  else el.editObjectSelect.value = "";
+
+  el.createMaterialSelect.innerHTML = "";
+  if (!model.materials.length) {
+    addOption(el.createMaterialSelect, "", "No material");
+  } else {
+    model.materials.forEach((id) => addOption(el.createMaterialSelect, id, id));
+    if (prevMaterial && model.materials.includes(prevMaterial)) el.createMaterialSelect.value = prevMaterial;
+    else el.createMaterialSelect.value = model.materials[0];
+  }
+  syncTransformInputsFromObject(el.editObjectSelect.value || "");
+}
+
+function setTransformInputs(values) {
+  const t = values && values.translation ? values.translation : [0, 0, 0];
+  const r = values && values.rotation ? values.rotation : [0, 0, 0];
+  const s = values && values.scale ? values.scale : [1, 1, 1];
+  if (el.editTranslateX) el.editTranslateX.value = formatSceneNumber(t[0], 0);
+  if (el.editTranslateY) el.editTranslateY.value = formatSceneNumber(t[1], 0);
+  if (el.editTranslateZ) el.editTranslateZ.value = formatSceneNumber(t[2], 0);
+  if (el.editRotateX) el.editRotateX.value = formatSceneNumber(r[0], 0);
+  if (el.editRotateY) el.editRotateY.value = formatSceneNumber(r[1], 0);
+  if (el.editRotateZ) el.editRotateZ.value = formatSceneNumber(r[2], 0);
+  if (el.editScaleX) el.editScaleX.value = formatSceneNumber(s[0], 1);
+  if (el.editScaleY) el.editScaleY.value = formatSceneNumber(s[1], 1);
+  if (el.editScaleZ) el.editScaleZ.value = formatSceneNumber(s[2], 1);
+}
+
+function currentTransformInputs() {
+  return {
+    translation: [
+      readSceneNumber(el.editTranslateX ? el.editTranslateX.value : 0, 0),
+      readSceneNumber(el.editTranslateY ? el.editTranslateY.value : 0, 0),
+      readSceneNumber(el.editTranslateZ ? el.editTranslateZ.value : 0, 0),
+    ],
+    rotation: [
+      readSceneNumber(el.editRotateX ? el.editRotateX.value : 0, 0),
+      readSceneNumber(el.editRotateY ? el.editRotateY.value : 0, 0),
+      readSceneNumber(el.editRotateZ ? el.editRotateZ.value : 0, 0),
+    ],
+    scale: [
+      Math.max(0.0001, readSceneNumber(el.editScaleX ? el.editScaleX.value : 1, 1)),
+      Math.max(0.0001, readSceneNumber(el.editScaleY ? el.editScaleY.value : 1, 1)),
+      Math.max(0.0001, readSceneNumber(el.editScaleZ ? el.editScaleZ.value : 1, 1)),
+    ],
+  };
+}
+
+function syncTransformInputsFromObject(objectId) {
+  const info = objectId ? getObjectTransformFromSource(el.sceneSource.value || "", objectId) : null;
+  if (el.editGeometryType) el.editGeometryType.value = info ? (info.geometryType || "") : "";
+  setTransformInputs(info || null);
+}
+
+async function rebuildVisualFromEditorSource() {
+  if (!visualEditor) return;
+  const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  await visualEditor.buildScene(sceneName, el.sceneSource.value || "", { meshes: {} });
+  refreshVisualCameraOptions();
+  syncVisualCameraFromRenderSelection();
+}
+
 function selectedExportFormat() {
   const raw = String(el.exportFormat && el.exportFormat.value ? el.exportFormat.value : "png").toLowerCase();
   if (raw === "exr" || raw === "hdr") return raw;
@@ -1265,6 +1779,9 @@ async function loadVisualSceneFromSelected() {
   const geometryData = pair[1] || { meshes: {} };
   await visualEditor.buildScene(sceneName, data.source || "", geometryData);
   visualLoadedSceneName = sceneName;
+  if (el.editObjectSelect && el.editObjectSelect.value && visualEditor.selectObjectById) {
+    visualEditor.selectObjectById(el.editObjectSelect.value, false);
+  }
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
   refreshVisualPhotonOverlay().catch(() => {});
@@ -1428,12 +1945,14 @@ async function loadSceneSource(scene) {
   if (!scene) {
     el.sceneSource.value = "";
     updateEditorMetrics();
+    refreshSceneEditControls();
     return;
   }
   const data = await api.getSceneSource(scene);
   el.sceneName.value = data.scene || scene;
   el.sceneSource.value = data.source || "";
   updateEditorMetrics();
+  refreshSceneEditControls();
   syncEditorScroll();
 }
 
@@ -1671,9 +2190,46 @@ async function boot() {
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneGeometry")) throw new Error("geometry endpoint unavailable");
         return api.getSceneGeometry(sceneName);
+      },
+      async (sceneName, relpath) => {
+        if (!hasBackendMethod(api, "getSceneAssetText")) throw new Error("asset endpoint unavailable");
+        return api.getSceneAssetText(sceneName, relpath);
       }
     );
     if (visualEditor.init()) {
+      if (visualEditor.setSelectionChangeHandler) {
+        visualEditor.setSelectionChangeHandler((meta) => {
+          const id = meta && meta.objectId ? String(meta.objectId) : "";
+          if (el.editObjectSelect) {
+            el.editObjectSelect.value = id;
+            syncTransformInputsFromObject(id);
+          }
+        });
+      }
+      if (visualEditor.setObjectTransformChangeHandler) {
+        visualEditor.setObjectTransformChangeHandler((evt) => {
+          const objectId = evt && evt.objectId ? String(evt.objectId) : "";
+          const transform = evt && evt.transform ? evt.transform : null;
+          if (!objectId || !transform) return;
+          try {
+            const deltaTranslation = Array.isArray(evt && evt.deltaTranslation)
+              ? evt.deltaTranslation
+              : [0, 0, 0];
+            const nextSource = updateObjectTransformInSource(
+              el.sceneSource.value || "",
+              objectId,
+              transform,
+              { useDelta: true, deltaTranslation }
+            );
+            updateSceneSourceText(nextSource);
+            if (el.editObjectSelect) el.editObjectSelect.value = objectId;
+            syncTransformInputsFromObject(objectId);
+            appendLog(`scene edit moved: ${objectId}`);
+          } catch (err) {
+            appendLog(`scene edit move error: ${err.message}`);
+          }
+        });
+      }
       syncVisualFrameAspect();
       if (el.visualProjection && visualEditor.setProjectionMode) {
         visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
@@ -1928,6 +2484,7 @@ async function boot() {
         el.sceneName.value = "new_scene.scn";
         el.sceneSource.value = source || "";
         updateEditorMetrics();
+        refreshSceneEditControls();
         syncEditorScroll();
         setStatus("new scene initialized");
         appendLog("new scene template");
@@ -1940,16 +2497,95 @@ async function boot() {
 
   el.saveSceneBtn.addEventListener("click", triggerSceneSave);
 
+  if (el.editObjectSelect) {
+    el.editObjectSelect.addEventListener("change", () => {
+      const objectId = String(el.editObjectSelect.value || "").trim();
+      syncTransformInputsFromObject(objectId);
+      if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
+    });
+  }
+
+  if (el.editSyncFromVisualBtn) {
+    el.editSyncFromVisualBtn.addEventListener("click", () => {
+      if (!visualEditor || !visualEditor.getSelectedObjectId) return;
+      const objectId = String(visualEditor.getSelectedObjectId() || "").trim();
+      if (!objectId) {
+        setStatus("error: no visual selection");
+        appendLog("scene edit: no visual selection");
+        return;
+      }
+      if (el.editObjectSelect) el.editObjectSelect.value = objectId;
+      syncTransformInputsFromObject(objectId);
+      appendLog(`scene edit selection=${objectId}`);
+    });
+  }
+
+  if (el.editApplyTransformBtn) {
+    el.editApplyTransformBtn.addEventListener("click", () => {
+      const objectId = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
+      if (!objectId) {
+        setStatus("error: select an object first");
+        appendLog("scene edit: apply transform failed (no object)");
+        return;
+      }
+      try {
+        const nextSource = updateObjectTransformInSource(el.sceneSource.value || "", objectId, currentTransformInputs());
+        updateSceneSourceText(nextSource);
+        rebuildVisualFromEditorSource()
+          .then(() => {
+            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
+          })
+          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
+        setStatus(`updated ${objectId}`);
+        appendLog(`scene edit transform updated: ${objectId}`);
+      } catch (err) {
+        setStatus(`error: ${err.message}`);
+        appendLog(`scene edit transform error: ${err.message}`);
+      }
+    });
+  }
+
+  if (el.createGeometryBtn) {
+    el.createGeometryBtn.addEventListener("click", () => {
+      try {
+        const added = addMeshObjectToSceneSource(el.sceneSource.value || "", {
+          generator: String(el.createGeometryType && el.createGeometryType.value ? el.createGeometryType.value : "cube").toLowerCase(),
+          material: String(el.createMaterialSelect && el.createMaterialSelect.value ? el.createMaterialSelect.value : "").trim(),
+          geometryId: String(el.createGeometryId && el.createGeometryId.value ? el.createGeometryId.value : "").trim(),
+          objectId: String(el.createObjectId && el.createObjectId.value ? el.createObjectId.value : "").trim(),
+          ...currentTransformInputs(),
+        });
+        updateSceneSourceText(added.source);
+        if (el.editObjectSelect) el.editObjectSelect.value = added.objectId;
+        syncTransformInputsFromObject(added.objectId);
+        rebuildVisualFromEditorSource()
+          .then(() => {
+            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(added.objectId, true);
+          })
+          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
+        setStatus(`created ${added.objectId}`);
+        appendLog(`scene edit created: object=${added.objectId} geometry=${added.geometryId}`);
+      } catch (err) {
+        setStatus(`error: ${err.message}`);
+        appendLog(`scene edit create error: ${err.message}`);
+      }
+    });
+  }
+
   el.clearLogsBtn.addEventListener("click", () => {
     el.logOutput.textContent = "";
   });
 
-  el.sceneSource.addEventListener("input", updateEditorMetrics);
+  el.sceneSource.addEventListener("input", () => {
+    updateEditorMetrics();
+    refreshSceneEditControls();
+  });
   el.sceneSource.addEventListener("keydown", handleEditorTabKey);
   el.sceneSource.addEventListener("scroll", syncEditorScroll);
   el.sceneSource.addEventListener("keyup", syncEditorScroll);
   el.sceneSource.addEventListener("click", syncEditorScroll);
   updateEditorMetrics();
+  refreshSceneEditControls();
   syncEditorScroll();
 }
 

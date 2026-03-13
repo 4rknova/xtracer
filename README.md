@@ -141,7 +141,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 | Tab | Key Capabilities |
 |---|---|
 | Render | Scene/camera/integrator selection, render settings, preview, export |
-| Editor | Scene source editor, scene save, visual viewport integration |
+| Editor | Scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Frontend behavior toggles and polling controls |
 | Logs | Backend log stream with incremental polling |
 | About | Build/backend metadata and license text |

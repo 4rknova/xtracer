@@ -483,10 +483,11 @@ function materialForDef(matDef) {
     return g;
   }
 
-  function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry) {
+  function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry, fetchSceneAssetText) {
     this.viewportEl = viewportEl;
     this.statusEl = statusEl;
     this.fetchSceneGeometry = (typeof fetchSceneGeometry === "function") ? fetchSceneGeometry : null;
+    this.fetchSceneAssetText = (typeof fetchSceneAssetText === "function") ? fetchSceneAssetText : null;
 
     this.renderer = null;
     this.scene = null;
@@ -509,6 +510,13 @@ function materialForDef(matDef) {
     this.selectedCameraAperture = 0;
     this.selectedCameraFLength = 0;
     this.selectedCameraType = "";
+    this.onSelectionChanged = null;
+    this.selectedMesh = null;
+    this.parsedScene = null;
+    this.currentSceneName = "";
+    this.objectMeshById = {};
+    this.objectMetaById = {};
+    this.assetTextCache = {};
     this.cameraWidgetRoot = null;
     this.cameraWidget = null;
     this.axisWidgetScene = null;
@@ -538,12 +546,49 @@ function materialForDef(matDef) {
     this.dragMoved = false;
     this.lastX = 0;
     this.lastY = 0;
+    this.movePlane = null;
+    this.moveOffset = new THREE.Vector3(0, 0, 0);
+    this.moveStartPosition = null;
+    this.onObjectTransformChanged = null;
 
     this._animateBound = this.animate.bind(this);
   }
 
   SceneVisualEditor.prototype.setStatus = function (msg) {
     if (this.statusEl) this.statusEl.textContent = String(msg || "");
+  };
+
+  SceneVisualEditor.prototype.setSelectionChangeHandler = function (handler) {
+    this.onSelectionChanged = (typeof handler === "function") ? handler : null;
+  };
+
+  SceneVisualEditor.prototype.setObjectTransformChangeHandler = function (handler) {
+    this.onObjectTransformChanged = (typeof handler === "function") ? handler : null;
+  };
+
+  SceneVisualEditor.prototype.notifySelectionChanged = function () {
+    if (!this.onSelectionChanged) return;
+    var selectedId = this.getSelectedObjectId();
+    var payload = selectedId ? this.getObjectMeta(selectedId) : null;
+    this.onSelectionChanged(payload);
+  };
+
+  SceneVisualEditor.prototype.extractObjectTransform = function (mesh) {
+    if (!mesh) return null;
+    return {
+      translation: [mesh.position.x, mesh.position.y, mesh.position.z],
+      rotation: [radToDeg(mesh.rotation.x), radToDeg(mesh.rotation.y), radToDeg(mesh.rotation.z)],
+      scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z],
+    };
+  };
+
+  SceneVisualEditor.prototype.notifyObjectTransformChanged = function (objectId, transform, deltaTranslation) {
+    if (!this.onObjectTransformChanged) return;
+    this.onObjectTransformChanged({
+      objectId: String(objectId || ""),
+      transform: transform || null,
+      deltaTranslation: Array.isArray(deltaTranslation) ? deltaTranslation.slice(0, 3) : [0, 0, 0],
+    });
   };
 
   SceneVisualEditor.prototype.init = function () {
@@ -678,7 +723,17 @@ function materialForDef(matDef) {
 
     this.viewportEl.addEventListener("pointerdown", function (e) {
       if (e.button === 0 && self.handleAxisWidgetPointerDown(e.clientX, e.clientY)) return;
-      if (e.button === 2 || e.button === 1) self.dragMode = "pan";
+      if (e.button === 0 && (e.ctrlKey || e.metaKey)) {
+        var picked = self.pickObjectAt(e.clientX, e.clientY);
+        if (picked && picked.mesh) {
+          self.setSelectedMesh(picked.mesh, false);
+          var meta = self.getObjectMeta(self.getSelectedObjectId());
+          var gt = meta ? String(meta.geometryType || "").toLowerCase() : "";
+          var canMove = (gt === "mesh" || gt === "sphere" || gt === "point" || gt === "triangle");
+          if (canMove && self.beginMoveDrag(e.clientX, e.clientY)) self.dragMode = "move";
+          else self.dragMode = "orbit";
+        } else self.dragMode = "orbit";
+      } else if (e.button === 2 || e.button === 1) self.dragMode = "pan";
       else self.dragMode = "orbit";
       self.dragPointerId = e.pointerId;
       self.dragButton = e.button;
@@ -696,7 +751,9 @@ function materialForDef(matDef) {
       self.lastX = e.clientX;
       self.lastY = e.clientY;
 
-      if (self.dragMode === "pan") {
+      if (self.dragMode === "move") {
+        if (self.updateMoveDrag(e.clientX, e.clientY)) self.dragMoved = true;
+      } else if (self.dragMode === "pan") {
         var panScale = self.distance * 0.0016;
         var right = new THREE.Vector3();
         var up = new THREE.Vector3();
@@ -712,10 +769,13 @@ function materialForDef(matDef) {
     });
     function endDrag(e) {
       if (self.dragPointerId !== e.pointerId) return;
-      var pickableClick = self.dragButton === 0
-        && !self.dragMoved
-        && (e.ctrlKey || e.metaKey);
-      if (pickableClick) self.pickPivotAt(e.clientX, e.clientY);
+      if (self.dragMode === "move") {
+        self.endMoveDrag(self.dragMoved);
+      }
+      var leftClick = self.dragButton === 0 && !self.dragMoved && self.dragMode !== "move";
+      if (leftClick) {
+        self.pickSelectAt(e.clientX, e.clientY);
+      }
       self.dragMode = "";
       self.dragPointerId = null;
       self.dragButton = 0;
@@ -731,6 +791,67 @@ function materialForDef(matDef) {
     });
   };
 
+  SceneVisualEditor.prototype.rayFromClient = function (clientX, clientY) {
+    if (!this.renderer || !this.camera) return null;
+    var rect = this.renderer.domElement.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+    var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+    var ny = -(((clientY - rect.top) / rect.height) * 2 - 1);
+    var ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(nx, ny), this.camera);
+    return ray.ray;
+  };
+
+  SceneVisualEditor.prototype.beginMoveDrag = function (clientX, clientY) {
+    if (!this.selectedMesh) return false;
+    var ray = this.rayFromClient(clientX, clientY);
+    if (!ray) return false;
+    var normal = new THREE.Vector3();
+    this.camera.getWorldDirection(normal);
+    if (normal.lengthSq() < 1e-10) normal.set(0, 0, -1);
+    normal.normalize();
+    this.movePlane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, this.selectedMesh.position.clone());
+    var hit = new THREE.Vector3();
+    if (!ray.intersectPlane(this.movePlane, hit)) return false;
+    this.moveOffset.copy(this.selectedMesh.position).sub(hit);
+    this.moveStartPosition = this.selectedMesh.position.clone();
+    this.setStatus("Dragging: " + this.getSelectedObjectId());
+    return true;
+  };
+
+  SceneVisualEditor.prototype.updateMoveDrag = function (clientX, clientY) {
+    if (!this.selectedMesh || !this.movePlane) return false;
+    var ray = this.rayFromClient(clientX, clientY);
+    if (!ray) return false;
+    var hit = new THREE.Vector3();
+    if (!ray.intersectPlane(this.movePlane, hit)) return false;
+    var next = hit.add(this.moveOffset);
+    if (!Number.isFinite(next.x) || !Number.isFinite(next.y) || !Number.isFinite(next.z)) return false;
+    this.selectedMesh.position.copy(next);
+    return true;
+  };
+
+  SceneVisualEditor.prototype.endMoveDrag = function (moved) {
+    if (this.selectedMesh && moved) {
+      var oid = this.getSelectedObjectId();
+      var t = this.extractObjectTransform(this.selectedMesh);
+      var delta = [0, 0, 0];
+      if (this.moveStartPosition) {
+        delta = [
+          this.selectedMesh.position.x - this.moveStartPosition.x,
+          this.selectedMesh.position.y - this.moveStartPosition.y,
+          this.selectedMesh.position.z - this.moveStartPosition.z,
+        ];
+      }
+      this.notifyObjectTransformChanged(oid, t, delta);
+      this.setStatus("Selected: " + oid);
+    }
+    this.movePlane = null;
+    this.moveOffset.set(0, 0, 0);
+    this.moveStartPosition = null;
+  };
+
   SceneVisualEditor.prototype.handleKeyDown = function (e) {
     if (!e) return;
     var target = e.target;
@@ -741,8 +862,13 @@ function materialForDef(matDef) {
       return;
     }
     var k = String(e.key || "").toLowerCase();
-    if (k !== "m") return;
-    if (this.jumpToSelectedCameraView()) e.preventDefault();
+    if (k === "m") {
+      if (this.jumpToSelectedCameraView()) e.preventDefault();
+      return;
+    }
+    if (k === "f") {
+      if (this.focusSelectedObject()) e.preventDefault();
+    }
   };
 
   SceneVisualEditor.prototype.jumpToSelectedCameraView = function () {
@@ -770,20 +896,50 @@ function materialForDef(matDef) {
     return true;
   };
 
-  SceneVisualEditor.prototype.pickPivotAt = function (clientX, clientY) {
+  SceneVisualEditor.prototype.focusSelectedObject = function () {
+    if (!this.selectedMesh) {
+      this.setStatus("Focus: no selected object");
+      return false;
+    }
+    var center = new THREE.Vector3();
+    if (this.selectedMesh.geometry) {
+      if (!this.selectedMesh.geometry.boundingBox) this.selectedMesh.geometry.computeBoundingBox();
+      if (this.selectedMesh.geometry.boundingBox) {
+        this.selectedMesh.geometry.boundingBox.getCenter(center);
+        center.applyMatrix4(this.selectedMesh.matrixWorld);
+      }
+    }
+    if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(center.z)) {
+      new THREE.Box3().setFromObject(this.selectedMesh).getCenter(center);
+    }
+    if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(center.z)) {
+      return false;
+    }
+
+    var toCam = this.camera.position.clone().sub(center);
+    var dist = clamp(toCam.length(), 0.3, 120);
+    var azimuth = Math.atan2(toCam.x, toCam.z);
+    var horiz = Math.sqrt(toCam.x * toCam.x + toCam.z * toCam.z);
+    var elevation = Math.atan2(toCam.y, Math.max(1e-6, horiz));
+
+    this.target.copy(center);
+    this.distance = dist;
+    this.azimuth = azimuth;
+    this.elevation = clamp(elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT);
+    this.setStatus("Focus: " + this.getSelectedObjectId());
+    return true;
+  };
+
+  SceneVisualEditor.prototype.pickObjectAt = function (clientX, clientY) {
     if (!this.renderer || !this.camera || !this.modelRoot) return false;
 
     this.modelRoot.updateMatrixWorld(true);
-    var rect = this.renderer.domElement.getBoundingClientRect();
-    if (!rect || rect.width <= 0 || rect.height <= 0) return false;
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
-
-    var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
-    var ny = -(((clientY - rect.top) / rect.height) * 2 - 1);
-    var ray = new THREE.Raycaster();
-    ray.setFromCamera(new THREE.Vector2(nx, ny), this.camera);
-    var hits = ray.intersectObjects(this.modelRoot.children, true);
-    if (!hits || hits.length === 0) return false;
+    var ray = this.rayFromClient(clientX, clientY);
+    if (!ray) return null;
+    var caster = new THREE.Raycaster();
+    caster.ray.copy(ray);
+    var hits = caster.intersectObjects(this.modelRoot.children, true);
+    if (!hits || hits.length === 0) return null;
 
     var chosenHit = null;
     var firstHit = null;
@@ -802,12 +958,16 @@ function materialForDef(matDef) {
       break;
     }
     if (!chosenHit) chosenHit = firstHit || firstInfinitePlaneHit;
-    if (!chosenHit || !chosenHit.mesh) return false;
+    if (!chosenHit || !chosenHit.mesh) return null;
+    return chosenHit;
+  };
 
-    var picked = chosenHit.mesh;
+  SceneVisualEditor.prototype.resolveMeshCenter = function (hitInfo) {
+    if (!hitInfo || !hitInfo.mesh) return null;
+    var picked = hitInfo.mesh;
     var center = new THREE.Vector3();
     if (picked.userData && picked.userData.infinitePlane) {
-      center.copy(chosenHit.hit.point);
+      center.copy(hitInfo.hit.point);
     } else if (picked.geometry) {
       if (!picked.geometry.boundingBox) picked.geometry.computeBoundingBox();
       if (picked.geometry.boundingBox) {
@@ -819,9 +979,74 @@ function materialForDef(matDef) {
       new THREE.Box3().setFromObject(picked).getCenter(center);
     }
     if (!Number.isFinite(center.x) || !Number.isFinite(center.y) || !Number.isFinite(center.z)) {
-      center.copy(chosenHit.hit.point);
+      center.copy(hitInfo.hit.point);
     }
+    return center;
+  };
 
+  SceneVisualEditor.prototype.applySelectionHighlight = function (mesh, selected) {
+    if (!mesh || !mesh.material) return;
+    var mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (var i = 0; i < mats.length; i += 1) {
+      var m = mats[i];
+      if (!m || !m.isMeshPhongMaterial) continue;
+      if (selected) {
+        if (!m.userData._selOrigEmissive) {
+          m.userData._selOrigEmissive = m.emissive ? m.emissive.clone() : new THREE.Color(0, 0, 0);
+          m.userData._selOrigEmissiveIntensity = Number(m.emissiveIntensity) || 1.0;
+        }
+        m.emissive = new THREE.Color(0x16384d);
+        m.emissiveIntensity = 0.75;
+      } else if (m.userData._selOrigEmissive) {
+        m.emissive.copy(m.userData._selOrigEmissive);
+        m.emissiveIntensity = m.userData._selOrigEmissiveIntensity;
+        delete m.userData._selOrigEmissive;
+        delete m.userData._selOrigEmissiveIntensity;
+      }
+    }
+  };
+
+  SceneVisualEditor.prototype.setSelectedMesh = function (mesh, focusView) {
+    if (this.selectedMesh && this.selectedMesh !== mesh) this.applySelectionHighlight(this.selectedMesh, false);
+    this.selectedMesh = mesh || null;
+    this.selectedObjectName = (mesh && mesh.userData && mesh.userData.objectId) || "";
+    if (this.selectedMesh) {
+      this.applySelectionHighlight(this.selectedMesh, true);
+      if (focusView) {
+        var c = this.resolveMeshCenter({ mesh: this.selectedMesh, hit: { point: this.target.clone() } });
+        if (c) {
+          var toCam = this.camera.position.clone().sub(c);
+          var dist = clamp(toCam.length(), 0.3, 120);
+          var azimuth = Math.atan2(toCam.x, toCam.z);
+          var horiz = Math.sqrt(toCam.x * toCam.x + toCam.z * toCam.z);
+          var elevation = Math.atan2(toCam.y, Math.max(1e-6, horiz));
+          this.target.copy(c);
+          this.distance = dist;
+          this.azimuth = azimuth;
+          this.elevation = clamp(elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT);
+        }
+      }
+      this.setStatus("Selected: " + this.selectedObjectName);
+    } else {
+      this.setStatus("Selection: none (click to select, Ctrl+drag to move)");
+    }
+    this.notifySelectionChanged();
+  };
+
+  SceneVisualEditor.prototype.pickSelectAt = function (clientX, clientY) {
+    var chosenHit = this.pickObjectAt(clientX, clientY);
+    if (!chosenHit || !chosenHit.mesh) return false;
+    this.setSelectedMesh(chosenHit.mesh, false);
+    return true;
+  };
+
+  SceneVisualEditor.prototype.pickPivotAt = function (clientX, clientY) {
+    var chosenHit = this.pickObjectAt(clientX, clientY);
+    if (!chosenHit || !chosenHit.mesh) return false;
+    var picked = chosenHit.mesh;
+    this.setSelectedMesh(picked, false);
+    var center = this.resolveMeshCenter(chosenHit);
+    if (!center) return true;
     var toCam = this.camera.position.clone().sub(center);
     var dist = clamp(toCam.length(), 0.3, 120);
     var azimuth = Math.atan2(toCam.x, toCam.z);
@@ -832,8 +1057,7 @@ function materialForDef(matDef) {
     this.distance = dist;
     this.azimuth = azimuth;
     this.elevation = clamp(elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT);
-    this.selectedObjectName = (picked.userData && picked.userData.objectId) || picked.name || "object";
-    this.setStatus("Selected: " + this.selectedObjectName);
+    this.setStatus("Selected: " + ((picked.userData && picked.userData.objectId) || picked.name || "object"));
     return true;
   };
 
@@ -1196,6 +1420,19 @@ function materialForDef(matDef) {
     if (String(def.type || "").toLowerCase() !== "mesh") return geometryForDef(def);
     var meshFromScene = this.geometryFromSceneData(def);
     if (meshFromScene) return meshFromScene;
+    var srcResolved = String(def.sourceResolved || def.source || "").trim();
+    if (this.fetchSceneAssetText && sceneName && srcResolved && /\.obj$/i.test(srcResolved)) {
+      try {
+        var key = sceneName + "::" + srcResolved;
+        var objText = this.assetTextCache[key];
+        if (!objText) {
+          objText = await this.fetchSceneAssetText(sceneName, srcResolved);
+          this.assetTextCache[key] = objText;
+        }
+        var parsedObj = parseObjToGeometry(objText);
+        if (parsedObj) return parsedObj;
+      } catch (_) {}
+    }
     return geometryForDef(def);
   };
 
@@ -1244,6 +1481,14 @@ function materialForDef(matDef) {
   };
 
   SceneVisualEditor.prototype.buildScene = async function (sceneName, source, geometryData) {
+    this.currentSceneName = String(sceneName || "");
+    this.assetTextCache = {};
+    this.parsedScene = null;
+    this.objectMeshById = {};
+    this.objectMetaById = {};
+    if (this.selectedMesh) this.applySelectionHighlight(this.selectedMesh, false);
+    this.selectedMesh = null;
+    this.selectedObjectName = "";
     this.clearPhotonPoints();
     while (this.modelRoot.children.length > 0) {
       var c = this.modelRoot.children.pop();
@@ -1265,6 +1510,7 @@ function materialForDef(matDef) {
     }
 
     var parsed = parseSceneSource(source || "");
+    this.parsedScene = parsed;
     this.sceneCameraMap = {};
     this.sceneCameraOrder = [];
     for (var ci = 0; ci < parsed.cameras.length; ci += 1) {
@@ -1287,8 +1533,17 @@ function materialForDef(matDef) {
       mesh.name = obj.id;
       mesh.userData = mesh.userData || {};
       mesh.userData.objectId = obj.id;
+      mesh.userData.geometryId = obj.geometry;
+      mesh.userData.materialId = obj.material || "";
       mesh.userData.geometryType = String(geoDef.type || "").toLowerCase();
       mesh.userData.infinitePlane = mesh.userData.geometryType === "plane";
+      this.objectMeshById[obj.id] = mesh;
+      this.objectMetaById[obj.id] = {
+        objectId: obj.id,
+        geometryId: obj.geometry,
+        materialId: obj.material || "",
+        geometryType: mesh.userData.geometryType,
+      };
       var isEmissive = !!(matDef && String(matDef.type || "").toLowerCase() === "emissive");
       mesh.castShadow = !isEmissive;
       mesh.receiveShadow = !isEmissive;
@@ -1379,7 +1634,39 @@ function materialForDef(matDef) {
     else if (this.sceneCameraOrder.length > 0) this.setActiveCamera(this.sceneCameraOrder[0]);
     else this.setActiveCamera("");
 
-    this.setStatus("Selection: none (Ctrl+Click)");
+    this.notifySelectionChanged();
+    this.setStatus("Selection: none (click to select, Ctrl+drag to move)");
+  };
+
+  SceneVisualEditor.prototype.getSelectedObjectId = function () {
+    return this.selectedObjectName || "";
+  };
+
+  SceneVisualEditor.prototype.getObjectMeta = function (objectId) {
+    if (!objectId || !this.objectMetaById) return null;
+    return this.objectMetaById[objectId] || null;
+  };
+
+  SceneVisualEditor.prototype.getObjectList = function () {
+    var out = [];
+    var self = this;
+    Object.keys(this.objectMetaById || {}).forEach(function (id) {
+      if (self.objectMetaById[id]) out.push(self.objectMetaById[id]);
+    });
+    out.sort(function (a, b) {
+      return String(a.objectId || "").localeCompare(String(b.objectId || ""));
+    });
+    return out;
+  };
+
+  SceneVisualEditor.prototype.selectObjectById = function (objectId, focusView) {
+    var id = String(objectId || "").trim();
+    if (!id || !this.objectMeshById || !this.objectMeshById[id]) {
+      this.setSelectedMesh(null, false);
+      return false;
+    }
+    this.setSelectedMesh(this.objectMeshById[id], !!focusView);
+    return true;
   };
 
   SceneVisualEditor.prototype.getCameraNames = function () {

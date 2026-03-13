@@ -495,6 +495,67 @@ textarea {
   font-size: 0.82rem;
 }
 
+.scene-edit-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scene-edit-details {
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 68%, transparent);
+  overflow: hidden;
+}
+
+.scene-edit-details summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid transparent;
+}
+
+.scene-edit-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.scene-edit-details[open] summary {
+  border-bottom-color: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.scene-edit-details .scene-edit-panel {
+  padding: 10px;
+}
+
+.scene-edit-group {
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--field-bg) 72%, transparent);
+}
+
+.scene-edit-title {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scene-edit-vec3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scene-edit-actions {
+  margin-top: 6px;
+}
+
 .editor-shell {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -1054,6 +1115,53 @@ button:disabled {
   white-space: nowrap;
 }
 
+.visual-controls-info {
+  margin: 0 0 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--field-bg) 68%, transparent);
+}
+
+.visual-controls-info summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.visual-controls-info summary::-webkit-details-marker {
+  display: none;
+}
+
+.visual-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  padding: 0 10px 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.visual-controls-grid p {
+  margin: 0;
+}
+
+.visual-controls-grid kbd {
+  display: inline-block;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.76rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 86%, transparent);
+}
+
 .reset-view-btn {
   padding: 7px 10px;
   margin: 0;
@@ -1135,8 +1243,8 @@ button:disabled {
 
 .visual-viewport-top {
   width: 100%;
-  height: clamp(260px, 42vh, 520px);
-  min-height: 220px;
+  height: clamp(520px, 84vh, 1040px);
+  min-height: 440px;
   margin: 0 0 10px;
   border: 1px solid color-mix(in srgb, var(--line) 70%, var(--line-strong));
   border-radius: 8px;
@@ -1168,8 +1276,8 @@ button:disabled {
 }
 
 #paneVisual .visual-viewport-top {
-  height: clamp(260px, 42vh, 520px);
-  min-height: 220px;
+  height: clamp(520px, 84vh, 1040px);
+  min-height: 440px;
   margin: 0;
 }
 
@@ -1255,7 +1363,7 @@ button:disabled {
   }
 
   .visual-viewport-top {
-    height: clamp(230px, 36vh, 420px);
+    height: clamp(460px, 72vh, 840px);
   }
 
   #paneVisual .panel-preview {
@@ -1323,6 +1431,10 @@ button:disabled {
     justify-content: flex-start;
   }
 
+  .visual-controls-grid {
+    grid-template-columns: 1fr;
+  }
+
   .tabs {
     width: 100%;
     gap: 0;
@@ -1343,6 +1455,10 @@ button:disabled {
 
   .editor-toolbar button {
     width: 100%;
+  }
+
+  .scene-edit-panel {
+    grid-template-columns: 1fr;
   }
 
   #paneVisual .panel-preview {
