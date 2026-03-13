@@ -201,7 +201,6 @@ struct third_party_dep_t {
 void append_third_party_licenses_json(std::ostringstream &ss)
 {
     static const third_party_dep_t deps[] = {
-        { "ImGui", "MIT", "https://github.com/ocornut/imgui" },
         { "TinyObjLoader", "MIT", "https://github.com/syoyo/tinyobjloader" },
         { "TinyFiles", "Public Domain", "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h" },
         { "STB", "Public Domain / MIT", "https://github.com/nothings/stb" },

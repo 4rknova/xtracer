@@ -29,7 +29,7 @@ for f in "${required_files[@]}"; do
   if [[ ! -f "$WEB_DIR/$f" ]]; then
     echo "Missing required file: $WEB_DIR/$f"
     echo "Build WASM first with:"
-    echo "  emcmake cmake -S . -B build-wasm -DXTRACER_ENABLE_GUI=OFF -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON"
+    echo "  emcmake cmake -S . -B build-wasm -DXTRACER_ENABLE_WEB=OFF -DXTRACER_ENABLE_RTMIDI=OFF -DXTRACER_ENABLE_WASM=ON"
     echo "  cmake --build build-wasm -j --target xtracer_wasm"
     exit 1
   fi

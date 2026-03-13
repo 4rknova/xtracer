@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.1)
 project(xtracer)
 
 option(XTRACER_ENABLE_RTMIDI "Build with RtMidi/ALSA support" ON)
-option(XTRACER_ENABLE_GUI "Build GUI frontend" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
 option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into bin/wasm-dist during native builds" OFF)
@@ -79,63 +78,6 @@ if (XTRACER_ENABLE_RTMIDI)
         message(WARNING "ALSA development files not found; disabling XTRACER_ENABLE_RTMIDI")
         set(XTRACER_ENABLE_RTMIDI OFF)
     endif()
-endif()
-
-if (XTRACER_ENABLE_GUI)
-    set(OpenGL_GL_PREFERENCE GLVND)
-
-    find_package(OpenGL REQUIRED)
-    find_package(GLEW REQUIRED)
-    find_package(glfw3 3.2 REQUIRED)
-
-    set(PATH_SRC_FRONTEND_GUI ${PATH_SRC}/frontend/gui)
-
-    file(GLOB SRC_FRONTEND_GUI
-        ${PATH_SRC_FRONTEND_GUI}/*.c
-        ${PATH_SRC_FRONTEND_GUI}/*.cc
-        ${PATH_SRC_FRONTEND_GUI}/*.cpp
-        ${PATH_SRC_FRONTEND_GUI}/*/*.c
-        ${PATH_SRC_FRONTEND_GUI}/*/*.cc
-        ${PATH_SRC_FRONTEND_GUI}/*/*.cpp
-    )
-
-    file(GLOB SRC_IMGUI
-        ${PATH_EXT}/imgui/*.cpp
-    )
-
-    set(OUT_EXE_GUI xtracer_gui)
-
-    add_library(imgui STATIC ${SRC_IMGUI})
-    set_target_properties(imgui PROPERTIES OUTPUT_NAME imgui)
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(imgui PRIVATE -Wno-class-memaccess)
-    endif()
-
-    add_executable(${OUT_EXE_GUI} ${SRC_FRONTEND_GUI})
-    set_target_properties(${OUT_EXE_GUI} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
-    )
-
-    target_include_directories(${OUT_EXE_GUI} PUBLIC
-        ${PATH_LIB}
-        ${PATH_SRC}
-    )
-    target_include_directories(${OUT_EXE_GUI} SYSTEM PUBLIC
-        ${ext_libs}
-    )
-
-    add_dependencies (${OUT_EXE_GUI} xtcore_static xtcore_dynamic)
-    if (XTRACER_ENABLE_RTMIDI)
-        target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread imgui GL glfw GLEW::GLEW ${OpenMP_LIBRARY})
-    else()
-        target_link_libraries(${OUT_EXE_GUI} PRIVATE xtcore_static pthread imgui GL glfw GLEW::GLEW ${OpenMP_LIBRARY})
-    endif()
-
-    install (TARGETS ${OUT_EXE_CLI}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-    )
 endif()
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
@@ -469,7 +411,6 @@ if (XTRACER_ENABLE_WASM_DIST)
             COMMAND ${CMAKE_COMMAND} -E rm -f ${WASM_DIST_BUILD_DIR}/CMakeCache.txt
             COMMAND ${CMAKE_COMMAND} -E rm -rf ${WASM_DIST_BUILD_DIR}/CMakeFiles
             COMMAND ${EMCMAKE_PROGRAM} cmake -S ${PATH_ROOT} -B ${WASM_DIST_BUILD_DIR}
-                    -DXTRACER_ENABLE_GUI=OFF
                     -DXTRACER_ENABLE_WEB=OFF
                     -DXTRACER_ENABLE_RTMIDI=OFF
                     -DXTRACER_ENABLE_WASM=ON
@@ -491,9 +432,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
-if (XTRACER_ENABLE_GUI)
-    target_compile_definitions(${OUT_EXE_GUI} PRIVATE ${DEFS})
-endif()
 if (XTRACER_ENABLE_WASM)
     target_compile_definitions(${OUT_EXE_WASM} PRIVATE ${DEFS})
 endif()

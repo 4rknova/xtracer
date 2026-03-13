@@ -12,17 +12,17 @@ Found under `src/xtcore/integrator/`:
 6. `uv`
 7. `emission`
 
-## Exposed In GUI Menu
+## Exposed Via Web API
 
-In `src/frontend/gui/gui.cc` integrator registry:
+In `src/frontend/common/render_service.cc` integrator registry:
 
-- Pathtracer
-- Depth
-- Stencil
-- Normal
-- UV
-- Emission
-- Ambient Occlusion
+- raytracer
+- pathtracer
+- pathtracer_mis
+- pathtracer_mis_full
+- photon_mapping
+- debug_views
+- ao
 
 ## Notes
 

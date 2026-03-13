@@ -121,7 +121,6 @@ const el = {
 };
 
 const DEFAULT_THIRD_PARTY_LICENSES = [
-  { name: "ImGui", license: "MIT", url: "https://github.com/ocornut/imgui" },
   { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
   {
     name: "TinyFiles",

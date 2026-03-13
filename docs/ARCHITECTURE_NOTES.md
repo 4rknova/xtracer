@@ -25,7 +25,10 @@
 - CLI:
   - Entrypoint: `src/frontend/cli/xtracer.cc`
   - Arg parsing: `src/frontend/cli/argparse.cc`
-- GUI:
-  - Entrypoint: `src/frontend/gui/xtracer.cc`
-  - Workspace and render threading: `src/frontend/gui/workspace.cc`, `src/frontend/gui/action.cc`
-  - Integrator selection/menu: `src/frontend/gui/gui.cc`
+- Web:
+  - Entrypoint: `src/frontend/web/main.cc`
+  - HTTP routing/API: `src/frontend/web/routes.cc`
+  - Job lifecycle: `src/frontend/web/job_manager.cc`
+- WASM:
+  - Entrypoint: `src/frontend/wasm/main.cc`
+  - Shared render bridge: `src/frontend/common/render_service.cc`

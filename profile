@@ -1,2 +1,2 @@
-valgrind --tool=callgrind ./bin/xtracer_gui
+valgrind --tool=callgrind ./bin/xtracer_cli
 kcachegrind

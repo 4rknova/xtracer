@@ -7,14 +7,14 @@ This file is the orientation and operating guide for coding agents working in th
 - Name: `xtracer`
 - Language: C/C++ (CMake)
 - Branch context: this workspace is currently on `develop`.
-- Core purpose: experimental rendering framework with a shared rendering core and multiple frontends (CLI, GUI, Web).
+- Core purpose: experimental rendering framework with a shared rendering core and multiple frontends (CLI, Web, WASM).
 
 ## Repository Map
 
 - Core renderer and scene system: `src/xtcore/`
 - CLI frontend: `src/frontend/cli/`
-- GUI frontend (OpenGL + ImGui): `src/frontend/gui/`
 - Web frontend backend: `src/frontend/web/`
+- WASM frontend runtime: `src/frontend/wasm/`
 - Frontend shared helpers: `src/frontend/common/`
 - Web static assets: `res/web/`
 - Supporting libraries: `lib/`
@@ -28,14 +28,14 @@ This file is the orientation and operating guide for coding agents working in th
   - `./configure`
   - `make`
 - Practical modern flow is CMake-driven.
-- GUI build is optional (see `XTRACER_ENABLE_GUI` usage in `CMakeLists.txt`).
 - Web build is optional (see `XTRACER_ENABLE_WEB` usage in `CMakeLists.txt`).
+- WASM build is optional (see `XTRACER_ENABLE_WASM` usage in `CMakeLists.txt`).
 - In this workspace, in-source CMake artifacts exist (`CMakeCache.txt`, `CMakeFiles/`, etc.). Prefer out-of-tree builds for new runs.
 
 ## Known Current State (Develop)
 
 - Integrator implementations exist under `src/xtcore/integrator/`.
-- GUI exposes several integrators via menu in `src/frontend/gui/gui.cc`.
+- Integrator metadata exposed by web/WASM is defined in `src/frontend/common/render_service.*`.
 - CLI integrator selection code in `src/frontend/cli/xtracer.cc` is currently commented out; treat CLI rendering path as needing repair before relying on it.
 - Web frontend is implemented as `xtracer_web`:
   - HTTP server via `ext/cpp-httplib/httplib.h`
@@ -145,13 +145,13 @@ Notes:
 - Do not revert unrelated working tree changes.
 - Keep tile-based architecture unless intentionally redesigning it.
 - When a code/config/API/feature change affects documented behavior, update `README.md` in the same task so it reflects the current repository state.
-- When changing rendering flow, validate GUI-thread vs worker-thread behavior.
+- When changing rendering flow, validate worker-thread behavior in web/WASM frontends.
 - When changing web API responses, update both:
   - backend route handlers in `src/frontend/web/routes.cc`
   - frontend consumers in `res/web/app.js`
 - If adding new integrators, update both:
   - `src/xtcore/integrator.h`
-  - GUI integrator registry in `src/frontend/gui/gui.cc`
+  - Integrator registry in `src/frontend/common/render_service.cc`
 
 ## Commit Message Format
 

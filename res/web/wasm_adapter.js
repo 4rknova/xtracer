@@ -19,7 +19,6 @@
     { id: 5, description: "4K UHD", width: 3840, height: 2160 },
   ];
   const THIRD_PARTY_LICENSES = [
-    { name: "ImGui", license: "MIT", url: "https://github.com/ocornut/imgui" },
     { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
     {
       name: "TinyFiles",

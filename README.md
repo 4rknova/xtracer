@@ -2,7 +2,7 @@
 
 # XTRACER
 
-Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, GUI, Web, WASM runtime).
+Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, Web, WASM runtime).
 
 [![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
 
@@ -10,7 +10,6 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 
 - Build system is CMake-driven (legacy `./configure && make` still exists, but CMake is the maintained path).
 - Core renderer and scene parsing are active under `src/xtcore/`.
-- GUI frontend is optional via `XTRACER_ENABLE_GUI`.
 - HTTP web frontend is optional via `XTRACER_ENABLE_WEB`.
 - Standalone WASM renderer runtime is optional via `XTRACER_ENABLE_WASM`.
 
@@ -20,7 +19,6 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
 | CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
-| GUI frontend | `src/frontend/gui/` | OpenGL + ImGui interactive frontend |
 | Web frontend backend | `src/frontend/web/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
 | Web static app | `res/web/` | SPA for Render / Editor / Settings / Logs / About |
@@ -32,31 +30,31 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 
 ### Frontends
 
-| Capability | CLI (`xtracer_cli`) | GUI (`xtracer_gui`) | Web (`xtracer_web`) | WASM (`xtracer_wasm`) |
-|---|---:|---:|---:|---:|
-| Load `.scn` scenes | Yes | Yes | Yes | Yes |
-| Select camera | Yes (`-cam`) | Yes | Yes | Yes |
-| Integrator selection | Yes (`-renderer`) | Yes (menu) | Yes (`/api/integrators`) | Yes (through web app adapter) |
-| Progressive updates | Terminal progress | Tile updates in UI | Job progress + preview API | Progressive snapshots |
-| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
-| HTTP API | No | No | Yes | No |
+| Capability | CLI (`xtracer_cli`) | Web (`xtracer_web`) | WASM (`xtracer_wasm`) |
+|---|---:|---:|---:|
+| Load `.scn` scenes | Yes | Yes | Yes |
+| Select camera | Yes (`-cam`) | Yes | Yes |
+| Integrator selection | Yes (`-renderer`) | Yes (`/api/integrators`) | Yes (through web app adapter) |
+| Progressive updates | Terminal progress | Job progress + preview API | Progressive snapshots |
+| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
+| HTTP API | No | Yes | No |
 
 ### Integrators
 
-| Integrator ID | Type | Exposed In GUI | Exposed In `/api/integrators` |
-|---|---|---:|---:|
-| `raytracer` | Whitted-style | Yes | Yes |
-| `pathtracer` | Brute-force path tracing | Yes | Yes |
-| `pathtracer_mis` | MIS diffuse path tracing | Yes | Yes |
-| `pathtracer_mis_full` | MIS full path tracing | Yes | Yes |
-| `photon_mapping` | Photon mapping | Yes | Yes |
-| `ao` | Ambient occlusion | Yes | Yes |
-| `debug_views` | Multi-mode debug integrator | Yes | Yes |
-| `depth` | Debug depth alias | Yes | No (alias accepted in `/api/render`) |
-| `stencil` | Debug stencil alias | Yes | No (alias accepted in `/api/render`) |
-| `normal` | Debug normal alias | Yes | No (alias accepted in `/api/render`) |
-| `uv` | Debug UV alias | Yes | No (alias accepted in `/api/render`) |
-| `emission` | Debug emission alias | Yes | No (alias accepted in `/api/render`) |
+| Integrator ID | Type | Exposed In `/api/integrators` |
+|---|---|---:|
+| `raytracer` | Whitted-style | Yes |
+| `pathtracer` | Brute-force path tracing | Yes |
+| `pathtracer_mis` | MIS diffuse path tracing | Yes |
+| `pathtracer_mis_full` | MIS full path tracing | Yes |
+| `photon_mapping` | Photon mapping | Yes |
+| `ao` | Ambient occlusion | Yes |
+| `debug_views` | Multi-mode debug integrator | Yes |
+| `depth` | Debug depth alias | No (alias accepted in `/api/render`) |
+| `stencil` | Debug stencil alias | No (alias accepted in `/api/render`) |
+| `normal` | Debug normal alias | No (alias accepted in `/api/render`) |
+| `uv` | Debug UV alias | No (alias accepted in `/api/render`) |
+| `emission` | Debug emission alias | No (alias accepted in `/api/render`) |
 
 ### Scene Schema Support (`.scn`)
 
@@ -178,12 +176,6 @@ sudo apt update
 sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
 ```
 
-GUI frontend (`XTRACER_ENABLE_GUI=ON`):
-
-```bash
-sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev libglew-dev libglfw3-dev
-```
-
 RtMidi/ALSA support (`XTRACER_ENABLE_RTMIDI=ON`):
 
 ```bash
@@ -199,7 +191,7 @@ sudo apt install -y emscripten
 ### Recommended Native Build (Out-of-Tree)
 
 ```bash
-cmake -S . -B build -DXTRACER_ENABLE_GUI=ON -DXTRACER_ENABLE_WEB=ON
+cmake -S . -B build -DXTRACER_ENABLE_WEB=ON
 cmake --build build -j
 ```
 
@@ -210,7 +202,6 @@ cmake --build build -j
 | Option | Default | Description |
 |---|---:|---|
 | `XTRACER_ENABLE_RTMIDI` | `ON` | Build RtMidi/ALSA support |
-| `XTRACER_ENABLE_GUI` | `ON` | Build GUI frontend |
 | `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
 | `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
 | `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
@@ -241,7 +232,6 @@ Open: `http://127.0.0.1:8080`
 
 ```bash
 emcmake cmake -S . -B build-wasm \
-  -DXTRACER_ENABLE_GUI=OFF \
   -DXTRACER_ENABLE_WEB=OFF \
   -DXTRACER_ENABLE_RTMIDI=OFF \
   -DXTRACER_ENABLE_WASM=ON
@@ -285,7 +275,6 @@ ctest --test-dir build --output-on-failure
 
 | Name | License | URL |
 |---|---|---|
-| ImGui | MIT | https://github.com/ocornut/imgui |
 | TinyObjLoader | MIT | https://github.com/syoyo/tinyobjloader |
 | TinyFiles | Public Domain | https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h |
 | STB | Public Domain / MIT | https://github.com/nothings/stb |
