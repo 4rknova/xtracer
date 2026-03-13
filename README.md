@@ -165,9 +165,9 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 | POST | `/api/render` | Create render job |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image |
-| GET | `/api/jobs/{id}/export?format=png|jpg|bmp|tga|exr|hdr|ply` | Download final export (PLY is raygraph) |
+| GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
-| GET | `/api/logs?since=<id>` | Incremental backend logs |
+| GET | `/api/logs?since={id}` | Incremental backend logs |
 
 ## Build
 
@@ -263,17 +263,17 @@ Optional static packaging:
 
 | Test Name (CTest) | Binary |
 |---|---|
-| `colorspace::roundtrip` | `bin/<debug|release>/test/test_nimg_colorspace` |
-| `colorspace::vectors` | `bin/<debug|release>/test/test_nimg_colorspace_vectors` |
-| `xtcore::tile` | `bin/<debug|release>/test/test_xtcore_tile` |
-| `xtcore::context` | `bin/<debug|release>/test/test_xtcore_context` |
-| `xtcore::sphere` | `bin/<debug|release>/test/test_xtcore_sphere` |
-| `xtcore::triangle` | `bin/<debug|release>/test/test_xtcore_triangle` |
-| `xtcore::white_furnace` | `bin/<debug|release>/test/test_xtcore_white_furnace` |
-| `xtcore::raytracer_emissive` | `bin/<debug|release>/test/test_xtcore_raytracer_emissive` |
-| `cli::setup_parse` | `bin/<debug|release>/test/test_xtracer_cli_setup` |
-| `ncf::inline_and_utf8` | `bin/<debug|release>/test/test_ncf_parser` |
-| `cli::stencil_smoke` | `bin/<debug|release>/xtracer_cli` smoke render |
+| `colorspace::roundtrip` | `bin/debug/test/test_nimg_colorspace` or `bin/release/test/test_nimg_colorspace` |
+| `colorspace::vectors` | `bin/debug/test/test_nimg_colorspace_vectors` or `bin/release/test/test_nimg_colorspace_vectors` |
+| `xtcore::tile` | `bin/debug/test/test_xtcore_tile` or `bin/release/test/test_xtcore_tile` |
+| `xtcore::context` | `bin/debug/test/test_xtcore_context` or `bin/release/test/test_xtcore_context` |
+| `xtcore::sphere` | `bin/debug/test/test_xtcore_sphere` or `bin/release/test/test_xtcore_sphere` |
+| `xtcore::triangle` | `bin/debug/test/test_xtcore_triangle` or `bin/release/test/test_xtcore_triangle` |
+| `xtcore::white_furnace` | `bin/debug/test/test_xtcore_white_furnace` or `bin/release/test/test_xtcore_white_furnace` |
+| `xtcore::raytracer_emissive` | `bin/debug/test/test_xtcore_raytracer_emissive` or `bin/release/test/test_xtcore_raytracer_emissive` |
+| `cli::setup_parse` | `bin/debug/test/test_xtracer_cli_setup` or `bin/release/test/test_xtracer_cli_setup` |
+| `ncf::inline_and_utf8` | `bin/debug/test/test_ncf_parser` or `bin/release/test/test_ncf_parser` |
+| `cli::stencil_smoke` | `bin/debug/xtracer_cli` or `bin/release/xtracer_cli` smoke render |
 
 Run all tests:
 
