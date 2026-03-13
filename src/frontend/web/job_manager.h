@@ -26,6 +26,13 @@ enum job_state_t
 
 struct job_snapshot_t
 {
+    struct tile_rect_t {
+        size_t x0;
+        size_t y0;
+        size_t x1;
+        size_t y1;
+    };
+
     std::string id;
     std::string scene;
     std::string integrator;
@@ -34,6 +41,9 @@ struct job_snapshot_t
     std::string error;
     double elapsed_ms;
     bool has_image;
+    size_t width;
+    size_t height;
+    std::vector<tile_rect_t> active_tiles;
 };
 
 class job_manager_t
@@ -73,9 +83,14 @@ class job_manager_t
         nimg::Pixmap final_fb;
         std::vector<unsigned char> image_exr;
         std::vector<unsigned char> image_hdr;
+        std::vector<unsigned char> image_jpg;
+        std::vector<unsigned char> image_bmp;
+        std::vector<unsigned char> image_tga;
+        std::vector<unsigned char> image_raygraph_ply;
         nimg::Pixmap progressive_fb;
         std::vector<common::render_result_t::point3_t> photon_diffuse_points;
         std::vector<common::render_result_t::point3_t> photon_caustic_points;
+        std::vector<job_snapshot_t::tile_rect_t> active_tiles;
         bool progressive_ready;
         size_t preview_last_encoded_done;
         bool preview_last_from_final;

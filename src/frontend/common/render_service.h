@@ -57,6 +57,7 @@ struct render_request_t
     size_t aa;
     size_t rdepth;
     size_t tile_size;
+    xtcore::antialiasing::SAMPLE_DISTRIBUTION sample_distribution;
 
     xtcore::render::TILE_ORDER tile_order;
 
@@ -75,6 +76,7 @@ struct render_result_t
     std::string error;
     nimg::Pixmap framebuffer;
     std::vector<unsigned char> image_png;
+    std::vector<unsigned char> raygraph_ply;
     std::vector<point3_t> photon_diffuse_points;
     std::vector<point3_t> photon_caustic_points;
     size_t tiles_done;
@@ -84,7 +86,13 @@ struct render_result_t
     render_result_t();
 };
 
-typedef std::function<void(size_t, size_t, const xtcore::render::tile_t*)> progress_callback_t;
+enum progress_event_t
+{
+    PROGRESS_EVENT_TILE_STARTED = 0,
+    PROGRESS_EVENT_TILE_FINISHED
+};
+
+typedef std::function<void(progress_event_t, size_t, size_t, const xtcore::render::tile_t*)> progress_callback_t;
 
 std::vector<integrator_info_t> list_integrators();
 bool is_integrator_supported(const std::string &name);

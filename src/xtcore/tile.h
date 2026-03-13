@@ -76,12 +76,15 @@ enum TILE_ORDER
     , TILE_ORDER_RANDOM
     , TILE_ORDER_RADIAL_IN
     , TILE_ORDER_RADIAL_OUT
+    , TILE_ORDER_SPIRAL_IN
+    , TILE_ORDER_SPIRAL_OUT
 };
 
 void order(Tileset &tiles, TILE_ORDER order);
 void order_scanline(Tileset &tiles);
 void order_random(Tileset &tiles);
 void order_radial(Tileset &tiles, bool outwards = true);
+void order_spiral(Tileset &tiles, bool outwards = true);
 
     } /* namespace render */
 } /* namespace xtcore */

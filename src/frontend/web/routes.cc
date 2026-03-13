@@ -124,6 +124,33 @@ bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore
         out = xtcore::render::TILE_ORDER_RADIAL_OUT;
         return true;
     }
+    if (s == "spiral_in") {
+        out = xtcore::render::TILE_ORDER_SPIRAL_IN;
+        return true;
+    }
+    if (s == "spiral_out") {
+        out = xtcore::render::TILE_ORDER_SPIRAL_OUT;
+        return true;
+    }
+    return false;
+}
+
+bool parse_sample_distribution_param(const httplib::Request &req,
+                                     const char *key,
+                                     xtcore::antialiasing::SAMPLE_DISTRIBUTION &out)
+{
+    if (!req.has_param(key)) return false;
+    std::string s = req.get_param_value(key);
+    std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char c) { return (char)std::tolower(c); });
+    if (s == "grid" || s == "grid_aligned") {
+        out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID;
+        return true;
+    }
+    if (s == "random" || s == "monte_carlo") {
+        out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_RANDOM;
+        return true;
+    }
     return false;
 }
 
@@ -163,6 +190,38 @@ bool has_prefix(const std::string &s, const char *prefix)
     if (!prefix) return false;
     const size_t n = std::strlen(prefix);
     return s.size() >= n && s.compare(0, n, prefix) == 0;
+}
+
+struct third_party_dep_t {
+    const char *name;
+    const char *license;
+    const char *url;
+};
+
+void append_third_party_licenses_json(std::ostringstream &ss)
+{
+    static const third_party_dep_t deps[] = {
+        { "ImGui", "MIT", "https://github.com/ocornut/imgui" },
+        { "TinyObjLoader", "MIT", "https://github.com/syoyo/tinyobjloader" },
+        { "TinyFiles", "Public Domain", "https://github.com/RandyGaul/tinyheaders/blob/master/tinyfiles.h" },
+        { "STB", "Public Domain / MIT", "https://github.com/nothings/stb" },
+        { "TinyEXR", "BSD-3-Clause", "https://github.com/syoyo/tinyexr" },
+        { "strpool", "Public Domain", "https://github.com/mattiasgustavsson/libs" },
+        { "cpp-httplib", "MIT", "https://github.com/yhirose/cpp-httplib" },
+        { "RtMidi", "MIT-style", "https://github.com/thestk/rtmidi" },
+        { "Three.js", "MIT", "https://github.com/mrdoob/three.js" },
+    };
+
+    ss << '[';
+    for (size_t i = 0; i < (sizeof(deps) / sizeof(deps[0])); ++i) {
+        if (i) ss << ',';
+        ss << "{"
+           << "\"name\":\"" << json_escape(deps[i].name ? deps[i].name : "") << "\","
+           << "\"license\":\"" << json_escape(deps[i].license ? deps[i].license : "") << "\","
+           << "\"url\":\"" << json_escape(deps[i].url ? deps[i].url : "") << "\""
+           << "}";
+    }
+    ss << ']';
 }
 
 std::string utc_timestamp_for_filename()
@@ -505,12 +564,15 @@ void setup_routes(httplib::Server &server,
         ss << "{"
            << "\"name\":\"XTRACER WEB\","
            << "\"version\":\"" << json_escape(xtcore::get_version()) << "\","
-           << "\"author_name\":\"Nikos Papadopoulos\","
+           << "\"author_name\":\"Nikolaos Papadopoulos\","
            << "\"author_email\":\"nikpapas@gmail.com\","
            << "\"homepage\":\"https://www.4rknova.com\","
            << "\"website\":\"https://github.com/4rknova/xtracer\","
-           << "\"copyright\":\"Copyright 2010-" << year << " (c) Nikos Papadopoulos\","
-           << "\"license\":\"" << json_escape(xtcore::get_license()) << "\""
+           << "\"copyright\":\"Copyright 2010-" << year << " (c) Nikolaos Papadopoulos\","
+           << "\"license\":\"" << json_escape(xtcore::get_license()) << "\","
+           << "\"third_party_licenses\":";
+        append_third_party_licenses_json(ss);
+        ss
            << "}";
         send_json(res, ss.str());
     });
@@ -824,6 +886,12 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid aa\"}", 400);
             return;
         }
+        if (!parse_sample_distribution_param(req, "sample_distribution", rr.sample_distribution)
+            && req.has_param("sample_distribution")) {
+            backend_log_t::handle().add("warn", "render rejected: invalid sample_distribution");
+            send_json(res, "{\"error\":\"invalid sample_distribution\"}", 400);
+            return;
+        }
         if (parse_u64_param(req, "rdepth", 1, 4096, v)) rr.rdepth = v;
         else if (req.has_param("rdepth")) {
             backend_log_t::handle().add("warn", "render rejected: invalid rdepth");
@@ -928,7 +996,9 @@ void setup_routes(httplib::Server &server,
         std::string id = req.matches[1];
         std::string format = "png";
         if (req.has_param("format")) format = lower_ascii(req.get_param_value("format"));
-        if (format != "png" && format != "exr" && format != "hdr") {
+        if (format != "png" && format != "exr" && format != "hdr"
+            && format != "jpg" && format != "bmp" && format != "tga"
+            && format != "ply") {
             send_json(res, "{\"error\":\"unsupported format\"}", 400);
             return;
         }
@@ -999,6 +1069,15 @@ void setup_routes(httplib::Server &server,
            << "\"progress\":" << snap.progress << ","
            << "\"elapsed_ms\":" << snap.elapsed_ms << ","
            << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","
+           << "\"width\":" << snap.width << ","
+           << "\"height\":" << snap.height << ","
+           << "\"active_tiles\":[";
+        for (size_t i = 0; i < snap.active_tiles.size(); ++i) {
+            if (i) ss << ",";
+            const auto &r = snap.active_tiles[i];
+            ss << "[" << r.x0 << "," << r.y0 << "," << r.x1 << "," << r.y1 << "]";
+        }
+        ss << "],"
            << "\"error\":\"" << json_escape(snap.error) << "\""
            << "}";
         send_json(res, ss.str());
@@ -1040,8 +1119,8 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "integrators.json"), "application/json", res);
     });
 
-    server.Get("/resolutions.json", [web_root](const httplib::Request &, httplib::Response &res) {
-        serve_static_file(join_path(web_root, "resolutions.json"), "application/json", res);
+    server.Get("/sidebar_cards.json", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "sidebar_cards.json"), "application/json", res);
     });
 
     server.Get("/scenes/index.json", [web_root](const httplib::Request &, httplib::Response &res) {
@@ -1063,6 +1142,10 @@ void setup_routes(httplib::Server &server,
 
     server.Get("/logo.png", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "logo.png"), "image/png", res);
+    });
+
+    server.Get("/logo.svg", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "logo.svg"), "image/svg+xml", res);
     });
 
     server.Get("/license.txt", [web_root](const httplib::Request &, httplib::Response &res) {

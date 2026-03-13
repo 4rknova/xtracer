@@ -56,6 +56,13 @@ bool encode_png_memory(nimg::Pixmap &pixmap,
     return encode_memory(ldr, nimg::io::save::png, out);
 }
 
+bool encode_jpg_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out)
+{
+    nimg::Pixmap ldr = pixmap;
+    xtcore::tonemapping::apply(ldr);
+    return encode_memory(ldr, nimg::io::save::jpg, out);
+}
+
 void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &fb)
 {
     if (!tile) return;
@@ -66,6 +73,15 @@ void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &
             fb.pixel(x, y) = col;
         }
     }
+}
+
+bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::tile_t *tile)
+{
+    if (!tile) return false;
+    return a.x0 == tile->x0()
+        && a.y0 == tile->y0()
+        && a.x1 == tile->x1()
+        && a.y1 == tile->y1();
 }
 
 } // namespace
@@ -84,9 +100,14 @@ job_manager_t::job_t::job_t()
     , final_fb()
     , image_exr()
     , image_hdr()
+    , image_jpg()
+    , image_bmp()
+    , image_tga()
+    , image_raygraph_ply()
     , progressive_fb()
     , photon_diffuse_points()
     , photon_caustic_points()
+    , active_tiles()
     , progressive_ready(false)
     , preview_last_encoded_done(0)
     , preview_last_from_final(false)
@@ -153,14 +174,42 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
     std::lock_guard<std::mutex> render_lock(render_mut);
 
     common::render_result_t rr = common::render_scene_to_png(job->request,
-        [job](size_t done, size_t total, const xtcore::render::tile_t *tile) {
+        [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile) {
             {
                 std::lock_guard<std::mutex> lock(job->mut);
-                copy_tile_to_framebuffer(tile, job->progressive_fb);
-                job->progressive_ready = true;
+                if (event == common::PROGRESS_EVENT_TILE_STARTED) {
+                    if (tile) {
+                        bool exists = false;
+                        for (size_t i = 0; i < job->active_tiles.size(); ++i) {
+                            if (same_tile_rect(job->active_tiles[i], tile)) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            job_snapshot_t::tile_rect_t rect;
+                            rect.x0 = tile->x0();
+                            rect.y0 = tile->y0();
+                            rect.x1 = tile->x1();
+                            rect.y1 = tile->y1();
+                            job->active_tiles.push_back(rect);
+                        }
+                    }
+                } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                    copy_tile_to_framebuffer(tile, job->progressive_fb);
+                    job->progressive_ready = true;
+                    for (size_t i = 0; i < job->active_tiles.size(); ++i) {
+                        if (same_tile_rect(job->active_tiles[i], tile)) {
+                            job->active_tiles.erase(job->active_tiles.begin() + i);
+                            break;
+                        }
+                    }
+                }
             }
-            job->tiles_done = done;
             job->tiles_total = total;
+            if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                job->tiles_done = done;
+            }
         }
     );
 
@@ -168,9 +217,13 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
     job->elapsed_ms = rr.elapsed_ms;
     if (rr.ok) {
         job->image_png.swap(rr.image_png);
+        job->image_raygraph_ply.swap(rr.raygraph_ply);
         job->final_fb = rr.framebuffer;
         job->image_exr.clear();
         job->image_hdr.clear();
+        job->image_jpg.clear();
+        job->image_bmp.clear();
+        job->image_tga.clear();
         job->photon_diffuse_points = rr.photon_diffuse_points;
         job->photon_caustic_points = rr.photon_caustic_points;
         job->tiles_done = rr.tiles_done;
@@ -184,6 +237,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
         job->preview_last_tm_mantiuk_contrast = 0.1f;
         job->preview_last_tm_mantiuk_saturation = 0.8f;
         job->preview_last_tm_mantiuk_detail = 1.0f;
+        job->active_tiles.clear();
         job->state = JOB_DONE;
         std::ostringstream log;
         log << "job completed id=" << job->id
@@ -191,6 +245,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
         backend_log_t::handle().add("info", log.str());
     } else {
         job->error = rr.error;
+        job->active_tiles.clear();
         job->state = JOB_ERROR;
         backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + rr.error);
     }
@@ -218,6 +273,9 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.error = job->error;
     out.elapsed_ms = job->elapsed_ms;
     out.has_image = !job->image_png.empty();
+    out.width = job->request.width;
+    out.height = job->request.height;
+    out.active_tiles = job->active_tiles;
 
     size_t total = job->tiles_total.load();
     size_t done = job->tiles_done.load();
@@ -314,6 +372,44 @@ bool job_manager_t::image_export(const std::string &id,
         out = job->image_hdr;
         mime_type = "image/vnd.radiance";
         extension = "hdr";
+        return true;
+    }
+
+    if (format == "jpg") {
+        if (job->image_jpg.empty()) {
+            if (!encode_jpg_memory(job->final_fb, job->image_jpg)) return false;
+        }
+        out = job->image_jpg;
+        mime_type = "image/jpeg";
+        extension = "jpg";
+        return true;
+    }
+
+    if (format == "bmp") {
+        if (job->image_bmp.empty()) {
+            if (!encode_memory(job->final_fb, nimg::io::save::bmp, job->image_bmp)) return false;
+        }
+        out = job->image_bmp;
+        mime_type = "image/bmp";
+        extension = "bmp";
+        return true;
+    }
+
+    if (format == "tga") {
+        if (job->image_tga.empty()) {
+            if (!encode_memory(job->final_fb, nimg::io::save::tga, job->image_tga)) return false;
+        }
+        out = job->image_tga;
+        mime_type = "image/x-tga";
+        extension = "tga";
+        return true;
+    }
+
+    if (format == "ply") {
+        if (job->image_raygraph_ply.empty()) return false;
+        out = job->image_raygraph_ply;
+        mime_type = "application/octet-stream";
+        extension = "ply";
         return true;
     }
 

@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <algorithm>
+#include <vector>
 #include "tile.h"
 
 namespace xtcore {
@@ -100,6 +101,8 @@ void order(Tileset &tiles, TILE_ORDER order)
         case TILE_ORDER_RANDOM     : order_random(tiles);        break;
         case TILE_ORDER_RADIAL_IN  : order_radial(tiles, false); break;
         case TILE_ORDER_RADIAL_OUT : order_radial(tiles, true ); break;
+        case TILE_ORDER_SPIRAL_IN  : order_spiral(tiles, false); break;
+        case TILE_ORDER_SPIRAL_OUT : order_spiral(tiles, true ); break;
     }
 }
 
@@ -154,6 +157,70 @@ void order_radial(Tileset &tiles, bool outwards)
             bool res = ar < br;
 
             return (outwards ? res : !res);
+        }
+    );
+}
+
+void order_spiral(Tileset &tiles, bool outwards)
+{
+    if (tiles.empty()) return;
+
+    std::vector<size_t> xs;
+    std::vector<size_t> ys;
+    xs.reserve(tiles.size());
+    ys.reserve(tiles.size());
+    for (const auto &t : tiles) {
+        xs.push_back(t.x0());
+        ys.push_back(t.y0());
+    }
+    std::sort(xs.begin(), xs.end());
+    std::sort(ys.begin(), ys.end());
+    xs.erase(std::unique(xs.begin(), xs.end()), xs.end());
+    ys.erase(std::unique(ys.begin(), ys.end()), ys.end());
+
+    const int cols = static_cast<int>(xs.size());
+    const int rows = static_cast<int>(ys.size());
+    if (cols <= 0 || rows <= 0) return;
+
+    std::vector<int> rank(static_cast<size_t>(rows * cols), -1);
+    std::vector<std::pair<int, int>> order_coords;
+    order_coords.reserve(static_cast<size_t>(rows * cols));
+
+    int cx = cols / 2;
+    int cy = rows / 2;
+    int x = cx;
+    int y = cy;
+
+    auto push_if_valid = [&](int px, int py) {
+        if (px < 0 || py < 0 || px >= cols || py >= rows) return;
+        const size_t idx = static_cast<size_t>(py * cols + px);
+        if (rank[idx] >= 0) return;
+        rank[idx] = static_cast<int>(order_coords.size());
+        order_coords.emplace_back(px, py);
+    };
+
+    push_if_valid(x, y);
+
+    int step_len = 1;
+    while (static_cast<int>(order_coords.size()) < rows * cols) {
+        for (int i = 0; i < step_len; ++i) { x += 1; push_if_valid(x, y); }
+        for (int i = 0; i < step_len; ++i) { y += 1; push_if_valid(x, y); }
+        step_len++;
+        for (int i = 0; i < step_len; ++i) { x -= 1; push_if_valid(x, y); }
+        for (int i = 0; i < step_len; ++i) { y -= 1; push_if_valid(x, y); }
+        step_len++;
+    }
+
+    std::sort(tiles.begin(), tiles.end(),
+        [&](const tile_t &a, const tile_t &b) -> bool {
+            const int ax = static_cast<int>(std::lower_bound(xs.begin(), xs.end(), a.x0()) - xs.begin());
+            const int ay = static_cast<int>(std::lower_bound(ys.begin(), ys.end(), a.y0()) - ys.begin());
+            const int bx = static_cast<int>(std::lower_bound(xs.begin(), xs.end(), b.x0()) - xs.begin());
+            const int by = static_cast<int>(std::lower_bound(ys.begin(), ys.end(), b.y0()) - ys.begin());
+
+            const int ar = rank[static_cast<size_t>(ay * cols + ax)];
+            const int br = rank[static_cast<size_t>(by * cols + bx)];
+            return outwards ? (ar < br) : (ar > br);
         }
     );
 }

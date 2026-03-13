@@ -38,7 +38,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 | Select camera | Yes (`-cam`) | Yes | Yes | Yes |
 | Integrator selection | Yes (`-renderer`) | Yes (menu) | Yes (`/api/integrators`) | Yes (through web app adapter) |
 | Progressive updates | Terminal progress | Tile updates in UI | Job progress + preview API | Progressive snapshots |
-| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR | PNG/HDR/EXR (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
+| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
 | HTTP API | No | No | Yes | No |
 
 ### Integrators
@@ -140,18 +140,18 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 
 | Tab | Key Capabilities |
 |---|---|
-| Render | Scene/camera/integrator selection, render settings, preview, export |
-| Editor | Scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
-| Settings | Frontend behavior toggles and polling controls |
-| Logs | Backend log stream with incremental polling |
-| About | Build/backend metadata and license text |
+| Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs) |
+| Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
+| Settings | Theme mode + dark palette selection, frontend behavior toggles, and polling controls |
+| Logs | Backend log stream with incremental polling and level filters |
+| About | Build/backend metadata, project license text, and third-party license notices |
 
 ### Web API Endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/health` | Health probe |
-| GET | `/api/about` | Backend/app metadata |
+| GET | `/api/about` | Backend/app metadata + license/third-party notice fields |
 | GET | `/api/scenes` | List available scenes |
 | GET | `/api/scenes/{scene}/cameras` | List cameras in scene |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
@@ -165,7 +165,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 | POST | `/api/render` | Create render job |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image |
-| GET | `/api/jobs/{id}/export?format=png|exr|hdr` | Download final export |
+| GET | `/api/jobs/{id}/export?format=png|jpg|bmp|tga|exr|hdr|ply` | Download final export (PLY is raygraph) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/logs?since=<id>` | Incremental backend logs |
 
@@ -298,4 +298,4 @@ ctest --test-dir build --output-on-failure
 
 BSD 3-Clause. See `LICENSE`.
 
-Copyright (c) 2010-present Nikos Papadopoulos.
+Copyright (c) 2010-present Nikolaos Papadopoulos.

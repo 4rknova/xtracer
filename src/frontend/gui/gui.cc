@@ -38,6 +38,8 @@
 #define STR_ORDER_RANDOM        "Random"
 #define STR_ORDER_RAD_IN        "Inwards"
 #define STR_ORDER_RAD_OUT       "Outwards"
+#define STR_ORDER_SPIRAL_IN     "Spiral In"
+#define STR_ORDER_SPIRAL_OUT    "Spiral Out"
 #define STR_TILE_ORDER          "Tile order"
 #define STR_SAMPLE_DISTRIBUTION "Sample distribution"
 #define STR_SAMPLE_DIST_GRID    "Grid Aligned"
@@ -375,6 +377,8 @@ void mm_sampling(workspace_t *ws)
     ImGui::RadioButton(STR_ORDER_RANDOM  , &tile_order, xtcore::render::TILE_ORDER_RANDOM);
     ImGui::RadioButton(STR_ORDER_RAD_IN  , &tile_order, xtcore::render::TILE_ORDER_RADIAL_IN);
     ImGui::RadioButton(STR_ORDER_RAD_OUT , &tile_order, xtcore::render::TILE_ORDER_RADIAL_OUT);
+    ImGui::RadioButton(STR_ORDER_SPIRAL_IN, &tile_order, xtcore::render::TILE_ORDER_SPIRAL_IN);
+    ImGui::RadioButton(STR_ORDER_SPIRAL_OUT, &tile_order, xtcore::render::TILE_ORDER_SPIRAL_OUT);
     ImGui::NewLine();
     p->tile_order = (xtcore::render::TILE_ORDER)tile_order;
 }

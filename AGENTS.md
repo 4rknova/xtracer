@@ -144,6 +144,7 @@ Notes:
 - Prefer minimal, surgical changes.
 - Do not revert unrelated working tree changes.
 - Keep tile-based architecture unless intentionally redesigning it.
+- When a code/config/API/feature change affects documented behavior, update `README.md` in the same task so it reflects the current repository state.
 - When changing rendering flow, validate GUI-thread vs worker-thread behavior.
 - When changing web API responses, update both:
   - backend route handlers in `src/frontend/web/routes.cc`

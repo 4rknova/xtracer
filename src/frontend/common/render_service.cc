@@ -50,20 +50,45 @@ HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &na
     return HASH_ID_INVALID;
 }
 
-struct progress_handler_t : public xtcore::render::tile_event_handler_t
+struct progress_state_t
 {
     std::atomic<size_t> done;
     size_t total;
     progress_callback_t cb;
 
-    explicit progress_handler_t(size_t tile_count, progress_callback_t callback)
+    explicit progress_state_t(size_t tile_count, progress_callback_t callback)
         : done(0), total(tile_count), cb(callback)
+    {}
+};
+
+struct progress_handler_on_init_t : public xtcore::render::tile_event_handler_t
+{
+    progress_state_t *state;
+
+    explicit progress_handler_on_init_t(progress_state_t *s)
+        : state(s)
     {}
 
     void handle_event(xtcore::render::tile_t *tile)
     {
-        size_t now = ++done;
-        if (cb) cb(now, total, tile);
+        if (!state || !state->cb) return;
+        state->cb(PROGRESS_EVENT_TILE_STARTED, state->done.load(), state->total, tile);
+    }
+};
+
+struct progress_handler_on_done_t : public xtcore::render::tile_event_handler_t
+{
+    progress_state_t *state;
+
+    explicit progress_handler_on_done_t(progress_state_t *s)
+        : state(s)
+    {}
+
+    void handle_event(xtcore::render::tile_t *tile)
+    {
+        if (!state) return;
+        size_t now = ++(state->done);
+        if (state->cb) state->cb(PROGRESS_EVENT_TILE_FINISHED, now, state->total, tile);
     }
 };
 
@@ -185,6 +210,34 @@ bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, st
 #endif
 }
 
+bool encode_raygraph_ply_memory(const xtcore::raygraph::raygraph_t &raygraph,
+                                std::vector<unsigned char> &out,
+                                std::string &error)
+{
+    char tmp_path[] = "/tmp/xtracer_web_raygraph_XXXXXX";
+    int fd = mkstemp(tmp_path);
+    if (fd < 0) {
+        error = "failed to create temporary file";
+        return false;
+    }
+    close(fd);
+
+    int write_err = xtcore::raygraph::write(tmp_path, raygraph);
+    if (write_err != 0) {
+        unlink(tmp_path);
+        error = "failed to export raygraph";
+        return false;
+    }
+
+    bool ok = read_file_bytes(tmp_path, out);
+    unlink(tmp_path);
+    if (!ok) {
+        error = "failed to read generated raygraph";
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 render_request_t::render_request_t()
@@ -198,6 +251,7 @@ render_request_t::render_request_t()
     , aa(1)
     , rdepth(3)
     , tile_size(32)
+    , sample_distribution(xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID)
     , tile_order(xtcore::render::TILE_ORDER_RANDOM)
 {}
 
@@ -206,6 +260,7 @@ render_result_t::render_result_t()
     , error()
     , framebuffer()
     , image_png()
+    , raygraph_ply()
     , tiles_done(0)
     , tiles_total(0)
     , elapsed_ms(0.0)
@@ -365,6 +420,7 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
     context.params.aa = request.aa;
     context.params.rdepth = request.rdepth;
     context.params.tile_size = request.tile_size;
+    context.params.sample_distribution = request.sample_distribution;
     context.params.tile_order = request.tile_order;
     context.init();
 
@@ -375,9 +431,12 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
     }
 
     result.tiles_total = context.tiles.size();
-    progress_handler_t handler(result.tiles_total, on_progress);
+    progress_state_t progress_state(result.tiles_total, on_progress);
+    progress_handler_on_init_t handler_on_init(&progress_state);
+    progress_handler_on_done_t handler_on_done(&progress_state);
     for (auto &tile : context.tiles) {
-        tile.setup_handler_on_done(&handler);
+        tile.setup_handler_on_init(&handler_on_init);
+        tile.setup_handler_on_done(&handler_on_done);
     }
 
     integrator->setup(context);
@@ -410,6 +469,13 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
             p.z = (float)caustic[i].z;
             result.photon_caustic_points.push_back(p);
         }
+    }
+
+    xtcore::raygraph::raygraph_t raygraph;
+    xtcore::render::assemble(raygraph, context);
+    std::string raygraph_error;
+    if (!encode_raygraph_ply_memory(raygraph, result.raygraph_ply, raygraph_error)) {
+        result.raygraph_ply.clear();
     }
 
     nimg::Pixmap framebuffer;
