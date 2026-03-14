@@ -27,6 +27,16 @@ bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
     return true;
 }
 
+bool write_file_bytes(const char *path, const std::vector<unsigned char> &bytes)
+{
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.good()) return false;
+    if (!bytes.empty()) {
+        out.write((const char *)bytes.data(), (std::streamsize)bytes.size());
+    }
+    return out.good();
+}
+
 typedef int (*save_fn_t)(const char *, nimg::Pixmap &);
 
 bool encode_memory(nimg::Pixmap &pixmap, save_fn_t save_fn, std::vector<unsigned char> &out)
@@ -89,6 +99,7 @@ bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::
 job_manager_t::job_t::job_t()
     : mut()
     , id()
+    , workspace_id()
     , scene()
     , integrator()
     , state(JOB_QUEUED)
@@ -119,16 +130,48 @@ job_manager_t::job_t::job_t()
     , preview_last_tm_mantiuk_detail(1.0f)
     , preview_png_cache()
     , request()
+    , cleanup_scene_path()
 {}
 
 job_manager_t::job_manager_t()
     : jobs_mut()
     , jobs()
+    , completed_job_order()
+    , max_completed_jobs(8)
+    , evicted_jobs()
+    , evicted_job_order()
+    , max_evicted_jobs(64)
     , next_id(0)
-    , render_mut()
+    , render_slots_mut()
+    , render_slots_cv()
+    , max_concurrent_renders(1)
+    , active_renders(0)
 {}
 
-std::string job_manager_t::create(const common::render_request_t &request, const std::string &scene_name)
+void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
+{
+    if (max_concurrent == 0) max_concurrent = 1;
+    std::lock_guard<std::mutex> lock(render_slots_mut);
+    max_concurrent_renders = max_concurrent;
+    render_slots_cv.notify_all();
+}
+
+size_t job_manager_t::get_max_concurrent_renders() const
+{
+    std::lock_guard<std::mutex> lock(render_slots_mut);
+    return max_concurrent_renders;
+}
+
+size_t job_manager_t::get_active_render_count() const
+{
+    std::lock_guard<std::mutex> lock(render_slots_mut);
+    return active_renders;
+}
+
+std::string job_manager_t::create(const common::render_request_t &request,
+                                  const std::string &scene_name,
+                                  const std::string &workspace_id,
+                                  const std::string &cleanup_scene_path)
 {
     std::shared_ptr<job_t> job(new job_t());
     unsigned long long id = ++next_id;
@@ -136,9 +179,11 @@ std::string job_manager_t::create(const common::render_request_t &request, const
     std::ostringstream ss;
     ss << "job_" << id;
     job->id = ss.str();
+    job->workspace_id = workspace_id;
     job->scene = scene_name;
     job->integrator = request.integrator;
     job->request = request;
+    job->cleanup_scene_path = cleanup_scene_path;
     job->progressive_fb.init(request.width, request.height);
     for (size_t y = 0; y < request.height; ++y) {
         for (size_t x = 0; x < request.width; ++x) {
@@ -157,6 +202,7 @@ std::string job_manager_t::create(const common::render_request_t &request, const
 
     std::ostringstream log;
     log << "job accepted id=" << job->id
+        << " workspace=" << workspace_id
         << " scene=" << scene_name
         << " integrator=" << request.integrator;
     backend_log_t::handle().add("info", log.str());
@@ -171,7 +217,25 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
     job->state = JOB_RUNNING;
     backend_log_t::handle().add("info", "job started id=" + job->id);
 
-    std::lock_guard<std::mutex> render_lock(render_mut);
+    {
+        std::unique_lock<std::mutex> lock(render_slots_mut);
+        render_slots_cv.wait(lock, [this]() { return active_renders < max_concurrent_renders; });
+        ++active_renders;
+    }
+
+    struct render_slot_guard_t {
+        std::mutex &mut;
+        std::condition_variable &cv;
+        size_t &active;
+        render_slot_guard_t(std::mutex &m, std::condition_variable &c, size_t &a) : mut(m), cv(c), active(a) {}
+        ~render_slot_guard_t() {
+            {
+                std::lock_guard<std::mutex> lock(mut);
+                if (active > 0) --active;
+            }
+            cv.notify_one();
+        }
+    } render_slot_guard(render_slots_mut, render_slots_cv, active_renders);
 
     common::render_result_t rr = common::render_scene_to_png(job->request,
         [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile) {
@@ -213,42 +277,49 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
         }
     );
 
-    std::lock_guard<std::mutex> lock(job->mut);
-    job->elapsed_ms = rr.elapsed_ms;
-    if (rr.ok) {
-        job->image_png.swap(rr.image_png);
-        job->image_raygraph_ply.swap(rr.raygraph_ply);
-        job->final_fb = rr.framebuffer;
-        job->image_exr.clear();
-        job->image_hdr.clear();
-        job->image_jpg.clear();
-        job->image_bmp.clear();
-        job->image_tga.clear();
-        job->photon_diffuse_points = rr.photon_diffuse_points;
-        job->photon_caustic_points = rr.photon_caustic_points;
-        job->tiles_done = rr.tiles_done;
-        job->tiles_total = rr.tiles_total;
-        job->preview_png_cache.clear();
-        job->preview_last_encoded_done = 0;
-        job->preview_last_from_final = false;
-        job->preview_last_tm_op = xtcore::tonemapping::OP_ACES_FITTED;
-        job->preview_last_tm_exposure = 1.0f;
-        job->preview_last_tm_white_point = 1.0f;
-        job->preview_last_tm_mantiuk_contrast = 0.1f;
-        job->preview_last_tm_mantiuk_saturation = 0.8f;
-        job->preview_last_tm_mantiuk_detail = 1.0f;
-        job->active_tiles.clear();
-        job->state = JOB_DONE;
-        std::ostringstream log;
-        log << "job completed id=" << job->id
-            << " elapsed_ms=" << std::fixed << std::setprecision(0) << rr.elapsed_ms;
-        backend_log_t::handle().add("info", log.str());
-    } else {
-        job->error = rr.error;
-        job->active_tiles.clear();
-        job->state = JOB_ERROR;
-        backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + rr.error);
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        job->elapsed_ms = rr.elapsed_ms;
+        if (rr.ok) {
+            job->image_png.swap(rr.image_png);
+            job->image_raygraph_ply.swap(rr.raygraph_ply);
+            job->final_fb = rr.framebuffer;
+            job->image_exr.clear();
+            job->image_hdr.clear();
+            job->image_jpg.clear();
+            job->image_bmp.clear();
+            job->image_tga.clear();
+            job->photon_diffuse_points = rr.photon_diffuse_points;
+            job->photon_caustic_points = rr.photon_caustic_points;
+            job->tiles_done = rr.tiles_done;
+            job->tiles_total = rr.tiles_total;
+            job->preview_png_cache.clear();
+            job->preview_last_encoded_done = 0;
+            job->preview_last_from_final = false;
+            job->preview_last_tm_op = xtcore::tonemapping::OP_ACES_FITTED;
+            job->preview_last_tm_exposure = 1.0f;
+            job->preview_last_tm_white_point = 1.0f;
+            job->preview_last_tm_mantiuk_contrast = 0.1f;
+            job->preview_last_tm_mantiuk_saturation = 0.8f;
+            job->preview_last_tm_mantiuk_detail = 1.0f;
+            job->active_tiles.clear();
+            job->state = JOB_DONE;
+            std::ostringstream log;
+            log << "job completed id=" << job->id
+                << " elapsed_ms=" << std::fixed << std::setprecision(0) << rr.elapsed_ms;
+            backend_log_t::handle().add("info", log.str());
+        } else {
+            job->error = rr.error;
+            job->active_tiles.clear();
+            job->state = JOB_ERROR;
+            backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + rr.error);
+        }
     }
+
+    if (!job->cleanup_scene_path.empty()) {
+        unlink(job->cleanup_scene_path.c_str());
+    }
+    on_job_finished(job->id);
 }
 
 std::shared_ptr<job_manager_t::job_t> job_manager_t::get_job(const std::string &id)
@@ -259,14 +330,106 @@ std::shared_ptr<job_manager_t::job_t> job_manager_t::get_job(const std::string &
     return it->second;
 }
 
+void job_manager_t::prune_completed_jobs_locked()
+{
+    while (completed_job_order.size() > max_completed_jobs) {
+        const std::string evict_id = completed_job_order.front();
+        completed_job_order.pop_front();
+
+        auto it = jobs.find(evict_id);
+        if (it == jobs.end()) continue;
+
+        const job_state_t st = it->second->state.load();
+        if (st == JOB_RUNNING || st == JOB_QUEUED) continue;
+
+        cache_evicted_job_locked(it->second);
+        jobs.erase(it);
+        backend_log_t::handle().add("debug", "job evicted id=" + evict_id);
+    }
+}
+
+void job_manager_t::cache_evicted_job_locked(const std::shared_ptr<job_t> &job)
+{
+    if (!job) return;
+
+    evicted_job_t rec;
+    rec.id = job->id;
+    rec.workspace_id = job->workspace_id;
+    rec.scene = job->scene;
+    rec.integrator = job->integrator;
+    rec.state = job->state.load();
+    rec.error = job->error;
+    rec.elapsed_ms = job->elapsed_ms;
+    rec.width = job->request.width;
+    rec.height = job->request.height;
+
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        if (!job->image_png.empty()) {
+            std::string png_path = "/tmp/xtracer_web_job_cache_" + job->id + ".png";
+            if (write_file_bytes(png_path.c_str(), job->image_png)) {
+                rec.png_path = png_path;
+            }
+        }
+    }
+
+    evicted_jobs[rec.id] = rec;
+    evicted_job_order.push_back(rec.id);
+    prune_evicted_jobs_locked();
+}
+
+void job_manager_t::prune_evicted_jobs_locked()
+{
+    while (evicted_job_order.size() > max_evicted_jobs) {
+        const std::string id = evicted_job_order.front();
+        evicted_job_order.pop_front();
+        auto it = evicted_jobs.find(id);
+        if (it == evicted_jobs.end()) continue;
+        if (!it->second.png_path.empty()) {
+            unlink(it->second.png_path.c_str());
+        }
+        evicted_jobs.erase(it);
+    }
+}
+
+void job_manager_t::on_job_finished(const std::string &id)
+{
+    std::lock_guard<std::mutex> lock(jobs_mut);
+    auto it = jobs.find(id);
+    if (it == jobs.end()) return;
+    const job_state_t st = it->second->state.load();
+    if (st != JOB_DONE && st != JOB_ERROR) return;
+    completed_job_order.push_back(id);
+    prune_completed_jobs_locked();
+}
+
 bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
 {
     std::shared_ptr<job_t> job = get_job(id);
-    if (!job) return false;
+    if (!job) {
+        std::lock_guard<std::mutex> lock(jobs_mut);
+        auto eit = evicted_jobs.find(id);
+        if (eit == evicted_jobs.end()) return false;
+        const evicted_job_t &e = eit->second;
+        out.id = e.id;
+        out.workspace_id = e.workspace_id;
+        out.scene = e.scene;
+        out.integrator = e.integrator;
+        out.state = e.state;
+        out.error = e.error;
+        out.elapsed_ms = e.elapsed_ms;
+        out.has_image = !e.png_path.empty();
+        out.width = e.width;
+        out.height = e.height;
+        out.active_tiles.clear();
+        out.progress = (e.state == JOB_DONE) ? 1.0f : 0.0f;
+        return true;
+    }
 
     std::lock_guard<std::mutex> lock(job->mut);
 
     out.id = job->id;
+    out.workspace_id = job->workspace_id;
     out.scene = job->scene;
     out.integrator = job->integrator;
     out.state = job->state.load();
@@ -295,7 +458,17 @@ bool job_manager_t::image(const std::string &id,
                           const xtcore::tonemapping::settings_t &tm_settings)
 {
     std::shared_ptr<job_t> job = get_job(id);
-    if (!job) return false;
+    if (!job) {
+        if (allow_partial) return false;
+        std::string png_path;
+        {
+            std::lock_guard<std::mutex> lock(jobs_mut);
+            auto eit = evicted_jobs.find(id);
+            if (eit == evicted_jobs.end() || eit->second.png_path.empty()) return false;
+            png_path = eit->second.png_path;
+        }
+        return read_file_bytes(png_path.c_str(), out);
+    }
 
     std::lock_guard<std::mutex> lock(job->mut);
 
@@ -340,7 +513,20 @@ bool job_manager_t::image_export(const std::string &id,
                                  std::string &extension)
 {
     std::shared_ptr<job_t> job = get_job(id);
-    if (!job) return false;
+    if (!job) {
+        if (format != "png") return false;
+        std::string png_path;
+        {
+            std::lock_guard<std::mutex> lock(jobs_mut);
+            auto eit = evicted_jobs.find(id);
+            if (eit == evicted_jobs.end() || eit->second.png_path.empty()) return false;
+            png_path = eit->second.png_path;
+        }
+        if (!read_file_bytes(png_path.c_str(), out)) return false;
+        mime_type = "image/png";
+        extension = "png";
+        return true;
+    }
 
     std::lock_guard<std::mutex> lock(job->mut);
     if (job->state != JOB_DONE) return false;

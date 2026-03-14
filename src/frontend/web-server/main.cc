@@ -1,7 +1,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <string>
+#include <thread>
+#if defined(_WIN32)
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <sys/ioctl.h>
+#endif
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 #include <cpp-httplib/httplib.h>
 
@@ -11,6 +25,7 @@
 #include "job_manager.h"
 #include "routes.h"
 #include "backend_log.h"
+#include "workspace_manager.h"
 
 namespace {
 
@@ -21,7 +36,7 @@ bool arg_eq(const char *arg, const char *name)
 
 void print_usage(const char *argv0)
 {
-    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--verbose]\n", argv0);
+    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--max-concurrent-renders <n>] [--verbose]\n", argv0);
 }
 
 const char *to_backend_level(xtcore::LOGENTRY_TYPE type)
@@ -44,6 +59,120 @@ void forward_xtcore_log(xtcore::LOGENTRY_TYPE type, const std::string &message, 
     xtracer::frontend::web::backend_log_t::handle().add(to_backend_level(type), message);
 }
 
+std::string now_verbose_timestamp()
+{
+    std::time_t t = std::time(nullptr);
+    std::tm tm_now;
+#if defined(_WIN32)
+    localtime_s(&tm_now, &t);
+#else
+    localtime_r(&t, &tm_now);
+#endif
+    std::ostringstream ss;
+    ss << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
+
+bool stdout_supports_ansi()
+{
+#if defined(_WIN32)
+    return _isatty(_fileno(stdout)) != 0;
+#else
+    if (isatty(fileno(stdout)) == 0) return false;
+    const char *term = std::getenv("TERM");
+    if (!term || std::strcmp(term, "dumb") == 0) return false;
+    return true;
+#endif
+}
+
+const char *http_status_color(int status)
+{
+    if (status >= 200 && status < 300) return "\033[32m"; // green
+    if (status >= 300 && status < 400) return "\033[36m"; // cyan
+    if (status >= 400 && status < 500) return "\033[33m"; // yellow
+    if (status >= 500 && status < 600) return "\033[31m"; // red
+    return "\033[37m"; // gray/white
+}
+
+long request_duration_ms(const httplib::Request &req)
+{
+    const std::string raw = req.get_header_value("X-Request-Duration-Ms");
+    if (raw.empty()) return -1;
+    char *end = nullptr;
+    long ms = std::strtol(raw.c_str(), &end, 10);
+    if (!end || *end != '\0' || ms < 0) return -1;
+    return ms;
+}
+
+int terminal_width_columns()
+{
+#if defined(_WIN32)
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (h == INVALID_HANDLE_VALUE) return 0;
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!GetConsoleScreenBufferInfo(h, &info)) return 0;
+    const int w = (int)(info.srWindow.Right - info.srWindow.Left + 1);
+    return (w > 0) ? w : 0;
+#else
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0) return 0;
+    const int w = (int)ws.ws_col;
+    return (w > 0) ? w : 0;
+#endif
+}
+
+std::string pad_right(const std::string &s, size_t width)
+{
+    if (s.size() >= width) return s;
+    return s + std::string(width - s.size(), ' ');
+}
+
+size_t runtime_omp_max_threads()
+{
+#if defined(_OPENMP)
+    int n = omp_get_max_threads();
+    return (n > 0) ? static_cast<size_t>(n) : 0;
+#else
+    return 0;
+#endif
+}
+
+void print_startup_banner(const std::string &host,
+                          int port,
+                          const std::string &scene_dir,
+                          const std::string &web_root,
+                          size_t max_concurrent_renders,
+                          bool verbose)
+{
+    const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
+    const size_t logical_cores = (logical_cores_raw == 0) ? 1 : static_cast<size_t>(logical_cores_raw);
+    const size_t omp_max_threads = runtime_omp_max_threads();
+
+    std::printf("\n");
+    std::printf("██╗  ██╗████████╗██████╗  █████╗  ██████╗███████╗██████╗ \n");
+    std::printf("╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝██╔══██╗\n");
+    std::printf(" ╚███╔╝    ██║   ██████╔╝███████║██║     █████╗  ██████╔╝\n");
+    std::printf(" ██╔██╗    ██║   ██╔══██╗██╔══██║██║     ██╔══╝  ██╔══██╗\n");
+    std::printf("██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗███████╗██║  ██║\n");
+    std::printf("╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝  ╚═╝\n");
+    std::printf("\n");
+    std::printf("[xtracer_web] startup\n");
+    std::printf("  url:                    http://%s:%d\n", host.c_str(), port);
+    std::printf("  host:                   %s\n", host.c_str());
+    std::printf("  port:                   %d\n", port);
+    std::printf("  scene-dir:              %s\n", scene_dir.c_str());
+    std::printf("  web-root:               %s\n", web_root.c_str());
+    std::printf("  max-concurrent-renders: %zu\n", max_concurrent_renders);
+    std::printf("  logical-cores:          %zu\n", logical_cores);
+    if (omp_max_threads > 0) {
+        std::printf("  openmp-max-threads:     %zu\n", omp_max_threads);
+    } else {
+        std::printf("  openmp-max-threads:     n/a\n");
+    }
+    std::printf("  verbose-http:           %s\n", verbose ? "on" : "off");
+    std::printf("\n");
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -52,6 +181,7 @@ int main(int argc, char **argv)
     int port = 8080;
     std::string scene_dir = "scene";
     std::string web_root = "src/frontend/web-client";
+    size_t max_concurrent_renders = 1;
     bool verbose = false;
 
     for (int i = 1; i < argc; ++i) {
@@ -83,6 +213,19 @@ int main(int argc, char **argv)
             }
             web_root = argv[i];
         }
+        else if (arg_eq(argv[i], "--max-concurrent-renders")) {
+            if (++i >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            char *end = nullptr;
+            unsigned long parsed = std::strtoul(argv[i], &end, 10);
+            if (!end || *end != '\0' || parsed == 0) {
+                std::printf("Invalid max concurrent renders: %s\n", argv[i]);
+                return 1;
+            }
+            max_concurrent_renders = static_cast<size_t>(parsed);
+        }
         else if (arg_eq(argv[i], "--help")) {
             print_usage(argv[0]);
             return 0;
@@ -109,19 +252,66 @@ int main(int argc, char **argv)
 
     httplib::Server server;
     if (verbose) {
-        server.set_logger([](const httplib::Request &req, const httplib::Response &res) {
-            std::printf("[http] %3d %-6s %s\n", res.status, req.method.c_str(), req.path.c_str());
+        const bool use_ansi = stdout_supports_ansi();
+        server.set_logger([use_ansi](const httplib::Request &req, const httplib::Response &res) {
+            const long elapsed_ms = request_duration_ms(req);
+            const bool slow_exempt = req.path == "/api/logs/wait";
+            const bool slow = (elapsed_ms >= 500) && !slow_exempt;
+            const char *color = slow ? "\033[31m" : http_status_color(res.status);
+            const char *dur_color = slow ? "\033[31m" : "\033[90m";
+            const char *reset = "\033[0m";
+            char status_buf[16];
+            std::snprintf(status_buf, sizeof(status_buf), "%3d", res.status);
+            const std::string ts = now_verbose_timestamp();
+            const std::string method_field = pad_right(req.method, 6);
+            const std::string prefix_plain = "[" + ts + "] [http] "
+                + status_buf + " "
+                + method_field + " "
+                + req.path;
+            const std::string duration_plain = std::to_string((elapsed_ms >= 0 ? elapsed_ms : 0)) + "ms";
+            const int cols = terminal_width_columns();
+            size_t pad_spaces = 1;
+            if (cols > 0) {
+                const size_t used = prefix_plain.size() + duration_plain.size();
+                if ((size_t)cols > used + 1) pad_spaces = (size_t)cols - used;
+            }
+            const std::string gap(pad_spaces, ' ');
+            if (use_ansi) {
+                std::printf("[%s] [http] %s%3d%s %-6s %s%s%s%s%s\n",
+                            ts.c_str(),
+                            color,
+                            res.status,
+                            reset,
+                            req.method.c_str(),
+                            req.path.c_str(),
+                            gap.c_str(),
+                            dur_color,
+                            duration_plain.c_str(),
+                            reset);
+            } else {
+                std::printf("[%s] [http] %3d %-6s %s%s%s\n",
+                            ts.c_str(),
+                            res.status,
+                            req.method.c_str(),
+                            req.path.c_str(),
+                            gap.c_str(),
+                            duration_plain.c_str());
+            }
             std::fflush(stdout);
         });
     }
     xtracer::frontend::web::job_manager_t jobs;
-    xtracer::frontend::web::setup_routes(server, jobs, scene_dir, web_root);
+    jobs.set_max_concurrent_renders(max_concurrent_renders);
+    xtracer::frontend::web::workspace_manager_t workspaces;
+    xtracer::frontend::web::setup_routes(server, jobs, workspaces, scene_dir, web_root);
 
-    std::printf("xtracer_web listening on http://%s:%d\n", host.c_str(), port);
-    std::printf("scene-dir=%s\n", scene_dir.c_str());
-    std::printf("web-root=%s\n", web_root.c_str());
+    print_startup_banner(host, port, scene_dir, web_root, max_concurrent_renders, verbose);
 
-    xtracer::frontend::web::backend_log_t::handle().add("info", "listen start host=" + host + " port=" + std::to_string(port));
+    xtracer::frontend::web::backend_log_t::handle().add(
+        "info",
+        "listen start host=" + host
+        + " port=" + std::to_string(port)
+        + " max_concurrent_renders=" + std::to_string(max_concurrent_renders));
     bool ok = server.listen(host.c_str(), port);
     if (!ok) {
         std::printf("Failed to listen on %s:%d\n", host.c_str(), port);

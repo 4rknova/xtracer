@@ -7,6 +7,18 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <div id="startupScreen" class="startup-screen" role="status" aria-live="polite" aria-label="Loading XTRACER">
+    <div class="startup-screen-inner">
+      <img class="startup-logo" src="/logo.svg" alt="XTRACER">
+      <div class="startup-loader" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <p id="startupLabel" class="startup-label">Loading app... 0%</p>
+      <div class="startup-progress" aria-hidden="true">
+        <div id="startupProgressFill" class="startup-progress-fill"></div>
+      </div>
+    </div>
+  </div>
   <main class="page">
     <div class="masthead">
       <header class="topbar">
@@ -14,6 +26,7 @@
       </header>
       <div class="content-header">
         <nav class="tabs">
+          <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
           <button class="tab active" id="tabRender" type="button">Render</button>
           <button class="tab" id="tabVisual" type="button">Editor</button>
           <button class="tab" id="tabLogs" type="button">Logs</button>
@@ -289,21 +302,11 @@
 
             <details class="control-section control-card" id="toneMappingControlsCard" open>
               <summary>
-                <span class="control-card-title">Post Filters</span>
-                <span class="control-card-note">Apply and parameterize a filter chain</span>
+                <span class="control-card-title">Tone Mapping</span>
+                <span class="control-card-note">Preview/output tone mapping settings</span>
               </summary>
               <div class="control-section-body">
-                <div class="post-filters-toolbar">
-                  <label for="postFilterType">Add Filter
-                    <select id="postFilterType">
-                      <option value="tone_mapping">Tone Mapping</option>
-                    </select>
-                  </label>
-                  <button id="postFilterAddBtn" class="action-btn" type="button">Add To Chain</button>
-                </div>
-                <div id="postFiltersChain" class="post-filters-chain" aria-live="polite"></div>
-                <p class="post-filters-note">Filters are applied in chain order. Tone mapping currently maps to backend preview processing.</p>
-                <label hidden>Tone Mapping
+                <label>Tone Mapping
                   <select id="toneMapping">
                     <option value="aces">ACES (Fitted)</option>
                     <option value="reinhard">Reinhard</option>
@@ -319,6 +322,27 @@
                   <label id="toneMappingMantiukSaturationControl">TM Saturation <input id="toneMappingMantiukSaturation" type="number" min="0" max="2" step="0.01" value="0.8"></label>
                   <label id="toneMappingMantiukDetailControl">TM Detail <input id="toneMappingMantiukDetail" type="number" min="1" max="99" step="1" value="1"></label>
                 </div>
+              </div>
+            </details>
+
+            <details class="control-section control-card" id="postFiltersControlsCard" open>
+              <summary>
+                <span class="control-card-title">Post Filters</span>
+                <span class="control-card-note">xtcore filter chain with before/after tone mapping stage</span>
+              </summary>
+              <div class="control-section-body">
+                <div class="post-filters-toolbar">
+                  <label for="postFilterType">Add Filter
+                    <select id="postFilterType">
+                      <option value="desaturate">Desaturate</option>
+                    </select>
+                  </label>
+                  <button id="postFilterAddBtn" class="action-btn post-filter-add-btn" type="button" title="Add to chain" aria-label="Add to chain">
+                    <span aria-hidden="true">+</span>
+                  </button>
+                </div>
+                <div id="postFiltersChain" class="post-filters-chain" aria-live="polite"></div>
+                <p class="post-filters-note">Each filter can be applied before or after tone mapping.</p>
               </div>
             </details>
 
@@ -388,10 +412,31 @@
               </div>
             </details>
 
+            <details class="control-section control-card" id="workspaceControlsCard" open hidden>
+              <summary>
+                <span class="control-card-title">Workspace</span>
+                <span class="control-card-note">Shared workspace status</span>
+              </summary>
+              <div class="control-section-body">
+                <section class="settings-section workspace-info-section">
+                  <div class="workspace-info-group">
+                    <p id="workspaceActiveHint" class="workspace-active-hint">Active workspace: -</p>
+                    <p id="workspaceCountHint" class="workspace-active-hint">Workspaces: 0</p>
+                  </div>
+                  <div class="workspace-info-group">
+                    <h4>Server</h4>
+                    <p id="workspaceMaxConcurrentHint" class="workspace-active-hint">Max concurrent renders: -</p>
+                    <p id="workspaceThreadsHint" class="workspace-active-hint">Hardware threads: -</p>
+                    <p id="workspaceOpenmpHint" class="workspace-active-hint">OpenMP max threads: -</p>
+                  </div>
+                </section>
+              </div>
+            </details>
+
             <details class="control-section control-card" id="settingsControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Settings</span>
-                <span class="control-card-note">Appearance, runtime polling, and behavior</span>
+                <span class="control-card-note">Appearance, runtime tuning, and behavior</span>
               </summary>
               <div class="control-section-body">
                 <div class="settings-stack">
@@ -422,11 +467,19 @@
                   <section class="settings-section">
                     <h3>Runtime</h3>
                     <div class="row">
-                      <label>Poll Interval (ms)
+                      <label>Render Poll Interval (ms)
                         <input id="pollInterval" type="number" min="100" max="10000" step="50" value="300">
                       </label>
                     </div>
-                    <p class="settings-note">Lower values update logs and progress faster, higher values reduce request frequency.</p>
+                    <div class="row">
+                      <label>Text History Size
+                        <input id="textHistorySize" type="number" min="10" max="2000" step="10" value="200">
+                      </label>
+                      <label>3D History Size
+                        <input id="visualHistorySize" type="number" min="10" max="2000" step="10" value="200">
+                      </label>
+                    </div>
+                    <p class="settings-note">Lower values update render progress faster. Backend logs use a wait-based stream.</p>
                   </section>
 
                   <section class="settings-section">
@@ -512,6 +565,53 @@
           </div>
 
         </section>
+      </section>
+
+      <section class="tab-pane" id="paneWorkspaces">
+        <div class="workspace-listing-head">
+          <div class="workspace-toolbar-actions">
+            <div class="workspace-create-inline">
+              <input id="workspaceCreateName" type="text" maxlength="64" placeholder="Workspace name" aria-label="Workspace name">
+              <button id="workspaceCreateBtn" class="workspace-view-btn workspace-create-icon-btn" type="button" title="Create workspace">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path>
+                </svg>
+                <span class="sr-only">Create workspace</span>
+              </button>
+              <button id="workspaceRefreshBtn" class="workspace-view-btn" type="button" title="Refresh workspace list">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                </svg>
+                <span class="sr-only">Refresh</span>
+              </button>
+            </div>
+            <div class="workspace-view-control" role="group" aria-label="Workspace list controls">
+              <div class="workspace-view-switch">
+                <button id="workspaceViewCardsBtn" class="workspace-view-btn active" type="button" data-mode="cards" aria-pressed="true" title="Cards view">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
+                    <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
+                    <rect x="3" y="13" width="8" height="7" rx="1.5"></rect>
+                    <rect x="13" y="13" width="8" height="7" rx="1.5"></rect>
+                  </svg>
+                  <span class="sr-only">Cards</span>
+                </button>
+                <button id="workspaceViewListBtn" class="workspace-view-btn" type="button" data-mode="list" aria-pressed="false" title="List view">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="5" width="3" height="3" rx="0.6"></rect>
+                    <rect x="9" y="5" width="11" height="3" rx="1"></rect>
+                    <rect x="4" y="10.5" width="3" height="3" rx="0.6"></rect>
+                    <rect x="9" y="10.5" width="11" height="3" rx="1"></rect>
+                    <rect x="4" y="16" width="3" height="3" rx="0.6"></rect>
+                    <rect x="9" y="16" width="11" height="3" rx="1"></rect>
+                  </svg>
+                  <span class="sr-only">List</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="workspaceList" class="workspace-list workspace-list-cards" aria-live="polite"></div>
       </section>
 
       <section class="tab-pane" id="paneLogs">

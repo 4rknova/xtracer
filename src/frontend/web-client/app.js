@@ -1,12 +1,17 @@
 const $ = (id) => document.getElementById(id);
 
 const el = {
+  startupScreen: $("startupScreen"),
+  startupLabel: $("startupLabel"),
+  startupProgressFill: $("startupProgressFill"),
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
+  tabWorkspaces: $("tabWorkspaces"),
   tabSettings: $("tabSettings"),
   tabLogs: $("tabLogs"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
+  paneWorkspaces: $("paneWorkspaces"),
   paneSettings: $("paneSettings"),
   paneLogs: $("paneLogs"),
   qualityControlsCard: $("qualityControlsCard"),
@@ -14,6 +19,8 @@ const el = {
   theme: $("theme"),
   darkPalette: $("darkPalette"),
   pollInterval: $("pollInterval"),
+  textHistorySize: $("textHistorySize"),
+  visualHistorySize: $("visualHistorySize"),
   autoLoadEditor: $("autoLoadEditor"),
   autoScrollLogs: $("autoScrollLogs"),
   fontSizePreset: $("fontSizePreset"),
@@ -35,6 +42,18 @@ const el = {
   aboutSceneDir: $("aboutSceneDir"),
   aboutStaticAssets: $("aboutStaticAssets"),
   aboutThirdPartyList: $("aboutThirdPartyList"),
+  workspaceCreateName: $("workspaceCreateName"),
+  workspaceCreateBtn: $("workspaceCreateBtn"),
+  workspaceRefreshBtn: $("workspaceRefreshBtn"),
+  workspaceViewMode: $("workspaceViewMode"),
+  workspaceViewCardsBtn: $("workspaceViewCardsBtn"),
+  workspaceViewListBtn: $("workspaceViewListBtn"),
+  workspaceActiveHint: $("workspaceActiveHint"),
+  workspaceCountHint: $("workspaceCountHint"),
+  workspaceMaxConcurrentHint: $("workspaceMaxConcurrentHint"),
+  workspaceThreadsHint: $("workspaceThreadsHint"),
+  workspaceOpenmpHint: $("workspaceOpenmpHint"),
+  workspaceList: $("workspaceList"),
   sceneDependencyPill: $("sceneDependencyPill"),
   scene: $("scene"),
   camera: $("camera"),
@@ -64,6 +83,9 @@ const el = {
   toneMappingMantiukSaturation: $("toneMappingMantiukSaturation"),
   toneMappingMantiukDetailControl: $("toneMappingMantiukDetailControl"),
   toneMappingMantiukDetail: $("toneMappingMantiukDetail"),
+  postFilterType: $("postFilterType"),
+  postFilterAddBtn: $("postFilterAddBtn"),
+  postFiltersChain: $("postFiltersChain"),
   clearPreviewOnRender: $("clearPreviewOnRender"),
   renderBtn: $("renderBtn"),
   status: $("status"),
@@ -133,6 +155,8 @@ const DEFAULT_THIRD_PARTY_LICENSES = [
 
 const uiOptions = {
   pollMs: 300,
+  textHistoryLimit: 200,
+  visualHistoryLimit: 200,
   autoLoadEditor: true,
   autoScrollLogs: true,
   clearPreviewOnRender: false,
@@ -150,6 +174,7 @@ let previewPendingRevokeUrl = "";
 let previewPinnedBaseUrl = "";
 let previewPinnedBaseBitmapPromise = null;
 let preservePreviewUnderlay = false;
+let previewSwapToken = 0;
 let activePreviewTiles = [];
 let activePreviewTileWidth = 0;
 let activePreviewTileHeight = 0;
@@ -169,16 +194,29 @@ let activeJobId = "";
 let lastCompletedJobId = "";
 let lastCompletedJobScene = "";
 let lastCompletedJobIntegrator = "";
+let activePollToken = 0;
+let startupDismissed = false;
+let startupProgressDone = 0;
+let startupProgressTotal = 1;
+const historyStores = {
+  text: { states: [], index: -1 },
+  visual: { states: [], index: -1 },
+};
+let textHistoryCommitTimer = null;
+let suppressHistoryTracking = false;
+let postFilterChain = [];
 let integratorCatalog = [];
 let integratorById = new Map();
 const integratorControlState = new Map();
 const BACKEND_MODE_KEY = "xtracer-backend-mode";
 const ACTIVE_TAB_KEY = "xtracer-active-tab";
 const EDITOR_VIEW_MODE_KEY = "xtracer-editor-view-mode";
+const WORKSPACE_VIEW_MODE_KEY = "xtracer-workspace-view-mode";
 const LAST_SCENE_KEY = "xtracer-last-scene";
 const LOG_FILTERS_KEY = "xtracer-log-filters";
+const CLIENT_ID_KEY = "xtracer-client-id";
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/sidebar_cards.json";
-const TAB_MODES = ["render", "visual", "logs", "settings"];
+const TAB_MODES = ["render", "visual", "workspaces", "logs", "settings"];
 // Fallback sidebar visibility matrix per top-level tab.
 const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
   render: [
@@ -187,6 +225,7 @@ const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
     "frameControlsCard",
     "qualityControlsCard",
     "toneMappingControlsCard",
+    "postFiltersControlsCard",
     "exportControlsCard",
   ],
   visual: [
@@ -217,6 +256,9 @@ const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
     "sceneControlsCard",
     "logsControlsCard",
   ],
+  workspaces: [
+    "workspaceControlsCard",
+  ],
   settings: [
     "sceneControlsCard",
     "settingsControlsCard",
@@ -226,6 +268,14 @@ let sidebarCardVisibility = { ...DEFAULT_SIDEBAR_CARD_VISIBILITY };
 let sidebarCardVisibilityRaw = "";
 let api = null;
 let backendMode = "server";
+let clientId = "";
+let activeWorkspaceId = "";
+let workspaceViewMode = "cards";
+const workspaceSnapshotById = new Map();
+const workspaceRuntimeById = new Map();
+let workspaceDraftSaveTimer = null;
+let workspaceSettingsSaveTimer = null;
+let suppressWorkspaceSettingsSave = false;
 let visualEditor = null;
 let visualLoadedSceneName = "";
 let editorViewMode = "visual";
@@ -273,6 +323,9 @@ const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
 const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
 const FONT_SIZE_PRESET_DEFAULT = "default";
 const FONT_SIZE_PRESET_LARGE = "large";
+const POST_FILTER_CATALOG = [
+  { id: "desaturate", label: "Desaturate" },
+];
 
 function normalizeFontSizePreset(value) {
   const preset = String(value || "").toLowerCase();
@@ -324,13 +377,54 @@ function isLogLevelEnabled(level) {
   return !!logFilters.message;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function renderLogLineHtml(entry) {
+  const line = String((entry && entry.line) || "");
+  const level = normalizeLogLevel(entry && entry.level);
+
+  // Backend format: #<id> <iso-ts> <LEVEL> <message...>
+  const backendMatch = line.match(/^#(\d+)\s+(\S+)\s+([A-Z_]+)\s*(.*)$/);
+  if (backendMatch) {
+    const id = backendMatch[1];
+    const tsRaw = backendMatch[2];
+    const ts = tsRaw.replace("T", " ").replace(/Z$/, "");
+    const lvl = backendMatch[3];
+    const msg = backendMatch[4] || "";
+    return `<span class="log-line log-line-backend log-level-${level}">`
+      + `<span class="log-token-id">#${escapeHtml(id)}</span>`
+      + `<span class="log-token-ts">${escapeHtml(ts)}</span>`
+      + `<span class="log-token-level">${escapeHtml(lvl)}</span>`
+      + `<span class="log-token-msg">${escapeHtml(msg)}</span>`
+      + `</span>`;
+  }
+
+  // UI format: [UI hh:mm:ss] <message...>
+  const uiMatch = line.match(/^(\[UI [^\]]+\])\s*(.*)$/);
+  if (uiMatch) {
+    const tag = uiMatch[1];
+    const msg = uiMatch[2] || "";
+    return `<span class="log-line log-line-ui log-level-${level}">`
+      + `<span class="log-token-ui">${escapeHtml(tag)}</span>`
+      + `<span class="log-token-msg">${escapeHtml(msg)}</span>`
+      + `</span>`;
+  }
+
+  return `<span class="log-line log-level-${level}">${escapeHtml(line)}</span>`;
+}
+
 function renderLogOutput() {
   if (!el.logOutput) return;
-  const text = logEntries
+  const html = logEntries
     .filter((entry) => isLogLevelEnabled(entry.level))
-    .map((entry) => entry.line)
-    .join("\n");
-  el.logOutput.textContent = text ? `${text}\n` : "";
+    .map((entry) => renderLogLineHtml(entry))
+    .join("");
+  el.logOutput.innerHTML = html;
   scrollLogToBottom(false);
 }
 
@@ -440,6 +534,110 @@ function createHttpError(status, message) {
   return err;
 }
 
+function generateClientId() {
+  const ts = Date.now().toString(36);
+  const rnd = Math.random().toString(36).slice(2, 10);
+  return `client_${ts}_${rnd}`;
+}
+
+function ensureClientId() {
+  const existing = String(localStorage.getItem(CLIENT_ID_KEY) || "").trim();
+  if (existing) {
+    clientId = existing;
+    return clientId;
+  }
+  clientId = generateClientId();
+  localStorage.setItem(CLIENT_ID_KEY, clientId);
+  return clientId;
+}
+
+function workspaceRuntimeState(workspaceId) {
+  const id = String(workspaceId || "").trim();
+  if (!id) return null;
+  let state = workspaceRuntimeById.get(id);
+  if (!state) {
+    state = {
+      activeJobId: "",
+      lastCompletedJobId: "",
+      lastCompletedJobScene: "",
+      lastCompletedJobIntegrator: "",
+    };
+    workspaceRuntimeById.set(id, state);
+  }
+  return state;
+}
+
+function syncWorkspaceRuntimeToGlobals() {
+  const state = workspaceRuntimeState(activeWorkspaceId);
+  if (!state) return;
+  activeJobId = state.activeJobId || "";
+  lastCompletedJobId = state.lastCompletedJobId || "";
+  lastCompletedJobScene = state.lastCompletedJobScene || "";
+  lastCompletedJobIntegrator = state.lastCompletedJobIntegrator || "";
+}
+
+function syncGlobalsToWorkspaceRuntime() {
+  const state = workspaceRuntimeState(activeWorkspaceId);
+  if (!state) return;
+  state.activeJobId = activeJobId || "";
+  state.lastCompletedJobId = lastCompletedJobId || "";
+  state.lastCompletedJobScene = lastCompletedJobScene || "";
+  state.lastCompletedJobIntegrator = lastCompletedJobIntegrator || "";
+}
+
+function beginPollSession() {
+  activePollToken += 1;
+  return activePollToken;
+}
+
+function dismissStartupScreen(immediate) {
+  if (startupDismissed) return;
+  if (!el.startupScreen) {
+    startupDismissed = true;
+    return;
+  }
+  startupDismissed = true;
+  if (immediate) {
+    el.startupScreen.hidden = true;
+    return;
+  }
+  el.startupScreen.classList.add("is-leaving");
+  setTimeout(() => {
+    if (el.startupScreen) el.startupScreen.hidden = true;
+  }, 460);
+}
+
+function renderStartupProgress() {
+  const total = Math.max(1, Number(startupProgressTotal) || 1);
+  const done = Math.max(0, Math.min(total, Number(startupProgressDone) || 0));
+  const ratio = done / total;
+  const pct = Math.round(ratio * 100);
+  if (el.startupProgressFill) {
+    el.startupProgressFill.style.width = `${pct}%`;
+  }
+  if (el.startupLabel) {
+    el.startupLabel.textContent = `Loading app... ${pct}%`;
+  }
+}
+
+function resetStartupProgress(total) {
+  startupProgressTotal = Math.max(1, Number(total) || 1);
+  startupProgressDone = 0;
+  renderStartupProgress();
+}
+
+function advanceStartupProgress(step) {
+  startupProgressDone += Math.max(1, Number(step) || 1);
+  renderStartupProgress();
+}
+
+function cancelActivePollingUi() {
+  beginPollSession();
+  clearActivePreviewTiles();
+  setRenderActive(false);
+  if (el.renderBtn) el.renderBtn.disabled = false;
+}
+
 function blobUrlForJobImage(jobId, opts) {
   const parts = [];
   if (opts && opts.partial) parts.push("partial=1");
@@ -503,6 +701,11 @@ function createServerApi() {
       const data = await getJSON(`/api/logs?since=${sinceId}`);
       return data.entries || [];
     },
+    async waitForLogsSince(sinceId, timeoutMs) {
+      const waitMs = Number.isFinite(timeoutMs) ? Math.max(1000, Math.min(60000, Math.floor(timeoutMs))) : 15000;
+      const data = await getJSON(`/api/logs/wait?since=${sinceId}&timeout_ms=${waitMs}`);
+      return data.entries || [];
+    },
     async getScenes() {
       const data = await getJSON("/api/scenes");
       return data.scenes || [];
@@ -525,7 +728,8 @@ function createServerApi() {
     },
     async getSceneSource(scene) {
       if (!scene) return { scene: "", source: "" };
-      const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/source`);
+      const cid = encodeURIComponent(clientId || ensureClientId());
+      const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/source?client_id=${cid}`);
       return { scene: data.scene || scene, source: data.source || "" };
     },
     async getSceneGeometry(scene) {
@@ -549,6 +753,8 @@ function createServerApi() {
     },
     async startRender(params) {
       const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
       Object.keys(params).forEach((k) => {
         const v = params[k];
         if (v !== undefined && v !== null && v !== "") body.set(k, String(v));
@@ -572,7 +778,7 @@ function createServerApi() {
       return getJSON(`/api/jobs/${encodeURIComponent(jobId)}/photons?limit=${encodeURIComponent(lim)}`);
     },
     async getJobImage(jobId, opts) {
-      const res = await fetch(blobUrlForJobImage(jobId, opts));
+      const res = await fetch(blobUrlForJobImage(jobId, opts), { cache: "no-store" });
       if (!res.ok) return null;
       return res.blob();
     },
@@ -595,6 +801,7 @@ function createServerApi() {
       const body = new URLSearchParams();
       body.set("name", name);
       body.set("source", source);
+      body.set("client_id", clientId || ensureClientId());
       if (overwrite) body.set("overwrite", "1");
 
       const res = await fetch("/api/scenes/save", {
@@ -606,6 +813,76 @@ function createServerApi() {
       const data = await res.json();
       if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
       return data.scene;
+    },
+    async getWorkspaces() {
+      const cid = encodeURIComponent(clientId || ensureClientId());
+      return getJSON(`/api/workspaces?client_id=${cid}`);
+    },
+    async createWorkspace(name) {
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      if (name) body.set("name", String(name));
+      const res = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return data;
+    },
+    async setActiveWorkspace(workspaceId) {
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      body.set("workspace_id", String(workspaceId || ""));
+      const res = await fetch("/api/workspaces/active", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return !!data.ok;
+    },
+    async deleteWorkspace(workspaceId) {
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      body.set("workspace_id", String(workspaceId || ""));
+      const res = await fetch("/api/workspaces/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return data || {};
+    },
+    async saveWorkspaceSceneDraft(scene, source) {
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      body.set("scene", String(scene || ""));
+      body.set("source", String(source || ""));
+      const res = await fetch("/api/workspaces/scene_draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return !!data.ok;
+    },
+    async saveWorkspaceSettings(settingsJson) {
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      body.set("settings_json", String(settingsJson || "{}"));
+      const res = await fetch("/api/workspaces/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return !!data.ok;
     },
   };
 }
@@ -679,16 +956,21 @@ function initializeBackendApi() {
 
 async function pollBackendLogs() {
   if (!api) return;
+  const supportsLogWait = hasBackendMethod(api, "waitForLogsSince");
   try {
-    const entries = await api.getLogsSince(lastBackendLogId);
+    const entries = supportsLogWait
+      ? await api.waitForLogsSince(lastBackendLogId, Math.max(1000, Math.min(60000, uiOptions.pollMs * 10)))
+      : await api.getLogsSince(lastBackendLogId);
     for (let i = 0; i < entries.length; i += 1) {
       appendBackendLog(entries[i]);
       if ((entries[i].id || 0) > lastBackendLogId) lastBackendLogId = entries[i].id;
     }
   } catch (err) {
     appendLog(`backend logs unavailable: ${err.message}`);
+    await new Promise((r) => setTimeout(r, 1000));
   } finally {
-    setTimeout(pollBackendLogs, Math.max(500, uiOptions.pollMs));
+    const delay = supportsLogWait ? 0 : Math.max(500, uiOptions.pollMs);
+    setTimeout(pollBackendLogs, delay);
   }
 }
 
@@ -1004,6 +1286,118 @@ function toneMappingControlSpec(opRaw) {
     return { usesExposure: true, usesWhitePoint: true, usesMantiuk: false };
   }
   return { usesExposure: true, usesWhitePoint: false, usesMantiuk: false };
+}
+
+function postFilterCatalogById(id) {
+  const key = String(id || "").trim().toLowerCase();
+  return POST_FILTER_CATALOG.find((it) => it.id === key) || null;
+}
+
+function normalizePostFilterStage(stage) {
+  return String(stage || "").toLowerCase() === "before" ? "before" : "after";
+}
+
+function normalizePostFilterId(id) {
+  const item = postFilterCatalogById(id);
+  return item ? item.id : "";
+}
+
+function renderPostFilterChain() {
+  if (!el.postFiltersChain) return;
+  el.postFiltersChain.innerHTML = "";
+  if (!Array.isArray(postFilterChain) || postFilterChain.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "post-filters-empty";
+    empty.textContent = "No filters in chain.";
+    el.postFiltersChain.appendChild(empty);
+    return;
+  }
+
+  postFilterChain.forEach((entry, index) => {
+    const filterId = normalizePostFilterId(entry && entry.filter);
+    const filterInfo = postFilterCatalogById(filterId);
+    if (!filterInfo) return;
+
+    const row = document.createElement("div");
+    row.className = "post-filter-entry";
+    row.dataset.index = String(index);
+
+    const name = document.createElement("span");
+    name.className = "post-filter-name";
+    name.textContent = filterInfo.label;
+
+    const stage = document.createElement("select");
+    stage.className = "post-filter-stage";
+    stage.setAttribute("aria-label", `Filter stage for ${filterInfo.label}`);
+    const beforeOpt = document.createElement("option");
+    beforeOpt.value = "before";
+    beforeOpt.textContent = "Before TM";
+    const afterOpt = document.createElement("option");
+    afterOpt.value = "after";
+    afterOpt.textContent = "After TM";
+    stage.appendChild(beforeOpt);
+    stage.appendChild(afterOpt);
+    stage.value = normalizePostFilterStage(entry && entry.stage);
+    stage.addEventListener("change", () => {
+      const idx = Number(row.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+      postFilterChain[idx].stage = normalizePostFilterStage(stage.value);
+      appendLog(`post_filter stage idx=${idx} stage=${postFilterChain[idx].stage}`);
+      queueWorkspaceSettingsSave();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "post-filter-remove";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      const idx = Number(row.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+      postFilterChain.splice(idx, 1);
+      renderPostFilterChain();
+      appendLog(`post_filter removed idx=${idx}`);
+      queueWorkspaceSettingsSave();
+    });
+
+    row.appendChild(name);
+    row.appendChild(stage);
+    row.appendChild(removeBtn);
+    el.postFiltersChain.appendChild(row);
+  });
+}
+
+function addPostFilterToChain() {
+  const filterId = normalizePostFilterId(el.postFilterType && el.postFilterType.value);
+  if (!filterId) return;
+  postFilterChain.push({ filter: filterId, stage: "after" });
+  renderPostFilterChain();
+  appendLog(`post_filter add filter=${filterId} stage=after`);
+  queueWorkspaceSettingsSave();
+}
+
+function populatePostFilterTypeOptions() {
+  if (!el.postFilterType) return;
+  const prev = String(el.postFilterType.value || "").trim();
+  el.postFilterType.innerHTML = "";
+  POST_FILTER_CATALOG.forEach((item) => {
+    addOption(el.postFilterType, item.id, item.label);
+  });
+  if (prev && normalizePostFilterId(prev)) {
+    el.postFilterType.value = normalizePostFilterId(prev);
+  } else if (POST_FILTER_CATALOG.length > 0) {
+    el.postFilterType.value = POST_FILTER_CATALOG[0].id;
+  }
+}
+
+function gatherPostFilterParams() {
+  const parts = [];
+  (postFilterChain || []).forEach((entry) => {
+    const filterId = normalizePostFilterId(entry && entry.filter);
+    if (!filterId) return;
+    const stage = normalizePostFilterStage(entry && entry.stage);
+    parts.push(`${stage}:${filterId}`);
+  });
+  return parts.join(",");
 }
 
 function editorLineCount(text) {
@@ -1852,12 +2246,162 @@ function addMeshObjectToSceneSource(source, options) {
   return { source: next, objectId, geometryId };
 }
 
-function updateSceneSourceText(nextSource) {
-  el.sceneSource.value = String(nextSource || "");
+function historyLimitFor(type) {
+  return type === "text"
+    ? Math.max(10, Number(uiOptions.textHistoryLimit) || 200)
+    : Math.max(10, Number(uiOptions.visualHistoryLimit) || 200);
+}
+
+function trimHistoryStore(type) {
+  const store = historyStores[type];
+  if (!store) return;
+  const limit = historyLimitFor(type);
+  if (store.states.length <= limit) return;
+  const drop = store.states.length - limit;
+  store.states.splice(0, drop);
+  store.index = Math.max(0, store.index - drop);
+}
+
+function applyHistoryLimits() {
+  trimHistoryStore("text");
+  trimHistoryStore("visual");
+}
+
+function commitHistoryState(type, source, selStart, selEnd) {
+  const store = historyStores[type];
+  if (!store) return;
+  const snapshot = {
+    source: String(source || ""),
+    selStart: Number.isFinite(selStart) ? selStart : 0,
+    selEnd: Number.isFinite(selEnd) ? selEnd : 0,
+  };
+  const current = (store.index >= 0 && store.index < store.states.length)
+    ? store.states[store.index]
+    : null;
+  if (current && current.source === snapshot.source) {
+    current.selStart = snapshot.selStart;
+    current.selEnd = snapshot.selEnd;
+    return;
+  }
+  if (store.index < store.states.length - 1) {
+    store.states.splice(store.index + 1);
+  }
+  store.states.push(snapshot);
+  store.index = store.states.length - 1;
+  trimHistoryStore(type);
+}
+
+function resetSceneHistoriesFromCurrentSource() {
+  if (textHistoryCommitTimer) {
+    clearTimeout(textHistoryCommitTimer);
+    textHistoryCommitTimer = null;
+  }
+  const source = String((el.sceneSource && el.sceneSource.value) || "");
+  const selStart = el.sceneSource ? (el.sceneSource.selectionStart || 0) : 0;
+  const selEnd = el.sceneSource ? (el.sceneSource.selectionEnd || selStart) : selStart;
+  historyStores.text.states = [];
+  historyStores.text.index = -1;
+  historyStores.visual.states = [];
+  historyStores.visual.index = -1;
+  commitHistoryState("text", source, selStart, selEnd);
+  commitHistoryState("visual", source, selStart, selEnd);
+}
+
+function scheduleTextHistoryCommit() {
+  if (suppressHistoryTracking) return;
+  if (textHistoryCommitTimer) clearTimeout(textHistoryCommitTimer);
+  textHistoryCommitTimer = setTimeout(() => {
+    textHistoryCommitTimer = null;
+    if (!el.sceneSource) return;
+    commitHistoryState("text", el.sceneSource.value || "", el.sceneSource.selectionStart, el.sceneSource.selectionEnd);
+  }, 180);
+}
+
+function flushTextHistoryCommit() {
+  if (!textHistoryCommitTimer) return;
+  clearTimeout(textHistoryCommitTimer);
+  textHistoryCommitTimer = null;
+  if (!el.sceneSource) return;
+  commitHistoryState("text", el.sceneSource.value || "", el.sceneSource.selectionStart, el.sceneSource.selectionEnd);
+}
+
+function applyHistoryStep(type, direction) {
+  const store = historyStores[type];
+  if (!store || store.states.length === 0) return false;
+  if (type === "text") flushTextHistoryCommit();
+
+  const nextIndex = store.index + direction;
+  if (nextIndex < 0 || nextIndex >= store.states.length) return false;
+  store.index = nextIndex;
+  const snap = store.states[store.index];
+
+  suppressHistoryTracking = true;
+  try {
+    el.sceneSource.value = String(snap.source || "");
+    updateEditorMetrics();
+    refreshSceneEditControls();
+    syncEditorScroll();
+    renderSceneGraphView();
+    if (type === "text" && el.sceneSource && editorViewMode === "text") {
+      const max = el.sceneSource.value.length;
+      const a = Math.max(0, Math.min(max, Number(snap.selStart) || 0));
+      const b = Math.max(0, Math.min(max, Number(snap.selEnd) || a));
+      el.sceneSource.focus();
+      el.sceneSource.setSelectionRange(a, b);
+    }
+  } finally {
+    suppressHistoryTracking = false;
+  }
+
+  queueWorkspaceDraftSave();
+  if (type === "visual" && visualEditor) {
+    rebuildVisualFromEditorSource()
+      .then(() => {
+        const selected = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
+        if (selected && visualEditor.selectObjectById) visualEditor.selectObjectById(selected, false);
+      })
+      .catch((err) => appendLog(`visual refresh error: ${err.message}`));
+  }
+  return true;
+}
+
+function handleUndoRedoShortcut(event) {
+  const key = String(event.key || "").toLowerCase();
+  if (key !== "z") return;
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  if (activeTabMode !== "visual") return;
+
+  const active = document.activeElement;
+  if (active && active !== el.sceneSource) {
+    const tag = String(active.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select" || active.isContentEditable) return;
+  }
+
+  const type = (active === el.sceneSource || editorViewMode === "text") ? "text" : "visual";
+  const ok = event.shiftKey ? applyHistoryStep(type, +1) : applyHistoryStep(type, -1);
+  if (ok) event.preventDefault();
+}
+
+function updateSceneSourceText(nextSource, options) {
+  const opts = options && typeof options === "object" ? options : {};
+  const historyType = opts.history || "visual";
+  const prev = String(el.sceneSource.value || "");
+  const next = String(nextSource || "");
+  if (prev === next) return;
+
+  el.sceneSource.value = next;
   updateEditorMetrics();
   syncEditorScroll();
   refreshSceneEditControls();
   renderSceneGraphView();
+  if (!suppressHistoryTracking) {
+    if (historyType === "visual") {
+      commitHistoryState("visual", next, el.sceneSource.selectionStart, el.sceneSource.selectionEnd);
+    } else if (historyType === "text") {
+      commitHistoryState("text", next, el.sceneSource.selectionStart, el.sceneSource.selectionEnd);
+    }
+  }
+  queueWorkspaceDraftSave();
 }
 
 function refreshSceneEditControls() {
@@ -1973,6 +2517,7 @@ function updateDownloadUi() {
 function setPreviewEmptyState(isEmpty) {
   el.previewFrame.classList.toggle("is-empty", isEmpty);
   if (isEmpty) {
+    previewSwapToken += 1;
     if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
       URL.revokeObjectURL(previewPinnedBaseUrl);
     }
@@ -1990,6 +2535,7 @@ function setPreviewEmptyState(isEmpty) {
     el.preview.removeAttribute("src");
     clearPreviewCanvas();
     lastCompletedJobId = "";
+    syncGlobalsToWorkspaceRuntime();
     resetPreviewView();
     updateDownloadUi();
     return;
@@ -1997,8 +2543,28 @@ function setPreviewEmptyState(isEmpty) {
   updateDownloadUi();
 }
 
-function setPreviewFromBlob(blob) {
+async function setPreviewFromBlob(blob) {
   const url = URL.createObjectURL(blob);
+  const token = ++previewSwapToken;
+  const probe = new Image();
+  const loaded = new Promise((resolve, reject) => {
+    probe.onload = () => resolve();
+    probe.onerror = () => reject(new Error("preview decode failed"));
+  });
+  probe.src = url;
+
+  try {
+    await loaded;
+  } catch (_) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+
+  if (token !== previewSwapToken) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+
   if (previewObjectUrl && previewObjectUrl !== url) {
     previewPendingRevokeUrl = previewObjectUrl;
   }
@@ -2007,6 +2573,10 @@ function setPreviewFromBlob(blob) {
   const nearest = isNearestPreviewSampling();
   el.previewFrame.classList.toggle("sampling-nearest", nearest);
   setPreviewEmptyState(false);
+  requestAnimationFrame(() => {
+    applyPreviewTransform();
+  });
+  return true;
 }
 
 function applyPreviewSampling() {
@@ -2069,8 +2639,7 @@ async function refreshProgressivePreview(jobId) {
     ? await composeWithPinnedPreview(blob)
     : blob;
 
-  setPreviewFromBlob(imageBlob);
-  return true;
+  return setPreviewFromBlob(imageBlob);
 }
 
 async function refreshPreviewForToneMapping() {
@@ -2090,11 +2659,94 @@ async function refreshPreviewForToneMapping() {
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
       });
-      if (finalBlob && finalBlob.size > 0) setPreviewFromBlob(finalBlob);
+      if (finalBlob && finalBlob.size > 0) await setPreviewFromBlob(finalBlob);
     }
   } catch (err) {
     appendLog(`tone mapping preview refresh failed: ${err.message}`);
   }
+}
+
+async function restorePreviewForActiveWorkspace() {
+  if (activeJobId) {
+    try {
+      const data = await api.getJob(activeJobId);
+      const state = String((data && data.state) || "").toLowerCase();
+      if (state === "queued" || state === "running") {
+        const progress = Number((data && data.progress) || 0);
+        updateActivePreviewTilesFromJob(data);
+        setProgress(progress);
+        setStatus(`${state} ${(100 * progress).toFixed(1)}%`);
+        await refreshProgressivePreview(activeJobId);
+        return;
+      }
+      if (state === "done") {
+        lastCompletedJobId = activeJobId;
+        lastCompletedJobScene = String((data && data.scene) || el.scene.value || "");
+        lastCompletedJobIntegrator = String((data && data.integrator) || el.integrator.value || "");
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      } else if (state === "error") {
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      }
+    } catch (_) {
+      // fallthrough to last completed image
+    }
+  }
+
+  if (!lastCompletedJobId) {
+    setPreviewEmptyState(true);
+    updateDownloadUi();
+    return;
+  }
+  try {
+    const finalBlob = await api.getJobImage(lastCompletedJobId, {
+      final: true,
+      cacheBust: true,
+      toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+      toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+      toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+      toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+      toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+      toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    });
+    if (finalBlob && finalBlob.size > 0) {
+      await setPreviewFromBlob(finalBlob);
+      updateDownloadUi();
+      return;
+    }
+  } catch (_) {
+    // fallthrough
+  }
+  setPreviewEmptyState(true);
+  updateDownloadUi();
+}
+
+function resumeWorkspaceJobPolling(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return;
+  if (renderActive && activeJobId === id) return;
+
+  activeJobId = id;
+  syncGlobalsToWorkspaceRuntime();
+  const token = beginPollSession();
+  setRenderActive(true);
+  if (el.renderBtn) el.renderBtn.disabled = true;
+  pollJob(id, token)
+    .catch((err) => {
+      setStatus(`error: ${err.message}`);
+      appendLog(`render error: ${err.message}`);
+    })
+    .finally(() => {
+      if (activeJobId === id) {
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      }
+      if (!activeJobId) {
+        setRenderActive(false);
+        if (el.renderBtn) el.renderBtn.disabled = false;
+      }
+    });
 }
 
 function addOption(select, value, label) {
@@ -2188,6 +2840,7 @@ function renderIntegratorControls() {
       curr[id] = input.value;
       integratorControlState.set(selected, curr);
       renderIntegratorControls();
+      queueWorkspaceSettingsSave();
     });
 
     label.appendChild(input);
@@ -2344,9 +2997,10 @@ async function loadResolutionPresets() {
 function normalizeTabMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "editor") return "visual";
+  if (raw === "workspace") return "workspaces";
   // Backward compatibility for previously stored "about" tab.
   if (raw === "about") return "settings";
-  if (raw === "render" || raw === "visual" || raw === "settings" || raw === "logs") {
+  if (raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs") {
     return raw;
   }
   return "render";
@@ -2549,15 +3203,18 @@ function setActiveTab(mode) {
   activeTabMode = nextMode;
   const isRender = nextMode === "render";
   const isVisual = nextMode === "visual";
+  const isWorkspaces = nextMode === "workspaces";
   const isSettings = nextMode === "settings";
   const isLogs = nextMode === "logs";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
+  setActive(el.tabWorkspaces, isWorkspaces);
   setActive(el.tabSettings, isSettings);
   setActive(el.tabLogs, isLogs);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
+  setActive(el.paneWorkspaces, isWorkspaces);
   setActive(el.paneSettings, isSettings);
   setActive(el.paneLogs, isLogs);
   applySidebarCardLayout(nextMode);
@@ -2566,6 +3223,17 @@ function setActiveTab(mode) {
   if (isVisual && editorViewMode === "visual" && visualEditor) visualEditor.onShow();
   if (isLogs && (uiOptions.autoScrollLogs || pendingLogScroll)) {
     scrollLogToBottom(true);
+  }
+  if (isWorkspaces && hasBackendMethod(api, "getWorkspaces")) {
+    refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+  }
+  if (isRender) {
+    requestAnimationFrame(() => {
+      updatePreviewSizing();
+    });
+    restorePreviewForActiveWorkspace().catch((err) => {
+      appendLog(`preview restore error: ${err.message}`);
+    });
   }
 }
 
@@ -2784,6 +3452,12 @@ function clampFontScale(v) {
   return Math.max(0.8, Math.min(1.4, Number(v) || 1.0));
 }
 
+function clampHistoryLimit(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 200;
+  return Math.max(10, Math.min(2000, Math.floor(n)));
+}
+
 function updateFontScaleUI() {
   if (!el.fontSizePreset) return;
   el.fontSizePreset.value = normalizeFontSizePreset(uiOptions.fontSizePreset);
@@ -2798,6 +3472,8 @@ function applyFontScale(scale) {
 function loadUIOptions() {
   const poll = parseInt(localStorage.getItem("xtracer-poll-ms") || "300", 10);
   uiOptions.pollMs = Number.isFinite(poll) ? Math.max(100, Math.min(10000, poll)) : 300;
+  uiOptions.textHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-text-history-limit") || "200");
+  uiOptions.visualHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-visual-history-limit") || "200");
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
@@ -2820,6 +3496,8 @@ function loadUIOptions() {
   uiOptions.darkPalette = normalizeDarkPalette(localStorage.getItem("xtracer-dark-palette") || "slate");
   uiOptions.lightPalette = normalizeLightPalette(localStorage.getItem("xtracer-light-palette") || "coastal");
   el.pollInterval.value = String(uiOptions.pollMs);
+  if (el.textHistorySize) el.textHistorySize.value = String(uiOptions.textHistoryLimit);
+  if (el.visualHistorySize) el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
@@ -2847,6 +3525,8 @@ function loadUIOptions() {
 
 function persistUIOptions() {
   localStorage.setItem("xtracer-poll-ms", String(uiOptions.pollMs));
+  localStorage.setItem("xtracer-text-history-limit", String(uiOptions.textHistoryLimit));
+  localStorage.setItem("xtracer-visual-history-limit", String(uiOptions.visualHistoryLimit));
   localStorage.setItem("xtracer-auto-load-editor", uiOptions.autoLoadEditor ? "1" : "0");
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");
@@ -2872,6 +3552,555 @@ async function loadScenes() {
   updateSceneDependencyPill(el.scene.value);
   if (el.scene.value) localStorage.setItem(LAST_SCENE_KEY, el.scene.value);
   else localStorage.removeItem(LAST_SCENE_KEY);
+}
+
+function updateWorkspaceActiveHint() {
+  if (!el.workspaceActiveHint) return;
+  const id = String(activeWorkspaceId || "").trim();
+  const label = "Active workspace";
+  const value = id || "-";
+  el.workspaceActiveHint.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+}
+
+function updateWorkspaceCountHint(count) {
+  if (!el.workspaceCountHint) return;
+  const n = Math.max(0, Number(count) || 0);
+  el.workspaceCountHint.innerHTML = `<span class="workspace-active-label">Workspaces</span><code class="workspace-active-value">${n}</code>`;
+}
+
+function updateWorkspaceServerStatHint(node, label, value) {
+  if (!node) return;
+  const rendered = (value === null || value === undefined || value === "") ? "-" : String(value);
+  node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${rendered}</code>`;
+}
+
+function updateWorkspaceServerStatsHints(data) {
+  const maxConcurrent = Number(data && data.max_concurrent_renders);
+  const logicalCores = Number(data && data.logical_cores);
+  const openmpThreads = Number(data && data.openmp_max_threads);
+  updateWorkspaceServerStatHint(
+    el.workspaceMaxConcurrentHint,
+    "Max Concurrent Renders",
+    Number.isFinite(maxConcurrent) && maxConcurrent > 0 ? Math.floor(maxConcurrent) : "-"
+  );
+  updateWorkspaceServerStatHint(
+    el.workspaceThreadsHint,
+    "Hardware Threads",
+    Number.isFinite(logicalCores) && logicalCores > 0 ? Math.floor(logicalCores) : "-"
+  );
+  updateWorkspaceServerStatHint(
+    el.workspaceOpenmpHint,
+    "OpenMP Max Threads",
+    Number.isFinite(openmpThreads) && openmpThreads > 0 ? Math.floor(openmpThreads) : "-"
+  );
+}
+
+function normalizeWorkspaceViewMode(value) {
+  return String(value || "").toLowerCase() === "list" ? "list" : "cards";
+}
+
+function setWorkspaceViewMode(mode, persist) {
+  workspaceViewMode = normalizeWorkspaceViewMode(mode);
+  if (el.workspaceViewMode) el.workspaceViewMode.value = workspaceViewMode;
+  if (el.workspaceViewCardsBtn) {
+    const active = workspaceViewMode === "cards";
+    el.workspaceViewCardsBtn.classList.toggle("active", active);
+    el.workspaceViewCardsBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (el.workspaceViewListBtn) {
+    const active = workspaceViewMode === "list";
+    el.workspaceViewListBtn.classList.toggle("active", active);
+    el.workspaceViewListBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (el.workspaceList) {
+    el.workspaceList.classList.toggle("workspace-list-cards", workspaceViewMode === "cards");
+    el.workspaceList.classList.toggle("workspace-list-list", workspaceViewMode === "list");
+  }
+  if (persist !== false) {
+    localStorage.setItem(WORKSPACE_VIEW_MODE_KEY, workspaceViewMode);
+  }
+}
+
+function formatWorkspaceUpdated(updatedMs) {
+  const ms = Number(updatedMs || 0);
+  if (!Number.isFinite(ms) || ms <= 0) return "-";
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString();
+}
+
+function buildWorkspacePreviewUrl(lastJobId) {
+  const jobId = String(lastJobId || "").trim();
+  if (!jobId) return "";
+  return `/api/jobs/${encodeURIComponent(jobId)}/image?final=1&tm=aces`;
+}
+
+function workspaceStateLabel(workspace) {
+  const id = String((workspace && workspace.id) || "");
+  const activeJob = String((workspace && workspace.active_job_id) || "");
+  if (activeJob) return "Rendering";
+  if (id && id === activeWorkspaceId) return "Active";
+  return "Idle";
+}
+
+function serializeIntegratorControlState() {
+  const out = {};
+  integratorControlState.forEach((value, key) => {
+    if (!key || !value || typeof value !== "object") return;
+    out[key] = { ...value };
+  });
+  return out;
+}
+
+function workspaceSettingsPayload() {
+  return {
+    quality: {
+      samples: String(el.samples && el.samples.value ? el.samples.value : "1"),
+      aa: String(el.aa && el.aa.value ? el.aa.value : "1"),
+      sample_distribution: String(el.sampleDistribution && el.sampleDistribution.value ? el.sampleDistribution.value : "grid"),
+      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "3"),
+    },
+    frame: {
+      width: String(el.width && el.width.value ? el.width.value : "500"),
+      height: String(el.height && el.height.value ? el.height.value : "500"),
+    },
+    integrator: {
+      id: String(el.integrator && el.integrator.value ? el.integrator.value : ""),
+      tile_size: String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"),
+      tile_order: String(el.tileOrder && el.tileOrder.value ? el.tileOrder.value : "random"),
+      threads: String(el.threads && el.threads.value ? el.threads.value : "0"),
+      controls_by_integrator: serializeIntegratorControlState(),
+    },
+    tone_mapping: {
+      operator: String(el.toneMapping && el.toneMapping.value ? el.toneMapping.value : "aces"),
+      exposure: String(el.toneMappingExposure && el.toneMappingExposure.value ? el.toneMappingExposure.value : "1.0"),
+      white_point: String(el.toneMappingWhitePoint && el.toneMappingWhitePoint.value ? el.toneMappingWhitePoint.value : "1.0"),
+      mantiuk_contrast: String(el.toneMappingMantiukContrast && el.toneMappingMantiukContrast.value ? el.toneMappingMantiukContrast.value : "0.1"),
+      mantiuk_saturation: String(el.toneMappingMantiukSaturation && el.toneMappingMantiukSaturation.value ? el.toneMappingMantiukSaturation.value : "0.8"),
+      mantiuk_detail: String(el.toneMappingMantiukDetail && el.toneMappingMantiukDetail.value ? el.toneMappingMantiukDetail.value : "1.0"),
+    },
+    post_filters: Array.isArray(postFilterChain)
+      ? postFilterChain.map((entry) => ({
+        filter: normalizePostFilterId(entry && entry.filter),
+        stage: normalizePostFilterStage(entry && entry.stage),
+      })).filter((entry) => !!entry.filter)
+      : [],
+  };
+}
+
+function queueWorkspaceSettingsSave() {
+  if (suppressWorkspaceSettingsSave) return;
+  if (!activeWorkspaceId) return;
+  if (!hasBackendMethod(api, "saveWorkspaceSettings")) return;
+  if (workspaceSettingsSaveTimer) {
+    clearTimeout(workspaceSettingsSaveTimer);
+    workspaceSettingsSaveTimer = null;
+  }
+  workspaceSettingsSaveTimer = setTimeout(() => {
+    workspaceSettingsSaveTimer = null;
+    let json = "{}";
+    try {
+      json = JSON.stringify(workspaceSettingsPayload());
+    } catch (_) {
+      return;
+    }
+    api.saveWorkspaceSettings(json)
+      .catch((err) => appendLog(`workspace settings save failed: ${err.message}`));
+  }, 250);
+}
+
+function applyWorkspaceSettings(settings) {
+  const cfg = settings && typeof settings === "object" ? settings : null;
+  if (!cfg) return;
+
+  suppressWorkspaceSettingsSave = true;
+  try {
+    const quality = cfg.quality && typeof cfg.quality === "object" ? cfg.quality : null;
+    if (quality) {
+      if (el.samples && quality.samples !== undefined) el.samples.value = String(quality.samples);
+      if (el.aa && quality.aa !== undefined) el.aa.value = String(quality.aa);
+      if (el.sampleDistribution && quality.sample_distribution !== undefined) el.sampleDistribution.value = String(quality.sample_distribution);
+      if (el.rdepth && quality.rdepth !== undefined) el.rdepth.value = String(quality.rdepth);
+      syncAaPresetUi();
+    }
+
+    const frame = cfg.frame && typeof cfg.frame === "object" ? cfg.frame : null;
+    if (frame) {
+      if (el.width && frame.width !== undefined) el.width.value = String(frame.width);
+      if (el.height && frame.height !== undefined) el.height.value = String(frame.height);
+      syncResolutionPresetFromInputs();
+      updatePreviewSizing();
+      syncVisualFrameAspect();
+    }
+
+    const integrator = cfg.integrator && typeof cfg.integrator === "object" ? cfg.integrator : null;
+    if (integrator) {
+      integratorControlState.clear();
+      const byInt = integrator.controls_by_integrator && typeof integrator.controls_by_integrator === "object"
+        ? integrator.controls_by_integrator
+        : {};
+      Object.keys(byInt).forEach((key) => {
+        const value = byInt[key];
+        if (!key || !value || typeof value !== "object") return;
+        integratorControlState.set(key, { ...value });
+      });
+
+      if (el.integrator && integrator.id && integratorById.has(String(integrator.id))) {
+        el.integrator.value = String(integrator.id);
+      }
+      if (el.tileSize && integrator.tile_size !== undefined) el.tileSize.value = String(integrator.tile_size);
+      if (el.tileOrder && integrator.tile_order !== undefined) el.tileOrder.value = String(integrator.tile_order);
+      if (el.threads && integrator.threads !== undefined) el.threads.value = String(integrator.threads);
+      renderIntegratorControls();
+    }
+
+    const tm = cfg.tone_mapping && typeof cfg.tone_mapping === "object" ? cfg.tone_mapping : null;
+    if (tm) {
+      if (el.toneMapping && tm.operator !== undefined) el.toneMapping.value = String(tm.operator);
+      if (el.toneMappingExposure && tm.exposure !== undefined) el.toneMappingExposure.value = String(tm.exposure);
+      if (el.toneMappingWhitePoint && tm.white_point !== undefined) el.toneMappingWhitePoint.value = String(tm.white_point);
+      if (el.toneMappingMantiukContrast && tm.mantiuk_contrast !== undefined) el.toneMappingMantiukContrast.value = String(tm.mantiuk_contrast);
+      if (el.toneMappingMantiukSaturation && tm.mantiuk_saturation !== undefined) el.toneMappingMantiukSaturation.value = String(tm.mantiuk_saturation);
+      if (el.toneMappingMantiukDetail && tm.mantiuk_detail !== undefined) el.toneMappingMantiukDetail.value = String(tm.mantiuk_detail);
+      updateToneMappingControlState();
+    }
+
+    if (Array.isArray(cfg.post_filters)) {
+      postFilterChain = cfg.post_filters.map((entry) => ({
+        filter: normalizePostFilterId(entry && entry.filter),
+        stage: normalizePostFilterStage(entry && entry.stage),
+      })).filter((entry) => !!entry.filter);
+      renderPostFilterChain();
+    }
+  } finally {
+    suppressWorkspaceSettingsSave = false;
+  }
+}
+
+function parseWorkspaceSettingsFromSnapshot(workspace) {
+  const raw = String((workspace && workspace.settings_json) || "").trim();
+  if (!raw) {
+    if (!workspace) return null;
+    const hasLegacyQuality = workspace.quality_samples !== undefined
+      || workspace.quality_aa !== undefined
+      || workspace.quality_sample_distribution !== undefined
+      || workspace.quality_rdepth !== undefined;
+    if (!hasLegacyQuality) return null;
+    return {
+      quality: {
+        samples: workspace.quality_samples !== undefined ? String(workspace.quality_samples) : undefined,
+        aa: workspace.quality_aa !== undefined ? String(workspace.quality_aa) : undefined,
+        sample_distribution: workspace.quality_sample_distribution !== undefined
+          ? String(workspace.quality_sample_distribution)
+          : undefined,
+        rdepth: workspace.quality_rdepth !== undefined ? String(workspace.quality_rdepth) : undefined,
+      },
+    };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function hasSceneOption(scene) {
+  const name = String(scene || "").trim();
+  if (!name || !el.scene) return false;
+  for (let i = 0; i < el.scene.options.length; ++i) {
+    if (String(el.scene.options[i].value || "") === name) return true;
+  }
+  return false;
+}
+
+function cacheWorkspaceSnapshots(items) {
+  workspaceSnapshotById.clear();
+  const list = Array.isArray(items) ? items : [];
+  list.forEach((ws) => {
+    const id = String((ws && ws.id) || "").trim();
+    if (!id) return;
+    workspaceSnapshotById.set(id, ws);
+
+    const runtime = workspaceRuntimeState(id);
+    if (!runtime) return;
+    runtime.activeJobId = String((ws && ws.active_job_id) || "").trim();
+    runtime.lastCompletedJobId = String((ws && ws.last_job_id) || "").trim();
+    const scene = String((ws && ws.active_scene) || "").trim();
+    if (scene) runtime.lastCompletedJobScene = scene;
+  });
+}
+
+async function applyActiveWorkspaceState(snapshot) {
+  cancelActivePollingUi();
+
+  const ws = snapshot || workspaceSnapshotById.get(activeWorkspaceId) || null;
+  if (!ws) {
+    await restorePreviewForActiveWorkspace();
+    return;
+  }
+
+  const settings = parseWorkspaceSettingsFromSnapshot(ws);
+  if (settings) applyWorkspaceSettings(settings);
+
+  const wsScene = String((ws && ws.active_scene) || "").trim();
+  if (wsScene && hasSceneOption(wsScene)) {
+    const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    const sceneChanged = currentScene !== wsScene;
+    if (sceneChanged) {
+      el.scene.value = wsScene;
+      localStorage.setItem(LAST_SCENE_KEY, wsScene);
+      updateSceneDependencyPill(wsScene);
+      await loadCameras(wsScene);
+    }
+    await loadSceneSource(wsScene);
+    if (visualEditor && editorViewMode === "visual" && sceneChanged) {
+      try {
+        await loadVisualSceneFromSelected();
+      } catch (err) {
+        appendLog(`visual load error: ${err.message}`);
+      }
+    }
+    if (editorViewMode === "graph") renderSceneGraphView();
+  }
+
+  await restorePreviewForActiveWorkspace();
+  const wsActiveJobId = String((ws && ws.active_job_id) || "").trim();
+  if (wsActiveJobId) {
+    resumeWorkspaceJobPolling(wsActiveJobId);
+  }
+}
+
+function renderWorkspaceList(items) {
+  if (!el.workspaceList) return;
+  el.workspaceList.innerHTML = "";
+  const list = Array.isArray(items) ? items : [];
+  const canDeleteAny = list.length > 1;
+  if (list.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "workspace-empty";
+    empty.textContent = "No workspaces available.";
+    el.workspaceList.appendChild(empty);
+    return;
+  }
+
+  list.forEach((ws) => {
+    const id = String((ws && ws.id) || "");
+    const scene = String((ws && ws.active_scene) || "").trim();
+    const activeJob = String((ws && ws.active_job_id) || "").trim();
+    const lastJob = String((ws && ws.last_job_id) || "").trim();
+    const clients = Number((ws && ws.client_count) || 0);
+    const drafts = Number((ws && ws.draft_count) || 0);
+
+    const card = document.createElement("article");
+    card.className = "workspace-item";
+    if (id && id === activeWorkspaceId) card.classList.add("is-active");
+    const isRendering = !!activeJob;
+    if (isRendering) card.classList.add("is-rendering");
+
+    const head = document.createElement("header");
+    head.className = "workspace-item-head";
+    const title = document.createElement("h3");
+    title.className = "workspace-item-title";
+    title.textContent = String((ws && ws.name) || id || "Workspace");
+    const state = document.createElement("span");
+    state.className = "workspace-item-state";
+    state.textContent = workspaceStateLabel(ws);
+    head.appendChild(title);
+    head.appendChild(state);
+
+    const actions = document.createElement("div");
+    actions.className = "workspace-item-actions";
+    const useBtn = document.createElement("button");
+    useBtn.type = "button";
+    useBtn.textContent = id === activeWorkspaceId ? "Active" : "Use";
+    useBtn.disabled = !id || id === activeWorkspaceId;
+    useBtn.setAttribute("aria-disabled", useBtn.disabled ? "true" : "false");
+    useBtn.addEventListener("click", () => {
+      switchActiveWorkspace(id).catch((err) => {
+        appendLog(`workspace switch error: ${err.message}`);
+      });
+    });
+    actions.appendChild(useBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.disabled = !id || !canDeleteAny;
+    deleteBtn.setAttribute("aria-disabled", deleteBtn.disabled ? "true" : "false");
+    deleteBtn.addEventListener("click", () => {
+      if (!id || !hasBackendMethod(api, "deleteWorkspace")) return;
+      const ok = window.confirm(`Delete workspace ${id}?`);
+      if (!ok) return;
+      api.deleteWorkspace(id)
+        .then(() => refreshWorkspaces())
+        .then(() => appendLog(`deleted workspace: ${id}`))
+        .catch((err) => appendLog(`workspace delete error: ${err.message}`));
+    });
+    actions.appendChild(deleteBtn);
+
+    const previewWrap = document.createElement("div");
+    previewWrap.className = "workspace-item-preview";
+    // Avoid requesting the active job's final image while rendering; it often 404s
+    // until completion and can show broken-image placeholders in the card.
+    const previewJob = lastJob;
+    const previewUrl = buildWorkspacePreviewUrl(previewJob);
+    if (previewUrl) {
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.alt = `${title.textContent} render preview`;
+      img.onerror = () => {
+        img.remove();
+        if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
+          const emptyPreview = document.createElement("div");
+          emptyPreview.className = "workspace-item-preview-empty";
+          emptyPreview.textContent = "No render yet";
+          previewWrap.appendChild(emptyPreview);
+        }
+      };
+      img.src = previewUrl;
+      previewWrap.appendChild(img);
+    } else if (!isRendering) {
+      const emptyPreview = document.createElement("div");
+      emptyPreview.className = "workspace-item-preview-empty";
+      emptyPreview.textContent = "No render yet";
+      previewWrap.appendChild(emptyPreview);
+    }
+    if (isRendering) {
+      const loading = document.createElement("div");
+      loading.className = "workspace-item-preview-loading";
+      loading.setAttribute("aria-label", "Rendering");
+      loading.innerHTML = '<span class="workspace-item-preview-spinner" aria-hidden="true"></span>';
+      previewWrap.appendChild(loading);
+    }
+
+    const meta = document.createElement("dl");
+    meta.className = "workspace-item-meta";
+    const addMeta = (label, value) => {
+      const row = document.createElement("div");
+      row.className = "workspace-item-meta-row";
+      row.setAttribute("data-meta-key", String(label || "").toLowerCase());
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      row.appendChild(dt);
+      row.appendChild(dd);
+      meta.appendChild(row);
+    };
+    addMeta("ID", id || "-");
+    addMeta("Scene", scene || "-");
+    addMeta("Clients", String(clients));
+    addMeta("Drafts", String(drafts));
+    addMeta("Job", activeJob || lastJob || "-");
+    addMeta("Updated", formatWorkspaceUpdated(ws && ws.updated_ms));
+
+    if (workspaceViewMode === "list") {
+      card.classList.add("workspace-item-list-compact");
+
+      const previewCol = document.createElement("div");
+      previewCol.className = "workspace-item-preview-col";
+      const listState = document.createElement("span");
+      listState.className = "workspace-item-list-state";
+      listState.textContent = workspaceStateLabel(ws);
+      previewCol.appendChild(previewWrap);
+      previewCol.appendChild(listState);
+
+      const main = document.createElement("div");
+      main.className = "workspace-item-list-main";
+      const sceneLine = document.createElement("p");
+      sceneLine.className = "workspace-item-list-scene";
+      sceneLine.textContent = scene || "-";
+
+      const metaStrip = document.createElement("div");
+      metaStrip.className = "workspace-item-meta-strip";
+      const addChip = (label, value) => {
+        const chip = document.createElement("span");
+        chip.className = "workspace-item-meta-chip";
+        chip.setAttribute("data-meta-key", String(label || "").toLowerCase());
+        const key = document.createElement("span");
+        key.className = "workspace-item-meta-chip-key";
+        key.textContent = label;
+        const val = document.createElement("span");
+        val.className = "workspace-item-meta-chip-value";
+        val.textContent = value;
+        chip.appendChild(key);
+        chip.appendChild(val);
+        metaStrip.appendChild(chip);
+      };
+      addChip("ID", id || "-");
+      addChip("Users", String(clients));
+      addChip("Drafts", String(drafts));
+      addChip("Job", activeJob || lastJob || "-");
+      addChip("Updated", formatWorkspaceUpdated(ws && ws.updated_ms));
+
+      main.appendChild(head);
+      main.appendChild(sceneLine);
+      main.appendChild(metaStrip);
+
+      card.appendChild(previewCol);
+      card.appendChild(main);
+      card.appendChild(actions);
+      el.workspaceList.appendChild(card);
+      return;
+    }
+
+    card.appendChild(head);
+    card.appendChild(previewWrap);
+    card.appendChild(meta);
+    card.appendChild(actions);
+    el.workspaceList.appendChild(card);
+  });
+}
+
+async function refreshWorkspaces() {
+  if (!hasBackendMethod(api, "getWorkspaces")) return;
+  const payload = await api.getWorkspaces();
+  const workspaceItems = (payload && payload.workspaces) || [];
+  cacheWorkspaceSnapshots(workspaceItems);
+  const nextActive = String((payload && payload.active_workspace) || "").trim();
+  let activeChanged = false;
+  if (nextActive && nextActive !== activeWorkspaceId) {
+    syncGlobalsToWorkspaceRuntime();
+    activeWorkspaceId = nextActive;
+    syncWorkspaceRuntimeToGlobals();
+    activeChanged = true;
+  }
+  updateWorkspaceActiveHint();
+  updateWorkspaceCountHint(Array.isArray(workspaceItems) ? workspaceItems.length : 0);
+  renderWorkspaceList(workspaceItems);
+  if (activeChanged) {
+    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
+  }
+}
+
+function queueWorkspaceDraftSave() {
+  if (!hasBackendMethod(api, "saveWorkspaceSceneDraft")) return;
+  if (workspaceDraftSaveTimer) {
+    clearTimeout(workspaceDraftSaveTimer);
+    workspaceDraftSaveTimer = null;
+  }
+  const scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!scene || !is_scene_name_safe_runtime(scene)) return;
+  workspaceDraftSaveTimer = setTimeout(() => {
+    workspaceDraftSaveTimer = null;
+    api.saveWorkspaceSceneDraft(scene, el.sceneSource ? (el.sceneSource.value || "") : "")
+      .catch((err) => appendLog(`workspace draft save failed: ${err.message}`));
+  }, 450);
+}
+
+function is_scene_name_safe_runtime(scene) {
+  return /^[A-Za-z0-9_.-]+\.scn$/.test(String(scene || ""));
+}
+
+async function switchActiveWorkspace(workspaceId) {
+  const nextId = String(workspaceId || "").trim();
+  if (!nextId || nextId === activeWorkspaceId) return;
+  if (!hasBackendMethod(api, "setActiveWorkspace")) return;
+  await api.setActiveWorkspace(nextId);
+  await refreshWorkspaces();
+  appendLog(`workspace active=${nextId}`);
 }
 
 async function loadCameras(scene) {
@@ -2916,6 +4145,7 @@ async function loadSceneSource(scene) {
     updateEditorMetrics();
     refreshSceneEditControls();
     renderSceneGraphView();
+    resetSceneHistoriesFromCurrentSource();
     return;
   }
   const data = await api.getSceneSource(scene);
@@ -2925,6 +4155,7 @@ async function loadSceneSource(scene) {
   refreshSceneEditControls();
   syncEditorScroll();
   renderSceneGraphView();
+  resetSceneHistoriesFromCurrentSource();
 }
 
 function renderThirdPartyLicenses(rawItems) {
@@ -2988,6 +4219,7 @@ async function loadAbout() {
   el.aboutDefaultUrl.textContent = data.default_url || window.location.origin;
   el.aboutSceneDir.textContent = data.scene_dir || (backendMode === "wasm" ? "scenes/" : "scene/");
   el.aboutStaticAssets.textContent = data.static_assets || "/";
+  updateWorkspaceServerStatsHints(data);
   renderThirdPartyLicenses(data.third_party_licenses);
 }
 
@@ -2999,20 +4231,40 @@ async function loadEmptySceneTemplate() {
   return data.source || "";
 }
 
+function sanitizeIntField(input, fallback, min, max) {
+  const raw = String(input && input.value !== undefined ? input.value : "").trim();
+  let value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value)) value = fallback;
+  value = Math.max(min, Math.min(max, value));
+  if (input && String(input.value) !== String(value)) {
+    input.value = String(value);
+  }
+  return String(value);
+}
+
 async function startRender() {
+  const width = sanitizeIntField(el.width, 500, 32, 8192);
+  const height = sanitizeIntField(el.height, 500, 32, 8192);
+  const samples = sanitizeIntField(el.samples, 1, 1, 1024);
+  const aa = sanitizeIntField(el.aa, 1, 1, 16);
+  const rdepth = sanitizeIntField(el.rdepth, 3, 1, 4096);
+  const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
+  const threads = sanitizeIntField(el.threads, 0, 0, 256);
+
   return api.startRender({
     scene: el.scene.value,
     integrator: el.integrator.value,
     camera: el.camera.value || "",
-    width: el.width.value,
-    height: el.height.value,
-    samples: el.samples.value,
-    aa: el.aa.value,
+    width,
+    height,
+    samples,
+    aa,
     sample_distribution: el.sampleDistribution.value,
-    rdepth: el.rdepth.value,
-    tile_size: el.tileSize.value,
+    rdepth,
+    tile_size: tileSize,
     tile_order: el.tileOrder.value,
-    threads: el.threads.value,
+    threads,
+    post_filters: gatherPostFilterParams(),
     ...gatherIntegratorOptionParams(),
   });
 }
@@ -3055,10 +4307,12 @@ function triggerSceneSave() {
     });
 }
 
-async function pollJob(jobId) {
+async function pollJob(jobId, token) {
   let lastState = "";
   while (true) {
+    if (token !== undefined && token !== activePollToken) return;
     const data = await api.getJob(jobId);
+    if (token !== undefined && token !== activePollToken) return;
     const state = data.state || "unknown";
     const progress = data.progress || 0;
     updateActivePreviewTilesFromJob(data);
@@ -3073,6 +4327,7 @@ async function pollJob(jobId) {
     }
 
     await refreshProgressivePreview(jobId);
+    if (token !== undefined && token !== activePollToken) return;
 
     if (state === "done") {
       clearActivePreviewTiles();
@@ -3087,11 +4342,12 @@ async function pollJob(jobId) {
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
       });
       if (finalBlob && finalBlob.size > 0) {
-        setPreviewFromBlob(finalBlob);
+        await setPreviewFromBlob(finalBlob);
       }
       lastCompletedJobId = jobId;
       lastCompletedJobScene = String(data.scene || el.scene.value || "");
       lastCompletedJobIntegrator = String(data.integrator || el.integrator.value || "");
+      syncGlobalsToWorkspaceRuntime();
       updateDownloadUi();
       refreshVisualPhotonOverlay().catch(() => {});
       setStatus(`done in ${Math.round(data.elapsed_ms || 0)} ms`);
@@ -3140,10 +4396,12 @@ async function handleExportClick(event) {
 
 async function handleRender() {
   setActiveTab("render");
+  const pollToken = beginPollSession();
   el.renderBtn.disabled = true;
   lastCompletedJobId = "";
   lastCompletedJobScene = "";
   lastCompletedJobIntegrator = "";
+  syncGlobalsToWorkspaceRuntime();
   updateDownloadUi();
   if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
     URL.revokeObjectURL(previewPinnedBaseUrl);
@@ -3165,9 +4423,11 @@ async function handleRender() {
   appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
   try {
     const jobId = await startRender();
+    if (pollToken !== activePollToken) return;
     activeJobId = jobId;
+    syncGlobalsToWorkspaceRuntime();
     appendLog(`job accepted: ${jobId}`);
-    await pollJob(jobId);
+    await pollJob(jobId, pollToken);
   } catch (err) {
     setStatus(`error: ${err.message}`);
     appendLog(`render error: ${err.message}`);
@@ -3178,29 +4438,58 @@ async function handleRender() {
     previewPinnedBaseUrl = "";
     previewPinnedBaseBitmapPromise = null;
     preservePreviewUnderlay = false;
-    activeJobId = "";
-    setRenderActive(false);
-    el.renderBtn.disabled = false;
+    if (!activeJobId || pollToken === activePollToken) {
+      activeJobId = "";
+      syncGlobalsToWorkspaceRuntime();
+    }
+    if (!activeJobId) {
+      setRenderActive(false);
+      el.renderBtn.disabled = false;
+    } else {
+      el.renderBtn.disabled = true;
+    }
   }
 }
 
 async function boot() {
+  ensureClientId();
   api = initializeBackendApi();
+  const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
+  const startupRequestTotal = 7 + (hasWorkspaceApi ? 1 : 0);
+  resetStartupProgress(startupRequestTotal);
+  const trackStartupRequest = (promise) => Promise.resolve(promise).finally(() => advanceStartupProgress(1));
+
+  if (!hasBackendMethod(api, "getWorkspaces")) {
+    if (el.tabWorkspaces) el.tabWorkspaces.hidden = true;
+    if (el.paneWorkspaces) el.paneWorkspaces.hidden = true;
+  }
   initSidebarAccordion();
-  await loadSidebarCardVisibilityConfig();
+  await trackStartupRequest(loadSidebarCardVisibilityConfig());
   const savedTheme = localStorage.getItem("xtracer-theme") || "system";
   el.theme.value = savedTheme;
   applyTheme(savedTheme);
   loadUIOptions();
+  applyHistoryLimits();
+  setWorkspaceViewMode(localStorage.getItem(WORKSPACE_VIEW_MODE_KEY) || "cards", false);
   pollBackendLogs();
 
   setStatus("loading...");
   appendLog(`boot (backend=${backendMode})`);
   setEditorViewMode(localStorage.getItem(EDITOR_VIEW_MODE_KEY) || "visual", false);
-  await Promise.all([loadScenes(), loadIntegrators(), loadResolutionPresets()]);
-  await loadCameras(el.scene.value);
-  await loadSceneSource(el.scene.value);
-  await loadAbout();
+  if (hasWorkspaceApi) {
+    await trackStartupRequest(refreshWorkspaces());
+  }
+  await Promise.all([
+    trackStartupRequest(loadScenes()),
+    trackStartupRequest(loadIntegrators()),
+    trackStartupRequest(loadResolutionPresets()),
+  ]);
+  await trackStartupRequest(loadCameras(el.scene.value));
+  await trackStartupRequest(loadSceneSource(el.scene.value));
+  if (hasWorkspaceApi && activeWorkspaceId) {
+    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
+  }
+  await trackStartupRequest(loadAbout());
   updatePreviewSizing();
   bindPreviewInteraction();
   bindGraphInteraction();
@@ -3386,14 +4675,41 @@ async function boot() {
     renderIntegratorControls();
     appendLog(`integrator=${el.integrator.value}`);
     refreshVisualPhotonOverlay().catch(() => {});
+    queueWorkspaceSettingsSave();
   });
 
   el.tileOrder.addEventListener("change", () => {
     appendLog(`tile_order=${el.tileOrder.value}`);
+    queueWorkspaceSettingsSave();
   });
+  if (el.tileSize) {
+    el.tileSize.addEventListener("change", () => {
+      appendLog(`tile_size=${el.tileSize.value}`);
+      queueWorkspaceSettingsSave();
+    });
+  }
+  if (el.threads) {
+    el.threads.addEventListener("change", () => {
+      appendLog(`threads=${el.threads.value}`);
+      queueWorkspaceSettingsSave();
+    });
+  }
+  if (el.samples) {
+    el.samples.addEventListener("change", () => {
+      appendLog(`samples=${el.samples.value}`);
+      queueWorkspaceSettingsSave();
+    });
+  }
+  if (el.rdepth) {
+    el.rdepth.addEventListener("change", () => {
+      appendLog(`rdepth=${el.rdepth.value}`);
+      queueWorkspaceSettingsSave();
+    });
+  }
   if (el.sampleDistribution) {
     el.sampleDistribution.addEventListener("change", () => {
       appendLog(`sample_distribution=${el.sampleDistribution.value}`);
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.aaPills && el.aaPills.length > 0) {
@@ -3404,6 +4720,7 @@ async function boot() {
         el.aa.value = value;
         syncAaPresetUi();
         appendLog(`aa=${el.aa.value}`);
+        queueWorkspaceSettingsSave();
       });
     });
   }
@@ -3414,6 +4731,7 @@ async function boot() {
     el.aa.addEventListener("change", () => {
       syncAaPresetUi();
       appendLog(`aa=${el.aa.value}`);
+      queueWorkspaceSettingsSave();
     });
   }
   syncAaPresetUi();
@@ -3423,6 +4741,7 @@ async function boot() {
       updateToneMappingControlState();
       appendLog(`tone_mapping=${el.toneMapping.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.toneMappingExposure) {
@@ -3432,6 +4751,7 @@ async function boot() {
     el.toneMappingExposure.addEventListener("change", () => {
       appendLog(`tone_mapping_exposure=${el.toneMappingExposure.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.toneMappingWhitePoint) {
@@ -3441,6 +4761,7 @@ async function boot() {
     el.toneMappingWhitePoint.addEventListener("change", () => {
       appendLog(`tone_mapping_white_point=${el.toneMappingWhitePoint.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.toneMappingMantiukContrast) {
@@ -3450,6 +4771,7 @@ async function boot() {
     el.toneMappingMantiukContrast.addEventListener("change", () => {
       appendLog(`tone_mapping_mantiuk_contrast=${el.toneMappingMantiukContrast.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.toneMappingMantiukSaturation) {
@@ -3459,6 +4781,7 @@ async function boot() {
     el.toneMappingMantiukSaturation.addEventListener("change", () => {
       appendLog(`tone_mapping_mantiuk_saturation=${el.toneMappingMantiukSaturation.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   if (el.toneMappingMantiukDetail) {
@@ -3468,14 +4791,23 @@ async function boot() {
     el.toneMappingMantiukDetail.addEventListener("change", () => {
       appendLog(`tone_mapping_mantiuk_detail=${el.toneMappingMantiukDetail.value}`);
       refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
     });
   }
   updateToneMappingControlState();
+  populatePostFilterTypeOptions();
+  renderPostFilterChain();
+  if (el.postFilterAddBtn) {
+    el.postFilterAddBtn.addEventListener("click", () => {
+      addPostFilterToChain();
+    });
+  }
 
   const onSizeChanged = () => {
     syncResolutionPresetFromInputs();
     updatePreviewSizing();
     syncVisualFrameAspect();
+    queueWorkspaceSettingsSave();
   };
   el.resolutionPreset.addEventListener("change", () => {
     if (el.resolutionPreset.value === "custom") return;
@@ -3486,6 +4818,7 @@ async function boot() {
     el.height.value = String(preset.height);
     updatePreviewSizing();
     syncVisualFrameAspect();
+    queueWorkspaceSettingsSave();
   });
   el.width.addEventListener("input", onSizeChanged);
   el.width.addEventListener("change", onSizeChanged);
@@ -3505,8 +4838,28 @@ async function boot() {
     uiOptions.pollMs = Number.isFinite(v) ? Math.max(100, Math.min(10000, v)) : 300;
     el.pollInterval.value = String(uiOptions.pollMs);
     persistUIOptions();
-    appendLog(`poll interval=${uiOptions.pollMs}ms`);
+    appendLog(`render poll interval=${uiOptions.pollMs}ms`);
   });
+
+  if (el.textHistorySize) {
+    el.textHistorySize.addEventListener("change", () => {
+      uiOptions.textHistoryLimit = clampHistoryLimit(el.textHistorySize.value || "200");
+      el.textHistorySize.value = String(uiOptions.textHistoryLimit);
+      applyHistoryLimits();
+      persistUIOptions();
+      appendLog(`text history size=${uiOptions.textHistoryLimit}`);
+    });
+  }
+
+  if (el.visualHistorySize) {
+    el.visualHistorySize.addEventListener("change", () => {
+      uiOptions.visualHistoryLimit = clampHistoryLimit(el.visualHistorySize.value || "200");
+      el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
+      applyHistoryLimits();
+      persistUIOptions();
+      appendLog(`3d history size=${uiOptions.visualHistoryLimit}`);
+    });
+  }
 
   el.autoLoadEditor.addEventListener("change", () => {
     uiOptions.autoLoadEditor = !!el.autoLoadEditor.checked;
@@ -3538,6 +4891,7 @@ async function boot() {
 
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
+  if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
   if (el.editorView3dBtn) {
@@ -3549,7 +4903,45 @@ async function boot() {
   if (el.editorViewTextBtn) {
     el.editorViewTextBtn.addEventListener("click", () => setEditorViewMode("text"));
   }
+  document.addEventListener("keydown", handleUndoRedoShortcut);
 
+  if (el.workspaceRefreshBtn) {
+    el.workspaceRefreshBtn.addEventListener("click", () => {
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceViewMode) {
+    el.workspaceViewMode.addEventListener("change", () => {
+      setWorkspaceViewMode(el.workspaceViewMode.value || "cards");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceViewCardsBtn) {
+    el.workspaceViewCardsBtn.addEventListener("click", () => {
+      setWorkspaceViewMode("cards");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceViewListBtn) {
+    el.workspaceViewListBtn.addEventListener("click", () => {
+      setWorkspaceViewMode("list");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceCreateBtn) {
+    el.workspaceCreateBtn.addEventListener("click", () => {
+      if (!hasBackendMethod(api, "createWorkspace")) return;
+      const rawName = el.workspaceCreateName ? String(el.workspaceCreateName.value || "").trim() : "";
+      api.createWorkspace(rawName)
+        .then((data) => {
+          const id = String((data && data.id) || "").trim();
+          if (el.workspaceCreateName) el.workspaceCreateName.value = "";
+          if (!id) return refreshWorkspaces();
+          return switchActiveWorkspace(id);
+        })
+        .catch((err) => appendLog(`workspace create error: ${err.message}`));
+    });
+  }
   el.loadSceneBtn.addEventListener("click", () => {
     loadSceneSource(el.scene.value)
       .then(() => {
@@ -3573,6 +4965,7 @@ async function boot() {
         refreshSceneEditControls();
         syncEditorScroll();
         renderSceneGraphView();
+        resetSceneHistoriesFromCurrentSource();
         setStatus("new scene initialized");
         setEditorOpStatus("info", "New scene template initialized");
         appendLog("new scene template");
@@ -3684,6 +5077,10 @@ async function boot() {
     updateEditorMetrics();
     refreshSceneEditControls();
     renderSceneGraphView();
+    if (!suppressHistoryTracking) {
+      scheduleTextHistoryCommit();
+    }
+    queueWorkspaceDraftSave();
   });
   el.sceneSource.addEventListener("keydown", handleEditorTabKey);
   el.sceneSource.addEventListener("scroll", syncEditorScroll);
@@ -3694,7 +5091,17 @@ async function boot() {
   syncEditorScroll();
 }
 
-boot().catch((err) => {
-  setStatus(`error: ${err.message}`);
-  appendLog(`boot error: ${err.message}`);
-});
+setTimeout(() => {
+  // Safety valve: avoid a permanent loading overlay on unexpected stalls.
+  dismissStartupScreen(false);
+}, 15000);
+
+boot()
+  .then(() => {
+    dismissStartupScreen(false);
+  })
+  .catch((err) => {
+    setStatus(`error: ${err.message}`);
+    appendLog(`boot error: ${err.message}`);
+    dismissStartupScreen(false);
+  });

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <condition_variable>
 
 namespace xtracer {
 namespace frontend {
@@ -26,11 +27,13 @@ class backend_log_t
 
     void add(const std::string &level, const std::string &message);
     std::vector<backend_log_entry_t> since(unsigned long long last_id) const;
+    std::vector<backend_log_entry_t> wait_since(unsigned long long last_id, unsigned long timeout_ms) const;
 
     private:
     backend_log_t();
 
     mutable std::mutex mut;
+    mutable std::condition_variable cv;
     std::deque<backend_log_entry_t> entries;
     std::atomic<unsigned long long> next_id;
     size_t max_entries;

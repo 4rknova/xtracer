@@ -5,6 +5,7 @@
     "integratorControlsCard",
     "qualityControlsCard",
     "toneMappingControlsCard",
+    "postFiltersControlsCard",
     "exportControlsCard"
   ],
   "visual": {
@@ -28,6 +29,9 @@
   },
   "logs": [
     "logsControlsCard"
+  ],
+  "workspaces": [
+    "workspaceControlsCard"
   ],
   "settings": [
     "settingsControlsCard"

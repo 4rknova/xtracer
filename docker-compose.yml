@@ -1,0 +1,29 @@
+services:
+  xtracer-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xtracer-web
+    restart: unless-stopped
+    ports:
+      - "${XTRACER_PORT:-8080}:8080"
+    environment:
+      OMP_NUM_THREADS: "${XTRACER_OMP_NUM_THREADS:-}"
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --scene-dir
+      - /app/scene
+      - --web-root
+      - /app/web-client
+      - --verbose
+    volumes:
+      - ./scene:/app/scene
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

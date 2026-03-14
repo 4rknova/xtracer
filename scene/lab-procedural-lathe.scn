@@ -1,122 +1,263 @@
-title = Procedural Lathe Showcase
-description = Demonstrates multiple gen(lathe) configurations with varied profiles, caps, and marble materials.
-version = 1.0
+title = Procedural Lathe Glassworks
+description = Intricate gen(lathe) showcase focused on ornate glasses and vases with varied silhouettes and refractive materials.
+version = 1.1
 
 environment = {
     type = gradient
     config = {
-        a = col3(0.90,0.94,1.00)
-        b = col3(0.09,0.11,0.15)
+        a = col3(0.94,0.97,1.00)
+        b = col3(0.05,0.07,0.10)
     }
 }
 
 camera = {
     default = {
         type     = thin-lens
-        fov      = 48
-        position = vec3(0.0,3.0,-13.2)
-        target   = vec3(0.0,1.2,2.8)
+        fov      = 42
+        position = vec3(0.0,3.4,-16.0)
+        target   = vec3(0.0,1.5,3.2)
         up       = vec3(0,1,0)
     }
 }
 
 geometry = {
     floor = {
-        type     = plane
-        normal   = vec3(0,1,0)
-        distance = 0
+        type       = mesh
+        source     = gen(plane)
+        resolution = 2
+        modifiers = {
+            rotation    = vec3(0,0,0)
+            scale       = vec3(30.0,1.0,30.0)
+            translation = vec3(0.0,0.0,3.8)
+        }
     }
 
-    lathe_bottle_glass = {
+    lathe_fluted_vase = {
         type       = mesh
         source     = gen(lathe)
-        resolution = 120
+        resolution = 176
         cap_ends   = true
         profile = {
-            p0 = tex2(0.00,-1.00)
-            p1 = tex2(0.26,-0.94)
-            p2 = tex2(0.38,-0.55)
-            p3 = tex2(0.34,-0.10)
-            p4 = tex2(0.56,0.35)
-            p5 = tex2(0.22,0.80)
-            p6 = tex2(0.20,1.00)
+            p0  = tex2(0.00,-1.00)
+            p1  = tex2(0.18,-0.98)
+            p2  = tex2(0.28,-0.84)
+            p3  = tex2(0.32,-0.64)
+            p4  = tex2(0.26,-0.42)
+            p5  = tex2(0.38,-0.14)
+            p6  = tex2(0.54,0.16)
+            p7  = tex2(0.58,0.38)
+            p8  = tex2(0.50,0.58)
+            p9  = tex2(0.34,0.78)
+            p10 = tex2(0.30,0.94)
+            p11 = tex2(0.34,1.00)
         }
-            	    	modifiers = {
-    		rotation = vec3(0, 0, 0)
-    		scale = vec3(1, 1, 1)
-    		translation = vec3(1.416563, -0.149561, -6.826684)
-    	}
+        modifiers = {
+            rotation    = vec3(0, 8, 0)
+            scale       = vec3(1.05, 1.30, 1.05)
+            translation = vec3(-5.4, 1.34, 4.5)
+        }
     }
 
-    lathe_vase_marble = {
+    lathe_necked_amphora = {
         type       = mesh
         source     = gen(lathe)
-        resolution = 110
+        resolution = 160
         cap_ends   = true
         profile = {
-            p0 = tex2(0.00,-1.00)
-            p1 = tex2(0.42,-0.92)
-            p2 = tex2(0.62,-0.52)
-            p3 = tex2(0.46,-0.02)
-            p4 = tex2(0.68,0.52)
-            p5 = tex2(0.30,0.90)
-            p6 = tex2(0.22,1.00)
+            p0  = tex2(0.00,-1.00)
+            p1  = tex2(0.22,-0.98)
+            p2  = tex2(0.42,-0.78)
+            p3  = tex2(0.52,-0.48)
+            p4  = tex2(0.44,-0.16)
+            p5  = tex2(0.34,0.10)
+            p6  = tex2(0.28,0.38)
+            p7  = tex2(0.24,0.60)
+            p8  = tex2(0.30,0.80)
+            p9  = tex2(0.36,0.94)
+            p10 = tex2(0.40,1.00)
         }
-            	modifiers = {
-    		rotation = vec3(0, 0, 0)
-    		scale = vec3(1, 1, 1)
-    		translation = vec3(0.695911, 0.045275, -1.066356)
-    	}
+        modifiers = {
+            rotation    = vec3(0, -5, 0)
+            scale       = vec3(0.95, 1.22, 0.95)
+            translation = vec3(-3.3, 1.22, 2.4)
+        }
     }
 
-    lathe_goblet_open = {
+    lathe_decanter_cut = {
         type       = mesh
         source     = gen(lathe)
-        resolution = 96
+        resolution = 188
+        cap_ends   = true
+        profile = {
+            p0  = tex2(0.00,-1.00)
+            p1  = tex2(0.16,-0.98)
+            p2  = tex2(0.20,-0.78)
+            p3  = tex2(0.38,-0.56)
+            p4  = tex2(0.62,-0.24)
+            p5  = tex2(0.70,0.02)
+            p6  = tex2(0.62,0.28)
+            p7  = tex2(0.46,0.50)
+            p8  = tex2(0.30,0.72)
+            p9  = tex2(0.24,0.90)
+            p10 = tex2(0.28,1.00)
+        }
+        modifiers = {
+            rotation    = vec3(0, -12, 0)
+            scale       = vec3(1.10, 1.28, 1.10)
+            translation = vec3(-0.8, 1.28, 5.1)
+        }
+    }
+
+    lathe_crystal_goblet = {
+        type       = mesh
+        source     = gen(lathe)
+        resolution = 168
         cap_ends   = false
         profile = {
-            p0 = tex2(0.16,-1.00)
-            p1 = tex2(0.11,-0.80)
-            p2 = tex2(0.10,-0.55)
-            p3 = tex2(0.32,-0.28)
-            p4 = tex2(0.40,0.10)
-            p5 = tex2(0.56,0.42)
-            p6 = tex2(0.50,0.76)
-            p7 = tex2(0.42,1.00)
+            p0  = tex2(0.12,-1.00)
+            p1  = tex2(0.14,-0.82)
+            p2  = tex2(0.14,-0.58)
+            p3  = tex2(0.20,-0.40)
+            p4  = tex2(0.22,-0.16)
+            p5  = tex2(0.40,0.06)
+            p6  = tex2(0.56,0.30)
+            p7  = tex2(0.60,0.54)
+            p8  = tex2(0.52,0.78)
+            p9  = tex2(0.48,1.00)
         }
-            	modifiers = {
-    		rotation = vec3(0, 0, 0)
-    		scale = vec3(1, 1, 1)
-    		translation = vec3(0.066146, 0.044401, -0.010251)
-    	}
+        modifiers = {
+            rotation    = vec3(0, 14, 0)
+            scale       = vec3(0.92, 1.16, 0.92)
+            translation = vec3(1.5, 1.16, 3.5)
+        }
     }
 
-    lathe_decanter_marble = {
+    lathe_chalice_tall = {
         type       = mesh
         source     = gen(lathe)
-        resolution = 132
+        resolution = 176
+        cap_ends   = false
+        profile = {
+            p0  = tex2(0.10,-1.00)
+            p1  = tex2(0.18,-0.86)
+            p2  = tex2(0.16,-0.56)
+            p3  = tex2(0.14,-0.26)
+            p4  = tex2(0.18,0.04)
+            p5  = tex2(0.26,0.28)
+            p6  = tex2(0.44,0.50)
+            p7  = tex2(0.58,0.70)
+            p8  = tex2(0.62,0.88)
+            p9  = tex2(0.54,1.00)
+        }
+        modifiers = {
+            rotation    = vec3(0, -18, 0)
+            scale       = vec3(0.86, 1.34, 0.86)
+            translation = vec3(3.7, 1.34, 4.3)
+        }
+    }
+
+    lathe_bud_vase = {
+        type       = mesh
+        source     = gen(lathe)
+        resolution = 154
         cap_ends   = true
         profile = {
-            p0 = tex2(0.00,-1.00)
-            p1 = tex2(0.24,-0.95)
-            p2 = tex2(0.52,-0.62)
-            p3 = tex2(0.72,-0.12)
-            p4 = tex2(0.60,0.40)
-            p5 = tex2(0.34,0.74)
-            p6 = tex2(0.30,0.92)
-            p7 = tex2(0.16,1.00)
+            p0  = tex2(0.00,-1.00)
+            p1  = tex2(0.10,-0.96)
+            p2  = tex2(0.20,-0.72)
+            p3  = tex2(0.34,-0.34)
+            p4  = tex2(0.38,-0.08)
+            p5  = tex2(0.30,0.18)
+            p6  = tex2(0.22,0.44)
+            p7  = tex2(0.18,0.72)
+            p8  = tex2(0.24,0.90)
+            p9  = tex2(0.30,1.00)
         }
-            	    	    	    	    	    	    	modifiers = {
-    		rotation = vec3(0, 0, 0)
-    		scale = vec3(1, 1, 1)
-    		translation = vec3(-6.614731, -0.033032, -4.194781)
-    	}
+        modifiers = {
+            rotation    = vec3(0, 6, 0)
+            scale       = vec3(0.78, 1.08, 0.78)
+            translation = vec3(5.5, 1.08, 2.7)
+        }
+    }
+
+    lathe_tumbler = {
+        type       = mesh
+        source     = gen(lathe)
+        resolution = 144
+        cap_ends   = false
+        profile = {
+            p0 = tex2(0.36,-1.00)
+            p1 = tex2(0.34,-0.86)
+            p2 = tex2(0.33,-0.58)
+            p3 = tex2(0.34,-0.24)
+            p4 = tex2(0.37,0.10)
+            p5 = tex2(0.40,0.44)
+            p6 = tex2(0.43,0.76)
+            p7 = tex2(0.45,1.00)
+        }
+        modifiers = {
+            rotation    = vec3(0, -10, 0)
+            scale       = vec3(0.62, 0.82, 0.62)
+            translation = vec3(-1.9, 0.82, 1.4)
+        }
+    }
+
+    lathe_wine_glass = {
+        type       = mesh
+        source     = gen(lathe)
+        resolution = 160
+        cap_ends   = false
+        profile = {
+            p0 = tex2(0.08,-1.00)
+            p1 = tex2(0.09,-0.78)
+            p2 = tex2(0.09,-0.50)
+            p3 = tex2(0.16,-0.24)
+            p4 = tex2(0.30,0.02)
+            p5 = tex2(0.44,0.28)
+            p6 = tex2(0.50,0.56)
+            p7 = tex2(0.48,0.84)
+            p8 = tex2(0.46,1.00)
+        }
+        modifiers = {
+            rotation    = vec3(0, 20, 0)
+            scale       = vec3(0.66, 1.02, 0.66)
+            translation = vec3(0.4, 1.02, 1.2)
+        }
+    }
+
+    lathe_champagne_flute = {
+        type       = mesh
+        source     = gen(lathe)
+        resolution = 164
+        cap_ends   = false
+        profile = {
+            p0 = tex2(0.07,-1.00)
+            p1 = tex2(0.08,-0.74)
+            p2 = tex2(0.08,-0.46)
+            p3 = tex2(0.10,-0.14)
+            p4 = tex2(0.18,0.16)
+            p5 = tex2(0.24,0.42)
+            p6 = tex2(0.25,0.66)
+            p7 = tex2(0.24,0.88)
+            p8 = tex2(0.23,1.00)
+        }
+        modifiers = {
+            rotation    = vec3(0, -28, 0)
+            scale       = vec3(0.70, 1.18, 0.70)
+            translation = vec3(2.5, 1.18, 1.5)
+        }
     }
 
     key_light = {
         type     = sphere
-        position = vec3(0.4,7.4,-1.8)
-        radius   = 1.00
+        position = vec3(-2.4,8.2,-1.2)
+        radius   = 1.25
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(5.0,5.8,-6.8)
+        radius   = 0.95
     }
 }
 
@@ -125,89 +266,63 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.57,0.59,0.62) }
+                diffuse = { type = color, value = col3(0.14,0.16,0.19) }
             }
         }
     }
 
-    lathe_glass = {
+    glass_clear = {
         type = dielectric
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.96,0.98,1.00) }
+                diffuse = { type = color, value = col3(0.97,0.99,1.00) }
             }
             scalars = {
                 ior          = 1.50
+                transparency = 0.95
+                reflectance  = 0.10
+            }
+        }
+    }
+
+    glass_smoke = {
+        type = dielectric
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.76,0.82,0.90) }
+            }
+            scalars = {
+                ior          = 1.52
                 transparency = 0.90
-                reflectance  = 0.12
+                reflectance  = 0.14
             }
         }
     }
 
-    lathe_marble_warm = {
-        type = blinn_phong
+    glass_emerald = {
+        type = dielectric
         properties = {
             samplers = {
-                diffuse = {
-                    type           = fbm_marble
-                    a              = col3(0.94,0.90,0.84)
-                    b              = col3(0.60,0.50,0.42)
-                    vein           = col3(0.22,0.14,0.10)
-                    scale          = 4.6
-                    vein_frequency = 8.5
-                    turbulence     = 3.6
-                    octaves        = 6
-                    lacunarity     = 2.0
-                    gain           = 0.5
-                    vein_strength  = 0.9
-                    vein_sharpness = 4.5
-                }
-                specular = { type = color, value = col3(0.25,0.22,0.20) }
+                diffuse = { type = color, value = col3(0.66,0.92,0.80) }
             }
             scalars = {
-                exponent    = 86
-                reflectance = 0.12
+                ior          = 1.49
+                transparency = 0.88
+                reflectance  = 0.13
             }
         }
     }
 
-    lathe_marble_cool = {
-        type = blinn_phong
+    glass_amber = {
+        type = dielectric
         properties = {
             samplers = {
-                diffuse = {
-                    type           = fbm_marble
-                    a              = col3(0.90,0.94,0.96)
-                    b              = col3(0.56,0.62,0.66)
-                    vein           = col3(0.18,0.24,0.30)
-                    scale          = 5.2
-                    vein_frequency = 10.0
-                    turbulence     = 4.0
-                    octaves        = 6
-                    lacunarity     = 2.0
-                    gain           = 0.5
-                    vein_strength  = 0.95
-                    vein_sharpness = 5.2
-                }
-                specular = { type = color, value = col3(0.20,0.22,0.24) }
+                diffuse = { type = color, value = col3(0.96,0.80,0.56) }
             }
             scalars = {
-                exponent    = 92
-                reflectance = 0.14
-            }
-        }
-    }
-
-    lathe_ceramic = {
-        type = blinn_phong
-        properties = {
-            samplers = {
-                diffuse = { type = color, value = col3(0.86,0.88,0.90) }
-                specular = { type = color, value = col3(0.20,0.20,0.22) }
-            }
-            scalars = {
-                exponent    = 72
-                reflectance = 0.08
+                ior          = 1.51
+                transparency = 0.86
+                reflectance  = 0.15
             }
         }
     }
@@ -216,7 +331,16 @@ material = {
         type = emissive
         properties = {
             samplers = {
-                emissive = { type = color, value = col3(3.4,3.1,2.6) }
+                emissive = { type = color, value = col3(4.2,3.8,3.2) }
+            }
+        }
+    }
+
+    emissive_fill = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(2.6,2.9,3.8) }
             }
         }
     }
@@ -224,9 +348,17 @@ material = {
 
 object = {
     floor = { geometry = floor, material = floor_matte }
-    lathe_bottle_glass = { geometry = lathe_bottle_glass, material = lathe_glass }
-    lathe_vase_marble = { geometry = lathe_vase_marble, material = lathe_marble_warm }
-    lathe_goblet_open = { geometry = lathe_goblet_open, material = lathe_ceramic }
-    lathe_decanter_marble = { geometry = lathe_decanter_marble, material = lathe_marble_cool }
-    key_light = { geometry = key_light, material = emissive_key }
+
+    lathe_fluted_vase   = { geometry = lathe_fluted_vase, material = glass_clear }
+    lathe_necked_amphora = { geometry = lathe_necked_amphora, material = glass_emerald }
+    lathe_decanter_cut  = { geometry = lathe_decanter_cut, material = glass_smoke }
+    lathe_crystal_goblet = { geometry = lathe_crystal_goblet, material = glass_clear }
+    lathe_chalice_tall  = { geometry = lathe_chalice_tall, material = glass_amber }
+    lathe_bud_vase      = { geometry = lathe_bud_vase, material = glass_smoke }
+    lathe_tumbler       = { geometry = lathe_tumbler, material = glass_clear }
+    lathe_wine_glass    = { geometry = lathe_wine_glass, material = glass_amber }
+    lathe_champagne_flute = { geometry = lathe_champagne_flute, material = glass_clear }
+
+    key_light  = { geometry = key_light, material = emissive_key }
+    fill_light = { geometry = fill_light, material = emissive_fill }
 }

@@ -6,7 +6,9 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <deque>
 #include <atomic>
+#include <condition_variable>
 
 #include <frontend/common/render_service.h>
 #include <nimg/pixmap.h>
@@ -34,6 +36,7 @@ struct job_snapshot_t
     };
 
     std::string id;
+    std::string workspace_id;
     std::string scene;
     std::string integrator;
     job_state_t state;
@@ -50,8 +53,14 @@ class job_manager_t
 {
     public:
     job_manager_t();
+    void set_max_concurrent_renders(size_t max_concurrent);
+    size_t get_max_concurrent_renders() const;
+    size_t get_active_render_count() const;
 
-    std::string create(const common::render_request_t &request, const std::string &scene_name);
+    std::string create(const common::render_request_t &request,
+                       const std::string &scene_name,
+                       const std::string &workspace_id,
+                       const std::string &cleanup_scene_path);
     bool snapshot(const std::string &id, job_snapshot_t &out);
     bool image(const std::string &id,
                std::vector<unsigned char> &out,
@@ -72,6 +81,7 @@ class job_manager_t
     {
         mutable std::mutex mut;
         std::string id;
+        std::string workspace_id;
         std::string scene;
         std::string integrator;
         std::atomic<job_state_t> state;
@@ -102,20 +112,46 @@ class job_manager_t
         float preview_last_tm_mantiuk_detail;
         std::vector<unsigned char> preview_png_cache;
         common::render_request_t request;
+        std::string cleanup_scene_path;
 
         job_t();
     };
 
+    struct evicted_job_t
+    {
+        std::string id;
+        std::string workspace_id;
+        std::string scene;
+        std::string integrator;
+        job_state_t state;
+        std::string error;
+        double elapsed_ms;
+        size_t width;
+        size_t height;
+        std::string png_path;
+    };
+
     void run(const std::shared_ptr<job_t> &job);
     std::shared_ptr<job_t> get_job(const std::string &id);
+    void on_job_finished(const std::string &id);
+    void prune_completed_jobs_locked();
+    void cache_evicted_job_locked(const std::shared_ptr<job_t> &job);
+    void prune_evicted_jobs_locked();
 
     mutable std::mutex jobs_mut;
     std::map<std::string, std::shared_ptr<job_t> > jobs;
+    std::deque<std::string> completed_job_order;
+    size_t max_completed_jobs;
+    std::map<std::string, evicted_job_t> evicted_jobs;
+    std::deque<std::string> evicted_job_order;
+    size_t max_evicted_jobs;
     std::atomic<unsigned long long> next_id;
 
-    // Global render lock keeps job execution deterministic and avoids
-    // oversubscribing the process when each render already uses OpenMP.
-    std::mutex render_mut;
+    // Limit concurrent renders to avoid unbounded oversubscription.
+    mutable std::mutex render_slots_mut;
+    std::condition_variable render_slots_cv;
+    size_t max_concurrent_renders;
+    size_t active_renders;
 };
 
 } /* namespace web */

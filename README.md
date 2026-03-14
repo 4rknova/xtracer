@@ -32,7 +32,7 @@ cmake --build build/intermediate/build -j
 Run web server:
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -170,8 +170,8 @@ Run CLI:
 |---|---|
 | Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs) |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
-| Settings | Theme mode + dark palette selection, frontend behavior toggles, and polling controls |
-| Logs | Backend log stream with incremental polling and level filters |
+| Settings | Theme mode + dark palette selection, frontend behavior toggles, and render polling controls |
+| Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party license notices |
 
 ### Web API Endpoints
@@ -179,7 +179,7 @@ Run CLI:
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/health` | Health probe |
-| GET | `/api/about` | Backend/app metadata + license/third-party notice fields |
+| GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields |
 | GET | `/api/scenes` | List available scenes |
 | GET | `/api/scenes/{scene}/cameras` | List cameras in scene |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
@@ -188,6 +188,12 @@ Run CLI:
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
 | GET | `/api/scenes/template/empty` | Empty scene template |
 | POST | `/api/scenes/save` | Save scene source |
+| GET | `/api/workspaces?client_id={id}` | List workspaces + active workspace + workspace-scoped settings snapshot |
+| POST | `/api/workspaces` | Create workspace for client context |
+| POST | `/api/workspaces/active` | Switch active workspace for client |
+| POST | `/api/workspaces/delete` | Delete workspace |
+| POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft |
+| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/post-filters) |
 | GET | `/api/integrators` | List backend integrators + controls |
 | GET | `/api/resolutions` | Resolution presets |
 | POST | `/api/render` | Create render job |
@@ -196,6 +202,7 @@ Run CLI:
 | GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
+| GET | `/api/logs/wait?since={id}&timeout_ms={n}` | Wait for new backend logs (long-poll) |
 
 ## Build
 
@@ -248,10 +255,43 @@ cmake --build build/intermediate/build -j
 ### Web Server
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
+
+`--max-concurrent-renders` controls how many render jobs execute simultaneously (default: `1`).
+Startup prints an ASCII banner with runtime info (host/port, paths, concurrency, and detected core/thread limits).
+
+### Docker Deployment
+
+Build and start on a host machine:
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+Check container status:
+
+```bash
+docker compose ps
+docker compose logs -f xtracer-web
+```
+
+Open: `http://127.0.0.1:${XTRACER_PORT:-8080}`
+
+Notes:
+
+- Scene files are mounted from `./scene` into the container at `/app/scene`.
+- The image builds web frontend support with `XTRACER_ENABLE_RTMIDI=OFF` for simpler runtime dependencies.
+- Set `XTRACER_OMP_NUM_THREADS` in `.env` to control OpenMP worker count.
+
+Stop:
+
+```bash
+docker compose down
+```
 
 ### Math Microbenchmark
 

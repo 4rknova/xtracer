@@ -9,6 +9,11 @@
 #include <iterator>
 #include <ctime>
 #include <vector>
+#include <thread>
+#include <unistd.h>
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 #include <cpp-httplib/httplib.h>
 #include <xtcore/camera.h>
@@ -23,12 +28,23 @@
 
 #include "backend_log.h"
 #include "job_manager.h"
+#include "workspace_manager.h"
 
 namespace xtracer {
 namespace frontend {
 namespace web {
 
 namespace {
+
+size_t runtime_omp_max_threads()
+{
+#if defined(_OPENMP)
+    int n = omp_get_max_threads();
+    return (n > 0) ? static_cast<size_t>(n) : 0;
+#else
+    return 0;
+#endif
+}
 
 std::string json_escape(const std::string &s)
 {
@@ -53,6 +69,24 @@ void send_json(httplib::Response &res, const std::string &json, int status = 200
 {
     res.status = status;
     res.set_content(json, "application/json");
+}
+
+std::string backend_logs_to_json(const std::vector<backend_log_entry_t> &list)
+{
+    std::ostringstream out;
+    out << "{\"entries\":[";
+    for (size_t i = 0; i < list.size(); ++i) {
+        const backend_log_entry_t &e = list[i];
+        if (i) out << ',';
+        out << "{"
+            << "\"id\":" << e.id << ","
+            << "\"ts\":\"" << json_escape(e.timestamp) << "\","
+            << "\"level\":\"" << json_escape(e.level) << "\","
+            << "\"message\":\"" << json_escape(e.message) << "\""
+            << "}";
+    }
+    out << "]}";
+    return out.str();
 }
 
 bool read_binary_file(const std::string &path, std::vector<char> &out)
@@ -302,6 +336,54 @@ bool is_scene_name_safe(const std::string &scene)
     return has_suffix(scene, ".scn");
 }
 
+bool is_client_id_safe(const std::string &client_id)
+{
+    if (client_id.empty() || client_id.size() > 96) return false;
+    for (size_t i = 0; i < client_id.size(); ++i) {
+        const unsigned char c = (unsigned char)client_id[i];
+        if (!(std::isalnum(c) || c == '_' || c == '-' || c == '.')) return false;
+    }
+    return true;
+}
+
+std::string read_client_id(const httplib::Request &req)
+{
+    if (!req.has_param("client_id")) return "";
+    const std::string client_id = req.get_param_value("client_id");
+    if (!is_client_id_safe(client_id)) return "";
+    return client_id;
+}
+
+bool write_workspace_temp_scene(const std::string &workspace_id,
+                                const std::string &scene_name,
+                                const std::string &source,
+                                std::string &out_path)
+{
+    std::string ws = workspace_id.empty() ? "ws" : workspace_id;
+    for (size_t i = 0; i < ws.size(); ++i) {
+        const unsigned char c = (unsigned char)ws[i];
+        if (!(std::isalnum(c) || c == '_' || c == '-')) ws[i] = '_';
+    }
+    std::string scene = scene_name.empty() ? "scene" : scene_name;
+    for (size_t i = 0; i < scene.size(); ++i) {
+        const unsigned char c = (unsigned char)scene[i];
+        if (!(std::isalnum(c) || c == '_' || c == '-')) scene[i] = '_';
+    }
+    std::string pattern = "/tmp/xtracer_ws_" + ws + "_" + scene + "_XXXXXX.scn";
+    std::vector<char> buf(pattern.begin(), pattern.end());
+    buf.push_back('\0');
+    int fd = mkstemps(buf.data(), 4);
+    if (fd < 0) return false;
+    close(fd);
+    out_path = std::string(buf.data());
+    if (!write_text_file(out_path, source)) {
+        unlink(out_path.c_str());
+        out_path.clear();
+        return false;
+    }
+    return true;
+}
+
 bool is_scene_basename_safe(const std::string &name)
 {
     if (name.empty()) return false;
@@ -543,6 +625,7 @@ void serve_static_file(const std::string &path, const char *mime, httplib::Respo
 
 void setup_routes(httplib::Server &server,
                   job_manager_t &jobs,
+                  workspace_manager_t &workspaces,
                   const std::string &scene_dir,
                   const std::string &web_root)
 {
@@ -552,11 +635,16 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/about", [](const httplib::Request &, httplib::Response &res) {
+    server.Get("/api/about", [&jobs](const httplib::Request &, httplib::Response &res) {
         std::time_t now = std::time(nullptr);
         std::tm *utc = std::gmtime(&now);
         int year = utc ? (utc->tm_year + 1900) : 2010;
         if (year < 2010) year = 2010;
+        const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
+        const size_t logical_cores = (logical_cores_raw == 0) ? 1 : static_cast<size_t>(logical_cores_raw);
+        const size_t openmp_max_threads = runtime_omp_max_threads();
+        const size_t max_concurrent_renders = jobs.get_max_concurrent_renders();
+        const size_t active_renders = jobs.get_active_render_count();
 
         std::ostringstream ss;
         ss << "{"
@@ -568,11 +656,169 @@ void setup_routes(httplib::Server &server,
            << "\"website\":\"https://github.com/4rknova/xtracer\","
            << "\"copyright\":\"Copyright 2010-" << year << " (c) Nikolaos Papadopoulos\","
            << "\"license\":\"" << json_escape(xtcore::get_license()) << "\","
+           << "\"max_concurrent_renders\":" << max_concurrent_renders << ","
+           << "\"active_renders\":" << active_renders << ","
+           << "\"logical_cores\":" << logical_cores << ","
+           << "\"openmp_max_threads\":" << openmp_max_threads << ","
            << "\"third_party_licenses\":";
         append_third_party_licenses_json(ss);
         ss
            << "}";
         send_json(res, ss.str());
+    });
+
+    server.Get("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        std::vector<workspace_snapshot_t> list;
+        std::string active_workspace;
+        workspaces.list(client_id, list, active_workspace);
+
+        std::ostringstream ss;
+        ss << "{"
+           << "\"active_workspace\":\"" << json_escape(active_workspace) << "\","
+           << "\"workspaces\":[";
+        for (size_t i = 0; i < list.size(); ++i) {
+            const workspace_snapshot_t &w = list[i];
+            if (i) ss << ",";
+            ss << "{"
+               << "\"id\":\"" << json_escape(w.id) << "\","
+               << "\"name\":\"" << json_escape(w.name) << "\","
+               << "\"active_scene\":\"" << json_escape(w.active_scene) << "\","
+               << "\"active_job_id\":\"" << json_escape(w.active_job_id) << "\","
+               << "\"last_job_id\":\"" << json_escape(w.last_job_id) << "\","
+               << "\"draft_count\":" << w.draft_count << ","
+               << "\"client_count\":" << w.client_count << ","
+               << "\"quality_samples\":" << w.quality_samples << ","
+               << "\"quality_aa\":" << w.quality_aa << ","
+               << "\"quality_sample_distribution\":\"" << json_escape(w.quality_sample_distribution) << "\","
+               << "\"quality_rdepth\":" << w.quality_rdepth << ","
+               << "\"settings_json\":\"" << json_escape(w.settings_json) << "\","
+               << "\"updated_ms\":" << w.updated_ms
+               << "}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Post("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        const std::string name = req.has_param("name") ? req.get_param_value("name") : "";
+        const std::string workspace_id = workspaces.create(name);
+        if (!client_id.empty()) {
+            workspaces.set_active(client_id, workspace_id);
+        }
+
+        std::ostringstream ss;
+        ss << "{"
+           << "\"id\":\"" << json_escape(workspace_id) << "\","
+           << "\"name\":\"" << json_escape(name) << "\""
+           << "}";
+        send_json(res, ss.str(), 201);
+    });
+
+    server.Post("/api/workspaces/active", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        if (client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!req.has_param("workspace_id")) {
+            send_json(res, "{\"error\":\"workspace_id is required\"}", 400);
+            return;
+        }
+        const std::string workspace_id = req.get_param_value("workspace_id");
+        if (!workspaces.set_active(client_id, workspace_id)) {
+            send_json(res, "{\"error\":\"workspace not found\"}", 404);
+            return;
+        }
+        send_json(res, "{\"ok\":true}");
+    });
+
+    server.Post("/api/workspaces/delete", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        if (client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!req.has_param("workspace_id")) {
+            send_json(res, "{\"error\":\"workspace_id is required\"}", 400);
+            return;
+        }
+
+        const std::string workspace_id = req.get_param_value("workspace_id");
+        std::string replacement_workspace_id;
+        const workspace_manager_t::remove_result_t rc = workspaces.remove(workspace_id, replacement_workspace_id);
+        if (rc == workspace_manager_t::REMOVE_NOT_FOUND) {
+            send_json(res, "{\"error\":\"workspace not found\"}", 404);
+            return;
+        }
+        if (rc == workspace_manager_t::REMOVE_LAST_WORKSPACE) {
+            send_json(res, "{\"error\":\"cannot delete last workspace\"}", 409);
+            return;
+        }
+
+        std::string active_workspace;
+        workspaces.get_active(client_id, active_workspace);
+        std::ostringstream ss;
+        ss << "{"
+           << "\"ok\":true,"
+           << "\"replacement_workspace\":\"" << json_escape(replacement_workspace_id) << "\","
+           << "\"active_workspace\":\"" << json_escape(active_workspace) << "\""
+           << "}";
+        send_json(res, ss.str());
+    });
+
+    server.Post("/api/workspaces/scene_draft", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        if (client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!req.has_param("scene")) {
+            send_json(res, "{\"error\":\"scene is required\"}", 400);
+            return;
+        }
+        if (!req.has_param("source")) {
+            send_json(res, "{\"error\":\"source is required\"}", 400);
+            return;
+        }
+        std::string workspace_id;
+        workspaces.get_active(client_id, workspace_id);
+        const std::string scene = req.get_param_value("scene");
+        if (!is_scene_name_safe(scene)) {
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+        if (!workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"))) {
+            send_json(res, "{\"error\":\"workspace not found\"}", 404);
+            return;
+        }
+        send_json(res, "{\"ok\":true}");
+    });
+
+    server.Post("/api/workspaces/settings", [&](const httplib::Request &req, httplib::Response &res) {
+        const std::string client_id = read_client_id(req);
+        if (client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!req.has_param("settings_json")) {
+            send_json(res, "{\"error\":\"settings_json is required\"}", 400);
+            return;
+        }
+
+        std::string workspace_id;
+        workspaces.get_active(client_id, workspace_id);
+        const std::string settings_json = req.get_param_value("settings_json");
+        if (settings_json.size() > 65536) {
+            send_json(res, "{\"error\":\"settings_json too large\"}", 400);
+            return;
+        }
+        if (!workspaces.set_settings_json(workspace_id, settings_json)) {
+            send_json(res, "{\"error\":\"workspace not found\"}", 404);
+            return;
+        }
+        send_json(res, "{\"ok\":true}");
     });
 
     server.Get("/api/scenes", [scene_dir](const httplib::Request &, httplib::Response &res) {
@@ -599,20 +845,36 @@ void setup_routes(httplib::Server &server,
         }
 
         std::vector<backend_log_entry_t> list = backend_log_t::handle().since(since);
-        std::ostringstream out;
-        out << "{\"entries\":[";
-        for (size_t i = 0; i < list.size(); ++i) {
-            const backend_log_entry_t &e = list[i];
-            if (i) out << ',';
-            out << "{"
-                << "\"id\":" << e.id << ","
-                << "\"ts\":\"" << json_escape(e.timestamp) << "\","
-                << "\"level\":\"" << json_escape(e.level) << "\","
-                << "\"message\":\"" << json_escape(e.message) << "\""
-                << "}";
+        send_json(res, backend_logs_to_json(list));
+    });
+
+    server.Get("/api/logs/wait", [](const httplib::Request &req, httplib::Response &res) {
+        unsigned long long since = 0;
+        if (req.has_param("since")) {
+            std::istringstream ss(req.get_param_value("since"));
+            ss >> since;
+            if (ss.fail()) {
+                send_json(res, "{\"error\":\"invalid since\"}", 400);
+                return;
+            }
         }
-        out << "]}";
-        send_json(res, out.str());
+
+        unsigned long timeout_ms = 15000;
+        if (req.has_param("timeout_ms")) {
+            std::istringstream ss(req.get_param_value("timeout_ms"));
+            unsigned long parsed = 0;
+            ss >> parsed;
+            if (ss.fail()) {
+                send_json(res, "{\"error\":\"invalid timeout_ms\"}", 400);
+                return;
+            }
+            if (parsed < 1000) parsed = 1000;
+            if (parsed > 60000) parsed = 60000;
+            timeout_ms = parsed;
+        }
+
+        std::vector<backend_log_entry_t> list = backend_log_t::handle().wait_since(since, timeout_ms);
+        send_json(res, backend_logs_to_json(list));
     });
 
     server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/cameras)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
@@ -641,7 +903,7 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/source)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/source)", [scene_dir, &workspaces](const httplib::Request &req, httplib::Response &res) {
         std::string scene = req.matches[1];
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "source read rejected: invalid scene name");
@@ -650,16 +912,30 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string source;
-        if (!read_text_file(join_path(scene_dir, scene), source)) {
-            backend_log_t::handle().add("error", "source read failed scene=" + scene);
-            send_json(res, "{\"error\":\"failed to read scene\"}", 404);
-            return;
+        std::string source_origin = "disk";
+        const std::string client_id = read_client_id(req);
+        if (!client_id.empty()) {
+            std::string workspace_id;
+            workspaces.get_active(client_id, workspace_id);
+            std::string draft;
+            if (workspaces.get_scene_draft(workspace_id, scene, draft)) {
+                source.swap(draft);
+                source_origin = "workspace";
+            }
+        }
+        if (source.empty()) {
+            if (!read_text_file(join_path(scene_dir, scene), source)) {
+                backend_log_t::handle().add("error", "source read failed scene=" + scene);
+                send_json(res, "{\"error\":\"failed to read scene\"}", 404);
+                return;
+            }
         }
 
         std::ostringstream ss;
         ss << "{"
            << "\"scene\":\"" << json_escape(scene) << "\","
-           << "\"source\":\"" << json_escape(source) << "\""
+           << "\"source\":\"" << json_escape(source) << "\","
+           << "\"source_origin\":\"" << json_escape(source_origin) << "\""
            << "}";
         send_json(res, ss.str());
     });
@@ -743,7 +1019,7 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post("/api/scenes/save", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+    server.Post("/api/scenes/save", [scene_dir, &workspaces](const httplib::Request &req, httplib::Response &res) {
         if (!req.has_param("name")) {
             backend_log_t::handle().add("warn", "scene save rejected: name missing");
             send_json(res, "{\"error\":\"name is required\"}", 400);
@@ -782,6 +1058,13 @@ void setup_routes(httplib::Server &server,
             backend_log_t::handle().add("error", "scene save failed scene=" + scene_name);
             send_json(res, "{\"error\":\"failed to write scene\"}", 500);
             return;
+        }
+        const std::string client_id = read_client_id(req);
+        if (!client_id.empty()) {
+            std::string workspace_id;
+            workspaces.get_active(client_id, workspace_id);
+            workspaces.set_scene_draft(workspace_id, scene_name, source);
+            workspaces.set_active_scene(workspace_id, scene_name);
         }
         backend_log_t::handle().add("info", "scene saved scene=" + scene_name);
 
@@ -837,6 +1120,29 @@ void setup_routes(httplib::Server &server,
 
         common::render_request_t rr;
         rr.scene_path = join_path(scene_dir, scene);
+
+        std::string workspace_id;
+        if (req.has_param("workspace_id")) {
+            workspace_id = req.get_param_value("workspace_id");
+        }
+        if (workspace_id.empty()) {
+            const std::string client_id = read_client_id(req);
+            if (!client_id.empty()) {
+                workspaces.get_active(client_id, workspace_id);
+            }
+        }
+        if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
+        workspaces.set_active_scene(workspace_id, scene);
+
+        std::string cleanup_scene_path;
+        std::string draft_source;
+        if (workspaces.get_scene_draft(workspace_id, scene, draft_source) && !draft_source.empty()) {
+            std::string tmp_scene_path;
+            if (write_workspace_temp_scene(workspace_id, scene, draft_source, tmp_scene_path)) {
+                rr.scene_path = tmp_scene_path;
+                cleanup_scene_path = tmp_scene_path;
+            }
+        }
 
         if (req.has_param("integrator")) rr.integrator = req.get_param_value("integrator");
         if (!common::is_integrator_supported(rr.integrator)) {
@@ -914,9 +1220,13 @@ void setup_routes(httplib::Server &server,
             return;
         }
 
-        std::string job_id = jobs.create(rr, scene);
+        std::string job_id = jobs.create(rr, scene, workspace_id, cleanup_scene_path);
+        workspaces.mark_job_started(workspace_id, job_id);
         std::ostringstream ss;
-        ss << "{\"job_id\":\"" << json_escape(job_id) << "\"}";
+        ss << "{"
+           << "\"job_id\":\"" << json_escape(job_id) << "\","
+           << "\"workspace_id\":\"" << json_escape(workspace_id) << "\""
+           << "}";
         send_json(res, ss.str(), 202);
     });
 
@@ -1057,10 +1367,14 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"job not found\"}", 404);
             return;
         }
+        if (snap.state == JOB_DONE || snap.state == JOB_ERROR) {
+            workspaces.mark_job_finished(snap.workspace_id, snap.id);
+        }
 
         std::ostringstream ss;
         ss << "{"
            << "\"id\":\"" << json_escape(snap.id) << "\","
+           << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
            << "\"scene\":\"" << json_escape(snap.scene) << "\","
            << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
            << "\"state\":\"" << job_state_name(snap.state) << "\","
