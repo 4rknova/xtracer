@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <dirent.h>
 #include <fstream>
@@ -10,6 +11,11 @@
 #include <ctime>
 #include <vector>
 #include <thread>
+#include <memory>
+#include <mutex>
+#include <unordered_map>
+#include <chrono>
+#include <sys/stat.h>
 #include <unistd.h>
 #if defined(_OPENMP)
 #include <omp.h>
@@ -17,10 +23,22 @@
 
 #include <cpp-httplib/httplib.h>
 #include <xtcore/camera.h>
+#include <xtcore/math/plane.h>
+#include <xtcore/math/sphere.h>
 #include <xtcore/math/triangle.h>
+#include <xtcore/material.h>
 #include <xtcore/mesh.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/resolution_preset.h>
+#include <xtcore/sampler/sampler_checker.h>
+#include <xtcore/sampler/sampler_col.h>
+#include <xtcore/sampler/sampler_cubemap.h>
+#include <xtcore/sampler/sampler_erp.h>
+#include <xtcore/sampler/sampler_fbm_marble.h>
+#include <xtcore/sampler/sampler_gradient.h>
+#include <xtcore/sampler/sampler_graphpaper.h>
+#include <xtcore/sampler/sampler_tex.h>
+#include <xtcore/sampler/sampler_weave.h>
 #include <xtcore/scene.h>
 #include <xtcore/strpool.h>
 #include <xtcore/tonemapping/tonemapping.h>
@@ -44,6 +62,20 @@ size_t runtime_omp_max_threads()
 #else
     return 0;
 #endif
+}
+
+size_t runtime_logical_cores()
+{
+    const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
+    return (logical_cores_raw == 0) ? 1 : static_cast<size_t>(logical_cores_raw);
+}
+
+size_t compute_auto_render_threads(size_t reserve_threads)
+{
+    const size_t logical_cores = runtime_logical_cores();
+    const size_t openmp_max_threads = runtime_omp_max_threads();
+    const size_t capacity = (openmp_max_threads > 0) ? openmp_max_threads : logical_cores;
+    return (capacity > reserve_threads) ? (capacity - reserve_threads) : 1;
 }
 
 std::string json_escape(const std::string &s)
@@ -211,6 +243,78 @@ bool parse_tonemapping_operator(const std::string &s, xtcore::tonemapping::opera
         return true;
     }
     return false;
+}
+
+bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping::settings_t &tm_settings, std::string &error_json)
+{
+    if (req.has_param("tm")) {
+        std::string tm = req.get_param_value("tm");
+        std::transform(tm.begin(), tm.end(), tm.begin(),
+            [](unsigned char c) { return (char)std::tolower(c); });
+        if (!parse_tonemapping_operator(tm, tm_settings.op)) {
+            error_json = "{\"error\":\"invalid tone mapping operator\"}";
+            return false;
+        }
+    }
+    if (req.has_param("tm_exposure")) {
+        std::istringstream es(req.get_param_value("tm_exposure"));
+        float exposure = 1.0f;
+        es >> exposure;
+        if (es.fail() || exposure <= 0.0f) {
+            error_json = "{\"error\":\"invalid tone mapping exposure\"}";
+            return false;
+        }
+        tm_settings.exposure = exposure;
+    }
+    if (req.has_param("tm_white_point")) {
+        std::istringstream ws(req.get_param_value("tm_white_point"));
+        float white_point = 1.0f;
+        ws >> white_point;
+        if (ws.fail() || white_point <= 0.0f) {
+            error_json = "{\"error\":\"invalid tone mapping white point\"}";
+            return false;
+        }
+        tm_settings.white_point = white_point;
+    }
+    if (req.has_param("tm_mantiuk_contrast")) {
+        std::istringstream cs(req.get_param_value("tm_mantiuk_contrast"));
+        float v = 0.1f;
+        cs >> v;
+        if (cs.fail() || v < 0.0f || v > 1.0f) {
+            error_json = "{\"error\":\"invalid mantiuk contrast\"}";
+            return false;
+        }
+        tm_settings.mantiuk_contrast = v;
+    }
+    if (req.has_param("tm_mantiuk_saturation")) {
+        std::istringstream ss(req.get_param_value("tm_mantiuk_saturation"));
+        float v = 0.8f;
+        ss >> v;
+        if (ss.fail() || v < 0.0f || v > 2.0f) {
+            error_json = "{\"error\":\"invalid mantiuk saturation\"}";
+            return false;
+        }
+        tm_settings.mantiuk_saturation = v;
+    }
+    if (req.has_param("tm_mantiuk_detail")) {
+        std::istringstream ds(req.get_param_value("tm_mantiuk_detail"));
+        float v = 1.0f;
+        ds >> v;
+        if (ds.fail() || v < 1.0f || v > 99.0f) {
+            error_json = "{\"error\":\"invalid mantiuk detail\"}";
+            return false;
+        }
+        tm_settings.mantiuk_detail = v;
+    }
+    return true;
+}
+
+void append_u32le(std::vector<unsigned char> &out, uint32_t v)
+{
+    out.push_back((unsigned char)(v & 0xFFu));
+    out.push_back((unsigned char)((v >> 8) & 0xFFu));
+    out.push_back((unsigned char)((v >> 16) & 0xFFu));
+    out.push_back((unsigned char)((v >> 24) & 0xFFu));
 }
 
 bool has_suffix(const std::string &s, const std::string &suffix)
@@ -419,6 +523,33 @@ std::string dirname_path(const std::string &path)
     return path.substr(0, slash);
 }
 
+std::string normalize_path_slashes(const std::string &path)
+{
+    if (path.empty()) return std::string();
+    std::string out = path;
+    for (size_t i = 0; i < out.size(); ++i) {
+        if (out[i] == '\\') out[i] = '/';
+    }
+    return out;
+}
+
+std::string make_asset_relpath_for_scene(const std::string &scene_path, const std::string &asset_path)
+{
+    const std::string full = normalize_path_slashes(asset_path);
+    if (full.empty()) return std::string();
+    if (full[0] != '/') return full;
+
+    const std::string scene_dir = normalize_path_slashes(dirname_path(scene_path));
+    const std::string root_dir = normalize_path_slashes(dirname_path(scene_dir));
+    if (root_dir.empty()) return std::string();
+
+    std::string prefix = root_dir;
+    if (!prefix.empty() && prefix[prefix.size() - 1] != '/') prefix += "/";
+    if (full.size() <= prefix.size()) return std::string();
+    if (full.compare(0, prefix.size(), prefix) != 0) return std::string();
+    return full.substr(prefix.size());
+}
+
 bool is_asset_relpath_safe(const std::string &path)
 {
     if (path.empty()) return false;
@@ -452,6 +583,22 @@ struct camera_list_info_t
     std::string default_camera;
 };
 
+bool file_mtime(const std::string &path, std::uint64_t &out)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return false;
+    std::uint64_t sec = (st.st_mtime >= 0) ? (std::uint64_t)st.st_mtime : 0ULL;
+    std::uint64_t nsec = 0ULL;
+#if defined(__linux__)
+    nsec = (st.st_mtim.tv_nsec >= 0) ? (std::uint64_t)st.st_mtim.tv_nsec : 0ULL;
+#elif defined(__APPLE__)
+    nsec = (st.st_mtimespec.tv_nsec >= 0) ? (std::uint64_t)st.st_mtimespec.tv_nsec : 0ULL;
+#endif
+    const std::uint64_t size = (st.st_size >= 0) ? (std::uint64_t)st.st_size : 0ULL;
+    out = ((sec & 0xffffffffULL) << 32) ^ (nsec & 0xffffffffULL) ^ (size * 0x9e3779b97f4a7c15ULL);
+    return true;
+}
+
 HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &name)
 {
     if (name.empty()) return HASH_ID_INVALID;
@@ -462,35 +609,20 @@ HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &na
     return HASH_ID_INVALID;
 }
 
-camera_list_info_t list_cameras(const std::string &scene_path, std::string &error)
+camera_list_info_t list_cameras_from_scene(const xtcore::Scene &scene)
 {
     camera_list_info_t out;
-    xtcore::Scene scene;
-    int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
-    if (load_err) {
-        error = "failed to load scene";
-        return out;
-    }
-
     for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
         const char *name = xtcore::pool::str::get((*it).first);
         if (name && *name) out.cameras.push_back(name);
     }
-
     std::sort(out.cameras.begin(), out.cameras.end());
     out.default_camera = scene.m_default_camera;
     return out;
 }
 
-std::string scene_geometry_json(const std::string &scene_path, std::string &error)
+std::string scene_geometry_json_from_scene(const xtcore::Scene &scene)
 {
-    xtcore::Scene scene;
-    int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
-    if (load_err) {
-        error = "failed to load scene";
-        return std::string();
-    }
-
     std::ostringstream ss;
     ss << "{\"meshes\":{";
     bool first_mesh = true;
@@ -530,6 +662,17 @@ std::string scene_geometry_json(const std::string &scene_path, std::string &erro
                 ss << tri.n[v].x << "," << tri.n[v].y << "," << tri.n[v].z;
             }
         }
+        ss << "],\"uvs\":[";
+
+        first_value = true;
+        for (size_t i = 0; i < tris.size(); ++i) {
+            const xtcore::surface::Triangle &tri = tris[i];
+            for (size_t v = 0; v < 3; ++v) {
+                if (!first_value) ss << ",";
+                first_value = false;
+                ss << tri.tc[v].x << "," << tri.tc[v].y;
+            }
+        }
         ss << "]}";
     }
 
@@ -537,25 +680,429 @@ std::string scene_geometry_json(const std::string &scene_path, std::string &erro
     return ss.str();
 }
 
-std::string scene_resolved_camera_json(const std::string &scene_path,
-                                       const std::string &requested_camera,
-                                       std::string &error)
+const char *surface_type_name(const xtcore::asset::ISurface *surface)
 {
-    xtcore::Scene scene;
-    int load_err = xtcore::io::scn::load(&scene, scene_path.c_str(), nullptr);
-    if (load_err) {
-        error = "failed to load scene";
-        return std::string();
+    if (!surface) return "surface";
+    if (dynamic_cast<const xtcore::surface::Plane *>(surface)) return "plane";
+    if (dynamic_cast<const xtcore::surface::Sphere *>(surface)) return "sphere";
+    if (dynamic_cast<const xtcore::surface::Triangle *>(surface)) return "triangle";
+    if (dynamic_cast<const xtcore::surface::Mesh *>(surface)) return "mesh";
+    return "surface";
+}
+
+const char *material_type_name(const xtcore::asset::IMaterial *mat)
+{
+    if (!mat) return "material";
+    if (dynamic_cast<const xtcore::asset::material::Lambert *>(mat)) return "lambert";
+    if (dynamic_cast<const xtcore::asset::material::Phong *>(mat)) return "phong";
+    if (dynamic_cast<const xtcore::asset::material::BlinnPhong *>(mat)) return "blinn_phong";
+    if (dynamic_cast<const xtcore::asset::material::Emissive *>(mat)) return "emissive";
+    if (dynamic_cast<const xtcore::asset::material::Dielectric *>(mat)) return "dielectric";
+    return "material";
+}
+
+const char *sampler_type_name(const xtcore::sampler::ISampler *sampler)
+{
+    if (!sampler) return "sampler";
+    if (dynamic_cast<const xtcore::sampler::Texture2D *>(sampler)) return "texture";
+    if (dynamic_cast<const xtcore::sampler::Cubemap *>(sampler)) return "cubemap";
+    if (dynamic_cast<const xtcore::sampler::ERP *>(sampler)) return "erp";
+    if (dynamic_cast<const xtcore::sampler::Gradient *>(sampler)) return "gradient";
+    if (dynamic_cast<const xtcore::sampler::Checker *>(sampler)) return "checker";
+    if (dynamic_cast<const xtcore::sampler::GraphPaper *>(sampler)) return "graphpaper";
+    if (dynamic_cast<const xtcore::sampler::Weave *>(sampler)) return "weave";
+    if (dynamic_cast<const xtcore::sampler::FBMMarble *>(sampler)) return "fbm_marble";
+    if (dynamic_cast<const xtcore::sampler::SolidColor *>(sampler)) return "color";
+    return "sampler";
+}
+
+std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, const xtcore::Scene &scene)
+{
+    std::ostringstream ss;
+    ss << "{";
+
+    ss << "\"cameras\":[";
+    bool first = true;
+    for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+        const xtcore::asset::ICamera *cam = (*it).second;
+        const xtcore::camera::Perspective *pcam = dynamic_cast<const xtcore::camera::Perspective *>(cam);
+        const xtcore::camera::ERP *ecam = dynamic_cast<const xtcore::camera::ERP *>(cam);
+        const xtcore::camera::ODS *ocam = dynamic_cast<const xtcore::camera::ODS *>(cam);
+        if (!first) ss << ",";
+        first = false;
+        ss << "{"
+           << "\"id\":\"" << json_escape(name) << "\","
+           << "\"type\":\"" << json_escape(cam ? cam->get_type() : "camera") << "\"";
+        if (cam) {
+            ss << ",\"position\":[" << cam->position.x << "," << cam->position.y << "," << cam->position.z << "]";
+        }
+        if (pcam) {
+            ss << ",\"target\":[" << pcam->target.x << "," << pcam->target.y << "," << pcam->target.z << "]";
+            ss << ",\"up\":[" << pcam->up.x << "," << pcam->up.y << "," << pcam->up.z << "]";
+            ss << ",\"fov\":" << pcam->fov;
+            ss << ",\"aperture\":" << pcam->aperture;
+            ss << ",\"flength\":" << pcam->flength;
+        } else if (ecam) {
+            ss << ",\"orientation\":[" << ecam->orientation.x << "," << ecam->orientation.y << "," << ecam->orientation.z << "]";
+        } else if (ocam) {
+            ss << ",\"orientation\":[" << ocam->orientation.x << "," << ocam->orientation.y << "," << ocam->orientation.z << "]";
+            ss << ",\"ipd\":" << ocam->ipd;
+        }
+        ss << "}";
+    }
+    ss << "],";
+
+    ss << "\"surfaces\":[";
+    first = true;
+    for (auto it = scene.m_surface.begin(); it != scene.m_surface.end(); ++it) {
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+        const xtcore::asset::ISurface *surface = (*it).second;
+        if (!first) ss << ",";
+        first = false;
+        ss << "{"
+           << "\"id\":\"" << json_escape(name) << "\","
+           << "\"type\":\"" << surface_type_name(surface) << "\"";
+        if (const xtcore::surface::Sphere *sphere = dynamic_cast<const xtcore::surface::Sphere *>(surface)) {
+            ss << ",\"position\":[" << sphere->origin.x << "," << sphere->origin.y << "," << sphere->origin.z << "]";
+            ss << ",\"radius\":" << sphere->radius;
+        } else if (const xtcore::surface::Plane *plane = dynamic_cast<const xtcore::surface::Plane *>(surface)) {
+            ss << ",\"normal\":[" << plane->normal.x << "," << plane->normal.y << "," << plane->normal.z << "]";
+            ss << ",\"distance\":" << plane->offset;
+        } else if (const xtcore::surface::Triangle *tri = dynamic_cast<const xtcore::surface::Triangle *>(surface)) {
+            ss << ",\"v0\":[" << tri->v[0].x << "," << tri->v[0].y << "," << tri->v[0].z << "]";
+            ss << ",\"v1\":[" << tri->v[1].x << "," << tri->v[1].y << "," << tri->v[1].z << "]";
+            ss << ",\"v2\":[" << tri->v[2].x << "," << tri->v[2].y << "," << tri->v[2].z << "]";
+        } else if (const xtcore::surface::Mesh *mesh = dynamic_cast<const xtcore::surface::Mesh *>(surface)) {
+            ss << ",\"triangles\":" << mesh->triangles().size();
+        }
+        ss
+           << "}";
+    }
+    ss << "],";
+
+    ss << "\"materials\":[";
+    first = true;
+    for (auto it = scene.m_materials.begin(); it != scene.m_materials.end(); ++it) {
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+        const xtcore::asset::IMaterial *mat = (*it).second;
+        if (!first) ss << ",";
+        first = false;
+        ss << "{"
+           << "\"id\":\"" << json_escape(name) << "\","
+           << "\"type\":\"" << material_type_name(mat) << "\"";
+
+        ss << ",\"scalars\":[";
+        bool first_scalar = true;
+        if (mat) {
+            xtcore::asset::IMaterial *rw_mat = const_cast<xtcore::asset::IMaterial *>(mat);
+            for (size_t i = 0; i < mat->get_scalar_count(); ++i) {
+                std::string scalar_name;
+                const float scalar_value = rw_mat->get_scalar_by_index(i, &scalar_name);
+                if (!first_scalar) ss << ",";
+                first_scalar = false;
+                ss << "{"
+                   << "\"name\":\"" << json_escape(scalar_name) << "\","
+                   << "\"value\":" << scalar_value
+                   << "}";
+            }
+        }
+        ss << "]";
+
+        ss << ",\"samplers\":[";
+        bool first_sampler = true;
+        if (mat) {
+            xtcore::asset::IMaterial *rw_mat = const_cast<xtcore::asset::IMaterial *>(mat);
+            for (size_t i = 0; i < mat->get_sampler_count(); ++i) {
+                std::string sampler_name;
+                xtcore::sampler::ISampler *sampler = rw_mat->get_sampler_by_index(i, &sampler_name);
+                if (!sampler) continue;
+                if (!first_sampler) ss << ",";
+                first_sampler = false;
+
+                std::string texture_asset_relpath;
+                const xtcore::sampler::Texture2D *tex = dynamic_cast<const xtcore::sampler::Texture2D *>(sampler);
+                if (tex) {
+                    texture_asset_relpath = make_asset_relpath_for_scene(scene_path, tex->source_path());
+                }
+
+                ss << "{"
+                   << "\"name\":\"" << json_escape(sampler_name) << "\","
+                   << "\"type\":\"" << sampler_type_name(sampler) << "\"";
+                const xtcore::sampler::SolidColor *solid = dynamic_cast<const xtcore::sampler::SolidColor *>(sampler);
+                if (solid) {
+                    nimg::ColorRGBf c;
+                    xtcore::sampler::SolidColor *rw_solid = const_cast<xtcore::sampler::SolidColor *>(solid);
+                    rw_solid->get(c);
+                    ss << ",\"color\":[" << c.r() << "," << c.g() << "," << c.b() << "]";
+                }
+                if (!texture_asset_relpath.empty()) {
+                    ss << ",\"asset\":\"" << json_escape(texture_asset_relpath) << "\"";
+                }
+                ss << "}";
+            }
+        }
+        ss << "]";
+
+        ss << "}";
+    }
+    ss << "],";
+
+    ss << "\"objects\":[";
+    first = true;
+    for (auto it = scene.m_objects.begin(); it != scene.m_objects.end(); ++it) {
+        const char *obj_name_c = xtcore::pool::str::get((*it).first);
+        const std::string obj_name = obj_name_c ? std::string(obj_name_c) : std::string();
+        if (obj_name.empty()) continue;
+        const xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+        const char *surface_name_c = xtcore::pool::str::get(obj->surface);
+        const std::string surface_name = surface_name_c ? std::string(surface_name_c) : std::string();
+        const char *material_name_c = xtcore::pool::str::get(obj->material);
+        const std::string material_name = material_name_c ? std::string(material_name_c) : std::string();
+        if (!first) ss << ",";
+        first = false;
+        ss << "{"
+           << "\"id\":\"" << json_escape(obj_name) << "\","
+           << "\"surface\":\"" << json_escape(surface_name) << "\","
+           << "\"material\":\"" << json_escape(material_name) << "\""
+           << "}";
+    }
+    ss << "]";
+
+    ss << "}";
+    return ss.str();
+}
+
+struct scene_cache_entry_t
+{
+    std::string scene_path;
+    std::uint64_t mtime;
+    std::shared_ptr<xtcore::Scene> scene;
+    camera_list_info_t cameras;
+    std::string geometry_json;
+    std::string runtime_graph_json;
+};
+
+struct scene_cache_lookup_t
+{
+    std::shared_ptr<scene_cache_entry_t> entry;
+    bool cache_hit;
+    bool loading;
+    unsigned long long load_job_id;
+    std::string error;
+
+    scene_cache_lookup_t()
+        : entry()
+        , cache_hit(false)
+        , loading(false)
+        , load_job_id(0ULL)
+        , error()
+    {}
+};
+
+struct scene_pending_load_t
+{
+    std::uint64_t mtime;
+    unsigned long long job_id;
+};
+
+class scene_cache_t
+{
+    public:
+    static scene_cache_t &handle()
+    {
+        static scene_cache_t c;
+        return c;
     }
 
-    HASH_ID resolved_id = HASH_ID_INVALID;
-    HASH_ID requested_id = HASH_ID_INVALID;
-    bool release_requested_id = false;
+    scene_cache_lookup_t get_or_load(const std::string &scene_path)
+    {
+        scene_cache_lookup_t out;
 
+        std::uint64_t mtime = 0ULL;
+        if (!file_mtime(scene_path, mtime)) {
+            out.error = "scene file not found";
+            return out;
+        }
+
+        unsigned long long pending_job_id = 0ULL;
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            auto it = entries.find(scene_path);
+            if (it != entries.end() && it->second && it->second->mtime == mtime) {
+                out.cache_hit = true;
+                backend_log_t::handle().add("debug", "scene cache hit path=" + scene_path);
+                out.entry = it->second;
+                return out;
+            }
+
+            auto pit = pending.find(scene_path);
+            if (pit != pending.end()) {
+                if (pit->second.mtime == mtime) {
+                    pending_job_id = pit->second.job_id;
+                } else {
+                    xtcore::io::scn::load_async_discard(pit->second.job_id);
+                    pending.erase(pit);
+                }
+            }
+        }
+
+        if (!pending_job_id) {
+            pending_job_id = xtcore::io::scn::load_async_start(scene_path.c_str(), nullptr);
+            if (!pending_job_id) {
+                out.error = "failed to start async scene load";
+                return out;
+            }
+            {
+                std::lock_guard<std::mutex> lock(mut);
+                scene_pending_load_t p;
+                p.mtime = mtime;
+                p.job_id = pending_job_id;
+                pending[scene_path] = p;
+            }
+            std::ostringstream log;
+            log << "scene async load started path=" << scene_path << " job_id=" << pending_job_id;
+            backend_log_t::handle().add("debug", log.str());
+            out.loading = true;
+            out.load_job_id = pending_job_id;
+            return out;
+        }
+
+        xtcore::io::scn::async_load_snapshot_t snapshot;
+        if (!xtcore::io::scn::load_async_snapshot(pending_job_id, &snapshot)) {
+            std::lock_guard<std::mutex> lock(mut);
+            auto pit = pending.find(scene_path);
+            if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
+            out.error = "scene load job not found";
+            return out;
+        }
+
+        if (snapshot.state == xtcore::io::scn::ASYNC_LOAD_QUEUED
+            || snapshot.state == xtcore::io::scn::ASYNC_LOAD_RUNNING) {
+            out.loading = true;
+            out.load_job_id = pending_job_id;
+            return out;
+        }
+
+        if (snapshot.state == xtcore::io::scn::ASYNC_LOAD_ERROR) {
+            xtcore::io::scn::load_async_discard(pending_job_id);
+            std::lock_guard<std::mutex> lock(mut);
+            auto pit = pending.find(scene_path);
+            if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
+            out.error = snapshot.error.empty() ? "failed to load scene" : snapshot.error;
+            return out;
+        }
+
+        std::shared_ptr<xtcore::Scene> loaded_scene = xtcore::io::scn::load_async_take_scene(pending_job_id);
+        if (!loaded_scene) {
+            out.loading = true;
+            out.load_job_id = pending_job_id;
+            return out;
+        }
+
+        std::shared_ptr<scene_cache_entry_t> entry(new scene_cache_entry_t());
+        entry->scene_path = scene_path;
+        entry->mtime = mtime;
+        entry->scene = loaded_scene;
+
+        auto t_pack_0 = std::chrono::steady_clock::now();
+        entry->cameras = list_cameras_from_scene(*entry->scene);
+        entry->geometry_json = scene_geometry_json_from_scene(*entry->scene);
+        entry->runtime_graph_json = scene_runtime_graph_json_from_scene(scene_path, *entry->scene);
+        auto t_pack_1 = std::chrono::steady_clock::now();
+        const long long pack_ms = (long long)std::chrono::duration_cast<std::chrono::milliseconds>(t_pack_1 - t_pack_0).count();
+
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            entries[scene_path] = entry;
+            auto pit = pending.find(scene_path);
+            if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
+        }
+        xtcore::io::scn::load_async_discard(pending_job_id);
+        xtcore::io::scn::load_async_gc_done(128);
+
+        std::ostringstream log;
+        log << "scene cache miss path=" << scene_path
+            << " async_job_id=" << pending_job_id
+            << " pack_ms=" << pack_ms;
+        backend_log_t::handle().add("debug", log.str());
+        out.entry = entry;
+        return out;
+    }
+
+    void invalidate(const std::string &scene_path)
+    {
+        std::lock_guard<std::mutex> lock(mut);
+        auto pit = pending.find(scene_path);
+        if (pit != pending.end()) {
+            xtcore::io::scn::load_async_discard(pit->second.job_id);
+            pending.erase(pit);
+        }
+        entries.erase(scene_path);
+    }
+
+    bool load_job_snapshot(unsigned long long id, xtcore::io::scn::async_load_snapshot_t &snapshot)
+    {
+        return xtcore::io::scn::load_async_snapshot(id, &snapshot);
+    }
+
+    private:
+    scene_cache_t() = default;
+    scene_cache_t(const scene_cache_t &) = delete;
+    scene_cache_t &operator=(const scene_cache_t &) = delete;
+
+    std::mutex mut;
+    std::unordered_map<std::string, std::shared_ptr<scene_cache_entry_t> > entries;
+    std::unordered_map<std::string, scene_pending_load_t> pending;
+};
+
+camera_list_info_t list_cameras(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry) return camera_list_info_t();
+    return entry->cameras;
+}
+
+std::string scene_geometry_json(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry) return std::string();
+    return entry->geometry_json;
+}
+
+std::string scene_resolved_camera_json(const std::string &scene_path,
+                                       const std::string &requested_camera,
+                                       std::string &error,
+                                       bool &loading,
+                                       unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry) return std::string();
+    if (!entry->scene) {
+        error = "scene not available";
+        return std::string();
+    }
+    xtcore::Scene &scene = *(entry->scene);
+
+    HASH_ID resolved_id = HASH_ID_INVALID;
     if (!requested_camera.empty()) {
-        requested_id = xtcore::pool::str::add(requested_camera.c_str());
-        release_requested_id = true;
-        if (scene.get_camera(requested_id)) resolved_id = requested_id;
+        resolved_id = find_camera_id_by_name(scene, requested_camera);
     }
     if (resolved_id == HASH_ID_INVALID) {
         resolved_id = find_camera_id_by_name(scene, scene.m_default_camera);
@@ -566,7 +1113,6 @@ std::string scene_resolved_camera_json(const std::string &scene_path,
     }
 
     if (resolved_id == HASH_ID_INVALID || !scene.get_camera(resolved_id)) {
-        if (release_requested_id) xtcore::pool::str::del(requested_id);
         error = "no valid camera found";
         return std::string();
     }
@@ -595,9 +1141,28 @@ std::string scene_resolved_camera_json(const std::string &scene_path,
         ss << "}";
     }
     ss << "}";
-
-    if (release_requested_id) xtcore::pool::str::del(requested_id);
     return ss.str();
+}
+
+std::string scene_runtime_graph_json(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry) return std::string();
+    return entry->runtime_graph_json;
+}
+
+void send_scene_loading(httplib::Response &res, unsigned long long load_job_id)
+{
+    std::ostringstream ss;
+    ss << "{"
+       << "\"state\":\"loading\","
+       << "\"job_id\":" << load_job_id
+       << "}";
+    send_json(res, ss.str(), 202);
 }
 
 const char *job_state_name(job_state_t state)
@@ -627,7 +1192,8 @@ void setup_routes(httplib::Server &server,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
                   const std::string &scene_dir,
-                  const std::string &web_root)
+                  const std::string &web_root,
+                  const render_thread_policy_t &thread_policy)
 {
     backend_log_t::handle().add("info", "web routes initialized");
 
@@ -635,14 +1201,15 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/about", [&jobs](const httplib::Request &, httplib::Response &res) {
+    server.Get("/api/about", [&jobs, thread_policy](const httplib::Request &, httplib::Response &res) {
         std::time_t now = std::time(nullptr);
         std::tm *utc = std::gmtime(&now);
         int year = utc ? (utc->tm_year + 1900) : 2010;
         if (year < 2010) year = 2010;
-        const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
-        const size_t logical_cores = (logical_cores_raw == 0) ? 1 : static_cast<size_t>(logical_cores_raw);
+        const size_t logical_cores = runtime_logical_cores();
         const size_t openmp_max_threads = runtime_omp_max_threads();
+        const size_t reserve_threads = thread_policy.reserve_threads;
+        const size_t auto_render_threads = compute_auto_render_threads(reserve_threads);
         const size_t max_concurrent_renders = jobs.get_max_concurrent_renders();
         const size_t active_renders = jobs.get_active_render_count();
 
@@ -660,6 +1227,8 @@ void setup_routes(httplib::Server &server,
            << "\"active_renders\":" << active_renders << ","
            << "\"logical_cores\":" << logical_cores << ","
            << "\"openmp_max_threads\":" << openmp_max_threads << ","
+           << "\"render_reserve_threads\":" << reserve_threads << ","
+           << "\"render_auto_threads\":" << auto_render_threads << ","
            << "\"third_party_licenses\":";
         append_third_party_licenses_json(ss);
         ss
@@ -672,10 +1241,20 @@ void setup_routes(httplib::Server &server,
         std::vector<workspace_snapshot_t> list;
         std::string active_workspace;
         workspaces.list(client_id, list, active_workspace);
+        const xtcore::spatial_index_stats_t spatial_stats = xtcore::get_last_spatial_index_stats();
 
         std::ostringstream ss;
         ss << "{"
            << "\"active_workspace\":\"" << json_escape(active_workspace) << "\","
+           << "\"spatial_index\":{"
+           << "\"total_objects\":" << spatial_stats.total_objects << ","
+           << "\"finite_objects\":" << spatial_stats.finite_objects << ","
+           << "\"infinite_objects\":" << spatial_stats.infinite_objects << ","
+           << "\"tlas_nodes\":" << spatial_stats.tlas_nodes << ","
+           << "\"tlas_leaves\":" << spatial_stats.tlas_leaves << ","
+           << "\"build_ms\":" << spatial_stats.build_ms << ","
+           << "\"build_count\":" << spatial_stats.build_count
+           << "},"
            << "\"workspaces\":[";
         for (size_t i = 0; i < list.size(); ++i) {
             const workspace_snapshot_t &w = list[i];
@@ -877,6 +1456,31 @@ void setup_routes(httplib::Server &server,
         send_json(res, backend_logs_to_json(list));
     });
 
+    server.Get(R"(/api/scenes/load_jobs/([0-9]+))", [](const httplib::Request &req, httplib::Response &res) {
+        unsigned long long id = 0ULL;
+        std::istringstream ss(req.matches[1].str());
+        ss >> id;
+        if (ss.fail() || !id) {
+            send_json(res, "{\"error\":\"invalid job id\"}", 400);
+            return;
+        }
+
+        xtcore::io::scn::async_load_snapshot_t snap;
+        if (!scene_cache_t::handle().load_job_snapshot(id, snap)) {
+            send_json(res, "{\"error\":\"job not found\"}", 404);
+            return;
+        }
+
+        std::ostringstream out;
+        out << "{"
+            << "\"job_id\":" << snap.id << ","
+            << "\"state\":\"" << json_escape(snap.state_name) << "\","
+            << "\"filename\":\"" << json_escape(snap.filename) << "\","
+            << "\"error\":\"" << json_escape(snap.error) << "\""
+            << "}";
+        send_json(res, out.str());
+    });
+
     server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/cameras)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
         std::string scene = req.matches[1];
         if (!is_scene_name_safe(scene)) {
@@ -886,7 +1490,13 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string error;
-        camera_list_info_t cameras = list_cameras(join_path(scene_dir, scene), error);
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        camera_list_info_t cameras = list_cameras(join_path(scene_dir, scene), error, loading, load_job_id);
+        if (loading) {
+            send_scene_loading(res, load_job_id);
+            return;
+        }
         if (!error.empty()) {
             backend_log_t::handle().add("error", "camera list failed for scene=" + scene);
             send_json(res, "{\"error\":\"failed to load scene\"}", 400);
@@ -949,9 +1559,40 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string error;
-        std::string payload = scene_geometry_json(join_path(scene_dir, scene), error);
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        std::string payload = scene_geometry_json(join_path(scene_dir, scene), error, loading, load_job_id);
+        if (loading) {
+            send_scene_loading(res, load_job_id);
+            return;
+        }
         if (!error.empty()) {
             backend_log_t::handle().add("error", "geometry export failed for scene=" + scene);
+            send_json(res, "{\"error\":\"failed to load scene\"}", 400);
+            return;
+        }
+
+        send_json(res, payload);
+    });
+
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/runtime_graph)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "runtime_graph rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+
+        std::string error;
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        std::string payload = scene_runtime_graph_json(join_path(scene_dir, scene), error, loading, load_job_id);
+        if (loading) {
+            send_scene_loading(res, load_job_id);
+            return;
+        }
+        if (!error.empty()) {
+            backend_log_t::handle().add("error", "runtime_graph failed for scene=" + scene);
             send_json(res, "{\"error\":\"failed to load scene\"}", 400);
             return;
         }
@@ -971,7 +1612,13 @@ void setup_routes(httplib::Server &server,
         if (req.has_param("camera")) requested_camera = req.get_param_value("camera");
 
         std::string error;
-        std::string payload = scene_resolved_camera_json(join_path(scene_dir, scene), requested_camera, error);
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        std::string payload = scene_resolved_camera_json(join_path(scene_dir, scene), requested_camera, error, loading, load_job_id);
+        if (loading) {
+            send_scene_loading(res, load_job_id);
+            return;
+        }
         if (!error.empty()) {
             backend_log_t::handle().add("error", "camera_resolve failed for scene=" + scene);
             send_json(res, "{\"error\":\"failed to resolve camera\"}", 400);
@@ -1059,6 +1706,7 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"failed to write scene\"}", 500);
             return;
         }
+        scene_cache_t::handle().invalidate(scene_path);
         const std::string client_id = read_client_id(req);
         if (!client_id.empty()) {
             std::string workspace_id;
@@ -1214,10 +1862,24 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid threads\"}", 400);
             return;
         }
+        const bool auto_threads_requested = (rr.threads == 0);
+        if (auto_threads_requested) {
+            rr.threads = compute_auto_render_threads(thread_policy.reserve_threads);
+        }
         if (!parse_tile_order_param(req, "tile_order", rr.tile_order) && req.has_param("tile_order")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_order");
             send_json(res, "{\"error\":\"invalid tile_order\"}", 400);
             return;
+        }
+
+        {
+            std::ostringstream policy_log;
+            policy_log << "render thread policy workspace=" << workspace_id
+                       << " mode=" << (auto_threads_requested ? "auto" : "manual")
+                       << " requested_threads=" << (auto_threads_requested ? 0 : rr.threads)
+                       << " effective_threads=" << rr.threads
+                       << " reserve_threads=" << thread_policy.reserve_threads;
+            backend_log_t::handle().add("debug", policy_log.str());
         }
 
         std::string job_id = jobs.create(rr, scene, workspace_id, cleanup_scene_path);
@@ -1234,62 +1896,10 @@ void setup_routes(httplib::Server &server,
         std::string id = req.matches[1];
         bool final_only = req.has_param("final") && req.get_param_value("final") == "1";
         xtcore::tonemapping::settings_t tm_settings;
-        if (req.has_param("tm")) {
-            const std::string tm = lower_ascii(req.get_param_value("tm"));
-            if (!parse_tonemapping_operator(tm, tm_settings.op)) {
-                send_json(res, "{\"error\":\"invalid tone mapping operator\"}", 400);
-                return;
-            }
-        }
-        if (req.has_param("tm_exposure")) {
-            std::istringstream es(req.get_param_value("tm_exposure"));
-            float exposure = 1.0f;
-            es >> exposure;
-            if (es.fail() || exposure <= 0.0f) {
-                send_json(res, "{\"error\":\"invalid tone mapping exposure\"}", 400);
-                return;
-            }
-            tm_settings.exposure = exposure;
-        }
-        if (req.has_param("tm_white_point")) {
-            std::istringstream ws(req.get_param_value("tm_white_point"));
-            float white_point = 1.0f;
-            ws >> white_point;
-            if (ws.fail() || white_point <= 0.0f) {
-                send_json(res, "{\"error\":\"invalid tone mapping white point\"}", 400);
-                return;
-            }
-            tm_settings.white_point = white_point;
-        }
-        if (req.has_param("tm_mantiuk_contrast")) {
-            std::istringstream cs(req.get_param_value("tm_mantiuk_contrast"));
-            float v = 0.1f;
-            cs >> v;
-            if (cs.fail() || v < 0.0f || v > 1.0f) {
-                send_json(res, "{\"error\":\"invalid mantiuk contrast\"}", 400);
-                return;
-            }
-            tm_settings.mantiuk_contrast = v;
-        }
-        if (req.has_param("tm_mantiuk_saturation")) {
-            std::istringstream ss(req.get_param_value("tm_mantiuk_saturation"));
-            float v = 0.8f;
-            ss >> v;
-            if (ss.fail() || v < 0.0f || v > 2.0f) {
-                send_json(res, "{\"error\":\"invalid mantiuk saturation\"}", 400);
-                return;
-            }
-            tm_settings.mantiuk_saturation = v;
-        }
-        if (req.has_param("tm_mantiuk_detail")) {
-            std::istringstream ds(req.get_param_value("tm_mantiuk_detail"));
-            float v = 1.0f;
-            ds >> v;
-            if (ds.fail() || v < 1.0f || v > 99.0f) {
-                send_json(res, "{\"error\":\"invalid mantiuk detail\"}", 400);
-                return;
-            }
-            tm_settings.mantiuk_detail = v;
+        std::string tm_error_json;
+        if (!parse_tonemapping_settings(req, tm_settings, tm_error_json)) {
+            send_json(res, tm_error_json, 400);
+            return;
         }
         std::vector<unsigned char> image;
         if (!jobs.image(id, image, !final_only, tm_settings)) {
@@ -1298,6 +1908,64 @@ void setup_routes(httplib::Server &server,
             return;
         }
         res.set_content((const char *)image.data(), image.size(), "image/png");
+    });
+
+    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/image_delta)", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        size_t since_done = 0;
+        size_t parsed = 0;
+        if (parse_u64_param(req, "since", 0, 1000000000, parsed)) {
+            since_done = parsed;
+        } else if (req.has_param("since")) {
+            send_json(res, "{\"error\":\"invalid since\"}", 400);
+            return;
+        }
+
+        size_t max_tiles = 16;
+        if (parse_u64_param(req, "limit", 1, 256, parsed)) {
+            max_tiles = parsed;
+        } else if (req.has_param("limit")) {
+            send_json(res, "{\"error\":\"invalid limit\"}", 400);
+            return;
+        }
+
+        xtcore::tonemapping::settings_t tm_settings;
+        std::string tm_error_json;
+        if (!parse_tonemapping_settings(req, tm_settings, tm_error_json)) {
+            send_json(res, tm_error_json, 400);
+            return;
+        }
+
+        job_image_delta_t delta;
+        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, delta)) {
+            send_json(res, "{\"error\":\"image delta not available\"}", 404);
+            return;
+        }
+
+        std::vector<unsigned char> payload;
+        payload.reserve(64);
+        payload.push_back('X');
+        payload.push_back('T');
+        payload.push_back('D');
+        payload.push_back('1');
+        append_u32le(payload, (uint32_t)delta.width);
+        append_u32le(payload, (uint32_t)delta.height);
+        append_u32le(payload, (uint32_t)delta.tiles_done);
+        append_u32le(payload, (uint32_t)delta.tiles_total);
+        append_u32le(payload, (uint32_t)delta.state);
+        append_u32le(payload, (uint32_t)delta.tiles.size());
+        for (size_t i = 0; i < delta.tiles.size(); ++i) {
+            const job_image_delta_t::tile_t &t = delta.tiles[i];
+            append_u32le(payload, (uint32_t)t.x0);
+            append_u32le(payload, (uint32_t)t.y0);
+            append_u32le(payload, (uint32_t)t.x1);
+            append_u32le(payload, (uint32_t)t.y1);
+            append_u32le(payload, (uint32_t)t.done_index);
+            append_u32le(payload, (uint32_t)t.png.size());
+            payload.insert(payload.end(), t.png.begin(), t.png.end());
+        }
+        res.set_header("Cache-Control", "no-store");
+        res.set_content((const char *)payload.data(), payload.size(), "application/octet-stream");
     });
 
     server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/export)", [&](const httplib::Request &req, httplib::Response &res) {

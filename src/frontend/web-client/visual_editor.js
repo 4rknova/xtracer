@@ -140,6 +140,17 @@
     return readCol3Prop(m[1] || "", "value");
   }
 
+  function readSamplerTextureSource(block, samplerName, aliases) {
+    if (!block || !samplerName) return "";
+    var samplerBody = readGroupBody(block, samplerName);
+    if (!samplerBody) return "";
+    var samplerType = trimQuotes(readStringProp(samplerBody, "type")).toLowerCase();
+    if (samplerType !== "texture") return "";
+    var sourceRaw = readStringProp(samplerBody, "source");
+    if (!sourceRaw) return "";
+    return resolveSourcePath(sourceRaw, aliases || {});
+  }
+
   function readGroupBody(block, key) {
     if (!block || !key) return "";
     var m = new RegExp("\\b" + key + "\\s*=\\s*\\{", "i").exec(block);
@@ -289,6 +300,9 @@
         diffuse: col,
         specular: sCol,
         emissive: eCol,
+        diffuseTextureSource: readSamplerTextureSource(samplersBody, "diffuse", aliases),
+        specularTextureSource: readSamplerTextureSource(samplersBody, "specular", aliases),
+        normalTextureSource: readSamplerTextureSource(samplersBody, "normal", aliases),
       };
     });
 
@@ -385,7 +399,41 @@
     return new THREE.BoxGeometry(0.5, 0.5, 0.5);
   }
 
-function materialForDef(matDef) {
+async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
+  var scene = String(sceneName || "").trim();
+  var relpath = String(sourcePath || "").trim();
+  if (!ctx || !scene || !relpath) return null;
+  if (relpath.indexOf("<") >= 0 || relpath.indexOf(">") >= 0) return null;
+  if (/^[A-Za-z][A-Za-z0-9+\-.]*:/.test(relpath)) return null;
+  if (relpath[0] === "/") return null;
+  relpath = relpath.replace(/\\/g, "/");
+  var key = scene + "::" + relpath + "::" + (colorTexture ? "color" : "linear");
+  if (Object.prototype.hasOwnProperty.call(ctx.textureCache, key)) {
+    return ctx.textureCache[key];
+  }
+  if (!ctx.textureLoader) {
+    ctx.textureLoader = new THREE.TextureLoader();
+  }
+  var url = "/api/scenes/" + encodeURIComponent(scene) + "/asset?path=" + encodeURIComponent(relpath);
+  var tex = await new Promise(function (resolve) {
+    ctx.textureLoader.load(
+      url,
+      function (loaded) { resolve(loaded || null); },
+      undefined,
+      function () { resolve(null); }
+    );
+  });
+  if (tex) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    if (colorTexture) tex.encoding = THREE.sRGBEncoding;
+    tex.needsUpdate = true;
+  }
+  ctx.textureCache[key] = tex;
+  return tex;
+}
+
+async function materialForDefAsync(ctx, sceneName, matDef) {
   if (!matDef) {
     return new THREE.MeshPhongMaterial({
       color: 0x95a4b5,
@@ -395,32 +443,47 @@ function materialForDef(matDef) {
     });
   }
 
+  var diffuseMap = await loadTextureForScene(ctx, sceneName, matDef.diffuseTextureSource, true);
+  var specularMap = await loadTextureForScene(ctx, sceneName, matDef.specularTextureSource, false);
+  var normalMap = await loadTextureForScene(ctx, sceneName, matDef.normalTextureSource, false);
+  var baseDiffuse = matDef.diffuse || new THREE.Color(0.75, 0.78, 0.82);
+  var baseSpecular = matDef.specular || new THREE.Color(0.08, 0.08, 0.08);
+
   if (matDef.type === "emissive") {
     var e = matDef.emissive || new THREE.Color(1, 0.95, 0.8);
-    return new THREE.MeshPhongMaterial({
-      color: matDef.diffuse || new THREE.Color(0.08, 0.08, 0.08),
+    var emissiveMat = new THREE.MeshPhongMaterial({
+      color: diffuseMap ? new THREE.Color(1, 1, 1) : (matDef.diffuse || new THREE.Color(0.08, 0.08, 0.08)),
       emissive: e,
       emissiveIntensity: 2.0,
       specular: matDef.specular || new THREE.Color(0.0, 0.0, 0.0),
       shininess: 20,
       side: THREE.DoubleSide,
     });
+    if (diffuseMap) emissiveMat.map = diffuseMap;
+    if (normalMap) emissiveMat.normalMap = normalMap;
+    return emissiveMat;
   }
 
-  return new THREE.MeshPhongMaterial({
-    color: matDef.diffuse || new THREE.Color(0.75, 0.78, 0.82),
-    specular: matDef.specular || new THREE.Color(0.08, 0.08, 0.08),
+  var mat = new THREE.MeshPhongMaterial({
+    color: diffuseMap ? new THREE.Color(1, 1, 1) : baseDiffuse,
+    specular: baseSpecular,
     shininess: 90,
     side: THREE.DoubleSide,
   });
+  if (diffuseMap) mat.map = diffuseMap;
+  if (specularMap) mat.specularMap = specularMap;
+  if (normalMap) mat.normalMap = normalMap;
+  return mat;
 }
 
   function parseObjToGeometry(objText) {
     var lines = String(objText || "").replace(/\r\n/g, "\n").split("\n");
     var v = [];
     var n = [];
+    var t = [];
     var posOut = [];
     var nOut = [];
+    var uvOut = [];
 
     function parseIndex(token, len) {
       var i = parseInt(token, 10);
@@ -436,6 +499,10 @@ function materialForDef(matDef) {
       var head = parts[0];
       if (head === "v" && parts.length >= 4) {
         v.push(vec3(parts[1], parts[2], parts[3]));
+      } else if (head === "vt" && parts.length >= 3) {
+        var tu = Number(parts[1]);
+        var tv = Number(parts[2]);
+        t.push({ u: Number.isFinite(tu) ? tu : 0, v: Number.isFinite(tv) ? tv : 0 });
       } else if (head === "vn" && parts.length >= 4) {
         n.push(vec3(parts[1], parts[2], parts[3]).normalize());
       } else if (head === "f" && parts.length >= 4) {
@@ -443,9 +510,10 @@ function materialForDef(matDef) {
         for (var pi = 1; pi < parts.length; pi += 1) {
           var p = parts[pi].split("/");
           var vi = parseIndex(p[0], v.length);
+          var tii = (p.length >= 2 && p[1] !== "") ? parseIndex(p[1], t.length) : -1;
           var ni = (p.length >= 3 && p[2] !== "") ? parseIndex(p[2], n.length) : -1;
           if (vi < 0 || vi >= v.length) continue;
-          verts.push({ vi: vi, ni: ni });
+          verts.push({ vi: vi, ti: tii, ni: ni });
         }
         if (verts.length < 3) continue;
 
@@ -470,6 +538,12 @@ function materialForDef(matDef) {
             } else {
               nOut.push(faceNormal.x, faceNormal.y, faceNormal.z);
             }
+            if (tri[k].ti >= 0 && tri[k].ti < t.length) {
+              var pt = t[tri[k].ti];
+              uvOut.push(pt.u, pt.v);
+            } else {
+              uvOut.push(0, 0);
+            }
           }
         }
       }
@@ -479,6 +553,9 @@ function materialForDef(matDef) {
     var g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(posOut, 3));
     g.setAttribute("normal", new THREE.Float32BufferAttribute(nOut, 3));
+    if (uvOut.length === (posOut.length / 3) * 2) {
+      g.setAttribute("uv", new THREE.Float32BufferAttribute(uvOut, 2));
+    }
     g.computeBoundingSphere();
     return g;
   }
@@ -517,6 +594,8 @@ function materialForDef(matDef) {
     this.objectMeshById = {};
     this.objectMetaById = {};
     this.assetTextCache = {};
+    this.textureCache = {};
+    this.textureLoader = null;
     this.cameraWidgetRoot = null;
     this.cameraWidget = null;
     this.axisWidgetScene = null;
@@ -1425,6 +1504,10 @@ function materialForDef(matDef) {
     } else {
       g.computeVertexNormals();
     }
+    var uvCountExpected = (meshDef.positions.length / 3) * 2;
+    if (Array.isArray(meshDef.uvs) && meshDef.uvs.length === uvCountExpected) {
+      g.setAttribute("uv", new THREE.Float32BufferAttribute(meshDef.uvs, 2));
+    }
     g.computeBoundingSphere();
     return g;
   };
@@ -1533,15 +1616,19 @@ function materialForDef(matDef) {
     }
     var count = 0;
     var areaLightCenters = [];
+    var referencedMeshIds = {};
 
     for (var i = 0; i < parsed.objects.length; i += 1) {
       var obj = parsed.objects[i];
       var geoDef = parsed.geometries[obj.geometry];
       if (!geoDef) continue;
+      if (String(geoDef.type || "").toLowerCase() === "mesh" && geoDef.id) {
+        referencedMeshIds[geoDef.id] = true;
+      }
 
       var geo = await this.geometryForDefAsync(sceneName, geoDef);
       var matDef = parsed.materials[obj.material];
-      var mat = materialForDef(matDef);
+      var mat = await materialForDefAsync(this, sceneName, matDef);
       var mesh = new THREE.Mesh(geo, mat);
       mesh.name = obj.id;
       mesh.userData = mesh.userData || {};
@@ -1604,6 +1691,63 @@ function materialForDef(matDef) {
           new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
         );
         mesh.add(edges);
+      }
+
+      count += 1;
+    }
+
+    // Backend geometry export includes mesh surfaces after scene load (including OBJ-import object forms).
+    // If a mesh surface has no parsed object binding in the source parser, still visualize it here.
+    var backendMeshes = (this.sceneGeometry && this.sceneGeometry.meshes) ? this.sceneGeometry.meshes : {};
+    var backendMeshIds = Object.keys(backendMeshes);
+    for (var bi = 0; bi < backendMeshIds.length; bi += 1) {
+      var backendMeshId = backendMeshIds[bi];
+      if (!backendMeshId || referencedMeshIds[backendMeshId] || this.objectMeshById[backendMeshId]) continue;
+
+      var backendGeoDef = { id: backendMeshId, type: "mesh", modifiers: null };
+      var backendGeo = this.geometryFromSceneData(backendGeoDef);
+      if (!backendGeo) continue;
+
+      var backendMat = await materialForDefAsync(this, sceneName, null);
+      var backendMesh = new THREE.Mesh(backendGeo, backendMat);
+      backendMesh.name = backendMeshId;
+      backendMesh.userData = backendMesh.userData || {};
+      backendMesh.userData.objectId = backendMeshId;
+      backendMesh.userData.geometryId = backendMeshId;
+      backendMesh.userData.materialId = "";
+      backendMesh.userData.geometryType = "mesh";
+      backendMesh.userData.infinitePlane = false;
+      backendMesh.userData.syntheticFromBackend = true;
+      this.objectMeshById[backendMeshId] = backendMesh;
+      this.objectMetaById[backendMeshId] = {
+        objectId: backendMeshId,
+        geometryId: backendMeshId,
+        materialId: "",
+        geometryType: "mesh",
+      };
+      backendMesh.castShadow = true;
+      backendMesh.receiveShadow = true;
+      this.modelRoot.add(backendMesh);
+
+      var addBackendEdges = true;
+      if (backendGeo && backendGeo.boundingBox === null && typeof backendGeo.computeBoundingBox === "function") {
+        backendGeo.computeBoundingBox();
+      }
+      if (backendGeo && backendGeo.boundingBox) {
+        var backendEdgeSize = new THREE.Vector3();
+        backendGeo.boundingBox.getSize(backendEdgeSize);
+        var backendEdgeMax = Math.max(backendEdgeSize.x, Math.max(backendEdgeSize.y, backendEdgeSize.z));
+        var backendEdgeMin = Math.min(backendEdgeSize.x, Math.min(backendEdgeSize.y, backendEdgeSize.z));
+        if (backendEdgeMax > 1e-6 && (backendEdgeMin / backendEdgeMax) < 0.02) {
+          addBackendEdges = false;
+        }
+      }
+      if (addBackendEdges) {
+        var backendEdges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(backendGeo, 35),
+          new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
+        );
+        backendMesh.add(backendEdges);
       }
 
       count += 1;
