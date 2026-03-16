@@ -148,6 +148,7 @@
 /* Render-screen UX: avoid accidental highlight drags on UI chrome. */
 .masthead,
 #paneRender,
+#paneScene,
 .persistent-sidebar {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -157,8 +158,11 @@
 
 /* Keep form controls editable/selectable. */
 #paneRender input,
+#paneScene input,
 #paneRender select,
+#paneScene select,
 #paneRender textarea,
+#paneScene textarea,
 .persistent-sidebar input,
 .persistent-sidebar select,
 .persistent-sidebar textarea {
@@ -486,8 +490,130 @@ h2 {
 }
 
 #paneRender,
+#paneScene,
 #paneSettings {
   width: 100%;
+}
+
+#paneScene .panel-scene-setup {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+}
+
+.scene-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+.scene-setup-card {
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--field-bg) 86%, transparent) 0%,
+    color-mix(in srgb, var(--panel) 82%, transparent) 100%
+  );
+  box-shadow:
+    0 8px 20px color-mix(in srgb, #000000 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent);
+  overflow: hidden;
+}
+
+.scene-setup-card-head {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+}
+
+.scene-setup-card-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.scene-setup-card-head p {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.scene-setup-card-body {
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.scene-loading-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.scene-loading-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.scene-loading-key {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.scene-loading-value {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--ink) 88%, transparent);
+  word-break: break-word;
+}
+
+.scene-load-state-pill {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 84%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.scene-load-state-pill.is-idle {
+  color: color-mix(in srgb, var(--muted) 90%, var(--ink));
+}
+
+.scene-load-state-pill.is-loading {
+  color: color-mix(in srgb, var(--accent) 82%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 46%, transparent);
+}
+
+.scene-load-state-pill.is-done {
+  color: color-mix(in srgb, #6ad09a 88%, #ffffff);
+  border-color: color-mix(in srgb, #6ad09a 52%, transparent);
+  background: color-mix(in srgb, #163328 52%, transparent);
+}
+
+.scene-load-state-pill.is-error {
+  color: color-mix(in srgb, #ff8f8f 92%, #ffffff);
+  border-color: color-mix(in srgb, #d95c5c 58%, transparent);
+  background: color-mix(in srgb, #3c1f21 58%, transparent);
 }
 
 #paneSettings.active {
@@ -801,6 +927,52 @@ label {
   border-color: color-mix(in srgb, #f2b46f 58%, transparent);
 }
 
+.scene-refresh-btn {
+  width: 26px;
+  height: 26px;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, var(--line-strong));
+  background: color-mix(in srgb, var(--field-bg) 86%, var(--panel));
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.scene-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scene-select-row > select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scene-select-row > .scene-refresh-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.scene-refresh-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.scene-refresh-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 75%, var(--accent) 25%);
+}
+
+.scene-refresh-btn:active {
+  transform: translateY(1px);
+}
+
 input,
 select,
 button {
@@ -929,7 +1101,8 @@ select:focus {
   line-height: 1.35;
 }
 
-.control-section-body label.aa-presets-group {
+.control-section-body label.aa-presets-group,
+.control-section-body label.sample-presets-group {
   align-items: start;
   row-gap: 6px;
 }
@@ -1029,6 +1202,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
 }
 
 .editor-toolbar {
@@ -1146,7 +1320,8 @@ textarea {
   border-radius: 10px;
   background: var(--field-bg);
   overflow: hidden;
-  height: min(62vh, 760px);
+  flex: 1 1 auto;
+  min-height: 220px;
 }
 
 .line-numbers {
@@ -1452,7 +1627,8 @@ textarea {
   margin: 0;
   min-height: 0;
   max-height: none;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 0.5rem;
   color: var(--ink);
   font-family: "JetBrains Mono", "Fira Code", monospace;
@@ -2337,6 +2513,23 @@ button:disabled {
   user-select: none;
 }
 
+.preview-transfer-stats {
+  margin: 0;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.74rem;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
+  white-space: nowrap;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.preview-transfer-stats-card {
+  white-space: normal;
+  line-height: 1.45;
+}
+
 .bar {
   width: auto;
   min-width: 140px;
@@ -2403,8 +2596,18 @@ button:disabled {
 
 .editor-view-toolbar {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin: 0 0 10px;
+  min-height: 38px;
+}
+
+.editor-view-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .editor-view-switch {
@@ -2483,7 +2686,55 @@ button:disabled {
     0 2px 8px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
+.editor-view-icon-btn {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--panel) 90%, transparent) 100%
+    );
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 2px 10px color-mix(in srgb, #000000 16%, transparent);
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.1s ease;
+}
+
+.editor-view-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.editor-view-icon-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 84%, var(--accent) 16%);
+}
+
+.editor-view-icon-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 78%, #ffffff);
+  outline-offset: 1px;
+}
+
+.editor-view-icon-btn:active {
+  transform: translateY(1px);
+}
+
 .graph-panel {
+  display: flex;
+  flex: 1 1 auto;
   min-height: 0;
   border: 0;
   box-shadow: none;
@@ -2494,7 +2745,9 @@ button:disabled {
 
 .graph-stage {
   position: relative;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -2536,8 +2789,10 @@ button:disabled {
 }
 
 .graph-canvas {
+  flex: 1 1 auto;
   width: 100%;
-  height: clamp(460px, 72vh, 840px);
+  height: 100%;
+  min-height: 320px;
   margin: 0;
   border: 0;
   border-radius: 0;
@@ -2811,6 +3066,7 @@ button:disabled {
 .preview-headline {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
   flex: 1;
@@ -2956,6 +3212,8 @@ button:disabled {
 
 #paneVisual .editor-panel {
   margin: 0;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .preview-empty {
@@ -3039,6 +3297,10 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .scene-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
   .visual-viewport-top {
     height: clamp(460px, 72vh, 840px);
   }
@@ -3101,6 +3363,11 @@ button:disabled {
 
   .panel-controls {
     position: static;
+  }
+
+  .scene-loading-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 
   .preview-toolbar {

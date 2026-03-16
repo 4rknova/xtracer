@@ -4,11 +4,13 @@ const el = {
   startupScreen: $("startupScreen"),
   startupLabel: $("startupLabel"),
   startupProgressFill: $("startupProgressFill"),
+  tabScene: $("tabScene"),
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
   tabWorkspaces: $("tabWorkspaces"),
   tabSettings: $("tabSettings"),
   tabLogs: $("tabLogs"),
+  paneScene: $("paneScene"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
   paneWorkspaces: $("paneWorkspaces"),
@@ -53,7 +55,10 @@ const el = {
   workspaceMaxConcurrentHint: $("workspaceMaxConcurrentHint"),
   workspaceThreadsHint: $("workspaceThreadsHint"),
   workspaceOpenmpHint: $("workspaceOpenmpHint"),
+  workspaceRenderReserveHint: $("workspaceRenderReserveHint"),
+  workspaceRenderAutoHint: $("workspaceRenderAutoHint"),
   workspaceList: $("workspaceList"),
+  sceneRefreshBtn: $("sceneRefreshBtn"),
   sceneDependencyPill: $("sceneDependencyPill"),
   scene: $("scene"),
   camera: $("camera"),
@@ -65,12 +70,14 @@ const el = {
   height: $("height"),
   samples: $("samples"),
   aa: $("aa"),
+  samplesPills: Array.from(document.querySelectorAll(".samples-pill")),
   sampleDistribution: $("sample_distribution"),
-  aaPills: Array.from(document.querySelectorAll(".aa-pill")),
+  aaPills: Array.from(document.querySelectorAll(".aa-pill[data-aa]")),
   rdepth: $("rdepth"),
   tileSize: $("tile_size"),
   tileOrder: $("tile_order"),
   threads: $("threads"),
+  threadsPolicyHint: $("threadsPolicyHint"),
   toneMapping: $("toneMapping"),
   toneMappingParamsRow: $("toneMappingParamsRow"),
   toneMappingExposureControl: $("toneMappingExposureControl"),
@@ -89,6 +96,15 @@ const el = {
   clearPreviewOnRender: $("clearPreviewOnRender"),
   renderBtn: $("renderBtn"),
   status: $("status"),
+  sceneLoadState: $("sceneLoadState"),
+  sceneLoadMessage: $("sceneLoadMessage"),
+  sceneLoadJobId: $("sceneLoadJobId"),
+  sceneLoadElapsed: $("sceneLoadElapsed"),
+  previewTransferStats: $("previewTransferStats"),
+  statsDeltaBytes: $("statsDeltaBytes"),
+  statsDeltaReqs: $("statsDeltaReqs"),
+  statsFullBytes: $("statsFullBytes"),
+  statsFullReqs: $("statsFullReqs"),
   renderTimer: $("renderTimer"),
   progressBar: $("progressBar"),
   progress: $("progress"),
@@ -137,6 +153,7 @@ const el = {
   graphPanel: $("graphPanel"),
   graphCanvas: $("graphCanvas"),
   graphLegend: $("graphLegend"),
+  graphResetLayoutBtn: $("graphResetLayoutBtn"),
   textEditorPanel: $("textEditorPanel"),
   editorView3dBtn: $("editorView3dBtn"),
   editorViewGraphBtn: $("editorViewGraphBtn"),
@@ -178,6 +195,10 @@ let previewSwapToken = 0;
 let activePreviewTiles = [];
 let activePreviewTileWidth = 0;
 let activePreviewTileHeight = 0;
+let progressiveDeltaJobId = "";
+let progressiveDeltaSinceDone = 0;
+let progressiveDeltaEnabled = true;
+let progressiveDeltaTmKey = "";
 let pendingLogScroll = false;
 const LOG_HISTORY_LIMIT = 10000;
 const logEntries = [];
@@ -195,6 +216,18 @@ let lastCompletedJobId = "";
 let lastCompletedJobScene = "";
 let lastCompletedJobIntegrator = "";
 let activePollToken = 0;
+const previewTransferStatsState = {
+  deltaReqs: 0,
+  deltaBytes: 0,
+  fullReqs: 0,
+  fullBytes: 0,
+};
+const sceneLoadStatusState = {
+  state: "idle",
+  message: "No active scene load.",
+  jobId: "",
+  startedAtMs: 0,
+};
 let startupDismissed = false;
 let startupProgressDone = 0;
 let startupProgressTotal = 1;
@@ -216,55 +249,8 @@ const LAST_SCENE_KEY = "xtracer-last-scene";
 const LOG_FILTERS_KEY = "xtracer-log-filters";
 const CLIENT_ID_KEY = "xtracer-client-id";
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/sidebar_cards.json";
-const TAB_MODES = ["render", "visual", "workspaces", "logs", "settings"];
-// Fallback sidebar visibility matrix per top-level tab.
-const DEFAULT_SIDEBAR_CARD_VISIBILITY = {
-  render: [
-    "sceneControlsCard",
-    "integratorControlsCard",
-    "frameControlsCard",
-    "qualityControlsCard",
-    "toneMappingControlsCard",
-    "postFiltersControlsCard",
-    "exportControlsCard",
-  ],
-  visual: [
-    "sceneControlsCard",
-    "frameControlsCard",
-    "sceneEditControlsCard",
-  ],
-  visual_by_editor: {
-    visual: [
-      "sceneControlsCard",
-      "frameControlsCard",
-      "visualControlsCard",
-      "sceneEditControlsCard",
-    ],
-    graph: [
-      "sceneControlsCard",
-      "frameControlsCard",
-      "sceneEditControlsCard",
-    ],
-    text: [
-      "sceneControlsCard",
-      "frameControlsCard",
-      "textEditorControlsCard",
-      "sceneEditControlsCard",
-    ],
-  },
-  logs: [
-    "sceneControlsCard",
-    "logsControlsCard",
-  ],
-  workspaces: [
-    "workspaceControlsCard",
-  ],
-  settings: [
-    "sceneControlsCard",
-    "settingsControlsCard",
-  ],
-};
-let sidebarCardVisibility = { ...DEFAULT_SIDEBAR_CARD_VISIBILITY };
+const TAB_MODES = ["scene", "render", "visual", "workspaces", "logs", "settings"];
+let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
 let api = null;
 let backendMode = "server";
@@ -273,13 +259,17 @@ let activeWorkspaceId = "";
 let workspaceViewMode = "cards";
 const workspaceSnapshotById = new Map();
 const workspaceRuntimeById = new Map();
+let workspaceSpatialIndexStats = null;
 let workspaceDraftSaveTimer = null;
 let workspaceSettingsSaveTimer = null;
 let suppressWorkspaceSettingsSave = false;
 let visualEditor = null;
 let visualLoadedSceneName = "";
 let editorViewMode = "visual";
-let activeTabMode = "render";
+let runtimeGraphByScene = new Map();
+let activeTabMode = "scene";
+let graphRenderRafPrimary = 0;
+let graphRenderRafSecondary = 0;
 const graphView = {
   scale: 1,
   tx: 0,
@@ -296,7 +286,18 @@ const graphView = {
   bound: false,
   hoverKey: "",
   data: null,
+  expandedNodeKeys: new Set(),
+  manualNodePos: new Map(),
+  pointerDown: false,
+  pointerDownNodeKey: "",
+  dragStartX: 0,
+  dragStartY: 0,
+  dragNodeKey: "",
+  dragNodeOffsetX: 0,
+  dragNodeOffsetY: 0,
+  movedSincePointerDown: false,
 };
+const graphTexturePreviewCache = new Map();
 const previewView = {
   scale: 1,
   tx: 0,
@@ -467,6 +468,53 @@ function setStatus(text) {
   el.status.classList.add(`is-${state}`);
 }
 
+function formatElapsedShort(ms) {
+  const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function renderSceneLoadStatus() {
+  if (el.sceneLoadState) {
+    const rawState = String(sceneLoadStatusState.state || "idle").toLowerCase();
+    let stateClass = "is-idle";
+    if (rawState === "loading" || rawState === "queued" || rawState === "running") stateClass = "is-loading";
+    else if (rawState === "done" || rawState === "ready" || rawState === "success") stateClass = "is-done";
+    else if (rawState === "error" || rawState === "failed") stateClass = "is-error";
+    el.sceneLoadState.classList.remove("is-idle", "is-loading", "is-done", "is-error");
+    el.sceneLoadState.classList.add(stateClass);
+    el.sceneLoadState.textContent = rawState;
+  }
+  if (el.sceneLoadMessage) el.sceneLoadMessage.textContent = String(sceneLoadStatusState.message || "");
+  if (el.sceneLoadJobId) {
+    const jobLabel = sceneLoadStatusState.jobId ? `#${sceneLoadStatusState.jobId}` : "-";
+    el.sceneLoadJobId.textContent = jobLabel;
+  }
+  if (el.sceneLoadElapsed) {
+    const elapsed = sceneLoadStatusState.startedAtMs > 0
+      ? (Date.now() - sceneLoadStatusState.startedAtMs)
+      : 0;
+    el.sceneLoadElapsed.textContent = formatElapsedShort(elapsed);
+  }
+}
+
+function setSceneLoadStatus(state, message, jobId) {
+  const nextState = String(state || "idle").toLowerCase();
+  const nextMsg = String(message || "");
+  const nextJob = String(jobId || "").trim();
+  const timingState = (nextState === "queued" || nextState === "running" || nextState === "loading");
+  if (!timingState) {
+    sceneLoadStatusState.startedAtMs = 0;
+  } else if (sceneLoadStatusState.startedAtMs <= 0) {
+    sceneLoadStatusState.startedAtMs = Date.now();
+  }
+  sceneLoadStatusState.state = nextState;
+  sceneLoadStatusState.message = nextMsg;
+  sceneLoadStatusState.jobId = nextJob;
+  renderSceneLoadStatus();
+}
+
 function setEditorOpStatus(kind, text) {
   if (!el.editorOpStatus) return;
   const msg = String(text || "").trim();
@@ -488,6 +536,66 @@ function formatElapsed(ms) {
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   }
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatBytesShort(bytes) {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} B`;
+  if (n < (1024 * 1024)) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function renderPreviewTransferStats() {
+  if (!el.previewTransferStats) return;
+  const hasData = (previewTransferStatsState.deltaReqs + previewTransferStatsState.fullReqs) > 0;
+  if (!hasData) {
+    if (el.statsDeltaBytes) {
+      el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code>`;
+    }
+    if (el.statsDeltaReqs) {
+      el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code>`;
+    }
+    if (el.statsFullBytes) {
+      el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code>`;
+    }
+    if (el.statsFullReqs) {
+      el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code>`;
+    }
+    return;
+  }
+  if (el.statsDeltaBytes) {
+    el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.deltaBytes)}</code>`;
+  }
+  if (el.statsDeltaReqs) {
+    el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">${previewTransferStatsState.deltaReqs}</code>`;
+  }
+  if (el.statsFullBytes) {
+    el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.fullBytes)}</code>`;
+  }
+  if (el.statsFullReqs) {
+    el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">${previewTransferStatsState.fullReqs}</code>`;
+  }
+}
+
+function resetPreviewTransferStats() {
+  previewTransferStatsState.deltaReqs = 0;
+  previewTransferStatsState.deltaBytes = 0;
+  previewTransferStatsState.fullReqs = 0;
+  previewTransferStatsState.fullBytes = 0;
+  renderPreviewTransferStats();
+}
+
+function recordPreviewTransfer(kind, bytes) {
+  const size = Math.max(0, Number(bytes) || 0);
+  if (size <= 0) return;
+  if (kind === "delta") {
+    previewTransferStatsState.deltaReqs += 1;
+    previewTransferStatsState.deltaBytes += size;
+  } else {
+    previewTransferStatsState.fullReqs += 1;
+    previewTransferStatsState.fullBytes += size;
+  }
+  renderPreviewTransferStats();
 }
 
 function updateRenderTimer() {
@@ -528,10 +636,92 @@ async function getJSON(url) {
   return res.json();
 }
 
+function sleep(ms) {
+  const waitMs = Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
+  return new Promise((resolve) => setTimeout(resolve, waitMs));
+}
+
 function createHttpError(status, message) {
   const err = new Error(message || `HTTP ${status}`);
   err.status = status;
   return err;
+}
+
+async function waitForSceneLoadJob(jobId, timeoutMs) {
+  const id = encodeURIComponent(String(jobId || ""));
+  if (!id) throw createHttpError(400, "invalid scene load job id");
+  const timeout = Number.isFinite(timeoutMs) ? Math.max(1000, timeoutMs) : 120000;
+  const t0 = Date.now();
+  setSceneLoadStatus("queued", "Scene load job queued.", id);
+
+  while ((Date.now() - t0) < timeout) {
+    const res = await fetch(`/api/scenes/load_jobs/${id}`, { cache: "no-store" });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+
+    if (res.status === 404) {
+      setSceneLoadStatus("done", "Scene load completed.", id);
+      return;
+    }
+    if (!res.ok) {
+      setSceneLoadStatus("error", (data && data.error) || `HTTP ${res.status}`, "");
+      throw createHttpError(res.status, (data && data.error) || `HTTP ${res.status}`);
+    }
+
+    const state = String(data && data.state ? data.state : "").toLowerCase();
+    if (state === "done") {
+      setSceneLoadStatus("done", "Scene load completed.", id);
+      return;
+    }
+    if (state === "error") {
+      setSceneLoadStatus("error", (data && data.error) || "Scene load failed.", id);
+      throw createHttpError(500, (data && data.error) || "scene load failed");
+    }
+    setSceneLoadStatus(state || "running", `Scene load ${state || "running"}...`, id);
+
+    await sleep(120);
+  }
+
+  setSceneLoadStatus("error", "Scene load timeout.", id);
+  throw createHttpError(504, "scene load timeout");
+}
+
+async function getSceneJSONWithAsyncLoad(url, timeoutMs) {
+  const timeout = Number.isFinite(timeoutMs) ? Math.max(1000, timeoutMs) : 120000;
+  const t0 = Date.now();
+  setSceneLoadStatus("loading", "Loading scene data from backend...", "");
+
+  while ((Date.now() - t0) < timeout) {
+    const res = await fetch(url, { cache: "no-store" });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+
+    if (res.status === 202) {
+      const jobId = Number(data && data.job_id);
+      if (!Number.isFinite(jobId) || jobId <= 0) {
+        setSceneLoadStatus("loading", "Scene is loading...", "");
+        throw createHttpError(202, "scene loading");
+      }
+      const remaining = timeout - (Date.now() - t0);
+      await waitForSceneLoadJob(jobId, remaining);
+      continue;
+    }
+
+    if (!res.ok) throw createHttpError(res.status, (data && data.error) || `HTTP ${res.status}`);
+    setSceneLoadStatus("done", "Scene data ready.", "");
+    return data;
+  }
+
+  setSceneLoadStatus("error", "Scene load timeout.", "");
+  throw createHttpError(504, "scene load timeout");
 }
 
 function generateClientId() {
@@ -587,6 +777,8 @@ function syncGlobalsToWorkspaceRuntime() {
 
 function beginPollSession() {
   activePollToken += 1;
+  resetProgressiveDeltaState("");
+  resetPreviewTransferStats();
   return activePollToken;
 }
 
@@ -638,10 +830,13 @@ function cancelActivePollingUi() {
   if (el.renderBtn) el.renderBtn.disabled = false;
 }
 
-function blobUrlForJobImage(jobId, opts) {
-  const parts = [];
-  if (opts && opts.partial) parts.push("partial=1");
-  if (opts && opts.final) parts.push("final=1");
+function resetProgressiveDeltaState(jobId) {
+  progressiveDeltaJobId = String(jobId || "").trim();
+  progressiveDeltaSinceDone = 0;
+  progressiveDeltaTmKey = "";
+}
+
+function appendToneMappingQuery(parts, opts) {
   const tm = String((opts && opts.toneMapping) || (el.toneMapping && el.toneMapping.value) || "aces").toLowerCase();
   if (tm === "aces" || tm === "reinhard" || tm === "reinhard_luma" || tm === "mantiuk_2006" || tm === "none") {
     parts.push(`tm=${encodeURIComponent(tm)}`);
@@ -689,9 +884,28 @@ function blobUrlForJobImage(jobId, opts) {
   parts.push(`tm_mantiuk_contrast=${encodeURIComponent(effectiveMantiukContrast)}`);
   parts.push(`tm_mantiuk_saturation=${encodeURIComponent(effectiveMantiukSaturation)}`);
   parts.push(`tm_mantiuk_detail=${encodeURIComponent(effectiveMantiukDetail)}`);
+}
+
+function blobUrlForJobImage(jobId, opts) {
+  const parts = [];
+  if (opts && opts.partial) parts.push("partial=1");
+  if (opts && opts.final) parts.push("final=1");
+  appendToneMappingQuery(parts, opts);
   if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
   const qs = parts.length ? `?${parts.join("&")}` : "";
   return `/api/jobs/${jobId}/image${qs}`;
+}
+
+function urlForJobImageDelta(jobId, opts) {
+  const parts = [];
+  const since = Number(opts && opts.since);
+  const limit = Number(opts && opts.limit);
+  parts.push(`since=${encodeURIComponent(Number.isFinite(since) && since >= 0 ? Math.floor(since) : 0)}`);
+  parts.push(`limit=${encodeURIComponent(Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 16)}`);
+  appendToneMappingQuery(parts, opts);
+  if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
+  const qs = parts.length ? `?${parts.join("&")}` : "";
+  return `/api/jobs/${encodeURIComponent(jobId)}/image_delta${qs}`;
 }
 
 function createServerApi() {
@@ -712,7 +926,7 @@ function createServerApi() {
     },
     async getCameras(scene) {
       if (!scene) return { cameras: [], defaultCamera: "" };
-      const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/cameras`);
+      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/cameras`);
       return {
         cameras: data.cameras || [],
         defaultCamera: data.default_camera || "",
@@ -734,8 +948,18 @@ function createServerApi() {
     },
     async getSceneGeometry(scene) {
       if (!scene) return { meshes: {} };
-      const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/geometry`);
+      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/geometry`);
       return { meshes: (data && data.meshes) || {} };
+    },
+    async getSceneRuntimeGraph(scene) {
+      if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [] };
+      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/runtime_graph`);
+      return {
+        cameras: Array.isArray(data && data.cameras) ? data.cameras : [],
+        objects: Array.isArray(data && data.objects) ? data.objects : [],
+        surfaces: Array.isArray(data && data.surfaces) ? data.surfaces : [],
+        materials: Array.isArray(data && data.materials) ? data.materials : [],
+      };
     },
     async getSceneAssetText(scene, relpath) {
       if (!scene || !relpath) return "";
@@ -781,6 +1005,11 @@ function createServerApi() {
       const res = await fetch(blobUrlForJobImage(jobId, opts), { cache: "no-store" });
       if (!res.ok) return null;
       return res.blob();
+    },
+    async getJobImageDelta(jobId, opts) {
+      const res = await fetch(urlForJobImageDelta(jobId, opts), { cache: "no-store" });
+      if (!res.ok) return null;
+      return res.arrayBuffer();
     },
     async getJobExport(jobId, format) {
       const fmt = encodeURIComponent(String(format || "png").toLowerCase());
@@ -1728,6 +1957,67 @@ function ensureGraphCanvasSize() {
   return { cssW, cssH, dpr };
 }
 
+function getGraphTexturePreview(url) {
+  const key = String(url || "").trim();
+  if (!key) return null;
+  let entry = graphTexturePreviewCache.get(key);
+  if (entry) return entry;
+  const img = new Image();
+  entry = { img, loaded: false, failed: false };
+  graphTexturePreviewCache.set(key, entry);
+  img.onload = () => {
+    entry.loaded = true;
+    drawGraphCanvas();
+  };
+  img.onerror = () => {
+    entry.failed = true;
+    drawGraphCanvas();
+  };
+  img.src = key;
+  return entry;
+}
+
+function formatGraphNumeric(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v ?? "-");
+  return Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function graphColorLabel(rgb) {
+  if (!Array.isArray(rgb) || rgb.length < 3) return "-";
+  const fmt = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(3) : "0.000";
+  };
+  return `${fmt(rgb[0])}, ${fmt(rgb[1])}, ${fmt(rgb[2])}`;
+}
+
+function graphVec3Label(v) {
+  if (!Array.isArray(v) || v.length < 3) return "-";
+  return `${formatGraphNumeric(v[0])}, ${formatGraphNumeric(v[1])}, ${formatGraphNumeric(v[2])}`;
+}
+
+function drawGraphFittedText(ctx, text, x, y, maxWidth) {
+  const raw = String(text ?? "");
+  const limit = Number(maxWidth) || 0;
+  if (!ctx || limit <= 0) return;
+  if (ctx.measureText(raw).width <= limit) {
+    ctx.fillText(raw, x, y);
+    return;
+  }
+  const ell = "...";
+  let lo = 0;
+  let hi = raw.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const probe = `${raw.slice(0, mid)}${ell}`;
+    if (ctx.measureText(probe).width <= limit) lo = mid;
+    else hi = mid - 1;
+  }
+  const out = `${raw.slice(0, Math.max(0, lo))}${ell}`;
+  ctx.fillText(out, x, y);
+}
+
 function drawGraphCanvas() {
   if (!el.graphCanvas) return;
   const dims = ensureGraphCanvasSize();
@@ -1832,15 +2122,119 @@ function drawGraphCanvas() {
 
     ctx.fillStyle = dimmed ? "rgba(180,194,208,0.45)" : "#e6eff7";
     ctx.font = "600 13px IBM Plex Sans, sans-serif";
-    ctx.fillText(n.id, n.x + 10, n.y + 20);
+    drawGraphFittedText(ctx, n.id, n.x + 10, n.y + 20, n.w - 20);
 
     ctx.fillStyle = dimmed ? "rgba(145,160,176,0.42)" : "rgba(170,186,202,0.9)";
     ctx.font = "11px IBM Plex Sans, sans-serif";
-    ctx.fillText(n.subtitle, n.x + 10, n.y + 37);
+    drawGraphFittedText(ctx, n.subtitle, n.x + 10, n.y + 37, n.w - 20);
+
+    if (n.expanded) {
+      const rows = Array.isArray(n.propertyRows) ? n.propertyRows : [];
+      const rowH = 18;
+      const tableTop = n.y + 46;
+      const tableH = rows.length * rowH;
+      const keyColW = 74;
+
+      if (tableH > 0) {
+        ctx.fillStyle = "rgba(8,13,19,0.45)";
+        ctx.fillRect(n.x + 6, tableTop, n.w - 12, tableH);
+        ctx.strokeStyle = "rgba(140,160,182,0.26)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(n.x + 6.5, tableTop + 0.5, n.w - 13, tableH - 1);
+
+        rows.forEach((row, idx) => {
+          const y0 = tableTop + idx * rowH;
+          if (idx > 0) {
+            ctx.strokeStyle = "rgba(130,152,176,0.18)";
+            ctx.beginPath();
+            ctx.moveTo(n.x + 7, y0 + 0.5);
+            ctx.lineTo(n.x + n.w - 7, y0 + 0.5);
+            ctx.stroke();
+          }
+          ctx.strokeStyle = "rgba(130,152,176,0.14)";
+          ctx.beginPath();
+          ctx.moveTo(n.x + 6 + keyColW, y0 + 1);
+          ctx.lineTo(n.x + 6 + keyColW, y0 + rowH - 1);
+          ctx.stroke();
+
+          ctx.fillStyle = dimmed ? "rgba(150,166,180,0.42)" : "rgba(162,182,202,0.92)";
+          ctx.font = "600 9px IBM Plex Sans, sans-serif";
+          drawGraphFittedText(ctx, String(row && row.key ? row.key : "-").toUpperCase(), n.x + 11, y0 + 12, keyColW - 10);
+
+          const valueX = n.x + 12 + keyColW;
+          const valueMaxW = Math.max(8, n.w - (valueX - n.x) - 10);
+          if (row && Array.isArray(row.color) && row.color.length >= 3) {
+            const r = clamp(Number(row.color[0]) || 0, 0, 1);
+            const g = clamp(Number(row.color[1]) || 0, 0, 1);
+            const b = clamp(Number(row.color[2]) || 0, 0, 1);
+            const sw = 12;
+            const sh = 12;
+            const sy = y0 + 3;
+            ctx.fillStyle = `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+            ctx.fillRect(valueX, sy, sw, sh);
+            ctx.strokeStyle = "rgba(214,228,240,0.64)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(valueX + 0.5, sy + 0.5, sw - 1, sh - 1);
+            ctx.fillStyle = dimmed ? "rgba(172,186,198,0.46)" : "rgba(206,220,234,0.95)";
+            ctx.font = "10px IBM Plex Sans, sans-serif";
+            drawGraphFittedText(ctx, graphColorLabel(row.color), valueX + sw + 6, y0 + 13, Math.max(8, valueMaxW - sw - 6));
+          } else {
+            ctx.fillStyle = dimmed ? "rgba(172,186,198,0.46)" : "rgba(206,220,234,0.95)";
+            ctx.font = "10px IBM Plex Sans, sans-serif";
+            drawGraphFittedText(ctx, String(row && row.value !== undefined ? row.value : "-"), valueX, y0 + 13, valueMaxW);
+          }
+        });
+      }
+
+      const previews = Array.isArray(n.texturePreviews) ? n.texturePreviews.slice(0, 3) : [];
+      if (previews.length > 0) {
+        const sw = 40;
+        const sh = 40;
+        const gap = 8;
+        const py = tableTop + tableH + 6;
+        previews.forEach((p, idx) => {
+          const px = n.x + 10 + idx * (sw + gap);
+          ctx.fillStyle = "rgba(12,18,24,0.7)";
+          ctx.fillRect(px, py, sw, sh);
+          ctx.strokeStyle = "rgba(165,182,198,0.65)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 0.5, py + 0.5, sw - 1, sh - 1);
+
+          const preview = getGraphTexturePreview(p && p.url ? p.url : "");
+          if (preview && preview.loaded && preview.img) {
+            ctx.drawImage(preview.img, px, py, sw, sh);
+          } else {
+            ctx.fillStyle = "rgba(168,184,200,0.72)";
+            ctx.font = "9px IBM Plex Sans, sans-serif";
+            ctx.fillText("tex", px + 11, py + 22);
+          }
+        });
+      }
+    }
   });
 
   ctx.restore();
   el.graphCanvas.classList.toggle("is-panning", !!graphView.panning);
+}
+
+function scheduleGraphRender() {
+  if (!el.graphCanvas) return;
+  if (graphRenderRafPrimary) {
+    cancelAnimationFrame(graphRenderRafPrimary);
+    graphRenderRafPrimary = 0;
+  }
+  if (graphRenderRafSecondary) {
+    cancelAnimationFrame(graphRenderRafSecondary);
+    graphRenderRafSecondary = 0;
+  }
+  graphRenderRafPrimary = requestAnimationFrame(() => {
+    graphRenderRafPrimary = 0;
+    graphRenderRafSecondary = requestAnimationFrame(() => {
+      graphRenderRafSecondary = 0;
+      if (activeTabMode !== "visual" || editorViewMode !== "graph") return;
+      renderSceneGraphView();
+    });
+  });
 }
 
 function applyGraphTransform() {
@@ -1865,6 +2259,23 @@ function findGraphNodeAt(clientX, clientY) {
     if (p.x >= n.x && p.x <= n.x + n.w && p.y >= n.y && p.y <= n.y + n.h) return n.key;
   }
   return "";
+}
+
+function findGraphNodeData(key) {
+  const data = graphView.data;
+  if (!data || !Array.isArray(data.nodes) || !key) return null;
+  for (let i = 0; i < data.nodes.length; i += 1) {
+    if (data.nodes[i] && data.nodes[i].key === key) return data.nodes[i];
+  }
+  return null;
+}
+
+function isGraphExpandableNode(key) {
+  const raw = String(key || "");
+  return raw.indexOf("camera:") === 0
+    || raw.indexOf("object:") === 0
+    || raw.indexOf("geometry:") === 0
+    || raw.indexOf("material:") === 0;
 }
 
 function fitGraphToViewport() {
@@ -1913,15 +2324,55 @@ function bindGraphInteraction() {
   el.graphCanvas.addEventListener("pointerdown", (evt) => {
     if (evt.button !== 0 && evt.button !== 1) return;
     evt.preventDefault();
-    graphView.panning = true;
+    graphView.pointerDown = true;
     graphView.pointerId = evt.pointerId;
+    graphView.pointerDownNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
+    graphView.dragStartX = evt.clientX;
+    graphView.dragStartY = evt.clientY;
     graphView.lastX = evt.clientX;
     graphView.lastY = evt.clientY;
+    graphView.dragNodeKey = "";
+    graphView.dragNodeOffsetX = 0;
+    graphView.dragNodeOffsetY = 0;
+    graphView.movedSincePointerDown = false;
+    if (evt.button === 0 && graphView.pointerDownNodeKey) {
+      const node = findGraphNodeData(graphView.pointerDownNodeKey);
+      const p = graphWorldPointFromClient(evt.clientX, evt.clientY);
+      if (node && p) {
+        graphView.dragNodeKey = node.key;
+        graphView.dragNodeOffsetX = p.x - node.x;
+        graphView.dragNodeOffsetY = p.y - node.y;
+      }
+      graphView.panning = false;
+    } else {
+      graphView.panning = true;
+    }
     el.graphCanvas.setPointerCapture(evt.pointerId);
     applyGraphTransform();
   });
 
   el.graphCanvas.addEventListener("pointermove", (evt) => {
+    if (graphView.pointerDown && graphView.pointerId === evt.pointerId) {
+      if (!graphView.panning) {
+        const moveX = Math.abs(evt.clientX - graphView.dragStartX);
+        const moveY = Math.abs(evt.clientY - graphView.dragStartY);
+        if ((moveX + moveY) > 4) graphView.movedSincePointerDown = true;
+      }
+      if (graphView.dragNodeKey) {
+        const node = findGraphNodeData(graphView.dragNodeKey);
+        const p = graphWorldPointFromClient(evt.clientX, evt.clientY);
+        if (node && p) {
+          node.x = p.x - graphView.dragNodeOffsetX;
+          node.y = p.y - graphView.dragNodeOffsetY;
+          graphView.userAdjusted = true;
+          if (node.manualKey) {
+            graphView.manualNodePos.set(node.manualKey, { x: node.x, y: node.y });
+          }
+          applyGraphTransform();
+          return;
+        }
+      }
+    }
     if (graphView.panning && graphView.pointerId === evt.pointerId) {
       const dx = evt.clientX - graphView.lastX;
       const dy = evt.clientY - graphView.lastY;
@@ -1941,13 +2392,40 @@ function bindGraphInteraction() {
   });
 
   const endPan = (evt) => {
-    if (!graphView.panning || graphView.pointerId !== evt.pointerId) return;
+    if (!graphView.pointerDown || graphView.pointerId !== evt.pointerId) return;
+    const wasPanning = !!graphView.panning;
+    const wasDraggingNode = !!graphView.dragNodeKey;
+    const moved = !!graphView.movedSincePointerDown;
+    const downNodeKey = String(graphView.pointerDownNodeKey || "");
+    graphView.pointerDown = false;
+    graphView.pointerDownNodeKey = "";
     graphView.panning = false;
     graphView.pointerId = null;
+    graphView.dragNodeKey = "";
+    graphView.dragNodeOffsetX = 0;
+    graphView.dragNodeOffsetY = 0;
+    graphView.movedSincePointerDown = false;
     try {
       el.graphCanvas.releasePointerCapture(evt.pointerId);
     } catch (_) {
       // ignore release errors
+    }
+    if (!wasPanning && !wasDraggingNode && evt.type === "pointerup" && evt.button === 0) {
+      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
+      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
+        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
+        else graphView.expandedNodeKeys.add(upNodeKey);
+        renderSceneGraphView();
+        return;
+      }
+    } else if (wasDraggingNode && !moved && evt.type === "pointerup" && evt.button === 0) {
+      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
+      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
+        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
+        else graphView.expandedNodeKeys.add(upNodeKey);
+        renderSceneGraphView();
+        return;
+      }
     }
     applyGraphTransform();
   };
@@ -1965,56 +2443,276 @@ function bindGraphInteraction() {
 function renderSceneGraphView() {
   if (!el.graphCanvas) return;
 
-  const source = el.sceneSource ? String(el.sceneSource.value || "") : "";
-  const model = parseSceneEditModel(source);
-  const cameras = (model.cameras || []).slice().sort((a, b) => a.id.localeCompare(b.id));
-  const objects = Array.from(model.objects.values()).sort((a, b) => a.id.localeCompare(b.id));
-  const geometries = Array.from(model.geometries.values()).sort((a, b) => a.id.localeCompare(b.id));
-  const materials = Array.from((model.materials || new Map()).values())
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const runtime = sceneName ? runtimeGraphByScene.get(sceneName) : null;
+  let cameras = [];
+  let objects = [];
+  let geometries = [];
+  let materials = [];
 
-  const columns = [
-    { key: "camera", title: "Camera", x: 40, color: "#5a88cf" },
-    { key: "object", title: "Object", x: 320, color: "#9a6846" },
-    { key: "geometry", title: "Surface", x: 600, color: "#4f9a8f" },
-    { key: "material", title: "Material", x: 880, color: "#5a9a4f" },
-  ];
+  if (runtime) {
+    cameras = (runtime.cameras || [])
+      .map((c) => ({
+        id: String((c && c.id) || "").trim(),
+        type: String((c && c.type) || "camera"),
+        position: Array.isArray(c && c.position) ? c.position.slice(0, 3).map((v) => Number(v) || 0) : null,
+        target: Array.isArray(c && c.target) ? c.target.slice(0, 3).map((v) => Number(v) || 0) : null,
+        up: Array.isArray(c && c.up) ? c.up.slice(0, 3).map((v) => Number(v) || 0) : null,
+        orientation: Array.isArray(c && c.orientation) ? c.orientation.slice(0, 3).map((v) => Number(v) || 0) : null,
+        fov: Number.isFinite(Number(c && c.fov)) ? Number(c.fov) : null,
+        aperture: Number.isFinite(Number(c && c.aperture)) ? Number(c.aperture) : null,
+        flength: Number.isFinite(Number(c && c.flength)) ? Number(c.flength) : null,
+        ipd: Number.isFinite(Number(c && c.ipd)) ? Number(c.ipd) : null,
+      }))
+      .filter((c) => c.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    objects = (runtime.objects || [])
+      .map((o) => ({
+        id: String((o && o.id) || "").trim(),
+        geometry: String((o && o.surface) || "").trim(),
+        material: String((o && o.material) || "").trim(),
+      }))
+      .filter((o) => o.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    geometries = (runtime.surfaces || [])
+      .map((g) => ({
+        id: String((g && g.id) || "").trim(),
+        type: String((g && g.type) || "surface"),
+        position: Array.isArray(g && g.position) ? g.position.slice(0, 3).map((v) => Number(v) || 0) : null,
+        radius: Number.isFinite(Number(g && g.radius)) ? Number(g.radius) : null,
+        normal: Array.isArray(g && g.normal) ? g.normal.slice(0, 3).map((v) => Number(v) || 0) : null,
+        distance: Number.isFinite(Number(g && g.distance)) ? Number(g.distance) : null,
+        triangles: Number.isFinite(Number(g && g.triangles)) ? Number(g.triangles) : null,
+        v0: Array.isArray(g && g.v0) ? g.v0.slice(0, 3).map((v) => Number(v) || 0) : null,
+        v1: Array.isArray(g && g.v1) ? g.v1.slice(0, 3).map((v) => Number(v) || 0) : null,
+        v2: Array.isArray(g && g.v2) ? g.v2.slice(0, 3).map((v) => Number(v) || 0) : null,
+      }))
+      .filter((g) => g.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    materials = (runtime.materials || [])
+      .map((m) => ({
+        id: String((m && m.id) || "").trim(),
+        type: String((m && m.type) || "material"),
+        scalars: Array.isArray(m && m.scalars) ? m.scalars.map((s) => ({
+          name: String((s && s.name) || "").trim(),
+          value: Number.isFinite(Number(s && s.value)) ? Number(s.value) : (s && s.value),
+        })).filter((s) => s.name) : [],
+        samplers: Array.isArray(m && m.samplers) ? m.samplers.map((s) => {
+          const asset = String((s && s.asset) || "").trim();
+          const previewUrl = (sceneName && asset)
+            ? `/api/scenes/${encodeURIComponent(sceneName)}/asset?path=${encodeURIComponent(asset)}`
+            : "";
+          const color = Array.isArray(s && s.color) ? s.color.slice(0, 3).map((v) => Number(v) || 0) : null;
+          return {
+            name: String((s && s.name) || "").trim(),
+            type: String((s && s.type) || "sampler"),
+            asset,
+            previewUrl,
+            color,
+          };
+        }).filter((s) => s.name) : [],
+      }))
+      .filter((m) => m.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  } else {
+    const source = el.sceneSource ? String(el.sceneSource.value || "") : "";
+    const model = parseSceneEditModel(source);
+    cameras = (model.cameras || []).slice().sort((a, b) => a.id.localeCompare(b.id));
+    objects = Array.from(model.objects.values()).sort((a, b) => a.id.localeCompare(b.id));
+    geometries = Array.from(model.geometries.values()).map((g) => ({ ...g })).sort((a, b) => a.id.localeCompare(b.id));
+    materials = Array.from((model.materials || new Map()).values())
+      .map((m) => ({ ...m, scalars: [], samplers: [] }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
 
-  const nodeW = 210;
+  const sortByObjectRefs = (items, idFromItem, refFromObject) => {
+    const ranks = new Map();
+    objects.forEach((o, idx) => {
+      const ref = String(refFromObject(o) || "");
+      if (!ref) return;
+      if (!ranks.has(ref)) ranks.set(ref, []);
+      ranks.get(ref).push(idx);
+    });
+    return (items || []).slice().sort((a, b) => {
+      const aId = String(idFromItem(a) || "");
+      const bId = String(idFromItem(b) || "");
+      const ar = ranks.get(aId) || [];
+      const br = ranks.get(bId) || [];
+      const as = ar.length ? (ar.reduce((s, v) => s + v, 0) / ar.length) : 1e9;
+      const bs = br.length ? (br.reduce((s, v) => s + v, 0) / br.length) : 1e9;
+      if (Math.abs(as - bs) > 1e-6) return as - bs;
+      return aId.localeCompare(bId);
+    });
+  };
+
+  geometries = sortByObjectRefs(geometries, (g) => g.id, (o) => o.geometry);
+  materials = sortByObjectRefs(materials, (m) => m.id, (o) => o.material);
+
+  const nodeW = 248;
   const nodeH = 48;
   const topPad = 70;
-  const rowStep = 64;
+  const rowGap = 14;
   const bottomPad = 40;
-  const viewW = 1140;
-  const maxRows = Math.max(cameras.length, objects.length, geometries.length, materials.length, 1);
-  const viewH = topPad + rowStep * maxRows + bottomPad;
+  const laneGap = 44;
+  const sectionGap = 84;
+  const graphRect = el.graphCanvas.getBoundingClientRect();
+  const availableH = Math.max(320, (Number(graphRect && graphRect.height) || 720) - topPad - bottomPad);
+  const nominalRows = Math.max(4, Math.floor(availableH / (nodeH + rowGap)));
+  const maxRowsPerLane = clamp(nominalRows, 4, 16);
 
   const nodes = [];
   const pos = new Map();
+  const columns = [];
+  const kindLayout = new Map();
 
-  const pushNode = (kind, id, subtitle, row) => {
-    const col = columns.find((c) => c.key === kind);
-    if (!col) return;
-    const y = topPad + row * rowStep;
+  const detailsNodeHeight = (expanded, rowCount, previewCount) => {
+    if (!expanded) return nodeH;
+    const detailsH = Math.max(0, rowCount) * 18;
+    const previewH = previewCount > 0 ? 48 : 0;
+    return nodeH + 6 + detailsH + previewH;
+  };
+
+  const kinds = [
+    { key: "camera", title: "Camera", color: "#5a88cf", count: cameras.length },
+    { key: "object", title: "Object", color: "#9a6846", count: objects.length },
+    { key: "geometry", title: "Surface", color: "#4f9a8f", count: geometries.length },
+    { key: "material", title: "Material", color: "#5a9a4f", count: materials.length },
+  ];
+  let xCursor = 40;
+  kinds.forEach((k) => {
+    const laneCount = Math.max(1, Math.ceil(Math.max(1, k.count) / maxRowsPerLane));
+    const laneXs = [];
+    for (let i = 0; i < laneCount; i += 1) laneXs.push(xCursor + i * (nodeW + laneGap));
+    const laneNextY = new Array(laneCount).fill(topPad);
+    kindLayout.set(k.key, {
+      laneCount,
+      laneXs,
+      laneNextY,
+      color: k.color,
+      title: k.title,
+      x: xCursor,
+    });
+    columns.push({ key: k.key, title: k.title, x: xCursor, color: k.color });
+    xCursor += laneCount * (nodeW + laneGap) - laneGap + sectionGap;
+  });
+  const viewW = Math.max(980, xCursor - sectionGap + 40);
+
+  const pushNode = (kind, id, subtitle, extras) => {
+    const layout = kindLayout.get(kind);
+    if (!layout) return;
+    const ext = (extras && typeof extras === "object") ? extras : {};
+    const h = Number(ext.h) > 0 ? Number(ext.h) : nodeH;
+    let lane = 0;
+    for (let i = 1; i < layout.laneNextY.length; i += 1) {
+      if (layout.laneNextY[i] < layout.laneNextY[lane]) lane = i;
+    }
+    const y = layout.laneNextY[lane] || topPad;
     const node = {
       key: `${kind}:${id}`,
       id,
       kind,
       subtitle: subtitle || "",
-      x: col.x,
+      x: layout.laneXs[lane],
       y,
       w: nodeW,
-      h: nodeH,
-      color: col.color,
+      h,
+      color: layout.color,
+      expanded: !!ext.expanded,
+      propertyRows: Array.isArray(ext.propertyRows) ? ext.propertyRows : [],
+      texturePreviews: Array.isArray(ext.texturePreviews) ? ext.texturePreviews : [],
     };
+    node.manualKey = `${sceneName || ""}|${node.key}`;
+    const manual = graphView.manualNodePos.get(node.manualKey);
+    if (manual && Number.isFinite(manual.x) && Number.isFinite(manual.y)) {
+      node.x = manual.x;
+      node.y = manual.y;
+    }
     nodes.push(node);
     pos.set(node.key, node);
+    layout.laneNextY[lane] = y + node.h + rowGap;
   };
 
-  cameras.forEach((c, i) => pushNode("camera", c.id, c.type || "camera", i));
-  objects.forEach((o, i) => pushNode("object", o.id, "scene object", i));
-  geometries.forEach((g, i) => pushNode("geometry", g.id, g.type || "surface", i));
-  materials.forEach((m, i) => pushNode("material", m.id, m.type || "material", i));
+  cameras.forEach((c) => {
+    const nodeKey = `camera:${c.id}`;
+    const expanded = graphView.expandedNodeKeys.has(nodeKey);
+    const propertyRows = [{ key: "type", value: String(c.type || "camera") }];
+    if (Array.isArray(c.position)) propertyRows.push({ key: "position", value: graphVec3Label(c.position) });
+    if (Array.isArray(c.target)) propertyRows.push({ key: "target", value: graphVec3Label(c.target) });
+    if (Array.isArray(c.up)) propertyRows.push({ key: "up", value: graphVec3Label(c.up) });
+    if (Array.isArray(c.orientation)) propertyRows.push({ key: "orientation", value: graphVec3Label(c.orientation) });
+    if (Number.isFinite(c.fov)) propertyRows.push({ key: "fov", value: formatGraphNumeric(c.fov) });
+    if (Number.isFinite(c.aperture)) propertyRows.push({ key: "aperture", value: formatGraphNumeric(c.aperture) });
+    if (Number.isFinite(c.flength)) propertyRows.push({ key: "flength", value: formatGraphNumeric(c.flength) });
+    if (Number.isFinite(c.ipd)) propertyRows.push({ key: "ipd", value: formatGraphNumeric(c.ipd) });
+    pushNode("camera", c.id, c.type || "camera", {
+      h: detailsNodeHeight(expanded, propertyRows.length, 0),
+      expanded,
+      propertyRows,
+      texturePreviews: [],
+    });
+  });
+  objects.forEach((o) => {
+    const nodeKey = `object:${o.id}`;
+    const expanded = graphView.expandedNodeKeys.has(nodeKey);
+    const propertyRows = [
+      { key: "surface", value: String(o.geometry || "-") },
+      { key: "material", value: String(o.material || "-") },
+    ];
+    pushNode("object", o.id, runtime ? "runtime object" : "scene object", {
+      h: detailsNodeHeight(expanded, propertyRows.length, 0),
+      expanded,
+      propertyRows,
+      texturePreviews: [],
+    });
+  });
+  geometries.forEach((g) => {
+    const nodeKey = `geometry:${g.id}`;
+    const expanded = graphView.expandedNodeKeys.has(nodeKey);
+    const propertyRows = [{ key: "type", value: String(g.type || "surface") }];
+    if (Array.isArray(g.position)) propertyRows.push({ key: "position", value: graphVec3Label(g.position) });
+    if (Number.isFinite(g.radius)) propertyRows.push({ key: "radius", value: formatGraphNumeric(g.radius) });
+    if (Array.isArray(g.normal)) propertyRows.push({ key: "normal", value: graphVec3Label(g.normal) });
+    if (Number.isFinite(g.distance)) propertyRows.push({ key: "distance", value: formatGraphNumeric(g.distance) });
+    if (Number.isFinite(g.triangles)) propertyRows.push({ key: "triangles", value: formatGraphNumeric(g.triangles) });
+    if (Array.isArray(g.v0)) propertyRows.push({ key: "v0", value: graphVec3Label(g.v0) });
+    if (Array.isArray(g.v1)) propertyRows.push({ key: "v1", value: graphVec3Label(g.v1) });
+    if (Array.isArray(g.v2)) propertyRows.push({ key: "v2", value: graphVec3Label(g.v2) });
+    pushNode("geometry", g.id, g.type || "surface", {
+      h: detailsNodeHeight(expanded, propertyRows.length, 0),
+      expanded,
+      propertyRows,
+      texturePreviews: [],
+    });
+  });
+  materials.forEach((m) => {
+    const nodeKey = `material:${String(m.id || "")}`;
+    const expanded = graphView.expandedNodeKeys.has(nodeKey);
+    const scalars = Array.isArray(m && m.scalars) ? m.scalars : [];
+    const samplers = Array.isArray(m && m.samplers) ? m.samplers : [];
+    const propertyRows = [];
+    propertyRows.push({ key: "type", value: String(m && m.type ? m.type : "material") });
+    scalars.forEach((s) => {
+      const name = String(s && s.name ? s.name : "scalar");
+      const value = (s && s.value !== undefined) ? formatGraphNumeric(s.value) : "-";
+      propertyRows.push({ key: name, value });
+    });
+    samplers.forEach((s) => {
+      const name = String(s && s.name ? s.name : "sampler");
+      const type = String(s && s.type ? s.type : "sampler");
+      const row = { key: name, value: type };
+      if (Array.isArray(s && s.color) && s.color.length >= 3) row.color = s.color.slice(0, 3);
+      propertyRows.push(row);
+    });
+    const texturePreviews = samplers
+      .filter((s) => !!(s && s.previewUrl))
+      .map((s) => ({ name: String(s.name || "texture"), url: String(s.previewUrl) }));
+    pushNode("material", m.id, m.type || "material", {
+      h: detailsNodeHeight(expanded, propertyRows.length, texturePreviews.length),
+      expanded,
+      propertyRows,
+      texturePreviews,
+    });
+  });
 
   const links = [];
   objects.forEach((o) => {
@@ -2024,6 +2722,15 @@ function renderSceneGraphView() {
     if (src && geo) links.push({ from: src, to: geo });
     if (src && mat) links.push({ from: src, to: mat });
   });
+
+  const viewH = Math.max(
+    topPad + rowGap + bottomPad,
+    ...Array.from(kindLayout.values()).map((layout) => {
+      const laneMax = Math.max(topPad, ...layout.laneNextY);
+      return laneMax + bottomPad;
+    }),
+    ...nodes.map((n) => n.y + n.h + bottomPad)
+  );
 
   graphView.data = {
     columns,
@@ -2622,7 +3329,146 @@ async function composeWithPinnedPreview(overlayBlob) {
   return composedBlob || overlayBlob;
 }
 
+function parseImageDeltaPacket(buffer) {
+  if (!(buffer instanceof ArrayBuffer)) return null;
+  if (buffer.byteLength < 28) return null;
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44 || bytes[3] !== 0x31) return null;
+
+  const view = new DataView(buffer);
+  let off = 4;
+  const readU32 = () => {
+    if (off + 4 > buffer.byteLength) return null;
+    const v = view.getUint32(off, true);
+    off += 4;
+    return v;
+  };
+
+  const width = readU32();
+  const height = readU32();
+  const tilesDone = readU32();
+  const tilesTotal = readU32();
+  const state = readU32();
+  const tileCount = readU32();
+  if (width === null || height === null || tilesDone === null || tilesTotal === null || state === null || tileCount === null) {
+    return null;
+  }
+
+  const tiles = [];
+  for (let i = 0; i < tileCount; i += 1) {
+    const x0 = readU32();
+    const y0 = readU32();
+    const x1 = readU32();
+    const y1 = readU32();
+    const doneIndex = readU32();
+    const size = readU32();
+    if (x0 === null || y0 === null || x1 === null || y1 === null || doneIndex === null || size === null) return null;
+    if (off + size > buffer.byteLength) return null;
+    const pngBytes = bytes.slice(off, off + size);
+    off += size;
+    tiles.push({ x0, y0, x1, y1, doneIndex, pngBytes });
+  }
+
+  return { width, height, tilesDone, tilesTotal, state, tiles };
+}
+
+async function drawDeltaTilesToPreviewCanvas(delta) {
+  if (!delta || !delta.width || !delta.height) return false;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = delta.width;
+  canvas.height = delta.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+
+  if (preservePreviewUnderlay && previewPinnedBaseUrl) {
+    try {
+      const base = await getPinnedBaseBitmap();
+      if (base) ctx.drawImage(base, 0, 0, delta.width, delta.height);
+    } catch (_) {
+      // best-effort underlay only
+    }
+  }
+
+  if (previewObjectUrl) {
+    try {
+      const res = await fetch(previewObjectUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob && blob.size > 0) {
+          const base = await createImageBitmap(blob);
+          ctx.drawImage(base, 0, 0, delta.width, delta.height);
+        }
+      }
+    } catch (_) {
+      // best-effort base image only
+    }
+  }
+
+  let maxDone = progressiveDeltaSinceDone;
+  for (let i = 0; i < delta.tiles.length; i += 1) {
+    const t = delta.tiles[i];
+    if (!t || !t.pngBytes || !t.pngBytes.length) continue;
+    const tileBlob = new Blob([t.pngBytes], { type: "image/png" });
+    const tileImage = await createImageBitmap(tileBlob);
+    const w = Math.max(1, Number(t.x1) - Number(t.x0));
+    const h = Math.max(1, Number(t.y1) - Number(t.y0));
+    ctx.drawImage(tileImage, Number(t.x0), Number(t.y0), w, h);
+    if (Number.isFinite(t.doneIndex) && t.doneIndex > maxDone) maxDone = t.doneIndex;
+  }
+
+  if (maxDone > progressiveDeltaSinceDone) progressiveDeltaSinceDone = maxDone;
+  const composedBlob = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b || null), "image/png");
+  });
+  if (!composedBlob || composedBlob.size === 0) return false;
+  return setPreviewFromBlob(composedBlob);
+}
+
+async function refreshProgressivePreviewDelta(jobId) {
+  if (!hasBackendMethod(api, "getJobImageDelta")) return false;
+  if (!progressiveDeltaEnabled) return false;
+
+  const id = String(jobId || "").trim();
+  if (!id) return false;
+  if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
+  const tmKey = [
+    el.toneMapping ? el.toneMapping.value : "aces",
+    el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+    el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+    el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+    el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+    el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  ].join("|");
+  if (tmKey !== progressiveDeltaTmKey) {
+    progressiveDeltaTmKey = tmKey;
+    progressiveDeltaSinceDone = 0;
+  }
+
+  const packet = await api.getJobImageDelta(id, {
+    since: progressiveDeltaSinceDone,
+    limit: 24,
+    cacheBust: true,
+    toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+    toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+    toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+    toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+    toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+    toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  });
+  if (!packet) return false;
+  if (renderActive && activeJobId && id === String(activeJobId)) {
+    recordPreviewTransfer("delta", packet.byteLength || 0);
+  }
+
+  const delta = parseImageDeltaPacket(packet);
+  if (!delta) return false;
+  if (!Array.isArray(delta.tiles) || delta.tiles.length === 0) return true;
+  return drawDeltaTilesToPreviewCanvas(delta);
+}
+
 async function refreshProgressivePreview(jobId) {
+  const id = String(jobId || "").trim();
   const blob = await api.getJobImage(jobId, {
     partial: true,
     cacheBust: true,
@@ -2634,6 +3480,9 @@ async function refreshProgressivePreview(jobId) {
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
   });
   if (!blob || blob.size === 0) return false;
+  if (renderActive && activeJobId && id === String(activeJobId)) {
+    recordPreviewTransfer("full", blob.size || 0);
+  }
 
   const imageBlob = preservePreviewUnderlay
     ? await composeWithPinnedPreview(blob)
@@ -2998,12 +3847,13 @@ function normalizeTabMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "editor") return "visual";
   if (raw === "workspace") return "workspaces";
+  if (raw === "scene_setup" || raw === "scenesetup") return "scene";
   // Backward compatibility for previously stored "about" tab.
   if (raw === "about") return "settings";
-  if (raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs") {
+  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs") {
     return raw;
   }
-  return "render";
+  return "scene";
 }
 
 function normalizeSidebarCardVisibilityConfig(rawConfig) {
@@ -3058,21 +3908,21 @@ async function fetchSidebarCardConfigJson() {
 }
 
 async function loadSidebarCardVisibilityConfig() {
-  try {
-    const data = await fetchSidebarCardConfigJson();
-    sidebarCardVisibilityRaw = JSON.stringify(data);
-    sidebarCardVisibility = normalizeSidebarCardVisibilityConfig(data);
-    appendLog(`loaded sidebar config from ${SIDEBAR_VISIBILITY_CONFIG_URL}`);
-  } catch (err) {
-    sidebarCardVisibilityRaw = "";
-    sidebarCardVisibility = { ...DEFAULT_SIDEBAR_CARD_VISIBILITY };
-    appendLog(`sidebar config fallback: ${err.message}`);
+  const data = await fetchSidebarCardConfigJson();
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("invalid sidebar card config payload");
   }
+  sidebarCardVisibilityRaw = JSON.stringify(data);
+  sidebarCardVisibility = normalizeSidebarCardVisibilityConfig(data);
+  appendLog(`loaded sidebar config from ${SIDEBAR_VISIBILITY_CONFIG_URL}`);
 }
 
 async function refreshSidebarCardVisibilityConfig(activeMode) {
   try {
     const data = await fetchSidebarCardConfigJson();
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("invalid sidebar card config payload");
+    }
     const raw = JSON.stringify(data);
     if (raw === sidebarCardVisibilityRaw) return;
     sidebarCardVisibilityRaw = raw;
@@ -3080,7 +3930,7 @@ async function refreshSidebarCardVisibilityConfig(activeMode) {
     applySidebarCardLayout(activeMode || activeTabMode);
     appendLog(`reloaded sidebar config from ${SIDEBAR_VISIBILITY_CONFIG_URL}`);
   } catch (err) {
-    // Keep last known good config during refresh failures.
+    appendLog(`sidebar config reload error: ${err.message}`);
   }
 }
 
@@ -3095,7 +3945,17 @@ function syncAaPresetUi() {
   if (!el.aaPills || el.aaPills.length === 0) return;
   const current = String(el.aa && el.aa.value ? el.aa.value : "");
   el.aaPills.forEach((btn) => {
+    if (btn.classList.contains("samples-pill")) return;
     const value = String(btn.getAttribute("data-aa") || "");
+    btn.classList.toggle("active", value === current);
+  });
+}
+
+function syncSamplesPresetUi() {
+  if (!el.samplesPills || el.samplesPills.length === 0) return;
+  const current = String(el.samples && el.samples.value ? el.samples.value : "");
+  el.samplesPills.forEach((btn) => {
+    const value = String(btn.getAttribute("data-samples") || "");
     btn.classList.toggle("active", value === current);
   });
 }
@@ -3109,6 +3969,7 @@ function setEditorViewMode(mode, persist) {
   if (el.visualPanel) el.visualPanel.hidden = !isVisual;
   if (el.graphPanel) el.graphPanel.hidden = !isGraph;
   if (el.textEditorPanel) el.textEditorPanel.hidden = (isVisual || isGraph);
+  if (el.graphResetLayoutBtn) el.graphResetLayoutBtn.hidden = !isGraph;
 
   const setActive = (node, state) => {
     if (!node) return;
@@ -3128,7 +3989,7 @@ function setEditorViewMode(mode, persist) {
     if (visualEditor.onShow) visualEditor.onShow();
     if (visualEditor.resize) visualEditor.resize();
   }
-  if (isGraph) renderSceneGraphView();
+  if (isGraph) scheduleGraphRender();
 }
 
 function setSidebarCardVisibility(card, visible) {
@@ -3162,6 +4023,7 @@ function setSidebarCardVisibility(card, visible) {
 }
 
 function applySidebarCardLayout(mode) {
+  if (!sidebarCardVisibility || typeof sidebarCardVisibility !== "object") return;
   const container = document.querySelector(".panel-controls");
   if (!container) return;
 
@@ -3201,17 +4063,20 @@ function applySidebarCardLayout(mode) {
 function setActiveTab(mode) {
   const nextMode = normalizeTabMode(mode);
   activeTabMode = nextMode;
+  const isScene = nextMode === "scene";
   const isRender = nextMode === "render";
   const isVisual = nextMode === "visual";
   const isWorkspaces = nextMode === "workspaces";
   const isSettings = nextMode === "settings";
   const isLogs = nextMode === "logs";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
+  setActive(el.tabScene, isScene);
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabWorkspaces, isWorkspaces);
   setActive(el.tabSettings, isSettings);
   setActive(el.tabLogs, isLogs);
+  setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneWorkspaces, isWorkspaces);
@@ -3221,6 +4086,7 @@ function setActiveTab(mode) {
   void refreshSidebarCardVisibilityConfig(nextMode);
   localStorage.setItem(ACTIVE_TAB_KEY, nextMode);
   if (isVisual && editorViewMode === "visual" && visualEditor) visualEditor.onShow();
+  if (isVisual && editorViewMode === "graph") scheduleGraphRender();
   if (isLogs && (uiOptions.autoScrollLogs || pendingLogScroll)) {
     scrollLogToBottom(true);
   }
@@ -3578,6 +4444,8 @@ function updateWorkspaceServerStatsHints(data) {
   const maxConcurrent = Number(data && data.max_concurrent_renders);
   const logicalCores = Number(data && data.logical_cores);
   const openmpThreads = Number(data && data.openmp_max_threads);
+  const renderReserveThreads = Number(data && data.render_reserve_threads);
+  const renderAutoThreads = Number(data && data.render_auto_threads);
   updateWorkspaceServerStatHint(
     el.workspaceMaxConcurrentHint,
     "Max Concurrent Renders",
@@ -3593,6 +4461,25 @@ function updateWorkspaceServerStatsHints(data) {
     "OpenMP Max Threads",
     Number.isFinite(openmpThreads) && openmpThreads > 0 ? Math.floor(openmpThreads) : "-"
   );
+  updateWorkspaceServerStatHint(
+    el.workspaceRenderReserveHint,
+    "Render Reserve Threads",
+    Number.isFinite(renderReserveThreads) && renderReserveThreads >= 0 ? Math.floor(renderReserveThreads) : "-"
+  );
+  updateWorkspaceServerStatHint(
+    el.workspaceRenderAutoHint,
+    "Render Auto Threads",
+    Number.isFinite(renderAutoThreads) && renderAutoThreads > 0 ? Math.floor(renderAutoThreads) : "-"
+  );
+  if (el.threadsPolicyHint) {
+    const reserveText = Number.isFinite(renderReserveThreads) && renderReserveThreads >= 0
+      ? String(Math.floor(renderReserveThreads))
+      : "?";
+    const autoText = Number.isFinite(renderAutoThreads) && renderAutoThreads > 0
+      ? String(Math.floor(renderAutoThreads))
+      : "?";
+    el.threadsPolicyHint.textContent = `Threads 0 uses auto mode (${autoText}), reserving ${reserveText} for server responsiveness.`;
+  }
 }
 
 function normalizeWorkspaceViewMode(value) {
@@ -3721,6 +4608,7 @@ function applyWorkspaceSettings(settings) {
       if (el.aa && quality.aa !== undefined) el.aa.value = String(quality.aa);
       if (el.sampleDistribution && quality.sample_distribution !== undefined) el.sampleDistribution.value = String(quality.sample_distribution);
       if (el.rdepth && quality.rdepth !== undefined) el.rdepth.value = String(quality.rdepth);
+      syncSamplesPresetUi();
       syncAaPresetUi();
     }
 
@@ -3891,6 +4779,21 @@ function renderWorkspaceList(items) {
     const lastJob = String((ws && ws.last_job_id) || "").trim();
     const clients = Number((ws && ws.client_count) || 0);
     const drafts = Number((ws && ws.draft_count) || 0);
+    const spatial = workspaceSpatialIndexStats && typeof workspaceSpatialIndexStats === "object"
+      ? workspaceSpatialIndexStats
+      : null;
+    const spatialNodes = spatial && Number.isFinite(Number(spatial.tlas_nodes))
+      ? String(Number(spatial.tlas_nodes))
+      : "-";
+    const spatialFinite = spatial && Number.isFinite(Number(spatial.finite_objects))
+      ? String(Number(spatial.finite_objects))
+      : "-";
+    const spatialInfinite = spatial && Number.isFinite(Number(spatial.infinite_objects))
+      ? String(Number(spatial.infinite_objects))
+      : "-";
+    const spatialBuildMs = spatial && Number.isFinite(Number(spatial.build_ms))
+      ? `${Math.max(0, Number(spatial.build_ms)).toFixed(0)} ms`
+      : "-";
 
     const card = document.createElement("article");
     card.className = "workspace-item";
@@ -3994,6 +4897,9 @@ function renderWorkspaceList(items) {
     addMeta("Clients", String(clients));
     addMeta("Drafts", String(drafts));
     addMeta("Job", activeJob || lastJob || "-");
+    addMeta("TLAS Nodes", spatialNodes);
+    addMeta("Finite/Infinite", `${spatialFinite}/${spatialInfinite}`);
+    addMeta("TLAS Build", spatialBuildMs);
     addMeta("Updated", formatWorkspaceUpdated(ws && ws.updated_ms));
 
     if (workspaceViewMode === "list") {
@@ -4033,6 +4939,9 @@ function renderWorkspaceList(items) {
       addChip("Users", String(clients));
       addChip("Drafts", String(drafts));
       addChip("Job", activeJob || lastJob || "-");
+      addChip("TLAS", spatialNodes);
+      addChip("Obj", `${spatialFinite}/${spatialInfinite}`);
+      addChip("Build", spatialBuildMs);
       addChip("Updated", formatWorkspaceUpdated(ws && ws.updated_ms));
 
       main.appendChild(head);
@@ -4057,6 +4966,9 @@ function renderWorkspaceList(items) {
 async function refreshWorkspaces() {
   if (!hasBackendMethod(api, "getWorkspaces")) return;
   const payload = await api.getWorkspaces();
+  workspaceSpatialIndexStats = payload && payload.spatial_index && typeof payload.spatial_index === "object"
+    ? payload.spatial_index
+    : null;
   const workspaceItems = (payload && payload.workspaces) || [];
   cacheWorkspaceSnapshots(workspaceItems);
   const nextActive = String((payload && payload.active_workspace) || "").trim();
@@ -4156,6 +5068,17 @@ async function loadSceneSource(scene) {
   syncEditorScroll();
   renderSceneGraphView();
   resetSceneHistoriesFromCurrentSource();
+}
+
+async function loadSceneRuntimeGraph(scene) {
+  const sceneName = String(scene || "").trim();
+  if (!sceneName || !hasBackendMethod(api, "getSceneRuntimeGraph")) return null;
+  const data = await api.getSceneRuntimeGraph(sceneName);
+  runtimeGraphByScene.set(sceneName, data || { cameras: [], objects: [], surfaces: [], materials: [] });
+  if (String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName) {
+    renderSceneGraphView();
+  }
+  return runtimeGraphByScene.get(sceneName) || null;
 }
 
 function renderThirdPartyLicenses(rawItems) {
@@ -4285,6 +5208,7 @@ function triggerSceneSave() {
           el.scene.value = scene;
           localStorage.setItem(LAST_SCENE_KEY, scene);
           const tasks = [loadCameras(scene)];
+          if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(scene));
           if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));
           if (visualEditor) tasks.push(loadVisualSceneFromSelected());
           return Promise.all(tasks);
@@ -4309,6 +5233,8 @@ function triggerSceneSave() {
 
 async function pollJob(jobId, token) {
   let lastState = "";
+  resetProgressiveDeltaState(jobId);
+  progressiveDeltaEnabled = true;
   while (true) {
     if (token !== undefined && token !== activePollToken) return;
     const data = await api.getJob(jobId);
@@ -4326,11 +5252,24 @@ async function pollJob(jobId, token) {
       lastState = state;
     }
 
-    await refreshProgressivePreview(jobId);
+    let updatedByDelta = false;
+    if (state === "queued" || state === "running") {
+      try {
+        updatedByDelta = await refreshProgressivePreviewDelta(jobId);
+      } catch (_) {
+        updatedByDelta = false;
+      }
+    }
+    if (!updatedByDelta) {
+      await refreshProgressivePreview(jobId);
+      if (state === "queued" || state === "running") progressiveDeltaEnabled = false;
+    }
     if (token !== undefined && token !== activePollToken) return;
 
     if (state === "done") {
       clearActivePreviewTiles();
+      resetProgressiveDeltaState("");
+      progressiveDeltaEnabled = true;
       const finalBlob = await api.getJobImage(jobId, {
         final: true,
         cacheBust: true,
@@ -4342,6 +5281,7 @@ async function pollJob(jobId, token) {
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
       });
       if (finalBlob && finalBlob.size > 0) {
+        recordPreviewTransfer("full", finalBlob.size || 0);
         await setPreviewFromBlob(finalBlob);
       }
       lastCompletedJobId = jobId;
@@ -4357,6 +5297,8 @@ async function pollJob(jobId, token) {
 
     if (state === "error") {
       clearActivePreviewTiles();
+      resetProgressiveDeltaState("");
+      progressiveDeltaEnabled = true;
       applyPreviewTransform();
       throw new Error(data.error || "render failed");
     }
@@ -4454,6 +5396,7 @@ async function handleRender() {
 async function boot() {
   ensureClientId();
   api = initializeBackendApi();
+  renderSceneLoadStatus();
   const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
   const startupRequestTotal = 7 + (hasWorkspaceApi ? 1 : 0);
   resetStartupProgress(startupRequestTotal);
@@ -4464,7 +5407,12 @@ async function boot() {
     if (el.paneWorkspaces) el.paneWorkspaces.hidden = true;
   }
   initSidebarAccordion();
-  await trackStartupRequest(loadSidebarCardVisibilityConfig());
+  await trackStartupRequest(
+    loadSidebarCardVisibilityConfig().catch((err) => {
+      appendLog(`sidebar config error: ${err.message}`);
+      // Keep booting: sidebar config is required but should not brick the UI.
+    })
+  );
   const savedTheme = localStorage.getItem("xtracer-theme") || "system";
   el.theme.value = savedTheme;
   applyTheme(savedTheme);
@@ -4474,6 +5422,7 @@ async function boot() {
   pollBackendLogs();
 
   setStatus("loading...");
+  setSceneLoadStatus("loading", "Bootstrapping scene metadata...", "");
   appendLog(`boot (backend=${backendMode})`);
   setEditorViewMode(localStorage.getItem(EDITOR_VIEW_MODE_KEY) || "visual", false);
   if (hasWorkspaceApi) {
@@ -4486,6 +5435,7 @@ async function boot() {
   ]);
   await trackStartupRequest(loadCameras(el.scene.value));
   await trackStartupRequest(loadSceneSource(el.scene.value));
+  await trackStartupRequest(loadSceneRuntimeGraph(el.scene.value).catch(() => null));
   if (hasWorkspaceApi && activeWorkspaceId) {
     await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
   }
@@ -4496,10 +5446,15 @@ async function boot() {
   applyPreviewSampling();
   setPreviewEmptyState(true);
   setRenderActive(false);
-  if (!el.scene.value) setStatus("no scenes found in scene/ directory");
-  else setStatus("idle");
+  if (!el.scene.value) {
+    setStatus("no scenes found in scene/ directory");
+    setSceneLoadStatus("idle", "No scenes found in scene/ directory.", "");
+  } else {
+    setStatus("idle");
+    setSceneLoadStatus("idle", "Ready.", "");
+  }
 
-  setActiveTab(localStorage.getItem(ACTIVE_TAB_KEY) || "render");
+  setActiveTab(localStorage.getItem(ACTIVE_TAB_KEY) || "scene");
   if (el.visualViewport && window.SceneVisualEditor) {
     visualEditor = new window.SceneVisualEditor(
       el.visualViewport,
@@ -4622,7 +5577,9 @@ async function boot() {
   el.scene.addEventListener("change", () => {
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
     updateSceneDependencyPill(el.scene.value);
+    setSceneLoadStatus("loading", `Loading ${el.scene.value || "scene"}...`, "");
     const tasks = [loadCameras(el.scene.value)];
+    if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
     if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
     Promise.all(tasks)
       .then(() => {
@@ -4632,7 +5589,9 @@ async function boot() {
         return null;
       })
       .then(() => appendLog(`scene changed: ${el.scene.value}`))
+      .then(() => setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, ""))
       .catch((err) => {
+        setSceneLoadStatus("error", err.message || "Scene change failed.", "");
         setStatus(`error: ${err.message}`);
         appendLog(`scene change error: ${err.message}`);
       });
@@ -4695,9 +5654,25 @@ async function boot() {
     });
   }
   if (el.samples) {
+    el.samples.addEventListener("input", () => {
+      syncSamplesPresetUi();
+    });
     el.samples.addEventListener("change", () => {
+      syncSamplesPresetUi();
       appendLog(`samples=${el.samples.value}`);
       queueWorkspaceSettingsSave();
+    });
+  }
+  if (el.samplesPills && el.samplesPills.length > 0) {
+    el.samplesPills.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const value = String(btn.getAttribute("data-samples") || "");
+        if (!el.samples || !value) return;
+        el.samples.value = value;
+        syncSamplesPresetUi();
+        appendLog(`samples=${el.samples.value}`);
+        queueWorkspaceSettingsSave();
+      });
     });
   }
   if (el.rdepth) {
@@ -4734,6 +5709,7 @@ async function boot() {
       queueWorkspaceSettingsSave();
     });
   }
+  syncSamplesPresetUi();
   syncAaPresetUi();
 
   if (el.toneMapping) {
@@ -4889,6 +5865,7 @@ async function boot() {
     });
   }
 
+  if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene"));
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
@@ -4899,6 +5876,14 @@ async function boot() {
   }
   if (el.editorViewGraphBtn) {
     el.editorViewGraphBtn.addEventListener("click", () => setEditorViewMode("graph"));
+  }
+  if (el.graphResetLayoutBtn) {
+    el.graphResetLayoutBtn.addEventListener("click", () => {
+      graphView.manualNodePos.clear();
+      graphView.userAdjusted = false;
+      renderSceneGraphView();
+      appendLog("graph layout reset");
+    });
   }
   if (el.editorViewTextBtn) {
     el.editorViewTextBtn.addEventListener("click", () => setEditorViewMode("text"));
@@ -4942,14 +5927,47 @@ async function boot() {
         .catch((err) => appendLog(`workspace create error: ${err.message}`));
     });
   }
+  if (el.sceneRefreshBtn) {
+    el.sceneRefreshBtn.addEventListener("click", () => {
+      setSceneLoadStatus("loading", "Refreshing scene list...", "");
+      loadScenes()
+        .then(() => {
+          const tasks = [loadCameras(el.scene.value)];
+          if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
+          if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
+          return Promise.all(tasks);
+        })
+        .then(() => {
+          if (visualEditor) {
+            return loadVisualSceneFromSelected();
+          }
+          return null;
+        })
+        .then(() => {
+          setStatus(`scenes refreshed (${el.scene.value || "none"})`);
+          setSceneLoadStatus("idle", `Scenes refreshed (${el.scene.value || "none"}).`, "");
+          appendLog("scene list refreshed");
+        })
+        .catch((err) => {
+          setSceneLoadStatus("error", err.message || "Scene refresh failed.", "");
+          setStatus(`error: ${err.message}`);
+          appendLog(`scene refresh error: ${err.message}`);
+        });
+    });
+  }
   el.loadSceneBtn.addEventListener("click", () => {
-    loadSceneSource(el.scene.value)
+    setSceneLoadStatus("loading", `Loading source for ${el.scene.value || "scene"}...`, "");
+    const tasks = [loadSceneSource(el.scene.value)];
+    if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
+    Promise.all(tasks)
       .then(() => {
         setStatus(`loaded ${el.scene.value}`);
+        setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, "");
         setEditorOpStatus("success", `Loaded: ${el.scene.value}`);
         appendLog(`loaded source: ${el.scene.value}`);
       })
       .catch((err) => {
+        setSceneLoadStatus("error", err.message || "Load source failed.", "");
         setStatus(`error: ${err.message}`);
         setEditorOpStatus("error", `Load failed: ${err.message}`);
         appendLog(`load source error: ${err.message}`);
