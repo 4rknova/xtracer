@@ -106,6 +106,12 @@ ColorRGBf IMaterial::get_sample(const char *name, const Vector3f &tc) const
     return (*it).second->sample(tc);
 }
 
+bool IMaterial::has_sampler(const char *name) const
+{
+    if (!name) return false;
+    return m_samplers.find(name) != m_samplers.end();
+}
+
 float& IMaterial::get_scalar_by_index(size_t idx, std::string *name)
 {
     std::map<std::string, float>::iterator it = m_scalars.begin();

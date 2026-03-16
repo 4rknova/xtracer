@@ -4,6 +4,7 @@
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <nimg/pixmap.h>
+#include <string>
 #include <xtcore/sampler.h>
 
 using nmath::Vector3f;
@@ -16,8 +17,9 @@ namespace xtcore {
 class Texture2D : public ISampler
 {
 	public:
-	int load(const char *file);
-	int load(const Pixmap &map);
+    int load(const char *file);
+    int load(const Pixmap &map);
+    const std::string &source_path() const;
 
     void set_filtering(FILTERING filtering);
 
@@ -32,6 +34,7 @@ class Texture2D : public ISampler
 	private:
     FILTERING m_filtering;
   	Pixmap    m_map;
+    std::string m_source_path;
 };
 
     } /* namespace sampler */

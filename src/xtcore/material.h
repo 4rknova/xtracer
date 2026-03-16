@@ -54,6 +54,7 @@ class IMaterial
 
     float     get_scalar(const char *name) const;
     ColorRGBf get_sample(const char *name, const Vector3f &tc) const;
+    bool has_sampler(const char *name) const;
        float& get_scalar_by_index  (size_t idx, std::string *name=0);
     ISampler* get_sampler_by_index (size_t idx, std::string *name=0);
 

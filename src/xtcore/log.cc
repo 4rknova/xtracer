@@ -4,6 +4,8 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <cstdio>
+#include <vector>
 #include "log.h"
 
 namespace xtcore {
@@ -22,6 +24,7 @@ Log::Log()
     , m_level(LOGENTRY_DEBUG)
     , m_callback(nullptr)
     , m_callback_user(nullptr)
+    , m_mut()
 {}
 
 Log::~Log()
@@ -35,6 +38,7 @@ Log::~Log()
 
 void Log::clear()
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	std::vector<log_entry_t *>::iterator it;
 
 	for (it = m_log.begin(); it != m_log.end(); ++it) {
@@ -46,6 +50,7 @@ void Log::clear()
 
 int Log::dump(const char* fpath)
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	std::ofstream file;
 	file.open(fpath);
 
@@ -78,17 +83,20 @@ int Log::dump(const char* fpath)
 
 log_entry_t Log::get_entry(size_t idx) const
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	if (idx < m_log.size()) return *(m_log[m_log.size()-1-idx]);
 	return log_entry_t();
 }
 
 size_t Log::get_size() const
 {
+    std::lock_guard<std::mutex> lock(m_mut);
     return m_log.size();
 }
 
 void Log::callback(callback_t fn, void *user)
 {
+    std::lock_guard<std::mutex> lock(m_mut);
     m_callback = fn;
     m_callback_user = user;
 }
@@ -100,95 +108,47 @@ Log &Log::handle()
 
 void Log::echo(bool state)
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	m_flag_echo = state;
 }
 
 bool Log::echo() const
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	return m_flag_echo;
 }
 
 void Log::rewind()
 {
+    std::lock_guard<std::mutex> lock(m_mut);
     m_flag_rewind = true;
 }
 
 void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 {
+    std::lock_guard<std::mutex> lock(m_mut);
     if (type < m_level) return;
 
-	// Store the length of the passed in string.
-	unsigned int msg_size = strlen(msg);
+    if (!msg || !*msg) return;
 
-	// We do not want to process an empty string.
-	if(msg_size == 0)
-		return;
+    va_list args_probe;
+    va_copy(args_probe, args);
+    const int needed = std::vsnprintf(nullptr, 0, msg, args_probe);
+    va_end(args_probe);
+    if (needed < 0) return;
 
-	// This is the delimeter that is used to specify the format flags
-	// you can use what you want.
-	static char delim = '%';
-
-    std::stringstream str;
-
-	for(unsigned int x = 0; x < msg_size; x++) {
-		if(msg[x] == delim)	{
-			// If there is a next character, and it is not a delim,
-			if(x + 1 < msg_size && msg[x + 1] != delim) {
-				// String
-				if (msg[x + 1] == 's') {
-					// We have a c-string, so get it and save it
-					const char* temp = va_arg(args, const char*);
-					str << temp;
-					x++;
-				}
-
-                // Character
-				else if (msg[x + 1] == 'c') {
-					char temp = va_arg(args, int);
-					str << temp;
-					x++;
-				}
-
-				// Integer
-				else if (msg[x + 1] == 'i') {
-					int temp = va_arg(args, int);
-					str << temp;
-					x++;
-				}
-
-				// Float
-				else if (msg[x + 1] == 'f') {
-					double temp = va_arg(args, double);
-					str << std::setprecision(3) << temp;
-					x++;
-				}
-				// size_t
-                else if (msg[x + 1] == 'l') {
-					double temp = va_arg(args, size_t);
-					str << temp;
-					x++;
-				}
-			}
-			else if(x + 1 < msg_size) {
-				// Save the delim that "delimdelim" was used for
-				str << delim;
-
-				// We know what comes after the delim, so do not process it
-				x++;
-			}
-		}
-		// ("delimdelim" means add a single delim)
-		else {
-			str << msg[x];
-		}
-	}
+    std::vector<char> buffer((size_t)needed + 1u, '\0');
+    va_list args_format;
+    va_copy(args_format, args);
+    std::vsnprintf(buffer.data(), buffer.size(), msg, args_format);
+    va_end(args_format);
 
 	log_entry_t *entry = new (std::nothrow) log_entry_t();
 
 	if (!entry)	return;
 
 	entry->type = type;
-	entry->message = str.str();
+	entry->message = std::string(buffer.data());
 
     if (m_flag_rewind) m_log.pop_back();
 
@@ -221,7 +181,10 @@ void Log::pulog(LOGENTRY_TYPE type, const char *msg, va_list args)
 
 	if (m_max_log_size) {
 		while (m_max_log_size < m_log.size()) {
-			pop_front();
+            std::vector<log_entry_t*>::iterator it = m_log.begin();
+            if (it == m_log.end()) break;
+            delete (*it);
+			m_log.erase(it);
 		}
 	}
 }
@@ -268,22 +231,26 @@ void Log::post_warning(const char *msg, ...)
 
 void Log::max_size(unsigned int size)
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	m_max_log_size = size;
 }
 
 void Log::pop_back()
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	m_log.pop_back();
 }
 
 void Log::pop_front()
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	std::vector<log_entry_t*>::iterator it = m_log.begin();
 	m_log.erase(it);
 }
 
 unsigned int Log::count_entries()
 {
+    std::lock_guard<std::mutex> lock(m_mut);
 	return m_log.size();
 }
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <stdarg.h>
+#include <mutex>
 
 // Disable: "<type> needs to have dll-interface to be used by clients"
 // This warning refers to STL member variables which are private and
@@ -77,8 +78,9 @@ class Log
 		bool         m_flag_echo;
 		bool         m_flag_rewind;
         size_t       m_level;
-        callback_t   m_callback;
+		callback_t   m_callback;
         void        *m_callback_user;
+        mutable std::mutex m_mut;
 
 		std::vector<log_entry_t*> m_log;
 		static Log m_log_manager;

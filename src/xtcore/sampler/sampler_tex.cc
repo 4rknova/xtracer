@@ -23,6 +23,7 @@ void Texture2D::set_filtering(FILTERING filtering)
 int Texture2D::load(const char *file)
 {
     int res = nimg::io::load::image(file, m_map);
+    m_source_path = file ? std::string(file) : std::string();
     Log::handle().post_message("Loading texture %s (%i)", file, res);
     return res;
 }
@@ -30,7 +31,13 @@ int Texture2D::load(const char *file)
 int Texture2D::load(const nimg::Pixmap &map)
 {
 	m_map = map;
+    m_source_path.clear();
 	return 0;
+}
+
+const std::string &Texture2D::source_path() const
+{
+    return m_source_path;
 }
 
 nimg::ColorRGBf Texture2D::sample(const nmath::Vector3f &tc) const

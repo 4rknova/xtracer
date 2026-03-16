@@ -118,6 +118,8 @@
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
 #define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
+#define XTPROTO_PROP_CELLS          "cells"             /* integer    */ /* Cell count */
+#define XTPROTO_PROP_MAX_DEVIATION  "max_deviation"     /* scalar_t   */ /* Max normal deviation (degrees) */
 #define XTPROTO_PROP_FIBERS         "fibers"            /* integer    */ /* Fiber count */
 #define XTPROTO_PROP_TURNS          "turns"             /* scalar_t   */ /* Turn count */
 #define XTPROTO_PROP_GROWTH         "growth"            /* scalar_t   */ /* Growth */
@@ -158,6 +160,7 @@
 #define XTPROTO_CHECKER             "checker"
 #define XTPROTO_WEAVE               "weave"
 #define XTPROTO_FBM_MARBLE          "fbm_marble"
+#define XTPROTO_VORONOI_NORMAL      "voronoi_normal"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"

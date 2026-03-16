@@ -8,6 +8,37 @@ namespace xtcore {
     namespace asset {
         namespace material {
 
+namespace {
+
+inline Vector3f lambert_shading_normal(const Lambert *mat, const hit_record_t &hit_record)
+{
+    Vector3f n = hit_record.normal.normalized();
+    if (!mat || !mat->has_sampler(MAT_SAMPLER_NORMAL)) return n;
+
+    const ColorRGBf tex = mat->get_sample(MAT_SAMPLER_NORMAL, hit_record.texcoord);
+    Vector3f tangent_space_n(
+        (nmath::scalar_t)(tex.r() * 2.0f - 1.0f),
+        (nmath::scalar_t)(tex.g() * 2.0f - 1.0f),
+        (nmath::scalar_t)(tex.b() * 2.0f - 1.0f)
+    );
+    if (tangent_space_n.length() <= (nmath::scalar_t)EPSILON) return n;
+    tangent_space_n.normalize();
+
+    const Vector3f t = xtcore::math::sampling::build_tangent(n);
+    Vector3f b = nmath::cross(n, t);
+    if (b.length() <= (nmath::scalar_t)EPSILON) return n;
+    b.normalize();
+
+    Vector3f mapped = (t * tangent_space_n.x) + (b * tangent_space_n.y) + (n * tangent_space_n.z);
+    if (mapped.length() <= (nmath::scalar_t)EPSILON) return n;
+    mapped.normalize();
+
+    if (nmath::dot(mapped, n) <= (nmath::scalar_t)0.0) return n;
+    return mapped;
+}
+
+} // namespace
+
 bool Lambert::shade(
             ColorRGBf    &intensity
     , const ICamera      *camera
@@ -19,7 +50,8 @@ bool Lambert::shade(
     Vector3f light_dir = emitter->position - hit_record.point;
     light_dir.normalize();
 
-    nmath::scalar_t d = dot(light_dir, hit_record.normal);
+    const Vector3f n = lambert_shading_normal(this, hit_record);
+    nmath::scalar_t d = dot(light_dir, n);
 
     if (d > 0) {
         intensity += emitter->intensity *
@@ -34,10 +66,12 @@ bool Lambert::sample_path(
     , const hit_record_t &hit_record
 ) const
 {
-    hit_result.ray.origin    = hit_record.point + hit_record.normal * EPSILON;
-    hit_result.ray.direction = nmath::sample::diffuse(hit_record.normal).normalized();
+    const Vector3f n = lambert_shading_normal(this, hit_record);
+    const Vector3f ng = hit_record.normal.normalized();
+    hit_result.ray.origin    = hit_record.point + ng * EPSILON;
+    hit_result.ray.direction = nmath::sample::diffuse(n).normalized();
     hit_result.intensity     = get_sample("diffuse", hit_record.texcoord)
-                             * dot(hit_record.normal, hit_result.ray.direction);
+                             * dot(n, hit_result.ray.direction);
     return true;
 }
 
@@ -49,7 +83,7 @@ bool Lambert::bsdf_eval(
     , scalar_t &pdf
 ) const
 {
-    const nmath::Vector3f n = hit_record.normal.normalized();
+    const nmath::Vector3f n = lambert_shading_normal(this, hit_record);
     const nmath::scalar_t cos_i = std::max((nmath::scalar_t)0.0, nmath::dot(n, wi.normalized()));
     const nmath::scalar_t cos_o = std::max((nmath::scalar_t)0.0, nmath::dot(n, wo.normalized()));
     if (cos_i <= (nmath::scalar_t)EPSILON || cos_o <= (nmath::scalar_t)EPSILON) {
@@ -71,7 +105,8 @@ bool Lambert::bsdf_sample(
     , scalar_t &pdf
 ) const
 {
-    wi = xtcore::math::sampling::sample_cosine_hemisphere(hit_record.normal, pdf);
+    const nmath::Vector3f n = lambert_shading_normal(this, hit_record);
+    wi = xtcore::math::sampling::sample_cosine_hemisphere(n, pdf);
     return bsdf_eval(hit_record, wo, wi, f, pdf);
 }
 

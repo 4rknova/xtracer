@@ -2,6 +2,13 @@
 #include <algorithm>
 #include <cctype>
 #include <vector>
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <memory>
+#include <fstream>
 
 #include <nmath/precision.h>
 #include <ncf/util.h>
@@ -34,6 +41,7 @@
 #include "sampler/sampler_checker.h"
 #include "sampler/sampler_weave.h"
 #include "sampler/sampler_fbm_marble.h"
+#include "sampler/sampler_voronoi_normal.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -156,6 +164,42 @@ nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const n
 }
 
 namespace {
+
+struct async_load_job_t {
+    unsigned long long id;
+    async_load_state_t state;
+    std::string filename;
+    std::string error;
+    std::shared_ptr<Scene> scene;
+    std::list<std::string> modifiers;
+    bool has_modifiers;
+
+    async_load_job_t()
+        : id(0)
+        , state(ASYNC_LOAD_QUEUED)
+        , filename()
+        , error()
+        , scene()
+        , modifiers()
+        , has_modifiers(false)
+    {}
+};
+
+static std::mutex g_async_jobs_mut;
+static std::mutex g_async_load_exec_mut;
+static std::map<unsigned long long, std::shared_ptr<async_load_job_t> > g_async_jobs;
+static std::atomic<unsigned long long> g_async_next_id(1ULL);
+
+static const char *async_load_state_name(async_load_state_t state)
+{
+    switch (state) {
+        case ASYNC_LOAD_QUEUED: return "queued";
+        case ASYNC_LOAD_RUNNING: return "running";
+        case ASYNC_LOAD_DONE: return "done";
+        case ASYNC_LOAD_ERROR: return "error";
+        default: return "unknown";
+    }
+}
 
 static bool parse_trailing_index(const std::string &name, int &index)
 {
@@ -282,6 +326,33 @@ static std::vector<nmath::Vector3f> deserialize_spline_points(const ncf::NCF *sp
     points.reserve(entries.size());
     for (size_t i = 0; i < entries.size(); ++i) points.push_back(entries[i].value);
     return points;
+}
+
+static bool path_exists(const std::string &path)
+{
+    std::ifstream in(path.c_str(), std::ios::binary);
+    return in.good();
+}
+
+static std::string resolve_obj_case_path(const std::string &path)
+{
+    if (path.empty()) return path;
+    if (path_exists(path)) return path;
+
+    const size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos) return path;
+
+    std::string ext = path.substr(dot + 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    if (ext != "obj") return path;
+
+    static const char *variants[] = { "obj", "OBJ", "Obj" };
+    for (size_t i = 0; i < (sizeof(variants) / sizeof(variants[0])); ++i) {
+        std::string candidate = path.substr(0, dot + 1);
+        candidate.append(variants[i]);
+        if (path_exists(candidate)) return candidate;
+    }
+    return path;
 }
 
 } /* namespace */
@@ -671,17 +742,26 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 		ncf::util::path_comp(fsource, base, file);
     	base.append(f);
 
-	    Log::handle().post_message("Loading data from %s", base.c_str());
+        std::string import_path = resolve_obj_case_path(base);
+        if (import_path != base) {
+            Log::handle().post_warning("OBJ path case fallback: %s -> %s", base.c_str(), import_path.c_str());
+        }
+	    Log::handle().post_message("Loading data from %s", import_path.c_str());
+        auto t_import_0 = std::chrono::steady_clock::now();
 
-	    if (nmesh::io::import::obj(base.c_str(), obj))
+	    if (nmesh::io::import::obj(import_path.c_str(), obj))
     	{
     		Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
 	    	delete data;
             return 0;
 		}
+        auto t_import_1 = std::chrono::steady_clock::now();
+        const double ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_import_1 - t_import_0).count();
+        Log::handle().post_message("OBJ import done: %s (%.0f ms)", base.c_str(), ms);
     }
 
     if (p->query_group(XTPROTO_MODIFIERS)) {
+        auto t_mod_0 = std::chrono::steady_clock::now();
         ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
 
     	nmath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , nmath::Vector3f(0, 0, 0));
@@ -702,6 +782,9 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             Log::handle().post_message("Applying modifier: extrude..");
             xtcore::auxiliary::extrude(&obj, cb);
         }
+        auto t_mod_1 = std::chrono::steady_clock::now();
+        const double ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_mod_1 - t_mod_0).count();
+        Log::handle().post_message("Mesh modifiers done: %s (%.0f ms)", f.c_str(), ms);
     }
 
     if (obj.shapes.empty()) {
@@ -711,11 +794,15 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     }
 
     Log::handle().post_message("Building octree..");
+    auto t_oct_0 = std::chrono::steady_clock::now();
     if (obj.shapes.size() == 1) {
         ((xtcore::surface::Mesh *)data)->build_octree(obj.shapes[0], obj.attributes);
     } else {
 	    ((xtcore::surface::Mesh *)data)->build_octree(obj);
     }
+    auto t_oct_1 = std::chrono::steady_clock::now();
+    const double oct_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_oct_1 - t_oct_0).count();
+    Log::handle().post_message("Mesh octree build done: %s (%zu shapes, %.0f ms)", f.c_str(), obj.shapes.size(), oct_ms);
 
     return data;
 }
@@ -850,6 +937,22 @@ xtcore::sampler::ISampler *deserialize_fbm_marble(const ncf::NCF *p)
     return sampler;
 }
 
+xtcore::sampler::ISampler *deserialize_voronoi_normal(const ncf::NCF *p)
+{
+    xtcore::sampler::VoronoiNormal *sampler = new (std::nothrow) xtcore::sampler::VoronoiNormal();
+    if (!sampler || !p) return sampler;
+
+    sampler->cells = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_CELLS), sampler->cells);
+    if (sampler->cells < 1) sampler->cells = 1;
+
+    sampler->max_deviation = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_MAX_DEVIATION), sampler->max_deviation);
+    if (sampler->max_deviation < (nmath::scalar_t)0.0) sampler->max_deviation = (nmath::scalar_t)0.0;
+    if (sampler->max_deviation > (nmath::scalar_t)89.0) sampler->max_deviation = (nmath::scalar_t)89.0;
+
+    sampler->seed = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), sampler->seed);
+    return sampler;
+}
+
 xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
@@ -887,6 +990,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
             else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
             else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
             else if (!type.compare(XTPROTO_FBM_MARBLE)) sampler = deserialize_fbm_marble(entry);
+            else if (!type.compare(XTPROTO_VORONOI_NORMAL)) sampler = deserialize_voronoi_normal(entry);
             else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
             data->add_sampler(entry->get_name(), sampler);
@@ -943,11 +1047,11 @@ xtcore::asset::Object *deserialize_object(const ncf::NCF *p)
 
     xtcore::asset::Object *data = new (std::nothrow) xtcore::asset::Object;
 
-   	const char *g = p->get_property_by_name(XTPROTO_PROP_OBJ_GEO);
-   	const char *m = p->get_property_by_name(XTPROTO_PROP_OBJ_MAT);
+    const std::string surface_name = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_OBJ_GEO));
+    const std::string material_name = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_OBJ_MAT));
 
-   	data->surface  = xtcore::pool::str::add(deserialize_cstr(g).c_str());
-   	data->material = xtcore::pool::str::add(deserialize_cstr(m).c_str());
+   	data->surface  = xtcore::pool::str::add(surface_name.c_str());
+   	data->material = xtcore::pool::str::add(material_name.c_str());
 
    	return data;
 }
@@ -988,26 +1092,43 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     if (!data) return 1;
     scene->destroy_surface(id);
     scene->m_surface[id] = data;
+    scene->mark_spatial_index_dirty();
     return 0;
 }
 
-xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3])
+xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3], bool white_fallback_on_missing = false)
 {
      xtcore::sampler::ISampler *sampler = 0;
      {
+        bool loaded_texture = false;
         if (texture && strlen(texture) > 0) {
-            sampler = new (std::nothrow) xtcore::sampler::Texture2D();
+            xtcore::sampler::Texture2D *tex = new (std::nothrow) xtcore::sampler::Texture2D();
             std::string normalized_path = base;
             normalized_path.append(texture);
             std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
-            ((xtcore::sampler::Texture2D*)sampler)->load(normalized_path.c_str());
-            ((xtcore::sampler::Texture2D*)sampler)->flip_horizontal();
-        } else {
+            if (tex && tex->load(normalized_path.c_str()) == 0) {
+                tex->set_filtering(xtcore::sampler::FILTERING_BILINEAR);
+                tex->flip_vertical();
+                sampler = tex;
+                loaded_texture = true;
+            } else {
+                Log::handle().post_warning("Failed to load texture %s, using solid color fallback", normalized_path.c_str());
+                delete tex;
+            }
+        }
+        if (!loaded_texture) {
+            float r = value[0];
+            float g = value[1];
+            float b = value[2];
+            if (white_fallback_on_missing && r <= 0.0f && g <= 0.0f && b <= 0.0f) {
+                r = 1.0f;
+                g = 1.0f;
+                b = 1.0f;
+            }
             sampler = new (std::nothrow) xtcore::sampler::SolidColor();
-            nimg::ColorRGBf col(value[0], value[1], value[2]);
+            nimg::ColorRGBf col(r, g, b);
             ((xtcore::sampler::SolidColor*)sampler)->set(col);
         }
-
      }
      return sampler;
 }
@@ -1023,9 +1144,18 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
     std::string base, filename, fsource = filepath;
 
 	ncf::util::path_comp(fsource, base, filename);
-    if (nmesh::io::import::obj(fsource.c_str(), obj, base.c_str()))	{
-   		Log::handle().post_warning("Failed to load mesh from %s", fsource.c_str());
+    std::string import_path = resolve_obj_case_path(fsource);
+    if (import_path != fsource) {
+        Log::handle().post_warning("OBJ path case fallback: %s -> %s", fsource.c_str(), import_path.c_str());
     }
+    auto t_import_0 = std::chrono::steady_clock::now();
+    if (nmesh::io::import::obj(import_path.c_str(), obj, base.c_str()))	{
+   		Log::handle().post_warning("Failed to load mesh from %s", fsource.c_str());
+        return 1;
+    }
+    auto t_import_1 = std::chrono::steady_clock::now();
+    const double import_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_import_1 - t_import_0).count();
+    Log::handle().post_message("External OBJ import done: %s (%zu shapes, %.0f ms)", fsource.c_str(), obj.shapes.size(), import_ms);
 
     Log::handle().post_debug("Materials: %i", obj.materials.size());
     Log::handle().post_debug("   Shapes: %i", obj.shapes.size());
@@ -1066,20 +1196,26 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
             }
             else
             {
-                mat = new (std::nothrow) xtcore::asset::material::BlinnPhong();
-                xtcore::sampler::ISampler *kd = create_sampler(base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse );
-                xtcore::sampler::ISampler *ks = create_sampler(base.c_str(), obj.materials[m].texture_specular.c_str(), obj.materials[m].specular);
+                mat = new (std::nothrow) xtcore::asset::material::Lambert();
+                xtcore::sampler::ISampler *kd = create_sampler(base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse, true);
                 mat->add_sampler(MAT_SAMPLER_DIFFUSE , kd);
-                mat->add_sampler(MAT_SAMPLER_SPECULAR, ks);
-                mat->add_scalar(MAT_SCALART_IOR, obj.materials[m].ior);
-                mat->add_scalar(MAT_SCALART_EXPONENT, obj.materials[m].shininess);
+
+                std::string normal_tex = obj.materials[m].texture_normal;
+                if (normal_tex.empty()) normal_tex = obj.materials[m].texture_bump;
+                if (!normal_tex.empty()) {
+                    float normal_default[3] = { 0.5f, 0.5f, 1.0f };
+                    xtcore::sampler::ISampler *kn = create_sampler(base.c_str(), normal_tex.c_str(), normal_default);
+                    mat->add_sampler(MAT_SAMPLER_NORMAL, kn);
+                }
             }
 
             scene->m_materials[id] = mat;
         }
     }
 
+    HASH_UINT64 fallback_mat_id = HASH_ID_INVALID;
     int shape_count = 0;
+    double octree_total_ms = 0.0;
     for (nmesh::shape_t shape : obj.shapes) {
         ++shape_count;
         std::string name = std::to_string(shape_count);
@@ -1092,18 +1228,43 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
 
         // Create Geometry
         xtcore::asset::ISurface *surf = new (std::nothrow) xtcore::surface::Mesh();
+        auto t_oct_0 = std::chrono::steady_clock::now();
         ((xtcore::surface::Mesh*)surf)->build_octree(shape, obj.attributes);
+        auto t_oct_1 = std::chrono::steady_clock::now();
+        const double oct_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_oct_1 - t_oct_0).count();
+        octree_total_ms += oct_ms;
         scene->m_surface[id] = surf;
 
         // Create Object
         xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
         obj->surface  = id;
-        obj->material = matids[shape.mesh.materials[0]];
+        int material_index = -1;
+        if (!shape.mesh.materials.empty()) material_index = shape.mesh.materials[0];
+
+        if (material_index < 0 || (size_t)material_index >= matids.size()) {
+            if (fallback_mat_id == HASH_ID_INVALID) {
+                std::string fallback_name = std::string(prefix ? prefix : "") + "__fallback_material";
+                fallback_mat_id = xtcore::pool::str::add(fallback_name.c_str());
+                if (scene->m_materials.find(fallback_mat_id) == scene->m_materials.end()) {
+                    xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::Lambert();
+                    float kd_val[3] = { 1.0f, 1.0f, 1.0f };
+                    mat->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler(base.c_str(), "", kd_val));
+                    scene->m_materials[fallback_mat_id] = mat;
+                }
+            }
+            Log::handle().post_warning("Shape %s has invalid material index (%d), using fallback material",
+                                       shape.name.c_str(), material_index);
+            obj->material = fallback_mat_id;
+        } else {
+            obj->material = matids[(size_t)material_index];
+        }
         scene->m_objects[id] = obj;
         Log::handle().post_message("creating object %s : %s"
                                  , name.c_str()
                                  , xtcore::pool::str::get(obj->material));
     }
+    Log::handle().post_message("External object build done: %s (%d objects, %.0f ms octree total)", filepath, shape_count, octree_total_ms);
+    scene->mark_spatial_index_dirty();
 
     return 0;
 }
@@ -1118,12 +1279,14 @@ int create_object(Scene *scene, ncf::NCF *p)
     if (!data) return 1;
     scene->destroy_object(id);
     scene->m_objects[id] = data;
+    scene->mark_spatial_index_dirty();
     return 0;
 }
 
 int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers)
 {
 	Log::handle().post_message("Loading script [%s]..", filename);
+    auto t_load_0 = std::chrono::steady_clock::now();
 
     if(!filename) return 1;
 
@@ -1245,8 +1408,130 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 			}
 		}
 	}
+    scene->rebuild_spatial_index();
 	Log::handle().post_message("Scene loaded.");
+    auto t_load_1 = std::chrono::steady_clock::now();
+    const double load_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_load_1 - t_load_0).count();
+    Log::handle().post_message("Scene load completed in %.0f ms", load_ms);
 	return 0;
+}
+
+unsigned long long load_async_start(const char *filename, const std::list<std::string> *modifiers)
+{
+    if (!filename || !*filename) return 0ULL;
+
+    std::shared_ptr<async_load_job_t> job(new (std::nothrow) async_load_job_t());
+    if (!job) return 0ULL;
+
+    job->id = g_async_next_id.fetch_add(1ULL);
+    job->filename = filename;
+    job->has_modifiers = (modifiers != 0);
+    if (modifiers) job->modifiers = *modifiers;
+
+    {
+        std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+        g_async_jobs[job->id] = job;
+    }
+
+    std::thread worker([job]() {
+        {
+            std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+            job->state = ASYNC_LOAD_RUNNING;
+            job->error.clear();
+        }
+
+        std::shared_ptr<Scene> loaded_scene(new (std::nothrow) Scene());
+        if (!loaded_scene) {
+            std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+            job->state = ASYNC_LOAD_ERROR;
+            job->error = "Failed to allocate scene";
+            return;
+        }
+
+        int result = 1;
+        {
+            std::lock_guard<std::mutex> lock(g_async_load_exec_mut);
+            const std::list<std::string> *mods = job->has_modifiers ? &job->modifiers : 0;
+            result = load(loaded_scene.get(), job->filename.c_str(), mods);
+        }
+
+        std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+        if (result == 0) {
+            job->scene = loaded_scene;
+            job->state = ASYNC_LOAD_DONE;
+            job->error.clear();
+        } else {
+            job->state = ASYNC_LOAD_ERROR;
+            job->error = "Scene load failed";
+        }
+    });
+    worker.detach();
+
+    return job->id;
+}
+
+bool load_async_snapshot(unsigned long long id, async_load_snapshot_t *out)
+{
+    if (!id || !out) return false;
+
+    std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+    std::map<unsigned long long, std::shared_ptr<async_load_job_t> >::const_iterator it = g_async_jobs.find(id);
+    if (it == g_async_jobs.end() || !it->second) return false;
+
+    out->id = it->second->id;
+    out->state = it->second->state;
+    out->state_name = async_load_state_name(it->second->state);
+    out->filename = it->second->filename;
+    out->error = it->second->error;
+    return true;
+}
+
+std::shared_ptr<Scene> load_async_take_scene(unsigned long long id)
+{
+    if (!id) return std::shared_ptr<Scene>();
+
+    std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+    std::map<unsigned long long, std::shared_ptr<async_load_job_t> >::iterator it = g_async_jobs.find(id);
+    if (it == g_async_jobs.end() || !it->second) return std::shared_ptr<Scene>();
+    if (it->second->state != ASYNC_LOAD_DONE) return std::shared_ptr<Scene>();
+
+    std::shared_ptr<Scene> result = it->second->scene;
+    it->second->scene.reset();
+    return result;
+}
+
+void load_async_discard(unsigned long long id)
+{
+    if (!id) return;
+
+    std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+    std::map<unsigned long long, std::shared_ptr<async_load_job_t> >::iterator it = g_async_jobs.find(id);
+    if (it != g_async_jobs.end()) g_async_jobs.erase(it);
+}
+
+size_t load_async_gc_done(size_t keep_latest)
+{
+    std::lock_guard<std::mutex> lock(g_async_jobs_mut);
+
+    std::vector<unsigned long long> completed_ids;
+    completed_ids.reserve(g_async_jobs.size());
+
+    for (std::map<unsigned long long, std::shared_ptr<async_load_job_t> >::const_iterator it = g_async_jobs.begin();
+         it != g_async_jobs.end(); ++it) {
+        if (!it->second) continue;
+        if (it->second->state == ASYNC_LOAD_DONE || it->second->state == ASYNC_LOAD_ERROR) {
+            completed_ids.push_back(it->first);
+        }
+    }
+
+    if (completed_ids.size() <= keep_latest) return 0;
+
+    const size_t remove_count = completed_ids.size() - keep_latest;
+    for (size_t i = 0; i < remove_count; ++i) {
+        std::map<unsigned long long, std::shared_ptr<async_load_job_t> >::iterator it = g_async_jobs.find(completed_ids[i]);
+        if (it != g_async_jobs.end()) g_async_jobs.erase(it);
+    }
+    return remove_count;
 }
 
         } /* namespace scn */
