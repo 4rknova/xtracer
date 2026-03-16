@@ -51,6 +51,10 @@ This file is the orientation and operating guide for coding agents working in th
 - `GET /api/scenes`
 - `GET /api/scenes/{scene}/cameras`
 - `GET /api/scenes/{scene}/source`
+- `GET /api/scenes/{scene}/geometry`
+- `GET /api/scenes/{scene}/runtime_graph`
+- `GET /api/scenes/{scene}/camera_resolve`
+- `GET /api/scenes/load_jobs/{id}`
 - `POST /api/scenes/save`
 - `GET /api/integrators`
 - `POST /api/render`

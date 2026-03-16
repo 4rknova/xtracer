@@ -14,7 +14,7 @@ xtracer_cli \- command-line renderer for XTRACER scenes
 .B xtracer_cli
 loads a
 .B .scn
-scene file, renders it with the selected integrator, and writes a PNG image.
+scene file, renders it with the selected integrator, and writes a tonemapped PNG image.
 .PP
 Default output filename:
 .I <scene_basename>_<renderer>.png
@@ -75,14 +75,14 @@ Debug view aliases.
 Render a scene:
 .PP
 .EX
-./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn \\
+\&./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn \\
   -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 .EE
 .PP
 Render with a specific camera and output directory:
 .PP
 .EX
-./build/release/xtracer_cli scene/lab-camera-dof-showcase.scn \\
+\&./build/release/xtracer_cli scene/lab-camera-dof-showcase.scn \\
   -cam camera.main -outdir ./renders -renderer pathtracer
 .EE
 .SH EXIT STATUS
@@ -90,6 +90,7 @@ Render with a specific camera and output directory:
 Success.
 .IP "1"
 Usage/setup error or scene load failure.
+This code is also currently returned by \fBxtracer_cli version\fR.
 .IP "2"
 Runtime/validation error (for example invalid renderer or camera).
 .SH AUTHOR

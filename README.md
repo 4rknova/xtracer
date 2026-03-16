@@ -32,7 +32,7 @@ cmake --build build/intermediate/build -j
 Run web server:
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -151,6 +151,17 @@ Run CLI:
 | `checker` | Procedural checker |
 | `weave` | Procedural weave |
 | `fbm_marble` | Procedural marble |
+| `voronoi_normal` | Procedural Voronoi tangent-space normal map |
+
+Lambert material supports an optional sampler named `normal` for tangent-space normal mapping.
+Supported normal sampler types:
+- `texture` (normal-map texture)
+- `voronoi_normal` (procedural normal generator)
+
+`voronoi_normal` parameters:
+- `cells` (integer, `>= 1`): Number of Voronoi cells.
+- `max_deviation` (float, degrees, clamped to `[0, 89]`): Maximum angular deviation from tangent-space +Z.
+- `seed` (integer): Deterministic random seed.
 
 #### Mesh Modifiers
 
@@ -181,10 +192,12 @@ Run CLI:
 | GET | `/api/health` | Health probe |
 | GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields |
 | GET | `/api/scenes` | List available scenes |
-| GET | `/api/scenes/{scene}/cameras` | List cameras in scene |
+| GET | `/api/scenes/{scene}/cameras` | List cameras in scene (returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
-| GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload |
-| GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata |
+| GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/cameras) (returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
 | GET | `/api/scenes/template/empty` | Empty scene template |
 | POST | `/api/scenes/save` | Save scene source |
@@ -199,6 +212,7 @@ Run CLI:
 | POST | `/api/render` | Create render job |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image |
+| GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, tone mapping params supported) |
 | GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
@@ -255,12 +269,14 @@ cmake --build build/intermediate/build -j
 ### Web Server
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --verbose
+./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
 
 `--max-concurrent-renders` controls how many render jobs execute simultaneously (default: `1`).
+`--render-reserve-threads` controls how many threads auto-render mode keeps free for server responsiveness (default: `1`).
+When `/api/render` uses `threads=0`, backend auto mode resolves to `max(1, runtime_threads - reserve_threads)` (single-core hosts still render with `1` thread).
 Startup prints an ASCII banner with runtime info (host/port, paths, concurrency, and detected core/thread limits).
 
 ### Docker Deployment

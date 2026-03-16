@@ -20,6 +20,14 @@ xtracer_web \- HTTP web server frontend for XTRACER
 .I path
 ]
 [
+.B --max-concurrent-renders
+.I num
+]
+[
+.B --render-reserve-threads
+.I num
+]
+[
 .B --verbose
 ]
 [
@@ -42,6 +50,14 @@ Default: \fBscene\fR.
 .IP "\fB--web-root\fR \fIpath\fR"
 Directory containing static web client assets.
 Default: \fBsrc/frontend/web-client\fR.
+.IP "\fB--max-concurrent-renders\fR \fInum\fR"
+Maximum number of queued render jobs allowed to execute concurrently.
+Must be 1 or greater.
+Default: \fB1\fR.
+.IP "\fB--render-reserve-threads\fR \fInum\fR"
+Number of CPU threads kept free from OpenMP render workers.
+Can be \fB0\fR or greater.
+Default: \fB1\fR.
 .IP "\fB--verbose\fR, \fB-v\fR"
 Enable per-request HTTP logging to stdout.
 .IP "\fB--help\fR"
@@ -51,13 +67,13 @@ Print usage and exit.
 Start server with defaults:
 .PP
 .EX
-./build/release/xtracer_web
+\&./build/release/xtracer_web
 .EE
 .PP
 Start server with explicit host/port and paths:
 .PP
 .EX
-./build/release/xtracer_web \\
+\&./build/release/xtracer_web \\
   --host 127.0.0.1 \\
   --port 8080 \\
   --scene-dir scene \\
@@ -65,21 +81,61 @@ Start server with explicit host/port and paths:
   --verbose
 .EE
 .SH API OVERVIEW
-Common endpoints:
+Primary API endpoints:
 .IP "\fBGET /api/health\fR"
 Health probe.
+.IP "\fBGET /api/about\fR"
+Runtime/build metadata and backend limits.
 .IP "\fBGET /api/scenes\fR"
 List available scenes.
+.IP "\fBGET /api/scenes/{scene}/cameras\fR"
+List cameras available in a scene.
 .IP "\fBGET /api/scenes/{scene}/source\fR"
 Get scene source.
+.IP "\fBGET /api/scenes/{scene}/geometry\fR"
+Scene geometry/asset inspection metadata.
+.IP "\fBGET /api/scenes/{scene}/runtime_graph\fR"
+Scene runtime graph summary.
+.IP "\fBGET /api/scenes/{scene}/camera_resolve\fR"
+Resolve camera selection for render submission.
+.IP "\fBGET /api/scenes/load_jobs/{id}\fR"
+Poll asynchronous scene-load job status.
+.IP "\fBPOST /api/scenes/save\fR"
+Save scene source content.
+.IP "\fBGET /api/scenes/template/empty\fR"
+Return an empty scene template.
+.IP "\fBGET /api/integrators\fR"
+List available integrators.
+.IP "\fBGET /api/resolutions\fR"
+List standard resolution presets.
 .IP "\fBPOST /api/render\fR"
 Create render job.
 .IP "\fBGET /api/jobs/{id}\fR"
 Get job snapshot.
 .IP "\fBGET /api/jobs/{id}/image\fR"
 Get preview/final image.
+.IP "\fBGET /api/jobs/{id}/image_delta\fR"
+Get incremental image delta payload.
+.IP "\fBGET /api/jobs/{id}/export\fR"
+Export current render output.
+.IP "\fBGET /api/jobs/{id}/photons\fR"
+Get photon map debug visualization payload.
 .IP "\fBGET /api/logs?since={id}\fR"
 Get incremental backend logs.
+.IP "\fBGET /api/logs/wait?since={id}\fR"
+Long-poll log stream helper.
+.IP "\fBGET /api/workspaces\fR"
+List workspace snapshots.
+.IP "\fBPOST /api/workspaces\fR"
+Create workspace.
+.IP "\fBPOST /api/workspaces/active\fR"
+Set active workspace.
+.IP "\fBPOST /api/workspaces/delete\fR"
+Delete workspace.
+.IP "\fBPOST /api/workspaces/scene_draft\fR"
+Persist draft scene source in workspace.
+.IP "\fBPOST /api/workspaces/settings\fR"
+Persist workspace-level settings.
 .SH EXIT STATUS
 .IP "0"
 Success.
