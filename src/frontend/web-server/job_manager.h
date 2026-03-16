@@ -49,6 +49,25 @@ struct job_snapshot_t
     std::vector<tile_rect_t> active_tiles;
 };
 
+struct job_image_delta_t
+{
+    struct tile_t {
+        size_t x0;
+        size_t y0;
+        size_t x1;
+        size_t y1;
+        size_t done_index;
+        std::vector<unsigned char> png;
+    };
+
+    job_state_t state;
+    size_t width;
+    size_t height;
+    size_t tiles_done;
+    size_t tiles_total;
+    std::vector<tile_t> tiles;
+};
+
 class job_manager_t
 {
     public:
@@ -66,6 +85,11 @@ class job_manager_t
                std::vector<unsigned char> &out,
                bool allow_partial,
                const xtcore::tonemapping::settings_t &tm_settings);
+    bool image_delta(const std::string &id,
+                     size_t since_done,
+                     size_t max_tiles,
+                     const xtcore::tonemapping::settings_t &tm_settings,
+                     job_image_delta_t &out);
     bool image_export(const std::string &id,
                       const std::string &format,
                       std::vector<unsigned char> &out,
@@ -98,6 +122,11 @@ class job_manager_t
         std::vector<unsigned char> image_tga;
         std::vector<unsigned char> image_raygraph_ply;
         nimg::Pixmap progressive_fb;
+        struct finished_tile_t {
+            job_snapshot_t::tile_rect_t rect;
+            size_t done_index;
+        };
+        std::vector<finished_tile_t> finished_tiles;
         std::vector<common::render_result_t::point3_t> photon_diffuse_points;
         std::vector<common::render_result_t::point3_t> photon_caustic_points;
         std::vector<job_snapshot_t::tile_rect_t> active_tiles;

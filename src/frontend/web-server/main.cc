@@ -36,7 +36,7 @@ bool arg_eq(const char *arg, const char *name)
 
 void print_usage(const char *argv0)
 {
-    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--max-concurrent-renders <n>] [--verbose]\n", argv0);
+    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--max-concurrent-renders <n>] [--render-reserve-threads <n>] [--verbose]\n", argv0);
 }
 
 const char *to_backend_level(xtcore::LOGENTRY_TYPE type)
@@ -142,6 +142,7 @@ void print_startup_banner(const std::string &host,
                           const std::string &scene_dir,
                           const std::string &web_root,
                           size_t max_concurrent_renders,
+                          size_t render_reserve_threads,
                           bool verbose)
 {
     const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
@@ -163,6 +164,7 @@ void print_startup_banner(const std::string &host,
     std::printf("  scene-dir:              %s\n", scene_dir.c_str());
     std::printf("  web-root:               %s\n", web_root.c_str());
     std::printf("  max-concurrent-renders: %zu\n", max_concurrent_renders);
+    std::printf("  render-reserve-threads: %zu\n", render_reserve_threads);
     std::printf("  logical-cores:          %zu\n", logical_cores);
     if (omp_max_threads > 0) {
         std::printf("  openmp-max-threads:     %zu\n", omp_max_threads);
@@ -182,6 +184,7 @@ int main(int argc, char **argv)
     std::string scene_dir = "scene";
     std::string web_root = "src/frontend/web-client";
     size_t max_concurrent_renders = 1;
+    size_t render_reserve_threads = 1;
     bool verbose = false;
 
     for (int i = 1; i < argc; ++i) {
@@ -225,6 +228,19 @@ int main(int argc, char **argv)
                 return 1;
             }
             max_concurrent_renders = static_cast<size_t>(parsed);
+        }
+        else if (arg_eq(argv[i], "--render-reserve-threads")) {
+            if (++i >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            char *end = nullptr;
+            unsigned long parsed = std::strtoul(argv[i], &end, 10);
+            if (!end || *end != '\0') {
+                std::printf("Invalid render reserve threads: %s\n", argv[i]);
+                return 1;
+            }
+            render_reserve_threads = static_cast<size_t>(parsed);
         }
         else if (arg_eq(argv[i], "--help")) {
             print_usage(argv[0]);
@@ -303,15 +319,18 @@ int main(int argc, char **argv)
     xtracer::frontend::web::job_manager_t jobs;
     jobs.set_max_concurrent_renders(max_concurrent_renders);
     xtracer::frontend::web::workspace_manager_t workspaces;
-    xtracer::frontend::web::setup_routes(server, jobs, workspaces, scene_dir, web_root);
+    xtracer::frontend::web::render_thread_policy_t thread_policy;
+    thread_policy.reserve_threads = render_reserve_threads;
+    xtracer::frontend::web::setup_routes(server, jobs, workspaces, scene_dir, web_root, thread_policy);
 
-    print_startup_banner(host, port, scene_dir, web_root, max_concurrent_renders, verbose);
+    print_startup_banner(host, port, scene_dir, web_root, max_concurrent_renders, render_reserve_threads, verbose);
 
     xtracer::frontend::web::backend_log_t::handle().add(
         "info",
         "listen start host=" + host
         + " port=" + std::to_string(port)
-        + " max_concurrent_renders=" + std::to_string(max_concurrent_renders));
+        + " max_concurrent_renders=" + std::to_string(max_concurrent_renders)
+        + " render_reserve_threads=" + std::to_string(render_reserve_threads));
     bool ok = server.listen(host.c_str(), port);
     if (!ok) {
         std::printf("Failed to listen on %s:%d\n", host.c_str(), port);

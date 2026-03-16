@@ -1,9 +1,10 @@
 title = Scan Face TEN24 Free Head
 descr = 3d scan by TEN24 (http://www.3dscanstore.com/)
 versn = 0.1
+default_camera = default
 
 path_data     = data
-path_geometry = <path_data>/geometry/ten24/Free+Head
+path_geometry = geometry/ten24/Free Head
 
 environment = {
     type = gradient
@@ -15,41 +16,23 @@ environment = {
 
 camera = {
 	default = {
-        type     = thin-lens
+	        type = thin-lens
 		fov      = 45
-		position = vec3(0,110,250)
-		target   = vec3(0,90,30)
+		position = vec3(0,0.25,1)
+		target   = vec3(0,0.2,0)
 		up       = vec3(0,1,0)
-        aperture = 10
-        flength  = 200
 	}
-
-    close = {
-        type     = thin-lens
-		fov      = 45
-		position = vec3(0,110,200)
-		target   = vec3(0,90,30)
-		up       = vec3(0,1,0)
-        aperture = 15
-        flength  = 150
-    }
-
-    ods = {
-        type     = ods
-        ipd      = 1.5
-        position = vec3(0, 50,100)
-    }
 }
 
 geometry = {
 	sat1 = {
 		type = sphere
-        radius = 50
+        radius = 0.1
 
 		position = {
-    		x = 88
-			y = 15
-			z = 170
+	    		x = 1
+			y = 1.5
+			z = 1
 		}
 
 		intensity = {
@@ -62,13 +45,12 @@ geometry = {
 
 material = {
     light = {
-        type = lambert
-
+        type = emissive
         properties = {
             samplers = {
                 emissive = {
                     type  = color
-                    value = col3(1,1,1)
+                    value = col3(200,200,200)
                 }
             }
         }
@@ -87,12 +69,12 @@ object = {
     }
 
     head = {
-        source = <path_geometry>/Repack/Head.OBJ
+        source = <path_geometry>/Head.OBJ
         prefix = head_
     }
 
     jacket = {
-        source = <path_geometry>/Repack/Jacket.OBJ
+        source = <path_geometry>/Jacket.OBJ
         prefix = jacket_
     }
 }

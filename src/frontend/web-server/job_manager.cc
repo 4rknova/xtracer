@@ -116,6 +116,7 @@ job_manager_t::job_t::job_t()
     , image_tga()
     , image_raygraph_ply()
     , progressive_fb()
+    , finished_tiles()
     , photon_diffuse_points()
     , photon_caustic_points()
     , active_tiles()
@@ -262,6 +263,15 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
                 } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
                     copy_tile_to_framebuffer(tile, job->progressive_fb);
                     job->progressive_ready = true;
+                    if (tile) {
+                        job_t::finished_tile_t finished;
+                        finished.rect.x0 = tile->x0();
+                        finished.rect.y0 = tile->y0();
+                        finished.rect.x1 = tile->x1();
+                        finished.rect.y1 = tile->y1();
+                        finished.done_index = done;
+                        job->finished_tiles.push_back(finished);
+                    }
                     for (size_t i = 0; i < job->active_tiles.size(); ++i) {
                         if (same_tile_rect(job->active_tiles[i], tile)) {
                             job->active_tiles.erase(job->active_tiles.begin() + i);
@@ -503,6 +513,85 @@ bool job_manager_t::image(const std::string &id,
     }
 
     out = job->preview_png_cache;
+    return true;
+}
+
+bool job_manager_t::image_delta(const std::string &id,
+                                size_t since_done,
+                                size_t max_tiles,
+                                const xtcore::tonemapping::settings_t &tm_settings,
+                                job_image_delta_t &out)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+
+    struct pending_tile_t {
+        size_t x0;
+        size_t y0;
+        size_t x1;
+        size_t y1;
+        size_t done_index;
+        nimg::Pixmap tile_fb;
+    };
+
+    std::vector<pending_tile_t> pending;
+    pending.reserve(max_tiles);
+
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        out.state = job->state.load();
+        out.width = job->request.width;
+        out.height = job->request.height;
+        out.tiles_done = job->tiles_done.load();
+        out.tiles_total = job->tiles_total.load();
+        out.tiles.clear();
+
+        const bool use_final = (out.state == JOB_DONE
+                                && job->final_fb.width() > 0
+                                && job->final_fb.height() > 0);
+        if (!use_final && !job->progressive_ready) return true;
+
+        nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
+        for (size_t i = 0; i < job->finished_tiles.size(); ++i) {
+            const job_t::finished_tile_t &t = job->finished_tiles[i];
+            if (t.done_index <= since_done) continue;
+            if (max_tiles > 0 && pending.size() >= max_tiles) break;
+
+            const size_t tw = (t.rect.x1 > t.rect.x0) ? (t.rect.x1 - t.rect.x0) : 0;
+            const size_t th = (t.rect.y1 > t.rect.y0) ? (t.rect.y1 - t.rect.y0) : 0;
+            if (tw == 0 || th == 0) continue;
+
+            pending_tile_t entry;
+            entry.x0 = t.rect.x0;
+            entry.y0 = t.rect.y0;
+            entry.x1 = t.rect.x1;
+            entry.y1 = t.rect.y1;
+            entry.done_index = t.done_index;
+            entry.tile_fb.init(tw, th);
+            for (size_t y = 0; y < th; ++y) {
+                for (size_t x = 0; x < tw; ++x) {
+                    entry.tile_fb.pixel(x, y) = src.pixel(t.rect.x0 + x, t.rect.y0 + y);
+                }
+            }
+            pending.push_back(entry);
+        }
+    }
+
+    out.tiles.reserve(pending.size());
+    for (size_t i = 0; i < pending.size(); ++i) {
+        std::vector<unsigned char> encoded;
+        if (!encode_png_memory(pending[i].tile_fb, tm_settings, encoded)) continue;
+
+        job_image_delta_t::tile_t tile;
+        tile.x0 = pending[i].x0;
+        tile.y0 = pending[i].y0;
+        tile.x1 = pending[i].x1;
+        tile.y1 = pending[i].y1;
+        tile.done_index = pending[i].done_index;
+        tile.png.swap(encoded);
+        out.tiles.push_back(tile);
+    }
+
     return true;
 }
 

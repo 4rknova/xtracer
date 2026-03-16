@@ -1,33 +1,34 @@
 {
+  "scene": [
+    "sceneLoadingControlsCard"
+  ],
   "render": [
-    "sceneControlsCard",
     "frameControlsCard",
     "integratorControlsCard",
     "qualityControlsCard",
     "toneMappingControlsCard",
     "postFiltersControlsCard",
-    "exportControlsCard"
+    "exportControlsCard",
+    "statisticsControlsCard"
   ],
   "visual": {
     "visual": [
-      "sceneControlsCard",
       "frameControlsCard",
       "visualControlsCard",
       "sceneEditControlsCard"
     ],
     "graph": [
-      "sceneControlsCard",
       "frameControlsCard",
       "sceneEditControlsCard"
     ],
     "text": [
-      "sceneControlsCard",
       "frameControlsCard",
       "textEditorControlsCard",
       "sceneEditControlsCard"
     ]
   },
   "logs": [
+    "statisticsControlsCard",
     "logsControlsCard"
   ],
   "workspaces": [

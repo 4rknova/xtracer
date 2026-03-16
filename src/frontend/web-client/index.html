@@ -26,8 +26,9 @@
       </header>
       <div class="content-header">
         <nav class="tabs">
+          <button class="tab active" id="tabScene" type="button">Scene</button>
           <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
-          <button class="tab active" id="tabRender" type="button">Render</button>
+          <button class="tab" id="tabRender" type="button">Render</button>
           <button class="tab" id="tabVisual" type="button">Editor</button>
           <button class="tab" id="tabLogs" type="button">Logs</button>
           <button class="tab" id="tabSettings" type="button" aria-label="Settings">
@@ -40,26 +41,6 @@
     <div class="app-shell">
       <aside class="persistent-sidebar">
         <section class="panel panel-controls">
-            <details class="control-section control-card" id="sceneControlsCard" open>
-              <summary>
-                <span class="control-card-title">Scene Setup</span>
-                <span class="control-card-note">Scene and camera</span>
-              </summary>
-              <div class="control-section-body">
-                <label>
-                  <span class="field-label-row">
-                    <span>Scene</span>
-                    <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
-                  </span>
-                  <select id="scene"></select>
-                </label>
-
-                <label>Camera
-                  <select id="camera"></select>
-                </label>
-              </div>
-            </details>
-
             <details class="control-section control-card" id="integratorControlsCard" open>
               <summary>
                 <span class="control-card-title">Integrator</span>
@@ -83,6 +64,7 @@
                   </label>
                   <label>Threads <input id="threads" type="number" min="0" max="256" value="0"></label>
                 </div>
+                <p id="threadsPolicyHint" class="settings-note">Threads 0 uses auto mode.</p>
                 <div id="integratorControlsSection" hidden>
                   <div id="integratorControls"></div>
                 </div>
@@ -277,14 +259,26 @@
               </summary>
               <div class="control-section-body">
                 <div class="row">
-                  <label>Samples <input id="samples" type="number" min="1" max="1024" value="1"></label>
+                  <label class="sample-presets-group">
+                    <span>Samples</span>
+                    <div class="aa-presets-stack">
+                      <div class="aa-pill-row" role="group" aria-label="Sample presets">
+                        <button class="aa-pill samples-pill" type="button" data-samples="2">2x</button>
+                        <button class="aa-pill samples-pill" type="button" data-samples="4">4x</button>
+                        <button class="aa-pill samples-pill" type="button" data-samples="10">10x</button>
+                        <button class="aa-pill samples-pill" type="button" data-samples="100">100x</button>
+                      </div>
+                      <input id="samples" class="aa-custom-input" type="number" min="1" max="1024" value="1" aria-label="Custom samples">
+                    </div>
+                  </label>
                   <label class="aa-presets-group">
                     <span>Anti-Aliasing</span>
                     <div class="aa-presets-stack">
                       <div class="aa-pill-row" role="group" aria-label="AA presets">
                         <button class="aa-pill" type="button" data-aa="2">2x</button>
                         <button class="aa-pill" type="button" data-aa="4">4x</button>
-                        <button class="aa-pill" type="button" data-aa="5">5x</button>
+                        <button class="aa-pill" type="button" data-aa="10">10x</button>
+                        <button class="aa-pill" type="button" data-aa="25">25x</button>
                       </div>
                       <input id="aa" class="aa-custom-input" type="number" min="1" max="16" value="1" aria-label="Custom anti-aliasing">
                     </div>
@@ -374,6 +368,51 @@
               </div>
             </details>
 
+            <details class="control-section control-card" id="statisticsControlsCard" open>
+              <summary>
+                <span class="control-card-title">Statistics</span>
+                <span class="control-card-note">Preview transfer usage</span>
+              </summary>
+              <div class="control-section-body">
+                <section id="previewTransferStats" class="settings-section workspace-info-section">
+                  <div class="workspace-info-group">
+                    <h4>Preview Transfer</h4>
+                    <p id="statsDeltaBytes" class="workspace-active-hint">Delta bytes: -</p>
+                    <p id="statsDeltaReqs" class="workspace-active-hint">Delta requests: -</p>
+                    <p id="statsFullBytes" class="workspace-active-hint">Full bytes: -</p>
+                    <p id="statsFullReqs" class="workspace-active-hint">Full requests: -</p>
+                  </div>
+                </section>
+              </div>
+            </details>
+
+            <details class="control-section control-card" id="sceneLoadingControlsCard" open>
+              <summary>
+                <span class="control-card-title">Loading Status</span>
+                <span class="control-card-note">Backend scene-load activity</span>
+              </summary>
+              <div class="control-section-body">
+                <div class="scene-loading-meta">
+                  <p class="scene-loading-row">
+                    <span class="scene-loading-key">State</span>
+                    <span id="sceneLoadState" class="scene-loading-value scene-load-state-pill">idle</span>
+                  </p>
+                  <p class="scene-loading-row">
+                    <span class="scene-loading-key">Message</span>
+                    <span id="sceneLoadMessage" class="scene-loading-value">No active scene load.</span>
+                  </p>
+                  <p class="scene-loading-row">
+                    <span class="scene-loading-key">Job</span>
+                    <span id="sceneLoadJobId" class="scene-loading-value">-</span>
+                  </p>
+                  <p class="scene-loading-row">
+                    <span class="scene-loading-key">Elapsed</span>
+                    <span id="sceneLoadElapsed" class="scene-loading-value">00:00</span>
+                  </p>
+                </div>
+              </div>
+            </details>
+
             <details class="control-section control-card" id="logsControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Logs</span>
@@ -428,6 +467,8 @@
                     <p id="workspaceMaxConcurrentHint" class="workspace-active-hint">Max concurrent renders: -</p>
                     <p id="workspaceThreadsHint" class="workspace-active-hint">Hardware threads: -</p>
                     <p id="workspaceOpenmpHint" class="workspace-active-hint">OpenMP max threads: -</p>
+                    <p id="workspaceRenderReserveHint" class="workspace-active-hint">Render reserve threads: -</p>
+                    <p id="workspaceRenderAutoHint" class="workspace-active-hint">Render auto threads: -</p>
                   </div>
                 </section>
               </div>
@@ -497,7 +538,36 @@
       </aside>
 
       <div class="tab-stage">
-        <section class="tab-pane active" id="paneRender">
+        <section class="tab-pane active" id="paneScene">
+          <section class="panel panel-scene-setup">
+            <div class="scene-setup-grid">
+              <section class="scene-setup-card">
+                <div class="scene-setup-card-body">
+                  <label>
+                    <span class="field-label-row">
+                      <span>Scene</span>
+                      <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
+                    </span>
+                    <div class="scene-select-row">
+                      <select id="scene"></select>
+                      <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </label>
+                  <label>Camera
+                    <select id="camera"></select>
+                  </label>
+                </div>
+              </section>
+
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-pane" id="paneRender">
           <section class="panel panel-preview">
             <div class="preview-toolbar">
               <div class="preview-headline">
@@ -520,6 +590,13 @@
               <button id="editorView3dBtn" class="editor-view-btn active" type="button" role="tab" aria-selected="true" aria-controls="visualPanel">3D View</button>
               <button id="editorViewGraphBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="graphPanel">Graph</button>
               <button id="editorViewTextBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="textEditorPanel">Text Editor</button>
+            </div>
+            <div class="editor-view-actions">
+              <button id="graphResetLayoutBtn" class="editor-view-icon-btn" type="button" title="Reset node positions and auto layout" aria-label="Reset node positions">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                </svg>
+              </button>
             </div>
           </div>
           <section class="panel panel-preview" id="visualPanel">

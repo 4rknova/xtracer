@@ -110,7 +110,7 @@ material = {
                     a       = col3(0.92,0.92,0.92)
                     b       = col3(0.10,0.12,0.14)
                     scale_u = 10
-                    scale_v = 6
+                    scale_v = 10
                 }
                 specular = {
                     type  = color
