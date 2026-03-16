@@ -1,4 +1,5 @@
 scene/data
+scene/geometry/
 media/
 temp/
 *.o
