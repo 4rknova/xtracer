@@ -1,0 +1,181 @@
+title = Voronoi Normal Map Two-Sphere Comparison
+description = Two identical Blinn-Phong spheres side-by-side; right sphere uses procedural voronoi_normal tangent-space normal map with directional lighting to emphasize relief.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.88,0.90,0.94)
+        b = col3(0.20,0.24,0.30)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 34
+        position = vec3(-0.45,1.25,-6.9)
+        target   = vec3(0.45,1.0,2.8)
+        up       = vec3(0,1,0)
+        flength  = 45
+        aperture = 0
+    }
+}
+
+geometry = {
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(12,1,12)
+            translation = vec3(0,0,0)
+        }
+    }
+
+    sphere_left = {
+        type     = sphere
+        position = vec3(-1.35,1.0,2.8)
+        radius   = 1.0
+    }
+
+    sphere_right = {
+        type     = sphere
+        position = vec3(1.35,1.0,2.8)
+        radius   = 1.0
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(-2.2,4.2,-0.4)
+        radius   = 0.35
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(3.3,2.6,0.9)
+        radius   = 0.28
+    }
+}
+
+material = {
+    floor = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.58,0.60,0.64)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.26,0.28,0.32)
+                }
+            }
+            scalars = {
+                reflectance = 0.12
+                exponent    = 40
+            }
+        }
+    }
+
+    sphere_plain = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.70,0.71,0.73)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.96,0.96,0.96)
+                }
+            }
+            scalars = {
+                reflectance = 0.20
+                exponent    = 120
+            }
+        }
+    }
+
+    sphere_voronoi_normal = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.70,0.71,0.73)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.96,0.96,0.96)
+                }
+
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 180
+                    max_deviation = 16
+                    seed          = 1337
+                }
+            }
+            scalars = {
+                reflectance = 0.20
+                exponent    = 120
+            }
+        }
+    }
+
+    key_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(105,100,96)
+                }
+            }
+            scalars = {}
+        }
+    }
+
+    fill_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(24,24,26)
+                }
+            }
+            scalars = {}
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor
+    }
+
+    sphere_left = {
+        geometry = sphere_left
+        material = sphere_plain
+    }
+
+    sphere_right = {
+        geometry = sphere_right
+        material = sphere_voronoi_normal
+    }
+
+    key_light = {
+        geometry = key_light
+        material = key_light
+    }
+
+    fill_light = {
+        geometry = fill_light
+        material = fill_light
+    }
+}
