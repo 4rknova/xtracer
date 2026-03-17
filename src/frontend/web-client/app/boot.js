@@ -464,6 +464,15 @@ async function boot() {
     persistUIOptions();
     appendLog(`clear preview before render=${uiOptions.clearPreviewOnRender ? "on" : "off"}`);
   });
+  if (el.tileHeatmapEnabled) {
+    el.tileHeatmapEnabled.addEventListener("change", () => {
+      uiOptions.tileHeatmapEnabled = !!el.tileHeatmapEnabled.checked;
+      persistUIOptions();
+      applyPreviewTransform();
+      renderTileHeatmapStats();
+      appendLog(`tile heatmap=${uiOptions.tileHeatmapEnabled ? "on" : "off"}`);
+    });
+  }
 
   if (el.fontSizePreset) {
     el.fontSizePreset.addEventListener("change", () => {

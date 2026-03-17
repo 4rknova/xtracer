@@ -500,6 +500,7 @@ function loadUIOptions() {
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
+  uiOptions.tileHeatmapEnabled = localStorage.getItem("xtracer-tile-heatmap-enabled") !== "0";
   const presetRaw = localStorage.getItem("xtracer-ui-font-size-preset");
   if (presetRaw) {
     uiOptions.fontSizePreset = normalizeFontSizePreset(presetRaw);
@@ -524,6 +525,7 @@ function loadUIOptions() {
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
+  if (el.tileHeatmapEnabled) el.tileHeatmapEnabled.checked = !!uiOptions.tileHeatmapEnabled;
   if (el.previewSampling) el.previewSampling.value = uiOptions.previewSampling;
   applyDarkPalette(uiOptions.darkPalette);
   applyLightPalette(uiOptions.lightPalette);
@@ -553,6 +555,7 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-auto-load-editor", uiOptions.autoLoadEditor ? "1" : "0");
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");
+  localStorage.setItem("xtracer-tile-heatmap-enabled", uiOptions.tileHeatmapEnabled ? "1" : "0");
   localStorage.setItem("xtracer-preview-sampling", uiOptions.previewSampling);
   localStorage.setItem("xtracer-ui-font-size-preset", uiOptions.fontSizePreset);
   localStorage.setItem("xtracer-ui-font-scale", String(uiOptions.fontScale));
