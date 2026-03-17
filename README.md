@@ -126,7 +126,11 @@ Run CLI:
 | `ring` | `torus_knot` | `icosphere` | `geodesic_dome` |
 | `icosa_cage` | `menger_sponge` | `sierpinski_tetrahedron` | `mobius_strip` |
 | `klein_bottle` | `hairball` | `shell_spiral` | `rock` |
-| `chain_link` | `lathe` | `snowflake` | - |
+| `chain_link` | `lathe` | `snowflake` | `pyramid` |
+
+`gen(pyramid)` supports:
+- `base_size` (float, `> 0`, default `1.0`)
+- `height` (float, `> 0`, default `1.0`)
 
 #### Material Types
 
@@ -181,7 +185,7 @@ Supported normal sampler types:
 |---|---|
 | Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs) |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
-| Settings | Theme mode + dark palette selection, frontend behavior toggles, and render polling controls |
+| Settings | Theme mode + light/dark palette selection, frontend behavior toggles, and render polling controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party license notices |
 
