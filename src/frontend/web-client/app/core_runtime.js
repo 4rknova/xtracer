@@ -241,6 +241,15 @@ function formatBytesShort(bytes) {
 
 function renderPreviewTransferStats() {
   if (!el.previewTransferStats) return;
+
+  if (el.statsFrameRender) {
+    const frameMs = Math.max(0, Number(previewTransferStatsState.fullFrameRenderMs) || 0);
+    const frameText = frameMs > 0
+      ? `${formatElapsed(frameMs)} (${Math.round(frameMs)} ms)`
+      : "-";
+    el.statsFrameRender.innerHTML = `<span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">${frameText}</code>`;
+  }
+
   const hasData = (previewTransferStatsState.deltaReqs + previewTransferStatsState.fullReqs) > 0;
   if (!hasData) {
     if (el.statsDeltaBytes) {
@@ -272,10 +281,17 @@ function renderPreviewTransferStats() {
 }
 
 function resetPreviewTransferStats() {
+  previewTransferStatsState.fullFrameRenderMs = 0;
   previewTransferStatsState.deltaReqs = 0;
   previewTransferStatsState.deltaBytes = 0;
   previewTransferStatsState.fullReqs = 0;
   previewTransferStatsState.fullBytes = 0;
+  renderPreviewTransferStats();
+}
+
+function recordFullFrameRenderTime(ms) {
+  const value = Math.max(0, Number(ms) || 0);
+  previewTransferStatsState.fullFrameRenderMs = value;
   renderPreviewTransferStats();
 }
 
@@ -473,6 +489,7 @@ function beginPollSession() {
   activePollToken += 1;
   resetProgressiveDeltaState("");
   resetPreviewTransferStats();
+  if (typeof resetTileHeatmapState === "function") resetTileHeatmapState("");
   return activePollToken;
 }
 
@@ -942,4 +959,3 @@ function toneMappingControlSpec(opRaw) {
   }
   return { usesExposure: true, usesWhitePoint: false, usesMantiuk: false };
 }
-

@@ -243,11 +243,20 @@ body {
   font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(1200px 700px at 10% 8%, color-mix(in srgb, var(--panel) 60%, transparent), transparent 72%),
-    radial-gradient(1000px 560px at 92% 6%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 74%),
-    linear-gradient(160deg, var(--bg), var(--bg-2) 58%, var(--bg));
+    radial-gradient(1050px 640px at -8% -14%, color-mix(in srgb, var(--accent-soft) 48%, var(--panel)), transparent 70%),
+    radial-gradient(980px 560px at 106% -8%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 72%),
+    radial-gradient(860px 540px at 50% 112%, color-mix(in srgb, var(--panel) 74%, transparent), transparent 78%),
+    linear-gradient(154deg, var(--bg), color-mix(in srgb, var(--bg-2) 90%, var(--bg) 10%) 52%, var(--bg)),
+    repeating-linear-gradient(
+      -22deg,
+      color-mix(in srgb, var(--line) 9%, transparent) 0,
+      color-mix(in srgb, var(--line) 9%, transparent) 1px,
+      transparent 1px,
+      transparent 17px
+    );
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: cover, cover, cover, cover, auto;
+  background-attachment: fixed;
   min-height: 100vh;
   height: 100vh;
   height: 100dvh;
@@ -261,7 +270,8 @@ body {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(900px 500px at 50% 22%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 72%),
+    radial-gradient(1250px 820px at 50% -24%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 78%),
+    radial-gradient(900px 600px at 82% 118%, color-mix(in srgb, var(--panel) 44%, transparent), transparent 80%),
     linear-gradient(165deg, color-mix(in srgb, var(--bg) 96%, #000000 4%), color-mix(in srgb, var(--bg-2) 92%, #000000 8%));
   opacity: 1;
   visibility: visible;
@@ -2619,6 +2629,47 @@ button:disabled {
 .preview-transfer-stats-card {
   white-space: normal;
   line-height: 1.45;
+}
+
+#statisticsControlsCard .workspace-info-section {
+  display: grid;
+  gap: 0;
+}
+
+#statisticsControlsCard .workspace-info-group {
+  display: grid;
+  gap: 6px;
+}
+
+#statisticsControlsCard .workspace-info-group + .workspace-info-group {
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+#statisticsControlsCard .workspace-info-group h4 {
+  margin-bottom: 2px;
+}
+
+#statisticsControlsCard .inline-check {
+  margin: 2px 0 4px;
+  padding-block: 0;
+}
+
+#statisticsControlsCard .workspace-active-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+#statisticsControlsCard .workspace-active-label {
+  letter-spacing: 0.06em;
+}
+
+#statisticsControlsCard .workspace-active-value {
+  max-width: 60%;
+  text-align: right;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .bar {

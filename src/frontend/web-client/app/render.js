@@ -114,6 +114,11 @@ async function pollJob(jobId, token) {
       clearActivePreviewTiles();
       resetProgressiveDeltaState("");
       progressiveDeltaEnabled = true;
+      const elapsedMsRaw = Math.max(0, Number(data.elapsed_ms) || 0);
+      const elapsedMs = elapsedMsRaw > 0
+        ? elapsedMsRaw
+        : (renderStartMs > 0 ? (Date.now() - renderStartMs) : 0);
+      recordFullFrameRenderTime(elapsedMs);
       const finalBlob = await api.getJobImage(jobId, {
         final: true,
         cacheBust: true,
@@ -134,8 +139,8 @@ async function pollJob(jobId, token) {
       syncGlobalsToWorkspaceRuntime();
       updateDownloadUi();
       refreshVisualPhotonOverlay().catch(() => {});
-      setStatus(`done in ${Math.round(data.elapsed_ms || 0)} ms`);
-      appendLog(`job ${jobId} finished in ${Math.round(data.elapsed_ms || 0)} ms`);
+      setStatus(`done in ${Math.round(elapsedMs)} ms`);
+      appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
       return;
     }
 
@@ -236,4 +241,3 @@ async function handleRender() {
     }
   }
 }
-

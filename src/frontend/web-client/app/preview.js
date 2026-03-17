@@ -6,6 +6,162 @@ function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
 }
 
+function isTileHeatmapEnabled() {
+  return !!uiOptions.tileHeatmapEnabled;
+}
+
+function tileRectKey(x0, y0, x1, y1) {
+  return `${x0},${y0},${x1},${y1}`;
+}
+
+function resetTileHeatmapState(jobId) {
+  tileHeatmapState.jobId = String(jobId || "").trim();
+  tileHeatmapState.tiles.clear();
+  tileHeatmapState.progressSamples = [];
+  tileHeatmapState.throughputTilesPerSec = 0;
+  tileHeatmapState.etaMs = 0;
+  tileHeatmapState.etaConfidence = "low";
+  tileHeatmapState.bottleneckHint = "-";
+  tileHeatmapState.totalTilesEstimate = 0;
+  tileHeatmapState.buckets = { fast: 0, medium: 0, slow: 0 };
+  renderTileHeatmapStats();
+}
+
+function estimateTileBottleneck(activeCount, progress) {
+  if (progress >= 0.995) return "Finalizing frame";
+  if (tileHeatmapState.throughputTilesPerSec <= 0.5 && activeCount > 0) return "Heavy shading per tile";
+  const estimate = Math.max(0, Number(tileHeatmapState.totalTilesEstimate) || 0);
+  if (activeCount >= Math.max(4, Math.round(estimate * 0.2))) return "Sampling-bound (many active tiles)";
+  if (activeCount <= 2 && progress < 0.95) return "Hotspot tiles (caustics/complex geometry)";
+  return "Balanced";
+}
+
+function recomputeTileBuckets() {
+  const durations = [];
+  tileHeatmapState.tiles.forEach((entry) => {
+    if (!entry || !entry.done || !Number.isFinite(entry.durationMs) || entry.durationMs <= 0) return;
+    durations.push(entry.durationMs);
+  });
+  if (!durations.length) {
+    tileHeatmapState.buckets = { fast: 0, medium: 0, slow: 0 };
+    return;
+  }
+  durations.sort((a, b) => a - b);
+  const mid = durations[Math.floor(durations.length / 2)];
+  const fastCut = Math.max(80, mid * 0.75);
+  const slowCut = Math.max(fastCut + 1, mid * 1.5);
+  let fast = 0;
+  let medium = 0;
+  let slow = 0;
+  for (let i = 0; i < durations.length; i += 1) {
+    const d = durations[i];
+    if (d <= fastCut) fast += 1;
+    else if (d >= slowCut) slow += 1;
+    else medium += 1;
+  }
+  tileHeatmapState.buckets = { fast, medium, slow };
+}
+
+function refreshThroughputEta(progress, activeCount) {
+  const now = Date.now();
+  const p = clamp(Number(progress) || 0, 0, 1);
+  tileHeatmapState.progressSamples.push({ ms: now, p });
+  const horizonMs = 30000;
+  tileHeatmapState.progressSamples = tileHeatmapState.progressSamples.filter((s) => (now - s.ms) <= horizonMs);
+  if (tileHeatmapState.progressSamples.length < 2) {
+    tileHeatmapState.throughputTilesPerSec = 0;
+    tileHeatmapState.etaMs = 0;
+    tileHeatmapState.etaConfidence = "low";
+    tileHeatmapState.bottleneckHint = estimateTileBottleneck(activeCount, p);
+    return;
+  }
+
+  const doneCount = Array.from(tileHeatmapState.tiles.values()).filter((e) => e && e.done).length;
+  const observed = doneCount + Math.max(0, Number(activeCount) || 0);
+  if (p > 0.001 && observed > 0) {
+    const estimatedTotal = Math.round(observed / p);
+    if (estimatedTotal > 0) {
+      tileHeatmapState.totalTilesEstimate = Math.max(tileHeatmapState.totalTilesEstimate, estimatedTotal);
+    }
+  }
+  const total = Math.max(tileHeatmapState.totalTilesEstimate, observed, 0);
+
+  const first = tileHeatmapState.progressSamples[0];
+  const last = tileHeatmapState.progressSamples[tileHeatmapState.progressSamples.length - 1];
+  const dp = Math.max(0, last.p - first.p);
+  const dtMs = Math.max(1, last.ms - first.ms);
+  if (total > 0 && dp > 0) {
+    tileHeatmapState.throughputTilesPerSec = (dp * total) / (dtMs / 1000);
+  } else {
+    tileHeatmapState.throughputTilesPerSec = 0;
+  }
+
+  if (tileHeatmapState.throughputTilesPerSec > 0 && total > 0) {
+    const remainingTiles = Math.max(0, total * (1 - p));
+    tileHeatmapState.etaMs = (remainingTiles / tileHeatmapState.throughputTilesPerSec) * 1000;
+  } else {
+    tileHeatmapState.etaMs = 0;
+  }
+
+  const inst = [];
+  for (let i = 1; i < tileHeatmapState.progressSamples.length; i += 1) {
+    const a = tileHeatmapState.progressSamples[i - 1];
+    const b = tileHeatmapState.progressSamples[i];
+    const dpLocal = Math.max(0, b.p - a.p);
+    const dtLocal = Math.max(1, b.ms - a.ms);
+    if (dpLocal <= 0 || total <= 0) continue;
+    inst.push((dpLocal * total) / (dtLocal / 1000));
+  }
+  if (inst.length < 3) {
+    tileHeatmapState.etaConfidence = "low";
+  } else {
+    const mean = inst.reduce((acc, v) => acc + v, 0) / inst.length;
+    const variance = inst.reduce((acc, v) => acc + ((v - mean) * (v - mean)), 0) / inst.length;
+    const std = Math.sqrt(Math.max(0, variance));
+    const cv = mean > 1e-6 ? (std / mean) : 1;
+    if (cv < 0.22) tileHeatmapState.etaConfidence = "high";
+    else if (cv < 0.55) tileHeatmapState.etaConfidence = "medium";
+    else tileHeatmapState.etaConfidence = "low";
+  }
+
+  tileHeatmapState.bottleneckHint = estimateTileBottleneck(activeCount, p);
+}
+
+function setTileHeatmapRow(node, label, value) {
+  if (!node) return;
+  node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+}
+
+function renderTileHeatmapStats() {
+  if (!isTileHeatmapEnabled()) {
+    setTileHeatmapRow(el.tileHeatmapBuckets, "Buckets", "(disabled)");
+    setTileHeatmapRow(el.tileHeatmapThroughput, "Throughput", "(disabled)");
+    setTileHeatmapRow(el.tileHeatmapEta, "ETA", "(disabled)");
+    setTileHeatmapRow(el.tileHeatmapConfidence, "ETA Confidence", "(disabled)");
+    setTileHeatmapRow(el.tileHeatmapBottleneck, "Bottleneck Hint", "(disabled)");
+    return;
+  }
+  if (el.tileHeatmapBuckets) {
+    const b = tileHeatmapState.buckets || { fast: 0, medium: 0, slow: 0 };
+    setTileHeatmapRow(el.tileHeatmapBuckets, "Buckets", `fast ${b.fast} | mid ${b.medium} | slow ${b.slow}`);
+  }
+  if (el.tileHeatmapThroughput) {
+    const tps = Number(tileHeatmapState.throughputTilesPerSec) || 0;
+    setTileHeatmapRow(el.tileHeatmapThroughput, "Throughput", `${tps > 0 ? tps.toFixed(1) : "-"} tiles/s`);
+  }
+  if (el.tileHeatmapEta) {
+    const etaMs = Number(tileHeatmapState.etaMs) || 0;
+    setTileHeatmapRow(el.tileHeatmapEta, "ETA", etaMs > 0 ? formatElapsed(etaMs) : "-");
+  }
+  if (el.tileHeatmapConfidence) {
+    const c = String(tileHeatmapState.etaConfidence || "low").toUpperCase();
+    setTileHeatmapRow(el.tileHeatmapConfidence, "ETA Confidence", c);
+  }
+  if (el.tileHeatmapBottleneck) {
+    setTileHeatmapRow(el.tileHeatmapBottleneck, "Bottleneck Hint", tileHeatmapState.bottleneckHint || "-");
+  }
+}
+
 function isNearestPreviewSampling() {
   return String(uiOptions.previewSampling || "").toLowerCase() === "nearest";
 }
@@ -91,9 +247,20 @@ function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
 
   const sx = imageW / srcW;
   const sy = imageH / srcH;
+  const now = Date.now();
+  let maxActiveMs = 1;
+  if (isTileHeatmapEnabled()) {
+    for (const t of activePreviewTiles) {
+      if (!Array.isArray(t) || t.length < 4) continue;
+      const key = tileRectKey(Number(t[0]), Number(t[1]), Number(t[2]), Number(t[3]));
+      const entry = tileHeatmapState.tiles.get(key);
+      if (!entry) continue;
+      const activeMs = Math.max(1, Number(entry.activeMs) || 0) + Math.max(0, now - (Number(entry.lastSeenMs) || now));
+      if (activeMs > maxActiveMs) maxActiveMs = activeMs;
+    }
+  }
+
   ctx.save();
-  ctx.fillStyle = "rgba(255, 48, 48, 0.22)";
-  ctx.strokeStyle = "rgba(255, 90, 90, 0.95)";
   ctx.lineWidth = 1;
   for (const t of activePreviewTiles) {
     if (!Array.isArray(t) || t.length < 4) continue;
@@ -106,6 +273,23 @@ function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
     const oy = imageY + y0 * sy;
     const ow = Math.max(1, (x1 - x0) * sx);
     const oh = Math.max(1, (y1 - y0) * sy);
+
+    if (isTileHeatmapEnabled()) {
+      const key = tileRectKey(x0, y0, x1, y1);
+      const entry = tileHeatmapState.tiles.get(key);
+      const activeMs = entry
+        ? (Math.max(1, Number(entry.activeMs) || 0) + Math.max(0, now - (Number(entry.lastSeenMs) || now)))
+        : 1;
+      const heat = clamp(activeMs / Math.max(1, maxActiveMs), 0, 1);
+      const r = Math.round(90 + 165 * heat);
+      const g = Math.round(220 - 150 * heat);
+      const b = Math.round(70 - 40 * heat);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.16 + 0.26 * heat})`;
+      ctx.strokeStyle = `rgba(${Math.min(255, r + 22)}, ${Math.max(0, g - 14)}, ${Math.max(0, b - 10)}, 0.95)`;
+    } else {
+      ctx.fillStyle = "rgba(255, 48, 48, 0.22)";
+      ctx.strokeStyle = "rgba(255, 90, 90, 0.95)";
+    }
     ctx.fillRect(ox, oy, ow, oh);
     ctx.strokeRect(ox + 0.5, oy + 0.5, Math.max(0, ow - 1), Math.max(0, oh - 1));
   }
@@ -113,13 +297,69 @@ function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
 }
 
 function updateActivePreviewTilesFromJob(data) {
+  const now = Date.now();
+  const stateJobId = String(activeJobId || progressiveDeltaJobId || "");
+  if (stateJobId && tileHeatmapState.jobId !== stateJobId) {
+    resetTileHeatmapState(stateJobId);
+  }
   const nextTiles = Array.isArray(data && data.active_tiles) ? data.active_tiles : [];
   activePreviewTiles = nextTiles;
   activePreviewTileWidth = Number(data && data.width) || 0;
   activePreviewTileHeight = Number(data && data.height) || 0;
+
+  const activeKeys = new Set();
+  for (let i = 0; i < nextTiles.length; i += 1) {
+    const t = nextTiles[i];
+    if (!Array.isArray(t) || t.length < 4) continue;
+    const x0 = Number(t[0]);
+    const y0 = Number(t[1]);
+    const x1 = Number(t[2]);
+    const y1 = Number(t[3]);
+    if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) continue;
+    const key = tileRectKey(x0, y0, x1, y1);
+    activeKeys.add(key);
+    let entry = tileHeatmapState.tiles.get(key);
+    if (!entry) {
+      entry = {
+        firstSeenMs: now,
+        lastSeenMs: now,
+        activeMs: 0,
+        seenCount: 0,
+        done: false,
+        durationMs: 0,
+      };
+      tileHeatmapState.tiles.set(key, entry);
+    } else {
+      entry.activeMs += Math.max(0, now - (Number(entry.lastSeenMs) || now));
+      entry.lastSeenMs = now;
+      entry.done = false;
+    }
+    entry.seenCount += 1;
+  }
+
+  const finalizeMs = Math.max(220, Math.floor((Number(uiOptions.pollMs) || 300) * 1.4));
+  tileHeatmapState.tiles.forEach((entry, key) => {
+    if (!entry || entry.done) return;
+    if (activeKeys.has(key)) return;
+    if ((now - (Number(entry.lastSeenMs) || now)) < finalizeMs) return;
+    entry.done = true;
+    entry.durationMs = Math.max(1, Number(entry.activeMs) || 0);
+  });
+
+  recomputeTileBuckets();
+  refreshThroughputEta(Number(data && data.progress) || 0, nextTiles.length);
+  renderTileHeatmapStats();
 }
 
 function clearActivePreviewTiles() {
+  const now = Date.now();
+  tileHeatmapState.tiles.forEach((entry) => {
+    if (!entry || entry.done) return;
+    entry.done = true;
+    entry.durationMs = Math.max(1, Number(entry.activeMs) || 0) + Math.max(0, now - (Number(entry.lastSeenMs) || now));
+  });
+  recomputeTileBuckets();
+  renderTileHeatmapStats();
   activePreviewTiles = [];
   activePreviewTileWidth = 0;
   activePreviewTileHeight = 0;
@@ -270,6 +510,7 @@ function bindPreviewInteraction() {
 function setPreviewEmptyState(isEmpty) {
   el.previewFrame.classList.toggle("is-empty", isEmpty);
   if (isEmpty) {
+    resetTileHeatmapState("");
     previewSwapToken += 1;
     if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
       URL.revokeObjectURL(previewPinnedBaseUrl);

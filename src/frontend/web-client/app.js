@@ -101,10 +101,17 @@ const el = {
   sceneLoadJobId: $("sceneLoadJobId"),
   sceneLoadElapsed: $("sceneLoadElapsed"),
   previewTransferStats: $("previewTransferStats"),
+  statsFrameRender: $("statsFrameRender"),
   statsDeltaBytes: $("statsDeltaBytes"),
   statsDeltaReqs: $("statsDeltaReqs"),
   statsFullBytes: $("statsFullBytes"),
   statsFullReqs: $("statsFullReqs"),
+  tileHeatmapEnabled: $("tileHeatmapEnabled"),
+  tileHeatmapBuckets: $("tileHeatmapBuckets"),
+  tileHeatmapThroughput: $("tileHeatmapThroughput"),
+  tileHeatmapEta: $("tileHeatmapEta"),
+  tileHeatmapConfidence: $("tileHeatmapConfidence"),
+  tileHeatmapBottleneck: $("tileHeatmapBottleneck"),
   renderTimer: $("renderTimer"),
   progressBar: $("progressBar"),
   progress: $("progress"),
@@ -177,6 +184,7 @@ const uiOptions = {
   autoLoadEditor: true,
   autoScrollLogs: true,
   clearPreviewOnRender: false,
+  tileHeatmapEnabled: true,
   previewSampling: "smooth",
   fontSizePreset: "default",
   fontScale: 1.0,
@@ -217,10 +225,22 @@ let lastCompletedJobScene = "";
 let lastCompletedJobIntegrator = "";
 let activePollToken = 0;
 const previewTransferStatsState = {
+  fullFrameRenderMs: 0,
   deltaReqs: 0,
   deltaBytes: 0,
   fullReqs: 0,
   fullBytes: 0,
+};
+const tileHeatmapState = {
+  jobId: "",
+  tiles: new Map(),
+  progressSamples: [],
+  throughputTilesPerSec: 0,
+  etaMs: 0,
+  etaConfidence: "low",
+  bottleneckHint: "-",
+  totalTilesEstimate: 0,
+  buckets: { fast: 0, medium: 0, slow: 0 },
 };
 const sceneLoadStatusState = {
   state: "idle",
@@ -309,6 +329,4 @@ const previewView = {
   lastX: 0,
   lastY: 0,
 };
-
-
 

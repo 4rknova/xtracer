@@ -372,13 +372,26 @@
                 <span class="control-card-note">Preview transfer usage</span>
               </summary>
               <div class="control-section-body">
-                <section id="previewTransferStats" class="settings-section workspace-info-section">
+                <section id="previewTransferStats" class="settings-section workspace-info-section preview-transfer-stats-card">
                   <div class="workspace-info-group">
                     <h4>Preview Transfer</h4>
-                    <p id="statsDeltaBytes" class="workspace-active-hint">Delta bytes: -</p>
-                    <p id="statsDeltaReqs" class="workspace-active-hint">Delta requests: -</p>
-                    <p id="statsFullBytes" class="workspace-active-hint">Full bytes: -</p>
-                    <p id="statsFullReqs" class="workspace-active-hint">Full requests: -</p>
+                    <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code></p>
+                  </div>
+                  <div class="workspace-info-group">
+                    <h4>Tile Heatmap</h4>
+                    <label class="inline-check">
+                      <input id="tileHeatmapEnabled" type="checkbox" checked>
+                      Enable tile heatmap overlay
+                    </label>
+                    <p id="tileHeatmapBuckets" class="workspace-active-hint"><span class="workspace-active-label">Buckets</span><code class="workspace-active-value">fast - | mid - | slow -</code></p>
+                    <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
+                    <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
+                    <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
+                    <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
                   </div>
                 </section>
               </div>
