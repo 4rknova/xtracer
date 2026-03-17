@@ -1,0 +1,645 @@
+function updatePreviewSizing() {
+  applyPreviewTransform();
+}
+
+function clamp(value, lo, hi) {
+  return Math.min(hi, Math.max(lo, value));
+}
+
+function isNearestPreviewSampling() {
+  return String(uiOptions.previewSampling || "").toLowerCase() === "nearest";
+}
+
+function hasPreviewImage() {
+  return !el.previewFrame.classList.contains("is-empty")
+    && !!el.preview.getAttribute("src")
+    && !!el.preview.naturalWidth
+    && !!el.preview.naturalHeight;
+}
+
+function getPreviewFittedSize() {
+  const frameW = el.previewFrame.clientWidth;
+  const frameH = el.previewFrame.clientHeight;
+  const imgW = el.preview.naturalWidth;
+  const imgH = el.preview.naturalHeight;
+  if (!frameW || !frameH || !imgW || !imgH) return null;
+  const fit = Math.min(frameW / imgW, frameH / imgH);
+  return {
+    frameW,
+    frameH,
+    width: imgW * fit,
+    height: imgH * fit,
+  };
+}
+
+function clearPreviewCanvas() {
+  if (!el.previewCanvas) return;
+  const ctx = el.previewCanvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
+}
+
+function ensurePreviewCanvasSize() {
+  if (!el.previewCanvas || !el.previewFrame) return null;
+  const cssW = Math.max(1, Math.floor(el.previewFrame.clientWidth));
+  const cssH = Math.max(1, Math.floor(el.previewFrame.clientHeight));
+  const dpr = window.devicePixelRatio || 1;
+  const pxW = Math.max(1, Math.floor(cssW * dpr));
+  const pxH = Math.max(1, Math.floor(cssH * dpr));
+  if (el.previewCanvas.width !== pxW || el.previewCanvas.height !== pxH) {
+    el.previewCanvas.width = pxW;
+    el.previewCanvas.height = pxH;
+  }
+  return { cssW, cssH, dpr };
+}
+
+function drawPreviewCanvas() {
+  if (!el.previewCanvas) return;
+  const dims = ensurePreviewCanvasSize();
+  const ctx = el.previewCanvas.getContext("2d");
+  if (!dims || !ctx) return;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
+  if (!hasPreviewImage()) return;
+
+  const fitted = getPreviewFittedSize();
+  if (!fitted) return;
+
+  const nearest = isNearestPreviewSampling();
+  const tx = nearest ? Math.round(previewView.tx) : previewView.tx;
+  const ty = nearest ? Math.round(previewView.ty) : previewView.ty;
+  const scale = nearest ? Math.max(1, Math.round(previewView.scale)) : previewView.scale;
+  const drawW = fitted.width * scale;
+  const drawH = fitted.height * scale;
+  const x = (fitted.frameW - drawW) * 0.5 + tx;
+  const y = (fitted.frameH - drawH) * 0.5 + ty;
+
+  ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
+  ctx.imageSmoothingEnabled = !nearest;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(el.preview, x, y, drawW, drawH);
+  drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
+}
+
+function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
+  if (!ctx || !activePreviewTiles.length) return;
+  const srcW = Number(activePreviewTileWidth) || el.preview.naturalWidth || 0;
+  const srcH = Number(activePreviewTileHeight) || el.preview.naturalHeight || 0;
+  if (srcW <= 0 || srcH <= 0 || imageW <= 0 || imageH <= 0) return;
+
+  const sx = imageW / srcW;
+  const sy = imageH / srcH;
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 48, 48, 0.22)";
+  ctx.strokeStyle = "rgba(255, 90, 90, 0.95)";
+  ctx.lineWidth = 1;
+  for (const t of activePreviewTiles) {
+    if (!Array.isArray(t) || t.length < 4) continue;
+    const x0 = Number(t[0]);
+    const y0 = Number(t[1]);
+    const x1 = Number(t[2]);
+    const y1 = Number(t[3]);
+    if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) continue;
+    const ox = imageX + x0 * sx;
+    const oy = imageY + y0 * sy;
+    const ow = Math.max(1, (x1 - x0) * sx);
+    const oh = Math.max(1, (y1 - y0) * sy);
+    ctx.fillRect(ox, oy, ow, oh);
+    ctx.strokeRect(ox + 0.5, oy + 0.5, Math.max(0, ow - 1), Math.max(0, oh - 1));
+  }
+  ctx.restore();
+}
+
+function updateActivePreviewTilesFromJob(data) {
+  const nextTiles = Array.isArray(data && data.active_tiles) ? data.active_tiles : [];
+  activePreviewTiles = nextTiles;
+  activePreviewTileWidth = Number(data && data.width) || 0;
+  activePreviewTileHeight = Number(data && data.height) || 0;
+}
+
+function clearActivePreviewTiles() {
+  activePreviewTiles = [];
+  activePreviewTileWidth = 0;
+  activePreviewTileHeight = 0;
+}
+
+function clampPreviewPan() {
+  const fitted = getPreviewFittedSize();
+  if (!fitted) {
+    previewView.tx = 0;
+    previewView.ty = 0;
+    return;
+  }
+  const scaledW = fitted.width * previewView.scale;
+  const scaledH = fitted.height * previewView.scale;
+  const maxX = Math.max(0, (scaledW - fitted.frameW) * 0.5);
+  const maxY = Math.max(0, (scaledH - fitted.frameH) * 0.5);
+  previewView.tx = clamp(previewView.tx, -maxX, maxX);
+  previewView.ty = clamp(previewView.ty, -maxY, maxY);
+}
+
+function applyPreviewTransform() {
+  if (!el.preview || !el.previewCanvas) return;
+  if (!hasPreviewImage()) {
+    if (el.preview.getAttribute("src")) {
+      // Keep the last drawn frame visible while the next blob is decoding.
+      updateResetViewUi(false);
+      return;
+    }
+    el.previewFrame.classList.remove("is-zoomed");
+    el.previewFrame.classList.remove("is-panning");
+    clearPreviewCanvas();
+    updateResetViewUi(false);
+    return;
+  }
+  clampPreviewPan();
+  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
+  el.previewFrame.classList.toggle("is-zoomed", isZoomed);
+  el.previewFrame.classList.toggle("is-panning", !!previewView.panning);
+  drawPreviewCanvas();
+  updateResetViewUi(isZoomed);
+}
+
+function resetPreviewView() {
+  previewView.scale = 1;
+  previewView.tx = 0;
+  previewView.ty = 0;
+  previewView.panning = false;
+  previewView.pointerId = null;
+  applyPreviewTransform();
+}
+
+function updateResetViewUi(enabled) {
+  if (!el.resetViewBtn) return;
+  const active = !!enabled;
+  el.resetViewBtn.classList.toggle("is-disabled", !active);
+  el.resetViewBtn.disabled = !active;
+  el.resetViewBtn.setAttribute("aria-disabled", active ? "false" : "true");
+}
+
+function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
+  if (!hasPreviewImage()) return;
+  const rect = el.previewFrame.getBoundingClientRect();
+  const cx = clientX - rect.left - rect.width * 0.5;
+  const cy = clientY - rect.top - rect.height * 0.5;
+  let nextScale = previewView.scale;
+  if (isNearestPreviewSampling()) {
+    const dir = wheelDeltaY < 0 ? 1 : -1;
+    nextScale = clamp(previewView.scale + dir, previewView.minScale, previewView.maxScale);
+  } else {
+    const zoomFactor = Math.exp((-wheelDeltaY) * 0.0015);
+    nextScale = clamp(previewView.scale * zoomFactor, previewView.minScale, previewView.maxScale);
+  }
+  if (!Number.isFinite(nextScale) || Math.abs(nextScale - previewView.scale) < 1e-6) return;
+  const k = nextScale / previewView.scale;
+  previewView.tx = cx - (cx - previewView.tx) * k;
+  previewView.ty = cy - (cy - previewView.ty) * k;
+  previewView.scale = nextScale;
+  applyPreviewTransform();
+}
+
+function bindPreviewInteraction() {
+  if (!el.previewFrame || !el.preview) return;
+  el.preview.draggable = false;
+
+  el.preview.addEventListener("load", () => {
+    if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
+      URL.revokeObjectURL(previewPendingRevokeUrl);
+    }
+    previewPendingRevokeUrl = "";
+    applyPreviewTransform();
+  });
+
+  el.previewFrame.addEventListener("wheel", (evt) => {
+    if (!hasPreviewImage()) return;
+    evt.preventDefault();
+    zoomPreviewAt(evt.clientX, evt.clientY, evt.deltaY);
+  }, { passive: false });
+
+  el.previewFrame.addEventListener("dblclick", (evt) => {
+    if (!hasPreviewImage()) return;
+    evt.preventDefault();
+    resetPreviewView();
+  });
+
+  el.previewFrame.addEventListener("pointerdown", (evt) => {
+    if (!hasPreviewImage()) return;
+    if (evt.button !== 0 && evt.button !== 1) return;
+    evt.preventDefault();
+    previewView.panning = true;
+    previewView.pointerId = evt.pointerId;
+    previewView.lastX = evt.clientX;
+    previewView.lastY = evt.clientY;
+    el.previewFrame.setPointerCapture(evt.pointerId);
+    applyPreviewTransform();
+  });
+
+  el.previewFrame.addEventListener("pointermove", (evt) => {
+    if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
+    const dx = evt.clientX - previewView.lastX;
+    const dy = evt.clientY - previewView.lastY;
+    previewView.lastX = evt.clientX;
+    previewView.lastY = evt.clientY;
+    previewView.tx += dx;
+    previewView.ty += dy;
+    applyPreviewTransform();
+  });
+
+  const endPan = (evt) => {
+    if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
+    previewView.panning = false;
+    previewView.pointerId = null;
+    try {
+      el.previewFrame.releasePointerCapture(evt.pointerId);
+    } catch (_) {
+      // Ignore release errors from non-captured pointers.
+    }
+    applyPreviewTransform();
+  };
+
+  el.previewFrame.addEventListener("pointerup", endPan);
+  el.previewFrame.addEventListener("pointercancel", endPan);
+  el.previewFrame.addEventListener("pointerleave", (evt) => {
+    if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
+    endPan(evt);
+  });
+}
+
+function setPreviewEmptyState(isEmpty) {
+  el.previewFrame.classList.toggle("is-empty", isEmpty);
+  if (isEmpty) {
+    previewSwapToken += 1;
+    if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
+      URL.revokeObjectURL(previewPinnedBaseUrl);
+    }
+    if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
+      URL.revokeObjectURL(previewPendingRevokeUrl);
+    }
+    previewPendingRevokeUrl = "";
+    previewPinnedBaseUrl = "";
+    previewPinnedBaseBitmapPromise = null;
+    preservePreviewUnderlay = false;
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl);
+      previewObjectUrl = "";
+    }
+    el.preview.removeAttribute("src");
+    clearPreviewCanvas();
+    lastCompletedJobId = "";
+    syncGlobalsToWorkspaceRuntime();
+    resetPreviewView();
+    updateDownloadUi();
+    return;
+  }
+  updateDownloadUi();
+}
+
+async function setPreviewFromBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  const token = ++previewSwapToken;
+  const probe = new Image();
+  const loaded = new Promise((resolve, reject) => {
+    probe.onload = () => resolve();
+    probe.onerror = () => reject(new Error("preview decode failed"));
+  });
+  probe.src = url;
+
+  try {
+    await loaded;
+  } catch (_) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+
+  if (token !== previewSwapToken) {
+    URL.revokeObjectURL(url);
+    return false;
+  }
+
+  if (previewObjectUrl && previewObjectUrl !== url) {
+    previewPendingRevokeUrl = previewObjectUrl;
+  }
+  previewObjectUrl = url;
+  el.preview.src = previewObjectUrl;
+  const nearest = isNearestPreviewSampling();
+  el.previewFrame.classList.toggle("sampling-nearest", nearest);
+  setPreviewEmptyState(false);
+  requestAnimationFrame(() => {
+    applyPreviewTransform();
+  });
+  return true;
+}
+
+function applyPreviewSampling() {
+  if (!el.preview || !el.previewCanvas) return;
+  const nearest = isNearestPreviewSampling();
+  el.previewFrame.classList.toggle("sampling-nearest", nearest);
+  applyPreviewTransform();
+}
+
+async function getPinnedBaseBitmap() {
+  if (!preservePreviewUnderlay || !previewPinnedBaseUrl) return null;
+  if (!previewPinnedBaseBitmapPromise) {
+    previewPinnedBaseBitmapPromise = (async () => {
+      const res = await fetch(previewPinnedBaseUrl);
+      if (!res.ok) throw new Error("failed to load base preview");
+      const blob = await res.blob();
+      return createImageBitmap(blob);
+    })();
+  }
+  return previewPinnedBaseBitmapPromise;
+}
+
+async function composeWithPinnedPreview(overlayBlob) {
+  const baseBitmap = await getPinnedBaseBitmap();
+  if (!baseBitmap) return overlayBlob;
+
+  const overlayBitmap = await createImageBitmap(overlayBlob);
+  const width = overlayBitmap.width || baseBitmap.width;
+  const height = overlayBitmap.height || baseBitmap.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return overlayBlob;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(baseBitmap, 0, 0, width, height);
+  ctx.drawImage(overlayBitmap, 0, 0, width, height);
+
+  const composedBlob = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b || overlayBlob), "image/png");
+  });
+  return composedBlob || overlayBlob;
+}
+
+function parseImageDeltaPacket(buffer) {
+  if (!(buffer instanceof ArrayBuffer)) return null;
+  if (buffer.byteLength < 28) return null;
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44 || bytes[3] !== 0x31) return null;
+
+  const view = new DataView(buffer);
+  let off = 4;
+  const readU32 = () => {
+    if (off + 4 > buffer.byteLength) return null;
+    const v = view.getUint32(off, true);
+    off += 4;
+    return v;
+  };
+
+  const width = readU32();
+  const height = readU32();
+  const tilesDone = readU32();
+  const tilesTotal = readU32();
+  const state = readU32();
+  const tileCount = readU32();
+  if (width === null || height === null || tilesDone === null || tilesTotal === null || state === null || tileCount === null) {
+    return null;
+  }
+
+  const tiles = [];
+  for (let i = 0; i < tileCount; i += 1) {
+    const x0 = readU32();
+    const y0 = readU32();
+    const x1 = readU32();
+    const y1 = readU32();
+    const doneIndex = readU32();
+    const size = readU32();
+    if (x0 === null || y0 === null || x1 === null || y1 === null || doneIndex === null || size === null) return null;
+    if (off + size > buffer.byteLength) return null;
+    const pngBytes = bytes.slice(off, off + size);
+    off += size;
+    tiles.push({ x0, y0, x1, y1, doneIndex, pngBytes });
+  }
+
+  return { width, height, tilesDone, tilesTotal, state, tiles };
+}
+
+async function drawDeltaTilesToPreviewCanvas(delta) {
+  if (!delta || !delta.width || !delta.height) return false;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = delta.width;
+  canvas.height = delta.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+
+  if (preservePreviewUnderlay && previewPinnedBaseUrl) {
+    try {
+      const base = await getPinnedBaseBitmap();
+      if (base) ctx.drawImage(base, 0, 0, delta.width, delta.height);
+    } catch (_) {
+      // best-effort underlay only
+    }
+  }
+
+  if (previewObjectUrl) {
+    try {
+      const res = await fetch(previewObjectUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob && blob.size > 0) {
+          const base = await createImageBitmap(blob);
+          ctx.drawImage(base, 0, 0, delta.width, delta.height);
+        }
+      }
+    } catch (_) {
+      // best-effort base image only
+    }
+  }
+
+  let maxDone = progressiveDeltaSinceDone;
+  for (let i = 0; i < delta.tiles.length; i += 1) {
+    const t = delta.tiles[i];
+    if (!t || !t.pngBytes || !t.pngBytes.length) continue;
+    const tileBlob = new Blob([t.pngBytes], { type: "image/png" });
+    const tileImage = await createImageBitmap(tileBlob);
+    const w = Math.max(1, Number(t.x1) - Number(t.x0));
+    const h = Math.max(1, Number(t.y1) - Number(t.y0));
+    ctx.drawImage(tileImage, Number(t.x0), Number(t.y0), w, h);
+    if (Number.isFinite(t.doneIndex) && t.doneIndex > maxDone) maxDone = t.doneIndex;
+  }
+
+  if (maxDone > progressiveDeltaSinceDone) progressiveDeltaSinceDone = maxDone;
+  const composedBlob = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b || null), "image/png");
+  });
+  if (!composedBlob || composedBlob.size === 0) return false;
+  return setPreviewFromBlob(composedBlob);
+}
+
+async function refreshProgressivePreviewDelta(jobId) {
+  if (!hasBackendMethod(api, "getJobImageDelta")) return false;
+  if (!progressiveDeltaEnabled) return false;
+
+  const id = String(jobId || "").trim();
+  if (!id) return false;
+  if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
+  const tmKey = [
+    el.toneMapping ? el.toneMapping.value : "aces",
+    el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+    el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+    el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+    el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+    el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  ].join("|");
+  if (tmKey !== progressiveDeltaTmKey) {
+    progressiveDeltaTmKey = tmKey;
+    progressiveDeltaSinceDone = 0;
+  }
+
+  const packet = await api.getJobImageDelta(id, {
+    since: progressiveDeltaSinceDone,
+    limit: 24,
+    cacheBust: true,
+    toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+    toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+    toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+    toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+    toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+    toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  });
+  if (!packet) return false;
+  if (renderActive && activeJobId && id === String(activeJobId)) {
+    recordPreviewTransfer("delta", packet.byteLength || 0);
+  }
+
+  const delta = parseImageDeltaPacket(packet);
+  if (!delta) return false;
+  if (!Array.isArray(delta.tiles) || delta.tiles.length === 0) return true;
+  return drawDeltaTilesToPreviewCanvas(delta);
+}
+
+async function refreshProgressivePreview(jobId) {
+  const id = String(jobId || "").trim();
+  const blob = await api.getJobImage(jobId, {
+    partial: true,
+    cacheBust: true,
+    toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+    toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+    toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+    toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+    toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+    toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  });
+  if (!blob || blob.size === 0) return false;
+  if (renderActive && activeJobId && id === String(activeJobId)) {
+    recordPreviewTransfer("full", blob.size || 0);
+  }
+
+  const imageBlob = preservePreviewUnderlay
+    ? await composeWithPinnedPreview(blob)
+    : blob;
+
+  return setPreviewFromBlob(imageBlob);
+}
+
+async function refreshPreviewForToneMapping() {
+  try {
+    if (renderActive && activeJobId) {
+      await refreshProgressivePreview(activeJobId);
+      return;
+    }
+    if (lastCompletedJobId) {
+      const finalBlob = await api.getJobImage(lastCompletedJobId, {
+        final: true,
+        cacheBust: true,
+        toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+        toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+        toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+        toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+        toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+        toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+      });
+      if (finalBlob && finalBlob.size > 0) await setPreviewFromBlob(finalBlob);
+    }
+  } catch (err) {
+    appendLog(`tone mapping preview refresh failed: ${err.message}`);
+  }
+}
+
+async function restorePreviewForActiveWorkspace() {
+  if (activeJobId) {
+    try {
+      const data = await api.getJob(activeJobId);
+      const state = String((data && data.state) || "").toLowerCase();
+      if (state === "queued" || state === "running") {
+        const progress = Number((data && data.progress) || 0);
+        updateActivePreviewTilesFromJob(data);
+        setProgress(progress);
+        setStatus(`${state} ${(100 * progress).toFixed(1)}%`);
+        await refreshProgressivePreview(activeJobId);
+        return;
+      }
+      if (state === "done") {
+        lastCompletedJobId = activeJobId;
+        lastCompletedJobScene = String((data && data.scene) || el.scene.value || "");
+        lastCompletedJobIntegrator = String((data && data.integrator) || el.integrator.value || "");
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      } else if (state === "error") {
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      }
+    } catch (_) {
+      // fallthrough to last completed image
+    }
+  }
+
+  if (!lastCompletedJobId) {
+    setPreviewEmptyState(true);
+    updateDownloadUi();
+    return;
+  }
+  try {
+    const finalBlob = await api.getJobImage(lastCompletedJobId, {
+      final: true,
+      cacheBust: true,
+      toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+      toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+      toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+      toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+      toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+      toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    });
+    if (finalBlob && finalBlob.size > 0) {
+      await setPreviewFromBlob(finalBlob);
+      updateDownloadUi();
+      return;
+    }
+  } catch (_) {
+    // fallthrough
+  }
+  setPreviewEmptyState(true);
+  updateDownloadUi();
+}
+
+function resumeWorkspaceJobPolling(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return;
+  if (renderActive && activeJobId === id) return;
+
+  activeJobId = id;
+  syncGlobalsToWorkspaceRuntime();
+  const token = beginPollSession();
+  setRenderActive(true);
+  if (el.renderBtn) el.renderBtn.disabled = true;
+  pollJob(id, token)
+    .catch((err) => {
+      setStatus(`error: ${err.message}`);
+      appendLog(`render error: ${err.message}`);
+    })
+    .finally(() => {
+      if (activeJobId === id) {
+        activeJobId = "";
+        syncGlobalsToWorkspaceRuntime();
+      }
+      if (!activeJobId) {
+        setRenderActive(false);
+        if (el.renderBtn) el.renderBtn.disabled = false;
+      }
+    });
+}

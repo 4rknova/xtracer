@@ -2071,6 +2071,11 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
     });
 
+    server.Get(R"(/app/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "app/" + name), "application/javascript", res);
+    });
+
     server.Get("/visual_editor.js", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "visual_editor.js"), "application/javascript", res);
     });
