@@ -1,33 +1,109 @@
 title = Camera Depth of Field Showcase
-description = Thin-lens depth-of-field demo with dense foreground, focus-plane, and background sphere stacks.
-version = 1.0
+description = From-scratch DOF bokeh lab: strong foreground/background blur, sharp focus band, and aperture-shape comparison cameras.
+version = 2.0
 default_camera = default
 
 environment = {
     type = gradient
     config = {
-        a = col3(0.92,0.96,1.00)
-        b = col3(0.14,0.16,0.22)
+        a = col3(0.82,0.88,0.96)
+        b = col3(0.05,0.06,0.10)
     }
 }
 
 camera = {
     default = {
         type     = thin-lens
-        fov      = 38
-        position = vec3(0,2.0,-11.0)
-        target   = vec3(0,1.2,2.2)
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
         up       = vec3(0,1,0)
-        flength  = 12.5
-        aperture = 0.5
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 6
+        aperture_rotation = 12
+    }
+
+    round_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 0
+        aperture_rotation = 0
+    }
+
+    square_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 4
+        aperture_rotation = 45
+    }
+
+    triangle_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 3
+        aperture_rotation = 30
+    }
+
+    pentagon_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 5
+        aperture_rotation = 18
+    }
+
+    heptagon_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 7
+        aperture_rotation = 10
+    }
+
+    octagon_bokeh = {
+        type     = thin-lens
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
+        up       = vec3(0,1,0)
+        flength  = 13.5
+        aperture = 0.65
+        aperture_blades = 8
+        aperture_rotation = 22.5
     }
 
     no_dof = {
         type     = thin-lens
-        fov      = 38
-        position = vec3(0,2.0,-11.0)
-        target   = vec3(0,1.2,2.2)
+        fov      = 33
+        position = vec3(0,1.65,-8.0)
+        target   = vec3(0,1.15,5.5)
         up       = vec3(0,1,0)
+        flength  = 0
+        aperture = 0
     }
 }
 
@@ -37,93 +113,129 @@ geometry = {
         source     = gen(plane)
         resolution = 1
         modifiers = {
-            scale       = vec3(24,1,24)
+            scale       = vec3(48,1,48)
             translation = vec3(0,0,0)
         }
     }
 
-    near_subject_big = {
+    fg_left = {
         type     = sphere
-        position = vec3(-5.4,1.95,-0.9)
-        radius   = 1.75
+        position = vec3(-4.9,1.35,2.0)
+        radius   = 1.25
     }
 
-    near_subject_small = {
+    fg_right = {
         type     = sphere
-        position = vec3(-3.5,0.62,-2.6)
-        radius   = 0.60
-    }
-
-    near_subject_medium = {
-        type     = sphere
-        position = vec3(4.3,1.12,-1.6)
+        position = vec3(5.1,1.22,2.3)
         radius   = 1.08
     }
 
-    near_subject_tiny = {
+    fg_center = {
         type     = sphere
-        position = vec3(2.8,0.52,-3.1)
-        radius   = 0.42
+        position = vec3(0.1,0.62,1.7)
+        radius   = 0.56
     }
 
-    focus_subject_center = {
+    spec_probe_near = {
         type     = sphere
-        position = vec3(0.0,1.2,2.2)
-        radius   = 1.18
+        position = vec3(-1.2,0.42,3.1)
+        radius   = 0.32
     }
 
-    focus_band_left = {
+    focus_center = {
         type     = sphere
-        position = vec3(-5.0,0.86,2.1)
-        radius   = 0.80
+        position = vec3(0.0,1.15,5.5)
+        radius   = 1.15
     }
 
-    focus_band_right = {
+    focus_left = {
         type     = sphere
-        position = vec3(5.2,0.84,2.45)
-        radius   = 0.88
+        position = vec3(-2.9,0.92,5.2)
+        radius   = 0.78
     }
 
-    focus_band_back = {
+    focus_right = {
         type     = sphere
-        position = vec3(-4.3,0.76,4.8)
-        radius   = 0.72
+        position = vec3(3.0,0.95,5.9)
+        radius   = 0.82
     }
 
-    far_subject_big = {
+    spec_probe_focus = {
         type     = sphere
-        position = vec3(5.8,1.75,8.4)
-        radius   = 1.92
+        position = vec3(1.0,0.44,6.4)
+        radius   = 0.28
     }
 
-    far_subject_small = {
+    bg_left = {
         type     = sphere
-        position = vec3(2.6,0.70,10.0)
-        radius   = 0.72
+        position = vec3(-5.3,1.55,11.3)
+        radius   = 1.52
     }
 
-    far_subject_medium = {
+    bg_right = {
         type     = sphere
-        position = vec3(-5.2,1.20,11.2)
-        radius   = 1.18
+        position = vec3(5.7,1.20,12.4)
+        radius   = 1.05
     }
 
-    far_subject_huge = {
+    bg_center = {
         type     = sphere
-        position = vec3(0.0,2.5,14.8)
-        radius   = 2.90
+        position = vec3(0.8,0.70,13.6)
+        radius   = 0.64
     }
 
-    far_subject_tiny = {
+    spec_probe_far = {
         type     = sphere
-        position = vec3(-2.6,0.44,8.6)
-        radius   = 0.36
+        position = vec3(-0.7,0.36,11.8)
+        radius   = 0.30
+    }
+
+    near_light_l = {
+        type     = sphere
+        position = vec3(-6.0,0.92,2.4)
+        radius   = 0.22
+    }
+
+    near_light_r = {
+        type     = sphere
+        position = vec3(6.1,0.92,2.8)
+        radius   = 0.22
+    }
+
+    near_light_c = {
+        type     = sphere
+        position = vec3(1.5,0.50,1.4)
+        radius   = 0.18
+    }
+
+    far_light_l = {
+        type     = sphere
+        position = vec3(-6.2,1.10,12.1)
+        radius   = 0.23
+    }
+
+    far_light_r = {
+        type     = sphere
+        position = vec3(6.0,1.25,11.4)
+        radius   = 0.23
+    }
+
+    far_light_c0 = {
+        type     = sphere
+        position = vec3(-1.0,2.20,13.1)
+        radius   = 0.21
+    }
+
+    far_light_c1 = {
+        type     = sphere
+        position = vec3(2.2,0.82,14.4)
+        radius   = 0.20
     }
 
     key_light = {
         type     = sphere
-        position = vec3(1.8,7.0,-1.4)
-        radius   = 0.9
+        position = vec3(0.5,8.1,0.6)
+        radius   = 1.25
     }
 }
 
@@ -132,7 +244,7 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.56,0.58,0.62) }
+                diffuse = { type = color, value = col3(0.46,0.50,0.56) }
             }
         }
     }
@@ -141,12 +253,12 @@ material = {
         type = blinn_phong
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.92,0.42,0.30) }
-                specular = { type = color, value = col3(0.28,0.22,0.22) }
+                diffuse  = { type = color, value = col3(0.92,0.40,0.29) }
+                specular = { type = color, value = col3(0.26,0.22,0.22) }
             }
             scalars = {
-                exponent    = 84
-                reflectance = 0.10
+                exponent    = 74
+                reflectance = 0.08
             }
         }
     }
@@ -155,12 +267,12 @@ material = {
         type = blinn_phong
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.34,0.76,0.50) }
-                specular = { type = color, value = col3(0.24,0.28,0.24) }
+                diffuse  = { type = color, value = col3(0.33,0.75,0.54) }
+                specular = { type = color, value = col3(0.72,0.75,0.75) }
             }
             scalars = {
-                exponent    = 96
-                reflectance = 0.12
+                exponent    = 132
+                reflectance = 0.14
             }
         }
     }
@@ -169,21 +281,53 @@ material = {
         type = blinn_phong
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.36,0.56,0.94) }
-                specular = { type = color, value = col3(0.22,0.24,0.30) }
+                diffuse  = { type = color, value = col3(0.35,0.56,0.92) }
+                specular = { type = color, value = col3(0.24,0.29,0.35) }
             }
             scalars = {
-                exponent    = 96
-                reflectance = 0.12
+                exponent    = 92
+                reflectance = 0.10
             }
         }
     }
 
-    emissive_key = {
+    spec_probe_mat = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.05,0.05,0.06) }
+                specular = { type = color, value = col3(0.98,0.98,0.96) }
+            }
+            scalars = {
+                exponent    = 220
+                reflectance = 0.42
+            }
+        }
+    }
+
+    light_warm = {
         type = emissive
         properties = {
             samplers = {
-                emissive = { type = color, value = col3(5.2,5.0,4.6) }
+                emissive = { type = color, value = col3(8.0,3.8,3.1) }
+            }
+        }
+    }
+
+    light_cool = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(3.6,6.2,9.3) }
+            }
+        }
+    }
+
+    light_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(6.0,5.7,5.2) }
             }
         }
     }
@@ -191,18 +335,30 @@ material = {
 
 object = {
     floor = { geometry = floor, material = floor_matte }
-    near_subject_big = { geometry = near_subject_big, material = near_mat }
-    near_subject_small = { geometry = near_subject_small, material = near_mat }
-    near_subject_medium = { geometry = near_subject_medium, material = near_mat }
-    near_subject_tiny = { geometry = near_subject_tiny, material = near_mat }
-    focus_subject_center = { geometry = focus_subject_center, material = focus_mat }
-    focus_band_left = { geometry = focus_band_left, material = focus_mat }
-    focus_band_right = { geometry = focus_band_right, material = focus_mat }
-    focus_band_back = { geometry = focus_band_back, material = focus_mat }
-    far_subject_big = { geometry = far_subject_big, material = far_mat }
-    far_subject_small = { geometry = far_subject_small, material = far_mat }
-    far_subject_medium = { geometry = far_subject_medium, material = far_mat }
-    far_subject_huge = { geometry = far_subject_huge, material = far_mat }
-    far_subject_tiny = { geometry = far_subject_tiny, material = far_mat }
-    key_light = { geometry = key_light, material = emissive_key }
+
+    fg_left = { geometry = fg_left, material = near_mat }
+    fg_right = { geometry = fg_right, material = near_mat }
+    fg_center = { geometry = fg_center, material = near_mat }
+    spec_probe_near = { geometry = spec_probe_near, material = spec_probe_mat }
+
+    focus_center = { geometry = focus_center, material = focus_mat }
+    focus_left = { geometry = focus_left, material = focus_mat }
+    focus_right = { geometry = focus_right, material = focus_mat }
+    spec_probe_focus = { geometry = spec_probe_focus, material = spec_probe_mat }
+
+    bg_left = { geometry = bg_left, material = far_mat }
+    bg_right = { geometry = bg_right, material = far_mat }
+    bg_center = { geometry = bg_center, material = far_mat }
+    spec_probe_far = { geometry = spec_probe_far, material = spec_probe_mat }
+
+    near_light_l = { geometry = near_light_l, material = light_warm }
+    near_light_r = { geometry = near_light_r, material = light_warm }
+    near_light_c = { geometry = near_light_c, material = light_warm }
+
+    far_light_l = { geometry = far_light_l, material = light_cool }
+    far_light_r = { geometry = far_light_r, material = light_cool }
+    far_light_c0 = { geometry = far_light_c0, material = light_cool }
+    far_light_c1 = { geometry = far_light_c1, material = light_cool }
+
+    key_light = { geometry = key_light, material = light_key }
 }
