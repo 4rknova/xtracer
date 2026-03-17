@@ -428,6 +428,8 @@ xtcore::asset::ICamera *deserialize_camera_tlp(const ncf::NCF *p)
     cam->fov      = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
     cam->flength  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
     cam->aperture = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
+    cam->aperture_blades = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_APERTURE_BLADES), cam->aperture_blades);
+    cam->aperture_rotation = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE_ROTATION), cam->aperture_rotation);
 
     return data;
 }

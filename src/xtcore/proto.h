@@ -69,6 +69,8 @@
 #define XTPROTO_PROP_APERTURE		"aperture"			/* scalar_t   */ /* Aperture of the lense */
 #define XTPROTO_PROP_TARGET			"target"			/* Vector3f   */ /* Target position */
 #define XTPROTO_PROP_FLENGTH		"flength"			/* scalar_t   */ /* Focal length */
+#define XTPROTO_PROP_APERTURE_BLADES "aperture_blades"  /* integer    */ /* Aperture polygon blades (>=3 enables polygon bokeh) */
+#define XTPROTO_PROP_APERTURE_ROTATION "aperture_rotation" /* scalar_t */ /* Aperture polygon rotation in degrees */
 #define XTPROTO_PROP_ORIENTATION    "orientation"		/* Vector3f   */ /* Orientation */
 #define XTPROTO_PROP_INTST			"intensity"			/* ColorRGBf  */ /* Color intensity */
 #define XTPROTO_PROP_IAMBN			"ambient"			/* ColorRGBf  */ /* Ambient intensity */

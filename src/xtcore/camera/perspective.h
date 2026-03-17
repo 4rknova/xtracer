@@ -21,9 +21,11 @@ class Perspective : public xtcore::asset::ICamera
 	public:
 		Vector3f target;
 		Vector3f up;
-		float    fov;
-		float    aperture;
-		float    flength;
+			float    fov;
+			float    aperture;
+			float    flength;
+			int      aperture_blades;
+			float    aperture_rotation;
 
 		Perspective();
         const char* get_type() const;

@@ -744,6 +744,8 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
             ss << ",\"fov\":" << pcam->fov;
             ss << ",\"aperture\":" << pcam->aperture;
             ss << ",\"flength\":" << pcam->flength;
+            ss << ",\"aperture_blades\":" << pcam->aperture_blades;
+            ss << ",\"aperture_rotation\":" << pcam->aperture_rotation;
         } else if (ecam) {
             ss << ",\"orientation\":[" << ecam->orientation.x << "," << ecam->orientation.y << "," << ecam->orientation.z << "]";
         } else if (ocam) {

@@ -18,6 +18,11 @@
     return new THREE.Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0);
   }
 
+  function isThinLensCameraType(type) {
+    var t = String(type || "").toLowerCase();
+    return t === "thin-lens" || t === "perspective";
+  }
+
   function generatedMeshGeometry(token, resolution) {
     var t = String(token || "").trim().toLowerCase();
     var seg = Math.max(8, Math.floor(Number(resolution) || 24));
@@ -261,6 +266,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         fov: Number.isFinite(Number(cam.fov)) ? Number(cam.fov) : 45,
         flength: Number.isFinite(Number(cam.flength)) ? Number(cam.flength) : 0,
         aperture: Number.isFinite(Number(cam.aperture)) ? Number(cam.aperture) : 0,
+        aperture_blades: Number.isFinite(Number(cam.aperture_blades)) ? Number(cam.aperture_blades) : 0,
+        aperture_rotation: Number.isFinite(Number(cam.aperture_rotation)) ? Number(cam.aperture_rotation) : 0,
       });
     });
 
@@ -368,6 +375,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraHFov = 45;
     this.selectedCameraAperture = 0;
     this.selectedCameraFLength = 0;
+    this.selectedCameraApertureBlades = 0;
+    this.selectedCameraApertureRotation = 0;
     this.selectedCameraType = "";
     this.onSelectionChanged = null;
     this.selectedMesh = null;
@@ -1138,6 +1147,46 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return g;
   };
 
+  SceneVisualEditor.prototype.buildApertureOutlineGeometry = function (radius, blades, rotationDeg) {
+    var r = Math.max(1e-5, Number(radius) || 0.1);
+    var b = Math.floor(Number(blades) || 0);
+    var rot = degToRad(Number(rotationDeg) || 0);
+    var points = [];
+    var i = 0;
+
+    if (b >= 3) {
+      for (i = 0; i < b; i += 1) {
+        var a = rot + (Math.PI * 2 * i) / b;
+        points.push(vec3(Math.cos(a) * r, Math.sin(a) * r, 0));
+      }
+    } else {
+      var segments = 48;
+      for (i = 0; i < segments; i += 1) {
+        var ac = (Math.PI * 2 * i) / segments;
+        points.push(vec3(Math.cos(ac) * r, Math.sin(ac) * r, 0));
+      }
+    }
+
+    if (points.length < 3) return null;
+
+    var seg = [];
+    for (i = 0; i < points.length; i += 1) {
+      var p0 = points[i];
+      var p1 = points[(i + 1) % points.length];
+      seg.push(p0, p1);
+    }
+
+    var arr = new Float32Array(seg.length * 3);
+    for (i = 0; i < seg.length; i += 1) {
+      arr[i * 3 + 0] = seg[i].x;
+      arr[i * 3 + 1] = seg[i].y;
+      arr[i * 3 + 2] = seg[i].z;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+    return g;
+  };
+
   SceneVisualEditor.prototype.updateCameraWidget = function () {
     this.clearCameraWidget();
     if (!this.selectedCameraPose || !this.cameraWidgetRoot) return;
@@ -1174,22 +1223,21 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.cameraWidget.position.copy(this.selectedCameraPose.position);
     this.cameraWidget.quaternion.copy(q);
 
-    if (this.selectedCameraType === "thin-lens") {
+    if (isThinLensCameraType(this.selectedCameraType)) {
       var fl = Math.max(0, Number(this.selectedCameraFLength) || 0);
       var ap = Math.max(0, Number(this.selectedCameraAperture) || 0);
+      var blades = Math.max(0, Math.floor(Number(this.selectedCameraApertureBlades) || 0));
+      var rotation = Number(this.selectedCameraApertureRotation) || 0;
 
       if (ap > 0) {
         var ar = Math.max(ap * 0.5, span * 0.04);
-        var ringGeo = new THREE.RingGeometry(ar * 0.92, ar, 48, 1);
-        var ringMat = new THREE.MeshBasicMaterial({
+        var apertureGeo = this.buildApertureOutlineGeometry(ar, blades, rotation);
+        var apertureMat = new THREE.LineBasicMaterial({
           color: 0xffb347,
-          side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.72,
-          depthWrite: false,
+          opacity: 0.9,
         });
-        var ring = new THREE.Mesh(ringGeo, ringMat);
-        this.cameraWidget.add(ring);
+        if (apertureGeo) this.cameraWidget.add(new THREE.LineSegments(apertureGeo, apertureMat));
       }
 
       if (fl > 0) {
@@ -1643,6 +1691,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.selectedCameraHFov = 45;
       this.selectedCameraAperture = 0;
       this.selectedCameraFLength = 0;
+      this.selectedCameraApertureBlades = 0;
+      this.selectedCameraApertureRotation = 0;
       this.selectedCameraType = "";
       this.updateCameraWidget();
       return;
@@ -1654,7 +1704,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     var up = c.up ? c.up.clone() : vec3(0, 1, 0);
 
     // If target is missing/non-sensical for non-thin-lens cameras, use orientation as forward.
-    if (c.type !== "thin-lens") {
+    if (!isThinLensCameraType(c.type)) {
       var hasExplicitTarget = target.lengthSq() > 1e-8;
       if (!hasExplicitTarget && c.orientation && c.orientation.lengthSq() > 1e-8) {
         // xtcore camera orientation is Euler XYZ in radians.
@@ -1668,6 +1718,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraHFov = hfov;
     this.selectedCameraAperture = Math.max(0, Number(c.aperture) || 0);
     this.selectedCameraFLength = Math.max(0, Number(c.flength) || 0);
+    this.selectedCameraApertureBlades = Math.max(0, Math.floor(Number(c.aperture_blades) || 0));
+    this.selectedCameraApertureRotation = Number(c.aperture_rotation) || 0;
     this.selectedCameraType = String(c.type || "").toLowerCase();
     this.selectedCameraPose = {
       position: pos.clone(),

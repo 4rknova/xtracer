@@ -1,4 +1,5 @@
 #include <nmath/prng.h>
+#include <cmath>
 #include "perspective.h"
 
 using nmath::RADIAN;
@@ -16,7 +17,46 @@ Perspective::Perspective()
 	, fov(XT_CAM_DEFAULT_FOV)
     , aperture(0)
     , flength(0)
+    , aperture_blades(0)
+    , aperture_rotation(0)
 {}
+
+namespace {
+
+static inline Vector3f sample_aperture_disk(const scalar_t radius)
+{
+    const scalar_t u1 = prng_c(0.0f, 1.0f);
+    const scalar_t u2 = prng_c(0.0f, 1.0f);
+    const scalar_t r = std::sqrt(u1) * radius;
+    const scalar_t theta = (scalar_t)(6.28318530717958647692) * u2;
+    return Vector3f(r * std::cos(theta), r * std::sin(theta), 0.0f);
+}
+
+static inline Vector3f sample_aperture_polygon(const scalar_t radius, const int blades, const scalar_t rotation)
+{
+    if (blades < 3) return sample_aperture_disk(radius);
+
+    const scalar_t u0 = prng_c(0.0f, 1.0f);
+    const scalar_t u1 = prng_c(0.0f, 1.0f);
+    const scalar_t u2 = prng_c(0.0f, 1.0f);
+
+    int edge = (int)(u0 * (scalar_t)blades);
+    if (edge >= blades) edge = blades - 1;
+
+    const scalar_t step = (scalar_t)(6.28318530717958647692) / (scalar_t)blades;
+    const scalar_t a0 = rotation + step * (scalar_t)edge;
+    const scalar_t a1 = a0 + step;
+
+    const Vector3f v0(radius * std::cos(a0), radius * std::sin(a0), 0.0f);
+    const Vector3f v1(radius * std::cos(a1), radius * std::sin(a1), 0.0f);
+
+    const scalar_t su = std::sqrt(u1);
+    const scalar_t w0 = su * (1.0f - u2);
+    const scalar_t w1 = su * u2;
+    return v0 * w0 + v1 * w1;
+}
+
+} // namespace
 
 const char* Perspective::get_type() const
 {
@@ -37,8 +77,7 @@ void Perspective::calculate_transform(Matrix4x4f &mat)
 
 Ray Perspective::get_primary_ray(float x, float y, float width, float height)
 {
-    // Note that the direction vector of ray is not normalized. 
-    // The DoF ray calculation depends on this at the moment.
+    // Keep the pre-transform direction unnormalized; DoF uses this camera-space ray.
     Ray ray;
 
     scalar_t aspect_ratio = (scalar_t)width / (scalar_t)height;
@@ -69,29 +108,30 @@ Ray Perspective::get_primary_ray(float x, float y, float width, float height)
 
     calculate_transform(m_transform);
 
-	// Calculate the deviated ray direction for DoF
-    if (flength > 0) {
-        Ray fray;
-    	fray.origin = ray.direction;
-    	scalar_t half_aperture = aperture / 2.f;
-    	fray.origin.x += prng_c(-half_aperture, half_aperture);
-    	fray.origin.y += prng_c(-half_aperture, half_aperture);
+	// Thin-lens DoF: sample a point on the lens disk and re-aim through focal plane.
+    if (flength > 0 && aperture > 0) {
+        const scalar_t half_aperture = aperture * 0.5f;
+        const scalar_t aperture_rotation_rad = aperture_rotation * RADIAN;
+        const Vector3f lens_point = sample_aperture_polygon(half_aperture, aperture_blades, aperture_rotation_rad);
 
-        // Find the intersection point on the focal plane
-    	Vector3f fpip = ray.direction + flength * ray.direction.normalized();
-    	fray.direction = fpip - fray.origin;
-
-        ray = fray;
+        // Intersect the pinhole ray with focal plane z = flength in camera space.
+        const scalar_t dz = ray.direction.z;
+        if (std::fabs((double)dz) > (scalar_t)1e-8) {
+            const scalar_t t_focus = flength / dz;
+            const Vector3f focus_point = ray.direction * t_focus;
+            ray.origin = lens_point;
+            ray.direction = focus_point - lens_point;
+        }
     }
 
 	// Transform the direction vector
 	ray.direction.transform(m_transform);
 	ray.direction.normalize();
 
-	// Transform the origin of the ray for DoF
-    if (flength > 0) {
-	    ray.origin.transform(m_transform);
-	    ray.origin += position;
+	// Transform the origin of the ray for DoF.
+    if (flength > 0 && aperture > 0) {
+		    ray.origin.transform(m_transform);
+		    ray.origin += position;
     }
 
 	return ray;

@@ -101,10 +101,14 @@ Run CLI:
 
 | Type | Notes |
 |---|---|
-| `thin-lens` | Position/target/up/fov/flength/aperture |
+| `thin-lens` | Position/target/up/fov/flength/aperture (+ optional aperture shape controls) |
 | `ods` | Omni-directional stereo camera |
 | `erp` | Equirectangular camera |
 | `cubemap` | Cubemap camera |
+
+`thin-lens` optional aperture-shape fields:
+- `aperture_blades` (integer): `0` or `<3` keeps circular aperture; `>=3` uses an N-gon aperture for polygonal bokeh.
+- `aperture_rotation` (float, degrees): rotates the polygonal aperture when `aperture_blades >= 3`.
 
 #### Geometry Types
 
