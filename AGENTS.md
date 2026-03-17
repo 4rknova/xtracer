@@ -120,6 +120,7 @@ Supported geometry `type` values:
 - `mesh`:
   - external source: `source = <path>.obj`
   - procedural generators: `source = gen(plane|icosahedron|tetrahedron|cube|hexahedron|octahedron|dodecahedron|capsule|cylinder|capped_cylinder|cone|truncated_cone|ring|torus_knot|icosphere|geodesic_dome|menger_sponge|sierpinski_tetrahedron|mobius_strip|klein_bottle|snowflake)`
+  - plus: `pyramid` (supports `base_size` and `height`)
   - optional: `resolution` (mesh complexity / iterations for generated meshes), `modifiers` (`rotation`, `scale`, `translation`, `flip_normals`, `extrude`)
 
 Supported material `type` values:

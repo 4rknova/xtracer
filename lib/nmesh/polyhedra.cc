@@ -250,5 +250,50 @@ void dodecahedron(object_t *obj)
     }
 }
 
+void pyramid(object_t *obj, float base_size, float height)
+{
+    if (!obj) return;
+
+    if (!(base_size > 0.0f)) base_size = 1.0f;
+    if (!(height > 0.0f)) height = 1.0f;
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    const float half = base_size * 0.5f;
+    const float y0 = -height * 0.5f;
+    const float y1 =  height * 0.5f;
+
+    const Vec3 p0(-half, y0, -half);
+    const Vec3 p1( half, y0, -half);
+    const Vec3 p2( half, y0,  half);
+    const Vec3 p3(-half, y0,  half);
+    const Vec3 apex(0.0f, y1, 0.0f);
+
+    auto add_side = [&](const Vec3 &a, const Vec3 &b, const Vec3 &c) {
+        Vec3 n = nmath::cross(b - a, c - a);
+        if (n.length() <= 1e-8f) n = Vec3(0.0f, 1.0f, 0.0f);
+        else n.normalize();
+        const int i0 = append_vertex_uv(obj, a, n, 0.0f, 0.0f);
+        const int i1 = append_vertex_uv(obj, b, n, 1.0f, 0.0f);
+        const int i2 = append_vertex_uv(obj, c, n, 0.5f, 1.0f);
+        append_triangle_uv(out, i0, i1, i2);
+    };
+
+    add_side(p0, p1, apex);
+    add_side(p1, p2, apex);
+    add_side(p2, p3, apex);
+    add_side(p3, p0, apex);
+
+    const Vec3 nbase(0.0f, -1.0f, 0.0f);
+    const int b0 = append_vertex_uv(obj, p0, nbase, 0.0f, 0.0f);
+    const int b1 = append_vertex_uv(obj, p1, nbase, 1.0f, 0.0f);
+    const int b2 = append_vertex_uv(obj, p2, nbase, 1.0f, 1.0f);
+    const int b3 = append_vertex_uv(obj, p3, nbase, 0.0f, 1.0f);
+    append_triangle_uv(out, b0, b3, b2);
+    append_triangle_uv(out, b0, b2, b1);
+}
+
     } /* namespace generator */
 } /* namespace nmesh */

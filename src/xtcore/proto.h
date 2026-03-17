@@ -23,6 +23,7 @@
 #define XTPROTO_LTRL_CUBE           "cube"              /* string     */ /* Cube */
 #define XTPROTO_LTRL_OCTAHEDRON     "octahedron"        /* string     */ /* Octahedron */
 #define XTPROTO_LTRL_DODECAHEDRON   "dodecahedron"      /* string     */ /* Dodecahedron */
+#define XTPROTO_LTRL_PYRAMID        "pyramid"           /* string     */ /* Pyramid */
 #define XTPROTO_LTRL_RING           "ring"              /* string     */ /* Ring (torus) */
 #define XTPROTO_LTRL_SNOWFLAKE      "snowflake"         /* string     */ /* Koch snowflake */
 #define XTPROTO_LTRL_CAPSULE        "capsule"           /* string     */ /* Capsule */
@@ -117,6 +118,7 @@
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
+#define XTPROTO_PROP_BASE_SIZE      "base_size"         /* scalar_t   */ /* Base size */
 #define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
 #define XTPROTO_PROP_CELLS          "cells"             /* integer    */ /* Cell count */
 #define XTPROTO_PROP_MAX_DEVIATION  "max_deviation"     /* scalar_t   */ /* Max normal deviation (degrees) */

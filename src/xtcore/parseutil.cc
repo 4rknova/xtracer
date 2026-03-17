@@ -528,6 +528,13 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         else if (!token.compare(XTPROTO_LTRL_DODECAHEDRON)) {
             nmesh::generator::dodecahedron(&obj);
         }
+        else if (!token.compare(XTPROTO_LTRL_PYRAMID)) {
+            float base_size = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BASE_SIZE) : 0, 1.0f);
+            if (base_size <= 0.0f) base_size = 1.0f;
+            float height = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT) : 0, 1.0f);
+            if (height <= 0.0f) height = 1.0f;
+            nmesh::generator::pyramid(&obj, base_size, height);
+        }
         else if (!token.compare(XTPROTO_LTRL_CAPSULE)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
             if (i < 12) i = 12;
