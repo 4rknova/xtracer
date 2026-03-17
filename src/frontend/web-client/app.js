@@ -314,11 +314,17 @@ const DARK_PALETTE_OPTIONS = [
   { value: "slate", label: "Slate" },
   { value: "crimson", label: "Crimson" },
   { value: "graphite", label: "Graphite" },
+  { value: "emerald", label: "Emerald" },
+  { value: "ember", label: "Ember" },
+  { value: "arctic", label: "Arctic" },
 ];
 const LIGHT_PALETTE_OPTIONS = [
   { value: "coastal", label: "Coastal" },
   { value: "amber", label: "Amber" },
   { value: "sage", label: "Sage" },
+  { value: "rose", label: "Rose" },
+  { value: "sky", label: "Sky" },
+  { value: "olive", label: "Olive" },
 ];
 const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
 const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
@@ -3186,7 +3192,18 @@ function syncTransformInputsFromObject(objectId) {
 async function rebuildVisualFromEditorSource() {
   if (!visualEditor) return;
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
-  await visualEditor.buildScene(sceneName, el.sceneSource.value || "", { meshes: {} });
+  const runtimeData = (sceneName && hasBackendMethod(api, "getSceneRuntimeGraph"))
+    ? await loadSceneRuntimeGraph(sceneName).catch(() => null)
+    : null;
+  let geometryData = { meshes: {} };
+  if (sceneName && hasBackendMethod(api, "getSceneGeometry")) {
+    try {
+      geometryData = await api.getSceneGeometry(sceneName);
+    } catch (_) {
+      geometryData = { meshes: {} };
+    }
+  }
+  await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
 }
@@ -4201,12 +4218,14 @@ async function loadVisualSceneFromSelected() {
 
   visualEditor.setStatus("Loading " + sceneName + " ...");
   const pair = await Promise.all([
-    api.getSceneSource(sceneName),
     api.getSceneGeometry(sceneName),
+    hasBackendMethod(api, "getSceneRuntimeGraph")
+      ? loadSceneRuntimeGraph(sceneName).catch(() => null)
+      : Promise.resolve(null),
   ]);
-  const data = pair[0] || {};
-  const geometryData = pair[1] || { meshes: {} };
-  await visualEditor.buildScene(sceneName, data.source || "", geometryData);
+  const geometryData = pair[0] || { meshes: {} };
+  const runtimeData = pair[1] || null;
+  await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
   visualLoadedSceneName = sceneName;
   if (el.editObjectSelect && el.editObjectSelect.value && visualEditor.selectObjectById) {
     visualEditor.selectObjectById(el.editObjectSelect.value, false);
@@ -5462,6 +5481,10 @@ async function boot() {
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneGeometry")) throw new Error("geometry endpoint unavailable");
         return api.getSceneGeometry(sceneName);
+      },
+      async (sceneName) => {
+        if (!hasBackendMethod(api, "getSceneRuntimeGraph")) throw new Error("runtime graph endpoint unavailable");
+        return api.getSceneRuntimeGraph(sceneName);
       },
       async (sceneName, relpath) => {
         if (!hasBackendMethod(api, "getSceneAssetText")) throw new Error("asset endpoint unavailable");

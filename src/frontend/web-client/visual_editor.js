@@ -18,328 +18,6 @@
     return new THREE.Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0);
   }
 
-  function sanitizeSource(src) {
-    return String(src || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/#[^\n]*/g, "");
-  }
-
-  function parsePathAliases(text) {
-    var aliases = {};
-    var re = /\b(path_[A-Za-z0-9_]+)\s*=\s*([^\n\r]+)/g;
-    var m;
-    while ((m = re.exec(text)) !== null) {
-      var key = String(m[1] || "").trim();
-      var val = String(m[2] || "").trim();
-      if (!key || !val) continue;
-      aliases[key] = val;
-      if (key.indexOf("path_") === 0 && key.length > 5) aliases[key.slice(5)] = val;
-    }
-    return aliases;
-  }
-
-  function trimQuotes(s) {
-    var v = String(s || "").trim();
-    if (v.length >= 2) {
-      var a = v[0];
-      var b = v[v.length - 1];
-      if ((a === "\"" && b === "\"") || (a === "'" && b === "'")) return v.slice(1, -1);
-    }
-    return v;
-  }
-
-  function resolveSourcePath(raw, aliases) {
-    var src = trimQuotes(raw || "");
-    if (!src) return "";
-    src = src.replace(/<([A-Za-z0-9_]+)>/g, function (_m, name) {
-      var k = String(name || "");
-      if (Object.prototype.hasOwnProperty.call(aliases, k)) return aliases[k];
-      return "<" + k + ">";
-    });
-    return src;
-  }
-
-  function findGroupBlock(text, groupName) {
-    var re = new RegExp("\\b" + groupName + "\\s*=\\s*\\{", "m");
-    var m = re.exec(text);
-    if (!m) return "";
-    var start = text.indexOf("{", m.index);
-    if (start < 0) return "";
-    var depth = 0;
-    for (var i = start; i < text.length; i += 1) {
-      var c = text[i];
-      if (c === "{") depth += 1;
-      else if (c === "}") {
-        depth -= 1;
-        if (depth === 0) return text.slice(start + 1, i);
-      }
-    }
-    return "";
-  }
-
-  function parseTopLevelBlocks(groupText) {
-    var out = {};
-    var i = 0;
-    while (i < groupText.length) {
-      while (i < groupText.length && /\s/.test(groupText[i])) i += 1;
-      var nameMatch = /^([A-Za-z0-9_\-]+)\s*=\s*\{/.exec(groupText.slice(i));
-      if (!nameMatch) {
-        i += 1;
-        continue;
-      }
-      var name = nameMatch[1];
-      i += nameMatch[0].length;
-      var bodyStart = i;
-      var depth = 1;
-      while (i < groupText.length && depth > 0) {
-        if (groupText[i] === "{") depth += 1;
-        else if (groupText[i] === "}") depth -= 1;
-        i += 1;
-      }
-      var body = groupText.slice(bodyStart, i - 1);
-      out[name] = body;
-    }
-    return out;
-  }
-
-  function readStringProp(block, key) {
-    var re = new RegExp("\\b" + key + "\\s*=\\s*([^\\n\\r]+)", "i");
-    var m = re.exec(block);
-    if (!m) return "";
-    return String(m[1] || "").trim();
-  }
-
-  function readRefProp(block, key) {
-    var re = new RegExp("\\b" + key + "\\s*=\\s*([A-Za-z0-9_.\\-]+)", "i");
-    var m = re.exec(block);
-    if (!m) return "";
-    return String(m[1] || "").trim();
-  }
-
-  function readNumberProp(block, key, fallback) {
-    var raw = readStringProp(block, key);
-    if (!raw) return fallback;
-    var n = Number(raw.replace(/[^0-9+\-.eE]/g, ""));
-    return Number.isFinite(n) ? n : fallback;
-  }
-
-  function readCol3Prop(block, key) {
-    var re = new RegExp("\\b" + key + "\\s*=\\s*col3\\(([^\\)]*)\\)", "i");
-    var m = re.exec(block);
-    if (!m) return null;
-    var parts = String(m[1] || "").split(",").map(function (x) { return Number(x.trim()); });
-    if (parts.length < 3 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) return null;
-    return new THREE.Color(clamp(parts[0], 0, 1), clamp(parts[1], 0, 1), clamp(parts[2], 0, 1));
-  }
-
-  function readSamplerColor(block, samplerName) {
-    if (!block || !samplerName) return null;
-    var re = new RegExp("\\b" + samplerName + "\\s*=\\s*\\{([\\s\\S]*?)\\}", "i");
-    var m = re.exec(block);
-    if (!m) return null;
-    return readCol3Prop(m[1] || "", "value");
-  }
-
-  function readSamplerTextureSource(block, samplerName, aliases) {
-    if (!block || !samplerName) return "";
-    var samplerBody = readGroupBody(block, samplerName);
-    if (!samplerBody) return "";
-    var samplerType = trimQuotes(readStringProp(samplerBody, "type")).toLowerCase();
-    if (samplerType !== "texture") return "";
-    var sourceRaw = readStringProp(samplerBody, "source");
-    if (!sourceRaw) return "";
-    return resolveSourcePath(sourceRaw, aliases || {});
-  }
-
-  function readGroupBody(block, key) {
-    if (!block || !key) return "";
-    var m = new RegExp("\\b" + key + "\\s*=\\s*\\{", "i").exec(block);
-    if (!m) return "";
-    var start = block.indexOf("{", m.index);
-    if (start < 0) return "";
-    var depth = 0;
-    for (var i = start; i < block.length; i += 1) {
-      if (block[i] === "{") depth += 1;
-      else if (block[i] === "}") {
-        depth -= 1;
-        if (depth === 0) return block.slice(start + 1, i);
-      }
-    }
-    return "";
-  }
-
-  function readVec3Prop(block, key, fallback) {
-    var inline = new RegExp("\\b" + key + "\\s*=\\s*vec3\\(([^\\)]*)\\)", "i").exec(block);
-    if (inline) {
-      var p = String(inline[1] || "").split(",").map(function (x) { return Number(x.trim()); });
-      if (p.length >= 3 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2])) {
-        return vec3(p[0], p[1], p[2]);
-      }
-    }
-
-    var nestedMatch = new RegExp("\\b" + key + "\\s*=\\s*\\{", "i").exec(block);
-    if (nestedMatch) {
-      var start = block.indexOf("{", nestedMatch.index);
-      var depth = 0;
-      for (var i = start; i < block.length; i += 1) {
-        if (block[i] === "{") depth += 1;
-        else if (block[i] === "}") {
-          depth -= 1;
-          if (depth === 0) {
-            var body = block.slice(start + 1, i);
-            var hasX = new RegExp("\\bx\\s*=", "i").test(body);
-            var hasY = new RegExp("\\by\\s*=", "i").test(body);
-            var hasZ = new RegExp("\\bz\\s*=", "i").test(body);
-            var any = hasX || hasY || hasZ;
-            var x = readNumberProp(body, "x", any ? 0 : fallback.x);
-            var y = readNumberProp(body, "y", any ? 0 : fallback.y);
-            var z = readNumberProp(body, "z", any ? 0 : fallback.z);
-            return vec3(x, y, z);
-          }
-        }
-      }
-    }
-
-    return fallback.clone();
-  }
-
-  function parseModifiers(block) {
-    var m = new RegExp("\\bmodifiers\\s*=\\s*\\{", "i").exec(block);
-    if (!m) {
-      return {
-        rotation: vec3(0, 0, 0),
-        scale: vec3(1, 1, 1),
-        translation: vec3(0, 0, 0),
-      };
-    }
-
-    var start = block.indexOf("{", m.index);
-    var depth = 0;
-    var end = -1;
-    for (var i = start; i < block.length; i += 1) {
-      if (block[i] === "{") depth += 1;
-      else if (block[i] === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          end = i;
-          break;
-        }
-      }
-    }
-    var body = end > start ? block.slice(start + 1, end) : "";
-
-    return {
-      rotation: readVec3Prop(body, "rotation", vec3(0, 0, 0)),
-      scale: readVec3Prop(body, "scale", vec3(1, 1, 1)),
-      translation: readVec3Prop(body, "translation", vec3(0, 0, 0)),
-    };
-  }
-
-  function parseSceneSource(source) {
-    var txt = sanitizeSource(source);
-    var aliases = parsePathAliases(txt);
-    var cameraGroup = parseTopLevelBlocks(findGroupBlock(txt, "camera"));
-    var geometryGroup = parseTopLevelBlocks(findGroupBlock(txt, "geometry"));
-    var objectGroup = parseTopLevelBlocks(findGroupBlock(txt, "object"));
-    var materialGroup = parseTopLevelBlocks(findGroupBlock(txt, "material"));
-
-    var geometries = {};
-    Object.keys(geometryGroup).forEach(function (id) {
-      var body = geometryGroup[id];
-      var type = readStringProp(body, "type").toLowerCase();
-      var sourceProp = readStringProp(body, "source");
-      var geo = {
-        id: id,
-        type: type,
-        source: sourceProp,
-        sourceResolved: resolveSourcePath(sourceProp, aliases),
-        resolution: readNumberProp(body, "resolution", 24),
-        radius: readNumberProp(body, "radius", 0.5),
-        distance: readNumberProp(body, "distance", 0),
-        position: readVec3Prop(body, "position", vec3(0, 0, 0)),
-        normal: readVec3Prop(body, "normal", vec3(0, 1, 0)),
-        v0: readVec3Prop(body, "v0", vec3(0, 0, 0)),
-        v1: readVec3Prop(body, "v1", vec3(1, 0, 0)),
-        v2: readVec3Prop(body, "v2", vec3(0, 1, 0)),
-        modifiers: parseModifiers(body),
-      };
-
-      var vecDataMatch = /\bvecdata\s*=\s*\{([\s\S]*?)\}/i.exec(body);
-      if (vecDataMatch) {
-        var vecData = vecDataMatch[1] || "";
-        geo.v0 = readVec3Prop(vecData, "v0", geo.v0);
-        geo.v1 = readVec3Prop(vecData, "v1", geo.v1);
-        geo.v2 = readVec3Prop(vecData, "v2", geo.v2);
-      }
-
-      geometries[id] = geo;
-    });
-
-    var materials = {};
-    Object.keys(materialGroup).forEach(function (id) {
-      var body = materialGroup[id];
-      var type = readStringProp(body, "type").toLowerCase();
-      var diffuse = /\bdiffuse\s*=\s*\{([\s\S]*?)\}/i.exec(body);
-      var specular = /\bspecular\s*=\s*\{([\s\S]*?)\}/i.exec(body);
-      var emissive = /\bemissive\s*=\s*\{([\s\S]*?)\}/i.exec(body);
-      var col = diffuse ? readCol3Prop(diffuse[1], "value") : null;
-      var sCol = specular ? readCol3Prop(specular[1], "value") : null;
-      var eCol = emissive ? readCol3Prop(emissive[1], "value") : null;
-      var samplersBody = readGroupBody(readGroupBody(body, "properties"), "samplers");
-      if (!col) {
-        col = readSamplerColor(samplersBody, "diffuse");
-      }
-      if (!sCol) {
-        sCol = readSamplerColor(samplersBody, "specular");
-      }
-      if (!eCol) {
-        eCol = readSamplerColor(samplersBody, "emissive");
-      }
-      materials[id] = {
-        type: type,
-        diffuse: col,
-        specular: sCol,
-        emissive: eCol,
-        diffuseTextureSource: readSamplerTextureSource(samplersBody, "diffuse", aliases),
-        specularTextureSource: readSamplerTextureSource(samplersBody, "specular", aliases),
-        normalTextureSource: readSamplerTextureSource(samplersBody, "normal", aliases),
-      };
-    });
-
-    var objects = [];
-    Object.keys(objectGroup).forEach(function (id) {
-      var body = objectGroup[id];
-      var geoId = readRefProp(body, "geometry");
-      var matId = readRefProp(body, "material");
-      if (!geoId) return;
-      objects.push({ id: id, geometry: geoId, material: matId });
-    });
-
-    var cameras = [];
-    Object.keys(cameraGroup).forEach(function (id) {
-      var body = cameraGroup[id];
-      cameras.push({
-        id: id,
-        type: readStringProp(body, "type").toLowerCase(),
-        position: readVec3Prop(body, "position", vec3(0, 2, -6)),
-        target: readVec3Prop(body, "target", vec3(0, 0, 0)),
-        up: readVec3Prop(body, "up", vec3(0, 1, 0)),
-        orientation: readVec3Prop(body, "orientation", vec3(0, 0, 0)),
-        fov: readNumberProp(body, "fov", 45),
-        flength: readNumberProp(body, "flength", 0),
-        aperture: readNumberProp(body, "aperture", 0),
-      });
-    });
-
-    return {
-      aliases: aliases,
-      cameras: cameras,
-      geometries: geometries,
-      materials: materials,
-      objects: objects,
-    };
-  }
-
   function generatedMeshGeometry(token, resolution) {
     var t = String(token || "").trim().toLowerCase();
     var seg = Math.max(8, Math.floor(Number(resolution) || 24));
@@ -560,10 +238,114 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return g;
   }
 
-  function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry, fetchSceneAssetText) {
+  function normalizeRuntimeGraph(runtimeGraph) {
+    var runtime = runtimeGraph || {};
+    var parsed = {
+      aliases: {},
+      cameras: [],
+      geometries: {},
+      materials: {},
+      objects: [],
+    };
+
+    var cameras = Array.isArray(runtime.cameras) ? runtime.cameras : [];
+    cameras.forEach(function (cam) {
+      if (!cam || !cam.id) return;
+      parsed.cameras.push({
+        id: String(cam.id || ""),
+        type: String(cam.type || "").toLowerCase(),
+        position: (Array.isArray(cam.position) && cam.position.length >= 3) ? vec3(cam.position[0], cam.position[1], cam.position[2]) : vec3(0, 2, -6),
+        target: (Array.isArray(cam.target) && cam.target.length >= 3) ? vec3(cam.target[0], cam.target[1], cam.target[2]) : vec3(0, 0, 0),
+        up: (Array.isArray(cam.up) && cam.up.length >= 3) ? vec3(cam.up[0], cam.up[1], cam.up[2]) : vec3(0, 1, 0),
+        orientation: (Array.isArray(cam.orientation) && cam.orientation.length >= 3) ? vec3(cam.orientation[0], cam.orientation[1], cam.orientation[2]) : vec3(0, 0, 0),
+        fov: Number.isFinite(Number(cam.fov)) ? Number(cam.fov) : 45,
+        flength: Number.isFinite(Number(cam.flength)) ? Number(cam.flength) : 0,
+        aperture: Number.isFinite(Number(cam.aperture)) ? Number(cam.aperture) : 0,
+      });
+    });
+
+    var surfaces = Array.isArray(runtime.surfaces) ? runtime.surfaces : [];
+    surfaces.forEach(function (surface) {
+      if (!surface || !surface.id) return;
+      var sid = String(surface.id || "");
+      parsed.geometries[sid] = {
+        id: sid,
+        type: String(surface.type || "").toLowerCase(),
+        source: "",
+        sourceResolved: "",
+        resolution: 24,
+        radius: Number.isFinite(Number(surface.radius)) ? Number(surface.radius) : 0.5,
+        distance: Number.isFinite(Number(surface.distance)) ? Number(surface.distance) : 0,
+        position: (Array.isArray(surface.position) && surface.position.length >= 3) ? vec3(surface.position[0], surface.position[1], surface.position[2]) : vec3(0, 0, 0),
+        normal: (Array.isArray(surface.normal) && surface.normal.length >= 3) ? vec3(surface.normal[0], surface.normal[1], surface.normal[2]) : vec3(0, 1, 0),
+        v0: (Array.isArray(surface.v0) && surface.v0.length >= 3) ? vec3(surface.v0[0], surface.v0[1], surface.v0[2]) : vec3(0, 0, 0),
+        v1: (Array.isArray(surface.v1) && surface.v1.length >= 3) ? vec3(surface.v1[0], surface.v1[1], surface.v1[2]) : vec3(1, 0, 0),
+        v2: (Array.isArray(surface.v2) && surface.v2.length >= 3) ? vec3(surface.v2[0], surface.v2[1], surface.v2[2]) : vec3(0, 1, 0),
+        modifiers: {
+          rotation: vec3(0, 0, 0),
+          scale: vec3(1, 1, 1),
+          translation: vec3(0, 0, 0),
+        },
+      };
+    });
+
+    var materials = Array.isArray(runtime.materials) ? runtime.materials : [];
+    materials.forEach(function (mat) {
+      if (!mat || !mat.id) return;
+      var mid = String(mat.id || "");
+      var outMat = {
+        type: String(mat.type || "").toLowerCase(),
+        diffuse: null,
+        specular: null,
+        emissive: null,
+        diffuseTextureSource: "",
+        specularTextureSource: "",
+        normalTextureSource: "",
+      };
+      var samplers = Array.isArray(mat.samplers) ? mat.samplers : [];
+      samplers.forEach(function (sampler) {
+        if (!sampler) return;
+        var sName = String(sampler.name || "").toLowerCase();
+        var sType = String(sampler.type || "").toLowerCase();
+        var hasColor = Array.isArray(sampler.color) && sampler.color.length >= 3;
+        var sColor = hasColor ? new THREE.Color(
+          Number(sampler.color[0]) || 0,
+          Number(sampler.color[1]) || 0,
+          Number(sampler.color[2]) || 0
+        ) : null;
+        var sAsset = String(sampler.asset || "").trim();
+
+        if (sName === "diffuse" && sColor) outMat.diffuse = sColor;
+        if (sName === "specular" && sColor) outMat.specular = sColor;
+        if (sName === "emissive" && sColor) outMat.emissive = sColor;
+
+        if (sType === "texture" && sAsset) {
+          if (sName === "diffuse") outMat.diffuseTextureSource = sAsset;
+          else if (sName === "specular") outMat.specularTextureSource = sAsset;
+          else if (sName === "normal") outMat.normalTextureSource = sAsset;
+        }
+      });
+      parsed.materials[mid] = outMat;
+    });
+
+    var objects = Array.isArray(runtime.objects) ? runtime.objects : [];
+    objects.forEach(function (obj) {
+      if (!obj || !obj.id || !obj.surface) return;
+      parsed.objects.push({
+        id: String(obj.id || ""),
+        geometry: String(obj.surface || ""),
+        material: String(obj.material || ""),
+      });
+    });
+
+    return parsed;
+  }
+
+  function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry, fetchSceneRuntimeGraph, fetchSceneAssetText) {
     this.viewportEl = viewportEl;
     this.statusEl = statusEl;
     this.fetchSceneGeometry = (typeof fetchSceneGeometry === "function") ? fetchSceneGeometry : null;
+    this.fetchSceneRuntimeGraph = (typeof fetchSceneRuntimeGraph === "function") ? fetchSceneRuntimeGraph : null;
     this.fetchSceneAssetText = (typeof fetchSceneAssetText === "function") ? fetchSceneAssetText : null;
 
     this.renderer = null;
@@ -1576,7 +1358,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     cam.updateProjectionMatrix();
   };
 
-  SceneVisualEditor.prototype.buildScene = async function (sceneName, source, geometryData) {
+  SceneVisualEditor.prototype.buildScene = async function (sceneName, source, geometryData, runtimeGraphData) {
     this.currentSceneName = String(sceneName || "");
     this.assetTextCache = {};
     this.parsedScene = null;
@@ -1605,7 +1387,26 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       }
     }
 
-    var parsed = parseSceneSource(source || "");
+    var parsed = null;
+    var runtimeGraph = runtimeGraphData || null;
+    if (!runtimeGraph && this.fetchSceneRuntimeGraph && sceneName) {
+      try {
+        runtimeGraph = await this.fetchSceneRuntimeGraph(sceneName);
+      } catch (_) {
+        runtimeGraph = null;
+      }
+    }
+    if (runtimeGraph && Array.isArray(runtimeGraph.objects) && Array.isArray(runtimeGraph.surfaces)) {
+      parsed = normalizeRuntimeGraph(runtimeGraph);
+    } else {
+      parsed = {
+        aliases: {},
+        cameras: [],
+        geometries: {},
+        materials: {},
+        objects: [],
+      };
+    }
     this.parsedScene = parsed;
     this.sceneCameraMap = {};
     this.sceneCameraOrder = [];
