@@ -552,28 +552,47 @@
         <section class="tab-pane active" id="paneScene">
           <section class="panel panel-scene-setup">
             <div class="scene-setup-grid">
-              <section class="scene-setup-card">
-                <div class="scene-setup-card-body">
-                  <label>
-                    <span class="field-label-row">
-                      <span>Scene</span>
-                      <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
-                    </span>
-                    <div class="scene-select-row">
-                      <select id="scene"></select>
-                      <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </label>
-                  <label>Camera
-                    <select id="camera"></select>
-                  </label>
+              <section class="scene-panel scene-panel-active">
+                <div class="scene-panel-head">
+                  <h3>Active</h3>
+                </div>
+                <div class="scene-active-panel" aria-live="polite">
+                  <span class="scene-active-label">Scene</span>
+                  <code id="sceneActiveFile" class="scene-active-value">-</code>
+                  <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
                 </div>
               </section>
 
+              <section class="scene-panel scene-panel-camera">
+                <div class="scene-panel-head">
+                  <h3>Camera</h3>
+                </div>
+                <div class="scene-active-panel camera-active-panel" aria-live="polite">
+                  <span class="scene-active-label">Active Camera</span>
+                  <code id="cameraActiveName" class="scene-active-value">-</code>
+                </div>
+                <div class="scene-file-toolbar">
+                  <span id="cameraFileCount" class="scene-file-count">0 cameras</span>
+                </div>
+                <div id="cameraFileList" class="scene-file-list camera-file-list" role="listbox" aria-label="Scene cameras"></div>
+                <select id="camera" hidden aria-hidden="true" tabindex="-1"></select>
+              </section>
+
+              <section class="scene-panel scene-panel-files">
+                <div class="scene-panel-head">
+                  <h3>Files</h3>
+                </div>
+                <div class="scene-file-toolbar">
+                  <span id="sceneFileCount" class="scene-file-count">0 files</span>
+                  <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div id="sceneFileList" class="scene-file-list" role="listbox" aria-label="Scene files"></div>
+                <select id="scene" hidden aria-hidden="true" tabindex="-1"></select>
+              </section>
             </div>
           </section>
         </section>

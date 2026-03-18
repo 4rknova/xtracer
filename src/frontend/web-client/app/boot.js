@@ -184,6 +184,7 @@ async function boot() {
   }
 
   el.scene.addEventListener("change", () => {
+    setSceneBrowserSelectedFile(el.scene.value);
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
     updateSceneDependencyPill(el.scene.value);
     setSceneLoadStatus("loading", `Loading ${el.scene.value || "scene"}...`, "");
@@ -207,6 +208,7 @@ async function boot() {
   });
 
   el.camera.addEventListener("change", () => {
+    setCameraBrowserSelectedCamera(el.camera.value);
     syncVisualCameraFromRenderSelection();
   });
 

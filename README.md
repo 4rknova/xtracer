@@ -187,6 +187,7 @@ Supported normal sampler types:
 
 | Tab | Key Capabilities |
 |---|---|
+| Scene | File-manager-style scene browser plus fixed-size camera cards (camera type + icon), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
 | Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs) |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, and render polling controls |
@@ -200,7 +201,7 @@ Supported normal sampler types:
 | GET | `/api/health` | Health probe |
 | GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields |
 | GET | `/api/scenes` | List available scenes |
-| GET | `/api/scenes/{scene}/cameras` | List cameras in scene (returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/cameras` | List cameras in scene (includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
 | GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/cameras) (returns `202` while async scene load is in progress) |
@@ -209,6 +210,7 @@ Supported normal sampler types:
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
 | GET | `/api/scenes/template/empty` | Empty scene template |
 | POST | `/api/scenes/save` | Save scene source |
+| POST | `/api/scenes/delete` | Delete a scene file by name |
 | GET | `/api/workspaces?client_id={id}` | List workspaces + active workspace + workspace-scoped settings snapshot |
 | POST | `/api/workspaces` | Create workspace for client context |
 | POST | `/api/workspaces/active` | Switch active workspace for client |

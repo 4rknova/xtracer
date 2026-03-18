@@ -636,10 +636,11 @@ function createServerApi() {
       return data.scenes || [];
     },
     async getCameras(scene) {
-      if (!scene) return { cameras: [], defaultCamera: "" };
+      if (!scene) return { cameras: [], cameraEntries: [], defaultCamera: "" };
       const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/cameras`);
       return {
         cameras: data.cameras || [],
+        cameraEntries: Array.isArray(data.camera_entries) ? data.camera_entries : [],
         defaultCamera: data.default_camera || "",
       };
     },
@@ -753,6 +754,21 @@ function createServerApi() {
       const data = await res.json();
       if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
       return data.scene;
+    },
+    async deleteScene(name) {
+      const body = new URLSearchParams();
+      body.set("name", String(name || ""));
+      body.set("client_id", clientId || ensureClientId());
+
+      const res = await fetch("/api/scenes/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return data.scene || "";
     },
     async getWorkspaces() {
       const cid = encodeURIComponent(clientId || ensureClientId());

@@ -50,7 +50,9 @@ function triggerSceneSave() {
       loadScenes()
         .then(() => {
           el.scene.value = scene;
+          setSceneBrowserSelectedFile(scene);
           localStorage.setItem(LAST_SCENE_KEY, scene);
+          updateSceneDependencyPill(scene);
           const tasks = [loadCameras(scene)];
           if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(scene));
           if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));

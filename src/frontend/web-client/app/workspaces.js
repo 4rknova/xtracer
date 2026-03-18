@@ -315,6 +315,7 @@ async function applyActiveWorkspaceState(snapshot) {
     const sceneChanged = currentScene !== wsScene;
     if (sceneChanged) {
       el.scene.value = wsScene;
+      setSceneBrowserSelectedFile(wsScene);
       localStorage.setItem(LAST_SCENE_KEY, wsScene);
       updateSceneDependencyPill(wsScene);
       await loadCameras(wsScene);

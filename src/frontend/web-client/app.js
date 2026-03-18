@@ -59,6 +59,12 @@ const el = {
   workspaceRenderAutoHint: $("workspaceRenderAutoHint"),
   workspaceList: $("workspaceList"),
   sceneRefreshBtn: $("sceneRefreshBtn"),
+  sceneActiveFile: $("sceneActiveFile"),
+  sceneFileCount: $("sceneFileCount"),
+  sceneFileList: $("sceneFileList"),
+  cameraActiveName: $("cameraActiveName"),
+  cameraFileCount: $("cameraFileCount"),
+  cameraFileList: $("cameraFileList"),
   sceneDependencyPill: $("sceneDependencyPill"),
   scene: $("scene"),
   camera: $("camera"),
@@ -193,6 +199,10 @@ const uiOptions = {
 };
 let resolutionPresets = [];
 let sceneDependencyByFile = new Map();
+let sceneCatalog = [];
+let sceneBrowserSelectedFile = "";
+let cameraCatalog = [];
+let cameraBrowserSelectedName = "";
 let lastBackendLogId = 0;
 let previewObjectUrl = "";
 let previewPendingRevokeUrl = "";
@@ -329,4 +339,3 @@ const previewView = {
   lastX: 0,
   lastY: 0,
 };
-
