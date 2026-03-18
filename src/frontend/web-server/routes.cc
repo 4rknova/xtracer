@@ -579,7 +579,13 @@ std::vector<std::string> list_scenes(const std::string &scene_dir)
 
 struct camera_list_info_t
 {
+    struct camera_entry_t {
+        std::string name;
+        std::string type;
+    };
+
     std::vector<std::string> cameras;
+    std::vector<camera_entry_t> camera_entries;
     std::string default_camera;
 };
 
@@ -614,9 +620,21 @@ camera_list_info_t list_cameras_from_scene(const xtcore::Scene &scene)
     camera_list_info_t out;
     for (auto it = scene.m_cameras.begin(); it != scene.m_cameras.end(); ++it) {
         const char *name = xtcore::pool::str::get((*it).first);
-        if (name && *name) out.cameras.push_back(name);
+        if (!name || !*name) continue;
+        const xtcore::asset::ICamera *cam = (*it).second;
+        camera_list_info_t::camera_entry_t entry;
+        entry.name = name;
+        entry.type = (cam && cam->get_type()) ? cam->get_type() : "camera";
+        out.camera_entries.push_back(entry);
     }
-    std::sort(out.cameras.begin(), out.cameras.end());
+    std::sort(out.camera_entries.begin(), out.camera_entries.end(),
+              [](const camera_list_info_t::camera_entry_t &a, const camera_list_info_t::camera_entry_t &b) {
+                  return a.name < b.name;
+              });
+    out.cameras.reserve(out.camera_entries.size());
+    for (size_t i = 0; i < out.camera_entries.size(); ++i) {
+        out.cameras.push_back(out.camera_entries[i].name);
+    }
     out.default_camera = scene.m_default_camera;
     return out;
 }
@@ -1511,6 +1529,14 @@ void setup_routes(httplib::Server &server,
             if (i) ss << ',';
             ss << '"' << json_escape(cameras.cameras[i]) << '"';
         }
+        ss << "],\"camera_entries\":[";
+        for (size_t i = 0; i < cameras.camera_entries.size(); ++i) {
+            if (i) ss << ',';
+            ss << "{"
+               << "\"name\":\"" << json_escape(cameras.camera_entries[i].name) << "\","
+               << "\"type\":\"" << json_escape(cameras.camera_entries[i].type) << "\""
+               << "}";
+        }
         ss << "],\"default_camera\":\"" << json_escape(cameras.default_camera) << "\"}";
         send_json(res, ss.str());
     });
@@ -1720,6 +1746,41 @@ void setup_routes(httplib::Server &server,
 
         std::ostringstream ss;
         ss << "{\"scene\":\"" << json_escape(scene_name) << "\"}";
+        send_json(res, ss.str());
+    });
+
+    server.Post("/api/scenes/delete", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        if (!req.has_param("name")) {
+            backend_log_t::handle().add("warn", "scene delete rejected: name missing");
+            send_json(res, "{\"error\":\"name is required\"}", 400);
+            return;
+        }
+
+        std::string scene_name = req.get_param_value("name");
+        if (!is_scene_name_safe(scene_name)) {
+            backend_log_t::handle().add("warn", "scene delete rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene name\"}", 400);
+            return;
+        }
+
+        const std::string scene_path = join_path(scene_dir, scene_name);
+        if (!file_exists(scene_path)) {
+            backend_log_t::handle().add("warn", "scene delete failed: scene not found scene=" + scene_name);
+            send_json(res, "{\"error\":\"scene not found\"}", 404);
+            return;
+        }
+
+        if (unlink(scene_path.c_str()) != 0) {
+            backend_log_t::handle().add("error", "scene delete failed scene=" + scene_name);
+            send_json(res, "{\"error\":\"failed to delete scene\"}", 500);
+            return;
+        }
+
+        scene_cache_t::handle().invalidate(scene_path);
+        backend_log_t::handle().add("info", "scene deleted scene=" + scene_name);
+
+        std::ostringstream ss;
+        ss << "{\"scene\":\"" << json_escape(scene_name) << "\",\"ok\":true}";
         send_json(res, ss.str());
     });
 
