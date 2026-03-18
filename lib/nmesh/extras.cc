@@ -186,28 +186,34 @@ static void add_cube_faces(object_t *obj, shape_t &shape, const Vec3 &center, fl
     const Vec3 p011(center.x - h, center.y + h, center.z + h);
 
     if (occupied.find(key(gx + 1, gy, gz)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p100, p101, p111);
-        add_triangle_flat(obj, shape, p100, p111, p110);
+        // +X
+        add_triangle_flat(obj, shape, p100, p110, p111);
+        add_triangle_flat(obj, shape, p100, p111, p101);
     }
     if (occupied.find(key(gx - 1, gy, gz)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p001, p000, p010);
-        add_triangle_flat(obj, shape, p001, p010, p011);
+        // -X
+        add_triangle_flat(obj, shape, p001, p011, p010);
+        add_triangle_flat(obj, shape, p001, p010, p000);
     }
     if (occupied.find(key(gx, gy + 1, gz)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p010, p110, p111);
-        add_triangle_flat(obj, shape, p010, p111, p011);
+        // +Y
+        add_triangle_flat(obj, shape, p010, p011, p111);
+        add_triangle_flat(obj, shape, p010, p111, p110);
     }
     if (occupied.find(key(gx, gy - 1, gz)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p000, p001, p101);
-        add_triangle_flat(obj, shape, p000, p101, p100);
+        // -Y
+        add_triangle_flat(obj, shape, p000, p100, p101);
+        add_triangle_flat(obj, shape, p000, p101, p001);
     }
     if (occupied.find(key(gx, gy, gz + 1)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p101, p001, p011);
-        add_triangle_flat(obj, shape, p101, p011, p111);
+        // +Z
+        add_triangle_flat(obj, shape, p101, p111, p011);
+        add_triangle_flat(obj, shape, p101, p011, p001);
     }
     if (occupied.find(key(gx, gy, gz - 1)) == occupied.end()) {
-        add_triangle_flat(obj, shape, p000, p100, p110);
-        add_triangle_flat(obj, shape, p000, p110, p010);
+        // -Z
+        add_triangle_flat(obj, shape, p000, p010, p110);
+        add_triangle_flat(obj, shape, p000, p110, p100);
     }
 }
 
