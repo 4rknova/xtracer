@@ -1,6 +1,8 @@
-title = Procedural Menger Sponge Showcase
-description = Demonstrates gen(menger_sponge) with adjustable subdivision depth via resolution.
+title = Procedural Sierpinski Tetrahedron Showcase
+description = Demonstrates gen(sierpinski_tetrahedron) with adjustable subdivision depth via resolution.
 version = 1.0
+
+tetra_resolution = 3
 
 environment = {
     type = gradient
@@ -9,8 +11,6 @@ environment = {
         b = col3(0.10,0.11,0.15)
     }
 }
-
-sponge_resolution = 3
 
 camera = {
     default = {
@@ -33,31 +33,23 @@ geometry = {
         }
     }
 
-    menger_main_gen = {
+    sierpinski_main_gen = {
         type       = mesh
-        source     = gen(menger_sponge)
-        resolution = <sponge_resolution>
-        modifiers = {
-	    scale       = vec3(2.0,2.0,2.0)
-	    rotation    = vec3(0,0.7853982,0)
-        }
+        source     = gen(sierpinski_tetrahedron)
+        resolution = <tetra_resolution>
     }
 
-    menger_main_gen_implicit = {
+    sierpinski_main_gen_implicit = {
         type       = mesh
-        source     = gen(menger_sponge_implicit)
-        resolution = <sponge_resolution>
-        modifiers = {
-	    scale       = vec3(2.0,2.0,2.0)
-	    rotation    = vec3(0,0.7853982,0)
-        }
+        source     = gen(sierpinski_tetrahedron_implicit)
+        resolution = <tetra_resolution>
     }
 
-    menger_main_analytic = {
-        type       = menger_sponge
-        orientation = vec3(0,0.7853982,0)
+    sierpinski_main_analytic = {
+        type       = sierpinski_tetrahedron
+        position   = vec3(0,0,0)
         radius     = 1.0
-        resolution = <sponge_resolution>
+        resolution = <tetra_resolution>
     }
 
     key_light = {
@@ -77,11 +69,11 @@ material = {
         }
     }
 
-    menger_surface = {
+    sierpinski_surface = {
         type = lambert
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.67,0.76,0.88) }
+                diffuse = { type = color, value = col3(0.67,0.76,0.88) }
             }
         }
     }
@@ -105,31 +97,31 @@ variants = {
     hide_base = true
 
     gen_mesh = {
-        name        = Menger - Gen Mesh
-        description = Uses mesh generator source = gen(menger_sponge).
+        name        = Sierpinski - Gen Mesh
+        description = Uses mesh generator source = gen(sierpinski_tetrahedron).
         set = {
             object = {
-                menger_main = { geometry = menger_main_gen, material = menger_surface }
+                sierpinski_main = { geometry = sierpinski_main_gen, material = sierpinski_surface }
             }
         }
     }
 
     gen_implicit = {
-        name        = Menger - Gen Implicit Mesh
-        description = Uses mesh generator source = gen(menger_sponge_implicit).
+        name        = Sierpinski - Gen Implicit Mesh
+        description = Uses mesh generator source = gen(sierpinski_tetrahedron_implicit).
         set = {
             object = {
-                menger_main = { geometry = menger_main_gen_implicit, material = menger_surface }
+                sierpinski_main = { geometry = sierpinski_main_gen_implicit, material = sierpinski_surface }
             }
         }
     }
 
     analytic = {
-        name        = Menger - Analytic Surface
-        description = Uses native analytic geometry.type = menger_sponge.
+        name        = Sierpinski - Analytic Surface
+        description = Uses native analytic geometry.type = sierpinski_tetrahedron.
         set = {
             object = {
-                menger_main = { geometry = menger_main_analytic, material = menger_surface }
+                sierpinski_main = { geometry = sierpinski_main_analytic, material = sierpinski_surface }
             }
         }
     }

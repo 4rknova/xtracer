@@ -31,9 +31,22 @@ typedef struct {
     float v;
 } uv_t;
 
+typedef struct {
+    int x;
+    int y;
+    int z;
+} ivec3_t;
+
 static int clampi(int v, int lo, int hi)
 {
     return std::max(lo, std::min(v, hi));
+}
+
+static int ipowi(int base, int exp)
+{
+    int out = 1;
+    for (int i = 0; i < exp; ++i) out *= base;
+    return out;
 }
 
 static tri_t make_tri(int a, int b, int c)
@@ -214,6 +227,148 @@ static void add_cube_faces(object_t *obj, shape_t &shape, const Vec3 &center, fl
         // -Z
         add_triangle_flat(obj, shape, p000, p010, p110);
         add_triangle_flat(obj, shape, p000, p110, p100);
+    }
+}
+
+static std::string voxel_key(int x, int y, int z)
+{
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%d,%d,%d", x, y, z);
+    return std::string(buf);
+}
+
+static float wrap_unit(float v)
+{
+    while (v > 1.0f) v -= 2.0f;
+    while (v < -1.0f) v += 2.0f;
+    return v;
+}
+
+static bool inside_menger_local(Vec3 p, int depth)
+{
+    if (std::fabs(p.x) > 1.0f || std::fabs(p.y) > 1.0f || std::fabs(p.z) > 1.0f) return false;
+    depth = std::max(1, depth);
+
+    for (int i = 0; i < depth; ++i) {
+        const Vec3 a(std::fabs(p.x), std::fabs(p.y), std::fabs(p.z));
+        const bool cut_xy = (a.x < (1.0f / 3.0f) && a.y < (1.0f / 3.0f));
+        const bool cut_xz = (a.x < (1.0f / 3.0f) && a.z < (1.0f / 3.0f));
+        const bool cut_yz = (a.y < (1.0f / 3.0f) && a.z < (1.0f / 3.0f));
+        if (cut_xy || cut_xz || cut_yz) return false;
+
+        p.x = wrap_unit(p.x * 3.0f);
+        p.y = wrap_unit(p.y * 3.0f);
+        p.z = wrap_unit(p.z * 3.0f);
+    }
+
+    return true;
+}
+
+static bool tetra_barycentric(const Vec3 &p, const Vec3 (&v)[4], float (&bary)[4])
+{
+    const Vec3 e1 = v[1] - v[0];
+    const Vec3 e2 = v[2] - v[0];
+    const Vec3 e3 = v[3] - v[0];
+    const Vec3 r = p - v[0];
+
+    const Vec3 c23 = nmath::cross(e2, e3);
+    const Vec3 cr3 = nmath::cross(r, e3);
+    const Vec3 c2r = nmath::cross(e2, r);
+    const float det = nmath::dot(e1, c23);
+    if (std::fabs(det) <= 1e-8f) return false;
+
+    const float inv_det = 1.0f / det;
+    const float b1 = nmath::dot(r, c23) * inv_det;
+    const float b2 = nmath::dot(e1, cr3) * inv_det;
+    const float b3 = nmath::dot(e1, c2r) * inv_det;
+
+    bary[0] = 1.0f - b1 - b2 - b3;
+    bary[1] = b1;
+    bary[2] = b2;
+    bary[3] = b3;
+    return true;
+}
+
+static bool inside_sierpinski_tetra_local(const Vec3 &p, int depth)
+{
+    const float s = 1.0f / nmath_sqrt(3.0f);
+    const Vec3 verts[4] = {
+        Vec3( s,  s,  s),
+        Vec3(-s, -s,  s),
+        Vec3(-s,  s, -s),
+        Vec3( s, -s, -s)
+    };
+
+    float b[4];
+    if (!tetra_barycentric(p, verts, b)) return false;
+
+    const float eps = 1e-6f;
+    for (int i = 0; i < 4; ++i) {
+        if (b[i] < -eps || b[i] > 1.0f + eps) return false;
+    }
+
+    depth = std::max(1, depth);
+    for (int iter = 0; iter < depth - 1; ++iter) {
+        int pivot = 0;
+        for (int i = 1; i < 4; ++i) {
+            if (b[i] > b[pivot]) pivot = i;
+        }
+        if (b[pivot] < 0.5f - eps) return false;
+
+        float next[4];
+        for (int i = 0; i < 4; ++i) {
+            next[i] = (i == pivot) ? (2.0f * b[i] - 1.0f) : (2.0f * b[i]);
+        }
+        for (int i = 0; i < 4; ++i) {
+            b[i] = next[i];
+            if (b[i] < -1e-4f || b[i] > 1.0f + 1e-4f) return false;
+        }
+    }
+
+    return true;
+}
+
+template <typename inside_fn_t>
+static void build_voxel_surface(object_t *obj, int grid, const Vec3 &bmin, const Vec3 &bmax, inside_fn_t inside_fn)
+{
+    if (!obj || grid < 2) return;
+
+    const float step_x = (bmax.x - bmin.x) / (float)grid;
+    const float step_y = (bmax.y - bmin.y) / (float)grid;
+    const float step_z = (bmax.z - bmin.z) / (float)grid;
+    const float step = std::min(step_x, std::min(step_y, step_z));
+    if (step <= 0.0f) return;
+
+    std::vector<ivec3_t> cells;
+    std::set<std::string> occupied;
+
+    for (int iz = 0; iz < grid; ++iz) {
+        const float z = bmin.z + ((float)iz + 0.5f) * step;
+        for (int iy = 0; iy < grid; ++iy) {
+            const float y = bmin.y + ((float)iy + 0.5f) * step;
+            for (int ix = 0; ix < grid; ++ix) {
+                const float x = bmin.x + ((float)ix + 0.5f) * step;
+                if (!inside_fn(Vec3(x, y, z))) continue;
+                cells.push_back(ivec3_t{ix, iy, iz});
+                occupied.insert(voxel_key(ix, iy, iz));
+            }
+        }
+    }
+
+    if (cells.empty()) return;
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    for (size_t i = 0; i < cells.size(); ++i) {
+        const ivec3_t c = cells[i];
+        const Vec3 center(
+            bmin.x + ((float)c.x + 0.5f) * step,
+            bmin.y + ((float)c.y + 0.5f) * step,
+            bmin.z + ((float)c.z + 0.5f) * step
+        );
+        add_cube_faces(obj, out, center, step, occupied, c.x, c.y, c.z);
     }
 }
 
@@ -682,12 +837,14 @@ void sierpinski_tetrahedron(object_t *obj, size_t resolution)
     shape_t &out = obj->shapes.back();
 
     const float s = 1.0f / nmath_sqrt(3.0f);
+    // Normalize canonical bounds to unit size [-0.5, 0.5].
+    const float unit_scale = 0.5f / s;
     std::vector<std::vector<Vec3> > tets;
     tets.push_back(std::vector<Vec3>{
-        Vec3( s,  s,  s),
-        Vec3(-s, -s,  s),
-        Vec3(-s,  s, -s),
-        Vec3( s, -s, -s)
+        Vec3( s,  s,  s) * unit_scale,
+        Vec3(-s, -s,  s) * unit_scale,
+        Vec3(-s,  s, -s) * unit_scale,
+        Vec3( s, -s, -s) * unit_scale
     });
 
     for (int d = 1; d < depth; ++d) {
@@ -708,12 +865,27 @@ void sierpinski_tetrahedron(object_t *obj, size_t resolution)
         tets.swap(next);
     }
 
+    const auto add_face_outward = [&](const std::vector<Vec3> &t, int ia, int ib, int ic) {
+        const Vec3 a = t[(size_t)ia];
+        const Vec3 b = t[(size_t)ib];
+        const Vec3 c = t[(size_t)ic];
+        const Vec3 center = (t[0] + t[1] + t[2] + t[3]) * 0.25f;
+        Vec3 n = nmath::cross(b - a, c - a);
+        if (n.length() <= 1e-8f) return;
+        const Vec3 face_center = (a + b + c) * (1.0f / 3.0f);
+        if (nmath::dot(n, face_center - center) < 0.0f) {
+            add_triangle_flat(obj, out, a, c, b);
+        } else {
+            add_triangle_flat(obj, out, a, b, c);
+        }
+    };
+
     for (size_t i = 0; i < tets.size(); ++i) {
         const std::vector<Vec3> &t = tets[i];
-        add_triangle_flat(obj, out, t[0], t[1], t[2]);
-        add_triangle_flat(obj, out, t[0], t[3], t[1]);
-        add_triangle_flat(obj, out, t[0], t[2], t[3]);
-        add_triangle_flat(obj, out, t[1], t[3], t[2]);
+        add_face_outward(t, 0, 1, 2);
+        add_face_outward(t, 0, 3, 1);
+        add_face_outward(t, 0, 2, 3);
+        add_face_outward(t, 1, 3, 2);
     }
 }
 
@@ -761,7 +933,8 @@ void menger_sponge(object_t *obj, size_t resolution)
         occupied.insert(std::string(buf));
     }
 
-    const float norm = 1.5f;
+    // Normalize generated Menger mesh to unit canonical bounds [-0.5, 0.5].
+    const float norm = 1.0f;
     for (size_t i = 0; i < cubes.size(); ++i) {
         const cube_t c = cubes[i];
         const Vec3 center(
@@ -771,6 +944,36 @@ void menger_sponge(object_t *obj, size_t resolution)
         );
         add_cube_faces(obj, out, center, c.size / norm, occupied, c.x, c.y, c.z);
     }
+}
+
+void menger_sponge_implicit(object_t *obj, size_t resolution)
+{
+    if (!obj) return;
+    const int depth = clampi((int)resolution, 1, 4);
+    const int grid = 6 * ipowi(3, depth - 1);
+    // Normalize generated implicit Menger mesh to unit canonical bounds [-0.5, 0.5].
+    const float extent = 0.5f;
+
+    build_voxel_surface(obj, grid, Vec3(-extent, -extent, -extent), Vec3(extent, extent, extent),
+                        [depth](const Vec3 &p) -> bool {
+                            return inside_menger_local(p * 2.0f, depth);
+                        });
+}
+
+void sierpinski_tetrahedron_implicit(object_t *obj, size_t resolution)
+{
+    if (!obj) return;
+    const int depth = clampi((int)resolution, 1, 4);
+    const int grid = 16 << (depth - 1);
+    const float s = 1.0f / nmath_sqrt(3.0f);
+    // Normalize canonical bounds to unit size [-0.5, 0.5].
+    const float extent = 0.5f;
+    const float local_scale = s / extent;
+
+    build_voxel_surface(obj, grid, Vec3(-extent, -extent, -extent), Vec3(extent, extent, extent),
+                        [depth, local_scale](const Vec3 &p) -> bool {
+                            return inside_sierpinski_tetra_local(p * local_scale, depth);
+                        });
 }
 
 void mobius_strip(object_t *obj, size_t resolution)
