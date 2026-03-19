@@ -110,6 +110,7 @@ set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
 set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
+set(OUT_EXE_SCENE_VALIDATOR_TEST test_xtcore_scene_validator)
 set(OUT_EXE_SAMPLING_TEST test_nmath_sampling)
 set(OUT_EXE_NMATH_BENCH bench_nmath)
 
@@ -218,6 +219,7 @@ add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_tes
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
 add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
+add_executable(${OUT_EXE_SCENE_VALIDATOR_TEST} ${PATH_SRC_TESTS}/scene_validator_test.cc)
 add_executable(${OUT_EXE_SAMPLING_TEST} ${PATH_SRC_TESTS}/sampling_test.cc)
 add_executable(${OUT_EXE_NMATH_BENCH} ${PATH_SRC_TESTS}/nmath_bench.cc)
 set_target_properties(${OUT_EXE_COLORSPACE_TEST} PROPERTIES
@@ -248,6 +250,9 @@ set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_NCF_PARSER_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_SCENE_VALIDATOR_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_SAMPLING_TEST} PROPERTIES
@@ -334,6 +339,13 @@ target_include_directories(${OUT_EXE_NCF_PARSER_TEST} PUBLIC
 target_include_directories(${OUT_EXE_NCF_PARSER_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_SCENE_VALIDATOR_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_SCENE_VALIDATOR_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_SAMPLING_TEST} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -364,6 +376,7 @@ target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthrea
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SAMPLING_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH} PRIVATE xtcore_static pthread)
 
@@ -502,6 +515,7 @@ target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SAMPLING_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
@@ -515,6 +529,7 @@ add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_SCENE_VALIDATOR_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SAMPLING_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_BENCH} xtcore_static)
 
@@ -559,6 +574,10 @@ add_test(
 add_test(
     NAME ncf::inline_and_utf8
     COMMAND ${PATH_TEST}/${OUT_EXE_NCF_PARSER_TEST}
+)
+add_test(
+    NAME scene::validate_all
+    COMMAND ${PATH_TEST}/${OUT_EXE_SCENE_VALIDATOR_TEST}
 )
 add_test(
     NAME nmath::sampling
