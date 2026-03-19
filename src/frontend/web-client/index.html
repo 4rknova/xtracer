@@ -24,8 +24,8 @@
       <header class="topbar">
         <nav class="tabs">
           <button class="tab active" id="tabScene" type="button">Scene</button>
-          <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
           <button class="tab" id="tabRender" type="button">Render</button>
+          <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
           <button class="tab" id="tabVisual" type="button">Editor</button>
           <button class="tab" id="tabLogs" type="button">Logs</button>
           <button class="tab" id="tabSettings" type="button" aria-label="Settings">
@@ -39,10 +39,25 @@
     <div class="app-shell">
       <aside class="persistent-sidebar">
         <section class="panel panel-controls">
+            <details class="control-section control-card" id="activeSceneControlsCard" open>
+              <summary>
+                <span class="control-card-title">Active Scene</span>
+                <span class="control-card-note">Scene, camera, variant</span>
+              </summary>
+              <div class="control-section-body">
+                <section class="settings-section workspace-info-section active-scene-sidebar">
+                  <div id="activeSceneCardScene" class="active-scene-header"></div>
+                  <p id="activeSceneCardDescription" class="active-scene-description">-</p>
+                  <div id="activeSceneCardCamera" class="active-scene-row"></div>
+                  <div id="activeSceneCardVariant" class="active-scene-row"></div>
+                </section>
+              </div>
+            </details>
+
             <details class="control-section control-card" id="integratorControlsCard" open>
               <summary>
                 <span class="control-card-title">Integrator</span>
-                <span class="control-card-note">Integrator mode and options</span>
+                <span class="control-card-note">Renderer and settings</span>
               </summary>
               <div class="control-section-body">
                 <label>Integrator
@@ -77,7 +92,7 @@
             <details class="control-section control-card" id="frameControlsCard" open>
               <summary>
                 <span class="control-card-title">Frame</span>
-                <span class="control-card-note">Output and performance settings</span>
+                <span class="control-card-note">Output dimensions</span>
               </summary>
               <div class="control-section-body">
                 <label>Resolution Preset
@@ -93,7 +108,7 @@
             <details class="control-section control-card" id="visualControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">3D View</span>
-                <span class="control-card-note">Camera, projection, and viewport controls</span>
+                <span class="control-card-note">Camera, projection, viewport</span>
               </summary>
               <div class="control-section-body visual-controls-card-body">
                 <label for="visualCamera">Camera
@@ -114,19 +129,19 @@
                   <h4 class="visual-controls-title">Controls</h4>
                   <div class="visual-controls-list">
                     <div class="visual-controls-item">
-                      <span class="visual-controls-key"><kbd>Left Click</kbd></span>
+                      <span class="visual-controls-key"><kbd>Left Click</kbd> / <kbd>Tap</kbd></span>
                       <small class="control-hint">Select object</small>
                     </div>
                     <div class="visual-controls-item">
-                      <span class="visual-controls-key"><kbd>Left Drag</kbd></span>
+                      <span class="visual-controls-key"><kbd>Left Drag</kbd> / <kbd>1-Finger Drag</kbd></span>
                       <small class="control-hint">Orbit camera</small>
                     </div>
                     <div class="visual-controls-item">
-                      <span class="visual-controls-key"><kbd>Right Drag</kbd> / <kbd>Middle Drag</kbd></span>
+                      <span class="visual-controls-key"><kbd>Right Drag</kbd> / <kbd>Middle Drag</kbd> / <kbd>2-Finger Drag</kbd></span>
                       <small class="control-hint">Pan camera</small>
                     </div>
                     <div class="visual-controls-item">
-                      <span class="visual-controls-key"><kbd>Wheel</kbd></span>
+                      <span class="visual-controls-key"><kbd>Wheel</kbd> / <kbd>Pinch</kbd></span>
                       <small class="control-hint">Zoom</small>
                     </div>
                     <div class="visual-controls-item">
@@ -153,7 +168,7 @@
             <details class="control-section control-card" id="textEditorControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Text Editor</span>
-                <span class="control-card-note">Scene source loading and saving</span>
+                <span class="control-card-note">Load and save source</span>
               </summary>
               <div class="control-section-body">
                 <button id="loadSceneBtn" type="button">Load Selected Scene</button>
@@ -165,7 +180,7 @@
             <details class="control-section control-card" id="sceneEditControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Scene Edit</span>
-                <span class="control-card-note">Edit transforms and create geometry</span>
+                <span class="control-card-note">Transforms and primitives</span>
               </summary>
               <div class="control-section-body">
                 <div class="scene-edit-panel" aria-label="Scene Edit Controls">
@@ -253,7 +268,7 @@
             <details class="control-section control-card" id="qualityControlsCard" open>
               <summary>
                 <span class="control-card-title">Quality</span>
-                <span class="control-card-note">Sampling and ray depth</span>
+                <span class="control-card-note">Sampling and bounce depth</span>
               </summary>
               <div class="control-section-body">
                 <div class="row">
@@ -295,7 +310,7 @@
             <details class="control-section control-card" id="toneMappingControlsCard" open>
               <summary>
                 <span class="control-card-title">Tone Mapping</span>
-                <span class="control-card-note">Preview/output tone mapping settings</span>
+                <span class="control-card-note">Preview and output mapping</span>
               </summary>
               <div class="control-section-body">
                 <label>Tone Mapping
@@ -320,7 +335,7 @@
             <details class="control-section control-card" id="postFiltersControlsCard" open>
               <summary>
                 <span class="control-card-title">Post Filters</span>
-                <span class="control-card-note">xtcore filter chain with before/after tone mapping stage</span>
+                <span class="control-card-note">Filter chain order</span>
               </summary>
               <div class="control-section-body">
                 <div class="post-filters-toolbar">
@@ -341,7 +356,7 @@
             <details class="control-section control-card" id="exportControlsCard" open>
               <summary>
                 <span class="control-card-title">Export</span>
-                <span class="control-card-note">Preview view, sampling, and file export</span>
+                <span class="control-card-note">Preview and export</span>
               </summary>
               <div class="control-section-body">
                 <button id="resetViewBtn" class="reset-view-btn is-disabled" type="button" aria-disabled="true" title="Reset preview view">Reset View</button>
@@ -369,7 +384,7 @@
             <details class="control-section control-card" id="statisticsControlsCard" open>
               <summary>
                 <span class="control-card-title">Statistics</span>
-                <span class="control-card-note">Preview transfer usage</span>
+                <span class="control-card-note">Transfer metrics</span>
               </summary>
               <div class="control-section-body">
                 <section id="previewTransferStats" class="settings-section workspace-info-section preview-transfer-stats-card">
@@ -400,7 +415,7 @@
             <details class="control-section control-card" id="sceneLoadingControlsCard" open>
               <summary>
                 <span class="control-card-title">Loading Status</span>
-                <span class="control-card-note">Backend scene-load activity</span>
+                <span class="control-card-note">Scene load activity</span>
               </summary>
               <div class="control-section-body">
                 <div class="scene-loading-meta">
@@ -427,7 +442,7 @@
             <details class="control-section control-card" id="logsControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Logs</span>
-                <span class="control-card-note">Frontend + backend log filters</span>
+                <span class="control-card-note">Live log filters</span>
               </summary>
               <div class="control-section-body">
                 <div class="settings-stack">
@@ -465,7 +480,7 @@
             <details class="control-section control-card" id="workspaceControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Workspace</span>
-                <span class="control-card-note">Shared workspace status</span>
+                <span class="control-card-note">Workspace status</span>
               </summary>
               <div class="control-section-body">
                 <section class="settings-section workspace-info-section">
@@ -488,7 +503,7 @@
             <details class="control-section control-card" id="settingsControlsCard" open hidden>
               <summary>
                 <span class="control-card-title">Settings</span>
-                <span class="control-card-note">Appearance, runtime tuning, and behavior</span>
+                <span class="control-card-note">Theme and behavior</span>
               </summary>
               <div class="control-section-body">
                 <div class="settings-stack">
@@ -552,27 +567,19 @@
         <section class="tab-pane active" id="paneScene">
           <section class="panel panel-scene-setup">
             <div class="scene-setup-grid">
-              <section class="scene-panel scene-panel-active">
+              <section class="scene-panel scene-panel-variant">
                 <div class="scene-panel-head">
-                  <h3>Active</h3>
+                  <h3>Variants</h3>
+                  <span id="variantFileCount" class="scene-file-count scene-count-pill">0</span>
                 </div>
-                <div class="scene-active-panel" aria-live="polite">
-                  <span class="scene-active-label">Scene</span>
-                  <code id="sceneActiveFile" class="scene-active-value">-</code>
-                  <span id="sceneDependencyPill" class="scene-kind-pill scene-kind-ext" hidden>EXT</span>
-                </div>
+                <div id="variantFileList" class="scene-file-list camera-file-list variant-file-list" role="listbox" aria-label="Scene variants"></div>
+                <select id="variant" hidden aria-hidden="true" tabindex="-1"></select>
               </section>
 
               <section class="scene-panel scene-panel-camera">
                 <div class="scene-panel-head">
-                  <h3>Camera</h3>
-                </div>
-                <div class="scene-active-panel camera-active-panel" aria-live="polite">
-                  <span class="scene-active-label">Active Camera</span>
-                  <code id="cameraActiveName" class="scene-active-value">-</code>
-                </div>
-                <div class="scene-file-toolbar">
-                  <span id="cameraFileCount" class="scene-file-count">0 cameras</span>
+                  <h3>Cameras</h3>
+                  <span id="cameraFileCount" class="scene-file-count scene-count-pill">0</span>
                 </div>
                 <div id="cameraFileList" class="scene-file-list camera-file-list" role="listbox" aria-label="Scene cameras"></div>
                 <select id="camera" hidden aria-hidden="true" tabindex="-1"></select>
@@ -580,15 +587,15 @@
 
               <section class="scene-panel scene-panel-files">
                 <div class="scene-panel-head">
-                  <h3>Files</h3>
-                </div>
-                <div class="scene-file-toolbar">
-                  <span id="sceneFileCount" class="scene-file-count">0 files</span>
-                  <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                    </svg>
-                  </button>
+                  <h3>Scenes</h3>
+                  <div class="scene-panel-head-actions">
+                    <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                      </svg>
+                    </button>
+                    <span id="sceneFileCount" class="scene-file-count scene-count-pill">0</span>
+                  </div>
                 </div>
                 <div id="sceneFileList" class="scene-file-list" role="listbox" aria-label="Scene files"></div>
                 <select id="scene" hidden aria-hidden="true" tabindex="-1"></select>
@@ -725,8 +732,7 @@
         <section class="panel log-panel">
           <div class="log-head">
             <div class="log-title-wrap">
-              <h2>Frontend Log</h2>
-              <p class="log-sub">Live frontend + backend event stream</p>
+              <h2>Log</h2>
             </div>
             <div class="log-actions">
               <span class="log-pill">Live</span>

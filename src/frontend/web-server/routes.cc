@@ -458,6 +458,34 @@ std::string read_client_id(const httplib::Request &req)
     return client_id;
 }
 
+bool is_variant_name_safe(const std::string &variant)
+{
+    if (variant.empty()) return false;
+    if (variant.size() > 96) return false;
+    if (variant.find('/') != std::string::npos) return false;
+    if (variant.find('\\') != std::string::npos) return false;
+    if (variant.find("..") != std::string::npos) return false;
+    for (size_t i = 0; i < variant.size(); ++i) {
+        const unsigned char c = (unsigned char)variant[i];
+        if (!(std::isalnum(c) || c == '_' || c == '-' || c == '.')) return false;
+    }
+    return true;
+}
+
+bool read_variant_name(const httplib::Request &req, std::string &variant, std::string &error)
+{
+    variant.clear();
+    error.clear();
+    if (!req.has_param("variant")) return true;
+    variant = req.get_param_value("variant");
+    if (variant.empty()) return true;
+    if (!is_variant_name_safe(variant)) {
+        error = "invalid variant";
+        return false;
+    }
+    return true;
+}
+
 bool write_workspace_temp_scene(const std::string &workspace_id,
                                 const std::string &scene_name,
                                 const std::string &source,
@@ -899,13 +927,26 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
 
 struct scene_cache_entry_t
 {
+    std::string cache_key;
     std::string scene_path;
+    std::string variant;
     std::uint64_t mtime;
     std::shared_ptr<xtcore::Scene> scene;
     camera_list_info_t cameras;
     std::string geometry_json;
     std::string runtime_graph_json;
 };
+
+std::string scene_cache_key(const std::string &scene_path, const std::string &variant)
+{
+    return scene_path + "\n" + variant;
+}
+
+bool scene_cache_key_matches_path(const std::string &key, const std::string &scene_path)
+{
+    const std::string prefix = scene_path + "\n";
+    return key.compare(0, prefix.size(), prefix) == 0;
+}
 
 struct scene_cache_lookup_t
 {
@@ -939,9 +980,10 @@ class scene_cache_t
         return c;
     }
 
-    scene_cache_lookup_t get_or_load(const std::string &scene_path)
+    scene_cache_lookup_t get_or_load(const std::string &scene_path, const std::string &variant)
     {
         scene_cache_lookup_t out;
+        const std::string key = scene_cache_key(scene_path, variant);
 
         std::uint64_t mtime = 0ULL;
         if (!file_mtime(scene_path, mtime)) {
@@ -952,15 +994,16 @@ class scene_cache_t
         unsigned long long pending_job_id = 0ULL;
         {
             std::lock_guard<std::mutex> lock(mut);
-            auto it = entries.find(scene_path);
+            auto it = entries.find(key);
             if (it != entries.end() && it->second && it->second->mtime == mtime) {
                 out.cache_hit = true;
-                backend_log_t::handle().add("debug", "scene cache hit path=" + scene_path);
+                backend_log_t::handle().add("debug",
+                                            "scene cache hit path=" + scene_path + " variant=" + variant);
                 out.entry = it->second;
                 return out;
             }
 
-            auto pit = pending.find(scene_path);
+            auto pit = pending.find(key);
             if (pit != pending.end()) {
                 if (pit->second.mtime == mtime) {
                     pending_job_id = pit->second.job_id;
@@ -972,7 +1015,8 @@ class scene_cache_t
         }
 
         if (!pending_job_id) {
-            pending_job_id = xtcore::io::scn::load_async_start(scene_path.c_str(), nullptr);
+            const char *variant_name = variant.empty() ? nullptr : variant.c_str();
+            pending_job_id = xtcore::io::scn::load_async_start(scene_path.c_str(), nullptr, variant_name);
             if (!pending_job_id) {
                 out.error = "failed to start async scene load";
                 return out;
@@ -982,10 +1026,12 @@ class scene_cache_t
                 scene_pending_load_t p;
                 p.mtime = mtime;
                 p.job_id = pending_job_id;
-                pending[scene_path] = p;
+                pending[key] = p;
             }
             std::ostringstream log;
-            log << "scene async load started path=" << scene_path << " job_id=" << pending_job_id;
+            log << "scene async load started path=" << scene_path
+                << " variant=" << variant
+                << " job_id=" << pending_job_id;
             backend_log_t::handle().add("debug", log.str());
             out.loading = true;
             out.load_job_id = pending_job_id;
@@ -995,7 +1041,7 @@ class scene_cache_t
         xtcore::io::scn::async_load_snapshot_t snapshot;
         if (!xtcore::io::scn::load_async_snapshot(pending_job_id, &snapshot)) {
             std::lock_guard<std::mutex> lock(mut);
-            auto pit = pending.find(scene_path);
+            auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
             out.error = "scene load job not found";
             return out;
@@ -1011,7 +1057,7 @@ class scene_cache_t
         if (snapshot.state == xtcore::io::scn::ASYNC_LOAD_ERROR) {
             xtcore::io::scn::load_async_discard(pending_job_id);
             std::lock_guard<std::mutex> lock(mut);
-            auto pit = pending.find(scene_path);
+            auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
             out.error = snapshot.error.empty() ? "failed to load scene" : snapshot.error;
             return out;
@@ -1025,7 +1071,9 @@ class scene_cache_t
         }
 
         std::shared_ptr<scene_cache_entry_t> entry(new scene_cache_entry_t());
+        entry->cache_key = key;
         entry->scene_path = scene_path;
+        entry->variant = variant;
         entry->mtime = mtime;
         entry->scene = loaded_scene;
 
@@ -1038,8 +1086,8 @@ class scene_cache_t
 
         {
             std::lock_guard<std::mutex> lock(mut);
-            entries[scene_path] = entry;
-            auto pit = pending.find(scene_path);
+            entries[key] = entry;
+            auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
         }
         xtcore::io::scn::load_async_discard(pending_job_id);
@@ -1047,6 +1095,7 @@ class scene_cache_t
 
         std::ostringstream log;
         log << "scene cache miss path=" << scene_path
+            << " variant=" << variant
             << " async_job_id=" << pending_job_id
             << " pack_ms=" << pack_ms;
         backend_log_t::handle().add("debug", log.str());
@@ -1057,12 +1106,21 @@ class scene_cache_t
     void invalidate(const std::string &scene_path)
     {
         std::lock_guard<std::mutex> lock(mut);
-        auto pit = pending.find(scene_path);
-        if (pit != pending.end()) {
-            xtcore::io::scn::load_async_discard(pit->second.job_id);
-            pending.erase(pit);
+        for (auto pit = pending.begin(); pit != pending.end(); ) {
+            if (scene_cache_key_matches_path(pit->first, scene_path)) {
+                xtcore::io::scn::load_async_discard(pit->second.job_id);
+                pit = pending.erase(pit);
+            } else {
+                ++pit;
+            }
         }
-        entries.erase(scene_path);
+        for (auto eit = entries.begin(); eit != entries.end(); ) {
+            if (scene_cache_key_matches_path(eit->first, scene_path)) {
+                eit = entries.erase(eit);
+            } else {
+                ++eit;
+            }
+        }
     }
 
     bool load_job_snapshot(unsigned long long id, xtcore::io::scn::async_load_snapshot_t &snapshot)
@@ -1080,9 +1138,13 @@ class scene_cache_t
     std::unordered_map<std::string, scene_pending_load_t> pending;
 };
 
-camera_list_info_t list_cameras(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+camera_list_info_t list_cameras(const std::string &scene_path,
+                                const std::string &variant,
+                                std::string &error,
+                                bool &loading,
+                                unsigned long long &job_id)
 {
-    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
     loading = lookup.loading;
     job_id = lookup.load_job_id;
@@ -1091,9 +1153,13 @@ camera_list_info_t list_cameras(const std::string &scene_path, std::string &erro
     return entry->cameras;
 }
 
-std::string scene_geometry_json(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+std::string scene_geometry_json(const std::string &scene_path,
+                                const std::string &variant,
+                                std::string &error,
+                                bool &loading,
+                                unsigned long long &job_id)
 {
-    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
     loading = lookup.loading;
     job_id = lookup.load_job_id;
@@ -1103,12 +1169,13 @@ std::string scene_geometry_json(const std::string &scene_path, std::string &erro
 }
 
 std::string scene_resolved_camera_json(const std::string &scene_path,
+                                       const std::string &variant,
                                        const std::string &requested_camera,
                                        std::string &error,
                                        bool &loading,
                                        unsigned long long &job_id)
 {
-    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
     loading = lookup.loading;
     job_id = lookup.load_job_id;
@@ -1164,9 +1231,13 @@ std::string scene_resolved_camera_json(const std::string &scene_path,
     return ss.str();
 }
 
-std::string scene_runtime_graph_json(const std::string &scene_path, std::string &error, bool &loading, unsigned long long &job_id)
+std::string scene_runtime_graph_json(const std::string &scene_path,
+                                     const std::string &variant,
+                                     std::string &error,
+                                     bool &loading,
+                                     unsigned long long &job_id)
 {
-    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path);
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
     loading = lookup.loading;
     job_id = lookup.load_job_id;
@@ -1508,11 +1579,17 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
 
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        camera_list_info_t cameras = list_cameras(join_path(scene_dir, scene), error, loading, load_job_id);
+        camera_list_info_t cameras = list_cameras(join_path(scene_dir, scene), variant, error, loading, load_job_id);
         if (loading) {
             send_scene_loading(res, load_job_id);
             return;
@@ -1585,11 +1662,17 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
 
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        std::string payload = scene_geometry_json(join_path(scene_dir, scene), error, loading, load_job_id);
+        std::string payload = scene_geometry_json(join_path(scene_dir, scene), variant, error, loading, load_job_id);
         if (loading) {
             send_scene_loading(res, load_job_id);
             return;
@@ -1610,11 +1693,17 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
 
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        std::string payload = scene_runtime_graph_json(join_path(scene_dir, scene), error, loading, load_job_id);
+        std::string payload = scene_runtime_graph_json(join_path(scene_dir, scene), variant, error, loading, load_job_id);
         if (loading) {
             send_scene_loading(res, load_job_id);
             return;
@@ -1638,11 +1727,22 @@ void setup_routes(httplib::Server &server,
 
         std::string requested_camera;
         if (req.has_param("camera")) requested_camera = req.get_param_value("camera");
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
 
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        std::string payload = scene_resolved_camera_json(join_path(scene_dir, scene), requested_camera, error, loading, load_job_id);
+        std::string payload = scene_resolved_camera_json(join_path(scene_dir, scene),
+                                                         variant,
+                                                         requested_camera,
+                                                         error,
+                                                         loading,
+                                                         load_job_id);
         if (loading) {
             send_scene_loading(res, load_job_id);
             return;
@@ -1831,6 +1931,12 @@ void setup_routes(httplib::Server &server,
 
         common::render_request_t rr;
         rr.scene_path = join_path(scene_dir, scene);
+        std::string variant_error;
+        if (!read_variant_name(req, rr.variant, variant_error)) {
+            backend_log_t::handle().add("warn", "render rejected: invalid variant");
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
 
         std::string workspace_id;
         if (req.has_param("workspace_id")) {

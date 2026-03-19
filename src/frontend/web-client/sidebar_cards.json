@@ -1,8 +1,10 @@
 {
   "scene": [
+    "activeSceneControlsCard",
     "sceneLoadingControlsCard"
   ],
   "render": [
+    "activeSceneControlsCard",
     "frameControlsCard",
     "integratorControlsCard",
     "qualityControlsCard",
@@ -13,25 +15,30 @@
   ],
   "visual": {
     "visual": [
+      "activeSceneControlsCard",
       "frameControlsCard",
       "visualControlsCard",
       "sceneEditControlsCard"
     ],
     "graph": [
+      "activeSceneControlsCard",
       "frameControlsCard",
       "sceneEditControlsCard"
     ],
     "text": [
+      "activeSceneControlsCard",
       "frameControlsCard",
       "textEditorControlsCard",
       "sceneEditControlsCard"
     ]
   },
   "logs": [
+    "activeSceneControlsCard",
     "statisticsControlsCard",
     "logsControlsCard"
   ],
   "workspaces": [
+    "activeSceneControlsCard",
     "workspaceControlsCard"
   ],
   "settings": [

@@ -13,6 +13,7 @@
 #define XT_ARG_TILESIZE      XT_ARG_PREFIX "tile_size" /* Size of square tile unit to render */
 #define XT_ARG_ANTIALIASING	 XT_ARG_PREFIX "aa"	       /* Antialiasing level. */
 #define XT_ARG_ACTIVE_CAMERA XT_ARG_PREFIX "cam"	   /* Active camera name. */
+#define XT_ARG_VARIANT       XT_ARG_PREFIX "variant"  /* Active scene variant name. */
 #define XT_ARG_OUTDIR		 XT_ARG_PREFIX "outdir"    /* Output directory. */
 #define XT_ARG_MOD			 XT_ARG_PREFIX "mod"	   /* Apply a modifier */
 

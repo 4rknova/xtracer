@@ -152,6 +152,9 @@
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_OBJECT			"object"			/* N/A        */ /* Resource node */
+#define XTPROTO_NODE_VARIANTS       "variants"          /* N/A        */ /* Scene variants node */
+#define XTPROTO_NODE_VARIANT_SET    "set"               /* N/A        */ /* Variant set overlay */
+#define XTPROTO_NODE_VARIANT_REMOVE "remove"            /* N/A        */ /* Variant remove overlay */
 #define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */ /* Perspective camera */
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */ /* Omni Directional Stereo camera */
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */

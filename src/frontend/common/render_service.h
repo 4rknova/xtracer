@@ -48,6 +48,7 @@ struct render_request_t
     std::string scene_path;
     std::string integrator;
     std::string camera;
+    std::string variant;
     std::map<std::string, std::string> integrator_options;
 
     size_t width;

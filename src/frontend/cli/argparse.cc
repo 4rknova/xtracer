@@ -15,6 +15,7 @@ int setup(int argc, char **argv
                  , std::string            &renderer
                  , std::string            &outdir
                  , std::string            &scene
+                 , std::string            &variant
                  , std::list<std::string> &modifiers
                  , HASH_UINT64            &camera
                  , params_t               &params)
@@ -130,7 +131,7 @@ int setup(int argc, char **argv
 
 			outdir = argv[i];
 		}
-		else if (IS_PARAM(XT_ARG_ACTIVE_CAMERA)) {
+			else if (IS_PARAM(XT_ARG_ACTIVE_CAMERA)) {
 			i++;
 
 			if (!argv[i]) {
@@ -138,9 +139,19 @@ int setup(int argc, char **argv
 				return 2;
 			}
 
-			camera = xtcore::pool::str::add(argv[i]);
-		}
-		else if (IS_PARAM(XT_ARG_THREADS))	{
+				camera = xtcore::pool::str::add(argv[i]);
+			}
+			else if (IS_PARAM(XT_ARG_VARIANT)) {
+				i++;
+
+				if (!argv[i]) {
+					xtcore::Log::handle().post_error("No value was provided for %s", argv[i-1]);
+					return 2;
+				}
+
+				variant = argv[i];
+			}
+			else if (IS_PARAM(XT_ARG_THREADS))	{
 			i++;
 
 			if (!argv[i]) {

@@ -615,6 +615,12 @@ h2 {
   gap: 10px;
 }
 
+.scene-panel-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .scene-panel-head h3 {
   margin: 0;
   font-size: 0.88rem;
@@ -628,6 +634,10 @@ h2 {
 }
 
 .scene-panel-camera {
+  flex: 0 0 auto;
+}
+
+.scene-panel-variant {
   flex: 0 0 auto;
 }
 
@@ -1005,29 +1015,31 @@ label {
 }
 
 .scene-refresh-btn {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   margin-top: 0;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 80%, var(--line-strong));
-  background: color-mix(in srgb, var(--field-bg) 86%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--line) 74%, var(--line-strong));
+  background: color-mix(in srgb, var(--field-bg) 78%, var(--panel));
   color: color-mix(in srgb, var(--ink) 72%, var(--muted));
   display: inline-grid;
   place-items: center;
   cursor: pointer;
   flex: 0 0 auto;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 90ms ease;
 }
 
 .scene-refresh-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
   fill: currentColor;
 }
 
 .scene-refresh-btn:hover {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--field-bg) 75%, var(--accent) 25%);
+  color: color-mix(in srgb, var(--ink) 92%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 56%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 68%, var(--accent) 32%);
 }
 
 .scene-refresh-btn:active {
@@ -1068,11 +1080,27 @@ label {
   color: color-mix(in srgb, var(--ink) 90%, transparent);
 }
 
+.variant-active-panel {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.scene-active-description {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .scene-file-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.scene-file-toolbar-compact {
+  justify-content: flex-end;
 }
 
 .scene-file-count {
@@ -1081,6 +1109,17 @@ label {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-weight: 700;
+}
+
+.scene-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  padding: 2px 9px;
+  background: color-mix(in srgb, var(--field-bg) 86%, var(--panel));
+  line-height: 1.2;
 }
 
 .scene-file-list {
@@ -1147,6 +1186,188 @@ label {
   color: color-mix(in srgb, var(--accent) 84%, var(--ink));
 }
 
+#sceneFileList {
+  padding: 3px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-auto-rows: 112px;
+  align-content: start;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+}
+
+#sceneFileList .scene-file-item {
+  position: relative;
+  min-height: 112px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 68%, var(--field-bg) 32%) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, var(--accent-soft) 16%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  padding: 13px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  overflow: hidden;
+  isolation: isolate;
+  backdrop-filter: blur(4px);
+  transition:
+    border-color 170ms ease,
+    background 190ms ease,
+    box-shadow 190ms ease,
+    transform 170ms ease;
+}
+
+#sceneFileList .scene-file-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+  transition: background 170ms ease;
+}
+
+#sceneFileList .scene-file-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(420px 140px at -12% -30%, color-mix(in srgb, var(--accent-soft) 26%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, #ffffff 3%, transparent), transparent 34%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#sceneFileList .scene-file-item > :not(.scene-file-icon) {
+  position: relative;
+  z-index: 1;
+}
+
+#sceneFileList .scene-file-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 60%, var(--accent-soft) 40%) 0%,
+      color-mix(in srgb, var(--field-bg) 78%, var(--accent-soft) 22%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 20%, transparent);
+}
+
+#sceneFileList .scene-file-item:hover .scene-file-icon {
+  opacity: 0.14;
+}
+
+#sceneFileList .scene-file-item.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--accent-soft) 44%, var(--field-bg)) 0%,
+      color-mix(in srgb, var(--accent-soft) 28%, var(--panel)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+#sceneFileList .scene-file-item.is-selected .scene-file-icon {
+  opacity: 0.16;
+}
+
+#sceneFileList .scene-file-item.is-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 66%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 22%, transparent);
+}
+
+#sceneFileList .scene-file-item.is-active::before {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+#sceneFileList .scene-file-icon {
+  position: absolute;
+  right: -6px;
+  bottom: -22px;
+  width: 92px;
+  height: 92px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--accent-soft) 62%, var(--muted));
+  opacity: 0.11;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#sceneFileList .scene-file-name {
+  padding-right: 60px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.84rem;
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+  color: color-mix(in srgb, var(--ink) 96%, transparent);
+}
+
+#sceneFileList .scene-file-meta {
+  gap: 5px;
+  align-content: start;
+}
+
+#sceneFileList .scene-file-title {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--muted) 84%, var(--ink));
+  letter-spacing: 0.01em;
+}
+
+#sceneFileList .scene-file-badges {
+  margin-top: 2px;
+  gap: 6px;
+}
+
+#sceneFileList .scene-file-item.is-active .scene-file-icon {
+  color: color-mix(in srgb, var(--accent) 70%, var(--accent-soft));
+  opacity: 0.18;
+}
+
+#sceneFileList .scene-file-item.is-active .scene-file-name::after {
+  content: "IN USE";
+}
+
+#sceneFileList .scene-file-ext {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+#sceneFileList .scene-file-var {
+  color: #dff8ea;
+  background: color-mix(in srgb, #2f8b63 42%, transparent);
+  border-color: color-mix(in srgb, #5ad392 62%, transparent);
+}
+
 .scene-file-icon {
   width: 22px;
   height: 26px;
@@ -1202,62 +1423,276 @@ label {
   border: 1px solid color-mix(in srgb, #f2b46f 58%, transparent);
 }
 
+.scene-file-badges {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scene-file-var {
+  color: #d8f8e6;
+  background: color-mix(in srgb, #2f8b63 36%, transparent);
+  border-color: color-mix(in srgb, #5ad392 58%, transparent);
+}
+
 .camera-active-panel {
+  margin-top: 0;
+}
+
+.variant-active-panel {
   margin-top: 0;
 }
 
 .camera-file-list {
   flex: 0 0 auto;
-  min-height: 190px;
-  max-height: clamp(190px, 34vh, 360px);
+  min-height: 168px;
+  max-height: clamp(168px, 36vh, 460px);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  grid-auto-rows: 88px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 132px;
   align-content: start;
-  gap: 8px;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .camera-file-item {
-  padding: 8px 9px;
-  min-height: 88px;
+  position: relative;
+  min-height: 132px;
+  padding: 12px 12px;
   align-items: start;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 68%, var(--field-bg) 32%) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, var(--accent-soft) 16%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.camera-file-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.camera-file-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 60%, var(--accent-soft) 40%) 0%,
+      color-mix(in srgb, var(--field-bg) 78%, var(--accent-soft) 22%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 20%, transparent);
+}
+
+.camera-file-item.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--accent-soft) 44%, var(--field-bg)) 0%,
+      color-mix(in srgb, var(--accent-soft) 28%, var(--panel)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.camera-file-item.is-active::before {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.camera-file-item.is-active .scene-file-name::after {
+  content: "IN USE";
 }
 
 .camera-file-icon {
   width: 30px;
-  height: 22px;
-  margin-top: 2px;
+  height: 24px;
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--muted) 80%, var(--ink));
+}
+
+.camera-file-item.is-active .camera-file-icon {
+  color: color-mix(in srgb, var(--accent) 78%, var(--ink));
 }
 
 .camera-file-icon--perspective {
-  color: color-mix(in srgb, var(--accent) 80%, var(--ink));
+  color: inherit;
 }
 
 .camera-file-icon--erp {
-  color: color-mix(in srgb, #2f8a67 88%, var(--ink));
+  color: inherit;
 }
 
 .camera-file-icon--ods {
-  color: color-mix(in srgb, #b45f3a 88%, var(--ink));
+  color: inherit;
 }
 
 .camera-file-icon--cubemap {
-  color: color-mix(in srgb, #4d7ea8 90%, var(--ink));
+  color: inherit;
 }
 
-.camera-file-type {
-  display: inline-flex;
+.variant-file-list {
+  min-height: 168px;
+  max-height: clamp(168px, 36vh, 460px);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 132px;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.variant-file-item {
+  position: relative;
+  min-height: 132px;
+  padding: 12px 12px;
+  align-items: start;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 68%, var(--field-bg) 32%) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, var(--accent-soft) 16%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.variant-file-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.variant-file-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 60%, var(--accent-soft) 40%) 0%,
+      color-mix(in srgb, var(--field-bg) 78%, var(--accent-soft) 22%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 20%, transparent);
+}
+
+.variant-file-item.is-base::before {
+  background: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.variant-file-item.is-base {
+  border-style: dashed;
+}
+
+.variant-file-item.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--accent-soft) 44%, var(--field-bg)) 0%,
+      color-mix(in srgb, var(--accent-soft) 28%, var(--panel)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.variant-file-item.is-active .scene-file-name::after {
+  content: "IN USE";
+}
+
+.variant-file-icon {
+  width: 30px;
+  height: 24px;
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--muted) 80%, var(--ink));
+}
+
+.variant-file-icon--base {
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
+}
+
+.variant-file-item.is-active::before {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.variant-file-item.is-active .variant-file-icon {
+  color: color-mix(in srgb, var(--accent) 78%, var(--ink));
+}
+
+.variant-file-item .scene-file-meta {
+  gap: 3px;
+  grid-template-rows: 2.64em auto;
+}
+
+.variant-file-item .scene-file-name {
+  padding-right: 70px;
+  height: 2.64em;
+  line-height: 1.22;
+  white-space: normal;
+  overflow: hidden;
+  display: flex;
   align-items: center;
-  justify-self: start;
-  max-width: 100%;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-  padding: 1px 7px;
-  font-size: 0.64rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--ink) 75%, var(--muted));
-  background: color-mix(in srgb, var(--field-bg) 86%, var(--panel));
+}
+
+.variant-file-description {
+  white-space: normal;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  max-height: 3.75em;
+}
+
+.camera-file-item .scene-file-meta {
+  gap: 3px;
+  grid-template-rows: 2.64em auto;
+}
+
+.camera-file-item .scene-file-name {
+  padding-right: 70px;
+  height: 2.64em;
+  line-height: 1.22;
+  white-space: normal;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.camera-file-description {
+  white-space: normal;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  max-height: 3.75em;
 }
 
 .scene-file-context-menu {
@@ -1855,7 +2290,7 @@ textarea {
 
 .log-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
@@ -2112,6 +2547,112 @@ textarea {
   font-size: 0.74rem;
   font-family: inherit;
   font-weight: 600;
+}
+
+.active-scene-sidebar {
+  display: grid;
+  gap: 9px;
+}
+
+.active-scene-header {
+  margin: 0;
+  padding-bottom: 8px;
+  display: block;
+}
+
+.active-scene-overline {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--muted) 92%, var(--ink));
+}
+
+.active-scene-title {
+  margin: 3px 0 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.96rem;
+  line-height: 1.2;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  color: color-mix(in srgb, var(--ink) 96%, transparent);
+}
+
+.active-scene-description {
+  margin: 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 58%, transparent);
+  min-width: 0;
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.83rem;
+  white-space: normal;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
+.active-scene-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.active-scene-row-label {
+  min-width: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.active-scene-row-value {
+  margin: 0;
+  min-width: 0;
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.active-scene-camera-field {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.active-scene-camera-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-scene-camera-icon {
+  width: 14px;
+  height: 11px;
+  margin-top: 0;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.active-scene-scene-name {
+  font-size: inherit;
+  line-height: 1.2;
+  font-weight: inherit;
 }
 
 .workspace-listing-head {
@@ -3726,19 +4267,28 @@ button:disabled {
 
 @media (max-width: 720px) {
   html {
+    height: auto;
+    min-height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
     height: auto;
-    min-height: 100dvh;
-    overflow: auto;
-    overscroll-behavior-y: contain;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: auto;
+    background-attachment: scroll;
   }
 
   .page {
     height: auto;
     min-height: 100dvh;
+    min-height: 100svh;
+    height: auto;
     padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -3781,7 +4331,7 @@ button:disabled {
   }
 
   .tab-stage {
-    min-height: 0;
+    min-height: auto;
     overflow: visible;
   }
 
@@ -3790,7 +4340,7 @@ button:disabled {
     flex-direction: column;
     gap: 10px;
     overflow: visible;
-    min-height: 0;
+    min-height: auto;
   }
 
   .panel-preview {
@@ -3963,6 +4513,18 @@ button:disabled {
   .log-token-level,
   .log-token-ui {
     display: block;
+  }
+
+  .variant-file-list {
+    grid-template-columns: 1fr;
+    grid-auto-rows: minmax(132px, auto);
+    max-height: none;
+  }
+
+  .camera-file-list {
+    grid-template-columns: 1fr;
+    grid-auto-rows: minmax(132px, auto);
+    max-height: none;
   }
 }
 

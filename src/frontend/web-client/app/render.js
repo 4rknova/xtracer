@@ -20,6 +20,7 @@ async function startRender() {
 
   return api.startRender({
     scene: el.scene.value,
+    variant: selectedSceneVariantValue(),
     integrator: el.integrator.value,
     camera: el.camera.value || "",
     width,
@@ -53,11 +54,14 @@ function triggerSceneSave() {
           setSceneBrowserSelectedFile(scene);
           localStorage.setItem(LAST_SCENE_KEY, scene);
           updateSceneDependencyPill(scene);
-          const tasks = [loadCameras(scene)];
-          if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(scene));
-          if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));
-          if (visualEditor) tasks.push(loadVisualSceneFromSelected());
-          return Promise.all(tasks);
+          return loadVariants(scene)
+            .then(() => {
+              const tasks = [loadCameras(scene)];
+              if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(scene));
+              if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(scene));
+              if (visualEditor) tasks.push(loadVisualSceneFromSelected());
+              return Promise.all(tasks);
+            });
         })
         .then(() => {
           setStatus(`saved ${scene}`);

@@ -21,6 +21,7 @@ int run_setup(const std::vector<std::string> &args,
               std::string &renderer,
               std::string &outdir,
               std::string &scene,
+              std::string &variant,
               std::list<std::string> &modifiers,
               HASH_UINT64 &camera,
               xtcore::render::params_t &params)
@@ -30,7 +31,7 @@ int run_setup(const std::vector<std::string> &args,
     for (size_t i = 0; i < args.size(); ++i) {
         argv.push_back(const_cast<char *>(args[i].c_str()));
     }
-    return setup((int)argv.size(), argv.data(), renderer, outdir, scene, modifiers, camera, params);
+    return setup((int)argv.size(), argv.data(), renderer, outdir, scene, variant, modifiers, camera, params);
 }
 
 } // namespace
@@ -40,19 +41,20 @@ int main()
     xtcore::init();
 
     {
-        std::string renderer, outdir, scene;
+        std::string renderer, outdir, scene, variant;
         std::list<std::string> modifiers;
         HASH_UINT64 camera = HASH_ID_INVALID;
         xtcore::render::params_t params;
 
         const int rc = run_setup({"xtracer_cli", "scene/lab-camera-modes-showcase.scn"},
-            renderer, outdir, scene, modifiers, camera, params);
+            renderer, outdir, scene, variant, modifiers, camera, params);
         if (rc != 0) return fail("minimal scene parse failed");
         if (scene != "scene/lab-camera-modes-showcase.scn") return fail("scene path mismatch");
+        if (!variant.empty()) return fail("variant should default to empty");
     }
 
     {
-        std::string renderer, outdir, scene;
+        std::string renderer, outdir, scene, variant;
         std::list<std::string> modifiers;
         HASH_UINT64 camera = HASH_ID_INVALID;
         xtcore::render::params_t params;
@@ -67,12 +69,14 @@ int main()
             "-tile_size", "8",
             "-threads", "2",
             "-outdir", "/tmp",
-            "-cam", "erp"
-        }, renderer, outdir, scene, modifiers, camera, params);
+            "-cam", "erp",
+            "-variant", "night"
+        }, renderer, outdir, scene, variant, modifiers, camera, params);
 
         if (rc != 0) return fail("full parse failed");
         if (renderer != "stencil") return fail("renderer parse mismatch");
         if (outdir != "/tmp") return fail("outdir parse mismatch");
+        if (variant != "night") return fail("variant parse mismatch");
         if (params.width != 64 || params.height != 32) return fail("resolution parse mismatch");
         if (params.samples != 4) return fail("samples parse mismatch");
         if (params.aa != 2) return fail("aa parse mismatch");
@@ -83,35 +87,35 @@ int main()
     }
 
     {
-        std::string renderer, outdir, scene;
+        std::string renderer, outdir, scene, variant;
         std::list<std::string> modifiers;
         HASH_UINT64 camera = HASH_ID_INVALID;
         xtcore::render::params_t params;
 
         const int rc = run_setup({"xtracer_cli", "scene/lab-camera-modes-showcase.scn", "-aa", "1"},
-            renderer, outdir, scene, modifiers, camera, params);
+            renderer, outdir, scene, variant, modifiers, camera, params);
         if (rc != 2) return fail("invalid aa should fail with rc=2");
     }
 
     {
-        std::string renderer, outdir, scene;
+        std::string renderer, outdir, scene, variant;
         std::list<std::string> modifiers;
         HASH_UINT64 camera = HASH_ID_INVALID;
         xtcore::render::params_t params;
 
         const int rc = run_setup({"xtracer_cli", "scene/lab-camera-modes-showcase.scn", "-does-not-exist"},
-            renderer, outdir, scene, modifiers, camera, params);
+            renderer, outdir, scene, variant, modifiers, camera, params);
         if (rc != 2) return fail("unknown flag should fail with rc=2");
     }
 
     {
-        std::string renderer, outdir, scene;
+        std::string renderer, outdir, scene, variant;
         std::list<std::string> modifiers;
         HASH_UINT64 camera = HASH_ID_INVALID;
         xtcore::render::params_t params;
 
         const int rc = run_setup({"xtracer_cli"},
-            renderer, outdir, scene, modifiers, camera, params);
+            renderer, outdir, scene, variant, modifiers, camera, params);
         if (rc != 1) return fail("missing scene should fail with rc=1");
     }
 

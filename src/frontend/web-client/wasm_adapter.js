@@ -269,21 +269,34 @@
 
         return filtered.filter((name) => !!name);
       },
-      async getCameras(scene) {
-        if (!scene) return [];
+      async getCameras(scene, variant) {
+        if (!scene) return { cameras: [], cameraEntries: [], defaultCamera: "" };
         try {
-          const data = await getSceneSourceHybrid(scene);
-          const cameras = extractCameraNames(data.source || "");
-          if (cameras.length > 0) return cameras;
+          const fromServer = await serverApi.getCameras(scene, variant);
+          if (fromServer && Array.isArray(fromServer.cameras) && fromServer.cameras.length >= 0) {
+            return {
+              cameras: fromServer.cameras || [],
+              cameraEntries: Array.isArray(fromServer.cameraEntries) ? fromServer.cameraEntries : [],
+              defaultCamera: fromServer.defaultCamera || "",
+            };
+          }
         } catch (_) {
           // fallback below
         }
 
         try {
-          return await serverApi.getCameras(scene);
+          const data = await getSceneSourceHybrid(scene);
+          const cameras = extractCameraNames(data.source || "");
+          return {
+            cameras,
+            cameraEntries: cameras.map((name) => ({ name, type: "" })),
+            defaultCamera: "",
+          };
         } catch (_) {
-          return [];
+          // fallback below
         }
+
+        return { cameras: [], cameraEntries: [], defaultCamera: "" };
       },
       async getIntegrators() {
         return loadIntegrators();

@@ -416,6 +416,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.dragMoved = false;
     this.lastX = 0;
     this.lastY = 0;
+    this.touchPoints = {};
+    this.touchLastCenter = null;
+    this.touchLastDistance = 0;
     this.movePlane = null;
     this.moveOffset = new THREE.Vector3(0, 0, 0);
     this.moveStartPosition = null;
@@ -595,6 +598,93 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
   SceneVisualEditor.prototype.bindInput = function () {
     var self = this;
     var canvas = this.renderer.domElement;
+    var TAP_MOVE_THRESHOLD_PX = 8.0;
+
+    function clearTouchTracking() {
+      self.touchPoints = {};
+      self.touchLastCenter = null;
+      self.touchLastDistance = 0;
+    }
+
+    function setTouchPoint(pointerId, x, y) {
+      self.touchPoints[pointerId] = { x: Number(x) || 0, y: Number(y) || 0 };
+    }
+
+    function removeTouchPoint(pointerId) {
+      delete self.touchPoints[pointerId];
+    }
+
+    function collectTouchPoints(limit) {
+      var out = [];
+      var max = Number.isFinite(limit) ? limit : 2;
+      for (var key in self.touchPoints) {
+        if (!Object.prototype.hasOwnProperty.call(self.touchPoints, key)) continue;
+        out.push({
+          id: Number(key),
+          x: self.touchPoints[key].x,
+          y: self.touchPoints[key].y,
+        });
+        if (out.length >= max) break;
+      }
+      return out;
+    }
+
+    function touchPointCount() {
+      return Object.keys(self.touchPoints).length;
+    }
+
+    function beginTwoFingerGesture() {
+      var pts = collectTouchPoints(2);
+      if (pts.length < 2) return;
+      var cx = (pts[0].x + pts[1].x) * 0.5;
+      var cy = (pts[0].y + pts[1].y) * 0.5;
+      var dx = pts[1].x - pts[0].x;
+      var dy = pts[1].y - pts[0].y;
+      self.touchLastCenter = { x: cx, y: cy };
+      self.touchLastDistance = Math.hypot(dx, dy);
+      self.dragMode = "touch_gesture";
+      self.dragPointerId = null;
+      self.dragButton = 0;
+      self.dragMoved = true;
+      self.movePlane = null;
+    }
+
+    function updateTwoFingerGesture() {
+      var pts = collectTouchPoints(2);
+      if (pts.length < 2) return;
+      var cx = (pts[0].x + pts[1].x) * 0.5;
+      var cy = (pts[0].y + pts[1].y) * 0.5;
+      var dx = pts[1].x - pts[0].x;
+      var dy = pts[1].y - pts[0].y;
+      var dist = Math.hypot(dx, dy);
+
+      if (!self.touchLastCenter) self.touchLastCenter = { x: cx, y: cy };
+      if (!Number.isFinite(self.touchLastDistance) || self.touchLastDistance <= 0) {
+        self.touchLastDistance = dist;
+      }
+
+      var panDx = cx - self.touchLastCenter.x;
+      var panDy = cy - self.touchLastCenter.y;
+      if (Math.abs(panDx) + Math.abs(panDy) > 0.1) {
+        var panScale = self.distance * 0.0016;
+        var right = new THREE.Vector3();
+        var up = new THREE.Vector3();
+        self.camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+        right.normalize();
+        up.normalize();
+        self.target.addScaledVector(right, -panDx * panScale);
+        self.target.addScaledVector(up, panDy * panScale);
+      }
+
+      if (dist > 0.1 && self.touchLastDistance > 0.1) {
+        // Pinch out => zoom in (decrease camera distance), pinch in => zoom out.
+        var zoomFactor = self.touchLastDistance / dist;
+        self.distance = clamp(self.distance * zoomFactor, 0.3, 120);
+      }
+
+      self.touchLastCenter = { x: cx, y: cy };
+      self.touchLastDistance = dist;
+    }
 
     this.viewportEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
@@ -605,6 +695,21 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }, { passive: false });
 
     this.viewportEl.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "touch") {
+        setTouchPoint(e.pointerId, e.clientX, e.clientY);
+        var touchCount = touchPointCount();
+        if (touchCount >= 2) {
+          beginTwoFingerGesture();
+          return;
+        }
+        self.dragMode = "touch_orbit";
+        self.dragPointerId = e.pointerId;
+        self.dragButton = 0;
+        self.dragMoved = false;
+        self.lastX = e.clientX;
+        self.lastY = e.clientY;
+        return;
+      }
       if (e.button === 0 && self.handleAxisWidgetPointerDown(e.clientX, e.clientY)) return;
       if (e.button === 0 && (e.ctrlKey || e.metaKey)) {
         var picked = self.pickObjectAt(e.clientX, e.clientY);
@@ -627,6 +732,26 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     });
 
     this.viewportEl.addEventListener("pointermove", function (e) {
+      if (e.pointerType === "touch") {
+        if (!Object.prototype.hasOwnProperty.call(self.touchPoints, e.pointerId)) return;
+        setTouchPoint(e.pointerId, e.clientX, e.clientY);
+        var touchCount = touchPointCount();
+        if (touchCount >= 2) {
+          if (self.dragMode !== "touch_gesture") beginTwoFingerGesture();
+          updateTwoFingerGesture();
+          return;
+        }
+        if (self.dragMode === "touch_orbit" && self.dragPointerId === e.pointerId) {
+          var tdx = e.clientX - self.lastX;
+          var tdy = e.clientY - self.lastY;
+          if (Math.abs(tdx) + Math.abs(tdy) > 1.0) self.dragMoved = true;
+          self.lastX = e.clientX;
+          self.lastY = e.clientY;
+          self.azimuth -= tdx * 0.006;
+          self.elevation = clamp(self.elevation - tdy * 0.006, -ELEVATION_LIMIT, ELEVATION_LIMIT);
+        }
+        return;
+      }
       if (self.dragPointerId !== e.pointerId) return;
       var dx = e.clientX - self.lastX;
       var dy = e.clientY - self.lastY;
@@ -651,6 +776,43 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       }
     });
     function endDrag(e) {
+      if (e.pointerType === "touch") {
+        var wasTapCandidate = self.dragMode === "touch_orbit"
+          && self.dragPointerId === e.pointerId
+          && !self.dragMoved;
+        var movedDistance = Math.abs(e.clientX - self.lastX) + Math.abs(e.clientY - self.lastY);
+        removeTouchPoint(e.pointerId);
+        var remainingTouches = touchPointCount();
+
+        if (remainingTouches >= 2) {
+          beginTwoFingerGesture();
+          return;
+        }
+
+        if (remainingTouches === 1) {
+          var remaining = collectTouchPoints(1)[0];
+          self.dragMode = "touch_orbit";
+          self.dragPointerId = remaining.id;
+          self.dragButton = 0;
+          self.dragMoved = true;
+          self.lastX = remaining.x;
+          self.lastY = remaining.y;
+          self.touchLastCenter = null;
+          self.touchLastDistance = 0;
+          return;
+        }
+
+        if (wasTapCandidate && movedDistance <= TAP_MOVE_THRESHOLD_PX) {
+          self.pickSelectAt(e.clientX, e.clientY);
+        }
+        self.dragMode = "";
+        self.dragPointerId = null;
+        self.dragButton = 0;
+        self.dragMoved = false;
+        self.touchLastCenter = null;
+        self.touchLastDistance = 0;
+        return;
+      }
       if (self.dragPointerId !== e.pointerId) return;
       if (self.dragMode === "move") {
         self.endMoveDrag(self.dragMoved);
@@ -668,6 +830,22 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
     this.viewportEl.addEventListener("pointerup", endDrag);
     this.viewportEl.addEventListener("pointercancel", endDrag);
+    this.viewportEl.addEventListener("pointerleave", function (e) {
+      if (e.pointerType !== "touch") return;
+      if (!Object.prototype.hasOwnProperty.call(self.touchPoints, e.pointerId)) return;
+      removeTouchPoint(e.pointerId);
+      if (touchPointCount() === 0) {
+        self.dragMode = "";
+        self.dragPointerId = null;
+        self.dragButton = 0;
+        self.dragMoved = false;
+        self.touchLastCenter = null;
+        self.touchLastDistance = 0;
+      }
+    });
+    this.viewportEl.addEventListener("lostpointercapture", function () {
+      clearTouchTracking();
+    });
 
     window.addEventListener("keydown", function (e) {
       self.handleKeyDown(e);

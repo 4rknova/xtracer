@@ -43,6 +43,12 @@ Run CLI:
 ./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
+With scene variant:
+
+```bash
+./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -variant night -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+```
+
 ## Repository Layout
 
 | Area | Path | Purpose |
@@ -64,6 +70,7 @@ Run CLI:
 |---|---:|---:|---:|
 | Load `.scn` scenes | Yes | Yes | Yes |
 | Select camera | Yes (`-cam`) | Yes | Yes |
+| Select scene variant | Yes (`-variant`) | Yes (`variant` API param) | Via backend API |
 | Integrator selection | Yes (`-renderer`) | Yes (`/api/integrators`) | Yes (through web app adapter) |
 | Progressive updates | Terminal progress | Job progress + preview API | Progressive snapshots |
 | Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
@@ -181,14 +188,57 @@ Supported normal sampler types:
 | `flip_normals` |
 | `extrude` |
 
+#### Scene Variants
+
+Scenes can define optional overlays under `variants`:
+
+```scn
+variants = {
+  base = {
+    name        = Baseline
+    description = Uses the unmodified scene definition.
+  }
+
+  night = {
+    name        = Night Lighting
+    description = Dims emissive and swaps to night camera.
+    remove = {
+      object = {
+        light_fill = {}
+      }
+    }
+    set = {
+      default_camera = cam_night
+      material = {
+        lamp = {
+          properties = {
+            samplers = {
+              emissive = { type = color, value = col3(0.03,0.03,0.06) }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Rules:
+- `remove`: presence-based nested groups (`name = {}`) remove matching properties/groups in the base scene.
+- `set`: deep-merge overlay; properties overwrite and groups merge recursively.
+- `name` / `description`: optional metadata for frontend variant pickers.
+- `variants.base`: optional metadata for the base (no variant) selection.
+- Apply order: `remove` -> `set` -> CLI `-mod` overrides.
+- Requesting a missing variant returns a scene-load error.
+
 ## Web App + API
 
 ### Web App Tabs
 
 | Tab | Key Capabilities |
 |---|---|
-| Scene | File-manager-style scene browser plus fixed-size camera cards (camera type + icon), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs) |
+| Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
+| Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs, including an `Active Scene` summary card for scene/camera/variant) |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, and render polling controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
@@ -201,11 +251,11 @@ Supported normal sampler types:
 | GET | `/api/health` | Health probe |
 | GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields |
 | GET | `/api/scenes` | List available scenes |
-| GET | `/api/scenes/{scene}/cameras` | List cameras in scene (includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/cameras` | List cameras in scene (optional `variant=<name>`; includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
-| GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (returns `202` while async scene load is in progress) |
-| GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/cameras) (returns `202` while async scene load is in progress) |
-| GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (optional `variant=<name>`; returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/cameras) (optional `variant=<name>`; returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
 | GET | `/api/scenes/template/empty` | Empty scene template |
@@ -219,7 +269,7 @@ Supported normal sampler types:
 | POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/post-filters) |
 | GET | `/api/integrators` | List backend integrators + controls |
 | GET | `/api/resolutions` | Resolution presets |
-| POST | `/api/render` | Create render job |
+| POST | `/api/render` | Create render job (optional `variant=<name>`) |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image |
 | GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, tone mapping params supported) |

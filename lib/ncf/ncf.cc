@@ -382,6 +382,25 @@ void NCF::set_property(const char *name, const char *value)
 	m_p_symbols[name] = value;
 }
 
+bool NCF::remove_property(const char *name)
+{
+	if (!name) return false;
+	std::map<std::string, std::string>::iterator it = m_p_symbols.find(name);
+	if (it == m_p_symbols.end()) return false;
+	m_p_symbols.erase(it);
+	return true;
+}
+
+bool NCF::remove_group(const char *name)
+{
+	if (!name) return false;
+	std::map<std::string, NCF*>::iterator it = m_p_groups.find(name);
+	if (it == m_p_groups.end()) return false;
+	delete it->second;
+	m_p_groups.erase(it);
+	return true;
+}
+
 NCF* NCF::get_group_by_name(const char *name) const
 {
 	std::map<std::string, NCF* >::iterator it = m_p_groups.find(name);

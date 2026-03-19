@@ -7,6 +7,7 @@
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
+#include <nplatform/timer.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/parseutil.h>
@@ -66,20 +67,21 @@ int main(int argc, char **argv)
 
 	xtcore::Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
-    std::string integrator_name, outdir, scene_path;
+    std::string integrator_name, outdir, scene_path, variant;
     HASH_UINT64 camera = HASH_ID_INVALID;
     xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
     xtcore::init();
 	if (setup(argc, argv
-            , integrator_name
-            , outdir
-            , scene_path
-            , modifiers
-            , camera
-            , params
-    )) {
+	            , integrator_name
+	            , outdir
+	            , scene_path
+                , variant
+	            , modifiers
+	            , camera
+	            , params
+	    )) {
         xtcore::deinit();
         return 1;
     }
@@ -88,7 +90,8 @@ int main(int argc, char **argv)
     {
 		xtcore::render::context_t context;
         context.params = params;
-        if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
+        const char *variant_name = variant.empty() ? nullptr : variant.c_str();
+        if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers, variant_name)) {
             if (context.scene.m_cameras.size() == 0) {
                 xtcore::Log::handle().post_error("no cameras found");
                 exit_code = 2;

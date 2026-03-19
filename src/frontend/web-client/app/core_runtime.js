@@ -619,6 +619,22 @@ function urlForJobImageDelta(jobId, opts) {
   return `/api/jobs/${encodeURIComponent(jobId)}/image_delta${qs}`;
 }
 
+function normalizeVariantName(variant) {
+  return String(variant || "").trim();
+}
+
+function selectedVariantForApi(variant) {
+  if (variant !== undefined && variant !== null) return normalizeVariantName(variant);
+  if (typeof el === "undefined" || !el || !el.variant) return "";
+  return normalizeVariantName(el.variant.value);
+}
+
+function withVariantQuery(url, variant) {
+  const name = selectedVariantForApi(variant);
+  if (!name) return url;
+  return `${url}${url.indexOf("?") >= 0 ? "&" : "?"}variant=${encodeURIComponent(name)}`;
+}
+
 function createServerApi() {
   return {
     mode: "server",
@@ -635,9 +651,9 @@ function createServerApi() {
       const data = await getJSON("/api/scenes");
       return data.scenes || [];
     },
-    async getCameras(scene) {
+    async getCameras(scene, variant) {
       if (!scene) return { cameras: [], cameraEntries: [], defaultCamera: "" };
-      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/cameras`);
+      const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/cameras`, variant));
       return {
         cameras: data.cameras || [],
         cameraEntries: Array.isArray(data.camera_entries) ? data.camera_entries : [],
@@ -658,14 +674,14 @@ function createServerApi() {
       const data = await getJSON(`/api/scenes/${encodeURIComponent(scene)}/source?client_id=${cid}`);
       return { scene: data.scene || scene, source: data.source || "" };
     },
-    async getSceneGeometry(scene) {
+    async getSceneGeometry(scene, variant) {
       if (!scene) return { meshes: {} };
-      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/geometry`);
+      const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/geometry`, variant));
       return { meshes: (data && data.meshes) || {} };
     },
-    async getSceneRuntimeGraph(scene) {
+    async getSceneRuntimeGraph(scene, variant) {
       if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [] };
-      const data = await getSceneJSONWithAsyncLoad(`/api/scenes/${encodeURIComponent(scene)}/runtime_graph`);
+      const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/runtime_graph`, variant));
       return {
         cameras: Array.isArray(data && data.cameras) ? data.cameras : [],
         objects: Array.isArray(data && data.objects) ? data.objects : [],

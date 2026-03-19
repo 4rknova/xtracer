@@ -244,6 +244,7 @@ render_request_t::render_request_t()
     : scene_path()
     , integrator("pathtracer_mis")
     , camera()
+    , variant()
     , width(640)
     , height(480)
     , threads(0)
@@ -388,7 +389,8 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
         return result;
     }
 
-    int load_err = xtcore::io::scn::load(&(context.scene), request.scene_path.c_str(), nullptr);
+    const char *variant_name = request.variant.empty() ? nullptr : request.variant.c_str();
+    int load_err = xtcore::io::scn::load(&(context.scene), request.scene_path.c_str(), nullptr, variant_name);
     if (load_err) {
         result.error = "failed to load scene";
         return result;

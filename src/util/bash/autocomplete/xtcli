@@ -4,7 +4,7 @@ _xtracer_cli_complete()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="-renderer -threads -res -rdepth -samples -tile_size -aa -cam -outdir -mod"
+    opts="-renderer -threads -res -rdepth -samples -tile_size -aa -cam -variant -outdir -mod"
     renderers="raytracer pathtracer pathtracer_mis pathtracer_is pathtracer_mis_full photon_mapping ao debug_views depth stencil normal uv emission"
 
     case "${prev}" in
@@ -12,7 +12,7 @@ _xtracer_cli_complete()
             COMPREPLY=( $(compgen -W "${renderers}" -- "${cur}") )
             return 0
             ;;
-        -cam|-outdir|-mod|-res|-threads|-rdepth|-samples|-tile_size|-aa)
+        -cam|-variant|-outdir|-mod|-res|-threads|-rdepth|-samples|-tile_size|-aa)
             return 0
             ;;
     esac

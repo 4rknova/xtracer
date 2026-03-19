@@ -10,6 +10,18 @@ function extractSceneTitle(source) {
   return title;
 }
 
+function extractSceneDescription(source) {
+  const m = /^\s*description\s*=\s*(.+)$/im.exec(source || "");
+  if (!m) return "";
+  let description = (m[1] || "").trim();
+  if (!description) return "";
+  if ((description[0] === "\"" && description[description.length - 1] === "\"")
+    || (description[0] === "'" && description[description.length - 1] === "'")) {
+    description = description.slice(1, -1).trim();
+  }
+  return description;
+}
+
 function sceneDependsOnExternalFiles(source) {
   const text = source || "";
   if (!text) return false;
@@ -45,10 +57,27 @@ async function buildSceneLabels(sceneFiles) {
       const data = await api.getSceneSource(sceneFile);
       const source = (data && data.source) || "";
       const title = extractSceneTitle(source);
+      const description = extractSceneDescription(source);
       const dependsExternal = sceneDependsOnExternalFiles(source);
-      return { sceneFile, label: title || sceneFile, title, dependsExternal };
+      const variantMeta = extractSceneVariantNames(source);
+      const hasVariants = Array.isArray(variantMeta && variantMeta.variants) && variantMeta.variants.length > 0;
+      return {
+        sceneFile,
+        label: title || sceneFile,
+        title,
+        description,
+        dependsExternal,
+        hasVariants,
+      };
     } catch (_) {
-      return { sceneFile, label: sceneFile, title: "", dependsExternal: false };
+      return {
+        sceneFile,
+        label: sceneFile,
+        title: "",
+        description: "",
+        dependsExternal: false,
+        hasVariants: false,
+      };
     }
   }));
 
@@ -68,17 +97,44 @@ function createSceneFileIcon() {
   svg.setAttribute("aria-hidden", "true");
   svg.classList.add("scene-file-icon");
 
-  const path = document.createElementNS(ns, "path");
-  path.setAttribute("d", "M5.5 1h8.2L20 7.3V25a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h-.5zM13.7 1v5.4h5.4");
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke", "currentColor");
-  path.setAttribute("stroke-width", "1.6");
-  path.setAttribute("stroke-linejoin", "round");
-  svg.appendChild(path);
+  const body = document.createElementNS(ns, "path");
+  body.setAttribute("d", "M6.2 1.5h7.8L19 6.5V24a2.4 2.4 0 0 1-2.4 2.4H6.2A2.2 2.2 0 0 1 4 24.2V3.7a2.2 2.2 0 0 1 2.2-2.2z");
+  body.setAttribute("fill", "none");
+  body.setAttribute("stroke", "currentColor");
+  body.setAttribute("stroke-width", "1.35");
+  body.setAttribute("stroke-linejoin", "round");
+  body.setAttribute("stroke-linecap", "round");
+  svg.appendChild(body);
+
+  const foldFill = document.createElementNS(ns, "path");
+  foldFill.setAttribute("d", "M14 1.5v4.9H19");
+  foldFill.setAttribute("fill", "currentColor");
+  foldFill.setAttribute("fill-opacity", "0.12");
+  svg.appendChild(foldFill);
+
+  const fold = document.createElementNS(ns, "path");
+  fold.setAttribute("d", "M14 1.5v4.9H19");
+  fold.setAttribute("fill", "none");
+  fold.setAttribute("stroke", "currentColor");
+  fold.setAttribute("stroke-width", "1.35");
+  fold.setAttribute("stroke-linecap", "round");
+  fold.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(fold);
+
+  const divider = document.createElementNS(ns, "path");
+  divider.setAttribute("d", "M7.2 17.9h9.6");
+  divider.setAttribute("fill", "none");
+  divider.setAttribute("stroke", "currentColor");
+  divider.setAttribute("stroke-opacity", "0.35");
+  divider.setAttribute("stroke-width", "1");
+  divider.setAttribute("stroke-linecap", "round");
+  svg.appendChild(divider);
 
   const text = document.createElementNS(ns, "text");
-  text.setAttribute("x", "6.2");
-  text.setAttribute("y", "11.2");
+  text.setAttribute("x", "12");
+  text.setAttribute("y", "12.4");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("dominant-baseline", "middle");
   text.textContent = ".ncf";
   svg.appendChild(text);
 
@@ -203,10 +259,96 @@ function createCameraIcon(cameraType) {
   return svg;
 }
 
+function createVariantIcon(isBase) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 20");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("scene-file-icon", "variant-file-icon");
+  if (isBase) svg.classList.add("variant-file-icon--base");
+
+  const back = document.createElementNS(ns, "path");
+  back.setAttribute("d", "M12 2.5l7 3.9v7.2l-7 3.9-7-3.9V6.4l7-3.9z");
+  back.setAttribute("fill", "none");
+  back.setAttribute("stroke", "currentColor");
+  back.setAttribute("stroke-width", "1.4");
+  back.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(back);
+
+  if (!isBase) {
+    const front = document.createElementNS(ns, "path");
+    front.setAttribute("d", "M12 6.2l3.7 2.1v3.8L12 14.2l-3.7-2.1V8.3L12 6.2z");
+    front.setAttribute("fill", "currentColor");
+    front.setAttribute("fill-opacity", "0.34");
+    svg.appendChild(front);
+  }
+
+  return svg;
+}
+
+function normalizeVariantName(variantName) {
+  return String(variantName || "").trim();
+}
+
+function selectedSceneVariantValue() {
+  if (!el.variant) return "";
+  return normalizeVariantName(el.variant.value);
+}
+
+function runtimeGraphCacheKey(sceneName, variantName) {
+  return `${normalizeVariantName(sceneName)}\n${normalizeVariantName(variantName)}`;
+}
+
+function getRuntimeGraphForScene(sceneName, variantName) {
+  return runtimeGraphByScene.get(runtimeGraphCacheKey(sceneName, variantName !== undefined ? variantName : selectedSceneVariantValue())) || null;
+}
+
+function extractSceneVariantNames(source) {
+  const text = String(source || "");
+  if (!text) return { base: { label: "(base)", description: "" }, variants: [] };
+
+  const groupRange = findSceneGroupRange(text, "variants");
+  if (!groupRange) return { base: { label: "(base)", description: "" }, variants: [] };
+
+  const unquote = (value) => {
+    const s = String(value || "").trim();
+    if (s.length >= 2 && ((s[0] === "\"" && s[s.length - 1] === "\"") || (s[0] === "'" && s[s.length - 1] === "'"))) {
+      return s.slice(1, -1).trim();
+    }
+    return s;
+  };
+
+  const entries = splitTopLevelSceneEntries(text, groupRange);
+  const byId = new Map();
+  entries.forEach((entry) => {
+    const id = normalizeVariantName(entry && entry.id ? entry.id : "");
+    if (!id || byId.has(id)) return;
+    const labelRaw = (typeof readSceneStringProp === "function") ? readSceneStringProp(entry.body || "", "name") : "";
+    const descRaw = (typeof readSceneStringProp === "function") ? readSceneStringProp(entry.body || "", "description") : "";
+    byId.set(id, {
+      id,
+      label: unquote(labelRaw) || id,
+      description: unquote(descRaw),
+    });
+  });
+
+  const baseMeta = byId.get("base");
+  if (baseMeta) byId.delete("base");
+
+  const variants = Array.from(byId.values()).sort((a, b) => a.id.localeCompare(b.id));
+  return {
+    base: {
+      label: (baseMeta && baseMeta.label) ? baseMeta.label : "(base)",
+      description: (baseMeta && baseMeta.description) ? baseMeta.description : "",
+    },
+    variants,
+  };
+}
+
 function updateSceneFileCount() {
   if (!el.sceneFileCount) return;
   const count = sceneCatalog.length;
-  el.sceneFileCount.textContent = `${count} file${count === 1 ? "" : "s"}`;
+  el.sceneFileCount.textContent = String(count);
 }
 
 function ensureSceneContextMenu() {
@@ -300,6 +442,7 @@ async function deleteSceneFile(sceneFile) {
 
   await loadScenes();
   const nextScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  await loadVariants(nextScene);
   const tasks = [loadCameras(nextScene)];
   if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(nextScene));
   if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(nextScene));
@@ -339,6 +482,7 @@ function renderSceneFileBrowser() {
     if (!sceneFile) return;
     const title = String(item && item.title ? item.title : "").trim();
     const dependsExternal = !!(item && item.dependsExternal);
+    const hasVariants = !!(item && item.hasVariants);
     const isSelected = sceneBrowserSelectedFile === sceneFile;
     const isActive = activeScene === sceneFile;
 
@@ -368,11 +512,25 @@ function renderSceneFileBrowser() {
       body.appendChild(titleNode);
     }
 
-    if (dependsExternal) {
-      const extNode = document.createElement("span");
-      extNode.className = "scene-file-ext";
-      extNode.textContent = "EXT";
-      body.appendChild(extNode);
+    if (dependsExternal || hasVariants) {
+      const badgesNode = document.createElement("span");
+      badgesNode.className = "scene-file-badges";
+
+      if (dependsExternal) {
+        const extNode = document.createElement("span");
+        extNode.className = "scene-file-ext";
+        extNode.textContent = "EXT";
+        badgesNode.appendChild(extNode);
+      }
+
+      if (hasVariants) {
+        const variantNode = document.createElement("span");
+        variantNode.className = "scene-file-ext scene-file-var";
+        variantNode.textContent = "VAR";
+        badgesNode.appendChild(variantNode);
+      }
+
+      body.appendChild(badgesNode);
     }
 
     button.appendChild(body);
@@ -424,15 +582,115 @@ function cameraCatalogHasName(cameraName) {
   return cameraCatalog.some((item) => String(item && item.value ? item.value : "").trim() === name);
 }
 
+function variantCatalogHasName(variantName) {
+  const name = normalizeVariantName(variantName);
+  return variantCatalog.some((item) => normalizeVariantName(item && item.value ? item.value : "") === name);
+}
+
+function variantCatalogEntryByName(variantName) {
+  const name = normalizeVariantName(variantName);
+  for (let i = 0; i < variantCatalog.length; i += 1) {
+    const item = variantCatalog[i];
+    if (normalizeVariantName(item && item.value ? item.value : "") === name) return item || null;
+  }
+  return null;
+}
+
+function sceneCatalogEntryByFile(sceneFile) {
+  const name = String(sceneFile || "").trim();
+  for (let i = 0; i < sceneCatalog.length; i += 1) {
+    const item = sceneCatalog[i];
+    if (String(item && item.sceneFile ? item.sceneFile : "").trim() === name) return item || null;
+  }
+  return null;
+}
+
+function cameraCatalogEntryByName(cameraName) {
+  const name = String(cameraName || "").trim();
+  for (let i = 0; i < cameraCatalog.length; i += 1) {
+    const item = cameraCatalog[i];
+    if (String(item && item.value ? item.value : "").trim() === name) return item || null;
+  }
+  return null;
+}
+
+function updateActiveSceneSidebarCard() {
+  const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const cameraName = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+  const variantName = selectedSceneVariantValue();
+  const variantMeta = variantCatalogEntryByName(variantName);
+  const variantLabel = String(variantMeta && variantMeta.label ? variantMeta.label : "").trim() || (variantName || "(base)");
+  const sceneMeta = sceneCatalogEntryByFile(sceneName);
+  const sceneLabel = String(sceneMeta && sceneMeta.label ? sceneMeta.label : "").trim()
+    || String(sceneMeta && sceneMeta.sceneFile ? sceneMeta.sceneFile : "").trim()
+    || (sceneName || "-");
+  const sceneDescription = String(sceneMeta && sceneMeta.description ? sceneMeta.description : "").trim() || "-";
+
+  if (el.activeSceneCardScene) {
+    el.activeSceneCardScene.replaceChildren();
+    const value = document.createElement("span");
+    value.className = "active-scene-row-value active-scene-scene-name";
+    value.textContent = sceneLabel;
+    el.activeSceneCardScene.appendChild(value);
+  }
+
+  if (el.activeSceneCardDescription) {
+    el.activeSceneCardDescription.textContent = sceneDescription;
+  }
+
+  if (el.activeSceneCardVariant) {
+    el.activeSceneCardVariant.replaceChildren();
+    const key = document.createElement("span");
+    key.className = "active-scene-row-label";
+    key.textContent = "Variant";
+    el.activeSceneCardVariant.appendChild(key);
+
+    const value = document.createElement("code");
+    value.className = "active-scene-row-value";
+    value.textContent = variantLabel;
+    el.activeSceneCardVariant.appendChild(value);
+  }
+
+  if (el.activeSceneCardCamera) {
+    const cameraMeta = cameraCatalogEntryByName(cameraName);
+    const cameraType = String(cameraMeta && cameraMeta.type ? cameraMeta.type : "").trim();
+    const cameraLabel = cameraName || "-";
+    el.activeSceneCardCamera.replaceChildren();
+
+    const key = document.createElement("span");
+    key.className = "active-scene-row-label";
+    key.textContent = "Camera";
+    el.activeSceneCardCamera.appendChild(key);
+
+    const valueWrap = document.createElement("span");
+    valueWrap.className = "active-scene-camera-field";
+    const valueNode = document.createElement("code");
+    valueNode.className = "active-scene-row-value active-scene-camera-name";
+    valueNode.textContent = cameraLabel;
+    valueWrap.appendChild(valueNode);
+
+    if (cameraType && cameraLabel !== "-") {
+      const icon = createCameraIcon(cameraType);
+      icon.classList.add("active-scene-camera-icon");
+      valueWrap.appendChild(icon);
+    }
+
+    el.activeSceneCardCamera.appendChild(valueWrap);
+  }
+}
+
 function cameraTypeLooksGeneric(cameraType) {
   const raw = String(cameraType || "").trim().toLowerCase();
   return !raw || raw === "camera";
 }
 
-function applyCameraTypesFromRuntimeGraph(sceneName, graphData) {
+function applyCameraTypesFromRuntimeGraph(sceneName, graphData, variantName) {
   const currentScene = String(sceneName || "").trim();
   const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const activeVariant = selectedSceneVariantValue();
+  const targetVariant = variantName !== undefined ? normalizeVariantName(variantName) : activeVariant;
   if (!currentScene || !activeScene || currentScene !== activeScene) return;
+  if (normalizeVariantName(activeVariant) !== targetVariant) return;
   if (!Array.isArray(cameraCatalog) || cameraCatalog.length === 0) return;
 
   const graphCameras = Array.isArray(graphData && graphData.cameras) ? graphData.cameras : [];
@@ -461,13 +719,31 @@ function applyCameraTypesFromRuntimeGraph(sceneName, graphData) {
 function updateCameraFileCount() {
   if (!el.cameraFileCount) return;
   const count = cameraCatalog.length;
-  el.cameraFileCount.textContent = `${count} camera${count === 1 ? "" : "s"}`;
+  el.cameraFileCount.textContent = String(count);
+}
+
+function updateVariantFileCount() {
+  if (!el.variantFileCount) return;
+  const count = variantCatalog.filter((item) => normalizeVariantName(item && item.value ? item.value : "")).length;
+  el.variantFileCount.textContent = String(count);
 }
 
 function updateCameraActivePanel() {
-  if (!el.cameraActiveName) return;
   const active = String(el.camera && el.camera.value ? el.camera.value : "").trim();
-  el.cameraActiveName.textContent = active || "-";
+  if (el.cameraActiveName) el.cameraActiveName.textContent = active || "-";
+  updateActiveSceneSidebarCard();
+}
+
+function updateVariantActivePanel() {
+  const active = selectedSceneVariantValue();
+  const item = variantCatalogEntryByName(active);
+  const label = String(item && item.label ? item.label : "").trim();
+  const description = String(item && item.description ? item.description : "").trim();
+  if (el.variantActiveName) el.variantActiveName.textContent = label || active || "(base)";
+  if (el.variantActiveDescription) {
+    el.variantActiveDescription.textContent = description || (active ? "Variant has no description." : "Uses the base scene definition.");
+  }
+  updateActiveSceneSidebarCard();
 }
 
 function renderCameraBrowser() {
@@ -513,10 +789,11 @@ function renderCameraBrowser() {
     nameNode.className = "scene-file-name";
     nameNode.textContent = label || value || "-";
     body.appendChild(nameNode);
-    const typeNode = document.createElement("span");
-    typeNode.className = "camera-file-type";
-    typeNode.textContent = cameraTypeLabel(camType);
-    body.appendChild(typeNode);
+
+    const descNode = document.createElement("span");
+    descNode.className = "scene-file-title camera-file-description";
+    descNode.textContent = `${cameraTypeLabel(camType)} camera`;
+    body.appendChild(descNode);
 
     button.appendChild(body);
     button.addEventListener("click", () => {
@@ -537,11 +814,92 @@ function renderCameraBrowser() {
   });
 }
 
+function renderVariantBrowser() {
+  if (!el.variantFileList) return;
+  if (!variantBrowserSelectedName || !variantCatalogHasName(variantBrowserSelectedName)) {
+    variantBrowserSelectedName = selectedSceneVariantValue();
+  }
+
+  el.variantFileList.replaceChildren();
+  updateVariantFileCount();
+  updateVariantActivePanel();
+
+  if (!variantCatalog.length) {
+    const empty = document.createElement("p");
+    empty.className = "scene-file-empty";
+    empty.textContent = "No variants found in this scene.";
+    el.variantFileList.appendChild(empty);
+    return;
+  }
+
+  variantCatalog.forEach((item) => {
+    const value = normalizeVariantName(item && item.value ? item.value : "");
+    const label = String(item && item.label ? item.label : "").trim() || "(base)";
+    const description = String(item && item.description ? item.description : "").trim();
+    const isBase = !value;
+    const isSelected = normalizeVariantName(variantBrowserSelectedName) === value;
+    const isActive = selectedSceneVariantValue() === value;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "scene-file-item camera-file-item variant-file-item";
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", isSelected ? "true" : "false");
+    button.dataset.variant = value;
+    if (isSelected) button.classList.add("is-selected");
+    if (isActive) button.classList.add("is-active");
+    if (isBase) button.classList.add("is-base");
+    if (description) button.classList.add("has-description");
+    else button.classList.add("no-description");
+
+    button.appendChild(createVariantIcon(isBase));
+
+    const body = document.createElement("span");
+    body.className = "scene-file-meta";
+
+    const nameNode = document.createElement("span");
+    nameNode.className = "scene-file-name";
+    nameNode.textContent = label;
+    body.appendChild(nameNode);
+
+    if (description) {
+      const descNode = document.createElement("span");
+      descNode.className = "scene-file-title variant-file-description";
+      descNode.textContent = description;
+      body.appendChild(descNode);
+    }
+
+    button.appendChild(body);
+    button.addEventListener("click", () => {
+      variantBrowserSelectedName = value;
+      renderVariantBrowser();
+    });
+    button.addEventListener("dblclick", () => {
+      activateVariant(value);
+    });
+    button.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter" || evt.key === " ") {
+        evt.preventDefault();
+        activateVariant(value);
+      }
+    });
+
+    el.variantFileList.appendChild(button);
+  });
+}
+
 function setCameraBrowserSelectedCamera(cameraName) {
   const name = String(cameraName || "");
   if (cameraCatalogHasName(name)) cameraBrowserSelectedName = name;
   else cameraBrowserSelectedName = "";
   renderCameraBrowser();
+}
+
+function setVariantBrowserSelectedVariant(variantName) {
+  const name = normalizeVariantName(variantName);
+  if (variantCatalogHasName(name)) variantBrowserSelectedName = name;
+  else variantBrowserSelectedName = "";
+  renderVariantBrowser();
 }
 
 function activateCamera(cameraName) {
@@ -557,11 +915,25 @@ function activateCamera(cameraName) {
   el.camera.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function activateVariant(variantName) {
+  if (!el.variant) return;
+  const name = normalizeVariantName(variantName);
+  if (!variantCatalogHasName(name)) return;
+  variantBrowserSelectedName = name;
+  if (selectedSceneVariantValue() === name) {
+    updateVariantActivePanel();
+    return;
+  }
+  el.variant.value = name;
+  el.variant.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 function updateSceneDependencyPill(sceneFile) {
   const pill = el.sceneDependencyPill;
   const active = String(sceneFile || (el.scene && el.scene.value ? el.scene.value : "") || "").trim();
   if (el.sceneActiveFile) el.sceneActiveFile.textContent = active || "-";
   if (!pill) {
+    updateActiveSceneSidebarCard();
     renderSceneFileBrowser();
     return;
   }
@@ -570,6 +942,7 @@ function updateSceneDependencyPill(sceneFile) {
   pill.textContent = "EXT";
   pill.classList.toggle("scene-kind-ext", dependsExternal);
   pill.classList.toggle("scene-kind-self", !dependsExternal);
+  updateActiveSceneSidebarCard();
   renderSceneFileBrowser();
 }
 
@@ -642,13 +1015,15 @@ async function loadScenes() {
 }
 
 
-async function loadCameras(scene) {
+async function loadCameras(scene, variant) {
   el.camera.innerHTML = "";
-  const info = await api.getCameras(scene);
+  const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const info = await api.getCameras(scene, variantName);
   const sceneName = String(scene || "").trim();
-  const cameras = (info && info.cameras) || [];
-  const cameraEntriesRaw = Array.isArray(info && info.cameraEntries) ? info.cameraEntries : [];
-  const defaultCamera = (info && info.defaultCamera) || "";
+  const infoObj = Array.isArray(info) ? { cameras: info } : (info || {});
+  const cameras = Array.isArray(infoObj.cameras) ? infoObj.cameras : [];
+  const cameraEntriesRaw = Array.isArray(infoObj.cameraEntries) ? infoObj.cameraEntries : [];
+  const defaultCamera = String(infoObj.defaultCamera || "");
   cameras.forEach((name) => addOption(el.camera, name, name));
   if (cameraEntriesRaw.length > 0) {
     cameraCatalog = cameraEntriesRaw
@@ -662,8 +1037,8 @@ async function loadCameras(scene) {
     cameraCatalog = cameras.map((name) => ({ value: name, label: name, type: "" }));
   }
 
-  const cachedGraph = runtimeGraphByScene.get(sceneName);
-  if (cachedGraph) applyCameraTypesFromRuntimeGraph(sceneName, cachedGraph);
+  const cachedGraph = getRuntimeGraphForScene(sceneName, variantName);
+  if (cachedGraph) applyCameraTypesFromRuntimeGraph(sceneName, cachedGraph, variantName);
 
   if (defaultCamera && cameras.includes(defaultCamera)) {
     el.camera.value = defaultCamera;
@@ -678,6 +1053,47 @@ async function loadCameras(scene) {
   renderCameraBrowser();
 
   syncVisualCameraFromRenderSelection();
+}
+
+async function loadVariants(scene, preferredVariant) {
+  if (!el.variant) return;
+  el.variant.innerHTML = "";
+  const sceneName = String(scene || "").trim();
+  variantCatalog = [{ value: "", label: "(base)", description: "" }];
+  addOption(el.variant, "", "(base)");
+
+  if (sceneName) {
+    try {
+      const data = await api.getSceneSource(sceneName);
+      const parsed = extractSceneVariantNames(data && data.source ? data.source : "");
+      if (parsed && parsed.base) {
+        variantCatalog[0].label = String(parsed.base.label || "(base)");
+        variantCatalog[0].description = String(parsed.base.description || "");
+      }
+      const variants = Array.isArray(parsed && parsed.variants) ? parsed.variants : [];
+      variants.forEach((entry) => {
+        const id = normalizeVariantName(entry && entry.id ? entry.id : "");
+        if (!id) return;
+        const label = String(entry && entry.label ? entry.label : id).trim() || id;
+        const description = String(entry && entry.description ? entry.description : "");
+        variantCatalog.push({ value: id, label, description });
+        addOption(el.variant, id, label);
+      });
+      const baseLabel = variantCatalog[0].label || "(base)";
+      if (el.variant.options.length > 0) el.variant.options[0].text = baseLabel;
+    } catch (_) {
+      // keep base-only when source is unavailable
+    }
+  }
+
+  const requested = preferredVariant !== undefined
+    ? normalizeVariantName(preferredVariant)
+    : selectedSceneVariantValue();
+  el.variant.value = variantCatalogHasName(requested) ? requested : "";
+  if (!variantCatalogHasName(variantBrowserSelectedName)) {
+    variantBrowserSelectedName = selectedSceneVariantValue();
+  }
+  renderVariantBrowser();
 }
 
 async function loadIntegrators() {
@@ -718,16 +1134,18 @@ async function loadSceneSource(scene) {
   resetSceneHistoriesFromCurrentSource();
 }
 
-async function loadSceneRuntimeGraph(scene) {
+async function loadSceneRuntimeGraph(scene, variant) {
   const sceneName = String(scene || "").trim();
   if (!sceneName || !hasBackendMethod(api, "getSceneRuntimeGraph")) return null;
-  const data = await api.getSceneRuntimeGraph(sceneName);
-  runtimeGraphByScene.set(sceneName, data || { cameras: [], objects: [], surfaces: [], materials: [] });
-  applyCameraTypesFromRuntimeGraph(sceneName, runtimeGraphByScene.get(sceneName));
+  const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const data = await api.getSceneRuntimeGraph(sceneName, variantName);
+  const key = runtimeGraphCacheKey(sceneName, variantName);
+  runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [] });
+  applyCameraTypesFromRuntimeGraph(sceneName, runtimeGraphByScene.get(key), variantName);
   if (String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName) {
     renderSceneGraphView();
   }
-  return runtimeGraphByScene.get(sceneName) || null;
+  return runtimeGraphByScene.get(key) || null;
 }
 
 function renderThirdPartyLicenses(rawItems) {

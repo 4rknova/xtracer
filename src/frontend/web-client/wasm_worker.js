@@ -146,6 +146,7 @@ async function initWasmFunctions() {
       "string",
       "string",
       "string",
+      "string",
       "number",
       "number",
       "number",
@@ -156,6 +157,7 @@ async function initWasmFunctions() {
       "number",
     ]),
     renderBegin: mod.cwrap("xtracer_wasm_render_begin", "number", [
+      "string",
       "string",
       "string",
       "string",
@@ -315,6 +317,7 @@ async function runWasmRender(job, params) {
     scenePath,
     params.integrator || "pathtracer",
     params.camera || "",
+    params.variant || "",
     Number(params.width) || 500,
     Number(params.height) || 500,
     Number(params.samples) || 1,

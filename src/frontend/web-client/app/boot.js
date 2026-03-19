@@ -3,7 +3,7 @@ async function boot() {
   api = initializeBackendApi();
   renderSceneLoadStatus();
   const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
-  const startupRequestTotal = 7 + (hasWorkspaceApi ? 1 : 0);
+  const startupRequestTotal = 8 + (hasWorkspaceApi ? 1 : 0);
   resetStartupProgress(startupRequestTotal);
   const trackStartupRequest = (promise) => Promise.resolve(promise).finally(() => advanceStartupProgress(1));
 
@@ -38,6 +38,7 @@ async function boot() {
     trackStartupRequest(loadIntegrators()),
     trackStartupRequest(loadResolutionPresets()),
   ]);
+  await trackStartupRequest(loadVariants(el.scene.value));
   await trackStartupRequest(loadCameras(el.scene.value));
   await trackStartupRequest(loadSceneSource(el.scene.value));
   await trackStartupRequest(loadSceneRuntimeGraph(el.scene.value).catch(() => null));
@@ -188,10 +189,13 @@ async function boot() {
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
     updateSceneDependencyPill(el.scene.value);
     setSceneLoadStatus("loading", `Loading ${el.scene.value || "scene"}...`, "");
-    const tasks = [loadCameras(el.scene.value)];
-    if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
-    if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
-    Promise.all(tasks)
+    loadVariants(el.scene.value)
+      .then(() => {
+        const tasks = [loadCameras(el.scene.value)];
+        if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
+        if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
+        return Promise.all(tasks);
+      })
       .then(() => {
         if (visualEditor) {
           return loadVisualSceneFromSelected();
@@ -206,6 +210,31 @@ async function boot() {
         appendLog(`scene change error: ${err.message}`);
       });
   });
+
+  if (el.variant) {
+    el.variant.addEventListener("change", () => {
+      setVariantBrowserSelectedVariant(el.variant.value);
+      const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+      const variantName = selectedSceneVariantValue();
+      setSceneLoadStatus("loading", `Loading ${sceneName || "scene"} (${variantName || "base"})...`, "");
+      const tasks = [loadCameras(sceneName, variantName)];
+      if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(sceneName, variantName));
+      Promise.all(tasks)
+        .then(() => {
+          if (visualEditor) return loadVisualSceneFromSelected();
+          return null;
+        })
+        .then(() => {
+          setSceneLoadStatus("idle", `Loaded ${sceneName || "scene"} (${variantName || "base"}).`, "");
+          appendLog(`variant changed: ${variantName || "(base)"}`);
+        })
+        .catch((err) => {
+          setSceneLoadStatus("error", err.message || "Variant change failed.", "");
+          setStatus(`error: ${err.message}`);
+          appendLog(`variant change error: ${err.message}`);
+        });
+    });
+  }
 
   el.camera.addEventListener("change", () => {
     setCameraBrowserSelectedCamera(el.camera.value);
@@ -552,10 +581,12 @@ async function boot() {
       setSceneLoadStatus("loading", "Refreshing scene list...", "");
       loadScenes()
         .then(() => {
-          const tasks = [loadCameras(el.scene.value)];
-          if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
-          if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
-          return Promise.all(tasks);
+          return loadVariants(el.scene.value).then(() => {
+            const tasks = [loadCameras(el.scene.value)];
+            if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
+            if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
+            return Promise.all(tasks);
+          });
         })
         .then(() => {
           if (visualEditor) {

@@ -11,6 +11,7 @@ int setup(int argc, char** argv
         , std::string            &renderer
         , std::string            &outdir
         , std::string            &scene
+        , std::string            &variant
         , std::list<std::string> &modifiers
         , HASH_UINT64            &camera
         , params_t               &params);

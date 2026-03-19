@@ -57,6 +57,10 @@ const el = {
   workspaceOpenmpHint: $("workspaceOpenmpHint"),
   workspaceRenderReserveHint: $("workspaceRenderReserveHint"),
   workspaceRenderAutoHint: $("workspaceRenderAutoHint"),
+  activeSceneCardScene: $("activeSceneCardScene"),
+  activeSceneCardDescription: $("activeSceneCardDescription"),
+  activeSceneCardCamera: $("activeSceneCardCamera"),
+  activeSceneCardVariant: $("activeSceneCardVariant"),
   workspaceList: $("workspaceList"),
   sceneRefreshBtn: $("sceneRefreshBtn"),
   sceneActiveFile: $("sceneActiveFile"),
@@ -65,9 +69,14 @@ const el = {
   cameraActiveName: $("cameraActiveName"),
   cameraFileCount: $("cameraFileCount"),
   cameraFileList: $("cameraFileList"),
+  variantActiveName: $("variantActiveName"),
+  variantActiveDescription: $("variantActiveDescription"),
+  variantFileCount: $("variantFileCount"),
+  variantFileList: $("variantFileList"),
   sceneDependencyPill: $("sceneDependencyPill"),
   scene: $("scene"),
   camera: $("camera"),
+  variant: $("variant"),
   integrator: $("integrator"),
   integratorControlsSection: $("integratorControlsSection"),
   integratorControls: $("integratorControls"),
@@ -203,6 +212,8 @@ let sceneCatalog = [];
 let sceneBrowserSelectedFile = "";
 let cameraCatalog = [];
 let cameraBrowserSelectedName = "";
+let variantCatalog = [];
+let variantBrowserSelectedName = "";
 let lastBackendLogId = 0;
 let previewObjectUrl = "";
 let previewPendingRevokeUrl = "";

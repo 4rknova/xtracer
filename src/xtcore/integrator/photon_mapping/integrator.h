@@ -2,7 +2,6 @@
 #define XTCORE_INTEGRATOR_PHOTON_MAPPING_H_INCLUDED
 
 #include <vector>
-#include <nplatform/timer.h>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 #include <nimg/color.h>

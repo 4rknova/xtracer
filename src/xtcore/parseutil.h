@@ -53,7 +53,10 @@ int create_material (Scene *scene, ncf::NCF *p);
 int create_geometry (Scene *scene, ncf::NCF *p);
 int create_object   (Scene *scene, ncf::NCF *p);
 
-int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers = 0);
+int load(Scene *scene,
+         const char *filename,
+         const std::list<std::string> *modifiers = 0,
+         const char *variant = 0);
 
 enum async_load_state_t
 {
@@ -72,7 +75,9 @@ struct async_load_snapshot_t
     std::string error;
 };
 
-unsigned long long load_async_start(const char *filename, const std::list<std::string> *modifiers = 0);
+unsigned long long load_async_start(const char *filename,
+                                    const std::list<std::string> *modifiers = 0,
+                                    const char *variant = 0);
 bool load_async_snapshot(unsigned long long id, async_load_snapshot_t *out);
 std::shared_ptr<Scene> load_async_take_scene(unsigned long long id);
 void load_async_discard(unsigned long long id);

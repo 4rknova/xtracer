@@ -173,6 +173,8 @@ struct async_load_job_t {
     std::shared_ptr<Scene> scene;
     std::list<std::string> modifiers;
     bool has_modifiers;
+    std::string variant;
+    bool has_variant;
 
     async_load_job_t()
         : id(0)
@@ -182,6 +184,8 @@ struct async_load_job_t {
         , scene()
         , modifiers()
         , has_modifiers(false)
+        , variant()
+        , has_variant(false)
     {}
 };
 
@@ -353,6 +357,102 @@ static std::string resolve_obj_case_path(const std::string &path)
         if (path_exists(candidate)) return candidate;
     }
     return path;
+}
+
+static void merge_ncf_group(ncf::NCF *dst, const ncf::NCF *src)
+{
+    if (!dst || !src) return;
+
+    const size_t prop_count = src->count_properties();
+    for (size_t i = 0; i < prop_count; ++i) {
+        const char *name = src->get_property_name_by_index(i);
+        const char *value = src->get_property_by_index(i);
+        if (!name || !*name) continue;
+        if (!value) value = "";
+        if (dst->query_group(name)) dst->remove_group(name);
+        dst->set_property(name, value);
+    }
+
+    const size_t group_count = src->count_groups();
+    for (size_t i = 0; i < group_count; ++i) {
+        ncf::NCF *src_child = src->get_group_by_index(i);
+        if (!src_child) continue;
+        const char *name = src_child->get_name();
+        if (!name || !*name) continue;
+        if (dst->query_property(name)) dst->remove_property(name);
+        ncf::NCF *dst_child = dst->get_group_by_name(name);
+        merge_ncf_group(dst_child, src_child);
+    }
+}
+
+static void apply_ncf_remove_overlay(ncf::NCF *target, const ncf::NCF *remove_node)
+{
+    if (!target || !remove_node) return;
+
+    const size_t prop_count = remove_node->count_properties();
+    for (size_t i = 0; i < prop_count; ++i) {
+        const char *name = remove_node->get_property_name_by_index(i);
+        if (!name || !*name) continue;
+        target->remove_property(name);
+        target->remove_group(name);
+    }
+
+    const size_t group_count = remove_node->count_groups();
+    for (size_t i = 0; i < group_count; ++i) {
+        ncf::NCF *remove_child = remove_node->get_group_by_index(i);
+        if (!remove_child) continue;
+        const char *name = remove_child->get_name();
+        if (!name || !*name) continue;
+
+        if (remove_child->count_properties() == 0 && remove_child->count_groups() == 0) {
+            target->remove_property(name);
+            target->remove_group(name);
+            continue;
+        }
+
+        if (target->query_group(name)) {
+            ncf::NCF *target_child = target->get_group_by_name(name);
+            apply_ncf_remove_overlay(target_child, remove_child);
+            continue;
+        }
+
+        if (target->query_property(name)) {
+            target->remove_property(name);
+            continue;
+        }
+    }
+}
+
+static bool apply_variant_overlay(ncf::NCF *root, const char *variant_name)
+{
+    if (!root || !variant_name || !*variant_name) return true;
+
+    if (!root->query_group(XTPROTO_NODE_VARIANTS)) {
+        Log::handle().post_error("Variant '%s' was requested but no '%s' node exists",
+                                 variant_name, XTPROTO_NODE_VARIANTS);
+        return false;
+    }
+
+    ncf::NCF *variants_node = root->get_group_by_name(XTPROTO_NODE_VARIANTS);
+    if (!variants_node->query_group(variant_name)) {
+        Log::handle().post_error("Variant '%s' was requested but is not defined", variant_name);
+        return false;
+    }
+
+    ncf::NCF *variant_node = variants_node->get_group_by_name(variant_name);
+    Log::handle().post_message("Applying variant: %s", variant_name);
+
+    if (variant_node->query_group(XTPROTO_NODE_VARIANT_REMOVE)) {
+        ncf::NCF *remove_node = variant_node->get_group_by_name(XTPROTO_NODE_VARIANT_REMOVE);
+        apply_ncf_remove_overlay(root, remove_node);
+    }
+
+    if (variant_node->query_group(XTPROTO_NODE_VARIANT_SET)) {
+        ncf::NCF *set_node = variant_node->get_group_by_name(XTPROTO_NODE_VARIANT_SET);
+        merge_ncf_group(root, set_node);
+    }
+
+    return true;
 }
 
 } /* namespace */
@@ -1292,7 +1392,7 @@ int create_object(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
-int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers)
+int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers, const char *variant)
 {
 	Log::handle().post_message("Loading script [%s]..", filename);
     auto t_load_0 = std::chrono::steady_clock::now();
@@ -1309,6 +1409,11 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 		Log::handle().post_error("Failed to parse the scene. Line %i: %s", error.line, error.message);
 		return 2;
 	}
+
+    if (!apply_variant_overlay(&root, variant)) {
+        root.purge();
+        return 2;
+    }
 
     // Mods are of the form: group.group.property:value
     if (modifiers) {
@@ -1425,7 +1530,9 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 	return 0;
 }
 
-unsigned long long load_async_start(const char *filename, const std::list<std::string> *modifiers)
+unsigned long long load_async_start(const char *filename,
+                                    const std::list<std::string> *modifiers,
+                                    const char *variant)
 {
     if (!filename || !*filename) return 0ULL;
 
@@ -1436,6 +1543,8 @@ unsigned long long load_async_start(const char *filename, const std::list<std::s
     job->filename = filename;
     job->has_modifiers = (modifiers != 0);
     if (modifiers) job->modifiers = *modifiers;
+    job->has_variant = (variant && *variant);
+    if (job->has_variant) job->variant = variant;
 
     {
         std::lock_guard<std::mutex> lock(g_async_jobs_mut);
@@ -1461,7 +1570,8 @@ unsigned long long load_async_start(const char *filename, const std::list<std::s
         {
             std::lock_guard<std::mutex> lock(g_async_load_exec_mut);
             const std::list<std::string> *mods = job->has_modifiers ? &job->modifiers : 0;
-            result = load(loaded_scene.get(), job->filename.c_str(), mods);
+            const char *variant_name = job->has_variant ? job->variant.c_str() : 0;
+            result = load(loaded_scene.get(), job->filename.c_str(), mods, variant_name);
         }
 
         std::lock_guard<std::mutex> lock(g_async_jobs_mut);

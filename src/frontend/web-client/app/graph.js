@@ -499,7 +499,11 @@ function renderSceneGraphView() {
   if (!el.graphCanvas) return;
 
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
-  const runtime = sceneName ? runtimeGraphByScene.get(sceneName) : null;
+  const runtime = sceneName
+    ? ((typeof getRuntimeGraphForScene === "function")
+      ? getRuntimeGraphForScene(sceneName)
+      : runtimeGraphByScene.get(sceneName))
+    : null;
   let cameras = [];
   let objects = [];
   let geometries = [];

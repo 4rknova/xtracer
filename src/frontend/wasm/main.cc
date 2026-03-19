@@ -190,6 +190,7 @@ void clear_session()
 bool prepare_session(const char *scene_path,
                      const char *integrator,
                      const char *camera,
+                     const char *variant,
                      int width,
                      int height,
                      int samples,
@@ -221,7 +222,8 @@ bool prepare_session(const char *scene_path,
         return false;
     }
 
-    int load_err = xtcore::io::scn::load(&(g_session.context.scene), scene_path, nullptr);
+    const char *variant_name = (variant && *variant) ? variant : nullptr;
+    int load_err = xtcore::io::scn::load(&(g_session.context.scene), scene_path, nullptr, variant_name);
     if (load_err) {
         g_last_error = "failed to load scene";
         g_session.failed = true;
@@ -324,6 +326,7 @@ void xtracer_wasm_free(void *ptr)
 int xtracer_wasm_render_begin(const char *scene_path,
                               const char *integrator,
                               const char *camera,
+                              const char *variant,
                               int width,
                               int height,
                               int samples,
@@ -333,7 +336,7 @@ int xtracer_wasm_render_begin(const char *scene_path,
                               int rdepth)
 {
     g_last_error.clear();
-    return prepare_session(scene_path, integrator, camera, width, height, samples, aa, tile_size, threads, rdepth) ? 1 : 0;
+    return prepare_session(scene_path, integrator, camera, variant, width, height, samples, aa, tile_size, threads, rdepth) ? 1 : 0;
 }
 
 int xtracer_wasm_render_step(int max_tiles)
@@ -403,6 +406,7 @@ unsigned char *xtracer_wasm_render_snapshot_hdr(int final_only, int *out_size)
 unsigned char *xtracer_wasm_render_png(const char *scene_path,
                                        const char *integrator,
                                        const char *camera,
+                                       const char *variant,
                                        int width,
                                        int height,
                                        int samples,
@@ -419,7 +423,7 @@ unsigned char *xtracer_wasm_render_png(const char *scene_path,
 
     *out_size = 0;
 
-    if (!xtracer_wasm_render_begin(scene_path, integrator, camera, width, height, samples, aa, tile_size, threads, rdepth)) {
+    if (!xtracer_wasm_render_begin(scene_path, integrator, camera, variant, width, height, samples, aa, tile_size, threads, rdepth)) {
         return nullptr;
     }
 

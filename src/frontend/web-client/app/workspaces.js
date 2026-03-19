@@ -318,6 +318,7 @@ async function applyActiveWorkspaceState(snapshot) {
       setSceneBrowserSelectedFile(wsScene);
       localStorage.setItem(LAST_SCENE_KEY, wsScene);
       updateSceneDependencyPill(wsScene);
+      await loadVariants(wsScene);
       await loadCameras(wsScene);
     }
     await loadSceneSource(wsScene);
