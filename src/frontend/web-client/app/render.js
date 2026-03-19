@@ -14,7 +14,7 @@ async function startRender() {
   const height = sanitizeIntField(el.height, 500, 32, 8192);
   const samples = sanitizeIntField(el.samples, 1, 1, 1024);
   const aa = sanitizeIntField(el.aa, 1, 1, 16);
-  const rdepth = sanitizeIntField(el.rdepth, 3, 1, 4096);
+  const rdepth = sanitizeIntField(el.rdepth, 10, 1, 4096);
   const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
   const threads = sanitizeIntField(el.threads, 0, 0, 256);
 

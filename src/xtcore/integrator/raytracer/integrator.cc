@@ -92,9 +92,23 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     }
 
     // Strict Whitted behavior: no diffuse GI recursion.
-    // Only recurse for non-diffuse materials (e.g. dielectric/transmissive).
+    // Recurse for materials with explicit reflective/transmissive paths.
+    // Also recurse for zero-diffuse materials to preserve prior behavior.
     const nimg::ColorRGBf kd = mat->get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord);
-    if (nimg::eval::luminance(kd) <= (nmath::scalar_t)EPSILON) {
+    nmath::scalar_t reflectance = (nmath::scalar_t)mat->get_scalar(MAT_SCALART_REFLECTANCE);
+    if (reflectance < (nmath::scalar_t)0.0) reflectance = (nmath::scalar_t)0.0;
+    if (reflectance > (nmath::scalar_t)1.0) reflectance = (nmath::scalar_t)1.0;
+
+    nmath::scalar_t transparency = (nmath::scalar_t)mat->get_scalar(MAT_SCALART_TRANSPARENCY);
+    if (transparency < (nmath::scalar_t)0.0) transparency = (nmath::scalar_t)0.0;
+    if (transparency > (nmath::scalar_t)1.0) transparency = (nmath::scalar_t)1.0;
+
+    const bool recurse_path =
+           (nimg::eval::luminance(kd) <= (nmath::scalar_t)EPSILON)
+        || (reflectance > (nmath::scalar_t)EPSILON)
+        || (transparency > (nmath::scalar_t)EPSILON);
+
+    if (recurse_path) {
         xtcore::hit_result_t next;
         next.intensity = nimg::ColorRGBf(1, 1, 1);
         next.ior = in.ior;

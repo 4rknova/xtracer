@@ -255,7 +255,7 @@ bool prepare_session(const char *scene_path,
     g_session.context.params.threads = static_cast<size_t>(threads >= 0 ? threads : 0);
     g_session.context.params.samples = static_cast<size_t>(samples > 0 ? samples : 1);
     g_session.context.params.aa = static_cast<size_t>(aa > 0 ? aa : 1);
-    g_session.context.params.rdepth = static_cast<size_t>(rdepth > 0 ? rdepth : 3);
+    g_session.context.params.rdepth = static_cast<size_t>(rdepth > 0 ? rdepth : 10);
     g_session.context.params.tile_size = static_cast<size_t>(tile_size > 0 ? tile_size : 32);
     g_session.context.init();
 

@@ -324,7 +324,7 @@ async function runWasmRender(job, params) {
     Number(params.aa) || 1,
     Number(params.tile_size) || 32,
     Number(params.threads) || 0,
-    Number(params.rdepth) || 3,
+    Number(params.rdepth) || 10,
   );
   if (!ok) {
     throw new Error(fns.getLastError() || "wasm render init failed");
