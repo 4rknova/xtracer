@@ -24,6 +24,8 @@ const el = {
   textHistorySize: $("textHistorySize"),
   visualHistorySize: $("visualHistorySize"),
   autoLoadEditor: $("autoLoadEditor"),
+  ftueShowOnNextLaunch: $("ftueShowOnNextLaunch"),
+  ftueStartNowBtn: $("ftueStartNowBtn"),
   autoScrollLogs: $("autoScrollLogs"),
   fontSizePreset: $("fontSizePreset"),
   clearLogsBtn: $("clearLogsBtn"),
@@ -180,6 +182,16 @@ const el = {
   editorView3dBtn: $("editorView3dBtn"),
   editorViewGraphBtn: $("editorViewGraphBtn"),
   editorViewTextBtn: $("editorViewTextBtn"),
+  ftueOverlay: $("ftueOverlay"),
+  ftueDim: $("ftueDim"),
+  ftueSpotlight: $("ftueSpotlight"),
+  ftueDialog: $("ftueDialog"),
+  ftueStepLabel: $("ftueStepLabel"),
+  ftueTitle: $("ftueTitle"),
+  ftueBody: $("ftueBody"),
+  ftueBackBtn: $("ftueBackBtn"),
+  ftueNextBtn: $("ftueNextBtn"),
+  ftueSkipBtn: $("ftueSkipBtn"),
 };
 
 const DEFAULT_THIRD_PARTY_LICENSES = [
@@ -289,7 +301,10 @@ const WORKSPACE_VIEW_MODE_KEY = "xtracer-workspace-view-mode";
 const LAST_SCENE_KEY = "xtracer-last-scene";
 const LOG_FILTERS_KEY = "xtracer-log-filters";
 const CLIENT_ID_KEY = "xtracer-client-id";
-const SIDEBAR_VISIBILITY_CONFIG_URL = "/sidebar_cards.json";
+const FTUE_STATE_VERSION_KEY = "xtracer-ftue-version";
+const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
+const FTUE_VERSION = 1;
+const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
 const TAB_MODES = ["scene", "render", "visual", "workspaces", "logs", "settings"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";

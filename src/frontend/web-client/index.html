@@ -555,6 +555,11 @@
                       <input id="autoLoadEditor" type="checkbox" checked>
                       Auto-load scene source in editor when scene changes
                     </label>
+                    <label class="inline-check">
+                      <input id="ftueShowOnNextLaunch" type="checkbox">
+                      Show tutorial on next launch
+                    </label>
+                    <button id="ftueStartNowBtn" type="button">Start Tutorial Now</button>
                   </section>
                 </div>
               </div>
@@ -813,6 +818,25 @@
     </div>
   </main>
 
+  <div id="ftueOverlay" class="ftue-overlay" hidden aria-hidden="true">
+    <div id="ftueDim" class="ftue-dim" aria-hidden="true"></div>
+    <div id="ftueSpotlight" class="ftue-spotlight" hidden aria-hidden="true"></div>
+    <div id="ftueDialog" class="ftue-dialog" role="dialog" aria-modal="true" aria-labelledby="ftueTitle" aria-describedby="ftueBody">
+      <div class="ftue-head">
+        <span id="ftueStepLabel" class="ftue-step-label">Step 1 of 1</span>
+        <button id="ftueSkipBtn" class="ftue-skip-btn" type="button" aria-label="Skip tutorial">Skip tutorial</button>
+      </div>
+      <div class="ftue-content">
+        <h2 id="ftueTitle" class="ftue-title">Welcome to XTRACER</h2>
+        <p id="ftueBody" class="ftue-body"></p>
+      </div>
+      <div class="ftue-actions">
+        <button id="ftueBackBtn" type="button">Back</button>
+        <button id="ftueNextBtn" type="button">Next</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/wasm_adapter.js"></script>
   <script src="/vendor/three.min.js"></script>
   <script src="/visual_editor.js"></script>
@@ -827,6 +851,7 @@
   <script src="/app/scene_data.js"></script>
   <script src="/app/ui_shell.js"></script>
   <script src="/app.js"></script>
+  <script src="/app/ftue.js"></script>
   <script src="/app/boot.js"></script>
 </body>
 </html>

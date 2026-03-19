@@ -191,7 +191,7 @@
 
     async function loadIntegrators() {
       try {
-        const data = await fetchJson("/integrators.json");
+        const data = await fetchJson("/app/data/integrators.json");
         const list = Array.isArray(data.integrators) ? data.integrators : [];
         if (list.length > 0) return list;
       } catch (_) {

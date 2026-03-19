@@ -856,6 +856,7 @@ async function boot() {
   updateEditorMetrics();
   refreshSceneEditControls();
   syncEditorScroll();
+  initializeFtueTutorial();
 }
 
 setTimeout(() => {
@@ -866,6 +867,7 @@ setTimeout(() => {
 boot()
   .then(() => {
     dismissStartupScreen(false);
+    maybeStartFtueTutorial();
   })
   .catch((err) => {
     setStatus(`error: ${err.message}`);

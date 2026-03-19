@@ -2274,12 +2274,9 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "xtracer_wasm.wasm"), "application/wasm", res);
     });
 
-    server.Get("/integrators.json", [web_root](const httplib::Request &, httplib::Response &res) {
-        serve_static_file(join_path(web_root, "integrators.json"), "application/json", res);
-    });
-
-    server.Get("/sidebar_cards.json", [web_root](const httplib::Request &, httplib::Response &res) {
-        serve_static_file(join_path(web_root, "sidebar_cards.json"), "application/json", res);
+    server.Get(R"(/app/data/([A-Za-z0-9_.-]+\.json))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "app/data/" + name), "application/json", res);
     });
 
     server.Get(R"(/scenes/([A-Za-z0-9_.-]+\.scn))", [web_root](const httplib::Request &req, httplib::Response &res) {

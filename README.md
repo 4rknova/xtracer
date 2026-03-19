@@ -255,9 +255,15 @@ Rules:
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
 | Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs, including an `Active Scene` summary card for scene/camera/variant) |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
-| Settings | Theme mode + light/dark palette selection, frontend behavior toggles, and render polling controls |
+| Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party license notices |
+
+First-time use tutorial (FTUE):
+- On first launch, the web app opens a guided tutorial for scene selection, rendering, and scene editing flow.
+- In `Settings`, enable `Show tutorial on next launch` to reset onboarding state for the next app start.
+- In `Settings`, use `Start Tutorial Now` to reopen the tutorial immediately.
+- Tutorial steps are config-driven via `src/frontend/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
 
 ### Web API Endpoints
 

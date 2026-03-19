@@ -1,0 +1,214 @@
+{
+  "steps": [
+    {
+      "title": "Welcome to XTRACER",
+      "body": "This guided tour walks through scene setup, rendering, editor workflows, logs, workspaces, and settings.",
+      "target_selector": "#tabScene",
+      "placement": "bottom",
+      "tab": "scene"
+    },
+    {
+      "title": "Pick a Scene",
+      "body": "Start in Scene. Pick a scene file from the scene list to drive render and editor context.",
+      "target_selector": "#sceneFileList",
+      "placement": "right",
+      "tab": "scene"
+    },
+    {
+      "title": "Choose Variant",
+      "body": "Use variants to load alternate scene setups (lighting, layout, or overrides) without editing base files.",
+      "target_selector": "#variantFileList",
+      "placement": "right",
+      "tab": "scene"
+    },
+    {
+      "title": "Choose Camera",
+      "body": "Select the render camera used for the next render job.",
+      "target_selector": "#cameraFileList",
+      "placement": "right",
+      "tab": "scene"
+    },
+    {
+      "title": "Open Render",
+      "body": "Move to Render to configure integrator, quality, tone mapping, and export.",
+      "target_selector": "#tabRender",
+      "placement": "bottom",
+      "tab": "scene"
+    },
+    {
+      "title": "Select Integrator",
+      "body": "Choose the rendering algorithm here. Different integrators trade speed, noise, and lighting accuracy.",
+      "target_selector": "#integrator",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "integratorControlsCard"
+      ]
+    },
+    {
+      "title": "Sampling Quality",
+      "body": "Samples and anti-aliasing heavily affect quality and render time. Start low for previews, increase for finals.",
+      "target_selector": "#samples",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "qualityControlsCard"
+      ]
+    },
+    {
+      "title": "Tone Mapping",
+      "body": "Tone mapping controls how high-dynamic-range lighting is mapped to display output.",
+      "target_selector": "#toneMapping",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "toneMappingControlsCard"
+      ]
+    },
+    {
+      "title": "Export Format",
+      "body": "Choose output format for export. PNG/JPG are convenient; EXR/HDR preserve more data.",
+      "target_selector": "#exportFormat",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "exportControlsCard"
+      ]
+    },
+    {
+      "title": "Start Rendering",
+      "body": "In Render, adjust quality controls in the sidebar, then click Render to run a job.",
+      "target_selector": "#renderBtn",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "integratorControlsCard"
+      ]
+    },
+    {
+      "title": "Export Render",
+      "body": "After a render finishes, use Export Render to download your output.",
+      "target_selector": "#download",
+      "placement": "right",
+      "tab": "render",
+      "open_cards": [
+        "exportControlsCard"
+      ]
+    },
+    {
+      "title": "Open Editor",
+      "body": "Switch to Editor to work on scene content in 3D, graph, or text mode.",
+      "target_selector": "#tabVisual",
+      "placement": "bottom",
+      "tab": "render"
+    },
+    {
+      "title": "3D View Mode",
+      "body": "Use 3D View to inspect geometry and interact with scene objects visually.",
+      "target_selector": "#editorView3dBtn",
+      "placement": "bottom",
+      "tab": "visual",
+      "editor_view": "visual"
+    },
+    {
+      "title": "Graph Mode",
+      "body": "Graph mode shows scene structure and relationships for quick validation.",
+      "target_selector": "#editorViewGraphBtn",
+      "placement": "bottom",
+      "tab": "visual",
+      "editor_view": "graph"
+    },
+    {
+      "title": "Text Editor Mode",
+      "body": "Text Editor gives precise control over the scene source.",
+      "target_selector": "#editorViewTextBtn",
+      "placement": "bottom",
+      "tab": "visual",
+      "editor_view": "text"
+    },
+    {
+      "title": "Edit Scene Source",
+      "body": "In Text Editor mode, edit scene source directly and use New Scene for a fresh template.",
+      "target_selector": "#sceneSource",
+      "placement": "left",
+      "tab": "visual",
+      "editor_view": "text"
+    },
+    {
+      "title": "Save Your Scene",
+      "body": "Use Save to persist changes. Load Selected Scene refreshes editor content from disk.",
+      "target_selector": "#saveSceneBtn",
+      "placement": "right",
+      "tab": "visual",
+      "editor_view": "text"
+    },
+    {
+      "title": "Open Logs",
+      "body": "Logs show backend events and warnings while you work and render.",
+      "target_selector": "#tabLogs",
+      "placement": "bottom",
+      "tab": "visual"
+    },
+    {
+      "title": "Log Filters",
+      "body": "Filter log levels to focus on warnings/errors or include debug details when troubleshooting.",
+      "target_selector": "#logFilterWarning",
+      "placement": "right",
+      "tab": "logs",
+      "open_cards": [
+        "logsControlsCard"
+      ]
+    },
+    {
+      "title": "Open Workspaces",
+      "body": "Workspaces let you keep separate session context and saved settings.",
+      "target_selector": "#tabWorkspaces",
+      "placement": "bottom",
+      "tab": "logs"
+    },
+    {
+      "title": "Create Workspace",
+      "body": "Create a workspace to isolate scene drafts and render setup for a workflow.",
+      "target_selector": "#workspaceCreateBtn",
+      "placement": "right",
+      "tab": "workspaces"
+    },
+    {
+      "title": "Open Settings",
+      "body": "Settings controls theme, UI behavior, and runtime polling preferences.",
+      "target_selector": "#tabSettings",
+      "placement": "bottom",
+      "tab": "workspaces"
+    },
+    {
+      "title": "Theme and Palette",
+      "body": "Adjust theme and palette to match your environment and readability preferences.",
+      "target_selector": "#theme",
+      "placement": "right",
+      "tab": "settings",
+      "open_cards": [
+        "settingsControlsCard"
+      ]
+    },
+    {
+      "title": "Render Polling",
+      "body": "Polling interval controls how often render status is refreshed. Lower is faster but more chatty.",
+      "target_selector": "#pollInterval",
+      "placement": "right",
+      "tab": "settings",
+      "open_cards": [
+        "settingsControlsCard"
+      ]
+    },
+    {
+      "title": "Reset Tutorial Later",
+      "body": "In Settings, use this toggle to replay tutorial on next launch, or Start Tutorial Now.",
+      "target_selector": "#ftueShowOnNextLaunch",
+      "placement": "right",
+      "tab": "settings",
+      "open_cards": [
+        "settingsControlsCard"
+      ]
+    }
+  ]
+}
