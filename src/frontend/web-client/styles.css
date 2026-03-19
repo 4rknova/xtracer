@@ -15,6 +15,12 @@
   --logo-filter: brightness(0.5) contrast(1.08) saturate(0.78);
   --logo-opacity: 0.94;
   --logo-side-fade: 14%;
+  --scrollbar-track: color-mix(in srgb, var(--panel) 78%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--line-strong) 72%, var(--accent-soft));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+  --scrollbar-thumb-active: color-mix(in srgb, var(--accent) 56%, var(--line-strong));
+  --scrollbar-size: 12px;
+  --scrollbar-thumb-inset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -193,6 +199,45 @@
   box-sizing: border-box;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: var(--scrollbar-thumb-inset) solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+  background-clip: content-box;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  :root {
+    --scrollbar-size: 8px;
+    --scrollbar-thumb-inset: 1px;
+  }
+}
+
 [hidden] {
   display: none !important;
 }
@@ -282,6 +327,213 @@ body {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+}
+
+.ftue-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3900;
+  display: block;
+  background: transparent;
+  pointer-events: none;
+  --ftue-hole-x: 0px;
+  --ftue-hole-y: 0px;
+  --ftue-hole-w: 0px;
+  --ftue-hole-h: 0px;
+}
+
+.ftue-dim {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, #000000 34%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-mask:
+    linear-gradient(#fff 0 0),
+    linear-gradient(#fff 0 0);
+  -webkit-mask-size:
+    100% 100%,
+    var(--ftue-hole-w) var(--ftue-hole-h);
+  -webkit-mask-position:
+    0 0,
+    var(--ftue-hole-x) var(--ftue-hole-y);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0),
+    linear-gradient(#fff 0 0);
+  mask-size:
+    100% 100%,
+    var(--ftue-hole-w) var(--ftue-hole-h);
+  mask-position:
+    0 0,
+    var(--ftue-hole-x) var(--ftue-hole-y);
+  mask-repeat: no-repeat;
+  mask-composite: exclude;
+}
+
+.ftue-spotlight {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 10px;
+  border: 2px solid color-mix(in srgb, var(--accent) 80%, #ffffff 20%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--panel) 70%, transparent) inset,
+    0 8px 24px color-mix(in srgb, #000000 30%, transparent);
+  transform: translate(-50%, -50%);
+  transition: left 170ms ease, top 170ms ease, width 170ms ease, height 170ms ease;
+  pointer-events: none;
+}
+
+.ftue-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 560px);
+  aspect-ratio: 1 / 1;
+  min-height: 320px;
+  max-height: min(86vh, 560px);
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  border-radius: 20px;
+  padding: 18px;
+  background:
+    linear-gradient(
+      158deg,
+      color-mix(in srgb, var(--panel) 93%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 80%, transparent) 56%,
+      color-mix(in srgb, var(--panel) 90%, transparent) 100%
+    );
+  box-shadow:
+    0 26px 60px color-mix(in srgb, #000000 34%, transparent),
+    0 0 0 1px color-mix(in srgb, #ffffff 8%, transparent) inset;
+  z-index: 1;
+  pointer-events: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.ftue-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ftue-head > * {
+  margin-top: 0 !important;
+  align-self: center;
+}
+
+.ftue-step-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 64%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 38%, transparent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  min-width: max-content;
+  line-height: 1;
+  margin: 0;
+}
+
+.ftue-content {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 4px 2px 2px;
+  min-height: 0;
+}
+
+.ftue-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.8vw, 2.05rem);
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--ink) 96%, #ffffff 4%);
+}
+
+.ftue-body {
+  margin: 0;
+  color: color-mix(in srgb, var(--ink) 82%, var(--muted));
+  line-height: 1.5;
+  font-size: clamp(1rem, 1.22vw, 1.08rem);
+  overflow: auto;
+  padding-right: 4px;
+  max-height: 100%;
+}
+
+.ftue-actions {
+  display: flex;
+  justify-content: stretch;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.ftue-actions button,
+.ftue-skip-btn {
+  border-radius: 12px;
+  height: 42px;
+  font-weight: 700;
+  padding: 1rem 2rem;
+}
+
+.ftue-actions button {
+  flex: 1;
+}
+
+.ftue-actions button:disabled {
+  opacity: 0.46;
+  cursor: default;
+  filter: saturate(0.7);
+}
+
+.ftue-skip-btn {
+  margin-left: auto;
+  margin-top: 0 !important;
+  min-width: 0;
+  width: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+}
+
+@media (max-width: 700px) {
+  .ftue-dialog {
+    width: min(94vw, 460px);
+    min-height: 300px;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .ftue-actions button,
+  .ftue-skip-btn {
+    height: 40px;
+  }
 }
 
 .startup-screen-inner {
@@ -2527,12 +2779,7 @@ textarea {
 }
 
 .log-output::-webkit-scrollbar {
-  width: 10px;
-}
-
-.log-output::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--line-strong) 86%, transparent);
-  border-radius: 8px;
+  width: var(--scrollbar-size);
 }
 
 #paneLogs.active {
