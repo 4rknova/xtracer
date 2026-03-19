@@ -1474,6 +1474,8 @@ label {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
     0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  overflow: hidden;
+  isolation: isolate;
   backdrop-filter: blur(4px);
 }
 
@@ -1486,6 +1488,24 @@ label {
   width: 3px;
   border-radius: 0 999px 999px 0;
   background: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.camera-file-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(420px 140px at -12% -30%, color-mix(in srgb, var(--accent-soft) 26%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, #ffffff 3%, transparent), transparent 34%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 170ms ease;
+}
+
+.camera-file-item > * {
+  position: relative;
+  z-index: 1;
 }
 
 .camera-file-item:hover {
@@ -1501,6 +1521,10 @@ label {
     0 14px 28px color-mix(in srgb, #000000 20%, transparent);
 }
 
+.camera-file-item:hover::after {
+  opacity: 1;
+}
+
 .camera-file-item.is-selected {
   border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
   background:
@@ -1512,6 +1536,10 @@ label {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
     0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.camera-file-item.is-selected::after {
+  opacity: 0.98;
 }
 
 .camera-file-item.is-active::before {
@@ -1576,6 +1604,8 @@ label {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
     0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  overflow: hidden;
+  isolation: isolate;
   backdrop-filter: blur(4px);
 }
 
@@ -1590,6 +1620,24 @@ label {
   background: color-mix(in srgb, var(--line) 82%, transparent);
 }
 
+.variant-file-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(420px 140px at -12% -30%, color-mix(in srgb, var(--accent-soft) 26%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, #ffffff 3%, transparent), transparent 34%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 170ms ease;
+}
+
+.variant-file-item > * {
+  position: relative;
+  z-index: 1;
+}
+
 .variant-file-item:hover {
   border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
   background:
@@ -1601,6 +1649,10 @@ label {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
     0 14px 28px color-mix(in srgb, #000000 20%, transparent);
+}
+
+.variant-file-item:hover::after {
+  opacity: 1;
 }
 
 .variant-file-item.is-base::before {
@@ -1622,6 +1674,10 @@ label {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
     0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.variant-file-item.is-selected::after {
+  opacity: 0.98;
 }
 
 .variant-file-item.is-active .scene-file-name::after {
@@ -2582,8 +2638,9 @@ textarea {
 
 .active-scene-description {
   margin: 0;
-  padding: 0 0 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 58%, transparent);
+  padding: 0;
+  border-bottom: 0;
+  margin-bottom: 10px;
   min-width: 0;
   font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
   font-size: 0.83rem;

@@ -305,10 +305,10 @@ function getRuntimeGraphForScene(sceneName, variantName) {
 
 function extractSceneVariantNames(source) {
   const text = String(source || "");
-  if (!text) return { base: { label: "(base)", description: "" }, variants: [] };
+  if (!text) return { base: { label: "(base)", description: "" }, variants: [], hideBase: false };
 
   const groupRange = findSceneGroupRange(text, "variants");
-  if (!groupRange) return { base: { label: "(base)", description: "" }, variants: [] };
+  if (!groupRange) return { base: { label: "(base)", description: "" }, variants: [], hideBase: false };
 
   const unquote = (value) => {
     const s = String(value || "").trim();
@@ -319,6 +319,10 @@ function extractSceneVariantNames(source) {
   };
 
   const entries = splitTopLevelSceneEntries(text, groupRange);
+  const variantsBody = text.slice(groupRange.bodyStart, groupRange.bodyEnd);
+  const hideBaseRaw = (typeof readSceneStringProp === "function") ? readSceneStringProp(variantsBody, "hide_base") : "";
+  const hideBaseText = unquote(hideBaseRaw).toLowerCase();
+  const hideBase = (hideBaseText === "1" || hideBaseText === "true" || hideBaseText === "yes");
   const byId = new Map();
   entries.forEach((entry) => {
     const id = normalizeVariantName(entry && entry.id ? entry.id : "");
@@ -342,6 +346,7 @@ function extractSceneVariantNames(source) {
       description: (baseMeta && baseMeta.description) ? baseMeta.description : "",
     },
     variants,
+    hideBase,
   };
 }
 
@@ -1016,9 +1021,17 @@ async function loadScenes() {
 
 
 async function loadCameras(scene, variant) {
-  el.camera.innerHTML = "";
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  if (!scene) {
+    el.camera.innerHTML = "";
+    cameraCatalog = [];
+    renderCameraBrowser();
+    syncVisualCameraFromRenderSelection();
+    return;
+  }
+
   const info = await api.getCameras(scene, variantName);
+  el.camera.innerHTML = "";
   const sceneName = String(scene || "").trim();
   const infoObj = Array.isArray(info) ? { cameras: info } : (info || {});
   const cameras = Array.isArray(infoObj.cameras) ? infoObj.cameras : [];
@@ -1059,37 +1072,42 @@ async function loadVariants(scene, preferredVariant) {
   if (!el.variant) return;
   el.variant.innerHTML = "";
   const sceneName = String(scene || "").trim();
-  variantCatalog = [{ value: "", label: "(base)", description: "" }];
-  addOption(el.variant, "", "(base)");
+  let parsed = null;
 
   if (sceneName) {
     try {
       const data = await api.getSceneSource(sceneName);
-      const parsed = extractSceneVariantNames(data && data.source ? data.source : "");
-      if (parsed && parsed.base) {
-        variantCatalog[0].label = String(parsed.base.label || "(base)");
-        variantCatalog[0].description = String(parsed.base.description || "");
-      }
-      const variants = Array.isArray(parsed && parsed.variants) ? parsed.variants : [];
-      variants.forEach((entry) => {
-        const id = normalizeVariantName(entry && entry.id ? entry.id : "");
-        if (!id) return;
-        const label = String(entry && entry.label ? entry.label : id).trim() || id;
-        const description = String(entry && entry.description ? entry.description : "");
-        variantCatalog.push({ value: id, label, description });
-        addOption(el.variant, id, label);
-      });
-      const baseLabel = variantCatalog[0].label || "(base)";
-      if (el.variant.options.length > 0) el.variant.options[0].text = baseLabel;
+      parsed = extractSceneVariantNames(data && data.source ? data.source : "");
     } catch (_) {
       // keep base-only when source is unavailable
     }
   }
 
+  const hideBase = !!(parsed && parsed.hideBase);
+  variantCatalog = [];
+  if (!hideBase) {
+    const baseLabel = String(parsed && parsed.base && parsed.base.label ? parsed.base.label : "(base)");
+    const baseDescription = String(parsed && parsed.base && parsed.base.description ? parsed.base.description : "");
+    variantCatalog.push({ value: "", label: baseLabel, description: baseDescription });
+    addOption(el.variant, "", baseLabel);
+  }
+
+  const variants = Array.isArray(parsed && parsed.variants) ? parsed.variants : [];
+  variants.forEach((entry) => {
+    const id = normalizeVariantName(entry && entry.id ? entry.id : "");
+    if (!id) return;
+    const label = String(entry && entry.label ? entry.label : id).trim() || id;
+    const description = String(entry && entry.description ? entry.description : "");
+    variantCatalog.push({ value: id, label, description });
+    addOption(el.variant, id, label);
+  });
+
   const requested = preferredVariant !== undefined
     ? normalizeVariantName(preferredVariant)
     : selectedSceneVariantValue();
-  el.variant.value = variantCatalogHasName(requested) ? requested : "";
+  if (variantCatalogHasName(requested)) el.variant.value = requested;
+  else if (variantCatalog.length > 0) el.variant.value = String(variantCatalog[0].value || "");
+  else el.variant.value = "";
   if (!variantCatalogHasName(variantBrowserSelectedName)) {
     variantBrowserSelectedName = selectedSceneVariantValue();
   }
