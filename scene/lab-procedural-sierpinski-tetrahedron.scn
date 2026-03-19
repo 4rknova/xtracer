@@ -16,8 +16,8 @@ camera = {
     default = {
         type     = thin-lens
         fov      = 45
-        position = vec3(0,7.5,-10)
-        target   = vec3(0.0,0,0)
+        position = vec3(0,3,-5)
+        target   = vec3(0,0,0)
         up       = vec3(0,1,0)
     }
 }
@@ -37,12 +37,22 @@ geometry = {
         type       = mesh
         source     = gen(sierpinski_tetrahedron)
         resolution = <tetra_resolution>
+        modifiers = {
+            scale        = vec3(2.0,2.0,2.0)
+            rotation     = vec3(0,0.7853982,0)
+            flip_normals = true
+        }
     }
 
     sierpinski_main_gen_implicit = {
         type       = mesh
         source     = gen(sierpinski_tetrahedron_implicit)
         resolution = <tetra_resolution>
+        modifiers = {
+            scale        = vec3(2.0,2.0,2.0)
+            rotation     = vec3(0,0.7853982,0)
+            flip_normals = true
+        }
     }
 
     sierpinski_main_analytic = {
