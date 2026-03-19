@@ -125,6 +125,10 @@ With scene variant:
 | `sphere` | Analytic sphere |
 | `point` | Parsed as epsilon-radius sphere |
 | `triangle` | Triangle via `vecdata.v0/v1/v2` |
+| `menger_sponge` | Implicit fractal surface (`position`, `radius`, `resolution`) |
+| `sierpinski_tetrahedron` | Implicit fractal surface (`position`, `radius`, `resolution`) |
+| `mandelbulb` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`) |
+| `julia` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`, `julia_c`) |
 | `mesh` | External OBJ or procedural generator |
 
 #### Procedural Mesh Generators (`geometry.type = mesh`, `source = gen(...)`)
@@ -136,8 +140,16 @@ With scene variant:
 | `cylinder` | `capped_cylinder` | `cone` | `truncated_cone` |
 | `ring` | `torus_knot` | `icosphere` | `geodesic_dome` |
 | `icosa_cage` | `menger_sponge` | `sierpinski_tetrahedron` | `mobius_strip` |
+| `menger_sponge_implicit` | `sierpinski_tetrahedron_implicit` |  |  |
 | `klein_bottle` | `hairball` | `shell_spiral` | `rock` |
 | `chain_link` | `lathe` | `snowflake` | `pyramid` |
+
+Note: `menger_sponge` and `sierpinski_tetrahedron` can be used either as:
+- `geometry.type` values (native implicit xtcore surfaces), or
+- `gen(...)` mesh generators (triangulated geometry).
+
+Sizing note:
+- `gen(menger_sponge)` and `gen(menger_sponge_implicit)` are normalized to unit canonical bounds (`[-0.5, 0.5]` per axis) before scene modifiers.
 
 `gen(pyramid)` supports:
 - `base_size` (float, `> 0`, default `1.0`)
@@ -194,6 +206,8 @@ Scenes can define optional overlays under `variants`:
 
 ```scn
 variants = {
+  hide_base = true
+
   base = {
     name        = Baseline
     description = Uses the unmodified scene definition.
@@ -226,6 +240,7 @@ variants = {
 Rules:
 - `remove`: presence-based nested groups (`name = {}`) remove matching properties/groups in the base scene.
 - `set`: deep-merge overlay; properties overwrite and groups merge recursively.
+- `hide_base` (optional bool): when `true`, hides the `(base)` option in the web variant picker.
 - `name` / `description`: optional metadata for frontend variant pickers.
 - `variants.base`: optional metadata for the base (no variant) selection.
 - Apply order: `remove` -> `set` -> CLI `-mod` overrides.
@@ -426,6 +441,7 @@ Optional static packaging:
 | `xtcore::raytracer_emissive` | `build/debug/test/test_xtcore_raytracer_emissive` or `build/release/test/test_xtcore_raytracer_emissive` |
 | `cli::setup_parse` | `build/debug/test/test_xtracer_cli_setup` or `build/release/test/test_xtracer_cli_setup` |
 | `ncf::inline_and_utf8` | `build/debug/test/test_ncf_parser` or `build/release/test/test_ncf_parser` |
+| `scene::validate_all` | `build/debug/test/test_xtcore_scene_validator` or `build/release/test/test_xtcore_scene_validator` |
 | `nmath::sampling` | `build/debug/test/test_nmath_sampling` or `build/release/test/test_nmath_sampling` |
 | `cli::stencil_smoke` | `build/debug/xtracer_cli` or `build/release/xtracer_cli` smoke render |
 
