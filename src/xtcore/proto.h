@@ -34,7 +34,11 @@
 #define XTPROTO_LTRL_GEODESIC_DOME  "geodesic_dome"     /* string     */ /* Geodesic dome */
 #define XTPROTO_LTRL_ICOSA_CAGE     "icosa_cage"        /* string     */ /* Icosahedral cage */
 #define XTPROTO_LTRL_MENGER_SPONGE  "menger_sponge"     /* string     */ /* Menger sponge */
+#define XTPROTO_LTRL_MENGER_SPONGE_IMPLICIT "menger_sponge_implicit" /* string */ /* Implicit Menger sponge */
 #define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON "sierpinski_tetrahedron" /* string */ /* Sierpinski tetrahedron */
+#define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON_IMPLICIT "sierpinski_tetrahedron_implicit" /* string */ /* Implicit Sierpinski tetrahedron */
+#define XTPROTO_LTRL_MANDELBULB      "mandelbulb"        /* string     */ /* Mandelbulb fractal */
+#define XTPROTO_LTRL_JULIA           "julia"             /* string     */ /* Julia 3D fractal */
 #define XTPROTO_LTRL_MOBIUS_STRIP   "mobius_strip"      /* string     */ /* Mobius strip */
 #define XTPROTO_LTRL_KLEIN_BOTTLE   "klein_bottle"      /* string     */ /* Klein bottle */
 #define XTPROTO_LTRL_HAIRBALL       "hairball"          /* string     */ /* Hairball */
@@ -129,6 +133,9 @@
 #define XTPROTO_PROP_GROWTH         "growth"            /* scalar_t   */ /* Growth */
 #define XTPROTO_PROP_TUBE_RADIUS    "tube_radius"       /* scalar_t   */ /* Tube radius */
 #define XTPROTO_PROP_HEIGHT			"height"			/* scalar_t   */ /* Height */
+#define XTPROTO_PROP_POWER          "power"             /* scalar_t   */ /* Fractal power */
+#define XTPROTO_PROP_BAILOUT        "bailout"           /* scalar_t   */ /* Fractal bailout */
+#define XTPROTO_PROP_JULIA_C        "julia_c"           /* Vector3f   */ /* Julia constant */
 #define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
 #define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
 #define XTPROTO_PROP_OCTAVES        "octaves"           /* integer    */ /* Octave count */

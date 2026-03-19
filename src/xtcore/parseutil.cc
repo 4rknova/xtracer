@@ -27,6 +27,7 @@
 #include "math/plane.h"
 #include "math/sphere.h"
 #include "math/triangle.h"
+#include "math/fractal.h"
 #include "mesh.h"
 #include "proto.h"
 #include "obj.h"
@@ -369,6 +370,7 @@ static void merge_ncf_group(ncf::NCF *dst, const ncf::NCF *src)
         const char *value = src->get_property_by_index(i);
         if (!name || !*name) continue;
         if (!value) value = "";
+
         if (dst->query_group(name)) dst->remove_group(name);
         dst->set_property(name, value);
     }
@@ -713,10 +715,20 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             if (i < 1) i = 1;
             nmesh::generator::menger_sponge(&obj, (size_t)i);
         }
+        else if (!token.compare(XTPROTO_LTRL_MENGER_SPONGE_IMPLICIT)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
+            if (i < 1) i = 1;
+            nmesh::generator::menger_sponge_implicit(&obj, (size_t)i);
+        }
         else if (!token.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
             if (i < 1) i = 1;
             nmesh::generator::sierpinski_tetrahedron(&obj, (size_t)i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON_IMPLICIT)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 2);
+            if (i < 1) i = 1;
+            nmesh::generator::sierpinski_tetrahedron_implicit(&obj, (size_t)i);
         }
         else if (!token.compare(XTPROTO_LTRL_MOBIUS_STRIP)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
@@ -957,6 +969,64 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
             tri->calc_aabb();
 		}
 	}
+    else if (!type.compare(XTPROTO_LTRL_MENGER_SPONGE)) {
+        data = new (std::nothrow) xtcore::surface::MengerSponge;
+        xtcore::surface::MengerSponge *f = (xtcore::surface::MengerSponge *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 2);
+        if (i < 1) i = 1;
+        if (i > 5) i = 5;
+        f->iterations = (size_t)i;
+    }
+    else if (!type.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)) {
+        data = new (std::nothrow) xtcore::surface::SierpinskiTetrahedron;
+        xtcore::surface::SierpinskiTetrahedron *f = (xtcore::surface::SierpinskiTetrahedron *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 2);
+        if (i < 1) i = 1;
+        if (i > 8) i = 8;
+        f->iterations = (size_t)i;
+    }
+    else if (!type.compare(XTPROTO_LTRL_MANDELBULB)) {
+        data = new (std::nothrow) xtcore::surface::Mandelbulb;
+        xtcore::surface::Mandelbulb *f = (xtcore::surface::Mandelbulb *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 18);
+        if (i < 1) i = 1;
+        if (i > 64) i = 64;
+        f->iterations = (size_t)i;
+        f->power = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_POWER), 8.0f);
+        if (f->power < 2.0f) f->power = 2.0f;
+        if (f->power > 16.0f) f->power = 16.0f;
+        f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
+        if (f->bailout < 2.0f) f->bailout = 2.0f;
+        if (f->bailout > 64.0f) f->bailout = 64.0f;
+    }
+    else if (!type.compare(XTPROTO_LTRL_JULIA)) {
+        data = new (std::nothrow) xtcore::surface::JuliaFractal;
+        xtcore::surface::JuliaFractal *f = (xtcore::surface::JuliaFractal *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->julia_c = deserialize_vec3(p, XTPROTO_PROP_JULIA_C, nmath::Vector3f(-0.24f, 0.74f, 0.12f));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 18);
+        if (i < 1) i = 1;
+        if (i > 64) i = 64;
+        f->iterations = (size_t)i;
+        f->power = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_POWER), 8.0f);
+        if (f->power < 2.0f) f->power = 2.0f;
+        if (f->power > 16.0f) f->power = 16.0f;
+        f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
+        if (f->bailout < 2.0f) f->bailout = 2.0f;
+        if (f->bailout > 64.0f) f->bailout = 64.0f;
+    }
 	// - Mesh
 	else if (!type.compare(XTPROTO_LTRL_MESH)) data = deserialize_geometry_mesh(source, p);
 	// unknown
