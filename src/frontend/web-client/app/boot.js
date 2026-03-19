@@ -38,12 +38,63 @@ async function boot() {
     trackStartupRequest(loadIntegrators()),
     trackStartupRequest(loadResolutionPresets()),
   ]);
-  await trackStartupRequest(loadVariants(el.scene.value));
-  await trackStartupRequest(loadCameras(el.scene.value));
-  await trackStartupRequest(loadSceneSource(el.scene.value));
-  await trackStartupRequest(loadSceneRuntimeGraph(el.scene.value).catch(() => null));
+  const tryLoadSceneBundle = async (sceneName) => {
+    const name = String(sceneName || "").trim();
+    if (!name) return false;
+    await loadVariants(name);
+    const variantName = selectedSceneVariantValue();
+    const tasks = [
+      loadCameras(name, variantName),
+      loadSceneSource(name),
+      loadSceneRuntimeGraph(name, variantName).catch(() => null),
+    ];
+    await Promise.all(tasks);
+    return true;
+  };
+
+  const chooseStartupSceneCandidates = () => {
+    const seen = new Set();
+    const out = [];
+    const push = (value) => {
+      const name = String(value || "").trim();
+      if (!name || seen.has(name) || !sceneCatalogHasFile(name)) return;
+      seen.add(name);
+      out.push(name);
+    };
+    push(el.scene && el.scene.value ? el.scene.value : "");
+    sceneCatalog.forEach((item) => push(item && item.sceneFile ? item.sceneFile : ""));
+    return out;
+  };
+
+  await trackStartupRequest((async () => {
+    const candidates = chooseStartupSceneCandidates();
+    let loaded = false;
+    let lastError = null;
+    for (let i = 0; i < candidates.length; ++i) {
+      const candidate = candidates[i];
+      try {
+        if (String(el.scene && el.scene.value ? el.scene.value : "").trim() !== candidate) {
+          el.scene.value = candidate;
+          setSceneBrowserSelectedFile(candidate);
+          localStorage.setItem(LAST_SCENE_KEY, candidate);
+          updateSceneDependencyPill(candidate);
+        }
+        await tryLoadSceneBundle(candidate);
+        loaded = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        appendLog(`startup scene load error (${candidate}): ${err.message}`);
+      }
+    }
+    if (!loaded && lastError) {
+      setSceneLoadStatus("error", lastError.message || "Scene load failed.", "");
+      setStatus(`error: ${lastError.message || "scene load failed"}`);
+    }
+  })());
   if (hasWorkspaceApi && activeWorkspaceId) {
-    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
+    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null)
+      .catch((err) => appendLog(`workspace restore error: ${err.message}`));
   }
   await trackStartupRequest(loadAbout());
   updatePreviewSizing();
@@ -184,6 +235,38 @@ async function boot() {
     appendLog("backend export endpoint unavailable; export disabled");
   }
 
+  const lastStableSelection = {
+    scene: String(el.scene && el.scene.value ? el.scene.value : "").trim(),
+    variant: selectedSceneVariantValue(),
+    camera: String(el.camera && el.camera.value ? el.camera.value : "").trim(),
+  };
+
+  const restoreStableSelection = async () => {
+    const sceneName = String(lastStableSelection.scene || "").trim();
+    if (!sceneName || !sceneCatalogHasFile(sceneName)) return;
+
+    if (String(el.scene && el.scene.value ? el.scene.value : "").trim() !== sceneName) {
+      el.scene.value = sceneName;
+    }
+    setSceneBrowserSelectedFile(sceneName);
+    updateSceneDependencyPill(sceneName);
+    localStorage.setItem(LAST_SCENE_KEY, sceneName);
+
+    const variantName = normalizeVariantName(lastStableSelection.variant);
+    await loadVariants(sceneName, variantName);
+    const tasks = [loadCameras(sceneName, variantName)];
+    if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(sceneName, variantName));
+    if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(sceneName));
+    await Promise.all(tasks);
+
+    const cameraName = String(lastStableSelection.camera || "").trim();
+    if (cameraName && cameraCatalogHasName(cameraName)) {
+      el.camera.value = cameraName;
+      setCameraBrowserSelectedCamera(cameraName);
+      syncVisualCameraFromRenderSelection();
+    }
+  };
+
   el.scene.addEventListener("change", () => {
     setSceneBrowserSelectedFile(el.scene.value);
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
@@ -203,11 +286,19 @@ async function boot() {
         return null;
       })
       .then(() => appendLog(`scene changed: ${el.scene.value}`))
-      .then(() => setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, ""))
+      .then(() => {
+        lastStableSelection.scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+        lastStableSelection.variant = selectedSceneVariantValue();
+        lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+        setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, "");
+      })
       .catch((err) => {
         setSceneLoadStatus("error", err.message || "Scene change failed.", "");
         setStatus(`error: ${err.message}`);
         appendLog(`scene change error: ${err.message}`);
+        restoreStableSelection().catch((restoreErr) => {
+          appendLog(`scene recovery error: ${restoreErr.message}`);
+        });
       });
   });
 
@@ -227,11 +318,17 @@ async function boot() {
         .then(() => {
           setSceneLoadStatus("idle", `Loaded ${sceneName || "scene"} (${variantName || "base"}).`, "");
           appendLog(`variant changed: ${variantName || "(base)"}`);
+          lastStableSelection.scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+          lastStableSelection.variant = selectedSceneVariantValue();
+          lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
         })
         .catch((err) => {
           setSceneLoadStatus("error", err.message || "Variant change failed.", "");
           setStatus(`error: ${err.message}`);
           appendLog(`variant change error: ${err.message}`);
+          restoreStableSelection().catch((restoreErr) => {
+            appendLog(`variant recovery error: ${restoreErr.message}`);
+          });
         });
     });
   }
@@ -239,6 +336,7 @@ async function boot() {
   el.camera.addEventListener("change", () => {
     setCameraBrowserSelectedCamera(el.camera.value);
     syncVisualCameraFromRenderSelection();
+    lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
   });
 
   el.theme.addEventListener("change", () => {

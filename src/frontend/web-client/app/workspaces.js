@@ -123,7 +123,7 @@ function workspaceSettingsPayload() {
       samples: String(el.samples && el.samples.value ? el.samples.value : "1"),
       aa: String(el.aa && el.aa.value ? el.aa.value : "1"),
       sample_distribution: String(el.sampleDistribution && el.sampleDistribution.value ? el.sampleDistribution.value : "grid"),
-      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "3"),
+      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"),
     },
     frame: {
       width: String(el.width && el.width.value ? el.width.value : "500"),
@@ -313,23 +313,47 @@ async function applyActiveWorkspaceState(snapshot) {
   if (wsScene && hasSceneOption(wsScene)) {
     const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
     const sceneChanged = currentScene !== wsScene;
-    if (sceneChanged) {
-      el.scene.value = wsScene;
-      setSceneBrowserSelectedFile(wsScene);
-      localStorage.setItem(LAST_SCENE_KEY, wsScene);
-      updateSceneDependencyPill(wsScene);
+    const previousScene = currentScene;
+    const previousVariant = selectedSceneVariantValue();
+    const previousCamera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+    try {
+      if (sceneChanged) {
+        el.scene.value = wsScene;
+        setSceneBrowserSelectedFile(wsScene);
+        localStorage.setItem(LAST_SCENE_KEY, wsScene);
+        updateSceneDependencyPill(wsScene);
+      }
       await loadVariants(wsScene);
-      await loadCameras(wsScene);
-    }
-    await loadSceneSource(wsScene);
-    if (visualEditor && editorViewMode === "visual" && sceneChanged) {
-      try {
-        await loadVisualSceneFromSelected();
-      } catch (err) {
-        appendLog(`visual load error: ${err.message}`);
+      const variantName = selectedSceneVariantValue();
+      await Promise.all([
+        loadCameras(wsScene, variantName),
+        loadSceneSource(wsScene),
+      ]);
+      if (visualEditor && editorViewMode === "visual" && sceneChanged) {
+        try {
+          await loadVisualSceneFromSelected();
+        } catch (err) {
+          appendLog(`visual load error: ${err.message}`);
+        }
+      }
+      if (editorViewMode === "graph") renderSceneGraphView();
+    } catch (err) {
+      appendLog(`workspace scene load error (${wsScene}): ${err.message}`);
+      if (previousScene && hasSceneOption(previousScene)) {
+        el.scene.value = previousScene;
+        setSceneBrowserSelectedFile(previousScene);
+        localStorage.setItem(LAST_SCENE_KEY, previousScene);
+        updateSceneDependencyPill(previousScene);
+        try {
+          await loadVariants(previousScene, previousVariant);
+          await loadCameras(previousScene, previousVariant);
+          if (previousCamera && cameraCatalogHasName(previousCamera)) el.camera.value = previousCamera;
+          await loadSceneSource(previousScene);
+        } catch (rollbackErr) {
+          appendLog(`workspace rollback error: ${rollbackErr.message}`);
+        }
       }
     }
-    if (editorViewMode === "graph") renderSceneGraphView();
   }
 
   await restorePreviewForActiveWorkspace();
