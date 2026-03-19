@@ -14,8 +14,8 @@ camera = {
     default = {
         type     = thin-lens
         fov      = 42
-        position = vec3(0,4.2,-6.8)
-        target   = vec3(0.0,1.3,1.4)
+        position = vec3(3,4,3)
+        target   = vec3(0,0,0)
         up       = vec3(0,1,0)
     }
 }
@@ -26,15 +26,14 @@ geometry = {
         source     = gen(plane)
         resolution = 1
         modifiers = {
-            scale       = vec3(26,1,30)
-            translation = vec3(0,0,11)
+            scale       = vec3(50,1,50)
+            translation = vec3(0,-1,0)
         }
     }
 
     bulb_mandel = {
         type       = mandelbulb
-        position   = vec3(0.0,1.25,1.4)
-        radius     = 1.65
+        radius     = 1
         resolution = 20
         power      = 8.0
         bailout    = 4.0
@@ -42,12 +41,10 @@ geometry = {
 
     bulb_julia = {
         type       = julia
-        position   = vec3(0.0,1.25,1.4)
-        radius     = 1.65
-        resolution = 22
-        power      = 8.0
-        bailout    = 4.0
-        julia_c    = vec3(-0.33,0.66,0.00)
+	resolution = 32
+	power      = 2.0
+	bailout    = 8.0
+	julia_c    = vec3(-0.12, 0.74, 0.28)
     }
 
     key_light = {
