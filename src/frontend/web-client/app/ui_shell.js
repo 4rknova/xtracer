@@ -177,6 +177,75 @@ function setSidebarCardVisibility(card, visible) {
   }, 180);
 }
 
+function getSidebarVisibleCards(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll("details.control-section"))
+    .filter((card) => !card.hidden && !card.classList.contains("is-visibility-hidden"));
+}
+
+function getSidebarCardTitle(card) {
+  if (!card) return "";
+  const titleNode = card.querySelector(".control-card-title");
+  const raw = titleNode ? titleNode.textContent : card.id;
+  return String(raw || "").trim();
+}
+
+function refreshMobileCardSwitcher() {
+  const container = document.querySelector(".panel-controls");
+  if (!container) return;
+  const allCards = Array.from(container.querySelectorAll("details.control-section"));
+
+  let switcher = container.querySelector(".mobile-card-switcher");
+  if (!switcher) {
+    switcher = document.createElement("div");
+    switcher.className = "mobile-card-switcher";
+    switcher.hidden = true;
+    switcher.setAttribute("aria-label", "Control sections");
+    container.insertBefore(switcher, container.firstChild);
+  }
+
+  if (!isMobileTabMenuViewport()) {
+    switcher.hidden = true;
+    switcher.innerHTML = "";
+    allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    return;
+  }
+
+  const cards = getSidebarVisibleCards(container);
+  if (cards.length <= 1) {
+    switcher.hidden = true;
+    switcher.innerHTML = "";
+    allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    return;
+  }
+
+  const openCard = cards.find((card) => card.open) || cards[0];
+  cards.forEach((card) => {
+    card.classList.toggle("mobile-card-hidden", card !== openCard);
+  });
+  switcher.hidden = false;
+  switcher.innerHTML = "";
+  cards.forEach((card) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "mobile-card-chip";
+    chip.textContent = getSidebarCardTitle(card);
+    chip.classList.toggle("is-active", card === openCard);
+    chip.setAttribute("aria-pressed", card === openCard ? "true" : "false");
+    chip.addEventListener("click", () => {
+      if (!isMobileTabMenuViewport()) return;
+      if (card.open) return;
+      const summary = card.querySelector("summary");
+      if (summary) summary.click();
+      else card.open = true;
+      requestAnimationFrame(() => {
+        card.scrollIntoView({ block: "start", inline: "nearest", behavior: "smooth" });
+      });
+    });
+    switcher.appendChild(chip);
+  });
+}
+
 function applySidebarCardLayout(mode) {
   if (!sidebarCardVisibility || typeof sidebarCardVisibility !== "object") return;
   const container = document.querySelector(".panel-controls");
@@ -213,10 +282,36 @@ function applySidebarCardLayout(mode) {
   if (visibleCards.length > 0 && !visibleCards.some((card) => card.open)) {
     visibleCards[0].open = true;
   }
+  requestAnimationFrame(refreshMobileCardSwitcher);
 }
 
 function isMobileTabMenuViewport() {
-  return !!(window.matchMedia && window.matchMedia("(max-width: 720px)").matches);
+  // Keep mobile interaction behavior narrower than layout breakpoint.
+  return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+}
+
+function syncMobileLogsViewport() {
+  const pane = el && el.paneLogs;
+  if (!pane) return;
+  const panel = pane.querySelector(".log-panel");
+  if (!panel) return;
+
+  const isMobile = isMobileTabMenuViewport();
+  const isActive = pane.classList.contains("active");
+  if (!isMobile || !isActive || !el.mainTabs) {
+    panel.style.height = "";
+    panel.style.maxHeight = "";
+    return;
+  }
+
+  const panelRect = panel.getBoundingClientRect();
+  const tabsRect = el.mainTabs.getBoundingClientRect();
+  const gapPx = 8;
+  const minHeightPx = 160;
+  const available = Math.floor(tabsRect.top - panelRect.top - gapPx);
+  const target = Math.max(minHeightPx, available);
+  panel.style.height = `${target}px`;
+  panel.style.maxHeight = `${target}px`;
 }
 
 function setMainMenuOpen(open) {
@@ -269,6 +364,10 @@ function setActiveTab(mode) {
     });
   }
   if (isMobileTabMenuViewport()) setMainMenuOpen(false);
+  requestAnimationFrame(() => {
+    refreshMobileCardSwitcher();
+    syncMobileLogsViewport();
+  });
 }
 
 function initSidebarAccordion() {
@@ -335,10 +434,31 @@ function initSidebarAccordion() {
     }, 220);
   };
 
-  // Enforce one-open initial state.
-  const firstOpen = cards.find((card) => card.open) || cards[0];
+  const enforceSingleOpen = () => {
+    const firstOpen = cards.find((card) => card.open) || cards[0];
+    cards.forEach((card) => {
+      card.open = card === firstOpen;
+    });
+    refreshMobileCardSwitcher();
+    syncMobileLogsViewport();
+  };
+
+  enforceSingleOpen();
+  window.addEventListener("resize", () => {
+    enforceSingleOpen();
+    syncMobileLogsViewport();
+  });
   cards.forEach((card) => {
-    card.open = card === firstOpen;
+    card.addEventListener("toggle", () => {
+      if (card.open) {
+        cards.forEach((other) => {
+          if (other !== card) other.open = false;
+        });
+      } else if (!cards.some((other) => other.open) && cards[0]) {
+        cards[0].open = true;
+      }
+      requestAnimationFrame(refreshMobileCardSwitcher);
+    });
   });
 
   cards.forEach((card) => {
@@ -355,6 +475,7 @@ function initSidebarAccordion() {
         animateClose(other);
       });
       animateOpen(card);
+      requestAnimationFrame(refreshMobileCardSwitcher);
     });
   });
 }
@@ -554,6 +675,7 @@ function loadUIOptions() {
         if (typeof parsed.message === "boolean") logFilters.message = parsed.message;
         if (typeof parsed.warning === "boolean") logFilters.warning = parsed.warning;
         if (typeof parsed.error === "boolean") logFilters.error = parsed.error;
+        if (typeof parsed.ui === "boolean") logFilters.ui = parsed.ui;
       }
     }
   } catch (_) {

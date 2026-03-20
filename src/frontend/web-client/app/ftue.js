@@ -198,8 +198,11 @@ function positionFtueDialogForTarget(target, preferredPlacement) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const cardRect = el.ftueDialog.getBoundingClientRect();
-  const cardW = Math.max(320, Math.round(cardRect.width) || Math.min(684, Math.floor(vw * 0.92)));
-  const cardH = Math.max(220, Math.round(cardRect.height) || el.ftueDialog.offsetHeight || 220);
+  const mobile = vw <= 700;
+  const minCardW = mobile ? 220 : 320;
+  const minCardH = mobile ? 150 : 220;
+  const cardW = Math.max(minCardW, Math.round(cardRect.width) || Math.min(684, Math.floor(vw * 0.92)));
+  const cardH = Math.max(minCardH, Math.round(cardRect.height) || el.ftueDialog.offsetHeight || minCardH);
   const placements = [preferredPlacement, "right", "left", "bottom", "top"]
     .filter((v, i, a) => !!v && a.indexOf(v) === i);
 

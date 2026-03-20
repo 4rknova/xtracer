@@ -1021,7 +1021,7 @@ function renderResolutionPresetList() {
     const modeLabel = mode === "landscape" ? "Landscape" : (mode === "portrait" ? "Portrait" : (mode === "square" ? "Square" : "Custom"));
     btn.innerHTML = ""
       + `<span class="resolution-cell resolution-name">${name}</span>`
-      + `<span class="resolution-cell resolution-mode"><span class="resolution-orient is-${mode}" aria-hidden="true"></span><span>${modeLabel}</span></span>`
+      + `<span class="resolution-cell resolution-mode" title="${modeLabel}" aria-label="${modeLabel}"><span class="resolution-orient is-${mode}" aria-hidden="true"></span></span>`
       + `<span class="resolution-cell resolution-aspect">${aspect}</span>`
       + `<span class="resolution-cell resolution-width">${Number(width) > 0 ? width : "-"}</span>`
       + `<span class="resolution-cell resolution-height">${Number(height) > 0 ? height : "-"}</span>`;
