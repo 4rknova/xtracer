@@ -35,6 +35,7 @@ const el = {
   logFilterMessage: $("logFilterMessage"),
   logFilterWarning: $("logFilterWarning"),
   logFilterError: $("logFilterError"),
+  logFilterUi: $("logFilterUi"),
   logOutput: $("logOutput"),
   aboutVersionRow: $("aboutVersionRow"),
   aboutVersion: $("aboutVersion"),
@@ -251,6 +252,7 @@ const logFilters = {
   message: true,
   warning: true,
   error: true,
+  ui: true,
 };
 let renderActive = false;
 let renderStartMs = 0;

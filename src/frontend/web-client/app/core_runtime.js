@@ -36,9 +36,8 @@ function fontSizePresetFromScale(scale) {
   return Number(scale) > 1.02 ? FONT_SIZE_PRESET_LARGE : FONT_SIZE_PRESET_DEFAULT;
 }
 
-function nowStamp() {
-  const d = new Date();
-  return d.toLocaleTimeString();
+function nowIsoStamp() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 function scrollLogToBottom(force) {
@@ -72,6 +71,13 @@ function isLogLevelEnabled(level) {
   return !!logFilters.message;
 }
 
+function isUiLogEntry(entry) {
+  if (!entry) return false;
+  if (entry.source === "ui") return true;
+  const line = String(entry.line || "");
+  return /^#UI\s+\S+\s+UI(\s|$)/.test(line) || /^\[UI [^\]]+\]/.test(line);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -83,29 +89,19 @@ function renderLogLineHtml(entry) {
   const line = String((entry && entry.line) || "");
   const level = normalizeLogLevel(entry && entry.level);
 
-  // Backend format: #<id> <iso-ts> <LEVEL> <message...>
-  const backendMatch = line.match(/^#(\d+)\s+(\S+)\s+([A-Z_]+)\s*(.*)$/);
+  // Standard format: #<id-or-type> <iso-ts> <LEVEL> <message...>
+  const backendMatch = line.match(/^#([A-Za-z0-9_-]+)\s+(\S+)\s+([A-Z_]+)\s*(.*)$/);
   if (backendMatch) {
     const id = backendMatch[1];
     const tsRaw = backendMatch[2];
     const ts = tsRaw.replace("T", " ").replace(/Z$/, "");
     const lvl = backendMatch[3];
     const msg = backendMatch[4] || "";
+    const idClass = id.toUpperCase() === "UI" ? "log-token-ui" : "log-token-id";
     return `<span class="log-line log-line-backend log-level-${level}">`
-      + `<span class="log-token-id">#${escapeHtml(id)}</span>`
+      + `<span class="${idClass}">#${escapeHtml(id)}</span>`
       + `<span class="log-token-ts">${escapeHtml(ts)}</span>`
       + `<span class="log-token-level">${escapeHtml(lvl)}</span>`
-      + `<span class="log-token-msg">${escapeHtml(msg)}</span>`
-      + `</span>`;
-  }
-
-  // UI format: [UI hh:mm:ss] <message...>
-  const uiMatch = line.match(/^(\[UI [^\]]+\])\s*(.*)$/);
-  if (uiMatch) {
-    const tag = uiMatch[1];
-    const msg = uiMatch[2] || "";
-    return `<span class="log-line log-line-ui log-level-${level}">`
-      + `<span class="log-token-ui">${escapeHtml(tag)}</span>`
       + `<span class="log-token-msg">${escapeHtml(msg)}</span>`
       + `</span>`;
   }
@@ -116,18 +112,22 @@ function renderLogLineHtml(entry) {
 function renderLogOutput() {
   if (!el.logOutput) return;
   const html = logEntries
-    .filter((entry) => isLogLevelEnabled(entry.level))
+    .filter((entry) => {
+      if (isUiLogEntry(entry)) return !!logFilters.ui;
+      return isLogLevelEnabled(entry.level);
+    })
     .map((entry) => renderLogLineHtml(entry))
     .join("");
   el.logOutput.innerHTML = html;
   scrollLogToBottom(false);
 }
 
-function appendLogEntry(level, line) {
+function appendLogEntry(level, line, source) {
   if (!line) return;
   logEntries.push({
     level: normalizeLogLevel(level),
     line: String(line),
+    source: String(source || ""),
   });
   if (logEntries.length > LOG_HISTORY_LIMIT) {
     logEntries.splice(0, logEntries.length - LOG_HISTORY_LIMIT);
@@ -137,7 +137,7 @@ function appendLogEntry(level, line) {
 
 function appendLog(message) {
   if (!message) return;
-  appendLogEntry("message", `[UI ${nowStamp()}] ${message}`);
+  appendLogEntry("message", `#UI ${nowIsoStamp()} UI ${message}`, "ui");
 }
 
 function appendBackendLog(entry) {
@@ -146,7 +146,7 @@ function appendBackendLog(entry) {
   const level = normalizeLogLevel(entry.level || "info");
   const levelLabel = String(entry.level || "info").toUpperCase();
   const msg = entry.message || "";
-  appendLogEntry(level, `#${id} ${ts} ${levelLabel} ${msg}`);
+  appendLogEntry(level, `#${id} ${ts} ${levelLabel} ${msg}`, "backend");
 }
 
 function setStatus(text) {

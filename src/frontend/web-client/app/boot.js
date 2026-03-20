@@ -546,6 +546,11 @@ async function boot() {
       if (!graphView.userAdjusted) fitGraphToViewport();
       applyGraphTransform();
     }
+    if (typeof syncMobileLogsViewport === "function") {
+      requestAnimationFrame(() => {
+        syncMobileLogsViewport();
+      });
+    }
   });
 
   el.pollInterval.addEventListener("change", () => {
@@ -639,6 +644,11 @@ async function boot() {
     if (typeof fitAboutLicenseText === "function") {
       requestAnimationFrame(() => {
         fitAboutLicenseText();
+      });
+    }
+    if (typeof syncMobileLogsViewport === "function") {
+      requestAnimationFrame(() => {
+        syncMobileLogsViewport();
       });
     }
   });
@@ -866,6 +876,7 @@ async function boot() {
   bindLogFilter(el.logFilterMessage, "message");
   bindLogFilter(el.logFilterWarning, "warning");
   bindLogFilter(el.logFilterError, "error");
+  bindLogFilter(el.logFilterUi, "ui");
 
   el.sceneSource.addEventListener("input", () => {
     updateEditorMetrics();

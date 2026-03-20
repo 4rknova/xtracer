@@ -35,13 +35,24 @@
           <span class="menu-toggle-bar" aria-hidden="true"></span>
         </button>
         <nav class="tabs" id="mainTabs">
-          <button class="tab active" id="tabScene" type="button">Scene</button>
-          <button class="tab" id="tabRender" type="button">Render</button>
-          <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
-          <button class="tab" id="tabVisual" type="button">Editor</button>
-          <button class="tab" id="tabLogs" type="button">Logs</button>
+          <button class="tab active" id="tabScene" type="button">
+            <span class="tab-label">Scene</span>
+          </button>
+          <button class="tab" id="tabRender" type="button">
+            <span class="tab-label">Render</span>
+          </button>
+          <button class="tab" id="tabWorkspaces" type="button">
+            <span class="tab-label tab-label-desktop">Workspaces</span>
+            <span class="tab-label tab-label-mobile">Spaces</span>
+          </button>
+          <button class="tab" id="tabVisual" type="button">
+            <span class="tab-label">Editor</span>
+          </button>
+          <button class="tab" id="tabLogs" type="button">
+            <span class="tab-label">Logs</span>
+          </button>
           <button class="tab" id="tabSettings" type="button" aria-label="Settings">
-            <span class="tab-icon" aria-hidden="true">&#9881;</span>
+            <span class="tab-label">Settings</span>
           </button>
         </nav>
         <img class="brand-logo" src="/logo.svg" alt="XTRACER">
@@ -489,6 +500,10 @@
                     <label class="inline-check">
                       <input id="logFilterError" type="checkbox" checked>
                       Error
+                    </label>
+                    <label class="inline-check">
+                      <input id="logFilterUi" type="checkbox" checked>
+                      UI
                     </label>
                   </section>
                   <section class="settings-section">
