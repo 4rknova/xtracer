@@ -22,7 +22,19 @@
   <main class="page">
     <div class="masthead">
       <header class="topbar">
-        <nav class="tabs">
+        <button
+          id="mainMenuToggle"
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mainTabs"
+          aria-label="Toggle main menu"
+        >
+          <span class="menu-toggle-bar" aria-hidden="true"></span>
+          <span class="menu-toggle-bar" aria-hidden="true"></span>
+          <span class="menu-toggle-bar" aria-hidden="true"></span>
+        </button>
+        <nav class="tabs" id="mainTabs">
           <button class="tab active" id="tabScene" type="button">Scene</button>
           <button class="tab" id="tabRender" type="button">Render</button>
           <button class="tab" id="tabWorkspaces" type="button">Workspaces</button>
@@ -95,13 +107,27 @@
                 <span class="control-card-note">Output dimensions</span>
               </summary>
               <div class="control-section-body">
-                <label>Resolution Preset
-                  <select id="resolutionPreset"></select>
-                </label>
-                <div class="row">
-                  <label>Width <input id="width" type="number" min="32" max="8192" value="500"></label>
-                  <label>Height <input id="height" type="number" min="32" max="8192" value="500"></label>
-                </div>
+                <section class="frame-section">
+                  <h4 class="frame-section-title">Resolution Presets</h4>
+                  <div class="resolution-preset-table" role="group" aria-label="Resolution presets">
+                    <div class="resolution-preset-head" aria-hidden="true">
+                      <span>Name</span>
+                      <span>Mode</span>
+                      <span>Aspect</span>
+                      <span>W</span>
+                      <span>H</span>
+                    </div>
+                    <div id="resolutionPresetList" class="resolution-preset-list" role="listbox" aria-label="Resolution preset list"></div>
+                  </div>
+                  <select id="resolutionPreset" hidden aria-hidden="true" tabindex="-1"></select>
+                </section>
+                <section class="frame-section">
+                  <h4 class="frame-section-title">Custom Dimensions</h4>
+                  <div class="row">
+                    <label>Width <input id="width" type="number" min="32" max="8192" value="500"></label>
+                    <label>Height <input id="height" type="number" min="32" max="8192" value="500"></label>
+                  </div>
+                </section>
               </div>
             </details>
 
@@ -827,6 +853,7 @@
         <button id="ftueSkipBtn" class="ftue-skip-btn" type="button" aria-label="Skip tutorial">Skip tutorial</button>
       </div>
       <div class="ftue-content">
+        <img class="ftue-hero" src="/res/ftue.png" alt="XTRACER tutorial preview">
         <h2 id="ftueTitle" class="ftue-title">Welcome to XTRACER</h2>
         <p id="ftueBody" class="ftue-body"></p>
       </div>
