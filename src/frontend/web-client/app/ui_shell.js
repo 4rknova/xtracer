@@ -190,6 +190,28 @@ function getSidebarCardTitle(card) {
   return String(raw || "").trim();
 }
 
+function scheduleMobileLogsViewportSync() {
+  if (scheduleMobileLogsViewportSync._rafId) {
+    cancelAnimationFrame(scheduleMobileLogsViewportSync._rafId);
+    scheduleMobileLogsViewportSync._rafId = 0;
+  }
+  if (scheduleMobileLogsViewportSync._timerId) {
+    clearTimeout(scheduleMobileLogsViewportSync._timerId);
+    scheduleMobileLogsViewportSync._timerId = 0;
+  }
+
+  scheduleMobileLogsViewportSync._rafId = requestAnimationFrame(() => {
+    scheduleMobileLogsViewportSync._rafId = 0;
+    syncMobileLogsViewport();
+  });
+
+  // Re-sync after accordion/card visibility animations settle.
+  scheduleMobileLogsViewportSync._timerId = setTimeout(() => {
+    scheduleMobileLogsViewportSync._timerId = 0;
+    syncMobileLogsViewport();
+  }, 260);
+}
+
 function refreshMobileCardSwitcher() {
   const container = document.querySelector(".panel-controls");
   if (!container) return;
@@ -208,6 +230,7 @@ function refreshMobileCardSwitcher() {
     switcher.hidden = true;
     switcher.innerHTML = "";
     allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    scheduleMobileLogsViewportSync();
     return;
   }
 
@@ -216,6 +239,7 @@ function refreshMobileCardSwitcher() {
     switcher.hidden = true;
     switcher.innerHTML = "";
     allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    scheduleMobileLogsViewportSync();
     return;
   }
 
@@ -244,6 +268,8 @@ function refreshMobileCardSwitcher() {
     });
     switcher.appendChild(chip);
   });
+
+  scheduleMobileLogsViewportSync();
 }
 
 function applySidebarCardLayout(mode) {
@@ -366,7 +392,7 @@ function setActiveTab(mode) {
   if (isMobileTabMenuViewport()) setMainMenuOpen(false);
   requestAnimationFrame(() => {
     refreshMobileCardSwitcher();
-    syncMobileLogsViewport();
+    scheduleMobileLogsViewportSync();
   });
 }
 
@@ -440,13 +466,13 @@ function initSidebarAccordion() {
       card.open = card === firstOpen;
     });
     refreshMobileCardSwitcher();
-    syncMobileLogsViewport();
+    scheduleMobileLogsViewportSync();
   };
 
   enforceSingleOpen();
   window.addEventListener("resize", () => {
     enforceSingleOpen();
-    syncMobileLogsViewport();
+    scheduleMobileLogsViewportSync();
   });
   cards.forEach((card) => {
     card.addEventListener("toggle", () => {
@@ -457,7 +483,10 @@ function initSidebarAccordion() {
       } else if (!cards.some((other) => other.open) && cards[0]) {
         cards[0].open = true;
       }
-      requestAnimationFrame(refreshMobileCardSwitcher);
+      requestAnimationFrame(() => {
+        refreshMobileCardSwitcher();
+        scheduleMobileLogsViewportSync();
+      });
     });
   });
 
@@ -475,7 +504,10 @@ function initSidebarAccordion() {
         animateClose(other);
       });
       animateOpen(card);
-      requestAnimationFrame(refreshMobileCardSwitcher);
+      requestAnimationFrame(() => {
+        refreshMobileCardSwitcher();
+        scheduleMobileLogsViewportSync();
+      });
     });
   });
 }
