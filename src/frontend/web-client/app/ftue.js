@@ -172,7 +172,7 @@ function applyFtueSpotlight(target) {
     return;
   }
   const rect = target.getBoundingClientRect();
-  const pad = 6;
+  const pad = 5;
   const x = Math.max(4, rect.left - pad);
   const y = Math.max(4, rect.top - pad);
   const w = Math.max(16, rect.width + (pad * 2));
@@ -303,38 +303,76 @@ function getFtueFocusable() {
     .filter((node) => !node.hasAttribute("disabled") && node.getAttribute("aria-hidden") !== "true");
 }
 
+function isFtueDialogTarget(node) {
+  if (!el.ftueDialog || !node || !(node instanceof Node)) return false;
+  return el.ftueDialog.contains(node);
+}
+
+function onFtueFocusIn(ev) {
+  if (!ftueOpen) return;
+  if (isFtueDialogTarget(ev.target)) return;
+  const focusable = getFtueFocusable();
+  safeFocus(focusable[0] || el.ftueNextBtn || el.ftueSkipBtn);
+}
+
 function onFtueKeydown(ev) {
   if (!ftueOpen) return;
+
+  if (!isFtueDialogTarget(ev.target)) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
   if (ev.key === "Escape") {
     ev.preventDefault();
+    ev.stopPropagation();
     closeFtueTutorial(true);
     return;
   }
   if (ev.key === "ArrowRight") {
     ev.preventDefault();
+    ev.stopPropagation();
     nextFtueStep();
     return;
   }
   if (ev.key === "ArrowLeft") {
     ev.preventDefault();
+    ev.stopPropagation();
     prevFtueStep();
     return;
   }
-  if (ev.key !== "Tab") return;
+  if (ev.key !== "Tab") {
+    ev.stopPropagation();
+    return;
+  }
   const focusable = getFtueFocusable();
-  if (focusable.length === 0) return;
+  if (focusable.length === 0) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    return;
+  }
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
   const current = document.activeElement;
-  if (ev.shiftKey && current === first) {
+  if (ev.shiftKey && (current === first || !isFtueDialogTarget(current))) {
     ev.preventDefault();
+    ev.stopPropagation();
     safeFocus(last);
     return;
   }
   if (!ev.shiftKey && current === last) {
     ev.preventDefault();
+    ev.stopPropagation();
     safeFocus(first);
+    return;
   }
+  if (!isFtueDialogTarget(current)) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    safeFocus(first);
+    return;
+  }
+  ev.stopPropagation();
 }
 
 function openFtueTutorial(source) {
@@ -352,7 +390,8 @@ function openFtueTutorial(source) {
   ftueLastFocused = document.activeElement;
   el.ftueOverlay.hidden = false;
   el.ftueOverlay.setAttribute("aria-hidden", "false");
-  document.addEventListener("keydown", onFtueKeydown);
+  document.addEventListener("keydown", onFtueKeydown, true);
+  document.addEventListener("focusin", onFtueFocusIn, true);
   window.addEventListener("resize", queueFtueStepLayout);
   window.addEventListener("scroll", queueFtueStepLayout, true);
   renderFtueStep();
@@ -365,7 +404,8 @@ function closeFtueTutorial(markCompleted) {
   ftueOpen = false;
   el.ftueOverlay.hidden = true;
   el.ftueOverlay.setAttribute("aria-hidden", "true");
-  document.removeEventListener("keydown", onFtueKeydown);
+  document.removeEventListener("keydown", onFtueKeydown, true);
+  document.removeEventListener("focusin", onFtueFocusIn, true);
   window.removeEventListener("resize", queueFtueStepLayout);
   window.removeEventListener("scroll", queueFtueStepLayout, true);
   if (ftueLayoutTimer) {

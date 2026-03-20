@@ -2300,6 +2300,25 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "logo.svg"), "image/svg+xml", res);
     });
 
+    server.Get(R"(/res/([A-Za-z0-9_.-]+\.png))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        const std::string direct_path = join_path("res", name);
+        if (file_exists(direct_path)) {
+            serve_static_file(direct_path, "image/png", res);
+            return;
+        }
+
+        const std::string web_res_path = join_path(join_path(web_root, "res"), name);
+        if (file_exists(web_res_path)) {
+            serve_static_file(web_res_path, "image/png", res);
+            return;
+        }
+
+        const std::string repo_root = join_path(join_path(join_path(web_root, ".."), ".."), "..");
+        const std::string repo_res_path = join_path(join_path(repo_root, "res"), name);
+        serve_static_file(repo_res_path, "image/png", res);
+    });
+
     server.Get("/license.txt", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "license.txt"), "text/plain; charset=utf-8", res);
     });
