@@ -696,7 +696,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
     this.viewportEl.addEventListener("pointerdown", function (e) {
       if (e.pointerType === "touch") {
+        e.preventDefault();
         setTouchPoint(e.pointerId, e.clientX, e.clientY);
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
         var touchCount = touchPointCount();
         if (touchCount >= 2) {
           beginTwoFingerGesture();
@@ -734,6 +736,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.viewportEl.addEventListener("pointermove", function (e) {
       if (e.pointerType === "touch") {
         if (!Object.prototype.hasOwnProperty.call(self.touchPoints, e.pointerId)) return;
+        e.preventDefault();
         setTouchPoint(e.pointerId, e.clientX, e.clientY);
         var touchCount = touchPointCount();
         if (touchCount >= 2) {
@@ -777,6 +780,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     });
     function endDrag(e) {
       if (e.pointerType === "touch") {
+        e.preventDefault();
         var wasTapCandidate = self.dragMode === "touch_orbit"
           && self.dragPointerId === e.pointerId
           && !self.dragMoved;
@@ -811,6 +815,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         self.dragMoved = false;
         self.touchLastCenter = null;
         self.touchLastDistance = 0;
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
         return;
       }
       if (self.dragPointerId !== e.pointerId) return;

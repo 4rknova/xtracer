@@ -524,6 +524,7 @@ async function boot() {
     queueWorkspaceSettingsSave();
   };
   el.resolutionPreset.addEventListener("change", () => {
+    if (typeof renderResolutionPresetList === "function") renderResolutionPresetList();
     if (el.resolutionPreset.value === "custom") return;
     const index = parseInt(el.resolutionPreset.value, 10);
     if (!Number.isFinite(index) || index < 0 || index >= resolutionPresets.length) return;
@@ -618,6 +619,32 @@ async function boot() {
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.mainMenuToggle) {
+    el.mainMenuToggle.addEventListener("click", () => {
+      const topbar = document.querySelector(".topbar");
+      const isOpen = !!(topbar && topbar.classList.contains("menu-open"));
+      setMainMenuOpen(!isOpen);
+    });
+  }
+  document.addEventListener("click", (event) => {
+    if (!isMobileTabMenuViewport()) return;
+    const topbar = document.querySelector(".topbar");
+    if (!topbar || !topbar.classList.contains("menu-open")) return;
+    const target = event.target instanceof Node ? event.target : null;
+    if (target && topbar.contains(target)) return;
+    setMainMenuOpen(false);
+  });
+  window.addEventListener("resize", () => {
+    if (!isMobileTabMenuViewport()) setMainMenuOpen(false);
+    if (typeof fitAboutLicenseText === "function") {
+      requestAnimationFrame(() => {
+        fitAboutLicenseText();
+      });
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMainMenuOpen(false);
+  });
   if (el.editorView3dBtn) {
     el.editorView3dBtn.addEventListener("click", () => setEditorViewMode("visual"));
   }

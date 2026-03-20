@@ -466,6 +466,7 @@ async function deleteSceneFile(sceneFile) {
 
 function renderSceneFileBrowser() {
   if (!el.sceneFileList) return;
+  const preservedScrollTop = el.sceneFileList.scrollTop;
   const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
   if (!sceneBrowserSelectedFile || !sceneCatalogHasFile(sceneBrowserSelectedFile)) {
     sceneBrowserSelectedFile = activeScene;
@@ -540,8 +541,12 @@ function renderSceneFileBrowser() {
 
     button.appendChild(body);
     button.addEventListener("click", () => {
+      if (sceneBrowserSelectedFile === sceneFile) {
+        activateSceneFile(sceneFile);
+        return;
+      }
       sceneBrowserSelectedFile = sceneFile;
-      renderSceneFileBrowser();
+      syncSceneFileBrowserSelectionUi();
     });
     button.addEventListener("dblclick", () => {
       activateSceneFile(sceneFile);
@@ -549,7 +554,7 @@ function renderSceneFileBrowser() {
     button.addEventListener("contextmenu", (evt) => {
       evt.preventDefault();
       sceneBrowserSelectedFile = sceneFile;
-      renderSceneFileBrowser();
+      syncSceneFileBrowserSelectionUi();
       openSceneContextMenu(sceneFile, evt.clientX, evt.clientY);
     });
     button.addEventListener("keydown", (evt) => {
@@ -561,13 +566,39 @@ function renderSceneFileBrowser() {
 
     el.sceneFileList.appendChild(button);
   });
+
+  // Keep viewport stable on mobile/desktop when a click re-renders the list.
+  const maxScrollTop = Math.max(0, el.sceneFileList.scrollHeight - el.sceneFileList.clientHeight);
+  el.sceneFileList.scrollTop = Math.max(0, Math.min(preservedScrollTop, maxScrollTop));
+}
+
+function syncSceneFileBrowserSelectionUi() {
+  if (!el.sceneFileList) return;
+  const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const items = el.sceneFileList.querySelectorAll(".scene-file-item[data-scene]");
+  if (!items || items.length === 0) return;
+  items.forEach((button) => {
+    const sceneFile = String(button.dataset && button.dataset.scene ? button.dataset.scene : "").trim();
+    const isSelected = sceneBrowserSelectedFile === sceneFile;
+    const isActive = activeScene === sceneFile;
+    button.setAttribute("aria-selected", isSelected ? "true" : "false");
+    button.classList.toggle("is-selected", isSelected);
+    button.classList.toggle("is-active", isActive);
+  });
 }
 
 function setSceneBrowserSelectedFile(sceneFile) {
   const name = String(sceneFile || "").trim();
   if (name && sceneCatalogHasFile(name)) sceneBrowserSelectedFile = name;
   else sceneBrowserSelectedFile = "";
-  renderSceneFileBrowser();
+  const renderedItems = el.sceneFileList
+    ? el.sceneFileList.querySelectorAll(".scene-file-item[data-scene]").length
+    : 0;
+  if (!el.sceneFileList || renderedItems !== sceneCatalog.length) {
+    renderSceneFileBrowser();
+    return;
+  }
+  syncSceneFileBrowserSelectionUi();
 }
 
 function activateSceneFile(sceneFile) {
@@ -575,7 +606,7 @@ function activateSceneFile(sceneFile) {
   if (!name || !sceneCatalogHasFile(name) || !el.scene) return;
   sceneBrowserSelectedFile = name;
   if (String(el.scene.value || "").trim() === name) {
-    updateSceneDependencyPill(name);
+    syncSceneFileBrowserSelectionUi();
     return;
   }
   el.scene.value = name;
@@ -955,17 +986,75 @@ function presetId(index) {
   return String(index).padStart(2, "0");
 }
 
-function formatResolutionPresetLabel(index, preset, descWidth) {
-  const baseDesc = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
-  const paddedDesc = baseDesc.padEnd(Math.max(1, descWidth), " ");
-  const sizeLabel = `${preset.width}x${preset.height}`;
-  return `${paddedDesc}   ${sizeLabel}`;
+function formatResolutionAspect(width, height) {
+  const w = Number(width);
+  const h = Number(height);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return "-";
+  if (Math.abs(w - h) < 0.0001) return "1:1";
+  const fmt = (v) => {
+    const rounded = Math.round(v * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  };
+  if (w > h) return `${fmt(w / h)}:1`;
+  return `1:${fmt(h / w)}`;
+}
+
+function orientationMode(width, height) {
+  if (width > height) return "landscape";
+  if (height > width) return "portrait";
+  return "square";
+}
+
+function renderResolutionPresetList() {
+  if (!el.resolutionPresetList) return;
+  const selected = String(el.resolutionPreset ? el.resolutionPreset.value : "custom");
+  el.resolutionPresetList.innerHTML = "";
+
+  const addRow = (value, name, width, height) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "resolution-preset-row";
+    btn.setAttribute("role", "option");
+    btn.setAttribute("data-value", value);
+    const mode = (Number(width) > 0 && Number(height) > 0) ? orientationMode(width, height) : "custom";
+    const aspect = (Number(width) > 0 && Number(height) > 0) ? formatResolutionAspect(width, height) : "-";
+    const modeLabel = mode === "landscape" ? "Landscape" : (mode === "portrait" ? "Portrait" : (mode === "square" ? "Square" : "Custom"));
+    btn.innerHTML = ""
+      + `<span class="resolution-cell resolution-name">${name}</span>`
+      + `<span class="resolution-cell resolution-mode"><span class="resolution-orient is-${mode}" aria-hidden="true"></span><span>${modeLabel}</span></span>`
+      + `<span class="resolution-cell resolution-aspect">${aspect}</span>`
+      + `<span class="resolution-cell resolution-width">${Number(width) > 0 ? width : "-"}</span>`
+      + `<span class="resolution-cell resolution-height">${Number(height) > 0 ? height : "-"}</span>`;
+    const isActive = String(value) === selected;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    btn.addEventListener("click", () => {
+      if (!el.resolutionPreset) return;
+      if (el.resolutionPreset.value === String(value)) return;
+      el.resolutionPreset.value = String(value);
+      el.resolutionPreset.dispatchEvent(new Event("change", { bubbles: true }));
+      renderResolutionPresetList();
+    });
+    el.resolutionPresetList.appendChild(btn);
+  };
+
+  addRow("custom", "Custom", 0, 0);
+  resolutionPresets.forEach((preset, index) => {
+    const name = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+    addRow(String(index), name, preset.width, preset.height);
+  });
+
+  const active = el.resolutionPresetList.querySelector(".resolution-preset-row.is-active");
+  if (active && active.scrollIntoView) {
+    active.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+  }
 }
 
 function syncResolutionPresetFromInputs() {
   const { width, height } = currentRenderSize();
   const index = resolutionPresets.findIndex((p) => p.width === width && p.height === height);
   el.resolutionPreset.value = index >= 0 ? String(index) : "custom";
+  renderResolutionPresetList();
 }
 
 function syncVisualFrameAspect() {
@@ -984,18 +1073,13 @@ async function loadResolutionPresets() {
 
   el.resolutionPreset.innerHTML = "";
   addOption(el.resolutionPreset, "custom", "Custom");
-  const descWidth = resolutionPresets.reduce((max, preset, index) => {
-    const desc = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
-    return Math.max(max, desc.length);
-  }, 0);
   resolutionPresets.forEach((preset, index) => {
-    addOption(
-      el.resolutionPreset,
-      String(index),
-      formatResolutionPresetLabel(index, preset, descWidth),
-    );
+    const desc = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+    const sizeLabel = `${preset.width}x${preset.height}`;
+    addOption(el.resolutionPreset, String(index), `${desc} ${sizeLabel}`);
   });
   syncResolutionPresetFromInputs();
+  renderResolutionPresetList();
 }
 
 
@@ -1205,6 +1289,48 @@ function renderThirdPartyLicenses(rawItems) {
   });
 }
 
+function fitAboutLicenseText() {
+  if (!el.aboutLicense) return;
+  const node = el.aboutLicense;
+  const raw = String(node.textContent || "");
+  if (!raw.trim()) {
+    node.style.fontSize = "";
+    return;
+  }
+
+  // Start from stylesheet size, then shrink only if needed.
+  node.style.fontSize = "";
+  const style = window.getComputedStyle(node);
+  const basePx = parseFloat(style.fontSize) || 10;
+  const padL = parseFloat(style.paddingLeft) || 0;
+  const padR = parseFloat(style.paddingRight) || 0;
+  const available = Math.max(1, node.clientWidth - padL - padR);
+  if (available <= 1) return;
+
+  const lines = raw.split(/\r?\n/);
+  let longest = "";
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].length > longest.length) longest = lines[i];
+  }
+  if (!longest) return;
+
+  const canvas = fitAboutLicenseText._measureCanvas
+    || (fitAboutLicenseText._measureCanvas = document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const fontStyle = style.fontStyle || "normal";
+  const fontWeight = style.fontWeight || "400";
+  const fontFamily = style.fontFamily || "monospace";
+  ctx.font = `${fontStyle} ${fontWeight} ${basePx}px ${fontFamily}`;
+  const measured = ctx.measureText(longest).width;
+  if (!Number.isFinite(measured) || measured <= 0) return;
+  if (measured <= available) return;
+
+  const minPx = 4.5;
+  const fittedPx = Math.max(minPx, basePx * (available / measured));
+  node.style.fontSize = `${fittedPx.toFixed(3)}px`;
+}
+
 async function loadAbout() {
   const data = await api.getAbout();
   const rawVersion = (data.version || "").trim();
@@ -1229,6 +1355,9 @@ async function loadAbout() {
   el.aboutStaticAssets.textContent = data.static_assets || "/";
   updateWorkspaceServerStatsHints(data);
   renderThirdPartyLicenses(data.third_party_licenses);
+  requestAnimationFrame(() => {
+    fitAboutLicenseText();
+  });
 }
 
 async function loadEmptySceneTemplate() {

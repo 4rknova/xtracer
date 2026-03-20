@@ -4,6 +4,8 @@ const el = {
   startupScreen: $("startupScreen"),
   startupLabel: $("startupLabel"),
   startupProgressFill: $("startupProgressFill"),
+  mainMenuToggle: $("mainMenuToggle"),
+  mainTabs: $("mainTabs"),
   tabScene: $("tabScene"),
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
@@ -83,6 +85,7 @@ const el = {
   integratorControlsSection: $("integratorControlsSection"),
   integratorControls: $("integratorControls"),
   resolutionPreset: $("resolutionPreset"),
+  resolutionPresetList: $("resolutionPresetList"),
   width: $("width"),
   height: $("height"),
   samples: $("samples"),
@@ -352,6 +355,11 @@ const graphView = {
   dragNodeOffsetX: 0,
   dragNodeOffsetY: 0,
   movedSincePointerDown: false,
+  touchPoints: {},
+  pinchActive: false,
+  pinchLastCenterX: 0,
+  pinchLastCenterY: 0,
+  pinchLastDistance: 0,
 };
 const graphTexturePreviewCache = new Map();
 const previewView = {

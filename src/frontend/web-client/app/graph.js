@@ -354,20 +354,126 @@ function bindGraphInteraction() {
   if (!el.graphCanvas || graphView.bound) return;
   graphView.bound = true;
 
-  el.graphCanvas.addEventListener("wheel", (evt) => {
-    if (!graphView.worldW || !graphView.worldH) return;
-    evt.preventDefault();
+  const setTouchPoint = (pointerId, x, y) => {
+    graphView.touchPoints[String(pointerId)] = { id: pointerId, x, y };
+  };
+  const removeTouchPoint = (pointerId) => {
+    delete graphView.touchPoints[String(pointerId)];
+  };
+  const touchPointCount = () => Object.keys(graphView.touchPoints).length;
+  const collectTouchPoints = (limit) => {
+    const out = [];
+    const max = Number.isFinite(limit) ? limit : 2;
+    for (const key in graphView.touchPoints) {
+      if (!Object.prototype.hasOwnProperty.call(graphView.touchPoints, key)) continue;
+      out.push(graphView.touchPoints[key]);
+      if (out.length >= max) break;
+    }
+    return out;
+  };
+  const clearPrimaryPointerState = () => {
+    graphView.pointerDown = false;
+    graphView.pointerDownNodeKey = "";
+    graphView.panning = false;
+    graphView.pointerId = null;
+    graphView.dragNodeKey = "";
+    graphView.dragNodeOffsetX = 0;
+    graphView.dragNodeOffsetY = 0;
+    graphView.movedSincePointerDown = false;
+  };
+  const zoomGraphAtClient = (clientX, clientY, factor) => {
+    if (!graphView.worldW || !graphView.worldH) return false;
     const rect = el.graphCanvas.getBoundingClientRect();
-    const cx = evt.clientX - rect.left;
-    const cy = evt.clientY - rect.top;
-    const k = Math.exp((-evt.deltaY) * 0.0015);
-    const nextScale = clamp(graphView.scale * k, graphView.minScale, graphView.maxScale);
-    if (!Number.isFinite(nextScale) || Math.abs(nextScale - graphView.scale) < 1e-6) return;
+    const cx = clientX - rect.left;
+    const cy = clientY - rect.top;
+    const nextScale = clamp(graphView.scale * factor, graphView.minScale, graphView.maxScale);
+    if (!Number.isFinite(nextScale) || Math.abs(nextScale - graphView.scale) < 1e-6) return false;
     const ratio = nextScale / graphView.scale;
     graphView.tx = cx - (cx - graphView.tx) * ratio;
     graphView.ty = cy - (cy - graphView.ty) * ratio;
     graphView.scale = nextScale;
     graphView.userAdjusted = true;
+    return true;
+  };
+  const beginTouchPinch = () => {
+    const pts = collectTouchPoints(2);
+    if (pts.length < 2) return false;
+    const cx = (pts[0].x + pts[1].x) * 0.5;
+    const cy = (pts[0].y + pts[1].y) * 0.5;
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    graphView.pinchActive = true;
+    graphView.pinchLastCenterX = cx;
+    graphView.pinchLastCenterY = cy;
+    graphView.pinchLastDistance = dist;
+    clearPrimaryPointerState();
+    return true;
+  };
+  const updateTouchPinch = () => {
+    const pts = collectTouchPoints(2);
+    if (pts.length < 2) return false;
+    const cx = (pts[0].x + pts[1].x) * 0.5;
+    const cy = (pts[0].y + pts[1].y) * 0.5;
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    if (!Number.isFinite(dist) || dist <= 0.01) return false;
+
+    let changed = false;
+    const panDx = cx - graphView.pinchLastCenterX;
+    const panDy = cy - graphView.pinchLastCenterY;
+    if (Math.abs(panDx) + Math.abs(panDy) > 0.01) {
+      graphView.tx += panDx;
+      graphView.ty += panDy;
+      graphView.userAdjusted = true;
+      changed = true;
+    }
+
+    if (graphView.pinchLastDistance > 0.01) {
+      const zoomFactor = dist / graphView.pinchLastDistance;
+      if (Number.isFinite(zoomFactor) && Math.abs(zoomFactor - 1) > 0.001) {
+        changed = zoomGraphAtClient(cx, cy, zoomFactor) || changed;
+      }
+    }
+
+    graphView.pinchLastCenterX = cx;
+    graphView.pinchLastCenterY = cy;
+    graphView.pinchLastDistance = dist;
+    return changed;
+  };
+  const endPrimaryPointer = (evt) => {
+    const wasPanning = !!graphView.panning;
+    const wasDraggingNode = !!graphView.dragNodeKey;
+    const moved = !!graphView.movedSincePointerDown;
+    const downNodeKey = String(graphView.pointerDownNodeKey || "");
+    clearPrimaryPointerState();
+    try {
+      el.graphCanvas.releasePointerCapture(evt.pointerId);
+    } catch (_) {
+      // ignore release errors
+    }
+    if (!wasPanning && !wasDraggingNode && evt.type === "pointerup" && evt.button === 0) {
+      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
+      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
+        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
+        else graphView.expandedNodeKeys.add(upNodeKey);
+        renderSceneGraphView();
+        return true;
+      }
+    } else if (wasDraggingNode && !moved && evt.type === "pointerup" && evt.button === 0) {
+      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
+      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
+        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
+        else graphView.expandedNodeKeys.add(upNodeKey);
+        renderSceneGraphView();
+        return true;
+      }
+    }
+    return false;
+  };
+
+  el.graphCanvas.addEventListener("wheel", (evt) => {
+    if (!graphView.worldW || !graphView.worldH) return;
+    evt.preventDefault();
+    const k = Math.exp((-evt.deltaY) * 0.0015);
+    if (!zoomGraphAtClient(evt.clientX, evt.clientY, k)) return;
     applyGraphTransform();
   }, { passive: false });
 
@@ -377,6 +483,20 @@ function bindGraphInteraction() {
   });
 
   el.graphCanvas.addEventListener("pointerdown", (evt) => {
+    if (evt.pointerType === "touch") {
+      evt.preventDefault();
+      setTouchPoint(evt.pointerId, evt.clientX, evt.clientY);
+      try {
+        el.graphCanvas.setPointerCapture(evt.pointerId);
+      } catch (_) {
+        // ignore capture errors
+      }
+      if (touchPointCount() >= 2) {
+        beginTouchPinch();
+        applyGraphTransform();
+        return;
+      }
+    }
     if (evt.button !== 0 && evt.button !== 1) return;
     evt.preventDefault();
     graphView.pointerDown = true;
@@ -407,6 +527,49 @@ function bindGraphInteraction() {
   });
 
   el.graphCanvas.addEventListener("pointermove", (evt) => {
+    if (evt.pointerType === "touch") {
+      if (!Object.prototype.hasOwnProperty.call(graphView.touchPoints, String(evt.pointerId))) return;
+      evt.preventDefault();
+      setTouchPoint(evt.pointerId, evt.clientX, evt.clientY);
+      if (touchPointCount() >= 2) {
+        if (!graphView.pinchActive) beginTouchPinch();
+        if (updateTouchPinch()) applyGraphTransform();
+        return;
+      }
+      if (graphView.pinchActive) {
+        graphView.pinchActive = false;
+        graphView.pinchLastDistance = 0;
+      }
+      if (!(graphView.pointerDown && graphView.pointerId === evt.pointerId)) return;
+      if (!graphView.panning) {
+        const moveX = Math.abs(evt.clientX - graphView.dragStartX);
+        const moveY = Math.abs(evt.clientY - graphView.dragStartY);
+        if ((moveX + moveY) > 4) graphView.movedSincePointerDown = true;
+      }
+      if (graphView.dragNodeKey) {
+        const node = findGraphNodeData(graphView.dragNodeKey);
+        const p = graphWorldPointFromClient(evt.clientX, evt.clientY);
+        if (node && p) {
+          node.x = p.x - graphView.dragNodeOffsetX;
+          node.y = p.y - graphView.dragNodeOffsetY;
+          graphView.userAdjusted = true;
+          if (node.manualKey) {
+            graphView.manualNodePos.set(node.manualKey, { x: node.x, y: node.y });
+          }
+          applyGraphTransform();
+          return;
+        }
+      }
+      const dx = evt.clientX - graphView.lastX;
+      const dy = evt.clientY - graphView.lastY;
+      graphView.lastX = evt.clientX;
+      graphView.lastY = evt.clientY;
+      graphView.tx += dx;
+      graphView.ty += dy;
+      graphView.userAdjusted = true;
+      applyGraphTransform();
+      return;
+    }
     if (graphView.pointerDown && graphView.pointerId === evt.pointerId) {
       if (!graphView.panning) {
         const moveX = Math.abs(evt.clientX - graphView.dragStartX);
@@ -447,41 +610,34 @@ function bindGraphInteraction() {
   });
 
   const endPan = (evt) => {
+    if (evt.pointerType === "touch") {
+      evt.preventDefault();
+      const tracked = Object.prototype.hasOwnProperty.call(graphView.touchPoints, String(evt.pointerId));
+      if (tracked) removeTouchPoint(evt.pointerId);
+      try {
+        el.graphCanvas.releasePointerCapture(evt.pointerId);
+      } catch (_) {
+        // ignore release errors
+      }
+      if (graphView.pinchActive) {
+        if (touchPointCount() >= 2) {
+          beginTouchPinch();
+        } else {
+          graphView.pinchActive = false;
+          graphView.pinchLastDistance = 0;
+        }
+      }
+      if (!graphView.pointerDown || graphView.pointerId !== evt.pointerId) {
+        applyGraphTransform();
+        return;
+      }
+      if (endPrimaryPointer(evt)) return;
+      applyGraphTransform();
+      return;
+    }
+
     if (!graphView.pointerDown || graphView.pointerId !== evt.pointerId) return;
-    const wasPanning = !!graphView.panning;
-    const wasDraggingNode = !!graphView.dragNodeKey;
-    const moved = !!graphView.movedSincePointerDown;
-    const downNodeKey = String(graphView.pointerDownNodeKey || "");
-    graphView.pointerDown = false;
-    graphView.pointerDownNodeKey = "";
-    graphView.panning = false;
-    graphView.pointerId = null;
-    graphView.dragNodeKey = "";
-    graphView.dragNodeOffsetX = 0;
-    graphView.dragNodeOffsetY = 0;
-    graphView.movedSincePointerDown = false;
-    try {
-      el.graphCanvas.releasePointerCapture(evt.pointerId);
-    } catch (_) {
-      // ignore release errors
-    }
-    if (!wasPanning && !wasDraggingNode && evt.type === "pointerup" && evt.button === 0) {
-      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
-      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
-        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
-        else graphView.expandedNodeKeys.add(upNodeKey);
-        renderSceneGraphView();
-        return;
-      }
-    } else if (wasDraggingNode && !moved && evt.type === "pointerup" && evt.button === 0) {
-      const upNodeKey = findGraphNodeAt(evt.clientX, evt.clientY);
-      if (upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)) {
-        if (graphView.expandedNodeKeys.has(upNodeKey)) graphView.expandedNodeKeys.delete(upNodeKey);
-        else graphView.expandedNodeKeys.add(upNodeKey);
-        renderSceneGraphView();
-        return;
-      }
-    }
+    if (endPrimaryPointer(evt)) return;
     applyGraphTransform();
   };
 

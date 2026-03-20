@@ -215,6 +215,18 @@ function applySidebarCardLayout(mode) {
   }
 }
 
+function isMobileTabMenuViewport() {
+  return !!(window.matchMedia && window.matchMedia("(max-width: 720px)").matches);
+}
+
+function setMainMenuOpen(open) {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar || !el.mainMenuToggle) return;
+  const next = !!open;
+  topbar.classList.toggle("menu-open", next);
+  el.mainMenuToggle.setAttribute("aria-expanded", next ? "true" : "false");
+}
+
 function setActiveTab(mode) {
   const nextMode = normalizeTabMode(mode);
   activeTabMode = nextMode;
@@ -256,6 +268,7 @@ function setActiveTab(mode) {
       appendLog(`preview restore error: ${err.message}`);
     });
   }
+  if (isMobileTabMenuViewport()) setMainMenuOpen(false);
 }
 
 function initSidebarAccordion() {
