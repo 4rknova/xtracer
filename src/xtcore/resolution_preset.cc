@@ -16,6 +16,8 @@ static const resolution_preset_t k_resolution_presets[] = {
     , { 1024, 1024, "Square"   }
     , { 2048, 2048, "Square"   }
     , { 4096, 4096, "Square"   }
+    , { 4000, 5600, "Displate" }
+    , { 5600, 4000, "Displate" }
     , {  640,  360, "nHD"      } // High Definition
     , {  960,  540, "qHD"      }
     , { 1280,  720, "HD"       }

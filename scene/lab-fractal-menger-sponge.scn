@@ -20,6 +20,14 @@ camera = {
         target   = vec3(0.0,0,0)
         up       = vec3(0,1,0)
     }
+
+    poster = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,4,-5)
+        target   = vec3(0.0,0,0)
+        up       = vec3(0,1,0)
+    }
 }
 
 geometry = {
@@ -28,7 +36,7 @@ geometry = {
         source     = gen(plane)
         resolution = 1
         modifiers = {
-            scale       = vec3(50,1,50)
+            scale       = vec3(128,1,128)
             translation = vec3(0,-1.5,0)
         }
     }
