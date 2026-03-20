@@ -2,6 +2,9 @@
 
 #include <cstdio>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
+#include <set>
 
 #include <ncf/ncf.h>
 
@@ -19,6 +22,10 @@ const char *k_prop_default_camera = "default_camera";
 const char *k_prop_source = "source";
 const char *k_prop_geometry = "geometry";
 const char *k_prop_material = "material";
+const char *k_prop_type = "type";
+const char *k_prop_op = "op";
+const char *k_group_left = "left";
+const char *k_group_right = "right";
 
 bool has_named_group(ncf::NCF *node, const std::string &name)
 {
@@ -37,6 +44,74 @@ void add_error(std::vector<std::string> *errors, const std::string &msg)
 {
     if (!errors) return;
     errors->push_back(msg);
+}
+
+std::string normalize_token(const char *text)
+{
+    if (!text) return std::string();
+    std::string out = text;
+    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
+        return (char)std::tolower(c);
+    });
+    out.erase(std::remove_if(out.begin(), out.end(), [](unsigned char c) {
+        return std::isspace(c) != 0;
+    }), out.end());
+    return out;
+}
+
+bool is_supported_csg_leaf_type(const std::string &type)
+{
+    static const std::set<std::string> k_types = {
+        "sphere",
+        "point",
+        "plane",
+        "menger_sponge",
+        "sierpinski_tetrahedron",
+        "mandelbulb",
+        "julia"
+    };
+    return k_types.find(type) != k_types.end();
+}
+
+void validate_csg_node(ncf::NCF *node, const std::string &path, size_t depth, std::vector<std::string> *errors)
+{
+    if (!node) {
+        add_error(errors, path + " is missing");
+        return;
+    }
+    if (depth > 32) {
+        add_error(errors, path + " exceeds max recursion depth (32)");
+        return;
+    }
+
+    const bool has_left = node->query_group(k_group_left);
+    const bool has_right = node->query_group(k_group_right);
+    const bool has_op = node->query_property(k_prop_op);
+    const bool branch = has_left || has_right || has_op;
+
+    if (branch) {
+        if (!has_op) add_error(errors, path + " is missing 'op'");
+        if (!has_left) add_error(errors, path + " is missing 'left'");
+        if (!has_right) add_error(errors, path + " is missing 'right'");
+
+        const std::string op = normalize_token(node->get_property_by_name(k_prop_op));
+        if (!op.empty() && op != "union" && op != "intersection" && op != "difference") {
+            add_error(errors, path + " has invalid op '" + op + "'");
+        }
+
+        if (has_left) validate_csg_node(node->get_group_by_name(k_group_left), path + ".left", depth + 1, errors);
+        if (has_right) validate_csg_node(node->get_group_by_name(k_group_right), path + ".right", depth + 1, errors);
+        return;
+    }
+
+    const std::string leaf_type = normalize_token(node->get_property_by_name(k_prop_type));
+    if (leaf_type.empty()) {
+        add_error(errors, path + " leaf is missing 'type'");
+        return;
+    }
+    if (!is_supported_csg_leaf_type(leaf_type)) {
+        add_error(errors, path + " leaf type '" + leaf_type + "' is not supported in CSG");
+    }
 }
 
 } // namespace
@@ -124,6 +199,20 @@ int validate(const char *filename, std::vector<std::string> *errors)
                 ss << "object '" << name << "' references missing material '" << mat_name << "'";
                 add_error(errors, ss.str());
             }
+        }
+    }
+
+    if (geometry) {
+        const size_t geometry_count = geometry->count_groups();
+        for (size_t i = 0; i < geometry_count; ++i) {
+            ncf::NCF *entry = geometry->get_group_by_index(i);
+            if (!entry) continue;
+
+            const std::string name = (entry->get_name() && *entry->get_name()) ? entry->get_name() : std::string("<unnamed>");
+            const std::string type = normalize_token(entry->get_property_by_name(k_prop_type));
+            if (type != "csg") continue;
+
+            validate_csg_node(entry, "geometry." + name, 0, errors);
         }
     }
 

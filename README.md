@@ -129,7 +129,32 @@ With scene variant:
 | `sierpinski_tetrahedron` | Implicit fractal surface (`position`, `radius`, `resolution`) |
 | `mandelbulb` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`) |
 | `julia` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`, `julia_c`) |
+| `csg` | Constructive solid geometry tree (`op`, `left`, `right`) |
 | `mesh` | External OBJ or procedural generator |
+
+#### CSG (`geometry.type = csg`)
+
+CSG geometry uses binary tree nodes:
+- `op`: `union`, `intersection`, or `difference`
+- `left`: nested node
+- `right`: nested node
+
+`left`/`right` can be:
+- another CSG node (contains `op`, `left`, `right`), or
+- a supported leaf geometry definition (v1): `sphere`, `point`, `plane`, `menger_sponge`, `sierpinski_tetrahedron`, `mandelbulb`, `julia`.
+
+Example:
+
+```scn
+geometry = {
+  shape = {
+    type = csg
+    op = difference
+    left = { type = sphere, position = vec3(0,0,0), radius = 1.0 }
+    right = { type = sphere, position = vec3(0.4,0,0), radius = 0.6 }
+  }
+}
+```
 
 #### Procedural Mesh Generators (`geometry.type = mesh`, `source = gen(...)`)
 

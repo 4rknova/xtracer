@@ -106,6 +106,7 @@ set(OUT_EXE_TILE_TEST test_xtcore_tile)
 set(OUT_EXE_CONTEXT_TEST test_xtcore_context)
 set(OUT_EXE_SPHERE_TEST test_xtcore_sphere)
 set(OUT_EXE_TRIANGLE_TEST test_xtcore_triangle)
+set(OUT_EXE_CSG_TEST test_xtcore_csg)
 set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
@@ -215,6 +216,7 @@ add_executable(${OUT_EXE_TILE_TEST} ${PATH_SRC_TESTS}/tile_test.cc)
 add_executable(${OUT_EXE_CONTEXT_TEST} ${PATH_SRC_TESTS}/context_test.cc)
 add_executable(${OUT_EXE_SPHERE_TEST} ${PATH_SRC_TESTS}/sphere_test.cc)
 add_executable(${OUT_EXE_TRIANGLE_TEST} ${PATH_SRC_TESTS}/triangle_test.cc)
+add_executable(${OUT_EXE_CSG_TEST} ${PATH_SRC_TESTS}/csg_test.cc)
 add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_test.cc)
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
@@ -238,6 +240,9 @@ set_target_properties(${OUT_EXE_SPHERE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_TRIANGLE_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_CSG_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_WHITE_FURNACE_TEST} PROPERTIES
@@ -311,6 +316,13 @@ target_include_directories(${OUT_EXE_TRIANGLE_TEST} PUBLIC
 target_include_directories(${OUT_EXE_TRIANGLE_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_CSG_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_CSG_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_WHITE_FURNACE_TEST} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -372,6 +384,7 @@ target_link_libraries(${OUT_EXE_TILE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CONTEXT_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SPHERE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_TRIANGLE_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_CSG_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
@@ -511,6 +524,7 @@ target_compile_definitions(${OUT_EXE_TILE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CONTEXT_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SPHERE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_TRIANGLE_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_CSG_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
@@ -525,6 +539,7 @@ add_dependencies (${OUT_EXE_TILE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CONTEXT_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SPHERE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_TRIANGLE_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_CSG_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
@@ -558,6 +573,10 @@ add_test(
 add_test(
     NAME xtcore::triangle
     COMMAND ${PATH_TEST}/${OUT_EXE_TRIANGLE_TEST}
+)
+add_test(
+    NAME xtcore::csg
+    COMMAND ${PATH_TEST}/${OUT_EXE_CSG_TEST}
 )
 add_test(
     NAME xtcore::white_furnace
