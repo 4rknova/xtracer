@@ -113,6 +113,7 @@
 #define XTPROTO_LTRL_CONE           "cone"             /* string     */ /* Cone */
 #define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */ /* Cylinder */
 #define XTPROTO_LTRL_MESH			"mesh"				/* string     */ /* Mesh */
+#define XTPROTO_LTRL_CSG            "csg"               /* string     */ /* Constructive solid geometry */
 #define XTPROTO_PROP_UP				"up"	            /* Vector3f   */ /* Up vector */
 #define XTPROTO_PROP_RIGHT			"right"	            /* Vector3f   */ /* Right vector */
 #define XTPROTO_PROP_NORMAL			"normal"			/* Vector3f   */ /* Normal vector */
@@ -149,6 +150,11 @@
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
+#define XTPROTO_PROP_OP             "op"                /* string     */ /* CSG boolean operator */
+#define XTPROTO_PROP_LEFT           "left"              /* group      */ /* CSG left node */
+#define XTPROTO_LTRL_UNION          "union"             /* string     */ /* CSG union operator */
+#define XTPROTO_LTRL_INTERSECTION   "intersection"      /* string     */ /* CSG intersection operator */
+#define XTPROTO_LTRL_DIFFERENCE     "difference"        /* string     */ /* CSG difference operator */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */

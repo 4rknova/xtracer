@@ -27,6 +27,7 @@
 #include <xtcore/math/sphere.h>
 #include <xtcore/math/triangle.h>
 #include <xtcore/math/fractal.h>
+#include <xtcore/math/csg.h>
 #include <xtcore/material.h>
 #include <xtcore/mesh.h>
 #include <xtcore/parseutil.h>
@@ -737,6 +738,7 @@ const char *surface_type_name(const xtcore::asset::ISurface *surface)
     if (dynamic_cast<const xtcore::surface::SierpinskiTetrahedron *>(surface)) return "sierpinski_tetrahedron";
     if (dynamic_cast<const xtcore::surface::Mandelbulb *>(surface)) return "mandelbulb";
     if (dynamic_cast<const xtcore::surface::JuliaFractal *>(surface)) return "julia";
+    if (dynamic_cast<const xtcore::surface::CSG *>(surface)) return "csg";
     if (dynamic_cast<const xtcore::surface::Mesh *>(surface)) return "mesh";
     return "surface";
 }

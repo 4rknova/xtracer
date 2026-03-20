@@ -28,6 +28,7 @@
 #include "math/sphere.h"
 #include "math/triangle.h"
 #include "math/fractal.h"
+#include "math/csg.h"
 #include "mesh.h"
 #include "proto.h"
 #include "obj.h"
@@ -928,6 +929,116 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     return data;
 }
 
+bool csg_supports_leaf_type(const std::string &type_lc)
+{
+    return !type_lc.compare(XTPROTO_LTRL_SPHERE)
+        || !type_lc.compare(XTPROTO_LTRL_POINT)
+        || !type_lc.compare(XTPROTO_LTRL_PLANE)
+        || !type_lc.compare(XTPROTO_LTRL_MENGER_SPONGE)
+        || !type_lc.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)
+        || !type_lc.compare(XTPROTO_LTRL_MANDELBULB)
+        || !type_lc.compare(XTPROTO_LTRL_JULIA);
+}
+
+xtcore::surface::CSG::op_t csg_parse_op(const std::string &token, bool &ok)
+{
+    std::string op = token;
+    std::transform(op.begin(), op.end(), op.begin(), [](unsigned char c) {
+        return (char)std::tolower(c);
+    });
+    op.erase(std::remove_if(op.begin(), op.end(), [](unsigned char c) {
+        return std::isspace(c) != 0;
+    }), op.end());
+
+    if (!op.compare(XTPROTO_LTRL_UNION)) {
+        ok = true;
+        return xtcore::surface::CSG::OP_UNION;
+    }
+    if (!op.compare(XTPROTO_LTRL_INTERSECTION)) {
+        ok = true;
+        return xtcore::surface::CSG::OP_INTERSECTION;
+    }
+    if (!op.compare(XTPROTO_LTRL_DIFFERENCE)) {
+        ok = true;
+        return xtcore::surface::CSG::OP_DIFFERENCE;
+    }
+    ok = false;
+    return xtcore::surface::CSG::OP_UNION;
+}
+
+xtcore::asset::ISurface *deserialize_geometry_csg_node(const char *source, const ncf::NCF *p, size_t depth)
+{
+    if (!p) return 0;
+    if (depth > 32) {
+        Log::handle().post_warning("CSG recursion depth exceeded at %s", p->get_name());
+        return 0;
+    }
+
+    const bool has_left = p->query_group(XTPROTO_PROP_LEFT);
+    const bool has_right = p->query_group(XTPROTO_PROP_RIGHT);
+    const bool has_op = p->query_property(XTPROTO_PROP_OP);
+
+    if (has_left || has_right || has_op) {
+        if (!has_left || !has_right || !has_op) {
+            Log::handle().post_warning("CSG node %s requires op + left + right", p->get_name());
+            return 0;
+        }
+
+        bool op_ok = false;
+        xtcore::surface::CSG::op_t op = csg_parse_op(
+            deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_OP)),
+            op_ok
+        );
+        if (!op_ok) {
+            Log::handle().post_warning("Invalid CSG op for node %s", p->get_name());
+            return 0;
+        }
+
+        xtcore::asset::ISurface *lhs = deserialize_geometry_csg_node(source, p->get_group_by_name(XTPROTO_PROP_LEFT), depth + 1);
+        if (!lhs) return 0;
+
+        xtcore::asset::ISurface *rhs = deserialize_geometry_csg_node(source, p->get_group_by_name(XTPROTO_PROP_RIGHT), depth + 1);
+        if (!rhs) {
+            delete lhs;
+            return 0;
+        }
+
+        xtcore::surface::CSG *node = new (std::nothrow) xtcore::surface::CSG();
+        if (!node) {
+            delete lhs;
+            delete rhs;
+            return 0;
+        }
+
+        node->op = op;
+        node->left = lhs;
+        node->right = rhs;
+        node->calc_aabb();
+        return node;
+    }
+
+    std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+    std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) {
+        return (char)std::tolower(c);
+    });
+
+    if (type.empty()) {
+        Log::handle().post_warning("CSG leaf at %s is missing type", p->get_name());
+        return 0;
+    }
+    if (!csg_supports_leaf_type(type)) {
+        Log::handle().post_warning("Unsupported CSG leaf type %s at %s", type.c_str(), p->get_name());
+        return 0;
+    }
+
+    return deserialize_geometry(source, p);
+}
+
+xtcore::asset::ISurface *deserialize_geometry_csg(const char *source, const ncf::NCF *p)
+{
+    return deserialize_geometry_csg_node(source, p, 0);
+}
+
 xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
@@ -1026,6 +1137,9 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
         f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
         if (f->bailout < 2.0f) f->bailout = 2.0f;
         if (f->bailout > 64.0f) f->bailout = 64.0f;
+    }
+    else if (!type.compare(XTPROTO_LTRL_CSG)) {
+        data = deserialize_geometry_csg(source, p);
     }
 	// - Mesh
 	else if (!type.compare(XTPROTO_LTRL_MESH)) data = deserialize_geometry_mesh(source, p);
