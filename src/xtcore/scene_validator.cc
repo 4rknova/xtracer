@@ -95,7 +95,12 @@ void validate_csg_node(ncf::NCF *node, const std::string &path, size_t depth, st
         if (!has_right) add_error(errors, path + " is missing 'right'");
 
         const std::string op = normalize_token(node->get_property_by_name(k_prop_op));
-        if (!op.empty() && op != "union" && op != "intersection" && op != "difference") {
+        if (!op.empty()
+            && op != "union"
+            && op != "soft_union"
+            && op != "smooth_union"
+            && op != "intersection"
+            && op != "difference") {
             add_error(errors, path + " has invalid op '" + op + "'");
         }
 

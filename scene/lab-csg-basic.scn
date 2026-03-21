@@ -1,65 +1,350 @@
-title       = CSG Basic
-description = Basic constructive solid geometry showcase (difference + union).
-version     = 1.0
+title       = CSG Variant Lab
+description = Variant-driven CSG test scene with one centered object per variant, mixed implicit operands, and nested trees.
+version     = 2.0
 
-default_camera = cam_main
+default_camera = cam_front
 
-ambient  = col3(0.08,0.08,0.08)
+ambient   = col3(0.12,0.12,0.12)
 k_ambient = 1.0
 
 environment = {
     type = gradient
     config = {
-        a = col3(0.08,0.1,0.14)
-        b = col3(0.22,0.24,0.28)
+        a = col3(0.09,0.11,0.15)
+        b = col3(0.23,0.25,0.30)
     }
 }
 
 camera = {
-    cam_main = {
+    cam_front = {
         type     = thin-lens
         fov      = 40
-        position = vec3(0,1.2,-5.8)
-        target   = vec3(0,0.2,0)
+        position = vec3(0.00,0.75,-4.30)
+        target   = vec3(0.00,0.10,0.00)
+        up       = vec3(0,1,0)
+    }
+    cam_three_quarter = {
+        type     = thin-lens
+        fov      = 42
+        position = vec3(2.60,1.20,-3.20)
+        target   = vec3(0.00,0.10,0.00)
+        up       = vec3(0,1,0)
+    }
+    cam_side = {
+        type     = thin-lens
+        fov      = 40
+        position = vec3(4.20,0.70,0.15)
+        target   = vec3(0.00,0.10,0.00)
+        up       = vec3(0,1,0)
+    }
+    cam_top = {
+        type     = thin-lens
+        fov      = 38
+        position = vec3(0.00,4.40,-0.20)
+        target   = vec3(0.00,0.05,0.00)
+        up       = vec3(0,0,-1)
+    }
+    cam_back = {
+        type     = thin-lens
+        fov      = 40
+        position = vec3(0.00,0.85,4.10)
+        target   = vec3(0.00,0.10,0.00)
         up       = vec3(0,1,0)
     }
 }
 
 geometry = {
-    csg_cut_sphere = {
-        type = csg
-        op   = difference
-        left = {
-            type     = sphere
-            position = vec3(-1.05,0.45,0.4)
-            radius   = 0.95
-        }
-        right = {
-            type     = sphere
-            position = vec3(-0.58,0.45,0.42)
-            radius   = 0.62
-        }
-    }
-
-    csg_capsule_like = {
+    csg_union_sphere_mandel = {
         type = csg
         op   = union
         left = {
             type     = sphere
-            position = vec3(1.0,0.25,0.25)
+            position = vec3(-0.35,0.10,0.00)
             radius   = 0.78
         }
         right = {
-            type     = sphere
-            position = vec3(1.0,-0.45,0.25)
-            radius   = 0.78
+            type       = mandelbulb
+            position   = vec3(0.30,0.10,0.00)
+            radius     = 0.70
+            resolution = 12
+            power      = 8.0
+            bailout    = 4.0
         }
     }
 
-    floor = {
-        type     = plane
-        normal   = vec3(0,1,0)
-        distance = -1
+    csg_intersection_sphere_tetra = {
+        type = csg
+        op   = intersection
+        left = {
+            type     = sphere
+            position = vec3(-0.18,0.12,0.00)
+            radius   = 0.88
+        }
+        right = {
+            type       = sierpinski_tetrahedron
+            position   = vec3(0.26,0.10,0.00)
+            radius     = 0.90
+            resolution = 5
+        }
+    }
+
+    csg_difference_menger_sphere = {
+        type = csg
+        op   = difference
+        left = {
+            type        = menger_sponge
+            position    = vec3(-0.06,0.16,0.02)
+            orientation = vec3(0,25,0)
+            radius      = 0.96
+            resolution  = 3
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.38,0.18,0.04)
+            radius   = 0.62
+        }
+    }
+
+    csg_soft_union_sphere_julia = {
+        type = csg
+        op   = soft_union
+        smoothness = 0.22
+        left = {
+            type     = sphere
+            position = vec3(0.00,0.35,0.00)
+            radius   = 0.74
+        }
+        right = {
+            type       = julia
+            position   = vec3(0.00,-0.20,0.00)
+            julia_c    = vec3(-0.24,0.74,0.12)
+            radius     = 0.72
+            resolution = 11
+            power      = 8.0
+            bailout    = 4.0
+        }
+    }
+
+    csg_union_mandel_julia = {
+        type = csg
+        op   = union
+        left = {
+            type       = mandelbulb
+            position   = vec3(-0.24,0.08,0.00)
+            radius     = 0.70
+            resolution = 12
+            power      = 8.0
+            bailout    = 4.0
+        }
+        right = {
+            type       = julia
+            position   = vec3(0.34,0.10,0.00)
+            julia_c    = vec3(-0.24,0.74,0.12)
+            radius     = 0.66
+            resolution = 11
+            power      = 8.0
+            bailout    = 4.0
+        }
+    }
+
+    csg_difference_tetra_mandel = {
+        type = csg
+        op   = difference
+        left = {
+            type       = sierpinski_tetrahedron
+            position   = vec3(-0.04,0.08,0.00)
+            radius     = 0.98
+            resolution = 5
+        }
+        right = {
+            type       = mandelbulb
+            position   = vec3(0.30,0.14,0.06)
+            radius     = 0.68
+            resolution = 12
+            power      = 8.0
+            bailout    = 4.0
+        }
+    }
+
+    csg_intersection_julia_sphere = {
+        type = csg
+        op   = intersection
+        left = {
+            type       = julia
+            position   = vec3(-0.10,0.12,0.00)
+            julia_c    = vec3(-0.24,0.74,0.12)
+            radius     = 0.82
+            resolution = 11
+            power      = 8.0
+            bailout    = 4.0
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.22,0.10,0.00)
+            radius   = 0.88
+        }
+    }
+
+    csg_tree_union_diff_intersection = {
+        type = csg
+        op   = union
+        left = {
+            type = csg
+            op   = difference
+            left = {
+                type     = sphere
+                position = vec3(-0.34,0.12,0.00)
+                radius   = 0.80
+            }
+            right = {
+                type       = menger_sponge
+                position   = vec3(0.06,0.12,0.00)
+                radius     = 0.66
+                resolution = 3
+            }
+        }
+        right = {
+            type = csg
+            op   = intersection
+            left = {
+                type       = julia
+                position   = vec3(0.26,0.10,0.00)
+                julia_c    = vec3(-0.24,0.74,0.12)
+                radius     = 0.70
+                resolution = 11
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.36,0.10,0.00)
+                radius   = 0.72
+            }
+        }
+    }
+
+    csg_tree_soft_union_of_diff_and_union = {
+        type = csg
+        op   = soft_union
+        smoothness = 0.18
+        left = {
+            type = csg
+            op   = difference
+            left = {
+                type       = mandelbulb
+                position   = vec3(-0.30,0.10,0.00)
+                radius     = 0.72
+                resolution = 12
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.03,0.10,0.00)
+                radius   = 0.56
+            }
+        }
+        right = {
+            type = csg
+            op   = union
+            left = {
+                type       = sierpinski_tetrahedron
+                position   = vec3(0.26,0.05,0.00)
+                radius     = 0.66
+                resolution = 5
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.52,0.05,0.00)
+                radius   = 0.48
+            }
+        }
+    }
+
+    csg_tree_difference_soft_and_intersection = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = soft_union
+            smoothness = 0.20
+            left = {
+                type       = julia
+                position   = vec3(-0.12,0.20,0.00)
+                julia_c    = vec3(-0.24,0.74,0.12)
+                radius     = 0.72
+                resolution = 11
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.14,-0.12,0.00)
+                radius   = 0.66
+            }
+        }
+        right = {
+            type = csg
+            op   = intersection
+            left = {
+                type       = mandelbulb
+                position   = vec3(0.30,0.10,0.02)
+                radius     = 0.64
+                resolution = 12
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type       = sierpinski_tetrahedron
+                position   = vec3(0.44,0.10,0.02)
+                radius     = 0.66
+                resolution = 5
+            }
+        }
+    }
+
+    csg_tree_three_softness = {
+        type = csg
+        op   = soft_union
+        smoothness = 0.38
+        left = {
+            type = csg
+            op   = soft_union
+            smoothness = 0.08
+            left = {
+                type     = sphere
+                position = vec3(-0.56,0.10,0.00)
+                radius   = 0.64
+            }
+            right = {
+                type       = mandelbulb
+                position   = vec3(-0.04,0.10,0.00)
+                radius     = 0.58
+                resolution = 11
+                power      = 8.0
+                bailout    = 4.0
+            }
+        }
+        right = {
+            type = csg
+            op   = soft_union
+            smoothness = 0.20
+            left = {
+                type       = julia
+                position   = vec3(0.32,0.08,0.00)
+                julia_c    = vec3(-0.24,0.74,0.12)
+                radius     = 0.58
+                resolution = 11
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type       = sierpinski_tetrahedron
+                position   = vec3(0.74,0.08,0.00)
+                radius     = 0.56
+                resolution = 5
+            }
+        }
     }
 }
 
@@ -68,8 +353,8 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.93,0.74,0.36) }
-                ambient = { type = color, value = col3(0.93,0.74,0.36) }
+                diffuse = { type = color, value = col3(0.92,0.72,0.34) }
+                ambient = { type = color, value = col3(0.92,0.72,0.34) }
             }
         }
     }
@@ -78,25 +363,143 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.36,0.78,0.92) }
-                ambient = { type = color, value = col3(0.36,0.78,0.92) }
+                diffuse = { type = color, value = col3(0.35,0.78,0.92) }
+                ambient = { type = color, value = col3(0.35,0.78,0.92) }
             }
         }
     }
 
-    mat_floor = {
+    mat_csg_c = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.28,0.28,0.3) }
-                ambient = { type = color, value = col3(0.28,0.28,0.3) }
+                diffuse = { type = color, value = col3(0.62,0.90,0.42) }
+                ambient = { type = color, value = col3(0.62,0.90,0.42) }
+            }
+        }
+    }
+
+    mat_csg_d = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.88,0.50,0.85) }
+                ambient = { type = color, value = col3(0.88,0.50,0.85) }
             }
         }
     }
 }
 
 object = {
-    obj_cut_sphere = { geometry = csg_cut_sphere, material = mat_csg_a }
-    obj_capsule_like = { geometry = csg_capsule_like, material = mat_csg_b }
-    obj_floor = { geometry = floor, material = mat_floor }
+    csg_subject = { geometry = csg_union_sphere_mandel, material = mat_csg_c }
+}
+
+variants = {
+    base = {
+        name = Union Sphere + Mandelbulb
+        description = Union of sphere and mandelbulb. One centered CSG subject object.
+    }
+
+    op_intersection_sphere_tetra = {
+        name = Intersection Sphere + Sierpinski
+        description = Intersection operation using sphere and sierpinski tetrahedron.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_intersection_sphere_tetra, material = mat_csg_d }
+            }
+        }
+    }
+
+    op_difference_menger_sphere = {
+        name = Difference Menger - Sphere
+        description = Difference operation subtracting sphere from menger sponge.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_difference_menger_sphere, material = mat_csg_a }
+            }
+        }
+    }
+
+    op_soft_union_sphere_julia = {
+        name = Soft Union Sphere + Julia
+        description = Smooth union operation on sphere and julia fractal.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_soft_union_sphere_julia, material = mat_csg_b }
+            }
+        }
+    }
+
+    op_union_mandel_julia = {
+        name = Union Mandelbulb + Julia
+        description = Union of two fractal implicit surfaces.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_union_mandel_julia, material = mat_csg_c }
+            }
+        }
+    }
+
+    op_difference_tetra_mandel = {
+        name = Difference Sierpinski - Mandelbulb
+        description = Difference combining tetrahedron fractal and mandelbulb.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_difference_tetra_mandel, material = mat_csg_a }
+            }
+        }
+    }
+
+    op_intersection_julia_sphere = {
+        name = Intersection Julia + Sphere
+        description = Intersection between julia fractal and sphere.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_intersection_julia_sphere, material = mat_csg_d }
+            }
+        }
+    }
+
+    tree_union_of_difference_and_intersection = {
+        name = Tree Union(Difference, Intersection)
+        description = Two-level CSG tree: union of a difference branch and an intersection branch.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_tree_union_diff_intersection, material = mat_csg_c }
+            }
+        }
+    }
+
+    tree_soft_union_of_difference_and_union = {
+        name = Tree SoftUnion(Difference, Union)
+        description = Two-level CSG tree with soft union at root.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_tree_soft_union_of_diff_and_union, material = mat_csg_b }
+            }
+            default_camera = cam_three_quarter
+        }
+    }
+
+    tree_difference_of_soft_and_intersection = {
+        name = Tree Difference(SoftUnion, Intersection)
+        description = Two-level CSG tree with nested soft union minus nested intersection.
+        set = {
+            object = {
+                csg_subject = { geometry = csg_tree_difference_soft_and_intersection, material = mat_csg_d }
+            }
+            default_camera = cam_side
+        }
+    }
+
+    tree_three_soft_unions = {
+        name = Tree Three Soft Unions
+        description = Three soft-union nodes with low, medium, and high smoothness values (0.08, 0.20, 0.38).
+        set = {
+            object = {
+                csg_subject = { geometry = csg_tree_three_softness, material = mat_csg_b }
+            }
+            default_camera = cam_three_quarter
+        }
+    }
 }

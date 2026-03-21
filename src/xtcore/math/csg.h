@@ -12,7 +12,8 @@ public:
     enum op_t {
         OP_UNION = 0,
         OP_INTERSECTION,
-        OP_DIFFERENCE
+        OP_DIFFERENCE,
+        OP_SOFT_UNION
     };
 
     CSG();
@@ -27,6 +28,7 @@ public:
     Vector3f emitter_position() const;
 
     op_t op;
+    nmath::scalar_t smoothness;
     xtcore::asset::ISurface *left;
     xtcore::asset::ISurface *right;
 

@@ -151,8 +151,11 @@
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
 #define XTPROTO_PROP_OP             "op"                /* string     */ /* CSG boolean operator */
+#define XTPROTO_PROP_SMOOTHNESS     "smoothness"        /* scalar_t   */ /* CSG soft union smoothing */
 #define XTPROTO_PROP_LEFT           "left"              /* group      */ /* CSG left node */
 #define XTPROTO_LTRL_UNION          "union"             /* string     */ /* CSG union operator */
+#define XTPROTO_LTRL_SOFT_UNION     "soft_union"        /* string     */ /* CSG soft union operator */
+#define XTPROTO_LTRL_SMOOTH_UNION   "smooth_union"      /* string     */ /* CSG soft union alias */
 #define XTPROTO_LTRL_INTERSECTION   "intersection"      /* string     */ /* CSG intersection operator */
 #define XTPROTO_LTRL_DIFFERENCE     "difference"        /* string     */ /* CSG difference operator */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */

@@ -57,7 +57,7 @@ With scene variant:
 | CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
 | Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
-| Web static app | `src/frontend/web-client/` | SPA for Render / Editor / Settings / Logs / About |
+| Web static app | `src/frontend/web-client/` | SPA for Render / Editor / Settings / Logs / About, including runtime JSON config in `app/data/` |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies |
@@ -135,9 +135,10 @@ With scene variant:
 #### CSG (`geometry.type = csg`)
 
 CSG geometry uses binary tree nodes:
-- `op`: `union`, `intersection`, or `difference`
+- `op`: `union`, `soft_union` (`smooth_union` alias), `intersection`, or `difference`
 - `left`: nested node
 - `right`: nested node
+- `smoothness` (optional): soft union blend width (`> 0`, default `0.15`), used only with `soft_union`
 
 `left`/`right` can be:
 - another CSG node (contains `op`, `left`, `right`), or
@@ -179,6 +180,29 @@ Sizing note:
 `gen(pyramid)` supports:
 - `base_size` (float, `> 0`, default `1.0`)
 - `height` (float, `> 0`, default `1.0`)
+
+#### Seeded Random Generators (`random`)
+
+Scenes may define a top-level `random` group to synthesize deterministic, repeatable scene content.
+Each random entry must provide an explicit `seed`.
+
+Supported generator types:
+
+- `sphere_grid`: creates many sphere objects with seeded random placement/material assignment.
+
+`sphere_grid` properties:
+- `seed` (integer, required)
+- `prefix` (string, optional): name prefix for generated geometry/material/object ids
+- `x_min`, `x_max`, `z_min`, `z_max` (integers): loop bounds (`[min, max)`)
+- `y` (float): sphere center Y
+- `radius` (float, `> 0`)
+- `jitter` (float): per-cell random XY jitter magnitude
+- `avoid_center` (`vec3`) and `avoid_radius` (float): exclusion sphere
+- `lambert_ratio` (float `[0,1]`): diffuse probability threshold
+- `metal_ratio` (float `[lambert_ratio,1]`): metal threshold (`> metal_ratio` becomes glass)
+- `metal_fuzz_min`, `metal_fuzz_max` (float `[0,1]`): seeded fuzz range for generated metals
+- `ior` (float `>= 1`): generated glass index of refraction
+- `glass_reflectance` (float `[0,1]`): generated glass reflection probability
 
 #### Material Types
 
@@ -278,7 +302,7 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export (with persistent left sidebar cards available across tabs, including an `Active Scene` summary card for scene/camera/variant) |
+| Render | Scene/camera/integrator selection, render settings, preview, export, and in-flight abort support (render action toggles `Render`/`Abort`) with persistent left sidebar cards available across tabs, including an `Active Scene` summary card for scene/camera/variant |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
@@ -316,6 +340,8 @@ First-time use tutorial (FTUE):
 | GET | `/api/integrators` | List backend integrators + controls |
 | GET | `/api/resolutions` | Resolution presets |
 | POST | `/api/render` | Create render job (optional `variant=<name>`) |
+| GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
+| POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image |
 | GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, tone mapping params supported) |

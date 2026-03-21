@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <atomic>
 
 #include "tile.h"
 #include "context.h"
@@ -17,14 +18,17 @@ class IIntegrator
 	virtual ~IIntegrator();
 
 	void setup(context_t &context);
-	void render();
+    void render();
     virtual void configure(const std::map<std::string, std::string> &options);
+    void set_abort_flag(const std::atomic<bool> *flag);
+    bool should_abort() const;
 
     virtual void setup_auxiliary();
     virtual void clean_auxiliary();
     virtual void render_tile(tile_t *tile) = 0;
 
     xtcore::render::context_t *ctx;
+    const std::atomic<bool> *abort_flag;
 };
 
 	} /* namespace render */

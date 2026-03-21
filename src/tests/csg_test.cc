@@ -68,6 +68,36 @@ int main()
     }
 
     {
+        xtcore::surface::CSG soft;
+        soft.op = xtcore::surface::CSG::OP_SOFT_UNION;
+        soft.smoothness = 0.25f;
+
+        xtcore::surface::Sphere *a = new xtcore::surface::Sphere();
+        a->origin = nmath::Vector3f(-0.8f, 0.0f, 0.0f);
+        a->radius = 1.0f;
+        a->calc_aabb();
+
+        xtcore::surface::Sphere *b = new xtcore::surface::Sphere();
+        b->origin = nmath::Vector3f(0.8f, 0.0f, 0.0f);
+        b->radius = 1.0f;
+        b->calc_aabb();
+
+        soft.left = a;
+        soft.right = b;
+        soft.calc_aabb();
+
+        xtcore::surface::CSG hard;
+        hard.op = xtcore::surface::CSG::OP_UNION;
+        hard.left = new xtcore::surface::Sphere(*a);
+        hard.right = new xtcore::surface::Sphere(*b);
+        hard.calc_aabb();
+
+        const float p = (float)hard.distance(nmath::Vector3f(0.0f, 0.0f, 0.0f));
+        const float q = (float)soft.distance(nmath::Vector3f(0.0f, 0.0f, 0.0f));
+        if (!(q < p)) return fail("soft_union should smooth/blend union interior");
+    }
+
+    {
         xtcore::surface::CSG inter;
         inter.op = xtcore::surface::CSG::OP_INTERSECTION;
 

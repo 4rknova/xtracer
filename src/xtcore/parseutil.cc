@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <vector>
 #include <chrono>
 #include <map>
@@ -9,6 +10,7 @@
 #include <atomic>
 #include <memory>
 #include <fstream>
+#include <random>
 
 #include <nmath/precision.h>
 #include <ncf/util.h>
@@ -164,6 +166,11 @@ nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const n
 
 	return res;
 }
+
+xtcore::sampler::ISampler *create_sampler(const char *base,
+                                          const char *texture,
+                                          float value[3],
+                                          bool white_fallback_on_missing = false);
 
 namespace {
 
@@ -359,6 +366,172 @@ static std::string resolve_obj_case_path(const std::string &path)
         if (path_exists(candidate)) return candidate;
     }
     return path;
+}
+
+static nmath::scalar_t clampf(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
+{
+    return std::max(lo, std::min(v, hi));
+}
+
+static int create_random_sphere_grid(Scene *scene, const ncf::NCF *p)
+{
+    if (!scene || !p) return -1;
+
+    const char *seed_prop = p->get_property_by_name("seed");
+    if (!seed_prop) {
+        Log::handle().post_error("random.%s requires seed for repeatable generation", p->get_name());
+        return 1;
+    }
+
+    const int seed = deserialize_numi(seed_prop, 0);
+    const int x_min = deserialize_numi(p->get_property_by_name("x_min"), -11);
+    const int x_max = deserialize_numi(p->get_property_by_name("x_max"), 11);
+    const int z_min = deserialize_numi(p->get_property_by_name("z_min"), -11);
+    const int z_max = deserialize_numi(p->get_property_by_name("z_max"), 11);
+    const nmath::scalar_t y = deserialize_numf(p->get_property_by_name("y"), (nmath::scalar_t)0.2);
+    const nmath::scalar_t radius = deserialize_numf(p->get_property_by_name("radius"), (nmath::scalar_t)0.2);
+    const nmath::scalar_t jitter = deserialize_numf(p->get_property_by_name("jitter"), (nmath::scalar_t)0.9);
+    const nmath::Vector3f avoid_center = deserialize_vec3(p, "avoid_center", nmath::Vector3f(4.0f, 0.2f, 0.0f));
+    const nmath::scalar_t avoid_radius = deserialize_numf(p->get_property_by_name("avoid_radius"), (nmath::scalar_t)0.9);
+
+    const nmath::scalar_t lambert_ratio = clampf(deserialize_numf(p->get_property_by_name("lambert_ratio"), (nmath::scalar_t)0.8), 0.0f, 1.0f);
+    const nmath::scalar_t metal_ratio = clampf(deserialize_numf(p->get_property_by_name("metal_ratio"), (nmath::scalar_t)0.95), lambert_ratio, 1.0f);
+    const nmath::scalar_t metal_fuzz_min = clampf(deserialize_numf(p->get_property_by_name("metal_fuzz_min"), (nmath::scalar_t)0.0), 0.0f, 1.0f);
+    const nmath::scalar_t metal_fuzz_max = clampf(deserialize_numf(p->get_property_by_name("metal_fuzz_max"), (nmath::scalar_t)0.5), metal_fuzz_min, 1.0f);
+    const nmath::scalar_t dielectric_ior = std::max((nmath::scalar_t)1.0, deserialize_numf(p->get_property_by_name("ior"), (nmath::scalar_t)1.5));
+    const nmath::scalar_t dielectric_reflectance = clampf(deserialize_numf(p->get_property_by_name("glass_reflectance"), (nmath::scalar_t)0.04), 0.0f, 1.0f);
+
+    if (x_max <= x_min || z_max <= z_min) {
+        Log::handle().post_error("random.%s has invalid grid bounds", p->get_name());
+        return 1;
+    }
+    if (radius <= (nmath::scalar_t)EPSILON) {
+        Log::handle().post_error("random.%s requires radius > 0", p->get_name());
+        return 1;
+    }
+
+    std::string prefix = deserialize_cstr(p->get_property_by_name("prefix"), p->get_name());
+    if (prefix.empty()) prefix = "random";
+
+    std::mt19937 rng((uint32_t)seed);
+    std::uniform_real_distribution<nmath::scalar_t> u01(0.0f, 1.0f);
+    const auto rand01 = [&]() -> nmath::scalar_t { return u01(rng); };
+    const auto rand_range = [&](nmath::scalar_t lo, nmath::scalar_t hi) -> nmath::scalar_t {
+        return lo + (hi - lo) * rand01();
+    };
+
+    HASH_UINT64 dielectric_mat_id = HASH_ID_INVALID;
+    int created = 0;
+    int skipped = 0;
+
+    for (int a = x_min; a < x_max; ++a) {
+        for (int b = z_min; b < z_max; ++b) {
+            const nmath::Vector3f center(
+                (nmath::scalar_t)a + jitter * rand01(),
+                y,
+                (nmath::scalar_t)b + jitter * rand01()
+            );
+            if ((center - avoid_center).length() <= avoid_radius) {
+                ++skipped;
+                continue;
+            }
+
+            const nmath::scalar_t choose_mat = rand01();
+            const std::string suffix = std::to_string(created);
+            const std::string gname = prefix + "_geo_" + suffix;
+            const std::string mname = prefix + "_mat_" + suffix;
+            const std::string oname = prefix + "_obj_" + suffix;
+
+            HASH_UINT64 gid = xtcore::pool::str::add(gname.c_str());
+            HASH_UINT64 mid = xtcore::pool::str::add(mname.c_str());
+            HASH_UINT64 oid = xtcore::pool::str::add(oname.c_str());
+
+            xtcore::surface::Sphere *surf = new (std::nothrow) xtcore::surface::Sphere();
+            if (!surf) return 1;
+            surf->origin = center;
+            surf->radius = radius;
+            scene->destroy_surface(gid);
+            scene->m_surface[gid] = surf;
+
+            HASH_UINT64 object_mat_id = mid;
+            xtcore::asset::IMaterial *mat = 0;
+
+            if (choose_mat < lambert_ratio) {
+                xtcore::asset::material::Lambert *lm = new (std::nothrow) xtcore::asset::material::Lambert();
+                if (!lm) return 1;
+                float kd[3] = {
+                    (float)(rand01() * rand01()),
+                    (float)(rand01() * rand01()),
+                    (float)(rand01() * rand01())
+                };
+                lm->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler("", "", kd, false));
+                mat = lm;
+            } else if (choose_mat < metal_ratio) {
+                xtcore::asset::material::BlinnPhong *bm = new (std::nothrow) xtcore::asset::material::BlinnPhong();
+                if (!bm) return 1;
+                float ks[3] = {
+                    (float)rand_range(0.5f, 1.0f),
+                    (float)rand_range(0.5f, 1.0f),
+                    (float)rand_range(0.5f, 1.0f)
+                };
+                const nmath::scalar_t fuzz = rand_range(metal_fuzz_min, metal_fuzz_max);
+                const nmath::scalar_t norm = (metal_fuzz_max > metal_fuzz_min + (nmath::scalar_t)EPSILON)
+                    ? ((fuzz - metal_fuzz_min) / (metal_fuzz_max - metal_fuzz_min))
+                    : 0.0f;
+                const nmath::scalar_t exponent = 16.0f + (1.0f - norm) * 1008.0f;
+                bm->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler("", "", ks, false));
+                bm->add_sampler(MAT_SAMPLER_SPECULAR, create_sampler("", "", ks, false));
+                bm->add_scalar(MAT_SCALART_REFLECTANCE, clampf(1.0f - fuzz, 0.0f, 1.0f));
+                bm->add_scalar(MAT_SCALART_EXPONENT, exponent);
+                mat = bm;
+            } else {
+                if (dielectric_mat_id == HASH_ID_INVALID) {
+                    const std::string dname = prefix + "_glass";
+                    dielectric_mat_id = xtcore::pool::str::add(dname.c_str());
+                    if (scene->m_materials.find(dielectric_mat_id) == scene->m_materials.end()) {
+                        xtcore::asset::material::Dielectric *dm = new (std::nothrow) xtcore::asset::material::Dielectric();
+                        if (!dm) return 1;
+                        dm->add_scalar(MAT_SCALART_IOR, dielectric_ior);
+                        dm->add_scalar(MAT_SCALART_TRANSPARENCY, 1.0f);
+                        dm->add_scalar(MAT_SCALART_REFLECTANCE, dielectric_reflectance);
+                        scene->m_materials[dielectric_mat_id] = dm;
+                    }
+                }
+                object_mat_id = dielectric_mat_id;
+            }
+
+            if (mat) {
+                scene->destroy_material(mid);
+                scene->m_materials[mid] = mat;
+            }
+
+            xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
+            if (!obj) return 1;
+            obj->surface = gid;
+            obj->material = object_mat_id;
+            scene->destroy_object(oid);
+            scene->m_objects[oid] = obj;
+            ++created;
+        }
+    }
+
+    scene->mark_spatial_index_dirty();
+    Log::handle().post_message("Created random sphere grid %s (%d spheres, %d skipped) [seed=%d]",
+                               p->get_name(), created, skipped, seed);
+    return 0;
+}
+
+static int create_random(Scene *scene, const ncf::NCF *p)
+{
+    if (!scene || !p) return -1;
+    const std::string type = deserialize_cstr(p->get_property_by_name("type"));
+    if (type.empty()) {
+        Log::handle().post_error("random.%s is missing type", p->get_name());
+        return 1;
+    }
+    if (!type.compare("sphere_grid")) return create_random_sphere_grid(scene, p);
+    Log::handle().post_error("Unsupported random generator type %s in random.%s", type.c_str(), p->get_name());
+    return 1;
 }
 
 static void merge_ncf_group(ncf::NCF *dst, const ncf::NCF *src)
@@ -954,6 +1127,10 @@ xtcore::surface::CSG::op_t csg_parse_op(const std::string &token, bool &ok)
         ok = true;
         return xtcore::surface::CSG::OP_UNION;
     }
+    if (!op.compare(XTPROTO_LTRL_SOFT_UNION) || !op.compare(XTPROTO_LTRL_SMOOTH_UNION)) {
+        ok = true;
+        return xtcore::surface::CSG::OP_SOFT_UNION;
+    }
     if (!op.compare(XTPROTO_LTRL_INTERSECTION)) {
         ok = true;
         return xtcore::surface::CSG::OP_INTERSECTION;
@@ -1011,6 +1188,13 @@ xtcore::asset::ISurface *deserialize_geometry_csg_node(const char *source, const
         }
 
         node->op = op;
+        if (op == xtcore::surface::CSG::OP_SOFT_UNION) {
+            nmath::scalar_t smoothness = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_SMOOTHNESS));
+            if (!std::isfinite((double)smoothness) || smoothness <= (nmath::scalar_t)EPSILON) {
+                smoothness = (nmath::scalar_t)0.15;
+            }
+            node->smoothness = smoothness;
+        }
         node->left = lhs;
         node->right = rhs;
         node->calc_aabb();
@@ -1389,7 +1573,7 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
-xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3], bool white_fallback_on_missing = false)
+xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3], bool white_fallback_on_missing)
 {
      xtcore::sampler::ISampler *sampler = 0;
      {
@@ -1706,6 +1890,19 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 			}
 		}
 	}
+
+    ncf::NCF *random_node = root.get_group_by_name("random");
+    const size_t random_count = random_node->count_groups();
+    for (size_t i = 0; i < random_count; ++i) {
+        ncf::NCF *entry = random_node->get_group_by_index(i);
+        Log::handle().post_message("Creating random / %s..", entry->get_name());
+        if (create_random(scene, entry)) {
+            Log::handle().post_error("Failed to load random generator: %s", entry->get_name());
+            scene->release();
+            return 1;
+        }
+    }
+
     scene->rebuild_spatial_index();
 	Log::handle().post_message("Scene loaded.");
     auto t_load_1 = std::chrono::steady_clock::now();
