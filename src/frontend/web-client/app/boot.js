@@ -788,6 +788,18 @@ async function boot() {
         });
     });
   }
+  if (el.sceneSearch && typeof setSceneSearchQuery === "function") {
+    el.sceneSearch.addEventListener("input", () => {
+      setSceneSearchQuery(el.sceneSearch.value);
+    });
+    el.sceneSearch.addEventListener("keydown", (evt) => {
+      if (evt.key !== "Escape") return;
+      if (!el.sceneSearch.value) return;
+      el.sceneSearch.value = "";
+      setSceneSearchQuery("");
+      evt.preventDefault();
+    });
+  }
 
   setInterval(() => {
     if (activeTabMode !== "workspaces") return;

@@ -78,6 +78,7 @@ const el = {
   sceneRefreshBtn: $("sceneRefreshBtn"),
   sceneActiveFile: $("sceneActiveFile"),
   sceneFileCount: $("sceneFileCount"),
+  sceneSearch: $("sceneSearch"),
   sceneFileList: $("sceneFileList"),
   cameraActiveName: $("cameraActiveName"),
   cameraFileCount: $("cameraFileCount"),

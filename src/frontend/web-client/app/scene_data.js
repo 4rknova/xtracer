@@ -1,4 +1,9 @@
 let appConfigLoadPromise = null;
+let sceneSearchQuery = "";
+
+function normalizeSceneSearchQuery(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
 function normalizeConfiguredDefaultIntegratorId(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) return "";
@@ -378,8 +383,33 @@ function extractSceneVariantNames(source) {
 
 function updateSceneFileCount() {
   if (!el.sceneFileCount) return;
-  const count = sceneCatalog.length;
-  el.sceneFileCount.textContent = String(count);
+  const visibleCount = getFilteredSceneCatalog().length;
+  const totalCount = sceneCatalog.length;
+  if (sceneSearchQuery && visibleCount !== totalCount) {
+    el.sceneFileCount.textContent = `${visibleCount}/${totalCount}`;
+    return;
+  }
+  el.sceneFileCount.textContent = String(totalCount);
+}
+
+function sceneItemSearchText(item) {
+  if (!item || typeof item !== "object") return "";
+  const sceneFile = String(item.sceneFile || "");
+  const title = String(item.title || "");
+  const description = String(item.description || "");
+  return `${sceneFile}\n${title}\n${description}`.toLowerCase();
+}
+
+function getFilteredSceneCatalog() {
+  if (!sceneSearchQuery) return sceneCatalog.slice();
+  return sceneCatalog.filter((item) => sceneItemSearchText(item).indexOf(sceneSearchQuery) >= 0);
+}
+
+function setSceneSearchQuery(value) {
+  const next = normalizeSceneSearchQuery(value);
+  if (sceneSearchQuery === next) return;
+  sceneSearchQuery = next;
+  renderSceneFileBrowser();
 }
 
 async function refreshSceneCatalog(sceneFile) {
@@ -586,15 +616,16 @@ function renderSceneFileBrowser() {
   el.sceneFileList.replaceChildren();
   updateSceneFileCount();
 
-  if (!sceneCatalog.length) {
+  const visibleSceneCatalog = getFilteredSceneCatalog();
+  if (!visibleSceneCatalog.length) {
     const empty = document.createElement("p");
     empty.className = "scene-file-empty";
-    empty.textContent = "No scene files found.";
+    empty.textContent = sceneSearchQuery ? "No scenes match the search." : "No scene files found.";
     el.sceneFileList.appendChild(empty);
     return;
   }
 
-  sceneCatalog.forEach((item) => {
+  visibleSceneCatalog.forEach((item) => {
     const sceneFile = String(item && item.sceneFile ? item.sceneFile : "").trim();
     if (!sceneFile) return;
     const title = String(item && item.title ? item.title : "").trim();
@@ -702,10 +733,11 @@ function setSceneBrowserSelectedFile(sceneFile) {
   const name = String(sceneFile || "").trim();
   if (name && sceneCatalogHasFile(name)) sceneBrowserSelectedFile = name;
   else sceneBrowserSelectedFile = "";
+  const filteredCount = getFilteredSceneCatalog().length;
   const renderedItems = el.sceneFileList
     ? el.sceneFileList.querySelectorAll(".scene-file-item[data-scene]").length
     : 0;
-  if (!el.sceneFileList || renderedItems !== sceneCatalog.length) {
+  if (!el.sceneFileList || renderedItems !== filteredCount) {
     renderSceneFileBrowser();
     return;
   }
