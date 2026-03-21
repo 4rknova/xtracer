@@ -9,6 +9,21 @@ function sanitizeIntField(input, fallback, min, max) {
   return String(value);
 }
 
+function updateRenderActionButton() {
+  if (!el.renderBtn) return;
+  const running = !!renderActive;
+  if (abortRequestInFlight) {
+    el.renderBtn.disabled = true;
+    el.renderBtn.textContent = "Aborting...";
+    return;
+  }
+  el.renderBtn.disabled = false;
+  el.renderBtn.textContent = running ? "Abort" : "Render";
+}
+
+let abortRequestedJobId = "";
+let abortRequestInFlight = false;
+
 async function startRender() {
   const width = sanitizeIntField(el.width, 500, 32, 8192);
   const height = sanitizeIntField(el.height, 500, 32, 8192);
@@ -35,6 +50,41 @@ async function startRender() {
     post_filters: gatherPostFilterParams(),
     ...gatherIntegratorOptionParams(),
   });
+}
+
+async function abortRenderJob(jobId) {
+  if (!jobId) return;
+  if (!hasBackendMethod(api, "abortJob")) throw new Error("abort endpoint unavailable");
+  return api.abortJob(jobId);
+}
+
+async function resolveAbortJobId() {
+  const localId = String(activeJobId || "").trim();
+  if (localId) return localId;
+  if (hasBackendMethod(api, "getActiveJobs")) {
+    try {
+      const activeJobs = await api.getActiveJobs();
+      const workspaceId = String(activeWorkspaceId || "").trim();
+      const forWorkspace = workspaceId
+        ? activeJobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
+        : null;
+      const selected = forWorkspace || (activeJobs.length > 0 ? activeJobs[0] : null);
+      const state = String((selected && selected.state) || "").toLowerCase();
+      const serverJobId = (state === "queued" || state === "running")
+        ? String((selected && selected.id) || "").trim()
+        : "";
+      if (serverJobId) {
+        activeJobId = serverJobId;
+        syncGlobalsToWorkspaceRuntime();
+        updateRenderActionButton();
+        appendLog(`abort resolve server job=${serverJobId}`);
+        return serverJobId;
+      }
+    } catch (err) {
+      appendLog(`abort resolve server lookup failed: ${err.message}`);
+    }
+  }
+  return "";
 }
 
 async function saveScene() {
@@ -91,10 +141,17 @@ async function pollJob(jobId, token) {
     if (token !== undefined && token !== activePollToken) return;
     const state = data.state || "unknown";
     const progress = data.progress || 0;
+    const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
+    const threads = Math.max(0, Number(data.threads) || 0);
     updateActivePreviewTilesFromJob(data);
     setProgress(progress);
+    setStatusThreads(threads);
     const stateLabel = state === "running" ? "rendering" : state;
-    setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
+    if ((state === "queued" || state === "running") && elapsedMs > 0 && typeof formatElapsed === "function") {
+      setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
+    } else {
+      setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
+    }
     applyPreviewTransform();
 
     if (state !== lastState) {
@@ -102,28 +159,45 @@ async function pollJob(jobId, token) {
       lastState = state;
     }
 
+    const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
     let updatedByDelta = false;
-    if (state === "queued" || state === "running") {
-      try {
-        updatedByDelta = await refreshProgressivePreviewDelta(jobId);
-      } catch (_) {
-        updatedByDelta = false;
+    let deltaTilesDone = 0;
+    let deltaTilesTotal = 0;
+    if (!abortPending) {
+      if (state === "queued" || state === "running" || state === "done") {
+        try {
+          const info = await refreshProgressivePreviewDelta(jobId);
+          if (info && typeof info === "object") {
+            updatedByDelta = !!info.updated;
+            deltaTilesDone = Number(info.tilesDone) || 0;
+            deltaTilesTotal = Number(info.tilesTotal) || 0;
+          }
+        } catch (_) {
+          updatedByDelta = false;
+          deltaTilesDone = 0;
+          deltaTilesTotal = 0;
+        }
       }
-    }
-    if (!updatedByDelta) {
-      await refreshProgressivePreview(jobId);
-      if (state === "queued" || state === "running") progressiveDeltaEnabled = false;
+      if (!updatedByDelta) {
+        await refreshProgressivePreview(jobId);
+      }
     }
     if (token !== undefined && token !== activePollToken) return;
 
+    const deltaComplete = !hasBackendMethod(api, "getJobImageDelta")
+      || deltaTilesTotal <= 0
+      || deltaTilesDone >= deltaTilesTotal;
+    if (state === "done" && !abortPending && !deltaComplete) {
+      await new Promise((r) => setTimeout(r, uiOptions.pollMs));
+      continue;
+    }
+
     if (state === "done") {
+      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
       clearActivePreviewTiles();
       resetProgressiveDeltaState("");
       progressiveDeltaEnabled = true;
-      const elapsedMsRaw = Math.max(0, Number(data.elapsed_ms) || 0);
-      const elapsedMs = elapsedMsRaw > 0
-        ? elapsedMsRaw
-        : (renderStartMs > 0 ? (Date.now() - renderStartMs) : 0);
+      const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
       recordFullFrameRenderTime(elapsedMs);
       const finalBlob = await api.getJobImage(jobId, {
         final: true,
@@ -150,7 +224,19 @@ async function pollJob(jobId, token) {
       return;
     }
 
+    if (state === "aborted") {
+      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
+      clearActivePreviewTiles();
+      resetProgressiveDeltaState("");
+      progressiveDeltaEnabled = true;
+      applyPreviewTransform();
+      setStatus("aborted");
+      appendLog(`job ${jobId} aborted`);
+      return;
+    }
+
     if (state === "error") {
+      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
       clearActivePreviewTiles();
       resetProgressiveDeltaState("");
       progressiveDeltaEnabled = true;
@@ -192,12 +278,50 @@ async function handleExportClick(event) {
 }
 
 async function handleRender() {
-  setActiveTab("render");
+  if (renderActive) {
+    if (abortRequestInFlight) return;
+    abortRequestInFlight = true;
+    updateRenderActionButton();
+    try {
+      const jobId = await resolveAbortJobId();
+      if (!jobId) throw new Error("no active job id available for abort");
+      abortRequestedJobId = String(jobId || "").trim();
+      // Stop render polling before issuing abort to avoid queuing abort behind
+      // a flood of polling requests.
+      beginPollSession();
+      clearActivePreviewTiles();
+      resetProgressiveDeltaState("");
+      progressiveDeltaEnabled = false;
+      applyPreviewTransform();
+      appendLog(`abort requested for job ${jobId}`);
+      const abortResult = await abortRenderJob(jobId);
+      const serverState = abortResult && abortResult.state ? String(abortResult.state) : "";
+      if (serverState) {
+        appendLog(`abort accepted for job ${jobId} state=${serverState}`);
+        setStatus(`aborting (${serverState})...`);
+      } else {
+        setStatus("aborting...");
+      }
+      // Stop all job polling immediately after abort request so we can observe
+      // backend cancellation behavior without client-side polling noise.
+      activeJobId = "";
+      abortRequestedJobId = "";
+      syncGlobalsToWorkspaceRuntime();
+      cancelActivePollingUi();
+    } catch (err) {
+      setStatus(`error: ${err.message}`);
+      appendLog(`abort error: ${err.message}`);
+    } finally {
+      abortRequestInFlight = false;
+      updateRenderActionButton();
+    }
+    return;
+  }
+
+  if (activeTabMode !== "render") setActiveTab("render");
   const pollToken = beginPollSession();
-  el.renderBtn.disabled = true;
-  lastCompletedJobId = "";
-  lastCompletedJobScene = "";
-  lastCompletedJobIntegrator = "";
+  abortRequestedJobId = "";
+  abortRequestInFlight = false;
   syncGlobalsToWorkspaceRuntime();
   updateDownloadUi();
   if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
@@ -213,18 +337,25 @@ async function handleRender() {
     previewPinnedBaseUrl = previewObjectUrl || el.preview.getAttribute("src") || "";
   }
   setRenderActive(true);
+  updateRenderActionButton();
   clearActivePreviewTiles();
   applyPreviewTransform();
   setProgress(0);
+  setStatusThreads(0);
   setStatus("submitting job...");
   appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
+  let submittedJobId = "";
+  let pollReachedTerminalState = false;
   try {
     const jobId = await startRender();
     if (pollToken !== activePollToken) return;
+    submittedJobId = String(jobId || "").trim();
     activeJobId = jobId;
+    updateRenderActionButton();
     syncGlobalsToWorkspaceRuntime();
     appendLog(`job accepted: ${jobId}`);
     await pollJob(jobId, pollToken);
+    pollReachedTerminalState = true;
   } catch (err) {
     setStatus(`error: ${err.message}`);
     appendLog(`render error: ${err.message}`);
@@ -235,15 +366,41 @@ async function handleRender() {
     previewPinnedBaseUrl = "";
     previewPinnedBaseBitmapPromise = null;
     preservePreviewUnderlay = false;
-    if (!activeJobId || pollToken === activePollToken) {
+
+    const ownPollSession = (pollToken === activePollToken);
+    let shouldClearActiveJob = pollReachedTerminalState;
+    const candidateJobId = String(activeJobId || submittedJobId || "").trim();
+
+    if (!shouldClearActiveJob && ownPollSession && candidateJobId && hasBackendMethod(api, "getJob")) {
+      try {
+        const snap = await api.getJob(candidateJobId);
+        const serverState = String((snap && snap.state) || "").toLowerCase();
+        if (serverState === "done" || serverState === "aborted" || serverState === "error") {
+          shouldClearActiveJob = true;
+        } else if (serverState === "queued" || serverState === "running") {
+          activeJobId = candidateJobId;
+          syncGlobalsToWorkspaceRuntime();
+          setRenderActive(true);
+          updateRenderActionButton();
+          appendLog(`poll recovered: job ${candidateJobId} still ${serverState}`);
+          if (typeof resumeWorkspaceJobPolling === "function") {
+            resumeWorkspaceJobPolling(candidateJobId);
+            return;
+          }
+        }
+      } catch (recoverErr) {
+        appendLog(`poll recover check failed: ${recoverErr.message}`);
+      }
+    }
+
+    if (shouldClearActiveJob && ownPollSession) {
       activeJobId = "";
+      updateRenderActionButton();
       syncGlobalsToWorkspaceRuntime();
     }
     if (!activeJobId) {
       setRenderActive(false);
-      el.renderBtn.disabled = false;
-    } else {
-      el.renderBtn.disabled = true;
+      updateRenderActionButton();
     }
   }
 }

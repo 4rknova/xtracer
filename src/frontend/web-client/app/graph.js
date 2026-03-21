@@ -73,6 +73,54 @@ function drawGraphFittedText(ctx, text, x, y, maxWidth) {
   ctx.fillText(out, x, y);
 }
 
+function drawCsgOperantIcon(ctx, cx, cy, op, dimmed) {
+  if (!ctx) return;
+  const leftX = cx - 6;
+  const rightX = cx + 6;
+  const radius = 8;
+  const iconPath = new Path2D();
+  iconPath.arc(leftX, cy, radius, 0, Math.PI * 2);
+  iconPath.arc(rightX, cy, radius, 0, Math.PI * 2);
+
+  const leftPath = new Path2D();
+  leftPath.arc(leftX, cy, radius, 0, Math.PI * 2);
+  const rightPath = new Path2D();
+  rightPath.arc(rightX, cy, radius, 0, Math.PI * 2);
+
+  const normOp = String(op || "union").toLowerCase();
+  const alpha = dimmed ? 0.45 : 0.9;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (normOp === "intersection") {
+    ctx.save();
+    ctx.clip(leftPath);
+    ctx.clip(rightPath);
+    ctx.fillStyle = "rgba(150,204,255,0.66)";
+    ctx.fillRect(cx - 24, cy - 14, 48, 28);
+    ctx.restore();
+  } else if (normOp === "difference") {
+    ctx.save();
+    ctx.clip(leftPath);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fill(rightPath);
+    ctx.restore();
+    ctx.fillStyle = "rgba(150,204,255,0.5)";
+    ctx.fill(leftPath);
+  } else {
+    // union + soft_union share the same glyph.
+    ctx.fillStyle = "rgba(150,204,255,0.32)";
+    ctx.fill(leftPath);
+    ctx.fill(rightPath);
+  }
+
+  ctx.strokeStyle = dimmed ? "rgba(170,188,205,0.5)" : "rgba(212,230,246,0.92)";
+  ctx.lineWidth = 1.1;
+  ctx.stroke(leftPath);
+  ctx.stroke(rightPath);
+  ctx.restore();
+}
+
 function drawGraphCanvas() {
   if (!el.graphCanvas) return;
   const dims = ensureGraphCanvasSize();
@@ -177,11 +225,14 @@ function drawGraphCanvas() {
 
     ctx.fillStyle = dimmed ? "rgba(180,194,208,0.45)" : "#e6eff7";
     ctx.font = "600 13px IBM Plex Sans, sans-serif";
-    drawGraphFittedText(ctx, n.id, n.x + 10, n.y + 20, n.w - 20);
+    const hasCsgIcon = n.kind === "geometry" && !!n.csgOp;
+    if (hasCsgIcon) drawCsgOperantIcon(ctx, n.x + n.w - 20, n.y + 16, n.csgOp, dimmed);
+    const titleMaxWidth = hasCsgIcon ? (n.w - 46) : (n.w - 20);
+    drawGraphFittedText(ctx, n.id, n.x + 10, n.y + 20, titleMaxWidth);
 
     ctx.fillStyle = dimmed ? "rgba(145,160,176,0.42)" : "rgba(170,186,202,0.9)";
     ctx.font = "11px IBM Plex Sans, sans-serif";
-    drawGraphFittedText(ctx, n.subtitle, n.x + 10, n.y + 37, n.w - 20);
+    drawGraphFittedText(ctx, n.subtitle, n.x + 10, n.y + 37, titleMaxWidth);
 
     if (n.expanded) {
       const rows = Array.isArray(n.propertyRows) ? n.propertyRows : [];
@@ -693,11 +744,17 @@ function renderSceneGraphView() {
       .map((g) => ({
         id: String((g && g.id) || "").trim(),
         type: String((g && g.type) || "surface"),
+        op: String((g && g.op) || "").trim(),
+        smoothness: Number.isFinite(Number(g && g.smoothness)) ? Number(g.smoothness) : null,
+        left_type: String((g && g.left_type) || "").trim(),
+        right_type: String((g && g.right_type) || "").trim(),
         position: Array.isArray(g && g.position) ? g.position.slice(0, 3).map((v) => Number(v) || 0) : null,
         radius: Number.isFinite(Number(g && g.radius)) ? Number(g.radius) : null,
         normal: Array.isArray(g && g.normal) ? g.normal.slice(0, 3).map((v) => Number(v) || 0) : null,
         distance: Number.isFinite(Number(g && g.distance)) ? Number(g.distance) : null,
         triangles: Number.isFinite(Number(g && g.triangles)) ? Number(g.triangles) : null,
+        bounds_min: Array.isArray(g && g.bounds_min) ? g.bounds_min.slice(0, 3).map((v) => Number(v) || 0) : null,
+        bounds_max: Array.isArray(g && g.bounds_max) ? g.bounds_max.slice(0, 3).map((v) => Number(v) || 0) : null,
         v0: Array.isArray(g && g.v0) ? g.v0.slice(0, 3).map((v) => Number(v) || 0) : null,
         v1: Array.isArray(g && g.v1) ? g.v1.slice(0, 3).map((v) => Number(v) || 0) : null,
         v2: Array.isArray(g && g.v2) ? g.v2.slice(0, 3).map((v) => Number(v) || 0) : null,
@@ -835,6 +892,7 @@ function renderSceneGraphView() {
       expanded: !!ext.expanded,
       propertyRows: Array.isArray(ext.propertyRows) ? ext.propertyRows : [],
       texturePreviews: Array.isArray(ext.texturePreviews) ? ext.texturePreviews : [],
+      csgOp: ext.csgOp || "",
     };
     node.manualKey = `${sceneName || ""}|${node.key}`;
     const manual = graphView.manualNodePos.get(node.manualKey);
@@ -884,11 +942,19 @@ function renderSceneGraphView() {
     const nodeKey = `geometry:${g.id}`;
     const expanded = graphView.expandedNodeKeys.has(nodeKey);
     const propertyRows = [{ key: "type", value: String(g.type || "surface") }];
+    if (g.type === "csg") {
+      if (g.op) propertyRows.push({ key: "op", value: g.op });
+      if (Number.isFinite(g.smoothness)) propertyRows.push({ key: "smoothness", value: formatGraphNumeric(g.smoothness) });
+      if (g.left_type) propertyRows.push({ key: "left", value: g.left_type });
+      if (g.right_type) propertyRows.push({ key: "right", value: g.right_type });
+    }
     if (Array.isArray(g.position)) propertyRows.push({ key: "position", value: graphVec3Label(g.position) });
     if (Number.isFinite(g.radius)) propertyRows.push({ key: "radius", value: formatGraphNumeric(g.radius) });
     if (Array.isArray(g.normal)) propertyRows.push({ key: "normal", value: graphVec3Label(g.normal) });
     if (Number.isFinite(g.distance)) propertyRows.push({ key: "distance", value: formatGraphNumeric(g.distance) });
     if (Number.isFinite(g.triangles)) propertyRows.push({ key: "triangles", value: formatGraphNumeric(g.triangles) });
+    if (Array.isArray(g.bounds_min)) propertyRows.push({ key: "bounds_min", value: graphVec3Label(g.bounds_min) });
+    if (Array.isArray(g.bounds_max)) propertyRows.push({ key: "bounds_max", value: graphVec3Label(g.bounds_max) });
     if (Array.isArray(g.v0)) propertyRows.push({ key: "v0", value: graphVec3Label(g.v0) });
     if (Array.isArray(g.v1)) propertyRows.push({ key: "v1", value: graphVec3Label(g.v1) });
     if (Array.isArray(g.v2)) propertyRows.push({ key: "v2", value: graphVec3Label(g.v2) });
@@ -897,6 +963,7 @@ function renderSceneGraphView() {
       expanded,
       propertyRows,
       texturePreviews: [],
+      csgOp: g.type === "csg" ? String(g.op || "union") : "",
     });
   });
   materials.forEach((m) => {

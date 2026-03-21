@@ -157,9 +157,34 @@ function setStatus(text) {
     if (lower.indexOf("error") >= 0) state = "error";
     else state = "running";
   }
-  el.status.textContent = statusText;
+  const match = String(statusText || "").match(/^(.+?)\s+(\d+(?:\.\d+)?)%(?:\s*\(([^)]+)\))?$/);
+  const statusLabel = match ? String(match[1] || "").trim() : String(statusText || "").trim();
+  const statusPercent = match ? `${match[2]}%` : "";
+  const statusTimer = match ? String(match[3] || "").trim() : "";
+
+  el.status.textContent = statusLabel || "Idle";
   el.status.classList.remove("is-idle", "is-running", "is-error");
   el.status.classList.add(`is-${state}`);
+  if (el.statusPercent) {
+    el.statusPercent.hidden = !statusPercent;
+    el.statusPercent.textContent = statusPercent || "0.0%";
+  }
+  if (el.renderTimer) {
+    el.renderTimer.hidden = !statusTimer;
+    el.renderTimer.textContent = statusTimer || "00:00";
+  }
+}
+
+function setStatusThreads(threads) {
+  if (!el.statusThreads) return;
+  const n = Number(threads);
+  const valid = Number.isFinite(n) && n > 0;
+  el.statusThreads.hidden = !valid;
+  if (valid) {
+    el.statusThreads.textContent = `threads ${Math.max(1, Math.floor(n))}`;
+  } else {
+    el.statusThreads.textContent = "threads 0";
+  }
 }
 
 function formatElapsedShort(ms) {
@@ -309,14 +334,7 @@ function recordPreviewTransfer(kind, bytes) {
 }
 
 function updateRenderTimer() {
-  if (!el.renderTimer) return;
-  if (!renderActive || renderStartMs <= 0) {
-    el.renderTimer.hidden = true;
-    el.renderTimer.textContent = "00:00";
-    return;
-  }
-  el.renderTimer.hidden = false;
-  el.renderTimer.textContent = formatElapsed(Date.now() - renderStartMs);
+  // Timer text is set from server-provided elapsed_ms in setStatus().
 }
 
 function setRenderActive(active) {
@@ -333,15 +351,26 @@ function setRenderActive(active) {
     }
   }
   updateRenderTimer();
-  if (el.progressBar) el.progressBar.hidden = !renderActive;
+  if (el.previewHeadline) {
+    el.previewHeadline.classList.toggle("is-running", renderActive);
+    el.previewHeadline.classList.toggle("is-idle", !renderActive);
+  }
+  if (el.progressBar) {
+    el.progressBar.hidden = false;
+    el.progressBar.classList.toggle("is-visible", renderActive);
+  }
   if (!renderActive) {
     el.progress.style.width = "0%";
+    setStatusThreads(0);
     setStatus("Idle");
+  }
+  if (typeof updateRenderActionButton === "function") {
+    updateRenderActionButton();
   }
 }
 
 async function getJSON(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -355,6 +384,14 @@ function createHttpError(status, message) {
   const err = new Error(message || `HTTP ${status}`);
   err.status = status;
   return err;
+}
+
+async function readJsonMaybe(res) {
+  try {
+    return await res.json();
+  } catch (_) {
+    return {};
+  }
 }
 
 async function waitForSceneLoadJob(jobId, timeoutMs) {
@@ -435,14 +472,17 @@ async function getSceneJSONWithAsyncLoad(url, timeoutMs) {
 }
 
 function generateClientId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return `client_${window.crypto.randomUUID()}`;
+  }
   const ts = Date.now().toString(36);
-  const rnd = Math.random().toString(36).slice(2, 10);
+  const rnd = Math.random().toString(36).slice(2, 14);
   return `client_${ts}_${rnd}`;
 }
 
 function ensureClientId() {
   const existing = String(localStorage.getItem(CLIENT_ID_KEY) || "").trim();
-  if (existing) {
+  if (existing && /^[A-Za-z0-9_.-]{1,96}$/.test(existing)) {
     clientId = existing;
     return clientId;
   }
@@ -538,7 +578,12 @@ function cancelActivePollingUi() {
   beginPollSession();
   clearActivePreviewTiles();
   setRenderActive(false);
-  if (el.renderBtn) el.renderBtn.disabled = false;
+  if (typeof updateRenderActionButton === "function") {
+    updateRenderActionButton();
+  } else if (el.renderBtn) {
+    el.renderBtn.disabled = false;
+    el.renderBtn.textContent = "Render";
+  }
 }
 
 function resetProgressiveDeltaState(jobId) {
@@ -642,9 +687,14 @@ function createServerApi() {
       const data = await getJSON(`/api/logs?since=${sinceId}`);
       return data.entries || [];
     },
-    async waitForLogsSince(sinceId, timeoutMs) {
+    async waitForLogsSince(sinceId, timeoutMs, opts) {
       const waitMs = Number.isFinite(timeoutMs) ? Math.max(1000, Math.min(60000, Math.floor(timeoutMs))) : 15000;
-      const data = await getJSON(`/api/logs/wait?since=${sinceId}&timeout_ms=${waitMs}`);
+      const res = await fetch(`/api/logs/wait?since=${sinceId}&timeout_ms=${waitMs}`, {
+        cache: "no-store",
+        signal: opts && opts.signal ? opts.signal : undefined,
+      });
+      if (!res.ok) throw createHttpError(res.status, `HTTP ${res.status}`);
+      const data = await readJsonMaybe(res);
       return data.entries || [];
     },
     async getScenes() {
@@ -724,6 +774,60 @@ function createServerApi() {
     },
     async getJob(jobId) {
       return getJSON(`/api/jobs/${jobId}`);
+    },
+    async getActiveJob() {
+      const list = await this.getActiveJobs();
+      return list.length > 0 ? list[0] : null;
+    },
+    async getActiveJobs() {
+      const res = await fetch("/api/jobs/active", { cache: "no-store" });
+      const data = await readJsonMaybe(res);
+      if (!res.ok) throw createHttpError(res.status, (data && data.error) || `HTTP ${res.status}`);
+      return Array.isArray(data && data.jobs) ? data.jobs : [];
+    },
+    async abortJob(jobId) {
+      const encoded = encodeURIComponent(jobId);
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      const res = await fetch(`/api/jobs/abort/${encoded}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await readJsonMaybe(res);
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return {
+        ok: !!data.ok,
+        state: String((data && data.state) || ""),
+      };
+    },
+    async moveJobQueueUp(jobId) {
+      const encoded = encodeURIComponent(String(jobId || ""));
+      if (!encoded) throw createHttpError(400, "invalid job id");
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      const res = await fetch(`/api/jobs/queue/up/${encoded}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await readJsonMaybe(res);
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return !!data.ok;
+    },
+    async moveJobQueueDown(jobId) {
+      const encoded = encodeURIComponent(String(jobId || ""));
+      if (!encoded) throw createHttpError(400, "invalid job id");
+      const body = new URLSearchParams();
+      body.set("client_id", clientId || ensureClientId());
+      const res = await fetch(`/api/jobs/queue/down/${encoded}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await readJsonMaybe(res);
+      if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
+      return !!data.ok;
     },
     async getJobPhotons(jobId, limit) {
       const lim = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100000;
@@ -929,18 +1033,35 @@ function initializeBackendApi() {
 async function pollBackendLogs() {
   if (!api) return;
   const supportsLogWait = hasBackendMethod(api, "waitForLogsSince");
+  const onLogsTab = String(activeTabMode || "") === "logs";
+  const waitMs = onLogsTab
+    ? Math.max(1000, Math.min(60000, Number(uiOptions.logPollActiveMs) || 3000))
+    : Math.max(1000, Math.min(120000, Number(uiOptions.logPollBackgroundMs) || 20000));
   try {
+    if (supportsLogWait && typeof AbortController === "function") {
+      backendLogWaitAbortController = new AbortController();
+    } else {
+      backendLogWaitAbortController = null;
+    }
     const entries = supportsLogWait
-      ? await api.waitForLogsSince(lastBackendLogId, Math.max(1000, Math.min(60000, uiOptions.pollMs * 10)))
+      ? await api.waitForLogsSince(lastBackendLogId, waitMs, {
+        signal: backendLogWaitAbortController ? backendLogWaitAbortController.signal : undefined,
+      })
       : await api.getLogsSince(lastBackendLogId);
     for (let i = 0; i < entries.length; i += 1) {
       appendBackendLog(entries[i]);
       if ((entries[i].id || 0) > lastBackendLogId) lastBackendLogId = entries[i].id;
     }
   } catch (err) {
-    appendLog(`backend logs unavailable: ${err.message}`);
+    if (err && (err.name === "AbortError" || String(err.message || "").toLowerCase().indexOf("aborted") >= 0)) {
+      // expected when prioritizing render/abort requests
+    } else {
+      appendLog(`backend logs unavailable: ${err.message}`);
+    }
     await new Promise((r) => setTimeout(r, 1000));
   } finally {
+    backendLogWaitAbortController = null;
+    // Long-poll already waits on the server; schedule the next cycle immediately.
     const delay = supportsLogWait ? 0 : Math.max(500, uiOptions.pollMs);
     setTimeout(pollBackendLogs, delay);
   }

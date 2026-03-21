@@ -23,6 +23,8 @@ const el = {
   theme: $("theme"),
   darkPalette: $("darkPalette"),
   pollInterval: $("pollInterval"),
+  logPollActiveInterval: $("logPollActiveInterval"),
+  logPollBackgroundInterval: $("logPollBackgroundInterval"),
   textHistorySize: $("textHistorySize"),
   visualHistorySize: $("visualHistorySize"),
   autoLoadEditor: $("autoLoadEditor"),
@@ -55,6 +57,9 @@ const el = {
   workspaceViewMode: $("workspaceViewMode"),
   workspaceViewCardsBtn: $("workspaceViewCardsBtn"),
   workspaceViewListBtn: $("workspaceViewListBtn"),
+  workspaceSortNameBtn: $("workspaceSortNameBtn"),
+  workspaceSortUpdatedBtn: $("workspaceSortUpdatedBtn"),
+  workspaceSortSceneBtn: $("workspaceSortSceneBtn"),
   workspaceActiveHint: $("workspaceActiveHint"),
   workspaceCountHint: $("workspaceCountHint"),
   workspaceMaxConcurrentHint: $("workspaceMaxConcurrentHint"),
@@ -62,6 +67,9 @@ const el = {
   workspaceOpenmpHint: $("workspaceOpenmpHint"),
   workspaceRenderReserveHint: $("workspaceRenderReserveHint"),
   workspaceRenderAutoHint: $("workspaceRenderAutoHint"),
+  settingsJobsUpdated: $("settingsJobsUpdated"),
+  settingsJobsThreadsUsage: $("settingsJobsThreadsUsage"),
+  settingsJobsList: $("settingsJobsList"),
   activeSceneCardScene: $("activeSceneCardScene"),
   activeSceneCardDescription: $("activeSceneCardDescription"),
   activeSceneCardCamera: $("activeSceneCardCamera"),
@@ -87,6 +95,10 @@ const el = {
   integratorControls: $("integratorControls"),
   resolutionPreset: $("resolutionPreset"),
   resolutionPresetList: $("resolutionPresetList"),
+  resolutionModeFilterAll: $("resolutionModeFilterAll"),
+  resolutionModeFilterLandscape: $("resolutionModeFilterLandscape"),
+  resolutionModeFilterPortrait: $("resolutionModeFilterPortrait"),
+  resolutionModeFilterSquare: $("resolutionModeFilterSquare"),
   width: $("width"),
   height: $("height"),
   samples: $("samples"),
@@ -116,7 +128,10 @@ const el = {
   postFiltersChain: $("postFiltersChain"),
   clearPreviewOnRender: $("clearPreviewOnRender"),
   renderBtn: $("renderBtn"),
+  previewHeadline: $("previewHeadline"),
   status: $("status"),
+  statusThreads: $("statusThreads"),
+  statusPercent: $("statusPercent"),
   sceneLoadState: $("sceneLoadState"),
   sceneLoadMessage: $("sceneLoadMessage"),
   sceneLoadJobId: $("sceneLoadJobId"),
@@ -210,6 +225,8 @@ const DEFAULT_THIRD_PARTY_LICENSES = [
 
 const uiOptions = {
   pollMs: 300,
+  logPollActiveMs: 3000,
+  logPollBackgroundMs: 20000,
   textHistoryLimit: 200,
   visualHistoryLimit: 200,
   autoLoadEditor: true,
@@ -223,6 +240,7 @@ const uiOptions = {
   lightPalette: "coastal",
 };
 let resolutionPresets = [];
+let resolutionPresetModeFilter = "all";
 let sceneDependencyByFile = new Map();
 let sceneCatalog = [];
 let sceneBrowserSelectedFile = "";
@@ -231,6 +249,7 @@ let cameraBrowserSelectedName = "";
 let variantCatalog = [];
 let variantBrowserSelectedName = "";
 let lastBackendLogId = 0;
+let backendLogWaitAbortController = null;
 let previewObjectUrl = "";
 let previewPendingRevokeUrl = "";
 let previewPinnedBaseUrl = "";
@@ -303,6 +322,7 @@ const BACKEND_MODE_KEY = "xtracer-backend-mode";
 const ACTIVE_TAB_KEY = "xtracer-active-tab";
 const EDITOR_VIEW_MODE_KEY = "xtracer-editor-view-mode";
 const WORKSPACE_VIEW_MODE_KEY = "xtracer-workspace-view-mode";
+const WORKSPACE_SORT_MODE_KEY = "xtracer-workspace-sort-mode";
 const LAST_SCENE_KEY = "xtracer-last-scene";
 const LOG_FILTERS_KEY = "xtracer-log-filters";
 const CLIENT_ID_KEY = "xtracer-client-id";
@@ -310,6 +330,7 @@ const FTUE_STATE_VERSION_KEY = "xtracer-ftue-version";
 const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
 const FTUE_VERSION = 1;
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
+const APP_CONFIG_URL = "/app/data/config.json";
 const TAB_MODES = ["scene", "render", "visual", "workspaces", "logs", "settings"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
@@ -318,6 +339,7 @@ let backendMode = "server";
 let clientId = "";
 let activeWorkspaceId = "";
 let workspaceViewMode = "cards";
+let workspaceSortMode = "name";
 const workspaceSnapshotById = new Map();
 const workspaceRuntimeById = new Map();
 let workspaceSpatialIndexStats = null;
@@ -375,3 +397,81 @@ const previewView = {
   lastX: 0,
   lastY: 0,
 };
+
+function isSafeClientId(value) {
+  return /^[A-Za-z0-9_.-]{1,96}$/.test(String(value || ""));
+}
+
+function fallbackClientId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return `client_${window.crypto.randomUUID()}`;
+  }
+  const ts = Date.now().toString(36);
+  const rnd = Math.random().toString(36).slice(2, 14);
+  return `client_${ts}_${rnd}`;
+}
+
+function getOrCreateClientIdForRequests() {
+  const fromGlobal = String(clientId || "").trim();
+  const persistCookie = (value) => {
+    const id = String(value || "").trim();
+    if (!isSafeClientId(id)) return;
+    document.cookie = `client_id=${id}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  };
+  if (isSafeClientId(fromGlobal)) {
+    persistCookie(fromGlobal);
+    return fromGlobal;
+  }
+  try {
+    const stored = String(localStorage.getItem(CLIENT_ID_KEY) || "").trim();
+    if (isSafeClientId(stored)) {
+      clientId = stored;
+      persistCookie(stored);
+      return stored;
+    }
+    const created = fallbackClientId();
+    localStorage.setItem(CLIENT_ID_KEY, created);
+    clientId = created;
+    persistCookie(created);
+    return created;
+  } catch (_) {
+    return "";
+  }
+}
+
+function withClientIdQuery(rawUrl, cid) {
+  const client = String(cid || "").trim();
+  if (!client) return rawUrl;
+  try {
+    const absolute = new URL(String(rawUrl), window.location.href);
+    if (absolute.origin !== window.location.origin) return rawUrl;
+    if (absolute.protocol !== "http:" && absolute.protocol !== "https:") return rawUrl;
+    if (absolute.searchParams.has("client_id")) return rawUrl;
+    absolute.searchParams.set("client_id", client);
+    return absolute.toString();
+  } catch (_) {
+    return rawUrl;
+  }
+}
+
+if (window && typeof window.fetch === "function") {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function fetchWithClientId(input, init) {
+    const cid = getOrCreateClientIdForRequests();
+    if (!cid) return originalFetch(input, init);
+
+    if (typeof input === "string" || input instanceof URL) {
+      const nextUrl = withClientIdQuery(input, cid);
+      return originalFetch(nextUrl, init);
+    }
+
+    if (input instanceof Request) {
+      const nextUrl = withClientIdQuery(input.url, cid);
+      if (nextUrl === input.url) return originalFetch(input, init);
+      const nextReq = new Request(nextUrl, input);
+      return originalFetch(nextReq, init);
+    }
+
+    return originalFetch(input, init);
+  };
+}

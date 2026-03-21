@@ -78,6 +78,10 @@
       if (gen) return generatedMeshGeometry(gen[1], def.resolution);
       return new THREE.BoxGeometry(1, 1, 1);
     }
+    if (type === "csg") {
+      // Placeholder volume. Real CSG preview uses bounds + overlays in buildScene.
+      return new THREE.BoxGeometry(1, 1, 1);
+    }
 
     return new THREE.BoxGeometry(0.5, 0.5, 0.5);
   }
@@ -288,6 +292,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         v0: (Array.isArray(surface.v0) && surface.v0.length >= 3) ? vec3(surface.v0[0], surface.v0[1], surface.v0[2]) : vec3(0, 0, 0),
         v1: (Array.isArray(surface.v1) && surface.v1.length >= 3) ? vec3(surface.v1[0], surface.v1[1], surface.v1[2]) : vec3(1, 0, 0),
         v2: (Array.isArray(surface.v2) && surface.v2.length >= 3) ? vec3(surface.v2[0], surface.v2[1], surface.v2[2]) : vec3(0, 1, 0),
+        boundsMin: (Array.isArray(surface.bounds_min) && surface.bounds_min.length >= 3) ? vec3(surface.bounds_min[0], surface.bounds_min[1], surface.bounds_min[2]) : null,
+        boundsMax: (Array.isArray(surface.bounds_max) && surface.bounds_max.length >= 3) ? vec3(surface.bounds_max[0], surface.bounds_max[1], surface.bounds_max[2]) : null,
         modifiers: {
           rotation: vec3(0, 0, 0),
           scale: vec3(1, 1, 1),
@@ -1490,6 +1496,20 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
     if (def.type === "sphere" || def.type === "point") {
       mesh.position.add(def.position || vec3(0, 0, 0));
+    } else if (def.type === "csg") {
+      var bmin = def.boundsMin;
+      var bmax = def.boundsMax;
+      if (bmin && bmax) {
+        var sx = Math.max(0.02, bmax.x - bmin.x);
+        var sy = Math.max(0.02, bmax.y - bmin.y);
+        var sz = Math.max(0.02, bmax.z - bmin.z);
+        mesh.scale.multiply(new THREE.Vector3(sx, sy, sz));
+        mesh.position.add(new THREE.Vector3(
+          (bmin.x + bmax.x) * 0.5,
+          (bmin.y + bmax.y) * 0.5,
+          (bmin.z + bmax.z) * 0.5
+        ));
+      }
     } else if (def.type === "plane") {
       var n = (def.normal || vec3(0, 1, 0)).clone();
       if (n.lengthSq() < 1e-8) n.set(0, 1, 0);
@@ -1523,6 +1543,72 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }
     g.computeBoundingSphere();
     return g;
+  };
+
+  SceneVisualEditor.prototype.decorateCsgPlaceholder = function (mesh) {
+    if (!mesh || !mesh.isMesh) return;
+
+    var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.001, 1.001, 1.001));
+    var edgeMat = new THREE.LineDashedMaterial({
+      color: 0x2f557a,
+      dashSize: 0.06,
+      gapSize: 0.04,
+      linewidth: 1,
+      transparent: true,
+      opacity: 0.95,
+    });
+    var edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
+    edgeLines.computeLineDistances();
+    edgeLines.raycast = function () {};
+    mesh.add(edgeLines);
+
+    var makeCsgFaceTag = function () {
+      var canvas = document.createElement("canvas");
+      canvas.width = 192;
+      canvas.height = 96;
+      var ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "rgba(24,44,66,0.78)";
+      ctx.fillRect(12, 18, 168, 60);
+      ctx.strokeStyle = "rgba(109,177,255,0.75)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(12, 18, 168, 60);
+      ctx.fillStyle = "rgba(199,232,255,0.95)";
+      ctx.font = "700 34px JetBrains Mono, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("CSG", canvas.width * 0.5, canvas.height * 0.5 + 2);
+
+      var tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      var mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        opacity: 0.92,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      var plane = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.17), mat);
+      plane.raycast = function () {};
+      return plane;
+    };
+
+    var faces = [
+      { pos: [ 0,  0,  0.515], rot: [0, 0, 0] },
+      { pos: [ 0,  0, -0.515], rot: [0, Math.PI, 0] },
+      { pos: [ 0.515, 0,  0], rot: [0, Math.PI * 0.5, 0] },
+      { pos: [-0.515, 0,  0], rot: [0, -Math.PI * 0.5, 0] },
+      { pos: [0,  0.515, 0], rot: [-Math.PI * 0.5, 0, 0] },
+      { pos: [0, -0.515, 0], rot: [ Math.PI * 0.5, 0, 0] },
+    ];
+    for (var i = 0; i < faces.length; i += 1) {
+      var tag = makeCsgFaceTag();
+      if (!tag) continue;
+      tag.position.set(faces[i].pos[0], faces[i].pos[1], faces[i].pos[2]);
+      tag.rotation.set(faces[i].rot[0], faces[i].rot[1], faces[i].rot[2]);
+      mesh.add(tag);
+    }
   };
 
   SceneVisualEditor.prototype.geometryForDefAsync = async function (sceneName, def) {
@@ -1680,6 +1766,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       mesh.castShadow = !isEmissive;
       mesh.receiveShadow = !isEmissive;
       this.applyDefTransform(mesh, geoDef);
+      if (mesh.userData.geometryType === "csg") {
+        this.decorateCsgPlaceholder(mesh);
+      }
       this.modelRoot.add(mesh);
 
       if (isEmissive) {

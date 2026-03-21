@@ -137,10 +137,14 @@
     {
       "title": "Save Your Scene",
       "body": "Use Save to persist changes. Load Selected Scene refreshes editor content from disk.",
-      "target_selector": "#saveSceneBtn",
+      "target_selector": "#textEditorControlsCard",
       "placement": "right",
       "tab": "visual",
-      "editor_view": "text"
+      "editor_view": "text",
+      "focus_selector": "#saveSceneBtn",
+      "open_cards": [
+        "textEditorControlsCard"
+      ]
     },
     {
       "title": "Open Logs",

@@ -6,7 +6,7 @@ function selectedExportFormat() {
 
 function updateDownloadUi() {
   const hasExportApi = hasBackendMethod(api, "getJobExport");
-  const enabled = hasExportApi && !!lastCompletedJobId;
+  const enabled = hasExportApi && !!lastCompletedJobId && !renderActive;
   const fmt = selectedExportFormat().toUpperCase();
   if (enabled) {
     el.download.disabled = false;

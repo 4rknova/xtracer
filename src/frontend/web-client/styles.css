@@ -2094,6 +2094,16 @@ label {
   align-items: center;
 }
 
+.variant-file-item .scene-file-name-text {
+  min-width: 0;
+  width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .variant-file-description {
   white-space: normal;
   line-height: 1.25;
@@ -2112,6 +2122,15 @@ label {
   padding-right: 70px;
   height: 2.64em;
   line-height: 1.22;
+  white-space: normal;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* Variant cards also carry .camera-file-item; force title truncation for variants. */
+.variant-file-item.camera-file-item .scene-file-name {
+  height: 2.64em;
   white-space: normal;
   overflow: hidden;
   display: flex;
@@ -2295,6 +2314,21 @@ select:focus {
   line-height: 1.35;
 }
 
+.info-widget {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 58%, var(--line));
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--field-bg) 86%, transparent),
+      color-mix(in srgb, var(--field-bg) 70%, transparent));
+  color: color-mix(in srgb, var(--muted) 90%, var(--ink));
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .control-section-body label.aa-presets-group,
 .control-section-body label.sample-presets-group {
   align-items: start;
@@ -2375,7 +2409,7 @@ button {
 }
 
 #renderBtn {
-  margin-top: 10px;
+  margin-top: 0;
   margin-bottom: 0;
 }
 
@@ -2979,6 +3013,245 @@ textarea {
   font-weight: 600;
 }
 
+.settings-jobs-section {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-jobs-empty {
+  border: 1px dashed color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--panel-soft) 82%, transparent);
+}
+
+.settings-job-item {
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 10px;
+  padding: 9px 10px 10px;
+  display: grid;
+  gap: 7px;
+  background: color-mix(in srgb, var(--panel-soft) 78%, transparent);
+  overflow: hidden;
+}
+
+.settings-job-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-job-pills {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  justify-self: end;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.settings-job-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  justify-self: end;
+  flex: 0 0 auto;
+}
+
+.settings-job-queue-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-job-queue-btn {
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: color-mix(in srgb, var(--ink) 84%, var(--muted));
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-job-queue-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  color: color-mix(in srgb, var(--ink) 94%, transparent);
+}
+
+.settings-job-queue-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.settings-job-id {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 95%, transparent);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-job-state-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+}
+
+.settings-job-state-pill.state-running {
+  color: color-mix(in srgb, var(--accent) 88%, white);
+  border-color: color-mix(in srgb, var(--accent) 58%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.settings-job-state-pill.state-queued {
+  color: color-mix(in srgb, #f5c56a 85%, var(--ink));
+  border-color: color-mix(in srgb, #f5c56a 48%, transparent);
+  background: color-mix(in srgb, #f5c56a 16%, transparent);
+}
+
+.settings-job-abort-btn {
+  border: 1px solid color-mix(in srgb, #ec6e6e 52%, var(--line));
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: color-mix(in srgb, #ffd5d5 76%, var(--ink));
+  background: color-mix(in srgb, #8c2f2f 34%, transparent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-job-abort-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, #9e2e2e 52%, transparent);
+  border-color: color-mix(in srgb, #ef7d7d 62%, var(--line));
+}
+
+.settings-job-abort-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.settings-job-action-icon {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+}
+
+.settings-job-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--muted) 92%, var(--ink));
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.settings-job-meta > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-job-metrics {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  justify-self: end;
+  min-width: 0;
+}
+
+.settings-job-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  background: color-mix(in srgb, var(--panel) 68%, transparent);
+  color: color-mix(in srgb, var(--ink) 82%, var(--muted));
+  white-space: nowrap;
+}
+
+.settings-job-progress {
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--line) 75%, transparent);
+}
+
+.settings-job-progress > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 68%, white),
+    color-mix(in srgb, var(--accent) 92%, white)
+  );
+}
+
+.settings-job-item.state-queued .settings-job-progress > span {
+  background: linear-gradient(90deg, #d6a34f, #f0c06a);
+}
+
+.settings-job-sub {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.7rem;
+  color: color-mix(in srgb, var(--muted) 86%, var(--ink));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-job-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
 .active-scene-sidebar {
   display: grid;
   gap: 9px;
@@ -3091,6 +3364,9 @@ textarea {
 }
 
 .workspace-view-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   width: fit-content;
 }
 
@@ -3130,6 +3406,11 @@ textarea {
       color-mix(in srgb, var(--field-bg) 94%, transparent) 0%,
       color-mix(in srgb, var(--panel) 90%, transparent) 100%
     );
+}
+
+.workspace-sort-switch .workspace-view-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 .workspace-view-btn {
@@ -3750,85 +4031,28 @@ button:disabled {
 .status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   width: auto;
   margin: 0;
-  padding: 7px 12px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 62%, transparent);
-  border-radius: 999px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--field-bg) 92%, transparent),
-      color-mix(in srgb, var(--panel) 88%, transparent)
-    );
-  color: color-mix(in srgb, var(--ink) 84%, var(--muted));
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #ffffff 45%, transparent),
-    0 2px 10px color-mix(in srgb, #000000 10%, transparent);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 82%, var(--muted));
+  font-weight: 600;
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  line-height: 1.2;
+  box-shadow: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  white-space: nowrap;
 }
 
-.status-chip::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--line-strong) 70%, transparent);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--line) 60%, transparent),
-    0 0 10px color-mix(in srgb, var(--line-strong) 35%, transparent);
-}
-
-.status-chip.is-idle {
-  color: color-mix(in srgb, var(--muted) 88%, var(--ink));
-}
-
-.status-chip.is-running {
-  border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--accent-soft) 48%, var(--field-bg)),
-      color-mix(in srgb, var(--accent-soft) 28%, var(--panel))
-    );
-  color: color-mix(in srgb, var(--accent) 82%, #ffffff);
-}
-
-.status-chip.is-error {
-  border-color: color-mix(in srgb, #d95c5c 46%, var(--line));
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, #d95c5c 16%, var(--field-bg)),
-      color-mix(in srgb, #d95c5c 8%, var(--panel))
-    );
-  color: color-mix(in srgb, #d95c5c 88%, #ffffff);
-}
-
-.status-chip.is-running::before {
-  background: color-mix(in srgb, var(--accent) 78%, #ffffff);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent),
-    0 0 12px color-mix(in srgb, var(--accent) 44%, transparent);
-  animation: status-running-pulse 1.6s ease-in-out infinite;
-}
-
-.status-chip.is-error::before {
-  background: color-mix(in srgb, #d95c5c 86%, #ffffff);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, #d95c5c 28%, transparent),
-    0 0 12px color-mix(in srgb, #d95c5c 40%, transparent);
-}
-
-.status-timer {
+.status-field {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3836,7 +4060,6 @@ button:disabled {
   border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--field-bg) 82%, transparent);
-  font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -3847,6 +4070,59 @@ button:disabled {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.status-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 82%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.status-chip.is-idle {
+  color: color-mix(in srgb, var(--muted) 88%, var(--ink));
+}
+
+.status-chip.is-running {
+  color: color-mix(in srgb, var(--accent) 82%, #ffffff);
+}
+
+.status-chip.is-error {
+  color: color-mix(in srgb, #d95c5c 88%, #ffffff);
+}
+
+.status-chip.is-running::before {
+  background: color-mix(in srgb, var(--accent) 78%, #ffffff);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent),
+    0 0 8px color-mix(in srgb, var(--accent) 32%, transparent);
+  animation: status-running-pulse 1.6s ease-in-out infinite;
+}
+
+.status-chip.is-error::before {
+  background: color-mix(in srgb, #d95c5c 86%, #ffffff);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #d95c5c 38%, transparent),
+    0 0 8px color-mix(in srgb, #d95c5c 30%, transparent);
+}
+
+.status-timer {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.status-percent {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  min-width: 4.4rem;
+}
+
+.status-threads {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  min-width: 7.8rem;
 }
 
 .preview-transfer-stats {
@@ -3961,6 +4237,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   margin-bottom: 10px;
   padding: 6px 2px 2px;
 }
@@ -4204,6 +4481,13 @@ button:disabled {
   margin-top: 4px;
   display: grid;
   gap: 6px;
+}
+
+.resolution-mode-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .frame-section + .frame-section {
@@ -4572,12 +4856,83 @@ button:disabled {
 }
 
 .preview-headline {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  column-gap: 12px;
+  row-gap: 8px;
   min-width: 0;
   flex: 1;
+  width: 100%;
+}
+
+.preview-status-row {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  transform: translateY(0);
+  transition: transform 200ms ease;
+}
+
+.preview-headline .status-chip {
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 84%, transparent);
+  min-width: 180px;
+  justify-content: flex-start;
+}
+
+#statusPercent[hidden],
+#renderTimer[hidden],
+#statusThreads[hidden] {
+  display: inline-flex !important;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(8px);
+  pointer-events: none;
+}
+
+.preview-headline .bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  height: 8px;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+
+.preview-headline .bar.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.render-toolbar-btn {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 36px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 @keyframes status-running-pulse {
@@ -4604,6 +4959,19 @@ button:disabled {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+.action-btn.render-toolbar-btn {
+  width: 104px;
+  min-width: 104px;
+  max-width: 104px;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  padding: 0;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .action-btn-icon {
@@ -5164,11 +5532,6 @@ button:disabled {
     backdrop-filter: blur(6px);
   }
 
-  #integratorControlsCard #renderBtn {
-    position: static;
-    margin-top: 8px;
-  }
-
   .row {
     grid-template-columns: 1fr;
   }
@@ -5212,7 +5575,8 @@ button:disabled {
   }
 
   .control-section-body label:not(.inline-check) .control-hint,
-  .settings-note {
+  .settings-note,
+  .info-widget {
     font-size: 0.68rem;
     line-height: 1.3;
   }

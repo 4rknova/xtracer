@@ -1,3 +1,29 @@
+let appConfigLoadPromise = null;
+
+function normalizeConfiguredDefaultIntegratorId(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return "";
+  const defaults = config.defaults;
+  if (!defaults || typeof defaults !== "object" || Array.isArray(defaults)) return "";
+  const id = String(defaults.integrator || "").trim();
+  return id;
+}
+
+async function loadAppConfig() {
+  if (appConfigLoadPromise) return appConfigLoadPromise;
+  appConfigLoadPromise = (async () => {
+    try {
+      const sep = APP_CONFIG_URL.includes("?") ? "&" : "?";
+      const url = `${APP_CONFIG_URL}${sep}t=${Date.now()}`;
+      const data = await getJSON(url);
+      if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+      return data;
+    } catch (_) {
+      return {};
+    }
+  })();
+  return appConfigLoadPromise;
+}
+
 function extractSceneTitle(source) {
   const m = /^\s*title\s*=\s*(.+)$/im.exec(source || "");
   if (!m) return "";
@@ -356,6 +382,72 @@ function updateSceneFileCount() {
   el.sceneFileCount.textContent = String(count);
 }
 
+async function refreshSceneCatalog(sceneFile) {
+  const requestedScene = String(sceneFile || "").trim();
+  const previousScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const targetHint = requestedScene || previousScene || "scene";
+  setSceneLoadStatus("loading", `Refreshing ${targetHint}...`, "");
+
+  await loadScenes();
+
+  const resolvedScene = sceneCatalogHasFile(requestedScene)
+    ? requestedScene
+    : String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!resolvedScene) {
+    setStatus("no scenes found in scene/ directory");
+    setSceneLoadStatus("idle", "No scenes found in scene/ directory.", "");
+    appendLog("scene refresh finished (no scenes available)");
+    return;
+  }
+
+  if (String(el.scene && el.scene.value ? el.scene.value : "").trim() !== resolvedScene) {
+    el.scene.value = resolvedScene;
+  }
+  setSceneBrowserSelectedFile(resolvedScene);
+  localStorage.setItem(LAST_SCENE_KEY, resolvedScene);
+  updateSceneDependencyPill(resolvedScene);
+
+  const preferredVariant = (resolvedScene === previousScene) ? selectedSceneVariantValue() : "";
+  await loadVariants(resolvedScene, preferredVariant);
+  const variantName = selectedSceneVariantValue();
+
+  const tasks = [loadCameras(resolvedScene, variantName)];
+  if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(resolvedScene, variantName));
+  if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(resolvedScene));
+  await Promise.all(tasks);
+
+  if (visualEditor) await loadVisualSceneFromSelected();
+
+  const variantSuffix = variantName ? ` (${variantName})` : "";
+  setStatus(`refreshed ${resolvedScene}${variantSuffix}`);
+  setSceneLoadStatus("idle", `Refreshed ${resolvedScene}${variantSuffix}.`, "");
+  appendLog(`scene refreshed: ${resolvedScene}${variantSuffix}`);
+}
+
+async function reloadSceneFile(sceneFile) {
+  const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const requestedScene = String(sceneFile || "").trim();
+  if (!activeScene || !requestedScene || requestedScene !== activeScene) return;
+
+  const variantBeforeReload = selectedSceneVariantValue();
+  const targetHint = variantBeforeReload ? `${activeScene} (${variantBeforeReload})` : activeScene;
+  setSceneLoadStatus("loading", `Reloading ${targetHint}...`, "");
+
+  await loadVariants(activeScene, variantBeforeReload);
+  const variantName = selectedSceneVariantValue();
+  const tasks = [loadCameras(activeScene, variantName)];
+  if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(activeScene, variantName));
+  if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(activeScene));
+  await Promise.all(tasks);
+
+  if (visualEditor) await loadVisualSceneFromSelected();
+
+  const variantSuffix = variantName ? ` (${variantName})` : "";
+  setStatus(`reloaded ${activeScene}${variantSuffix}`);
+  setSceneLoadStatus("idle", `Reloaded ${activeScene}${variantSuffix}.`, "");
+  appendLog(`scene reloaded: ${activeScene}${variantSuffix}`);
+}
+
 function ensureSceneContextMenu() {
   if (document.getElementById("sceneFileContextMenu")) return;
   const menu = document.createElement("div");
@@ -364,6 +456,7 @@ function ensureSceneContextMenu() {
   menu.hidden = true;
   menu.innerHTML = ""
     + "<button id=\"sceneCtxSetActive\" type=\"button\">Set Active</button>"
+    + "<button id=\"sceneCtxReload\" type=\"button\">Reload</button>"
     + "<button id=\"sceneCtxDelete\" type=\"button\" class=\"danger\">Delete</button>";
   document.body.appendChild(menu);
 
@@ -373,6 +466,7 @@ function ensureSceneContextMenu() {
   };
 
   const setActiveBtn = menu.querySelector("#sceneCtxSetActive");
+  const reloadBtn = menu.querySelector("#sceneCtxReload");
   const deleteBtn = menu.querySelector("#sceneCtxDelete");
   if (setActiveBtn) {
     setActiveBtn.addEventListener("click", () => {
@@ -380,6 +474,18 @@ function ensureSceneContextMenu() {
       close();
       if (!sceneFile) return;
       activateSceneFile(sceneFile);
+    });
+  }
+  if (reloadBtn) {
+    reloadBtn.addEventListener("click", () => {
+      const sceneFile = String(menu.dataset.scene || "").trim();
+      close();
+      if (!sceneFile) return;
+      reloadSceneFile(sceneFile).catch((err) => {
+        setStatus(`error: ${err.message}`);
+        setSceneLoadStatus("error", err.message || "Scene reload failed.", "");
+        appendLog(`scene reload error: ${err.message}`);
+      });
     });
   }
   if (deleteBtn) {
@@ -419,6 +525,11 @@ function openSceneContextMenu(sceneFile, x, y) {
   const isActive = String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName;
   const setActiveBtn = menu.querySelector("#sceneCtxSetActive");
   if (setActiveBtn) setActiveBtn.disabled = isActive;
+  const reloadBtn = menu.querySelector("#sceneCtxReload");
+  if (reloadBtn) {
+    reloadBtn.hidden = !isActive;
+    reloadBtn.disabled = !isActive;
+  }
 
   const deleteBtn = menu.querySelector("#sceneCtxDelete");
   if (deleteBtn) deleteBtn.disabled = !hasBackendMethod(api, "deleteScene");
@@ -895,7 +1006,10 @@ function renderVariantBrowser() {
 
     const nameNode = document.createElement("span");
     nameNode.className = "scene-file-name";
-    nameNode.textContent = label;
+    const nameTextNode = document.createElement("span");
+    nameTextNode.className = "scene-file-name-text";
+    nameTextNode.textContent = label;
+    nameNode.appendChild(nameTextNode);
     body.appendChild(nameNode);
 
     if (description) {
@@ -1005,9 +1119,38 @@ function orientationMode(width, height) {
   return "square";
 }
 
+function normalizeResolutionModeFilter(mode) {
+  const value = String(mode || "").toLowerCase();
+  if (value === "landscape" || value === "portrait" || value === "square") return value;
+  return "all";
+}
+
+function updateResolutionModeFilterButtons() {
+  const activeMode = normalizeResolutionModeFilter(resolutionPresetModeFilter);
+  const buttons = [
+    { mode: "all", node: el.resolutionModeFilterAll },
+    { mode: "square", node: el.resolutionModeFilterSquare },
+    { mode: "portrait", node: el.resolutionModeFilterPortrait },
+    { mode: "landscape", node: el.resolutionModeFilterLandscape },
+  ];
+  buttons.forEach((entry) => {
+    if (!entry.node) return;
+    const active = entry.mode === activeMode;
+    entry.node.classList.toggle("active", active);
+    entry.node.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function setResolutionPresetModeFilter(mode) {
+  resolutionPresetModeFilter = normalizeResolutionModeFilter(mode);
+  updateResolutionModeFilterButtons();
+}
+
 function renderResolutionPresetList() {
   if (!el.resolutionPresetList) return;
   const selected = String(el.resolutionPreset ? el.resolutionPreset.value : "custom");
+  const modeFilter = normalizeResolutionModeFilter(resolutionPresetModeFilter);
+  updateResolutionModeFilterButtons();
   el.resolutionPresetList.innerHTML = "";
 
   const addRow = (value, name, width, height) => {
@@ -1040,6 +1183,8 @@ function renderResolutionPresetList() {
 
   addRow("custom", "Custom", 0, 0);
   resolutionPresets.forEach((preset, index) => {
+    const mode = orientationMode(preset.width, preset.height);
+    if (modeFilter !== "all" && mode !== modeFilter) return;
     const name = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
     addRow(String(index), name, preset.width, preset.height);
   });
@@ -1200,6 +1345,8 @@ async function loadVariants(scene, preferredVariant) {
 
 async function loadIntegrators() {
   const integrators = await api.getIntegrators();
+  const appConfig = await loadAppConfig();
+  const configuredDefault = normalizeConfiguredDefaultIntegratorId(appConfig);
   integratorCatalog = Array.isArray(integrators) ? integrators : [];
   integratorById = new Map(integratorCatalog.map((it) => [it.id, it]));
   const prev = el.integrator.value;
@@ -1207,6 +1354,10 @@ async function loadIntegrators() {
   integratorCatalog.forEach((it) => addOption(el.integrator, it.id, it.label));
   if (prev && integratorCatalog.some((it) => it.id === prev)) {
     el.integrator.value = prev;
+  } else if (configuredDefault && integratorCatalog.some((it) => it.id === configuredDefault)) {
+    el.integrator.value = configuredDefault;
+  } else if (integratorCatalog.some((it) => it.id === "pathtracer_mis_full")) {
+    el.integrator.value = "pathtracer_mis_full";
   } else if (integratorCatalog.some((it) => it.id === "pathtracer_mis")) {
     el.integrator.value = "pathtracer_mis";
   } else if (integratorCatalog.some((it) => it.id === "pathtracer_is")) {

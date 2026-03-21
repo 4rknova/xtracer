@@ -100,7 +100,7 @@
                   </label>
                   <label>Threads <input id="threads" type="number" min="0" max="256" value="0"></label>
                 </div>
-                <p id="threadsPolicyHint" class="settings-note">Threads 0 uses auto mode.</p>
+                <p id="threadsPolicyHint" class="info-widget">Threads 0 uses auto mode.</p>
                 <div id="integratorControlsSection" hidden>
                   <div id="integratorControls"></div>
                 </div>
@@ -108,7 +108,6 @@
                   <input id="clearPreviewOnRender" type="checkbox">
                   Clear preview on render
                 </label>
-                <button id="renderBtn" type="button">Render</button>
               </div>
             </details>
 
@@ -120,6 +119,12 @@
               <div class="control-section-body">
                 <section class="frame-section">
                   <h4 class="frame-section-title">Resolution Presets</h4>
+                  <div class="resolution-mode-filter-row" role="group" aria-label="Resolution mode filter">
+                    <button id="resolutionModeFilterAll" class="aa-pill active" type="button" data-mode="all" aria-pressed="true">All</button>
+                    <button id="resolutionModeFilterSquare" class="aa-pill" type="button" data-mode="square" aria-pressed="false">Square</button>
+                    <button id="resolutionModeFilterPortrait" class="aa-pill" type="button" data-mode="portrait" aria-pressed="false">Portrait</button>
+                    <button id="resolutionModeFilterLandscape" class="aa-pill" type="button" data-mode="landscape" aria-pressed="false">Landscape</button>
+                  </div>
                   <div class="resolution-preset-table" role="group" aria-label="Resolution presets">
                     <div class="resolution-preset-head" aria-hidden="true">
                       <span>Name</span>
@@ -580,6 +585,14 @@
                       </label>
                     </div>
                     <div class="row">
+                      <label>Log Wait Poll (Logs Tab, ms)
+                        <input id="logPollActiveInterval" type="number" min="1000" max="60000" step="500" value="3000">
+                      </label>
+                      <label>Log Wait Poll (Background, ms)
+                        <input id="logPollBackgroundInterval" type="number" min="1000" max="120000" step="1000" value="20000">
+                      </label>
+                    </div>
+                    <div class="row">
                       <label>Text History Size
                         <input id="textHistorySize" type="number" min="10" max="2000" step="10" value="200">
                       </label>
@@ -587,7 +600,7 @@
                         <input id="visualHistorySize" type="number" min="10" max="2000" step="10" value="200">
                       </label>
                     </div>
-                    <p class="settings-note">Lower values update render progress faster. Backend logs use a wait-based stream.</p>
+                    <p class="settings-note">Backend logs use wait polling. Logs tab and background wait intervals are configurable.</p>
                   </section>
 
                   <section class="settings-section">
@@ -603,6 +616,26 @@
                     <button id="ftueStartNowBtn" type="button">Start Tutorial Now</button>
                   </section>
                 </div>
+              </div>
+            </details>
+
+            <details class="control-section control-card" id="JobsControlsCard" open hidden>
+              <summary>
+                <span class="control-card-title">Jobs</span>
+                <span class="control-card-note">Server active/queued jobs</span>
+              </summary>
+              <div class="control-section-body">
+                <section class="settings-section workspace-info-section settings-jobs-section">
+                  <p id="settingsJobsUpdated" class="workspace-active-hint">
+                    <span class="workspace-active-label">Updated</span>
+                    <code class="workspace-active-value">-</code>
+                  </p>
+                  <p id="settingsJobsThreadsUsage" class="workspace-active-hint">
+                    <span class="workspace-active-label">Threads In Use</span>
+                    <code class="workspace-active-value">-</code>
+                  </p>
+                  <div id="settingsJobsList" class="settings-jobs-list" aria-live="polite"></div>
+                </section>
               </div>
             </details>
 
@@ -653,10 +686,15 @@
         <section class="tab-pane" id="paneRender">
           <section class="panel panel-preview">
             <div class="preview-toolbar">
-              <div class="preview-headline">
-                <p id="status" class="status-chip">Idle</p>
-                <span id="renderTimer" class="status-timer" hidden>00:00</span>
-                <div id="progressBar" class="bar" hidden><div id="progress"></div></div>
+              <div id="previewHeadline" class="preview-headline is-idle">
+                <button id="renderBtn" class="action-btn render-toolbar-btn" type="button">Render</button>
+                <div class="preview-status-row">
+                  <p id="status" class="status-chip">Idle</p>
+                  <span id="statusThreads" class="status-field status-threads" hidden>threads 0</span>
+                  <span id="statusPercent" class="status-field status-percent" hidden>0.0%</span>
+                  <span id="renderTimer" class="status-field status-timer" hidden>00:00</span>
+                </div>
+                <div id="progressBar" class="bar"><div id="progress"></div></div>
               </div>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
@@ -766,6 +804,28 @@
                     <rect x="9" y="16" width="11" height="3" rx="1"></rect>
                   </svg>
                   <span class="sr-only">List</span>
+                </button>
+              </div>
+              <div class="workspace-view-switch workspace-sort-switch" role="group" aria-label="Workspace sort order">
+                <button id="workspaceSortNameBtn" class="workspace-view-btn active" type="button" data-sort="name" aria-pressed="true" title="Sort by name">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16v2H4zM4 11h10v2H4zM4 16h6v2H4z"></path>
+                  </svg>
+                  <span class="sr-only">Sort by name</span>
+                </button>
+                <button id="workspaceSortUpdatedBtn" class="workspace-view-btn" type="button" data-sort="updated" aria-pressed="false" title="Sort by last updated">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4a8 8 0 1 1-8 8h2a6 6 0 1 0 6-6v3l4-4-4-4z"></path>
+                    <path d="M11 8h2v5h4v2h-6z"></path>
+                  </svg>
+                  <span class="sr-only">Sort by last updated</span>
+                </button>
+                <button id="workspaceSortSceneBtn" class="workspace-view-btn" type="button" data-sort="scene" aria-pressed="false" title="Sort by scene">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 5h18v14H3zM5 7v10h14V7z"></path>
+                    <path d="M7 15l3-3 2 2 3-4 2 5z"></path>
+                  </svg>
+                  <span class="sr-only">Sort by scene</span>
                 </button>
               </div>
             </div>

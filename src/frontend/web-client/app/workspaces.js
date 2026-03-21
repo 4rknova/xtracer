@@ -49,6 +49,9 @@ function updateWorkspaceServerStatsHints(data) {
     "Render Auto Threads",
     Number.isFinite(renderAutoThreads) && renderAutoThreads > 0 ? Math.floor(renderAutoThreads) : "-"
   );
+  settingsJobsTotalRenderThreads = Number.isFinite(renderAutoThreads) && renderAutoThreads > 0
+    ? Math.floor(renderAutoThreads)
+    : 0;
   if (el.threadsPolicyHint) {
     const reserveText = Number.isFinite(renderReserveThreads) && renderReserveThreads >= 0
       ? String(Math.floor(renderReserveThreads))
@@ -60,8 +63,309 @@ function updateWorkspaceServerStatsHints(data) {
   }
 }
 
+let settingsJobsRefreshInFlight = false;
+let settingsJobsLastError = "";
+let settingsJobsTotalRenderThreads = 0;
+const settingsJobsAbortInFlight = new Set();
+const settingsJobsMoveInFlight = new Set();
+
+function parseJobSequence(jobId) {
+  const id = String(jobId || "");
+  const m = id.match(/^job_(\d+)$/);
+  return m ? Number(m[1]) : 0;
+}
+
+function compareActiveJobsForSettings(a, b) {
+  const stateA = String((a && a.state) || "").toLowerCase();
+  const stateB = String((b && b.state) || "").toLowerCase();
+  const priority = (state) => {
+    if (state === "running") return 0;
+    if (state === "queued") return 1;
+    return 2;
+  };
+  const pa = priority(stateA);
+  const pb = priority(stateB);
+  if (pa !== pb) return pa - pb;
+  const sa = parseJobSequence(a && a.id);
+  const sb = parseJobSequence(b && b.id);
+  if (sa !== sb) return sb - sa;
+  return String((a && a.id) || "").localeCompare(String((b && b.id) || ""));
+}
+
+function formatJobElapsedMs(ms) {
+  const elapsed = Math.max(0, Number(ms) || 0);
+  if (!Number.isFinite(elapsed) || elapsed <= 0) return "-";
+  if (typeof formatElapsed === "function") return formatElapsed(elapsed);
+  return `${Math.round(elapsed)} ms`;
+}
+
+function createSettingsJobActionIcon(kind) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("settings-job-action-icon");
+
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "1.8");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+
+  if (kind === "up") path.setAttribute("d", "M8 12V4M8 4L5.4 6.6M8 4l2.6 2.6");
+  else if (kind === "down") path.setAttribute("d", "M8 4v8M8 12l-2.6-2.6M8 12l2.6-2.6");
+  else path.setAttribute("d", "M5 5l6 6M11 5L5 11");
+
+  svg.appendChild(path);
+  return svg;
+}
+
+function renderSettingsJobsList(activeJobs) {
+  if (!el.settingsJobsList) return;
+  const jobs = Array.isArray(activeJobs) ? [...activeJobs] : [];
+  el.settingsJobsList.innerHTML = "";
+  if (!jobs.length) {
+    const empty = document.createElement("div");
+    empty.className = "settings-jobs-empty";
+    empty.textContent = "No active or queued jobs.";
+    el.settingsJobsList.appendChild(empty);
+    return;
+  }
+
+  const queuedJobs = jobs.filter((job) => String((job && job.state) || "").toLowerCase() === "queued");
+  const queuedIndexById = new Map();
+  queuedJobs.forEach((job, i) => {
+    const id = String((job && job.id) || "").trim();
+    if (!id) return;
+    queuedIndexById.set(id, i);
+  });
+  const queuedCount = queuedJobs.length;
+
+  jobs.forEach((job) => {
+    const id = String((job && job.id) || "").trim() || "-";
+    const workspaceId = String((job && job.workspace_id) || "").trim() || "-";
+    const state = String((job && job.state) || "").toLowerCase() || "unknown";
+    const threads = Math.max(0, Number((job && job.threads) || 0));
+    const progress = Math.max(0, Math.min(1, Number((job && job.progress) || 0)));
+    const elapsed = formatJobElapsedMs(job && job.elapsed_ms);
+    const scene = String((job && job.scene) || "").trim() || "-";
+    const integrator = String((job && job.integrator) || "").trim() || "-";
+
+    const item = document.createElement("article");
+    item.className = `settings-job-item state-${state}`;
+
+    const head = document.createElement("div");
+    head.className = "settings-job-head";
+
+    const idNode = document.createElement("code");
+    idNode.className = "settings-job-id";
+    idNode.textContent = id;
+
+    const statePill = document.createElement("span");
+    statePill.className = `settings-job-state-pill state-${state}`;
+    statePill.textContent = state;
+
+    const controls = document.createElement("div");
+    controls.className = "settings-job-controls";
+    const queueIdx = queuedIndexById.has(id) ? queuedIndexById.get(id) : -1;
+    const isMoving = settingsJobsMoveInFlight.has(id);
+    if (state === "queued" && queueIdx >= 0) {
+      const queueControls = document.createElement("div");
+      queueControls.className = "settings-job-queue-controls";
+
+      const upBtn = document.createElement("button");
+      upBtn.type = "button";
+      upBtn.className = "settings-job-queue-btn";
+      upBtn.setAttribute("aria-label", "Move job up");
+      upBtn.title = "Move up";
+      upBtn.appendChild(createSettingsJobActionIcon("up"));
+      upBtn.disabled = isMoving || queueIdx <= 0;
+      upBtn.addEventListener("click", () => {
+        moveSettingsJobQueue(id, "up").catch((err) => appendLog(`settings queue move up error: ${err.message}`));
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.type = "button";
+      downBtn.className = "settings-job-queue-btn";
+      downBtn.setAttribute("aria-label", "Move job down");
+      downBtn.title = "Move down";
+      downBtn.appendChild(createSettingsJobActionIcon("down"));
+      downBtn.disabled = isMoving || queueIdx >= (queuedCount - 1);
+      downBtn.addEventListener("click", () => {
+        moveSettingsJobQueue(id, "down").catch((err) => appendLog(`settings queue move down error: ${err.message}`));
+      });
+
+      queueControls.appendChild(upBtn);
+      queueControls.appendChild(downBtn);
+      controls.appendChild(queueControls);
+    }
+    if (state === "running" || state === "queued") {
+      const abortBtn = document.createElement("button");
+      abortBtn.type = "button";
+      abortBtn.className = "settings-job-abort-btn";
+      abortBtn.setAttribute("aria-label", settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort job");
+      abortBtn.title = settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort";
+      abortBtn.appendChild(createSettingsJobActionIcon("abort"));
+      abortBtn.disabled = settingsJobsAbortInFlight.has(id);
+      abortBtn.addEventListener("click", () => {
+        abortSettingsJob(id).catch((err) => appendLog(`settings abort error: ${err.message}`));
+      });
+      controls.appendChild(abortBtn);
+    }
+    const pills = document.createElement("div");
+    pills.className = "settings-job-pills";
+    pills.appendChild(statePill);
+
+    head.appendChild(idNode);
+    head.appendChild(pills);
+
+    const meta = document.createElement("div");
+    meta.className = "settings-job-meta";
+    const workspaceNode = document.createElement("span");
+    workspaceNode.textContent = `ws ${workspaceId}`;
+    const metrics = document.createElement("div");
+    metrics.className = "settings-job-metrics";
+    const threadsNode = document.createElement("span");
+    threadsNode.className = "settings-job-meta-pill";
+    threadsNode.textContent = threads === 1 ? "1 thread" : `${threads} threads`;
+    const elapsedNode = document.createElement("span");
+    elapsedNode.className = "settings-job-meta-pill";
+    elapsedNode.textContent = elapsed;
+    const progressNode = document.createElement("span");
+    progressNode.className = "settings-job-meta-pill";
+    progressNode.textContent = `${(progress * 100).toFixed(1)}%`;
+    metrics.appendChild(threadsNode);
+    metrics.appendChild(elapsedNode);
+    metrics.appendChild(progressNode);
+    meta.appendChild(workspaceNode);
+    meta.appendChild(metrics);
+
+    const progressBar = document.createElement("div");
+    progressBar.className = "settings-job-progress";
+    const progressFill = document.createElement("span");
+    progressFill.style.width = `${(progress * 100).toFixed(1)}%`;
+    progressBar.appendChild(progressFill);
+
+    const sub = document.createElement("div");
+    sub.className = "settings-job-sub";
+    sub.textContent = `${scene} · ${integrator}`;
+
+    const footer = document.createElement("div");
+    footer.className = "settings-job-footer";
+    footer.appendChild(sub);
+    if (controls.childElementCount > 0) footer.appendChild(controls);
+
+    item.appendChild(head);
+    item.appendChild(meta);
+    item.appendChild(progressBar);
+    item.appendChild(footer);
+    el.settingsJobsList.appendChild(item);
+  });
+}
+
+async function refreshSettingsJobsCard() {
+  if (!el.settingsJobsList || !hasBackendMethod(api, "getActiveJobs")) return;
+  if (settingsJobsRefreshInFlight) return;
+  settingsJobsRefreshInFlight = true;
+  try {
+    const activeJobs = await api.getActiveJobs();
+    renderSettingsJobsList(activeJobs);
+    settingsJobsLastError = "";
+    if (el.settingsJobsUpdated) {
+      const ts = new Date();
+      const hh = String(ts.getHours()).padStart(2, "0");
+      const mm = String(ts.getMinutes()).padStart(2, "0");
+      const ss = String(ts.getSeconds()).padStart(2, "0");
+      el.settingsJobsUpdated.innerHTML = `<span class="workspace-active-label">Updated</span><code class="workspace-active-value">${hh}:${mm}:${ss}</code>`;
+    }
+    if (el.settingsJobsThreadsUsage) {
+      const occupied = activeJobs.reduce((sum, job) => {
+        const state = String((job && job.state) || "").toLowerCase();
+        if (state !== "running") return sum;
+        const threads = Math.max(0, Number((job && job.threads) || 0));
+        return sum + (Number.isFinite(threads) ? Math.floor(threads) : 0);
+      }, 0);
+      const total = Math.max(0, Number(settingsJobsTotalRenderThreads) || 0);
+      const value = total > 0 ? `${occupied} / ${total}` : `${occupied} / -`;
+      el.settingsJobsThreadsUsage.innerHTML = `<span class="workspace-active-label">Threads In Use</span><code class="workspace-active-value">${value}</code>`;
+    }
+  } catch (err) {
+    const message = String((err && err.message) || "jobs unavailable");
+    if (message !== settingsJobsLastError) {
+      appendLog(`settings jobs refresh failed: ${message}`);
+      settingsJobsLastError = message;
+    }
+    if (el.settingsJobsList) {
+      el.settingsJobsList.innerHTML = `<p class="workspace-active-hint settings-jobs-empty">Failed to load active jobs.</p>`;
+    }
+    if (el.settingsJobsThreadsUsage) {
+      el.settingsJobsThreadsUsage.innerHTML = `<span class="workspace-active-label">Threads In Use</span><code class="workspace-active-value">-</code>`;
+    }
+  } finally {
+    settingsJobsRefreshInFlight = false;
+  }
+}
+
+function isJobsControlsCardVisible() {
+  const card = document.getElementById("JobsControlsCard");
+  if (!card) return false;
+  if (card.hidden) return false;
+  if (card.classList.contains("is-visibility-hidden")) return false;
+  if (!card.open) return false;
+  return true;
+}
+
+async function moveSettingsJobQueue(jobId, direction) {
+  const id = String(jobId || "").trim();
+  const dir = String(direction || "").toLowerCase();
+  if (!id) return;
+  if (dir !== "up" && dir !== "down") return;
+  const fn = (dir === "up") ? "moveJobQueueUp" : "moveJobQueueDown";
+  if (!hasBackendMethod(api, fn)) return;
+  const key = `${id}:${dir}`;
+  if (settingsJobsMoveInFlight.has(id) || settingsJobsMoveInFlight.has(key)) return;
+  settingsJobsMoveInFlight.add(id);
+  settingsJobsMoveInFlight.add(key);
+  try {
+    if (dir === "up") await api.moveJobQueueUp(id);
+    else await api.moveJobQueueDown(id);
+    appendLog(`settings queue move ${dir} ${id}`);
+  } catch (err) {
+    appendLog(`settings queue move ${dir} failed for ${id}: ${err.message}`);
+  } finally {
+    settingsJobsMoveInFlight.delete(key);
+    settingsJobsMoveInFlight.delete(id);
+    refreshSettingsJobsCard().catch((refreshErr) => appendLog(`settings jobs refresh error: ${refreshErr.message}`));
+  }
+}
+
+async function abortSettingsJob(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id || !hasBackendMethod(api, "abortJob")) return;
+  if (settingsJobsAbortInFlight.has(id)) return;
+  settingsJobsAbortInFlight.add(id);
+  try {
+    appendLog(`settings abort requested for ${id}`);
+    await api.abortJob(id);
+    appendLog(`settings abort accepted for ${id}`);
+  } catch (err) {
+    appendLog(`settings abort failed for ${id}: ${err.message}`);
+  } finally {
+    settingsJobsAbortInFlight.delete(id);
+    refreshSettingsJobsCard().catch((refreshErr) => appendLog(`settings jobs refresh error: ${refreshErr.message}`));
+  }
+}
+
 function normalizeWorkspaceViewMode(value) {
   return String(value || "").toLowerCase() === "list" ? "list" : "cards";
+}
+
+function normalizeWorkspaceSortMode(value) {
+  const mode = String(value || "").toLowerCase();
+  if (mode === "updated") return "updated";
+  if (mode === "scene") return "scene";
+  return "name";
 }
 
 function setWorkspaceViewMode(mode, persist) {
@@ -84,6 +388,68 @@ function setWorkspaceViewMode(mode, persist) {
   if (persist !== false) {
     localStorage.setItem(WORKSPACE_VIEW_MODE_KEY, workspaceViewMode);
   }
+}
+
+function setWorkspaceSortMode(mode, persist) {
+  workspaceSortMode = normalizeWorkspaceSortMode(mode);
+  if (el.workspaceSortNameBtn) {
+    const active = workspaceSortMode === "name";
+    el.workspaceSortNameBtn.classList.toggle("active", active);
+    el.workspaceSortNameBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (el.workspaceSortUpdatedBtn) {
+    const active = workspaceSortMode === "updated";
+    el.workspaceSortUpdatedBtn.classList.toggle("active", active);
+    el.workspaceSortUpdatedBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (el.workspaceSortSceneBtn) {
+    const active = workspaceSortMode === "scene";
+    el.workspaceSortSceneBtn.classList.toggle("active", active);
+    el.workspaceSortSceneBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (persist !== false) {
+    localStorage.setItem(WORKSPACE_SORT_MODE_KEY, workspaceSortMode);
+  }
+}
+
+function compareWorkspaceName(a, b) {
+  const nameA = String((a && a.name) || (a && a.id) || "").trim().toLowerCase();
+  const nameB = String((b && b.name) || (b && b.id) || "").trim().toLowerCase();
+  const byName = nameA.localeCompare(nameB);
+  if (byName !== 0) return byName;
+  const idA = String((a && a.id) || "").trim().toLowerCase();
+  const idB = String((b && b.id) || "").trim().toLowerCase();
+  return idA.localeCompare(idB);
+}
+
+function compareWorkspaceUpdated(a, b) {
+  const rawA = Number((a && a.updated_ms) || 0);
+  const rawB = Number((b && b.updated_ms) || 0);
+  const updatedA = Number.isFinite(rawA) ? rawA : 0;
+  const updatedB = Number.isFinite(rawB) ? rawB : 0;
+  if (updatedA !== updatedB) return updatedB - updatedA;
+  return compareWorkspaceName(a, b);
+}
+
+function compareWorkspaceScene(a, b) {
+  const sceneA = String((a && a.active_scene) || "").trim().toLowerCase();
+  const sceneB = String((b && b.active_scene) || "").trim().toLowerCase();
+  if (sceneA !== sceneB) return sceneA.localeCompare(sceneB);
+  return compareWorkspaceName(a, b);
+}
+
+function sortWorkspaceItems(items) {
+  const list = Array.isArray(items) ? [...items] : [];
+  if (workspaceSortMode === "updated") {
+    list.sort(compareWorkspaceUpdated);
+    return list;
+  }
+  if (workspaceSortMode === "scene") {
+    list.sort(compareWorkspaceScene);
+    return list;
+  }
+  list.sort(compareWorkspaceName);
+  return list;
 }
 
 function formatWorkspaceUpdated(updatedMs) {
@@ -294,6 +660,35 @@ function cacheWorkspaceSnapshots(items) {
     runtime.lastCompletedJobId = String((ws && ws.last_job_id) || "").trim();
     const scene = String((ws && ws.active_scene) || "").trim();
     if (scene) runtime.lastCompletedJobScene = scene;
+  });
+}
+
+function mapActiveJobsByWorkspace(activeJobs) {
+  const byWorkspace = new Map();
+  const list = Array.isArray(activeJobs) ? activeJobs : [];
+  list.forEach((job) => {
+    const workspaceId = String((job && job.workspace_id) || "").trim();
+    const jobId = String((job && job.id) || "").trim();
+    const state = String((job && job.state) || "").toLowerCase();
+    if (!workspaceId || !jobId) return;
+    if (state !== "queued" && state !== "running") return;
+    if (!byWorkspace.has(workspaceId)) byWorkspace.set(workspaceId, jobId);
+  });
+  return byWorkspace;
+}
+
+function overlayWorkspaceActiveJobs(workspaces, activeJobs) {
+  const list = Array.isArray(workspaces) ? workspaces : [];
+  if (!Array.isArray(activeJobs)) return list.map((ws) => ({ ...ws }));
+  const map = mapActiveJobsByWorkspace(activeJobs);
+  return list.map((ws) => {
+    const id = String((ws && ws.id) || "").trim();
+    if (!id) return ws;
+    const activeJobId = map.get(id) || "";
+    return {
+      ...ws,
+      active_job_id: activeJobId,
+    };
   });
 }
 
@@ -569,12 +964,21 @@ function renderWorkspaceList(items) {
 
 async function refreshWorkspaces() {
   if (!hasBackendMethod(api, "getWorkspaces")) return;
-  const payload = await api.getWorkspaces();
+  const [payload, activeJobs] = await Promise.all([
+    api.getWorkspaces(),
+    hasBackendMethod(api, "getActiveJobs")
+      ? api.getActiveJobs().catch((err) => {
+        appendLog(`active jobs refresh failed: ${err.message}`);
+        return null;
+      })
+      : Promise.resolve(null),
+  ]);
   workspaceSpatialIndexStats = payload && payload.spatial_index && typeof payload.spatial_index === "object"
     ? payload.spatial_index
     : null;
-  const workspaceItems = (payload && payload.workspaces) || [];
-  cacheWorkspaceSnapshots(workspaceItems);
+  const workspaceItems = overlayWorkspaceActiveJobs((payload && payload.workspaces) || [], activeJobs);
+  const sortedWorkspaceItems = sortWorkspaceItems(workspaceItems);
+  cacheWorkspaceSnapshots(sortedWorkspaceItems);
   const nextActive = String((payload && payload.active_workspace) || "").trim();
   let activeChanged = false;
   if (nextActive && nextActive !== activeWorkspaceId) {
@@ -584,8 +988,8 @@ async function refreshWorkspaces() {
     activeChanged = true;
   }
   updateWorkspaceActiveHint();
-  updateWorkspaceCountHint(Array.isArray(workspaceItems) ? workspaceItems.length : 0);
-  renderWorkspaceList(workspaceItems);
+  updateWorkspaceCountHint(Array.isArray(sortedWorkspaceItems) ? sortedWorkspaceItems.length : 0);
+  renderWorkspaceList(sortedWorkspaceItems);
   if (activeChanged) {
     await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
   }

@@ -2,6 +2,8 @@ function updatePreviewSizing() {
   applyPreviewTransform();
 }
 
+let workspacePollingJobId = "";
+
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
 }
@@ -713,11 +715,15 @@ async function drawDeltaTilesToPreviewCanvas(delta) {
 }
 
 async function refreshProgressivePreviewDelta(jobId) {
-  if (!hasBackendMethod(api, "getJobImageDelta")) return false;
-  if (!progressiveDeltaEnabled) return false;
+  if (!hasBackendMethod(api, "getJobImageDelta")) {
+    return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
+  }
+  if (!progressiveDeltaEnabled) {
+    return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
+  }
 
   const id = String(jobId || "").trim();
-  if (!id) return false;
+  if (!id) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
   const tmKey = [
     el.toneMapping ? el.toneMapping.value : "aces",
@@ -743,15 +749,28 @@ async function refreshProgressivePreviewDelta(jobId) {
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
   });
-  if (!packet) return false;
+  if (!packet) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (renderActive && activeJobId && id === String(activeJobId)) {
     recordPreviewTransfer("delta", packet.byteLength || 0);
   }
 
   const delta = parseImageDeltaPacket(packet);
-  if (!delta) return false;
-  if (!Array.isArray(delta.tiles) || delta.tiles.length === 0) return true;
-  return drawDeltaTilesToPreviewCanvas(delta);
+  if (!delta) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
+  if (!Array.isArray(delta.tiles) || delta.tiles.length === 0) {
+    return {
+      updated: true,
+      tilesDone: Number(delta.tilesDone) || 0,
+      tilesTotal: Number(delta.tilesTotal) || 0,
+      state: String(delta.state || ""),
+    };
+  }
+  const updated = await drawDeltaTilesToPreviewCanvas(delta);
+  return {
+    updated: !!updated,
+    tilesDone: Number(delta.tilesDone) || 0,
+    tilesTotal: Number(delta.tilesTotal) || 0,
+    state: String(delta.state || ""),
+  };
 }
 
 async function refreshProgressivePreview(jobId) {
@@ -803,16 +822,48 @@ async function refreshPreviewForToneMapping() {
 }
 
 async function restorePreviewForActiveWorkspace() {
+  if (!activeJobId && hasBackendMethod(api, "getActiveJobs")) {
+    try {
+      const jobs = await api.getActiveJobs();
+      const workspaceId = String(activeWorkspaceId || "").trim();
+      const candidate = workspaceId
+        ? jobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
+        : (jobs.length > 0 ? jobs[0] : null);
+      const state = String((candidate && candidate.state) || "").toLowerCase();
+      const id = String((candidate && candidate.id) || "").trim();
+      if (id && (state === "queued" || state === "running")) {
+        activeJobId = id;
+        syncGlobalsToWorkspaceRuntime();
+        appendLog(`restored active workspace job: ${id}`);
+      }
+    } catch (_) {
+      // No globally active job is fine.
+    }
+  }
+
   if (activeJobId) {
     try {
       const data = await api.getJob(activeJobId);
       const state = String((data && data.state) || "").toLowerCase();
       if (state === "queued" || state === "running") {
         const progress = Number((data && data.progress) || 0);
+        const elapsedMs = Math.max(0, Number((data && data.elapsed_ms) || 0));
+        const threads = Math.max(0, Number((data && data.threads) || 0));
+        const stateLabel = state === "running" ? "rendering" : state;
         updateActivePreviewTilesFromJob(data);
+        setRenderActive(true);
         setProgress(progress);
-        setStatus(`${state} ${(100 * progress).toFixed(1)}%`);
+        setStatusThreads(threads);
+        if (elapsedMs > 0 && typeof formatElapsed === "function") {
+          setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
+        } else {
+          setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
+        }
+        if (typeof updateRenderActionButton === "function") updateRenderActionButton();
         await refreshProgressivePreview(activeJobId);
+        if (typeof resumeWorkspaceJobPolling === "function") {
+          resumeWorkspaceJobPolling(activeJobId);
+        }
         return;
       }
       if (state === "done") {
@@ -821,7 +872,7 @@ async function restorePreviewForActiveWorkspace() {
         lastCompletedJobIntegrator = String((data && data.integrator) || el.integrator.value || "");
         activeJobId = "";
         syncGlobalsToWorkspaceRuntime();
-      } else if (state === "error") {
+      } else if (state === "aborted" || state === "error") {
         activeJobId = "";
         syncGlobalsToWorkspaceRuntime();
       }
@@ -861,26 +912,28 @@ async function restorePreviewForActiveWorkspace() {
 function resumeWorkspaceJobPolling(jobId) {
   const id = String(jobId || "").trim();
   if (!id) return;
-  if (renderActive && activeJobId === id) return;
+  if (workspacePollingJobId === id) return;
 
+  workspacePollingJobId = id;
   activeJobId = id;
   syncGlobalsToWorkspaceRuntime();
   const token = beginPollSession();
   setRenderActive(true);
-  if (el.renderBtn) el.renderBtn.disabled = true;
+  if (typeof updateRenderActionButton === "function") updateRenderActionButton();
   pollJob(id, token)
     .catch((err) => {
       setStatus(`error: ${err.message}`);
       appendLog(`render error: ${err.message}`);
     })
     .finally(() => {
+      if (workspacePollingJobId === id) workspacePollingJobId = "";
       if (activeJobId === id) {
         activeJobId = "";
         syncGlobalsToWorkspaceRuntime();
       }
       if (!activeJobId) {
         setRenderActive(false);
-        if (el.renderBtn) el.renderBtn.disabled = false;
+        if (typeof updateRenderActionButton === "function") updateRenderActionButton();
       }
     });
 }

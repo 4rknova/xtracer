@@ -24,6 +24,7 @@ async function boot() {
   loadUIOptions();
   applyHistoryLimits();
   setWorkspaceViewMode(localStorage.getItem(WORKSPACE_VIEW_MODE_KEY) || "cards", false);
+  setWorkspaceSortMode(localStorage.getItem(WORKSPACE_SORT_MODE_KEY) || "name", false);
   pollBackendLogs();
 
   setStatus("loading...");
@@ -96,18 +97,30 @@ async function boot() {
     await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null)
       .catch((err) => appendLog(`workspace restore error: ${err.message}`));
   }
+  if (!activeJobId && typeof restorePreviewForActiveWorkspace === "function") {
+    await restorePreviewForActiveWorkspace()
+      .catch((err) => appendLog(`startup preview restore error: ${err.message}`));
+  }
   await trackStartupRequest(loadAbout());
   updatePreviewSizing();
   bindPreviewInteraction();
   bindGraphInteraction();
   applyPreviewSampling();
-  setPreviewEmptyState(true);
-  setRenderActive(false);
-  if (!el.scene.value) {
-    setStatus("no scenes found in scene/ directory");
-    setSceneLoadStatus("idle", "No scenes found in scene/ directory.", "");
+  const hasActiveRender = !!String(activeJobId || "").trim();
+  const hasRestoredCompletedRender = !!String(lastCompletedJobId || "").trim();
+  if (!hasActiveRender && !hasRestoredCompletedRender) {
+    setPreviewEmptyState(true);
+  }
+  if (!hasActiveRender) {
+    setRenderActive(false);
+    if (!el.scene.value) {
+      setStatus("no scenes found in scene/ directory");
+      setSceneLoadStatus("idle", "No scenes found in scene/ directory.", "");
+    } else {
+      setStatus("idle");
+      setSceneLoadStatus("idle", "Ready.", "");
+    }
   } else {
-    setStatus("idle");
     setSceneLoadStatus("idle", "Ready.", "");
   }
 
@@ -523,6 +536,22 @@ async function boot() {
     syncVisualFrameAspect();
     queueWorkspaceSettingsSave();
   };
+  [
+    { mode: "all", node: el.resolutionModeFilterAll },
+    { mode: "square", node: el.resolutionModeFilterSquare },
+    { mode: "portrait", node: el.resolutionModeFilterPortrait },
+    { mode: "landscape", node: el.resolutionModeFilterLandscape },
+  ].forEach((entry) => {
+    if (!entry.node) return;
+    entry.node.addEventListener("click", () => {
+      if (typeof setResolutionPresetModeFilter === "function") {
+        setResolutionPresetModeFilter(entry.mode);
+      }
+      if (typeof renderResolutionPresetList === "function") {
+        renderResolutionPresetList();
+      }
+    });
+  });
   el.resolutionPreset.addEventListener("change", () => {
     if (typeof renderResolutionPresetList === "function") renderResolutionPresetList();
     if (el.resolutionPreset.value === "custom") return;
@@ -560,6 +589,24 @@ async function boot() {
     persistUIOptions();
     appendLog(`render poll interval=${uiOptions.pollMs}ms`);
   });
+
+  if (el.logPollActiveInterval) {
+    el.logPollActiveInterval.addEventListener("change", () => {
+      uiOptions.logPollActiveMs = clampLogPollMs(el.logPollActiveInterval.value || "3000", 3000, 1000, 60000);
+      el.logPollActiveInterval.value = String(uiOptions.logPollActiveMs);
+      persistUIOptions();
+      appendLog(`logs wait interval (logs tab)=${uiOptions.logPollActiveMs}ms`);
+    });
+  }
+
+  if (el.logPollBackgroundInterval) {
+    el.logPollBackgroundInterval.addEventListener("change", () => {
+      uiOptions.logPollBackgroundMs = clampLogPollMs(el.logPollBackgroundInterval.value || "20000", 20000, 1000, 120000);
+      el.logPollBackgroundInterval.value = String(uiOptions.logPollBackgroundMs);
+      persistUIOptions();
+      appendLog(`logs wait interval (background)=${uiOptions.logPollBackgroundMs}ms`);
+    });
+  }
 
   if (el.textHistorySize) {
     el.textHistorySize.addEventListener("change", () => {
@@ -697,6 +744,24 @@ async function boot() {
       refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
     });
   }
+  if (el.workspaceSortNameBtn) {
+    el.workspaceSortNameBtn.addEventListener("click", () => {
+      setWorkspaceSortMode("name");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceSortUpdatedBtn) {
+    el.workspaceSortUpdatedBtn.addEventListener("click", () => {
+      setWorkspaceSortMode("updated");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
+  if (el.workspaceSortSceneBtn) {
+    el.workspaceSortSceneBtn.addEventListener("click", () => {
+      setWorkspaceSortMode("scene");
+      refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    });
+  }
   if (el.workspaceCreateBtn) {
     el.workspaceCreateBtn.addEventListener("click", () => {
       if (!hasBackendMethod(api, "createWorkspace")) return;
@@ -713,27 +778,9 @@ async function boot() {
   }
   if (el.sceneRefreshBtn) {
     el.sceneRefreshBtn.addEventListener("click", () => {
-      setSceneLoadStatus("loading", "Refreshing scene list...", "");
-      loadScenes()
-        .then(() => {
-          return loadVariants(el.scene.value).then(() => {
-            const tasks = [loadCameras(el.scene.value)];
-            if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(el.scene.value));
-            if (uiOptions.autoLoadEditor) tasks.push(loadSceneSource(el.scene.value));
-            return Promise.all(tasks);
-          });
-        })
-        .then(() => {
-          if (visualEditor) {
-            return loadVisualSceneFromSelected();
-          }
-          return null;
-        })
-        .then(() => {
-          setStatus(`scenes refreshed (${el.scene.value || "none"})`);
-          setSceneLoadStatus("idle", `Scenes refreshed (${el.scene.value || "none"}).`, "");
-          appendLog("scene list refreshed");
-        })
+      const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+      refreshSceneCatalog(currentScene)
+        .then(() => appendLog("scene list refreshed"))
         .catch((err) => {
           setSceneLoadStatus("error", err.message || "Scene refresh failed.", "");
           setStatus(`error: ${err.message}`);
@@ -741,6 +788,19 @@ async function boot() {
         });
     });
   }
+
+  setInterval(() => {
+    if (activeTabMode !== "workspaces") return;
+    if (!hasBackendMethod(api, "getWorkspaces")) return;
+    refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+  }, 2000);
+
+  setInterval(() => {
+    if (typeof refreshSettingsJobsCard !== "function") return;
+    if (typeof isJobsControlsCardVisible === "function" && !isJobsControlsCardVisible()) return;
+    refreshSettingsJobsCard().catch((err) => appendLog(`settings jobs refresh error: ${err.message}`));
+  }, 2000);
+
   el.loadSceneBtn.addEventListener("click", () => {
     setSceneLoadStatus("loading", `Loading source for ${el.scene.value || "scene"}...`, "");
     const tasks = [loadSceneSource(el.scene.value)];
