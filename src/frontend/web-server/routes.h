@@ -17,9 +17,11 @@ class workspace_manager_t;
 struct render_thread_policy_t
 {
     size_t reserve_threads;
+    size_t max_render_threads;
 
     render_thread_policy_t()
         : reserve_threads(1)
+        , max_render_threads(1)
     {}
 };
 

@@ -13,12 +13,45 @@
 #include <xtcore/integrator.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <nimg/img.h>
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 namespace xtracer {
 namespace frontend {
 namespace common {
 
 namespace {
+
+struct openmp_thread_limit_guard_t
+{
+    bool active;
+    int previous_threads;
+
+    explicit openmp_thread_limit_guard_t(size_t requested_threads)
+        : active(false)
+        , previous_threads(0)
+    {
+#if defined(_OPENMP)
+        if (requested_threads == 0) return;
+        previous_threads = omp_get_max_threads();
+        int limited = (int)requested_threads;
+        if (limited < 1) limited = 1;
+        omp_set_num_threads(limited);
+        active = true;
+#else
+        (void)requested_threads;
+#endif
+    }
+
+    ~openmp_thread_limit_guard_t()
+    {
+#if defined(_OPENMP)
+        if (!active) return;
+        if (previous_threads > 0) omp_set_num_threads(previous_threads);
+#endif
+    }
+};
 
 bool parse_u64_text(const std::string &s, size_t &out)
 {
@@ -258,6 +291,7 @@ render_request_t::render_request_t()
 
 render_result_t::render_result_t()
     : ok(false)
+    , aborted(false)
     , error()
     , framebuffer()
     , image_png()
@@ -379,10 +413,13 @@ bool validate_integrator_options(const std::string &integrator,
     return true;
 }
 
-render_result_t render_scene_to_png(const render_request_t &request, progress_callback_t on_progress)
+render_result_t render_scene_to_png(const render_request_t &request,
+                                    progress_callback_t on_progress,
+                                    const std::atomic<bool> *abort_flag)
 {
     render_result_t result;
     xtcore::render::context_t context;
+    openmp_thread_limit_guard_t thread_limit_guard(request.threads);
 
     if (request.scene_path.empty()) {
         result.error = "scene path is empty";
@@ -443,12 +480,22 @@ render_result_t render_scene_to_png(const render_request_t &request, progress_ca
 
     integrator->setup(context);
     integrator->configure(request.integrator_options);
+    static const std::atomic<bool> never_abort(false);
+    if (!abort_flag) abort_flag = &never_abort;
+    integrator->set_abort_flag(abort_flag);
     xtcore::render::order(context.tiles, context.params.tile_order);
 
     auto t0 = std::chrono::steady_clock::now();
     integrator->render();
     auto t1 = std::chrono::steady_clock::now();
     result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    if (abort_flag->load()) {
+        result.tiles_total = context.tiles.size();
+        result.tiles_done = progress_state.done.load();
+        result.aborted = true;
+        result.error = "render aborted";
+        return result;
+    }
 
     xtcore::integrator::photon_mapping::Integrator *pm =
         dynamic_cast<xtcore::integrator::photon_mapping::Integrator *>(integrator.get());

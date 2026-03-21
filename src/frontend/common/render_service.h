@@ -5,6 +5,7 @@
 #include <vector>
 #include <functional>
 #include <map>
+#include <atomic>
 
 #include <xtcore/context.h>
 #include <nimg/pixmap.h>
@@ -74,6 +75,7 @@ struct render_result_t
     };
 
     bool ok;
+    bool aborted;
     std::string error;
     nimg::Pixmap framebuffer;
     std::vector<unsigned char> image_png;
@@ -101,7 +103,9 @@ const integrator_info_t *find_integrator_info(const std::string &name);
 bool validate_integrator_options(const std::string &integrator,
                                  const std::map<std::string, std::string> &options,
                                  std::string &error);
-render_result_t render_scene_to_png(const render_request_t &request, progress_callback_t on_progress);
+render_result_t render_scene_to_png(const render_request_t &request,
+                                    progress_callback_t on_progress,
+                                    const std::atomic<bool> *abort_flag = nullptr);
 
 } /* namespace common */
 } /* namespace frontend */

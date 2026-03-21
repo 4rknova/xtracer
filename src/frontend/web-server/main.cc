@@ -104,6 +104,65 @@ long request_duration_ms(const httplib::Request &req)
     return ms;
 }
 
+bool is_safe_client_id_char(unsigned char c)
+{
+    return (c >= 'a' && c <= 'z')
+        || (c >= 'A' && c <= 'Z')
+        || (c >= '0' && c <= '9')
+        || c == '_' || c == '-' || c == '.';
+}
+
+std::string request_client_tag(const httplib::Request &req)
+{
+    auto parse_cookie_client_id = [&req]() -> std::string {
+        const std::string cookie = req.get_header_value("Cookie");
+        if (cookie.empty()) return "";
+        const char *needle = "client_id=";
+        const size_t n = std::strlen(needle);
+        size_t i = 0;
+        while (i < cookie.size()) {
+            while (i < cookie.size() && (cookie[i] == ' ' || cookie[i] == ';')) ++i;
+            if (i >= cookie.size()) break;
+            if (cookie.compare(i, n, needle) == 0) {
+                size_t begin = i + n;
+                size_t end = begin;
+                while (end < cookie.size() && cookie[end] != ';') ++end;
+                return cookie.substr(begin, end - begin);
+            }
+            while (i < cookie.size() && cookie[i] != ';') ++i;
+        }
+        return "";
+    };
+
+    std::string client_id;
+    if (req.has_param("client_id")) client_id = req.get_param_value("client_id");
+    if (client_id.empty()) client_id = parse_cookie_client_id();
+    if (client_id.empty()) return "no-client";
+    if (client_id.size() > 96) return "invalid-client";
+    for (size_t i = 0; i < client_id.size(); ++i) {
+        if (!is_safe_client_id_char((unsigned char)client_id[i])) return "invalid-client";
+    }
+    return client_id;
+}
+
+std::string compact_client_tag(const std::string &tag)
+{
+    if (tag.size() > 7 && tag.compare(0, 7, "client_") == 0) return tag.substr(7);
+    if (tag.size() > 7 && tag.compare(0, 7, "client-") == 0) return tag.substr(7);
+    return tag;
+}
+
+std::string cancel_job_annotation(const httplib::Request &req)
+{
+    if (req.method != "POST") return "";
+    const std::string prefix = "/api/jobs/abort/";
+    if (req.path.size() <= prefix.size()) return "";
+    if (req.path.compare(0, prefix.size(), prefix) != 0) return "";
+    const std::string id = req.path.substr(prefix.size());
+    if (id.empty()) return "";
+    return " cancel_job=" + id;
+}
+
 int terminal_width_columns()
 {
 #if defined(_WIN32)
@@ -127,6 +186,20 @@ std::string pad_right(const std::string &s, size_t width)
     return s + std::string(width - s.size(), ' ');
 }
 
+std::string pad_left(const std::string &s, size_t width)
+{
+    if (s.size() >= width) return s;
+    return std::string(width - s.size(), ' ') + s;
+}
+
+std::string fit_field(const std::string &s, size_t width)
+{
+    if (s.size() == width) return s;
+    if (s.size() < width) return pad_right(s, width);
+    if (width <= 3) return s.substr(0, width);
+    return s.substr(0, width - 3) + "...";
+}
+
 size_t runtime_omp_max_threads()
 {
 #if defined(_OPENMP)
@@ -135,6 +208,15 @@ size_t runtime_omp_max_threads()
 #else
     return 0;
 #endif
+}
+
+size_t compute_auto_render_threads(size_t reserve_threads)
+{
+    const unsigned int logical_cores_raw = std::thread::hardware_concurrency();
+    const size_t logical_cores = (logical_cores_raw == 0) ? 1 : static_cast<size_t>(logical_cores_raw);
+    const size_t omp_max_threads = runtime_omp_max_threads();
+    const size_t capacity = (omp_max_threads > 0) ? omp_max_threads : logical_cores;
+    return (capacity > reserve_threads) ? (capacity - reserve_threads) : 1;
 }
 
 void print_startup_banner(const std::string &host,
@@ -183,7 +265,7 @@ int main(int argc, char **argv)
     int port = 8080;
     std::string scene_dir = "scene";
     std::string web_root = "src/frontend/web-client";
-    size_t max_concurrent_renders = 1;
+    size_t max_concurrent_renders = 999;
     size_t render_reserve_threads = 1;
     bool verbose = false;
 
@@ -279,48 +361,58 @@ int main(int argc, char **argv)
             char status_buf[16];
             std::snprintf(status_buf, sizeof(status_buf), "%3d", res.status);
             const std::string ts = now_verbose_timestamp();
+            const std::string client_tag = compact_client_tag(request_client_tag(req));
+            const std::string client_field = fit_field(client_tag, 18);
             const std::string method_field = pad_right(req.method, 6);
-            const std::string prefix_plain = "[" + ts + "] [http] "
+            const std::string cancel_note = cancel_job_annotation(req);
+            const std::string prefix_plain = "[" + ts + "] [" + client_field + "] "
                 + status_buf + " "
                 + method_field + " "
-                + req.path;
+                + req.path
+                + cancel_note;
             const std::string duration_plain = std::to_string((elapsed_ms >= 0 ? elapsed_ms : 0)) + "ms";
+            const std::string duration_field = pad_left(duration_plain, 8);
             const int cols = terminal_width_columns();
             size_t pad_spaces = 1;
             if (cols > 0) {
-                const size_t used = prefix_plain.size() + duration_plain.size();
+                const size_t used = prefix_plain.size() + duration_field.size();
                 if ((size_t)cols > used + 1) pad_spaces = (size_t)cols - used;
             }
             const std::string gap(pad_spaces, ' ');
             if (use_ansi) {
-                std::printf("[%s] [http] %s%3d%s %-6s %s%s%s%s%s\n",
+                std::printf("[%s] [%s] %s%3d%s %-6s %s%s%s%s%s\n",
                             ts.c_str(),
+                            client_field.c_str(),
                             color,
                             res.status,
                             reset,
                             req.method.c_str(),
-                            req.path.c_str(),
+                            (req.path + cancel_note).c_str(),
                             gap.c_str(),
                             dur_color,
-                            duration_plain.c_str(),
+                            duration_field.c_str(),
                             reset);
             } else {
-                std::printf("[%s] [http] %3d %-6s %s%s%s\n",
+                std::printf("[%s] [%s] %3d %-6s %s%s%s\n",
                             ts.c_str(),
+                            client_field.c_str(),
                             res.status,
                             req.method.c_str(),
-                            req.path.c_str(),
+                            (req.path + cancel_note).c_str(),
                             gap.c_str(),
-                            duration_plain.c_str());
+                            duration_field.c_str());
             }
             std::fflush(stdout);
         });
     }
     xtracer::frontend::web::job_manager_t jobs;
     jobs.set_max_concurrent_renders(max_concurrent_renders);
+    const size_t render_thread_budget = compute_auto_render_threads(render_reserve_threads);
+    jobs.set_render_thread_budget(render_thread_budget);
     xtracer::frontend::web::workspace_manager_t workspaces;
     xtracer::frontend::web::render_thread_policy_t thread_policy;
     thread_policy.reserve_threads = render_reserve_threads;
+    thread_policy.max_render_threads = render_thread_budget;
     xtracer::frontend::web::setup_routes(server, jobs, workspaces, scene_dir, web_root, thread_policy);
 
     print_startup_banner(host, port, scene_dir, web_root, max_concurrent_renders, render_reserve_threads, verbose);

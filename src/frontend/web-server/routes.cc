@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstring>
+#include <cmath>
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
@@ -102,6 +103,7 @@ std::string json_escape(const std::string &s)
 void send_json(httplib::Response &res, const std::string &json, int status = 200)
 {
     res.status = status;
+    res.set_header("Cache-Control", "no-store");
     res.set_content(json, "application/json");
 }
 
@@ -151,6 +153,12 @@ bool file_exists(const std::string &path)
 {
     std::ifstream in(path.c_str(), std::ios::binary);
     return in.good();
+}
+
+bool finite_aabb3(const xtcore::AABB3 &box)
+{
+    return std::isfinite((double)box.min.x) && std::isfinite((double)box.min.y) && std::isfinite((double)box.min.z)
+        && std::isfinite((double)box.max.x) && std::isfinite((double)box.max.y) && std::isfinite((double)box.max.z);
 }
 
 bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v, size_t max_v, size_t &out)
@@ -743,6 +751,22 @@ const char *surface_type_name(const xtcore::asset::ISurface *surface)
     return "surface";
 }
 
+const char *csg_op_name(xtcore::surface::CSG::op_t op)
+{
+    switch (op) {
+        case xtcore::surface::CSG::OP_UNION:
+            return "union";
+        case xtcore::surface::CSG::OP_SOFT_UNION:
+            return "soft_union";
+        case xtcore::surface::CSG::OP_INTERSECTION:
+            return "intersection";
+        case xtcore::surface::CSG::OP_DIFFERENCE:
+            return "difference";
+        default:
+            return "union";
+    }
+}
+
 const char *material_type_name(const xtcore::asset::IMaterial *mat)
 {
     if (!mat) return "material";
@@ -830,8 +854,17 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
             ss << ",\"v0\":[" << tri->v[0].x << "," << tri->v[0].y << "," << tri->v[0].z << "]";
             ss << ",\"v1\":[" << tri->v[1].x << "," << tri->v[1].y << "," << tri->v[1].z << "]";
             ss << ",\"v2\":[" << tri->v[2].x << "," << tri->v[2].y << "," << tri->v[2].z << "]";
+        } else if (const xtcore::surface::CSG *csg = dynamic_cast<const xtcore::surface::CSG *>(surface)) {
+            ss << ",\"op\":\"" << csg_op_name(csg->op) << "\"";
+            ss << ",\"smoothness\":" << csg->smoothness;
+            ss << ",\"left_type\":\"" << surface_type_name(csg->left) << "\"";
+            ss << ",\"right_type\":\"" << surface_type_name(csg->right) << "\"";
         } else if (const xtcore::surface::Mesh *mesh = dynamic_cast<const xtcore::surface::Mesh *>(surface)) {
             ss << ",\"triangles\":" << mesh->triangles().size();
+        }
+        if (surface && finite_aabb3(surface->aabb)) {
+            ss << ",\"bounds_min\":[" << surface->aabb.min.x << "," << surface->aabb.min.y << "," << surface->aabb.min.z << "]";
+            ss << ",\"bounds_max\":[" << surface->aabb.max.x << "," << surface->aabb.max.y << "," << surface->aabb.max.z << "]";
         }
         ss
            << "}";
@@ -1269,6 +1302,7 @@ const char *job_state_name(job_state_t state)
         case JOB_QUEUED:  return "queued";
         case JOB_RUNNING: return "running";
         case JOB_DONE:    return "done";
+        case JOB_ABORTED: return "aborted";
         case JOB_ERROR:   return "error";
     }
     return "unknown";
@@ -1307,7 +1341,9 @@ void setup_routes(httplib::Server &server,
         const size_t logical_cores = runtime_logical_cores();
         const size_t openmp_max_threads = runtime_omp_max_threads();
         const size_t reserve_threads = thread_policy.reserve_threads;
-        const size_t auto_render_threads = compute_auto_render_threads(reserve_threads);
+        const size_t auto_render_threads = (thread_policy.max_render_threads > 0)
+            ? thread_policy.max_render_threads
+            : compute_auto_render_threads(reserve_threads);
         const size_t max_concurrent_renders = jobs.get_max_concurrent_renders();
         const size_t active_renders = jobs.get_active_render_count();
 
@@ -2038,9 +2074,13 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid threads\"}", 400);
             return;
         }
+        const size_t max_render_threads = (thread_policy.max_render_threads > 0)
+            ? thread_policy.max_render_threads
+            : compute_auto_render_threads(thread_policy.reserve_threads);
         const bool auto_threads_requested = (rr.threads == 0);
-        if (auto_threads_requested) {
-            rr.threads = compute_auto_render_threads(thread_policy.reserve_threads);
+        const size_t requested_threads = rr.threads;
+        if (!auto_threads_requested && rr.threads > max_render_threads) {
+            rr.threads = max_render_threads;
         }
         if (!parse_tile_order_param(req, "tile_order", rr.tile_order) && req.has_param("tile_order")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_order");
@@ -2052,8 +2092,8 @@ void setup_routes(httplib::Server &server,
             std::ostringstream policy_log;
             policy_log << "render thread policy workspace=" << workspace_id
                        << " mode=" << (auto_threads_requested ? "auto" : "manual")
-                       << " requested_threads=" << (auto_threads_requested ? 0 : rr.threads)
-                       << " effective_threads=" << rr.threads
+                       << " requested_threads=" << requested_threads
+                       << " effective_threads=" << (auto_threads_requested ? 0 : rr.threads)
                        << " reserve_threads=" << thread_policy.reserve_threads;
             backend_log_t::handle().add("debug", policy_log.str());
         }
@@ -2203,6 +2243,60 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
+    server.Get("/api/jobs/active", [&](const httplib::Request &, httplib::Response &res) {
+        std::vector<job_snapshot_t> active;
+        jobs.list_active(active);
+        std::ostringstream ss;
+        ss << "{\"jobs\":[";
+        for (size_t i = 0; i < active.size(); ++i) {
+            if (i) ss << ",";
+            const job_snapshot_t &snap = active[i];
+            ss << "{"
+               << "\"id\":\"" << json_escape(snap.id) << "\","
+               << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
+               << "\"scene\":\"" << json_escape(snap.scene) << "\","
+               << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+               << "\"state\":\"" << job_state_name(snap.state) << "\","
+               << "\"threads\":" << snap.threads << ","
+               << "\"progress\":" << snap.progress << ","
+               << "\"elapsed_ms\":" << snap.elapsed_ms << ","
+               << "\"queue_index\":" << snap.queue_index
+               << "}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Post(R"(/api/jobs/abort/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        if (!jobs.abort(id)) {
+            send_json(res, "{\"error\":\"job not found\"}", 404);
+            return;
+        }
+        backend_log_t::handle().add("info", "job abort requested id=" + id);
+        send_json(res, "{\"ok\":true}");
+    });
+
+    server.Post(R"(/api/jobs/queue/up/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        if (!jobs.move_queue_up(id)) {
+            send_json(res, "{\"error\":\"job not found or not queued\"}", 404);
+            return;
+        }
+        backend_log_t::handle().add("info", "job queue move up id=" + id);
+        send_json(res, "{\"ok\":true}");
+    });
+
+    server.Post(R"(/api/jobs/queue/down/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
+        std::string id = req.matches[1];
+        if (!jobs.move_queue_down(id)) {
+            send_json(res, "{\"error\":\"job not found or not queued\"}", 404);
+            return;
+        }
+        backend_log_t::handle().add("info", "job queue move down id=" + id);
+        send_json(res, "{\"ok\":true}");
+    });
+
     server.Get(R"(/api/jobs/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
         std::string id = req.matches[1];
         job_snapshot_t snap;
@@ -2211,7 +2305,7 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"job not found\"}", 404);
             return;
         }
-        if (snap.state == JOB_DONE || snap.state == JOB_ERROR) {
+        if (snap.state == JOB_DONE || snap.state == JOB_ABORTED || snap.state == JOB_ERROR) {
             workspaces.mark_job_finished(snap.workspace_id, snap.id);
         }
 
@@ -2222,6 +2316,7 @@ void setup_routes(httplib::Server &server,
            << "\"scene\":\"" << json_escape(snap.scene) << "\","
            << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
            << "\"state\":\"" << job_state_name(snap.state) << "\","
+           << "\"threads\":" << snap.threads << ","
            << "\"progress\":" << snap.progress << ","
            << "\"elapsed_ms\":" << snap.elapsed_ms << ","
            << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","

@@ -9,6 +9,7 @@
 #include <deque>
 #include <atomic>
 #include <condition_variable>
+#include <chrono>
 
 #include <frontend/common/render_service.h>
 #include <nimg/pixmap.h>
@@ -23,6 +24,7 @@ enum job_state_t
     JOB_QUEUED = 0,
     JOB_RUNNING,
     JOB_DONE,
+    JOB_ABORTED,
     JOB_ERROR
 };
 
@@ -46,6 +48,8 @@ struct job_snapshot_t
     bool has_image;
     size_t width;
     size_t height;
+    size_t threads;
+    int queue_index;
     std::vector<tile_rect_t> active_tiles;
 };
 
@@ -73,6 +77,7 @@ class job_manager_t
     public:
     job_manager_t();
     void set_max_concurrent_renders(size_t max_concurrent);
+    void set_render_thread_budget(size_t max_threads);
     size_t get_max_concurrent_renders() const;
     size_t get_active_render_count() const;
 
@@ -99,6 +104,10 @@ class job_manager_t
                  std::vector<common::render_result_t::point3_t> &diffuse_out,
                  std::vector<common::render_result_t::point3_t> &caustic_out,
                  size_t limit_per_set);
+    bool abort(const std::string &id);
+    bool move_queue_up(const std::string &id);
+    bool move_queue_down(const std::string &id);
+    bool list_active(std::vector<job_snapshot_t> &out);
 
     private:
     struct job_t
@@ -109,10 +118,13 @@ class job_manager_t
         std::string scene;
         std::string integrator;
         std::atomic<job_state_t> state;
+        std::atomic<bool> cancel_requested;
         std::atomic<size_t> tiles_done;
         std::atomic<size_t> tiles_total;
         std::string error;
         double elapsed_ms;
+        std::chrono::steady_clock::time_point started_at;
+        bool has_started;
         std::vector<unsigned char> image_png;
         nimg::Pixmap final_fb;
         std::vector<unsigned char> image_exr;
@@ -140,6 +152,7 @@ class job_manager_t
         float preview_last_tm_mantiuk_saturation;
         float preview_last_tm_mantiuk_detail;
         std::vector<unsigned char> preview_png_cache;
+        size_t effective_threads;
         common::render_request_t request;
         std::string cleanup_scene_path;
 
@@ -157,6 +170,7 @@ class job_manager_t
         double elapsed_ms;
         size_t width;
         size_t height;
+        size_t threads;
         std::string png_path;
     };
 
@@ -181,6 +195,9 @@ class job_manager_t
     std::condition_variable render_slots_cv;
     size_t max_concurrent_renders;
     size_t active_renders;
+    size_t render_thread_budget;
+    size_t active_render_threads;
+    std::deque<std::string> queued_job_order;
 };
 
 } /* namespace web */
