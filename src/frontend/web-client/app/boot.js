@@ -226,6 +226,16 @@ async function boot() {
       appendLog("preview view reset");
     });
   }
+  if (el.interactivePreviewSaveCameraBtn) {
+    el.interactivePreviewSaveCameraBtn.addEventListener("click", () => {
+      saveInteractiveCameraToScene()
+        .catch((err) => {
+          setStatus(`error: ${err.message}`);
+          setEditorOpStatus("error", `Save camera failed: ${err.message}`);
+          appendLog(`interactive camera save error: ${err.message}`);
+        });
+    });
+  }
   el.download.addEventListener("click", handleExportClick);
   if (el.exportFormat) {
     el.exportFormat.addEventListener("change", () => {
@@ -280,6 +290,53 @@ async function boot() {
     }
   };
 
+  const saveInteractiveCameraToScene = async () => {
+    const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    if (!sceneName) throw new Error("no active scene");
+    if (!interactivePreviewCamera || !interactivePreviewCamera.ready) {
+      throw new Error("interactive camera is not ready");
+    }
+    const sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+    if (!sourceText.trim()) throw new Error("scene source is empty");
+
+    const baseLabel = String(interactivePreviewCamera.sourceCamera || "").trim() || "interactive_camera";
+    const next = addInteractiveCameraToSceneSource(sourceText, {
+      baseName: `interactive_${sanitizeSceneId(baseLabel, "camera")}`,
+      position: interactivePreviewCamera.position,
+      target: interactivePreviewCamera.target,
+      up: interactivePreviewCamera.up,
+      hfov: interactivePreviewCamera.hfov,
+    });
+    updateSceneSourceText(next.source, { history: "visual" });
+
+    await api.saveScene(sceneName, next.source, true);
+    await loadScenes();
+    el.scene.value = sceneName;
+    setSceneBrowserSelectedFile(sceneName);
+    localStorage.setItem(LAST_SCENE_KEY, sceneName);
+    updateSceneDependencyPill(sceneName);
+
+    const variantName = selectedSceneVariantValue();
+    await loadCameras(sceneName, variantName);
+    if (cameraCatalogHasName(next.cameraId)) {
+      el.camera.value = next.cameraId;
+      setCameraBrowserSelectedCamera(next.cameraId);
+      syncVisualCameraFromRenderSelection();
+      lastStableSelection.camera = next.cameraId;
+    }
+    if (hasBackendMethod(api, "getSceneRuntimeGraph")) {
+      await loadSceneRuntimeGraph(sceneName, variantName).catch(() => null);
+    }
+    if (visualEditor) await loadVisualSceneFromSelected().catch(() => null);
+    if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+      const ok = await refreshInteractivePreviewCameraFromSelection().catch(() => false);
+      if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+    }
+    setStatus(`saved ${sceneName} (+camera ${next.cameraId})`);
+    setEditorOpStatus("success", `Saved camera: ${next.cameraId}`);
+    appendLog(`interactive camera saved: ${next.cameraId}`);
+  };
+
   el.scene.addEventListener("change", () => {
     setSceneBrowserSelectedFile(el.scene.value);
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
@@ -304,6 +361,13 @@ async function boot() {
         lastStableSelection.variant = selectedSceneVariantValue();
         lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
         setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, "");
+        if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+          refreshInteractivePreviewCameraFromSelection()
+            .then((ok) => {
+              if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+            })
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         setSceneLoadStatus("error", err.message || "Scene change failed.", "");
@@ -334,6 +398,13 @@ async function boot() {
           lastStableSelection.scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
           lastStableSelection.variant = selectedSceneVariantValue();
           lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+          if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+            refreshInteractivePreviewCameraFromSelection()
+              .then((ok) => {
+                if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+              })
+              .catch(() => {});
+          }
         })
         .catch((err) => {
           setSceneLoadStatus("error", err.message || "Variant change failed.", "");
@@ -350,6 +421,13 @@ async function boot() {
     setCameraBrowserSelectedCamera(el.camera.value);
     syncVisualCameraFromRenderSelection();
     lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+    if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+      refreshInteractivePreviewCameraFromSelection()
+        .then((ok) => {
+          if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+        })
+        .catch(() => {});
+    }
   });
 
   el.theme.addEventListener("change", () => {
@@ -646,6 +724,41 @@ async function boot() {
     persistUIOptions();
     appendLog(`clear preview before render=${uiOptions.clearPreviewOnRender ? "on" : "off"}`);
   });
+  if (el.renderMode) {
+    el.renderMode.value = normalizeRenderMode(renderMode);
+    el.renderMode.addEventListener("change", () => {
+      const next = normalizeRenderMode(el.renderMode.value);
+      if (typeof setRenderMode === "function") {
+        setRenderMode(next, { log: true })
+          .then(() => queueWorkspaceSettingsSave())
+          .catch(() => {
+            if (el.renderMode) el.renderMode.value = normalizeRenderMode(renderMode);
+          });
+      }
+    });
+  }
+  if (el.interactivePreviewSpeed) {
+    const clampInteractiveSpeed = (v) => Math.max(0.2, Math.min(5.0, Number(v) || 1.0));
+    const applyInteractiveSpeed = (raw, logIt) => {
+      const speed = clampInteractiveSpeed(raw);
+      interactivePreviewFlySpeedScale = speed;
+      el.interactivePreviewSpeed.value = String(speed.toFixed(1));
+      if (el.interactivePreviewSpeedValue) el.interactivePreviewSpeedValue.textContent = `${speed.toFixed(1)}x`;
+      if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+      if (logIt) appendLog(`interactive speed=${speed.toFixed(1)}x`);
+    };
+    applyInteractiveSpeed(interactivePreviewFlySpeedScale, false);
+    el.interactivePreviewSpeed.addEventListener("input", () => {
+      applyInteractiveSpeed(el.interactivePreviewSpeed.value, false);
+    });
+    el.interactivePreviewSpeed.addEventListener("change", () => {
+      applyInteractiveSpeed(el.interactivePreviewSpeed.value, true);
+      queueWorkspaceSettingsSave();
+    });
+  }
+  if (typeof setRenderMode === "function") {
+    setRenderMode(renderMode, { log: false }).catch(() => {});
+  }
   if (el.tileHeatmapEnabled) {
     el.tileHeatmapEnabled.addEventListener("change", () => {
       uiOptions.tileHeatmapEnabled = !!el.tileHeatmapEnabled.checked;

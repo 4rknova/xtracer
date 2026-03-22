@@ -4,8 +4,358 @@ function updatePreviewSizing() {
 
 let workspacePollingJobId = "";
 
+function normalizeRenderMode(value) {
+  const mode = String(value || "").trim().toLowerCase();
+  if (mode === RENDER_MODE_PROGRESSIVE) return RENDER_MODE_PROGRESSIVE;
+  if (mode === RENDER_MODE_INTERACTIVE) return RENDER_MODE_INTERACTIVE;
+  return RENDER_MODE_NORMAL;
+}
+
+function isInteractiveRenderMode() {
+  return normalizeRenderMode(renderMode) === RENDER_MODE_INTERACTIVE;
+}
+
+function isProgressiveRenderMode() {
+  return normalizeRenderMode(renderMode) === RENDER_MODE_PROGRESSIVE;
+}
+
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
+}
+
+function v3(x, y, z) {
+  return [Number(x) || 0, Number(y) || 0, Number(z) || 0];
+}
+
+function v3add(a, b) {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+}
+
+function v3sub(a, b) {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function v3scale(a, s) {
+  return [a[0] * s, a[1] * s, a[2] * s];
+}
+
+function v3dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function v3cross(a, b) {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+}
+
+function v3len(a) {
+  return Math.sqrt(v3dot(a, a));
+}
+
+function v3norm(a, fallback) {
+  const l = v3len(a);
+  if (!Number.isFinite(l) || l < 1e-8) return fallback ? [...fallback] : [0, 0, 1];
+  return [a[0] / l, a[1] / l, a[2] / l];
+}
+
+function rotateAroundAxis(v, axisUnit, radians) {
+  const c = Math.cos(radians);
+  const s = Math.sin(radians);
+  const term1 = v3scale(v, c);
+  const term2 = v3scale(v3cross(axisUnit, v), s);
+  const term3 = v3scale(axisUnit, v3dot(axisUnit, v) * (1 - c));
+  return v3add(v3add(term1, term2), term3);
+}
+
+function interactivePreviewAvailable() {
+  return !!interactivePreviewEnabled
+    && activeTabMode === "render"
+    && interactivePreviewCamera.ready;
+}
+
+function markInteractiveInputActivity() {
+  interactivePreviewLastInputMs = Date.now();
+}
+
+function renderInteractivePreviewHud() {
+  if (!el.interactivePreviewHud) return;
+  if (el.interactivePreviewControls) {
+    el.interactivePreviewControls.hidden = !isInteractiveRenderMode();
+  }
+  if (el.renderMode) {
+    el.renderMode.value = normalizeRenderMode(renderMode);
+  }
+  const show = !!interactivePreviewEnabled && activeTabMode === "render";
+  el.interactivePreviewHud.hidden = !show;
+  if (el.interactivePreviewSaveCameraBtn) {
+    const canSave = !!interactivePreviewEnabled && !!interactivePreviewCamera.ready;
+    el.interactivePreviewSaveCameraBtn.disabled = !canSave;
+    el.interactivePreviewSaveCameraBtn.classList.toggle("is-disabled", !canSave);
+    el.interactivePreviewSaveCameraBtn.setAttribute("aria-disabled", canSave ? "false" : "true");
+  }
+  if (!show) return;
+  if (el.interactivePreviewHudMode) {
+    el.interactivePreviewHudMode.textContent = `Mode: ${String(interactivePreviewHudMode || "LOOK").toUpperCase()}`;
+  }
+  if (el.interactivePreviewHudSpeed) {
+    const sp = Number(interactivePreviewFlySpeedScale) || 1;
+    el.interactivePreviewHudSpeed.textContent = `Speed: ${sp.toFixed(1)}x`;
+  }
+  if (el.interactivePreviewHudQuality) {
+    el.interactivePreviewHudQuality.textContent = `Quality: ${interactivePreviewHudQuality || "idle"}`;
+  }
+}
+
+function interactivePreviewCameraRequestParams() {
+  if (!interactivePreviewCamera.ready) return null;
+  const p = interactivePreviewCamera.position;
+  const t = interactivePreviewCamera.target;
+  const u = interactivePreviewCamera.up;
+  const nums = [p[0], p[1], p[2], t[0], t[1], t[2], u[0], u[1], u[2], interactivePreviewCamera.hfov];
+  for (let i = 0; i < nums.length; i += 1) {
+    if (!Number.isFinite(nums[i])) return null;
+  }
+  return {
+    camera: interactivePreviewCamera.sourceCamera || (el.camera ? (el.camera.value || "") : ""),
+    cam_px: String(p[0]),
+    cam_py: String(p[1]),
+    cam_pz: String(p[2]),
+    cam_tx: String(t[0]),
+    cam_ty: String(t[1]),
+    cam_tz: String(t[2]),
+    cam_upx: String(u[0]),
+    cam_upy: String(u[1]),
+    cam_upz: String(u[2]),
+    cam_hfov: String(interactivePreviewCamera.hfov || 60),
+  };
+}
+
+async function refreshInteractivePreviewCameraFromSelection() {
+  interactivePreviewCamera.ready = false;
+  if (!interactivePreviewEnabled) return false;
+  if (!hasBackendMethod(api, "getSceneResolvedCamera")) return false;
+  const scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!scene) return false;
+  const variant = selectedSceneVariantValue();
+  const cameraName = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+  try {
+    const resolved = await api.getSceneResolvedCamera(scene, variant, cameraName);
+    const pos = Array.isArray(resolved && resolved.position) ? resolved.position : null;
+    const target = Array.isArray(resolved && resolved.target) ? resolved.target : null;
+    const up = Array.isArray(resolved && resolved.up) ? resolved.up : null;
+    const hfov = Number(resolved && resolved.hfov);
+    if (!pos || !target || !up) {
+      appendLog("interactive preview unavailable for current camera");
+      return false;
+    }
+    const vals = [pos[0], pos[1], pos[2], target[0], target[1], target[2], up[0], up[1], up[2]];
+    if (vals.some((v) => !Number.isFinite(Number(v)))) {
+      appendLog("interactive preview unavailable: camera metadata is non-finite");
+      return false;
+    }
+    interactivePreviewCamera.ready = true;
+    interactivePreviewCamera.type = String((resolved && resolved.type) || "");
+    interactivePreviewCamera.sourceScene = scene;
+    interactivePreviewCamera.sourceVariant = variant;
+    interactivePreviewCamera.sourceCamera = String((resolved && resolved.resolved) || cameraName);
+    interactivePreviewCamera.position = v3(pos[0], pos[1], pos[2]);
+    interactivePreviewCamera.target = v3(target[0], target[1], target[2]);
+    interactivePreviewCamera.up = v3norm(v3(up[0], up[1], up[2]), [0, 1, 0]);
+    interactivePreviewCamera.hfov = Number.isFinite(hfov) ? clamp(hfov, 1, 179) : 60;
+    interactivePreviewCameraSeq += 1;
+    return true;
+  } catch (err) {
+    appendLog(`interactive camera resolve failed: ${err.message}`);
+    return false;
+  }
+}
+
+function interactiveCameraBasis() {
+  const pos = interactivePreviewCamera.position;
+  const target = interactivePreviewCamera.target;
+  let forward = v3norm(v3sub(target, pos), [0, 0, -1]);
+  let right = v3cross(forward, interactivePreviewCamera.up);
+  right = v3norm(right, [1, 0, 0]);
+  let up = v3cross(right, forward);
+  up = v3norm(up, [0, 1, 0]);
+  forward = v3norm(forward, [0, 0, -1]);
+  return { forward, right, up };
+}
+
+function markInteractiveCameraDirty() {
+  interactivePreviewCameraSeq += 1;
+  interactivePreviewDirty = true;
+  markInteractiveInputActivity();
+  interactivePreviewHudQuality = "active";
+  renderInteractivePreviewHud();
+  if (typeof requestInteractivePreviewRender === "function") {
+    requestInteractivePreviewRender();
+  }
+}
+
+function interactiveLookCamera(dx, dy) {
+  if (!interactivePreviewCamera.ready) return;
+  const basis = interactiveCameraBasis();
+  const dist = Math.max(0.1, v3len(v3sub(interactivePreviewCamera.target, interactivePreviewCamera.position)));
+  const yaw = -dx * 0.0045;
+  const pitch = -dy * 0.0045;
+  let forward = rotateAroundAxis(basis.forward, basis.up, yaw);
+  let right = v3norm(v3cross(forward, basis.up), basis.right);
+  forward = rotateAroundAxis(forward, right, pitch);
+  const upDot = clamp(v3dot(forward, basis.up), -0.985, 0.985);
+  const horiz = v3sub(forward, v3scale(basis.up, upDot));
+  const horizNorm = v3norm(horiz, [0, 0, -1]);
+  const corrected = v3norm(v3add(v3scale(horizNorm, Math.sqrt(Math.max(0.0, 1 - upDot * upDot))), v3scale(basis.up, upDot)), basis.forward);
+  interactivePreviewCamera.target = v3add(interactivePreviewCamera.position, v3scale(corrected, dist));
+  interactivePreviewCamera.up = basis.up;
+  markInteractiveCameraDirty();
+}
+
+function hasInteractiveFlyInput() {
+  return !!(interactivePreviewKeyState.w
+    || interactivePreviewKeyState.a
+    || interactivePreviewKeyState.s
+    || interactivePreviewKeyState.d
+    || interactivePreviewKeyState.q
+    || interactivePreviewKeyState.e);
+}
+
+function tickInteractiveFly() {
+  if (!interactivePreviewAvailable()) return;
+  const now = Date.now();
+  if (!interactivePreviewFlyLastTickMs) interactivePreviewFlyLastTickMs = now;
+  const dt = Math.max(0.001, Math.min(0.05, (now - interactivePreviewFlyLastTickMs) / 1000));
+  interactivePreviewFlyLastTickMs = now;
+  if (!hasInteractiveFlyInput()) return;
+  const basis = interactiveCameraBasis();
+  const speed = INTERACTIVE_PREVIEW_FLY_SPEED
+    * Math.max(0.2, Math.min(5.0, Number(interactivePreviewFlySpeedScale) || 1.0))
+    * (interactivePreviewKeyState.shift ? INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER : 1.0);
+  let move = [0, 0, 0];
+  if (interactivePreviewKeyState.w) move = v3add(move, basis.forward);
+  if (interactivePreviewKeyState.s) move = v3sub(move, basis.forward);
+  if (interactivePreviewKeyState.d) move = v3add(move, basis.right);
+  if (interactivePreviewKeyState.a) move = v3sub(move, basis.right);
+  if (interactivePreviewKeyState.e) move = v3add(move, basis.up);
+  if (interactivePreviewKeyState.q) move = v3sub(move, basis.up);
+  const moveNorm = v3norm(move, [0, 0, 0]);
+  if (v3len(moveNorm) < 1e-6) return;
+  const delta = v3scale(moveNorm, speed * dt);
+  interactivePreviewCamera.position = v3add(interactivePreviewCamera.position, delta);
+  interactivePreviewCamera.target = v3add(interactivePreviewCamera.target, delta);
+  markInteractiveCameraDirty();
+}
+
+function stopInteractiveFlyTicker() {
+  if (interactivePreviewFlyTimer) {
+    clearInterval(interactivePreviewFlyTimer);
+    interactivePreviewFlyTimer = 0;
+  }
+  interactivePreviewFlyLastTickMs = 0;
+}
+
+function ensureInteractiveFlyTicker() {
+  if (interactivePreviewFlyTimer) return;
+  interactivePreviewFlyLastTickMs = Date.now();
+  interactivePreviewFlyTimer = setInterval(() => {
+    tickInteractiveFly();
+  }, 16);
+}
+
+function bindInteractivePreviewKeyboard() {
+  const isTypingTarget = (node) => {
+    if (!node || !(node instanceof HTMLElement)) return false;
+    const tag = String(node.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || node.isContentEditable;
+  };
+  const applyKey = (evt, down) => {
+    if (!interactivePreviewEnabled) return;
+    if (activeTabMode !== "render") return;
+    if (isTypingTarget(evt.target)) return;
+    const k = String(evt.key || "").toLowerCase();
+    let handled = true;
+    if (k === "w") interactivePreviewKeyState.w = down;
+    else if (k === "a") interactivePreviewKeyState.a = down;
+    else if (k === "s") interactivePreviewKeyState.s = down;
+    else if (k === "d") interactivePreviewKeyState.d = down;
+    else if (k === "q") interactivePreviewKeyState.q = down;
+    else if (k === "e") interactivePreviewKeyState.e = down;
+    else if (k === "shift") interactivePreviewKeyState.shift = down;
+    else handled = false;
+    if (!handled) return;
+    evt.preventDefault();
+    interactivePreviewHudMode = "FLY";
+    renderInteractivePreviewHud();
+    markInteractiveInputActivity();
+  };
+  window.addEventListener("keydown", (evt) => applyKey(evt, true));
+  window.addEventListener("keyup", (evt) => applyKey(evt, false));
+  window.addEventListener("blur", () => {
+    interactivePreviewKeyState.w = false;
+    interactivePreviewKeyState.a = false;
+    interactivePreviewKeyState.s = false;
+    interactivePreviewKeyState.d = false;
+    interactivePreviewKeyState.q = false;
+    interactivePreviewKeyState.e = false;
+    interactivePreviewKeyState.shift = false;
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
+  });
+}
+
+function interactiveOrbitCamera(dx, dy) {
+  if (!interactivePreviewCamera.ready) return;
+  const pos = interactivePreviewCamera.position;
+  const target = interactivePreviewCamera.target;
+  const offset = v3sub(pos, target);
+  const radius = Math.max(0.001, v3len(offset));
+  const yaw = -dx * 0.005;
+  const pitch = -dy * 0.005;
+  const basis = interactiveCameraBasis();
+  let rotated = rotateAroundAxis(offset, basis.up, yaw);
+  const axis = v3norm(v3cross(rotated, basis.up), basis.right);
+  rotated = rotateAroundAxis(rotated, axis, pitch);
+  const minY = -0.995 * radius;
+  const maxY = 0.995 * radius;
+  const y = clamp(v3dot(rotated, basis.up), minY, maxY);
+  const horiz = v3sub(rotated, v3scale(basis.up, v3dot(rotated, basis.up)));
+  const horizLen = Math.max(1e-6, v3len(horiz));
+  const targetHorizLen = Math.sqrt(Math.max(0, radius * radius - y * y));
+  const fixed = v3add(v3scale(v3scale(horiz, 1 / horizLen), targetHorizLen), v3scale(basis.up, y));
+  interactivePreviewCamera.position = v3add(target, fixed);
+  interactivePreviewCamera.up = basis.up;
+  markInteractiveCameraDirty();
+}
+
+function interactivePanCamera(dx, dy) {
+  if (!interactivePreviewCamera.ready) return;
+  const pos = interactivePreviewCamera.position;
+  const target = interactivePreviewCamera.target;
+  const basis = interactiveCameraBasis();
+  const dist = Math.max(0.001, v3len(v3sub(target, pos)));
+  const k = dist * 0.0018;
+  const move = v3add(v3scale(basis.right, -dx * k), v3scale(basis.up, dy * k));
+  interactivePreviewCamera.position = v3add(pos, move);
+  interactivePreviewCamera.target = v3add(target, move);
+  interactivePreviewCamera.up = basis.up;
+  markInteractiveCameraDirty();
+}
+
+function interactiveZoomCamera(deltaY) {
+  if (!interactivePreviewCamera.ready) return;
+  const pos = interactivePreviewCamera.position;
+  const target = interactivePreviewCamera.target;
+  const basis = interactiveCameraBasis();
+  const dist = Math.max(0.001, v3len(v3sub(target, pos)));
+  const amount = clamp(Math.exp(deltaY * 0.0015), 0.8, 1.25);
+  const nextDist = clamp(dist * amount, 0.02, 1e6);
+  const nextPos = v3sub(target, v3scale(basis.forward, nextDist));
+  interactivePreviewCamera.position = nextPos;
+  interactivePreviewCamera.up = basis.up;
+  markInteractiveCameraDirty();
 }
 
 function isTileHeatmapEnabled() {
@@ -421,6 +771,50 @@ function updateResetViewUi(enabled) {
   el.resetViewBtn.setAttribute("aria-disabled", active ? "false" : "true");
 }
 
+async function setInteractivePreviewEnabled(enabled) {
+  return setRenderMode(enabled ? RENDER_MODE_INTERACTIVE : RENDER_MODE_NORMAL, { log: true });
+}
+
+async function setRenderMode(nextModeRaw, options) {
+  const opts = options && typeof options === "object" ? options : {};
+  const nextMode = normalizeRenderMode(nextModeRaw);
+  const prevInteractive = !!interactivePreviewEnabled;
+  const changed = normalizeRenderMode(renderMode) !== nextMode;
+  renderMode = nextMode;
+  interactivePreviewEnabled = isInteractiveRenderMode();
+  if (el.renderMode) {
+    el.renderMode.value = renderMode;
+  }
+  if (interactivePreviewEnabled) {
+    ensureInteractiveFlyTicker();
+    markInteractiveInputActivity();
+    interactivePreviewHudMode = "LOOK";
+    interactivePreviewHudQuality = "active";
+    renderInteractivePreviewHud();
+    const ok = await refreshInteractivePreviewCameraFromSelection();
+    if (ok) {
+      if (opts.log !== false) appendLog("interactive preview on");
+      if (typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+    } else {
+      if (opts.log !== false) appendLog("interactive preview unavailable for selected camera");
+    }
+  } else {
+    stopInteractiveFlyTicker();
+    interactivePreviewHudQuality = "idle";
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
+    appendLog("interactive preview off");
+    if (typeof stopInteractivePreviewLoop === "function") {
+      stopInteractivePreviewLoop(true).catch(() => {});
+    }
+    if (prevInteractive && opts.log !== false) appendLog("interactive preview off");
+  }
+  if (changed && (opts.log || opts.log === undefined)) {
+    appendLog(`render mode=${renderMode}`);
+  }
+  renderInteractivePreviewHud();
+}
+
 function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
   if (!hasPreviewImage()) return;
   const rect = el.previewFrame.getBoundingClientRect();
@@ -445,6 +839,10 @@ function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
 function bindPreviewInteraction() {
   if (!el.previewFrame || !el.preview) return;
   el.preview.draggable = false;
+  const touchPoints = {};
+  let pinchDistance = 0;
+  let pinchCenterX = 0;
+  let pinchCenterY = 0;
 
   el.preview.addEventListener("load", () => {
     if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
@@ -454,22 +852,63 @@ function bindPreviewInteraction() {
     applyPreviewTransform();
   });
 
+  el.previewFrame.addEventListener("contextmenu", (evt) => {
+    if (interactivePreviewAvailable()) evt.preventDefault();
+  });
+
   el.previewFrame.addEventListener("wheel", (evt) => {
-    if (!hasPreviewImage()) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
     evt.preventDefault();
+    if (interactive) {
+      interactiveZoomCamera(evt.deltaY);
+      return;
+    }
     zoomPreviewAt(evt.clientX, evt.clientY, evt.deltaY);
   }, { passive: false });
 
   el.previewFrame.addEventListener("dblclick", (evt) => {
-    if (!hasPreviewImage()) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
     evt.preventDefault();
+    if (interactive) {
+      refreshInteractivePreviewCameraFromSelection()
+        .then((ok) => {
+          if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+        })
+        .catch(() => {});
+      return;
+    }
     resetPreviewView();
   });
 
   el.previewFrame.addEventListener("pointerdown", (evt) => {
-    if (!hasPreviewImage()) return;
-    if (evt.button !== 0 && evt.button !== 1) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
+    if (evt.button !== 0 && evt.button !== 1 && evt.button !== 2) return;
     evt.preventDefault();
+    if (interactive) {
+      if (evt.pointerType === "touch") {
+        touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+        if (Object.keys(touchPoints).length >= 2) {
+          const ids = Object.keys(touchPoints).slice(0, 2);
+          const a = touchPoints[ids[0]];
+          const b = touchPoints[ids[1]];
+          pinchCenterX = (a.x + b.x) * 0.5;
+          pinchCenterY = (a.y + b.y) * 0.5;
+          pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+        }
+      }
+      previewView.panning = true;
+      previewView.pointerId = evt.pointerId;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      previewView.panMode = (evt.button === 1 || evt.button === 2 || evt.shiftKey) ? "pan" : "orbit";
+      interactivePreviewHudMode = previewView.panMode === "pan" ? "PAN" : "LOOK";
+      renderInteractivePreviewHud();
+      el.previewFrame.setPointerCapture(evt.pointerId);
+      return;
+    }
     previewView.panning = true;
     previewView.pointerId = evt.pointerId;
     previewView.lastX = evt.clientX;
@@ -479,6 +918,38 @@ function bindPreviewInteraction() {
   });
 
   el.previewFrame.addEventListener("pointermove", (evt) => {
+    if (interactivePreviewAvailable()) {
+      if (evt.pointerType === "touch" && Object.prototype.hasOwnProperty.call(touchPoints, String(evt.pointerId))) {
+        touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+        const ids = Object.keys(touchPoints);
+        if (ids.length >= 2) {
+          const a = touchPoints[ids[0]];
+          const b = touchPoints[ids[1]];
+          const centerX = (a.x + b.x) * 0.5;
+          const centerY = (a.y + b.y) * 0.5;
+          const dist = Math.max(1e-6, Math.hypot(a.x - b.x, a.y - b.y));
+          if (pinchDistance > 1e-6) {
+            const zoomDelta = Math.log(dist / pinchDistance) * 1000;
+            interactiveZoomCamera(zoomDelta);
+          }
+          if (Number.isFinite(pinchCenterX) && Number.isFinite(pinchCenterY)) {
+            interactivePanCamera(centerX - pinchCenterX, centerY - pinchCenterY);
+          }
+          pinchDistance = dist;
+          pinchCenterX = centerX;
+          pinchCenterY = centerY;
+          return;
+        }
+      }
+      if (!(previewView.panning && previewView.pointerId === evt.pointerId)) return;
+      const dx = evt.clientX - previewView.lastX;
+      const dy = evt.clientY - previewView.lastY;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      if (previewView.panMode === "pan") interactivePanCamera(dx, dy);
+      else interactiveLookCamera(dx, dy);
+      return;
+    }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     const dx = evt.clientX - previewView.lastX;
     const dy = evt.clientY - previewView.lastY;
@@ -490,14 +961,27 @@ function bindPreviewInteraction() {
   });
 
   const endPan = (evt) => {
+    if (evt.pointerType === "touch") {
+      delete touchPoints[String(evt.pointerId)];
+      const ids = Object.keys(touchPoints);
+      if (ids.length < 2) {
+        pinchDistance = 0;
+        pinchCenterX = 0;
+        pinchCenterY = 0;
+      }
+    }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     previewView.panning = false;
     previewView.pointerId = null;
+    previewView.panMode = "";
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
     try {
       el.previewFrame.releasePointerCapture(evt.pointerId);
     } catch (_) {
       // Ignore release errors from non-captured pointers.
     }
+    if (interactivePreviewAvailable()) return;
     applyPreviewTransform();
   };
 
@@ -507,6 +991,9 @@ function bindPreviewInteraction() {
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     endPan(evt);
   });
+
+  bindInteractivePreviewKeyboard();
+  renderInteractivePreviewHud();
 }
 
 function setPreviewEmptyState(isEmpty) {
@@ -773,17 +1260,44 @@ async function refreshProgressivePreviewDelta(jobId) {
   };
 }
 
-async function refreshProgressivePreview(jobId) {
+function previewToneMappingParamsForJob(jobId) {
   const id = String(jobId || "").trim();
-  const blob = await api.getJobImage(jobId, {
-    partial: true,
-    cacheBust: true,
+  const isInteractiveMoving = interactivePreviewEnabled
+    && !!interactivePreviewActiveMovingJob
+    && id
+    && id === String(interactivePreviewJobId || "").trim();
+  if (isInteractiveMoving) {
+    return {
+      toneMapping: "none",
+      toneMappingExposure: "1.0",
+      toneMappingWhitePoint: "1.0",
+      toneMappingMantiukContrast: "0.1",
+      toneMappingMantiukSaturation: "0.8",
+      toneMappingMantiukDetail: "1.0",
+    };
+  }
+  return {
     toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
     toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
     toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+  };
+}
+
+async function refreshProgressivePreview(jobId) {
+  const id = String(jobId || "").trim();
+  const tm = previewToneMappingParamsForJob(id);
+  const blob = await api.getJobImage(jobId, {
+    partial: true,
+    cacheBust: true,
+    toneMapping: tm.toneMapping,
+    toneMappingExposure: tm.toneMappingExposure,
+    toneMappingWhitePoint: tm.toneMappingWhitePoint,
+    toneMappingMantiukContrast: tm.toneMappingMantiukContrast,
+    toneMappingMantiukSaturation: tm.toneMappingMantiukSaturation,
+    toneMappingMantiukDetail: tm.toneMappingMantiukDetail,
   });
   if (!blob || blob.size === 0) return false;
   if (renderActive && activeJobId && id === String(activeJobId)) {

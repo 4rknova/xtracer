@@ -4146,6 +4146,11 @@ button:disabled {
   min-width: 7.8rem;
 }
 
+.status-pass {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  min-width: 5.8rem;
+}
+
 .preview-transfer-stats {
   margin: 0;
   font-family: "JetBrains Mono", "Fira Code", monospace;
@@ -5046,6 +5051,54 @@ button:disabled {
   overflow: hidden;
   background: var(--preview-bg);
   margin: 0;
+}
+
+.interactive-speed-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.interactive-speed-row input[type="range"] {
+  width: 100%;
+}
+
+.interactive-speed-value {
+  min-width: 3.8em;
+  text-align: right;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--ink) 88%, transparent);
+}
+
+.interactive-save-camera-btn {
+  width: 100%;
+}
+
+.interactive-preview-hud {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 4;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, #000000 28%, transparent);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.interactive-preview-hud-row {
+  margin: 0;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--ink) 92%, #ffffff);
 }
 
 .visual-viewport-top {

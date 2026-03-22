@@ -101,6 +101,13 @@
                   <label>Threads <input id="threads" type="number" min="0" max="256" value="0"></label>
                 </div>
                 <p id="threadsPolicyHint" class="info-widget">Threads 0 uses auto mode.</p>
+                <label>Render Mode
+                  <select id="renderMode">
+                    <option value="normal">Normal</option>
+                    <option value="progressive">Progressive</option>
+                    <option value="interactive">Interactive</option>
+                  </select>
+                </label>
                 <div id="integratorControlsSection" hidden>
                   <div id="integratorControls"></div>
                 </div>
@@ -402,6 +409,15 @@
               </summary>
               <div class="control-section-body">
                 <button id="resetViewBtn" class="reset-view-btn is-disabled" type="button" aria-disabled="true" title="Reset preview view">Reset View</button>
+                <div id="interactivePreviewControls" hidden>
+                  <label for="interactivePreviewSpeed">Interactive Speed
+                    <div class="interactive-speed-row">
+                      <input id="interactivePreviewSpeed" type="range" min="0.2" max="5.0" step="0.1" value="1.0">
+                      <code id="interactivePreviewSpeedValue" class="interactive-speed-value">1.0x</code>
+                    </div>
+                  </label>
+                  <button id="interactivePreviewSaveCameraBtn" class="action-btn interactive-save-camera-btn is-disabled" type="button" disabled aria-disabled="true" title="Save current interactive camera as a new scene camera">Save Interactive Camera</button>
+                </div>
                 <label for="previewSampling">Preview Sampling
                   <select id="previewSampling" class="preview-sampling">
                     <option value="nearest">Nearest</option>
@@ -692,6 +708,7 @@
                 <div class="preview-status-row">
                   <p id="status" class="status-chip">Idle</p>
                   <span id="statusThreads" class="status-field status-threads" hidden>threads 0</span>
+                  <span id="statusPass" class="status-field status-pass" hidden>pass 1/1</span>
                   <span id="statusPercent" class="status-field status-percent" hidden>0.0%</span>
                   <span id="renderTimer" class="status-field status-timer" hidden>00:00</span>
                 </div>
@@ -700,6 +717,11 @@
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
+              <div id="interactivePreviewHud" class="interactive-preview-hud" hidden>
+                <p id="interactivePreviewHudMode" class="interactive-preview-hud-row">Mode: LOOK</p>
+                <p id="interactivePreviewHudSpeed" class="interactive-preview-hud-row">Speed: 1.0x</p>
+                <p id="interactivePreviewHudQuality" class="interactive-preview-hud-row">Quality: idle</p>
+              </div>
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
             </div>

@@ -393,6 +393,13 @@ function setActiveTab(mode) {
     restorePreviewForActiveWorkspace().catch((err) => {
       appendLog(`preview restore error: ${err.message}`);
     });
+    if (interactivePreviewEnabled && typeof requestInteractivePreviewRender === "function") {
+      requestInteractivePreviewRender();
+    }
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+  } else if (interactivePreviewEnabled && typeof stopInteractivePreviewLoop === "function") {
+    stopInteractivePreviewLoop(true).catch(() => {});
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
   }
   if (isMobileTabMenuViewport()) setMainMenuOpen(false);
   requestAnimationFrame(() => {

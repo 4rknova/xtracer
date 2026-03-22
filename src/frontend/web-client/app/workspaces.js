@@ -510,6 +510,11 @@ function workspaceSettingsPayload() {
       mantiuk_saturation: String(el.toneMappingMantiukSaturation && el.toneMappingMantiukSaturation.value ? el.toneMappingMantiukSaturation.value : "0.8"),
       mantiuk_detail: String(el.toneMappingMantiukDetail && el.toneMappingMantiukDetail.value ? el.toneMappingMantiukDetail.value : "1.0"),
     },
+    preview: {
+      render_mode: normalizeRenderMode(renderMode),
+      interactive_speed: String((Number(interactivePreviewFlySpeedScale) || 1.0).toFixed(1)),
+      interactive_moving_width: String(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth)),
+    },
     post_filters: Array.isArray(postFilterChain)
       ? postFilterChain.map((entry) => ({
         filter: normalizePostFilterId(entry && entry.filter),
@@ -595,6 +600,25 @@ function applyWorkspaceSettings(settings) {
       if (el.toneMappingMantiukSaturation && tm.mantiuk_saturation !== undefined) el.toneMappingMantiukSaturation.value = String(tm.mantiuk_saturation);
       if (el.toneMappingMantiukDetail && tm.mantiuk_detail !== undefined) el.toneMappingMantiukDetail.value = String(tm.mantiuk_detail);
       updateToneMappingControlState();
+    }
+
+    const preview = cfg.preview && typeof cfg.preview === "object" ? cfg.preview : null;
+    if (preview && typeof setRenderMode === "function") {
+      let nextMode = normalizeRenderMode(preview.render_mode);
+      if (preview.render_mode === undefined && preview.interactive !== undefined) {
+        nextMode = preview.interactive ? RENDER_MODE_INTERACTIVE : RENDER_MODE_NORMAL;
+      }
+      setRenderMode(nextMode, { log: false }).catch(() => {});
+    }
+    if (preview && preview.interactive_speed !== undefined) {
+      const speed = Math.max(0.2, Math.min(5.0, Number(preview.interactive_speed) || 1.0));
+      interactivePreviewFlySpeedScale = speed;
+      if (el.interactivePreviewSpeed) el.interactivePreviewSpeed.value = String(speed.toFixed(1));
+      if (el.interactivePreviewSpeedValue) el.interactivePreviewSpeedValue.textContent = `${speed.toFixed(1)}x`;
+      if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+    }
+    if (preview && preview.interactive_moving_width !== undefined) {
+      interactivePreviewAdaptiveMovingWidth = nearestInteractiveMovingWidth(preview.interactive_moving_width);
     }
 
     if (Array.isArray(cfg.post_filters)) {

@@ -180,6 +180,20 @@ bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v,
     return true;
 }
 
+bool parse_f64_param(const httplib::Request &req, const char *key, double min_v, double max_v, double &out)
+{
+    if (!req.has_param(key)) return false;
+    const std::string s = req.get_param_value(key);
+    if (s.empty()) return false;
+    std::istringstream ss(s);
+    double v = 0.0;
+    ss >> v;
+    if (ss.fail() || !std::isfinite(v)) return false;
+    if (v < min_v || v > max_v) return false;
+    out = v;
+    return true;
+}
+
 bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore::render::TILE_ORDER &out)
 {
     if (!req.has_param(key)) return false;
@@ -206,6 +220,29 @@ bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore
     }
     if (s == "spiral_out") {
         out = xtcore::render::TILE_ORDER_SPIRAL_OUT;
+        return true;
+    }
+    return false;
+}
+
+bool parse_render_mode_param(const httplib::Request &req,
+                             const char *key,
+                             common::render_request_t::render_mode_t &out)
+{
+    if (!req.has_param(key)) return false;
+    std::string s = req.get_param_value(key);
+    std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char c) { return (char)std::tolower(c); });
+    if (s == "normal") {
+        out = common::render_request_t::RENDER_MODE_NORMAL;
+        return true;
+    }
+    if (s == "progressive") {
+        out = common::render_request_t::RENDER_MODE_PROGRESSIVE;
+        return true;
+    }
+    if (s == "interactive") {
+        out = common::render_request_t::RENDER_MODE_INTERACTIVE;
         return true;
     }
     return false;
@@ -2010,6 +2047,11 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"integrator not supported\"}", 400);
             return;
         }
+        if (!parse_render_mode_param(req, "render_mode", rr.render_mode) && req.has_param("render_mode")) {
+            backend_log_t::handle().add("warn", "render rejected: invalid render_mode");
+            send_json(res, "{\"error\":\"invalid render_mode\"}", 400);
+            return;
+        }
         for (auto it = req.params.begin(); it != req.params.end(); ++it) {
             if (!has_prefix((*it).first, "iopt.")) continue;
             const std::string key = (*it).first.substr(5);
@@ -2025,14 +2067,53 @@ void setup_routes(httplib::Server &server,
 
         if (req.has_param("camera")) rr.camera = req.get_param_value("camera");
 
+        const bool has_cam_override =
+            req.has_param("cam_px") || req.has_param("cam_py") || req.has_param("cam_pz")
+            || req.has_param("cam_tx") || req.has_param("cam_ty") || req.has_param("cam_tz")
+            || req.has_param("cam_upx") || req.has_param("cam_upy") || req.has_param("cam_upz")
+            || req.has_param("cam_hfov");
+        if (has_cam_override) {
+            double cam_px = 0.0, cam_py = 0.0, cam_pz = 0.0;
+            double cam_tx = 0.0, cam_ty = 0.0, cam_tz = 0.0;
+            double cam_upx = 0.0, cam_upy = 1.0, cam_upz = 0.0;
+            double cam_hfov = 60.0;
+            const bool ok =
+                parse_f64_param(req, "cam_px", -1e9, 1e9, cam_px)
+                && parse_f64_param(req, "cam_py", -1e9, 1e9, cam_py)
+                && parse_f64_param(req, "cam_pz", -1e9, 1e9, cam_pz)
+                && parse_f64_param(req, "cam_tx", -1e9, 1e9, cam_tx)
+                && parse_f64_param(req, "cam_ty", -1e9, 1e9, cam_ty)
+                && parse_f64_param(req, "cam_tz", -1e9, 1e9, cam_tz)
+                && parse_f64_param(req, "cam_upx", -1e6, 1e6, cam_upx)
+                && parse_f64_param(req, "cam_upy", -1e6, 1e6, cam_upy)
+                && parse_f64_param(req, "cam_upz", -1e6, 1e6, cam_upz)
+                && parse_f64_param(req, "cam_hfov", 1.0, 179.0, cam_hfov);
+            if (!ok) {
+                backend_log_t::handle().add("warn", "render rejected: invalid camera override");
+                send_json(res, "{\"error\":\"invalid camera override\"}", 400);
+                return;
+            }
+            rr.camera_override.enabled = true;
+            rr.camera_override.px = cam_px;
+            rr.camera_override.py = cam_py;
+            rr.camera_override.pz = cam_pz;
+            rr.camera_override.tx = cam_tx;
+            rr.camera_override.ty = cam_ty;
+            rr.camera_override.tz = cam_tz;
+            rr.camera_override.upx = cam_upx;
+            rr.camera_override.upy = cam_upy;
+            rr.camera_override.upz = cam_upz;
+            rr.camera_override.hfov = cam_hfov;
+        }
+
         size_t v = 0;
-        if (parse_u64_param(req, "width", 32, 8192, v)) rr.width = v;
+        if (parse_u64_param(req, "width", 8, 8192, v)) rr.width = v;
         else if (req.has_param("width")) {
             backend_log_t::handle().add("warn", "render rejected: invalid width");
             send_json(res, "{\"error\":\"invalid width\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "height", 32, 8192, v)) rr.height = v;
+        if (parse_u64_param(req, "height", 8, 8192, v)) rr.height = v;
         else if (req.has_param("height")) {
             backend_log_t::handle().add("warn", "render rejected: invalid height");
             send_json(res, "{\"error\":\"invalid height\"}", 400);
@@ -2256,9 +2337,14 @@ void setup_routes(httplib::Server &server,
                << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
                << "\"scene\":\"" << json_escape(snap.scene) << "\","
                << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+               << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
                << "\"state\":\"" << job_state_name(snap.state) << "\","
                << "\"threads\":" << snap.threads << ","
                << "\"progress\":" << snap.progress << ","
+               << "\"tiles_done\":" << snap.tiles_done << ","
+               << "\"tiles_total\":" << snap.tiles_total << ","
+               << "\"pass_current\":" << snap.pass_current << ","
+               << "\"pass_total\":" << snap.pass_total << ","
                << "\"elapsed_ms\":" << snap.elapsed_ms << ","
                << "\"queue_index\":" << snap.queue_index
                << "}";
@@ -2315,9 +2401,14 @@ void setup_routes(httplib::Server &server,
            << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
            << "\"scene\":\"" << json_escape(snap.scene) << "\","
            << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+           << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
            << "\"state\":\"" << job_state_name(snap.state) << "\","
            << "\"threads\":" << snap.threads << ","
            << "\"progress\":" << snap.progress << ","
+           << "\"tiles_done\":" << snap.tiles_done << ","
+           << "\"tiles_total\":" << snap.tiles_total << ","
+           << "\"pass_current\":" << snap.pass_current << ","
+           << "\"pass_total\":" << snap.pass_total << ","
            << "\"elapsed_ms\":" << snap.elapsed_ms << ","
            << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","
            << "\"width\":" << snap.width << ","

@@ -24,7 +24,7 @@ function updateRenderActionButton() {
 let abortRequestedJobId = "";
 let abortRequestInFlight = false;
 
-async function startRender() {
+async function startRender(extraParams) {
   const width = sanitizeIntField(el.width, 500, 32, 8192);
   const height = sanitizeIntField(el.height, 500, 32, 8192);
   const samples = sanitizeIntField(el.samples, 1, 1, 1024);
@@ -32,6 +32,12 @@ async function startRender() {
   const rdepth = sanitizeIntField(el.rdepth, 10, 1, 4096);
   const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
   const threads = sanitizeIntField(el.threads, 0, 0, 256);
+
+  const extra = (extraParams && typeof extraParams === "object") ? { ...extraParams } : {};
+  const skipIntegratorOptions = !!extra.__skipIntegratorOptions;
+  const skipPostFilters = !!extra.__skipPostFilters;
+  delete extra.__skipIntegratorOptions;
+  delete extra.__skipPostFilters;
 
   return api.startRender({
     scene: el.scene.value,
@@ -47,8 +53,10 @@ async function startRender() {
     tile_size: tileSize,
     tile_order: el.tileOrder.value,
     threads,
-    post_filters: gatherPostFilterParams(),
-    ...gatherIntegratorOptionParams(),
+    render_mode: normalizeRenderMode(renderMode),
+    ...(skipPostFilters ? {} : { post_filters: gatherPostFilterParams() }),
+    ...(skipIntegratorOptions ? {} : gatherIntegratorOptionParams()),
+    ...extra,
   });
 }
 
@@ -143,9 +151,13 @@ async function pollJob(jobId, token) {
     const progress = data.progress || 0;
     const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
     const threads = Math.max(0, Number(data.threads) || 0);
+    const jobRenderMode = String(data.render_mode || "").toLowerCase();
+    const passCurrent = Number(data.pass_current) || 0;
+    const passTotal = Number(data.pass_total) || 0;
     updateActivePreviewTilesFromJob(data);
     setProgress(progress);
     setStatusThreads(threads);
+    setStatusPass(passCurrent, passTotal, jobRenderMode);
     const stateLabel = state === "running" ? "rendering" : state;
     if ((state === "queued" || state === "running") && elapsedMs > 0 && typeof formatElapsed === "function") {
       setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
@@ -160,11 +172,14 @@ async function pollJob(jobId, token) {
     }
 
     const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
+    const isInteractiveMovingJob = interactivePreviewEnabled
+      && !!interactivePreviewActiveMovingJob
+      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
     let updatedByDelta = false;
     let deltaTilesDone = 0;
     let deltaTilesTotal = 0;
     if (!abortPending) {
-      if (state === "queued" || state === "running" || state === "done") {
+      if (!isInteractiveMovingJob && (state === "queued" || state === "running" || state === "done")) {
         try {
           const info = await refreshProgressivePreviewDelta(jobId);
           if (info && typeof info === "object") {
@@ -221,7 +236,7 @@ async function pollJob(jobId, token) {
       refreshVisualPhotonOverlay().catch(() => {});
       setStatus(`done in ${Math.round(elapsedMs)} ms`);
       appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
-      return;
+      return { state: "done", elapsedMs };
     }
 
     if (state === "aborted") {
@@ -232,7 +247,7 @@ async function pollJob(jobId, token) {
       applyPreviewTransform();
       setStatus("aborted");
       appendLog(`job ${jobId} aborted`);
-      return;
+      return { state: "aborted", elapsedMs };
     }
 
     if (state === "error") {
@@ -244,8 +259,255 @@ async function pollJob(jobId, token) {
       throw new Error(data.error || "render failed");
     }
 
-    await new Promise((r) => setTimeout(r, uiOptions.pollMs));
+    const isInteractiveJob = interactivePreviewEnabled
+      && String(interactivePreviewJobId || "").trim()
+      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
+    const delayMs = isInteractiveJob
+      ? INTERACTIVE_PREVIEW_ACTIVE_POLL_MS
+      : uiOptions.pollMs;
+    await new Promise((r) => setTimeout(r, delayMs));
   }
+}
+
+function interactiveMovingWidthLevels() {
+  return [8, 16, 24, 32, 48, 64, 96, 128, 160, 192, 256];
+}
+
+function nearestInteractiveMovingWidth(v) {
+  const levels = interactiveMovingWidthLevels();
+  const value = Math.max(levels[0], Math.min(levels[levels.length - 1], Number(v) || levels[0]));
+  let best = levels[0];
+  let bestErr = Math.abs(best - value);
+  for (let i = 1; i < levels.length; i += 1) {
+    const err = Math.abs(levels[i] - value);
+    if (err < bestErr) {
+      best = levels[i];
+      bestErr = err;
+    }
+  }
+  return best;
+}
+
+function interactiveAdaptiveAdjustAfterFrame(stageWidth, elapsedMs) {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 1) return;
+  const levels = interactiveMovingWidthLevels();
+  let idx = levels.indexOf(nearestInteractiveMovingWidth(stageWidth));
+  if (idx < 0) idx = levels.indexOf(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth));
+  if (idx < 0) idx = 0;
+  const target = Math.max(40, Number(INTERACTIVE_PREVIEW_TARGET_FRAME_MS) || 110);
+  if (elapsedMs > target * 1.5 && idx > 0) {
+    idx -= 1;
+  } else if (elapsedMs < target * 0.65 && idx + 1 < levels.length) {
+    idx += 1;
+  }
+  interactivePreviewAdaptiveMovingWidth = levels[idx];
+}
+
+function interactivePreviewIsMoving() {
+  const sinceInput = Date.now() - (Number(interactivePreviewLastInputMs) || 0);
+  if (sinceInput < INTERACTIVE_PREVIEW_SETTLE_MS) return true;
+  if (!interactivePreviewKeyState) return false;
+  return !!(interactivePreviewKeyState.w
+    || interactivePreviewKeyState.a
+    || interactivePreviewKeyState.s
+    || interactivePreviewKeyState.d
+    || interactivePreviewKeyState.q
+    || interactivePreviewKeyState.e);
+}
+
+function interactiveResolutionStages(settleMode) {
+  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  const samples = Math.max(1, Number.parseInt(String(el.samples && el.samples.value ? el.samples.value : "1"), 10) || 1);
+  const aa = Math.max(1, Number.parseInt(String(el.aa && el.aa.value ? el.aa.value : "1"), 10) || 1);
+  const rdepth = Math.max(1, Number.parseInt(String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"), 10) || 10);
+  const pick = (targetW) => {
+    const w = Math.max(8, Math.min(width, targetW));
+    const h = Math.max(8, Math.round((height * w) / Math.max(1, width)));
+    return { width: w, height: h };
+  };
+  const movingWidth = nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth);
+  const raw = settleMode ? [8, 16, 32, 64, 128, 256, 512, width] : [movingWidth];
+  const unique = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const v = raw[i];
+    if (!unique.length || unique[unique.length - 1] !== v) unique.push(v);
+  }
+  const out = [];
+  for (let i = 0; i < unique.length; i += 1) {
+    const dims = pick(unique[i]);
+    const moving = !settleMode;
+    out.push({
+      width: dims.width,
+      height: dims.height,
+      samples: String(settleMode && i + 1 >= unique.length ? samples : 1),
+      aa: String(settleMode && i + 1 >= unique.length ? aa : 1),
+      rdepth: String(settleMode && i + 1 >= unique.length ? rdepth : Math.min(rdepth, 3)),
+      tile_size: String(moving ? 8 : Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+      tile_order: "random",
+      integrator: moving ? "raytracer" : String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+      moving,
+    });
+  }
+  return out;
+}
+
+async function abortInteractivePreviewJob() {
+  const jobId = String(interactivePreviewJobId || activeJobId || "").trim();
+  if (!jobId || !hasBackendMethod(api, "abortJob")) return;
+  try {
+    await abortRenderJob(jobId);
+  } catch (_) {
+    // Best effort cancellation only.
+  }
+}
+
+async function runInteractiveStage(stage, seq, loopToken, settleMode) {
+  if (!interactivePreviewEnabled) return false;
+  if (loopToken !== interactivePreviewLoopToken) return false;
+  if (seq !== interactivePreviewCameraSeq) return false;
+  if (activeTabMode !== "render") return false;
+
+  const cameraParams = (typeof interactivePreviewCameraRequestParams === "function")
+    ? interactivePreviewCameraRequestParams()
+    : null;
+  if (!cameraParams) return false;
+
+  const pollToken = beginPollSession();
+  setRenderActive(true);
+  setProgress(0);
+  setStatusThreads(0);
+  setStatus(`interactive ${stage.width}x${stage.height}${stage.moving ? " nav" : ""}`);
+  interactivePreviewHudQuality = `${stage.width}x${stage.height} ${stage.moving ? "nav(raytracer)" : (Number(stage.samples) > 1 || Number(stage.aa) > 1 ? "refine" : "fast")}`;
+  interactivePreviewActiveMovingJob = !!stage.moving;
+  if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+  clearActivePreviewTiles();
+  applyPreviewTransform();
+
+  let jobId = "";
+  try {
+    jobId = await startRender({
+      width: String(stage.width),
+      height: String(stage.height),
+      samples: stage.samples,
+      aa: stage.aa,
+      rdepth: stage.rdepth,
+      tile_size: stage.tile_size,
+      tile_order: stage.tile_order,
+      integrator: stage.integrator,
+      render_mode: RENDER_MODE_NORMAL,
+      __skipIntegratorOptions: !!stage.moving,
+      __skipPostFilters: !!stage.moving,
+      ...cameraParams,
+    });
+  } catch (err) {
+    setRenderActive(false);
+    updateRenderActionButton();
+    setStatus(`interactive render error: ${err.message}`);
+    appendLog(`interactive render rejected: ${err.message}`);
+    return false;
+  }
+  if (loopToken !== interactivePreviewLoopToken || seq !== interactivePreviewCameraSeq) {
+    interactivePreviewJobId = String(jobId || "").trim();
+    await abortInteractivePreviewJob();
+    return false;
+  }
+
+  interactivePreviewJobId = String(jobId || "").trim();
+  activeJobId = interactivePreviewJobId;
+  syncGlobalsToWorkspaceRuntime();
+  updateRenderActionButton();
+  const result = await pollJob(jobId, pollToken);
+  if (!settleMode && result && result.state === "done") {
+    interactiveAdaptiveAdjustAfterFrame(stage.width, Number(result.elapsedMs) || 0);
+  }
+  if (activeJobId === interactivePreviewJobId) {
+    activeJobId = "";
+    syncGlobalsToWorkspaceRuntime();
+  }
+  interactivePreviewJobId = "";
+  interactivePreviewActiveMovingJob = false;
+  return true;
+}
+
+async function runInteractivePreviewLoop(loopToken) {
+  while (interactivePreviewEnabled && loopToken === interactivePreviewLoopToken) {
+    if (activeTabMode !== "render") break;
+    if (!interactivePreviewDirty) {
+      await new Promise((r) => setTimeout(r, 50));
+      continue;
+    }
+    interactivePreviewDirty = false;
+    const seq = interactivePreviewCameraSeq;
+    const settleMode = !interactivePreviewIsMoving();
+    interactivePreviewHudQuality = settleMode ? "settling" : "moving";
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+    const stages = interactiveResolutionStages(settleMode);
+    for (let i = 0; i < stages.length; i += 1) {
+      if (!interactivePreviewEnabled || loopToken !== interactivePreviewLoopToken) return;
+      if (seq !== interactivePreviewCameraSeq) break;
+      const ok = await runInteractiveStage(stages[i], seq, loopToken, settleMode);
+      if (!ok) break;
+      if (seq !== interactivePreviewCameraSeq) break;
+      if (!settleMode && interactivePreviewIsMoving()) {
+        // Keep latency tight while user is actively moving.
+        break;
+      }
+    }
+    if (!settleMode && seq === interactivePreviewCameraSeq && interactivePreviewEnabled) {
+      interactivePreviewDirty = true;
+    }
+  }
+}
+
+function startInteractivePreviewLoop() {
+  if (interactivePreviewLoopActive) return;
+  if (!interactivePreviewEnabled) return;
+  if (activeTabMode !== "render") return;
+  interactivePreviewLoopActive = true;
+  const token = ++interactivePreviewLoopToken;
+  runInteractivePreviewLoop(token)
+    .catch((err) => appendLog(`interactive loop error: ${err.message}`))
+    .finally(() => {
+      if (token !== interactivePreviewLoopToken) return;
+      interactivePreviewLoopActive = false;
+      interactivePreviewJobId = "";
+      interactivePreviewActiveMovingJob = false;
+      activeJobId = "";
+      syncGlobalsToWorkspaceRuntime();
+      setRenderActive(false);
+      updateRenderActionButton();
+      if (interactivePreviewEnabled && interactivePreviewDirty && activeTabMode === "render") {
+        startInteractivePreviewLoop();
+      }
+    });
+}
+
+async function stopInteractivePreviewLoop(abortJob) {
+  interactivePreviewLoopToken += 1;
+  interactivePreviewDirty = false;
+  interactivePreviewLoopActive = false;
+  interactivePreviewActiveMovingJob = false;
+  if (abortJob) await abortInteractivePreviewJob();
+  interactivePreviewJobId = "";
+  if (!activeJobId || String(activeJobId).trim() === "") {
+    setRenderActive(false);
+    updateRenderActionButton();
+  }
+  interactivePreviewHudQuality = "idle";
+  if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+}
+
+function requestInteractivePreviewRender() {
+  if (!interactivePreviewEnabled) return;
+  if (activeTabMode !== "render") return;
+  if (typeof interactivePreviewCameraRequestParams === "function" && !interactivePreviewCameraRequestParams()) return;
+  interactivePreviewDirty = true;
+  const movingNow = interactivePreviewIsMoving();
+  if (interactivePreviewJobId && !movingNow) {
+    abortInteractivePreviewJob().catch(() => {});
+  }
+  startInteractivePreviewLoop();
 }
 
 async function handleExportClick(event) {
@@ -279,6 +541,9 @@ async function handleExportClick(event) {
 
 async function handleRender() {
   if (renderActive) {
+    if (interactivePreviewEnabled) {
+      await stopInteractivePreviewLoop(false);
+    }
     if (abortRequestInFlight) return;
     abortRequestInFlight = true;
     updateRenderActionButton();
@@ -319,6 +584,17 @@ async function handleRender() {
   }
 
   if (activeTabMode !== "render") setActiveTab("render");
+  if (isInteractiveRenderMode()) {
+    if (typeof requestInteractivePreviewRender === "function") {
+      requestInteractivePreviewRender();
+      setStatus("interactive mode active");
+      appendLog("interactive render loop requested");
+    }
+    return;
+  }
+  if (interactivePreviewEnabled) {
+    await stopInteractivePreviewLoop(true);
+  }
   const pollToken = beginPollSession();
   abortRequestedJobId = "";
   abortRequestInFlight = false;
@@ -343,7 +619,7 @@ async function handleRender() {
   setProgress(0);
   setStatusThreads(0);
   setStatus("submitting job...");
-  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
+  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} mode=${normalizeRenderMode(renderMode)} tile_order=${el.tileOrder.value}`);
   let submittedJobId = "";
   let pollReachedTerminalState = false;
   try {

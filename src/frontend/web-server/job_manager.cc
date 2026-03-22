@@ -1,5 +1,6 @@
 #include "job_manager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <fstream>
@@ -86,6 +87,23 @@ void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &
     }
 }
 
+void copy_rect_from_framebuffer(nimg::Pixmap &src,
+                                size_t x0, size_t y0, size_t x1, size_t y1,
+                                nimg::Pixmap &dst)
+{
+    if (x1 <= x0 || y1 <= y0) return;
+    const size_t max_w = std::min(src.width(), dst.width());
+    const size_t max_h = std::min(src.height(), dst.height());
+    if (x0 >= max_w || y0 >= max_h) return;
+    const size_t cx1 = std::min(x1, max_w);
+    const size_t cy1 = std::min(y1, max_h);
+    for (size_t y = y0; y < cy1; ++y) {
+        for (size_t x = x0; x < cx1; ++x) {
+            dst.pixel(x, y) = src.pixel(x, y);
+        }
+    }
+}
+
 bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::tile_t *tile)
 {
     if (!tile) return false;
@@ -105,6 +123,33 @@ unsigned long long parse_job_sequence(const std::string &id)
         v = v * 10ULL + (unsigned long long)(c - '0');
     }
     return v;
+}
+
+const char *render_mode_label(common::render_request_t::render_mode_t mode)
+{
+    switch (mode) {
+        case common::render_request_t::RENDER_MODE_PROGRESSIVE: return "progressive";
+        case common::render_request_t::RENDER_MODE_INTERACTIVE: return "interactive";
+        case common::render_request_t::RENDER_MODE_NORMAL:
+        default: return "normal";
+    }
+}
+
+size_t progressive_pass_sample_step(size_t total_samples)
+{
+    if (total_samples <= 4) return 1;
+    if (total_samples <= 16) return 2;
+    if (total_samples <= 64) return 4;
+    return 8;
+}
+
+size_t progressive_pass_count(size_t total_samples)
+{
+    const size_t samples = (total_samples > 0) ? total_samples : 1;
+    const size_t step = progressive_pass_sample_step(samples);
+    if (samples <= 1) return 1;
+    const size_t rem = samples - 1;
+    return 1 + ((rem + step - 1) / step);
 }
 
 } // namespace
@@ -238,7 +283,8 @@ std::string job_manager_t::create(const common::render_request_t &request,
     log << "job accepted id=" << job->id
         << " workspace=" << workspace_id
         << " scene=" << scene_name
-        << " integrator=" << request.integrator;
+        << " integrator=" << request.integrator
+        << " mode=" << render_mode_label(request.render_mode);
     backend_log_t::handle().add("info", log.str());
 
     return job->id;
@@ -336,41 +382,59 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
     common::render_request_t request = job->request;
     request.threads = granted_threads;
     common::render_result_t rr = common::render_scene_to_png(request,
-        [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile) {
+        [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
             {
                 std::lock_guard<std::mutex> lock(job->mut);
                 if (event == common::PROGRESS_EVENT_TILE_STARTED) {
-                    if (tile) {
+                    const bool has_upd_rect = upd && upd->has_rect;
+                    if (tile || has_upd_rect) {
+                        const size_t rx0 = has_upd_rect ? upd->x0 : tile->x0();
+                        const size_t ry0 = has_upd_rect ? upd->y0 : tile->y0();
+                        const size_t rx1 = has_upd_rect ? upd->x1 : tile->x1();
+                        const size_t ry1 = has_upd_rect ? upd->y1 : tile->y1();
                         bool exists = false;
                         for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                            if (same_tile_rect(job->active_tiles[i], tile)) {
+                            const job_snapshot_t::tile_rect_t &r = job->active_tiles[i];
+                            if (r.x0 == rx0 && r.y0 == ry0 && r.x1 == rx1 && r.y1 == ry1) {
                                 exists = true;
                                 break;
                             }
                         }
                         if (!exists) {
                             job_snapshot_t::tile_rect_t rect;
-                            rect.x0 = tile->x0();
-                            rect.y0 = tile->y0();
-                            rect.x1 = tile->x1();
-                            rect.y1 = tile->y1();
+                            rect.x0 = rx0;
+                            rect.y0 = ry0;
+                            rect.x1 = rx1;
+                            rect.y1 = ry1;
                             job->active_tiles.push_back(rect);
                         }
                     }
                 } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
-                    copy_tile_to_framebuffer(tile, job->progressive_fb);
-                    job->progressive_ready = true;
-                    if (tile) {
+                    const bool has_upd_rect = upd && upd->has_rect;
+                    if (has_upd_rect && upd->source_fb) {
+                        copy_rect_from_framebuffer(*upd->source_fb, upd->x0, upd->y0, upd->x1, upd->y1, job->progressive_fb);
+                        job->progressive_ready = true;
+                    } else {
+                        copy_tile_to_framebuffer(tile, job->progressive_fb);
+                        if (tile) job->progressive_ready = true;
+                    }
+                    if (tile || has_upd_rect) {
                         job_t::finished_tile_t finished;
-                        finished.rect.x0 = tile->x0();
-                        finished.rect.y0 = tile->y0();
-                        finished.rect.x1 = tile->x1();
-                        finished.rect.y1 = tile->y1();
+                        finished.rect.x0 = has_upd_rect ? upd->x0 : tile->x0();
+                        finished.rect.y0 = has_upd_rect ? upd->y0 : tile->y0();
+                        finished.rect.x1 = has_upd_rect ? upd->x1 : tile->x1();
+                        finished.rect.y1 = has_upd_rect ? upd->y1 : tile->y1();
                         finished.done_index = done;
                         job->finished_tiles.push_back(finished);
                     }
                     for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                        if (same_tile_rect(job->active_tiles[i], tile)) {
+                        const bool match_tile = tile && same_tile_rect(job->active_tiles[i], tile);
+                        const bool match_upd = has_upd_rect
+                            && job->active_tiles[i].x0 == upd->x0
+                            && job->active_tiles[i].y0 == upd->y0
+                            && job->active_tiles[i].x1 == upd->x1
+                            && job->active_tiles[i].y1 == upd->y1;
+                        if (match_tile || match_upd) {
                             job->active_tiles.erase(job->active_tiles.begin() + i);
                             break;
                         }
@@ -529,6 +593,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.workspace_id = e.workspace_id;
         out.scene = e.scene;
         out.integrator = e.integrator;
+        out.render_mode = "normal";
         out.state = e.state;
         out.error = e.error;
         out.elapsed_ms = e.elapsed_ms;
@@ -536,6 +601,10 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.width = e.width;
         out.height = e.height;
         out.threads = e.threads;
+        out.tiles_done = 0;
+        out.tiles_total = 0;
+        out.pass_current = 0;
+        out.pass_total = 0;
         out.queue_index = -1;
         out.active_tiles.clear();
         out.progress = (e.state == JOB_DONE) ? 1.0f : 0.0f;
@@ -548,6 +617,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.workspace_id = job->workspace_id;
     out.scene = job->scene;
     out.integrator = job->integrator;
+    out.render_mode = render_mode_label(job->request.render_mode);
     out.state = job->state.load();
     out.error = job->error;
     out.elapsed_ms = job->elapsed_ms;
@@ -559,11 +629,37 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.width = job->request.width;
     out.height = job->request.height;
     out.threads = (job->effective_threads > 0) ? job->effective_threads : job->request.threads;
+    out.tiles_done = job->tiles_done.load();
+    out.tiles_total = job->tiles_total.load();
+    out.pass_current = 0;
+    out.pass_total = 0;
     out.queue_index = -1;
     out.active_tiles = job->active_tiles;
 
-    size_t total = job->tiles_total.load();
-    size_t done = job->tiles_done.load();
+    if (job->request.render_mode == common::render_request_t::RENDER_MODE_PROGRESSIVE) {
+        const size_t ptotal = progressive_pass_count(job->request.samples);
+        out.pass_total = ptotal;
+        size_t tiles_per_pass = (ptotal > 0) ? (out.tiles_total / ptotal) : 0;
+        if (tiles_per_pass == 0) {
+            const size_t tile_size = (job->request.tile_size > 0) ? job->request.tile_size : 1;
+            const size_t nx = (job->request.width + tile_size - 1) / tile_size;
+            const size_t ny = (job->request.height + tile_size - 1) / tile_size;
+            tiles_per_pass = nx * ny;
+        }
+        if (out.state == JOB_DONE) {
+            out.pass_current = out.pass_total;
+        } else if (out.pass_total > 0) {
+            const size_t completed_passes = (tiles_per_pass > 0) ? (out.tiles_done / tiles_per_pass) : 0;
+            const bool in_pass = (tiles_per_pass > 0) ? ((out.tiles_done % tiles_per_pass) != 0) : false;
+            size_t curr = completed_passes + (in_pass ? 1 : 0);
+            if ((out.state == JOB_QUEUED || out.state == JOB_RUNNING) && curr == 0) curr = 1;
+            if (curr > out.pass_total) curr = out.pass_total;
+            out.pass_current = curr;
+        }
+    }
+
+    size_t total = out.tiles_total;
+    size_t done = out.tiles_done;
     if (total == 0) {
         out.progress = (out.state == JOB_DONE) ? 1.0f : 0.0f;
     } else {

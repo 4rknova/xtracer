@@ -5,12 +5,14 @@
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
+#include <mutex>
 #include <memory>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <xtcore/strpool.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/integrator.h>
+#include <xtcore/camera.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <nimg/img.h>
 #if defined(_OPENMP)
@@ -105,7 +107,7 @@ struct progress_handler_on_init_t : public xtcore::render::tile_event_handler_t
     void handle_event(xtcore::render::tile_t *tile)
     {
         if (!state || !state->cb) return;
-        state->cb(PROGRESS_EVENT_TILE_STARTED, state->done.load(), state->total, tile);
+        state->cb(PROGRESS_EVENT_TILE_STARTED, state->done.load(), state->total, tile, nullptr);
     }
 };
 
@@ -121,7 +123,7 @@ struct progress_handler_on_done_t : public xtcore::render::tile_event_handler_t
     {
         if (!state) return;
         size_t now = ++(state->done);
-        if (state->cb) state->cb(PROGRESS_EVENT_TILE_FINISHED, now, state->total, tile);
+        if (state->cb) state->cb(PROGRESS_EVENT_TILE_FINISHED, now, state->total, tile, nullptr);
     }
 };
 
@@ -271,6 +273,14 @@ bool encode_raygraph_ply_memory(const xtcore::raygraph::raygraph_t &raygraph,
     return true;
 }
 
+size_t progressive_pass_sample_step(size_t total_samples)
+{
+    if (total_samples <= 4) return 1;
+    if (total_samples <= 16) return 2;
+    if (total_samples <= 64) return 4;
+    return 8;
+}
+
 } // namespace
 
 render_request_t::render_request_t()
@@ -278,6 +288,7 @@ render_request_t::render_request_t()
     , integrator("pathtracer_mis")
     , camera()
     , variant()
+    , camera_override()
     , width(640)
     , height(480)
     , threads(0)
@@ -287,7 +298,20 @@ render_request_t::render_request_t()
     , tile_size(32)
     , sample_distribution(xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID)
     , tile_order(xtcore::render::TILE_ORDER_RANDOM)
-{}
+    , render_mode(RENDER_MODE_NORMAL)
+{
+    camera_override.enabled = false;
+    camera_override.px = 0.0;
+    camera_override.py = 0.0;
+    camera_override.pz = 0.0;
+    camera_override.tx = 0.0;
+    camera_override.ty = 0.0;
+    camera_override.tz = -1.0;
+    camera_override.upx = 0.0;
+    camera_override.upy = 1.0;
+    camera_override.upz = 0.0;
+    camera_override.hfov = 60.0;
+}
 
 render_result_t::render_result_t()
     : ok(false)
@@ -418,6 +442,143 @@ render_result_t render_scene_to_png(const render_request_t &request,
                                     const std::atomic<bool> *abort_flag)
 {
     render_result_t result;
+    if (request.render_mode == render_request_t::RENDER_MODE_PROGRESSIVE) {
+        const size_t total_samples = (request.samples > 0) ? request.samples : 1;
+        const size_t step = progressive_pass_sample_step(total_samples);
+        std::vector<size_t> pass_samples;
+        pass_samples.push_back(1);
+        for (size_t rem = (total_samples > 1 ? (total_samples - 1) : 0); rem > 0;) {
+            const size_t chunk = (rem > step) ? step : rem;
+            pass_samples.push_back(chunk);
+            rem -= chunk;
+        }
+        if (pass_samples.empty()) pass_samples.push_back(1);
+
+        nimg::Pixmap accum_fb;
+        accum_fb.init(request.width, request.height);
+        std::vector<float> accum_weight(accum_fb.width() * accum_fb.height(), 0.0f);
+        for (size_t y = 0; y < accum_fb.height(); ++y) {
+            for (size_t x = 0; x < accum_fb.width(); ++x) {
+                accum_fb.pixel(x, y) = nimg::ColorRGBAf(0.f, 0.f, 0.f, 1.f);
+            }
+        }
+        std::mutex accum_mut;
+        size_t global_tiles_total = 0;
+        size_t global_tiles_done = 0;
+
+        for (size_t pass_index = 0; pass_index < pass_samples.size(); ++pass_index) {
+            if (abort_flag && abort_flag->load()) {
+                result.aborted = true;
+                result.error = "render aborted";
+                result.tiles_total = global_tiles_total;
+                result.tiles_done = global_tiles_done;
+                return result;
+            }
+
+            render_request_t pass_request = request;
+            pass_request.render_mode = render_request_t::RENDER_MODE_NORMAL;
+            pass_request.samples = pass_samples[pass_index];
+            const float pass_weight = static_cast<float>(pass_samples[pass_index]);
+            render_result_t pass_result = render_scene_to_png(
+                pass_request,
+                [on_progress, pass_index, pass_weight, &pass_samples, &accum_fb, &accum_weight, &accum_mut](progress_event_t event,
+                                                                                                              size_t done,
+                                                                                                              size_t total,
+                                                                                                              const xtcore::render::tile_t *tile,
+                                                                                                              const progress_tile_update_t *) {
+                    const size_t pass_count = pass_samples.size();
+                    const size_t mapped_total = total * pass_count;
+                    const size_t mapped_done = (pass_index * total) + done;
+                    if (event == PROGRESS_EVENT_TILE_STARTED) {
+                        if (on_progress) on_progress(event, mapped_done, mapped_total, tile, nullptr);
+                        return;
+                    }
+                    if (event != PROGRESS_EVENT_TILE_FINISHED || !tile) return;
+
+                    const size_t x0 = tile->x0();
+                    const size_t y0 = tile->y0();
+                    const size_t x1 = tile->x1();
+                    const size_t y1 = tile->y1();
+
+                    std::lock_guard<std::mutex> lock(accum_mut);
+                    nimg::ColorRGBAf sample;
+                    for (size_t y = y0; y < y1; ++y) {
+                        for (size_t x = x0; x < x1; ++x) {
+                            tile->read(x, y, sample);
+                            const size_t idx = y * accum_fb.width() + x;
+                            const float prev_weight = accum_weight[idx];
+                            const float next_weight = prev_weight + pass_weight;
+                            if (next_weight <= 0.0f) continue;
+                            const nimg::ColorRGBAf prev = accum_fb.pixel(x, y);
+                            const float sum_r = (prev.r() * prev_weight) + (sample.r() * pass_weight);
+                            const float sum_g = (prev.g() * prev_weight) + (sample.g() * pass_weight);
+                            const float sum_b = (prev.b() * prev_weight) + (sample.b() * pass_weight);
+                            accum_fb.pixel(x, y) = nimg::ColorRGBAf(
+                                sum_r / next_weight,
+                                sum_g / next_weight,
+                                sum_b / next_weight,
+                                1.f);
+                            accum_weight[idx] = next_weight;
+                        }
+                    }
+
+                    if (on_progress) {
+                        progress_tile_update_t upd;
+                        upd.has_rect = true;
+                        upd.x0 = x0;
+                        upd.y0 = y0;
+                        upd.x1 = x1;
+                        upd.y1 = y1;
+                        upd.source_fb = &accum_fb;
+                        on_progress(PROGRESS_EVENT_TILE_FINISHED, mapped_done, mapped_total, nullptr, &upd);
+                    }
+                },
+                abort_flag);
+
+            result.elapsed_ms += pass_result.elapsed_ms;
+            global_tiles_total = pass_result.tiles_total * pass_samples.size();
+            global_tiles_done = (pass_index + 1) * pass_result.tiles_total;
+            if (global_tiles_done > global_tiles_total) global_tiles_done = global_tiles_total;
+
+            if (pass_result.aborted || (abort_flag && abort_flag->load())) {
+                result.aborted = true;
+                result.error = "render aborted";
+                result.tiles_total = global_tiles_total;
+                result.tiles_done = global_tiles_done;
+                return result;
+            }
+            if (!pass_result.ok) {
+                result.error = pass_result.error;
+                result.tiles_total = global_tiles_total;
+                result.tiles_done = global_tiles_done;
+                return result;
+            }
+            if (pass_result.framebuffer.width() == 0 || pass_result.framebuffer.height() == 0) {
+                result.error = "empty framebuffer";
+                result.tiles_total = global_tiles_total;
+                result.tiles_done = global_tiles_done;
+                return result;
+            }
+
+            if (pass_index + 1 == pass_samples.size()) {
+                result.raygraph_ply = pass_result.raygraph_ply;
+                result.photon_diffuse_points = pass_result.photon_diffuse_points;
+                result.photon_caustic_points = pass_result.photon_caustic_points;
+            }
+        }
+
+        result.framebuffer = accum_fb;
+        nimg::Pixmap ldr_framebuffer = accum_fb;
+        xtcore::tonemapping::apply(ldr_framebuffer);
+        if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
+            return result;
+        }
+        result.tiles_total = global_tiles_total;
+        result.tiles_done = global_tiles_total;
+        result.ok = true;
+        return result;
+    }
+
     xtcore::render::context_t context;
     openmp_thread_limit_guard_t thread_limit_guard(request.threads);
 
@@ -450,6 +611,29 @@ render_result_t render_scene_to_png(const render_request_t &request,
     if (context.params.camera == HASH_ID_INVALID || !context.scene.get_camera(context.params.camera)) {
         result.error = "no valid camera found";
         return result;
+    }
+    if (request.camera_override.enabled) {
+        xtcore::asset::ICamera *cam = context.scene.get_camera(context.params.camera);
+        xtcore::camera::Perspective *pcam = dynamic_cast<xtcore::camera::Perspective *>(cam);
+        if (!pcam) {
+            result.error = "interactive camera override requires perspective camera";
+            return result;
+        }
+        pcam->position = nmath::Vector3f(
+            static_cast<float>(request.camera_override.px),
+            static_cast<float>(request.camera_override.py),
+            static_cast<float>(request.camera_override.pz));
+        pcam->target = nmath::Vector3f(
+            static_cast<float>(request.camera_override.tx),
+            static_cast<float>(request.camera_override.ty),
+            static_cast<float>(request.camera_override.tz));
+        pcam->up = nmath::Vector3f(
+            static_cast<float>(request.camera_override.upx),
+            static_cast<float>(request.camera_override.upy),
+            static_cast<float>(request.camera_override.upz));
+        if (request.camera_override.hfov > 0.01) {
+            pcam->fov = static_cast<float>(request.camera_override.hfov);
+        }
     }
 
     context.params.width = request.width;

@@ -112,6 +112,7 @@ const el = {
   tileOrder: $("tile_order"),
   threads: $("threads"),
   threadsPolicyHint: $("threadsPolicyHint"),
+  renderMode: $("renderMode"),
   toneMapping: $("toneMapping"),
   toneMappingParamsRow: $("toneMappingParamsRow"),
   toneMappingExposureControl: $("toneMappingExposureControl"),
@@ -132,6 +133,7 @@ const el = {
   previewHeadline: $("previewHeadline"),
   status: $("status"),
   statusThreads: $("statusThreads"),
+  statusPass: $("statusPass"),
   statusPercent: $("statusPercent"),
   sceneLoadState: $("sceneLoadState"),
   sceneLoadMessage: $("sceneLoadMessage"),
@@ -154,9 +156,17 @@ const el = {
   progress: $("progress"),
   previewFrame: $("previewFrame"),
   previewEmpty: $("previewEmpty"),
+  interactivePreviewHud: $("interactivePreviewHud"),
+  interactivePreviewHudMode: $("interactivePreviewHudMode"),
+  interactivePreviewHudSpeed: $("interactivePreviewHudSpeed"),
+  interactivePreviewHudQuality: $("interactivePreviewHudQuality"),
   previewCanvas: $("previewCanvas"),
   preview: $("preview"),
   resetViewBtn: $("resetViewBtn"),
+  interactivePreviewControls: $("interactivePreviewControls"),
+  interactivePreviewSpeed: $("interactivePreviewSpeed"),
+  interactivePreviewSpeedValue: $("interactivePreviewSpeedValue"),
+  interactivePreviewSaveCameraBtn: $("interactivePreviewSaveCameraBtn"),
   previewSampling: $("previewSampling"),
   exportFormat: $("exportFormat"),
   download: $("download"),
@@ -397,6 +407,49 @@ const previewView = {
   pointerId: null,
   lastX: 0,
   lastY: 0,
+};
+const RENDER_MODE_NORMAL = "normal";
+const RENDER_MODE_PROGRESSIVE = "progressive";
+const RENDER_MODE_INTERACTIVE = "interactive";
+let renderMode = RENDER_MODE_NORMAL;
+let interactivePreviewEnabled = false;
+let interactivePreviewLoopToken = 0;
+let interactivePreviewLoopActive = false;
+let interactivePreviewJobId = "";
+let interactivePreviewDirty = false;
+let interactivePreviewCameraSeq = 0;
+let interactivePreviewLastInputMs = 0;
+const INTERACTIVE_PREVIEW_SETTLE_MS = 320;
+const INTERACTIVE_PREVIEW_ACTIVE_POLL_MS = 90;
+const INTERACTIVE_PREVIEW_FLY_SPEED = 2.5;
+const INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER = 3.0;
+const INTERACTIVE_PREVIEW_TARGET_FRAME_MS = 110;
+let interactivePreviewAdaptiveMovingWidth = 64;
+let interactivePreviewFlySpeedScale = 1.0;
+let interactivePreviewHudMode = "LOOK";
+let interactivePreviewHudQuality = "idle";
+let interactivePreviewActiveMovingJob = false;
+let interactivePreviewFlyTimer = 0;
+let interactivePreviewFlyLastTickMs = 0;
+const interactivePreviewKeyState = {
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  q: false,
+  e: false,
+  shift: false,
+};
+const interactivePreviewCamera = {
+  ready: false,
+  type: "",
+  sourceScene: "",
+  sourceVariant: "",
+  sourceCamera: "",
+  position: [0, 0, 0],
+  target: [0, 0, -1],
+  up: [0, 1, 0],
+  hfov: 60,
 };
 
 function isSafeClientId(value) {

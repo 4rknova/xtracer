@@ -41,6 +41,7 @@ struct job_snapshot_t
     std::string workspace_id;
     std::string scene;
     std::string integrator;
+    std::string render_mode;
     job_state_t state;
     float progress;
     std::string error;
@@ -49,6 +50,10 @@ struct job_snapshot_t
     size_t width;
     size_t height;
     size_t threads;
+    size_t tiles_done;
+    size_t tiles_total;
+    size_t pass_current;
+    size_t pass_total;
     int queue_index;
     std::vector<tile_rect_t> active_tiles;
 };

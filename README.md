@@ -302,7 +302,7 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export, and in-flight abort support (render action toggles `Render`/`Abort`) with persistent left sidebar cards available across tabs, including an `Active Scene` summary card for scene/camera/variant |
+| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), and render modes (`Normal`, `Progressive`, `Interactive`) with interactive camera controls/ramping available in Interactive mode |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
@@ -313,6 +313,19 @@ First-time use tutorial (FTUE):
 - In `Settings`, enable `Show tutorial on next launch` to reset onboarding state for the next app start.
 - In `Settings`, use `Start Tutorial Now` to reopen the tutorial immediately.
 - Tutorial steps are config-driven via `src/frontend/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
+
+Interactive preview controls (Render tab, with `Render Mode = Interactive`):
+- `Left drag`: look around
+- `Middle/Right drag` or `Shift + Left drag`: pan
+- `Wheel` or touch pinch: zoom
+- `W/A/S/D`: move forward/left/back/right
+- `Q/E`: move down/up
+- `Shift`: speed boost
+- `Interactive Speed` slider: scales fly movement speed
+- `Save Interactive Camera`: appends a new `camera` entry to the active scene from the current interactive pose and saves it
+- Preview HUD: shows mode, speed, and current interactive quality stage
+- Moving quality auto-adapts toward a low-latency frame-time target before settle refinement
+- During active movement, interactive mode temporarily uses a low-cost navigation profile (raytracer + lightweight settings), then restores settle refinement
 
 ### Web API Endpoints
 
@@ -336,10 +349,10 @@ First-time use tutorial (FTUE):
 | POST | `/api/workspaces/active` | Switch active workspace for client |
 | POST | `/api/workspaces/delete` | Delete workspace |
 | POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft |
-| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/post-filters) |
+| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters) |
 | GET | `/api/integrators` | List backend integrators + controls |
 | GET | `/api/resolutions` | Resolution presets |
-| POST | `/api/render` | Create render job (optional `variant=<name>`) |
+| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={normal,progressive,interactive}`, and optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`) |
 | GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
 | POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
@@ -389,6 +402,11 @@ cmake --build build/intermediate/build -j
 | `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
 | `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
 | `XTRACER_ENABLE_VIZ` | `OFF` | Build OpenGL sampling visualization tool (`xtracer_viz_sampling`) |
+| `XTRACER_ENABLE_NMATH_SIMD` | `OFF` | Enable x86 SSE2 SIMD fast-paths for `nmath::Vector3f` in double-precision builds |
+
+Notes:
+- `XTRACER_ENABLE_NMATH_SIMD` currently targets native x86/x86_64 builds and is ignored for Emscripten.
+- SIMD paths are used only when `nmath` is built in double precision (default configuration); scalar fallback remains available.
 
 ## Run
 

@@ -187,6 +187,22 @@ function setStatusThreads(threads) {
   }
 }
 
+function setStatusPass(currentPass, totalPasses, mode) {
+  if (!el.statusPass) return;
+  const isProgressive = String(mode || "").toLowerCase() === RENDER_MODE_PROGRESSIVE;
+  const total = Math.max(0, Number(totalPasses) || 0);
+  let current = Math.max(0, Number(currentPass) || 0);
+  if (!isProgressive || total <= 0 || !renderActive) {
+    el.statusPass.hidden = true;
+    el.statusPass.textContent = "pass 1/1";
+    return;
+  }
+  if (current <= 0) current = 1;
+  if (current > total) current = total;
+  el.statusPass.hidden = false;
+  el.statusPass.textContent = `pass ${Math.floor(current)}/${Math.floor(total)}`;
+}
+
 function formatElapsedShort(ms) {
   const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -362,6 +378,7 @@ function setRenderActive(active) {
   if (!renderActive) {
     el.progress.style.width = "0%";
     setStatusThreads(0);
+    setStatusPass(0, 0, "");
     setStatus("Idle");
   }
   if (typeof updateRenderActionButton === "function") {
@@ -738,6 +755,14 @@ function createServerApi() {
         surfaces: Array.isArray(data && data.surfaces) ? data.surfaces : [],
         materials: Array.isArray(data && data.materials) ? data.materials : [],
       };
+    },
+    async getSceneResolvedCamera(scene, variant, camera) {
+      if (!scene) return null;
+      const cam = String(camera || "").trim();
+      const base = `/api/scenes/${encodeURIComponent(scene)}/camera_resolve`
+        + (cam ? `?camera=${encodeURIComponent(cam)}` : "");
+      const data = await getSceneJSONWithAsyncLoad(withVariantQuery(base, variant));
+      return data && typeof data === "object" ? data : null;
     },
     async getSceneAssetText(scene, relpath) {
       if (!scene || !relpath) return "";
