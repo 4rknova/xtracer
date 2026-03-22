@@ -112,5 +112,10 @@ Ray Sphere::ray_sample() const
     return ray;
 }
 
+Vector3f Sphere::emitter_position() const
+{
+    return origin;
+}
+
     } /* namespace surface */
 } /* namespace xtcore */

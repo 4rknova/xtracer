@@ -59,6 +59,7 @@ typedef int socket_t;
 #include <map>
 #include <memory>
 #include <mutex>
+#include <chrono>
 #include <regex>
 #include <string>
 #include <thread>
@@ -1758,6 +1759,13 @@ inline bool Server::dispatch_request(Request& req, Response& res, Handlers& hand
 
 inline bool Server::process_request(Stream& strm, bool last_connection, bool& connection_close)
 {
+    const auto request_begin = std::chrono::steady_clock::now();
+    const auto stamp_elapsed_ms = [&request_begin](Request& req) {
+        const auto now = std::chrono::steady_clock::now();
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - request_begin).count();
+        req.set_header("X-Request-Duration-Ms", std::to_string(elapsed).c_str());
+    };
+
     const auto bufsiz = 2048;
     char buf[bufsiz];
 
@@ -1776,6 +1784,7 @@ inline bool Server::process_request(Stream& strm, bool last_connection, bool& co
     // Request line and headers
     if (!parse_request_line(reader.ptr(), req) || !detail::read_headers(strm, req.headers)) {
         res.status = 400;
+        stamp_elapsed_ms(req);
         write_response(strm, last_connection, req, res);
         return true;
     }
@@ -1792,6 +1801,7 @@ inline bool Server::process_request(Stream& strm, bool last_connection, bool& co
     if (req.method == "POST" || req.method == "PUT") {
         if (!detail::read_content(strm, req)) {
             res.status = 400;
+            stamp_elapsed_ms(req);
             write_response(strm, last_connection, req, res);
             return ret;
         }
@@ -1803,6 +1813,7 @@ inline bool Server::process_request(Stream& strm, bool last_connection, bool& co
             detail::decompress(req.body);
 #else
             res.status = 415;
+            stamp_elapsed_ms(req);
             write_response(strm, last_connection, req, res);
             return ret;
 #endif
@@ -1815,6 +1826,7 @@ inline bool Server::process_request(Stream& strm, bool last_connection, bool& co
             if (!detail::parse_multipart_boundary(content_type, boundary) ||
                 !detail::parse_multipart_formdata(boundary, req.body, req.files)) {
                 res.status = 400;
+                stamp_elapsed_ms(req);
                 write_response(strm, last_connection, req, res);
                 return ret;
             }
@@ -1829,6 +1841,7 @@ inline bool Server::process_request(Stream& strm, bool last_connection, bool& co
         res.status = 404;
     }
 
+    stamp_elapsed_ms(req);
     write_response(strm, last_connection, req, res);
     return ret;
 }

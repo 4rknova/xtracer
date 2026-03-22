@@ -380,14 +380,14 @@ Matrix4x4f operator *(const Matrix4x4f &m1, const Matrix4x4f &m2)
 {
     Matrix4x4f res;
 
-	for(int i=0; i<4; i++) {
-		for(int j=0; j<4; j++) {
-			res.data[i][j] =	m1.data[i][0] * m2.data[0][j] +
+		for(int i=0; i<4; i++) {
+			for(int j=0; j<4; j++) {
+				res.data[i][j] =	m1.data[i][0] * m2.data[0][j] +
 									m1.data[i][1] * m2.data[1][j] +
-									m1.data[i][2] * m1.data[i][2] +
+									m1.data[i][2] * m2.data[2][j] +
 									m1.data[i][3] * m2.data[3][j];
-        }
-    }
+	        }
+	    }
     return res;
 }
 

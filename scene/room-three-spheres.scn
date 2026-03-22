@@ -1,0 +1,238 @@
+title       = Room Three Spheres
+description = Three spheres in a room (diffuse/specular variants, sphere light).
+version     = 1.0
+
+default_camera = default
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,0,-20)
+        up       = vec3(0,1,0)
+    }
+
+    side = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(3,3,-14)
+        up       = vec3(0,1,0)
+    }
+
+    back = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,1,4.8)
+        target   = vec3(0,0,3)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    red_ball = {
+        type     = sphere
+        position = vec3(0.8,-3.05,-1)
+        radius   = 0.95
+    }
+
+    green_ball = {
+        type     = sphere
+        position = vec3(3.5,-3.3,3.5)
+        radius   = 0.77
+    }
+
+    blue_ball = {
+        type     = sphere
+        position = vec3(-2.2,-2.45,0.8)
+        radius   = 1.55
+    }
+
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = -4
+    }
+
+    ceiling = {
+        type     = plane
+        normal   = vec3(0,-1,0)
+        distance = 4
+    }
+
+    back = {
+        type     = plane
+        normal   = vec3(0,0,-1)
+        distance = 5
+    }
+
+    left_wall = {
+        type     = plane
+        normal   = vec3(1,0,0)
+        distance = -5
+    }
+
+    right_wall = {
+        type     = plane
+        normal   = vec3(-1,0,0)
+        distance = 5
+    }
+
+    light_sphere = {
+        type     = sphere
+        radius   = 0.25
+        position = vec3(0,1.5,-4)
+    }
+}
+
+material = {
+    lambert_red = {
+        type = lambert
+        properties = {
+            samplers = {
+                ambient = { type = color, value = col3(1,0,0) }
+                diffuse = { type = color, value = col3(1,0,0) }
+            }
+        }
+    }
+
+    lambert_green = {
+        type = lambert
+        properties = {
+            samplers = {
+                ambient = { type = color, value = col3(0,1,0) }
+                diffuse = { type = color, value = col3(0,1,0) }
+            }
+        }
+    }
+
+    lambert_blue = {
+        type = lambert
+        properties = {
+            samplers = {
+                ambient = { type = color, value = col3(0.2,0.4,1) }
+                diffuse = { type = color, value = col3(0.2,0.4,1) }
+            }
+        }
+    }
+
+    lambert_grey = {
+        type = lambert
+        properties = {
+            samplers = {
+                ambient = { type = color, value = col3(0.5,0.5,0.5) }
+                diffuse = { type = color, value = col3(0.5,0.5,0.5) }
+            }
+        }
+    }
+
+    phong_red = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.5,0,0) }
+                specular = { type = color, value = col3(0.5,0,0) }
+            }
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+    }
+
+    phong_green = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0,0.5,0) }
+                specular = { type = color, value = col3(0,0.5,0) }
+            }
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+    }
+
+    phong_blue = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.1,0.2,0.5) }
+                specular = { type = color, value = col3(0.1,0.2,0.5) }
+            }
+            scalars = {
+                reflectance = 0.5
+                exponent    = 128
+            }
+        }
+    }
+
+    phong_grey = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.5,0.5,0.5) }
+                specular = { type = color, value = col3(0.5,0.5,0.5) }
+            }
+            scalars = {
+                reflectance = 0.5
+                exponent    = 60
+            }
+        }
+    }
+
+    light_emissive = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(1,1,1) }
+            }
+        }
+    }
+
+    light_lambert_emissive = {
+        type = lambert
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(1,1,1) }
+            }
+        }
+    }
+}
+
+object = {
+    red_ball = { geometry = red_ball, material = lambert_red }
+    green_ball = { geometry = green_ball, material = lambert_green }
+    blue_ball = { geometry = blue_ball, material = lambert_blue }
+    floor = { geometry = floor, material = lambert_grey }
+    ceiling = { geometry = ceiling, material = lambert_grey }
+    back = { geometry = back, material = lambert_grey }
+    right_wall = { geometry = right_wall, material = lambert_blue }
+    left_wall = { geometry = left_wall, material = lambert_green }
+    light = { geometry = light_sphere, material = light_emissive }
+}
+
+variants = {
+    base = {
+        name        = Three Spheres - Diffuse
+        description = Three spheres in a room (diffuse, sphere lights).
+    }
+
+    specular = {
+        name        = Three Spheres - Specular
+        description = Phong-based room variant with specular highlights.
+        set = {
+            object = {
+                red_ball   = { material = phong_red }
+                green_ball = { material = phong_green }
+                blue_ball  = { material = phong_blue }
+                floor      = { material = phong_grey }
+                ceiling    = { material = phong_grey }
+                back       = { material = phong_grey }
+                right_wall = { material = phong_blue }
+                left_wall  = { material = phong_green }
+                light      = { material = light_lambert_emissive }
+            }
+        }
+    }
+}

@@ -1,8 +1,13 @@
+#!/usr/bin/env sh
+
 DIR_RES="./src/xtcore/res/"
 OUT_LICENSE="$DIR_RES/license.h"
 mkdir -p $DIR_RES
 xxd -i ./LICENSE | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
-xxd -i ./res/logo.png ./src/frontend/gui/logo.h
-BUILD=Debug
+BUILD=${BUILD:-Debug}
+XTRACER_ENABLE_RTMIDI=${XTRACER_ENABLE_RTMIDI:-ON}
+BUILD_DIR=${BUILD_DIR:-build/intermediate/build}
 make -C ./automation
-cmake -DCMAKE_BUILD_TYPE=$BUILD ./CMakeLists.txt
+cmake -S . -B "$BUILD_DIR" \
+    -DCMAKE_BUILD_TYPE="$BUILD" \
+    -DXTRACER_ENABLE_RTMIDI="$XTRACER_ENABLE_RTMIDI"

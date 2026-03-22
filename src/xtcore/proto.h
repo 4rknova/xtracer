@@ -9,14 +9,43 @@
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */
 #define XTPROTO_FORMAT_TEX2         "tex2(%f,%f)"       /* string     */ /* Format for tex2 */
 #define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
-#define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z])"    /* string     */ /* Format for generate function */
+#define XTPROTO_FORMAT_GENERATE     "gen(%[a-zA-Z_])"   /* string     */ /* Format for generate function */
 
 #define XTPROTO_CONFIG              "config"            /* N/A        */ /* Config */
 #define XTPROTO_PROP_TITLE			"title"				/* string     */ /* Scene title */
 #define XTPROTO_PROP_DESCR			"description"	    /* string     */ /* Scene description */
 #define XTPROTO_PROP_VERSN			"version"			/* string     */ /* Scene version */
+#define XTPROTO_PROP_DEFAULT_CAMERA "default_camera"    /* string     */ /* Scene default camera */
 #define XTPROTO_LTRL_ICOSAHEDRON    "icosahedron"       /* string     */ /* Icosahedron */
 #define XTPROTO_LTRL_PLANE          "plane"             /* string     */ /* Plane */
+#define XTPROTO_LTRL_TETRAHEDRON    "tetrahedron"       /* string     */ /* Tetrahedron */
+#define XTPROTO_LTRL_HEXAHEDRON     "hexahedron"        /* string     */ /* Hexahedron (cube) */
+#define XTPROTO_LTRL_CUBE           "cube"              /* string     */ /* Cube */
+#define XTPROTO_LTRL_OCTAHEDRON     "octahedron"        /* string     */ /* Octahedron */
+#define XTPROTO_LTRL_DODECAHEDRON   "dodecahedron"      /* string     */ /* Dodecahedron */
+#define XTPROTO_LTRL_PYRAMID        "pyramid"           /* string     */ /* Pyramid */
+#define XTPROTO_LTRL_RING           "ring"              /* string     */ /* Ring (torus) */
+#define XTPROTO_LTRL_SNOWFLAKE      "snowflake"         /* string     */ /* Koch snowflake */
+#define XTPROTO_LTRL_CAPSULE        "capsule"           /* string     */ /* Capsule */
+#define XTPROTO_LTRL_CAPPED_CYLINDER "capped_cylinder"  /* string     */ /* Capped cylinder */
+#define XTPROTO_LTRL_TRUNCATED_CONE "truncated_cone"    /* string     */ /* Truncated cone */
+#define XTPROTO_LTRL_TORUS_KNOT     "torus_knot"        /* string     */ /* Torus knot */
+#define XTPROTO_LTRL_ICOSPHERE      "icosphere"         /* string     */ /* Icosphere */
+#define XTPROTO_LTRL_GEODESIC_DOME  "geodesic_dome"     /* string     */ /* Geodesic dome */
+#define XTPROTO_LTRL_ICOSA_CAGE     "icosa_cage"        /* string     */ /* Icosahedral cage */
+#define XTPROTO_LTRL_MENGER_SPONGE  "menger_sponge"     /* string     */ /* Menger sponge */
+#define XTPROTO_LTRL_MENGER_SPONGE_IMPLICIT "menger_sponge_implicit" /* string */ /* Implicit Menger sponge */
+#define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON "sierpinski_tetrahedron" /* string */ /* Sierpinski tetrahedron */
+#define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON_IMPLICIT "sierpinski_tetrahedron_implicit" /* string */ /* Implicit Sierpinski tetrahedron */
+#define XTPROTO_LTRL_MANDELBULB      "mandelbulb"        /* string     */ /* Mandelbulb fractal */
+#define XTPROTO_LTRL_JULIA           "julia"             /* string     */ /* Julia 3D fractal */
+#define XTPROTO_LTRL_MOBIUS_STRIP   "mobius_strip"      /* string     */ /* Mobius strip */
+#define XTPROTO_LTRL_KLEIN_BOTTLE   "klein_bottle"      /* string     */ /* Klein bottle */
+#define XTPROTO_LTRL_HAIRBALL       "hairball"          /* string     */ /* Hairball */
+#define XTPROTO_LTRL_SHELL_SPIRAL   "shell_spiral"      /* string     */ /* Shell spiral */
+#define XTPROTO_LTRL_ROCK           "rock"              /* string     */ /* Rock */
+#define XTPROTO_LTRL_CHAIN_LINK     "chain_link"        /* string     */ /* Chain links */
+#define XTPROTO_LTRL_LATHE          "lathe"             /* string     */ /* Lathe */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -44,6 +73,8 @@
 #define XTPROTO_PROP_APERTURE		"aperture"			/* scalar_t   */ /* Aperture of the lense */
 #define XTPROTO_PROP_TARGET			"target"			/* Vector3f   */ /* Target position */
 #define XTPROTO_PROP_FLENGTH		"flength"			/* scalar_t   */ /* Focal length */
+#define XTPROTO_PROP_APERTURE_BLADES "aperture_blades"  /* integer    */ /* Aperture polygon blades (>=3 enables polygon bokeh) */
+#define XTPROTO_PROP_APERTURE_ROTATION "aperture_rotation" /* scalar_t */ /* Aperture polygon rotation in degrees */
 #define XTPROTO_PROP_ORIENTATION    "orientation"		/* Vector3f   */ /* Orientation */
 #define XTPROTO_PROP_INTST			"intensity"			/* ColorRGBf  */ /* Color intensity */
 #define XTPROTO_PROP_IAMBN			"ambient"			/* ColorRGBf  */ /* Ambient intensity */
@@ -79,8 +110,10 @@
 #define XTPROTO_LTRL_POINT			"point"	    		/* string     */ /* Point */
 #define XTPROTO_LTRL_SPHERE			"sphere"			/* string     */ /* Sphere */
 #define XTPROTO_LTRL_HULL			"hull"  			/* string     */ /* Hull */
+#define XTPROTO_LTRL_CONE           "cone"             /* string     */ /* Cone */
 #define XTPROTO_LTRL_CYLINDER		"cylinder"			/* string     */ /* Cylinder */
 #define XTPROTO_LTRL_MESH			"mesh"				/* string     */ /* Mesh */
+#define XTPROTO_LTRL_CSG            "csg"               /* string     */ /* Constructive solid geometry */
 #define XTPROTO_PROP_UP				"up"	            /* Vector3f   */ /* Up vector */
 #define XTPROTO_PROP_RIGHT			"right"	            /* Vector3f   */ /* Right vector */
 #define XTPROTO_PROP_NORMAL			"normal"			/* Vector3f   */ /* Normal vector */
@@ -92,9 +125,39 @@
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
+#define XTPROTO_PROP_BASE_SIZE      "base_size"         /* scalar_t   */ /* Base size */
+#define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
+#define XTPROTO_PROP_CELLS          "cells"             /* integer    */ /* Cell count */
+#define XTPROTO_PROP_MAX_DEVIATION  "max_deviation"     /* scalar_t   */ /* Max normal deviation (degrees) */
+#define XTPROTO_PROP_FIBERS         "fibers"            /* integer    */ /* Fiber count */
+#define XTPROTO_PROP_TURNS          "turns"             /* scalar_t   */ /* Turn count */
+#define XTPROTO_PROP_GROWTH         "growth"            /* scalar_t   */ /* Growth */
+#define XTPROTO_PROP_TUBE_RADIUS    "tube_radius"       /* scalar_t   */ /* Tube radius */
+#define XTPROTO_PROP_HEIGHT			"height"			/* scalar_t   */ /* Height */
+#define XTPROTO_PROP_POWER          "power"             /* scalar_t   */ /* Fractal power */
+#define XTPROTO_PROP_BAILOUT        "bailout"           /* scalar_t   */ /* Fractal bailout */
+#define XTPROTO_PROP_JULIA_C        "julia_c"           /* Vector3f   */ /* Julia constant */
+#define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
+#define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
+#define XTPROTO_PROP_OCTAVES        "octaves"           /* integer    */ /* Octave count */
+#define XTPROTO_PROP_COUNT          "count"             /* integer    */ /* Count */
+#define XTPROTO_PROP_MAJOR_RADIUS   "major_radius"      /* scalar_t   */ /* Major radius */
+#define XTPROTO_PROP_MINOR_RADIUS   "minor_radius"      /* scalar_t   */ /* Minor radius */
+#define XTPROTO_PROP_SPACING        "spacing"           /* scalar_t   */ /* Spacing */
+#define XTPROTO_PROP_PROFILE        "profile"           /* group      */ /* Lathe profile */
+#define XTPROTO_PROP_CAP_ENDS       "cap_ends"          /* bool       */ /* Cap ends */
+#define XTPROTO_PROP_SPLINE         "spline"            /* group      */ /* Spline */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
+#define XTPROTO_PROP_OP             "op"                /* string     */ /* CSG boolean operator */
+#define XTPROTO_PROP_SMOOTHNESS     "smoothness"        /* scalar_t   */ /* CSG soft union smoothing */
+#define XTPROTO_PROP_LEFT           "left"              /* group      */ /* CSG left node */
+#define XTPROTO_LTRL_UNION          "union"             /* string     */ /* CSG union operator */
+#define XTPROTO_LTRL_SOFT_UNION     "soft_union"        /* string     */ /* CSG soft union operator */
+#define XTPROTO_LTRL_SMOOTH_UNION   "smooth_union"      /* string     */ /* CSG soft union alias */
+#define XTPROTO_LTRL_INTERSECTION   "intersection"      /* string     */ /* CSG intersection operator */
+#define XTPROTO_LTRL_DIFFERENCE     "difference"        /* string     */ /* CSG difference operator */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
@@ -105,6 +168,9 @@
 #define XTPROTO_NODE_TEXTURE		"texture"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_GEOMETRY		"geometry"			/* N/A        */ /* Resource node */
 #define XTPROTO_NODE_OBJECT			"object"			/* N/A        */ /* Resource node */
+#define XTPROTO_NODE_VARIANTS       "variants"          /* N/A        */ /* Scene variants node */
+#define XTPROTO_NODE_VARIANT_SET    "set"               /* N/A        */ /* Variant set overlay */
+#define XTPROTO_NODE_VARIANT_REMOVE "remove"            /* N/A        */ /* Variant remove overlay */
 #define XTPROTO_LTRL_CAM_THINLENS   "thin-lens"         /* string     */ /* Perspective camera */
 #define XTPROTO_LTRL_CAM_ODS        "ods"               /* string     */ /* Omni Directional Stereo camera */
 #define XTPROTO_LTRL_CAM_ERP        "erp"               /* string     */ /* Equirectangular camera */
@@ -113,6 +179,11 @@
 #define XTPROTO_CUBEMAP             "cubemap"
 #define XTPROTO_ERP                 "erp"
 #define XTPROTO_COLOR               "color"
+#define XTPROTO_GRAPHPAPER          "graphpaper"
+#define XTPROTO_CHECKER             "checker"
+#define XTPROTO_WEAVE               "weave"
+#define XTPROTO_FBM_MARBLE          "fbm_marble"
+#define XTPROTO_VORONOI_NORMAL      "voronoi_normal"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"

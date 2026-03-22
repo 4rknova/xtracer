@@ -1,0 +1,134 @@
+title = Ring Cardioid Caustics
+description = Cardioid caustic study with a specular ring, single key light, and diffuse ground plane.
+version     = 1.4
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.92,0.95,1.00)
+        b = col3(0.32,0.52,0.90)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 34
+        position = vec3(2,5,-2)
+        target   = vec3(0,0,0)
+        up       = vec3(0,1,0)
+        flength  = 5
+        aperture = 0
+    }
+}
+
+geometry = {
+    ground_plane = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        u_scale    = 8
+        v_scale    = 8
+        modifiers = {
+            scale       = vec3(10,1,10)
+            rotation    = vec3(0,0,0)
+            translation = vec3(0,0,0)
+        }
+    }
+
+    ring_mirror = {
+        type       = mesh
+        source     = gen(ring)
+        resolution = 100
+	radius     = 1.0
+	height     = 0.5
+        modifiers = {
+            scale       = vec3(1,1,1)
+            rotation    = vec3(0,0,0)
+            translation = vec3(0,0.25,0)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(1,15,10)
+        radius   = 2.0
+    }
+}
+
+material = {
+    ground_plane = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.86,0.86,0.86)
+                    minor       = col3(0.45,0.67,0.78)
+                    major       = col3(0.10,0.36,0.54)
+                    scale       = 10
+                    major_every = 5
+                    minor_width = 0.045
+                    major_width = 0.085
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.03,0.03,0.03)
+                }
+            }
+            scalars = {
+                exponent    = 40
+                reflectance = 0.03
+            }
+        }
+    }
+
+    ring_mirror = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.0,0.0,0.0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(1.0, 0.84, 0.0)
+                }
+            }
+            scalars = {
+                exponent    = 900
+                reflectance = 1.0
+            }
+        }
+    }
+
+    key_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(200,200,200)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    ground_plane = {
+        geometry = ground_plane
+        material = ground_plane
+    }
+
+    ring_mirror = {
+        geometry = ring_mirror
+        material = ring_mirror
+    }
+
+    key_light = {
+        geometry = key_light
+        material = key_light
+    }
+}

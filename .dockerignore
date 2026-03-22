@@ -1,0 +1,10 @@
+.git
+.github
+build
+cmake-build-*
+dist
+tmp
+*.log
+*.tmp
+*.swp
+.DS_Store

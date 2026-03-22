@@ -4,13 +4,15 @@
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <ncf/ncf.h>
+#include <memory>
+#include <list>
 #include "math/surface.h"
 #include "camera.h"
 #include "material.h"
-#include "sampler_tex.h"
-#include "sampler_col.h"
-#include "sampler_cubemap.h"
-#include "sampler_gradient.h"
+#include "sampler/sampler_tex.h"
+#include "sampler/sampler_col.h"
+#include "sampler/sampler_cubemap.h"
+#include "sampler/sampler_gradient.h"
 #include "object.h"
 #include "cubemap.h"
 #include "scene.h"
@@ -51,7 +53,35 @@ int create_material (Scene *scene, ncf::NCF *p);
 int create_geometry (Scene *scene, ncf::NCF *p);
 int create_object   (Scene *scene, ncf::NCF *p);
 
-int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers = 0);
+int load(Scene *scene,
+         const char *filename,
+         const std::list<std::string> *modifiers = 0,
+         const char *variant = 0);
+
+enum async_load_state_t
+{
+    ASYNC_LOAD_QUEUED = 0,
+    ASYNC_LOAD_RUNNING,
+    ASYNC_LOAD_DONE,
+    ASYNC_LOAD_ERROR
+};
+
+struct async_load_snapshot_t
+{
+    unsigned long long id;
+    async_load_state_t state;
+    std::string state_name;
+    std::string filename;
+    std::string error;
+};
+
+unsigned long long load_async_start(const char *filename,
+                                    const std::list<std::string> *modifiers = 0,
+                                    const char *variant = 0);
+bool load_async_snapshot(unsigned long long id, async_load_snapshot_t *out);
+std::shared_ptr<Scene> load_async_take_scene(unsigned long long id);
+void load_async_discard(unsigned long long id);
+size_t load_async_gc_done(size_t keep_latest = 128);
 
         } /* namespace scn */
     } /* namespace io */

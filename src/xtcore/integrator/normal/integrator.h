@@ -1,7 +1,6 @@
 #ifndef XTCORE_INTEGRATOR_NORMAL_H_INCLUDED
 #define XTCORE_INTEGRATOR_NORMAL_H_INCLUDED
 
-#include <nplatform/timer.h>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 

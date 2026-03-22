@@ -1,8 +1,13 @@
 scene/data
-bin/
+scene/geometry/
 media/
 temp/
 *.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
 *.pc
 *.ppm
 *.png
@@ -13,10 +18,20 @@ temp/
 CMakeCache.txt
 CMakeLists.txt.user
 CMakeFiles/
+cmake-build-*/
+build/
+build-*/
+out/
+compile_commands.json
+CMakeUserPresets.json
+CMakePresets.json
 Testing/
 cmake_install.cmake
 CTestTestfile.cmake
 Makefile
+build.ninja
+.ninja_deps
+.ninja_log
 imgui.ini
 .cmake
 .idea
@@ -28,3 +43,10 @@ src/xtcore/license.h
 # other files
 *.cbp
 
+# generated web assets
+res/web/license.txt
+res/web/xtracer_wasm.js
+res/web/xtracer_wasm.wasm
+res/web/xtracer_wasm.js.map
+res/web/xtracer_wasm.wasm.map
+res/web/*.symbols

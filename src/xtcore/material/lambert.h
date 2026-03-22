@@ -27,6 +27,21 @@ class Lambert : public xtcore::asset::IMaterial
                 hit_result_t &hit_result
         , const hit_record_t &hit_record
     ) const;
+
+    virtual bool bsdf_eval(
+                const hit_record_t &hit_record
+        , const Vector3f &wo
+        , const Vector3f &wi
+        , ColorRGBf &f
+        , scalar_t &pdf
+    ) const;
+    virtual bool bsdf_sample(
+                const hit_record_t &hit_record
+        , const Vector3f &wo
+        , Vector3f &wi
+        , ColorRGBf &f
+        , scalar_t &pdf
+    ) const;
 };
 
         } /* namespace material */

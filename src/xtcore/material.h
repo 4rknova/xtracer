@@ -36,8 +36,25 @@ class IMaterial
         , const hit_record_t &hit_record
     ) const = 0;
 
+    virtual bool bsdf_is_delta() const;
+    virtual bool bsdf_eval(
+                const hit_record_t &hit_record
+        , const Vector3f &wo
+        , const Vector3f &wi
+        , ColorRGBf &f
+        , scalar_t &pdf
+    ) const;
+    virtual bool bsdf_sample(
+                const hit_record_t &hit_record
+        , const Vector3f &wo
+        , Vector3f &wi
+        , ColorRGBf &f
+        , scalar_t &pdf
+    ) const;
+
     float     get_scalar(const char *name) const;
     ColorRGBf get_sample(const char *name, const Vector3f &tc) const;
+    bool has_sampler(const char *name) const;
        float& get_scalar_by_index  (size_t idx, std::string *name=0);
     ISampler* get_sampler_by_index (size_t idx, std::string *name=0);
 

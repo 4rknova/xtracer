@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <nmath/precision.h>
 #include <nmath/sample.h>
 #include <xtcore/aa.h>
@@ -7,7 +8,21 @@ namespace xtcore {
     namespace integrator {
         namespace ao {
 
-#define MAX_DISTANCE 100.0f
+Integrator::Integrator()
+    : m_max_distance(100.0)
+{}
+
+void Integrator::configure(const std::map<std::string, std::string> &options)
+{
+    auto it = options.find("max_distance");
+    if (it == options.end()) return;
+
+    char *end = nullptr;
+    double v = std::strtod(it->second.c_str(), &end);
+    if (end == it->second.c_str() || !end || *end != '\0') return;
+    if (v <= 0.0) return;
+    m_max_distance = (nmath::scalar_t)v;
+}
 
 void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
@@ -41,7 +56,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
             if (ctx->scene.intersection(ao_ray, ao_hit_record)) {
                 float dist = (ao_hit_record.point - ao_ray.origin).length();
-                w = nmath::min(dist, MAX_DISTANCE) / MAX_DISTANCE;
+                w = nmath::min((nmath::scalar_t)dist, m_max_distance) / m_max_distance;
             }
         }
 

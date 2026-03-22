@@ -1,7 +1,6 @@
 #ifndef XTCORE_INTEGRATOR_AO_H_INCLUDED
 #define XTCORE_INTEGRATOR_AO_H_INCLUDED
 
-#include <nplatform/timer.h>
 #include <nmath/precision.h>
 #include <nmath/vector.h>
 
@@ -23,7 +22,12 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
-	virtual void render_tile(xtcore::render::tile_t *tile);
+    Integrator();
+    virtual void configure(const std::map<std::string, std::string> &options);
+    virtual void render_tile(xtcore::render::tile_t *tile);
+
+    private:
+    nmath::scalar_t m_max_distance;
 };
 
         } /* namespace ao */

@@ -2,7 +2,7 @@
 #define XTCORE_EXTRUDE_H_INCLUDED
 
 #include <nmesh/structs.h>
-#include "sampler_cubemap.h"
+#include "sampler/sampler_cubemap.h"
 
 namespace xtcore {
     namespace auxiliary {

@@ -1,64 +1,179 @@
-.TH XTRACER 2 "December 2010" UNIX "User Manuals"
-.SH NAME 
-xtracer
+.TH XTRACER_CLI 1 "March 2026" UNIX "User Manuals"
+.SH NAME
+xtracer_cli \- command-line renderer for XTRACER scenes
 .SH SYNOPSIS
-.B xtracer [
-.I option
-]... 
-.B file
+.B xtracer_cli
+[
+.I options
+]
+.I scene.scn
+.br
+.B xtracer_cli
+.B version
 .SH DESCRIPTION
-A basic raytracer.
+.B xtracer_cli
+loads a
+.B .scn
+scene file, renders it with the selected integrator, and writes a tonemapped PNG image.
+.PP
+Default output filename:
+.I <scene_basename>_<renderer>.png
 .SH OPTIONS
-.IP "-version"
-Outputs the program version information and exits.
-.IP "-help"
-Outputs basic usage information and exits.
-.IP "-threads %i"
-Sets the number of threads that will be spawned. 
-A value of 0 lets the system decide.
-.IP "-res %ix%i"
-Sets the output buffer resolution.
-.IP "-rdepth %i"
-Sets the maximum recursion depth.
-.IP "-s_global"
-Sets the number of samples for s_dof, s_light, s_refl.
-.IP "-s_dof %i"
-Sets the number of dof samples.
-.IP "-s_light %i"
-Sets the number of samples for area lights.
-.IP "-s_refl %i"
-Sets the number of samples for specular reflections.
-.IP "-aa %i"
-Enables antialiasing (supersampling). %i must be 1 or greater.
-.IP "-resume %s"
-Resumes rendering of the given file.
-.IP "-region %ix%i:%ix%i"
-Restricts rendering to the given area.
-.IP "-cam %s"
-Sets the active camera.
-.IP "-outdrv %s"
-Sets the output driver to use. Available drivers are: ppm, dum.
-.IP "-outdir %s"
-Sets the output directory.
-.IP "-gi %i:%i:%ix%f"
-Sets up the photon mapping step. The first number sets the total ammount of photons.
-The second defines the maximum number of samples per pixel, the third number sets the
-maximum sampling radius per pixel and the last number is the photon power multiplier.
-.IP "-giviz"
-The output is calculated by sampling the photon map and direct illumination is ignored.
-.IP "-octree_depth %i"
-Maximum depth for octree generation.
-.IP "-octree_ipn %i"
-Maximum number of items per octree node.
-.IP "-mod %s"
-Forces a scene modifier. Modifiers are expressed in the form group.subgroup.*.property:value.
-.SH DRIVERS
-.IP "ppm"
-Exports the framebuffer to a ppm image file.
-.IP "nul"
-Performs all the computation without exporting anything. Used for benchmarking.
-.RE
-.SH AUTHOR
-."BR bar (1)"
-Written by Nikos Papadopoulos <nikpapas at gmail dot com>
+.IP "\fB-renderer\fR \fIname\fR"
+Integrator to use.
+Default: \fBpathtracer\fR.
+.IP "\fB-res\fR \fI<width>x<height>\fR"
+Framebuffer resolution.
+Default: \fB640x480\fR.
+.IP "\fB-rdepth\fR \fIuint\fR"
+Maximum ray recursion depth.
+Default: \fB3\fR.
+.IP "\fB-samples\fR \fIuint\fR"
+Sample count.
+Must be 1 or greater.
+Default: \fB1\fR.
+.IP "\fB-aa\fR \fIuint\fR"
+Supersampling anti-aliasing level.
+Must be 2 or greater when provided.
+Default: \fB1\fR.
+.IP "\fB-tile_size\fR \fIuint\fR"
+Tile width/height in pixels.
+.IP "\fB-threads\fR \fIuint\fR"
+Worker thread count.
+\fB0\fR lets the runtime choose automatically.
+Default: \fB0\fR.
+.IP "\fB-cam\fR \fIname\fR"
+Active camera name.
+If omitted, the first camera in the scene is used.
+.IP "\fB-outdir\fR \fIpath\fR"
+Output directory for exported PNG.
+.IP "\fB-mod\fR \fIexpression\fR"
+Apply scene modifier. May be repeated.
+.IP "\fBversion\fR"
+Print version and exit.
+Note: this form is positional (\fBversion\fR), not \fB-version\fR.
+.SH RENDERERS
+Known renderer IDs:
+.IP "\fBraytracer\fR"
+Whitted-style ray tracer.
+.IP "\fBpathtracer\fR"
+Brute-force path tracer.
+.IP "\fBpathtracer_mis\fR, \fBpathtracer_is\fR"
+MIS diffuse path tracer aliases.
+.IP "\fBpathtracer_mis_full\fR"
+Full MIS path tracer.
+.IP "\fBphoton_mapping\fR"
+Photon mapping.
+.IP "\fBao\fR"
+Ambient occlusion.
+.IP "\fBdebug_views\fR"
+Debug view integrator.
+.IP "\fBdepth\fR, \fBstencil\fR, \fBnormal\fR, \fBuv\fR, \fBemission\fR"
+Debug view aliases.
+.SH SCENE AUTHORING GUIDE
+XTRACER scene files use a simple key/group format.
+Top-level sections commonly include:
+.IP "\(bu"
+\fBtitle\fR, \fBdescription\fR, \fBversion\fR, \fBdefault_camera\fR
+.IP "\(bu"
+\fBenvironment\fR, \fBcamera\fR, \fBgeometry\fR, \fBmaterial\fR, \fBobject\fR
+.IP "\(bu"
+optional \fBvariants\fR overlays
+.PP
+Minimal scene template:
+.PP
+.EX
+title = Minimal Scene
+description = Small starter scene
+version = 1.0
+default_camera = cam_main
 
+environment = {
+  type = color
+  config = { value = col3(0.05,0.05,0.05) }
+}
+
+camera = {
+  cam_main = {
+    type = thin-lens
+    fov = 45
+    position = vec3(0,1,-5)
+    target = vec3(0,0,0)
+    up = vec3(0,1,0)
+  }
+}
+
+geometry = {
+  g_sphere = { type = sphere, position = vec3(0,0,0), radius = 1 }
+}
+
+material = {
+  m_lambert = {
+    type = lambert
+    properties = {
+      samplers = {
+        diffuse = { type = color, value = col3(0.8,0.2,0.2) }
+      }
+    }
+  }
+}
+
+object = {
+  sphere = { geometry = g_sphere, material = m_lambert }
+}
+.EE
+.PP
+Common values:
+.IP "\(bu"
+Environment \fBtype\fR: \fBgradient\fR, \fBcolor\fR, \fBcubemap\fR, \fBerp\fR
+.IP "\(bu"
+Camera \fBtype\fR: \fBthin-lens\fR, \fBods\fR, \fBerp\fR, \fBcubemap\fR
+.IP "\(bu"
+Geometry \fBtype\fR: \fBplane\fR, \fBsphere\fR, \fBpoint\fR, \fBtriangle\fR, \fBmesh\fR
+.IP "\(bu"
+Material \fBtype\fR: \fBlambert\fR, \fBphong\fR, \fBblinn_phong\fR, \fBemissive\fR, \fBdielectric\fR
+.PP
+For \fBmesh\fR geometry with \fBsource = gen(...)\fR, common generators include
+\fBplane\fR, \fBcube\fR, \fBicosphere\fR, \fBmenger_sponge\fR, \fBsnowflake\fR, and \fBpyramid\fR.
+Mesh modifiers are defined under \fBmodifiers\fR:
+\fBrotation\fR, \fBscale\fR, \fBtranslation\fR, \fBflip_normals\fR, \fBextrude\fR.
+.PP
+Variants can switch camera/material/object wiring:
+.PP
+.EX
+variants = {
+  hide_base = true
+  night = {
+    name = Night
+    remove = { object = { fill_light = {} } }
+    set = { default_camera = cam_night }
+  }
+}
+.EE
+.PP
+\fBhide_base\fR only affects the web variant picker visibility for the base option.
+.SH EXAMPLES
+.PP
+Render a scene:
+.PP
+.EX
+\&./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn \\
+  -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+.EE
+.PP
+Render with a specific camera and output directory:
+.PP
+.EX
+\&./build/release/xtracer_cli scene/lab-camera-dof-showcase.scn \\
+  -cam camera.main -outdir ./renders -renderer pathtracer
+.EE
+.SH EXIT STATUS
+.IP "0"
+Success.
+.IP "1"
+Usage/setup error or scene load failure.
+This code is also currently returned by \fBxtracer_cli version\fR.
+.IP "2"
+Runtime/validation error (for example invalid renderer or camera).
+.SH AUTHOR
+Nikolaos Papadopoulos <nikpapas at gmail dot com>

@@ -1,0 +1,103 @@
+title = Procedural Hairball Showcase
+description = Demonstrates the gen(hairball) procedural mesh with controllable seed, radius, and fibers.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.92,0.95,1.00)
+        b = col3(0.12,0.14,0.18)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 44
+        position = vec3(0.0,1.8,-6.8)
+        target   = vec3(0.0,0.6,0.6)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    hairball_main = {
+        type       = mesh
+        source     = gen(hairball)
+        resolution = 72
+        seed       = 1337
+        radius     = 1.25
+        fibers     = 4200
+        modifiers = {
+            translation = vec3(0,1.25,1.0)
+            rotation    = vec3(0,28,0)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(3.8,4.1,-2.4)
+        radius   = 0.75
+    }
+}
+
+material = {
+    floor_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.58,0.60,0.62)
+                }
+            }
+        }
+    }
+
+    hairball_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.72,0.38,0.22)
+                }
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(3.8,3.3,2.7)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor_matte
+    }
+
+    hairball_main = {
+        geometry = hairball_main
+        material = hairball_matte
+    }
+
+    key_light = {
+        geometry = key_light
+        material = emissive_key
+    }
+}

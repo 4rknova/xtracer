@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <list>
+#include <cstddef>
 
 #include <nmath/vector.h>
 
@@ -12,7 +13,7 @@
 #include "strpool.h"
 #include "camera.h"
 #include "material.h"
-#include "sampler_tex.h"
+#include "sampler/sampler_tex.h"
 #include "sampler.h"
 #include "object.h"
 
@@ -30,6 +31,17 @@ struct light_t
 {
     xtcore::asset::ISurface  *light;
     xtcore::asset::IMaterial *material;
+};
+
+struct spatial_index_stats_t
+{
+    size_t total_objects;
+    size_t finite_objects;
+    size_t infinite_objects;
+    size_t tlas_nodes;
+    size_t tlas_leaves;
+    double build_ms;
+    unsigned long long build_count;
 };
 
 class Scene
@@ -58,6 +70,8 @@ class Scene
 
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
 	bool intersection(const Ray &ray, hit_record_t &hit_record);
+    void rebuild_spatial_index();
+    void mark_spatial_index_dirty();
 
 	int destroy_camera   (HASH_UINT64 id);
 	int destroy_material (HASH_UINT64 id);
@@ -78,13 +92,43 @@ class Scene
 	std::string m_source;
     std::string m_description;
     std::string m_version;
+    std::string m_default_camera;
 
     xtcore::sampler::ISampler *m_environment;
 
 	// This will cleanup all the allocated memory
 	void release();
+
+    private:
+    struct tlas_item_t {
+        HASH_ID object_id;
+        AABB3 aabb;
+        Vector3f center;
+    };
+
+    struct tlas_node_t {
+        AABB3 aabb;
+        int left;
+        int right;
+        size_t first;
+        size_t count;
+    };
+
+    bool is_finite_aabb(const AABB3 &aabb) const;
+    bool intersects_node(const AABB3 &aabb, const Ray &ray) const;
+    int build_tlas_node(size_t first, size_t count);
+    void update_tlas_node_bounds(tlas_node_t &node);
+
+    bool m_spatial_index_dirty;
+    std::vector<tlas_item_t> m_tlas_items;
+    std::vector<tlas_node_t> m_tlas_nodes;
+    std::vector<HASH_ID> m_infinite_objects;
 };
 
 } /* namespace xtcore */
+
+namespace xtcore {
+spatial_index_stats_t get_last_spatial_index_stats();
+}
 
 #endif /* XTCORE_SCENE_HPP_INCLUDED */

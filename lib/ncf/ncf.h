@@ -60,9 +60,11 @@ class DECLSPEC NCF
 		size_t count_groups() const;
 
 		void        set_property(const char *name, const char *value);
+		bool        remove_property(const char *name);
 		const char* get_property_by_name(const char *name) const;
 		const char* get_property_by_index(size_t index) const;
 		const char* get_property_name_by_index(size_t index) const;
+		bool        remove_group(const char *name);
 		NCF*		get_group_by_name(const char *name) const;
 		NCF*		get_group_by_index(size_t index) const;
 

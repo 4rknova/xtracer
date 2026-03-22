@@ -15,6 +15,7 @@ extern "C" {
 void start_video(const char *file, int width, int height, int frame_rate)
 {
     FILE *f = fopen(file, "wb");
+    if (!f) return;
     fprintf(f, "%s", HID);
     fprintf(f, "W%i ", width);
     fprintf(f, "H%i ", height);
@@ -26,11 +27,17 @@ void start_video(const char *file, int width, int height, int frame_rate)
     fclose(f);
 }
 
-#define MIN(a,b) (a > b ? b : a)
+static unsigned char clamp_u8(float v)
+{
+    if (v < 0.0f) return 0u;
+    if (v > 1.0f) return 255u;
+    return (unsigned char)(v * 255.0f);
+}
 
-void write_frame(const char *file, int width, int height, float *rgb)
+void write_frame(const char *file, int width, int height, const float *rgb)
 {
     FILE *f = fopen(file, "ab");
+    if (!f) return;
     fseek(f, 0, SEEK_END);
     fprintf(f, "FRAME\n");
 
@@ -38,16 +45,20 @@ void write_frame(const char *file, int width, int height, float *rgb)
     int pc2 = pc1 * 2;
     int sz  = pc1 * 3;
 
-    unsigned char *buffer = (char*)malloc(sz*sizeof(unsigned char));
+    unsigned char *buffer = (unsigned char*)malloc((size_t)sz * sizeof(unsigned char));
+    if (!buffer) {
+        fclose(f);
+        return;
+    }
     for (int i = 0; i < sz; i+=3) {
         float r = rgb[i], g = rgb[i+1], b = rgb[i+2], y = 0, cb = 0, cr = 0;
         rgb_to_ycbcr(r, g, b, &y, &cb, &cr);
         int idx = i / 3;
-        buffer[idx      ] = MIN(255, (char)(y  * 255.));
-        buffer[idx + pc1] = MIN(255, (char)(cb * 255.));
-        buffer[idx + pc2] = MIN(255, (char)(cr * 255.));
+        buffer[idx      ] = clamp_u8(y);
+        buffer[idx + pc1] = clamp_u8(cb);
+        buffer[idx + pc2] = clamp_u8(cr);
     }
-    fwrite(buffer, sizeof(char), sz, f);
+    fwrite(buffer, sizeof(unsigned char), (size_t)sz, f);
     fclose(f);
     free(buffer);
 }

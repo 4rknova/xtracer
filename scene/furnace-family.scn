@@ -1,0 +1,147 @@
+title       = Furnace Family
+description = White furnace baseline scene. Select variants to switch material model.
+version     = 1.0
+
+environment = {
+    type = color
+    config = {
+        value = col3(1.0,1.0,1.0)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0,0,0)
+        target   = vec3(0,0,1)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    sphere = {
+        type     = sphere
+        position = vec3(0,0,3)
+        radius   = 1.0
+    }
+}
+
+material = {
+    lambert_gray = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+            }
+        }
+    }
+
+    lambert_white = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+        }
+    }
+
+    blinn_spec = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.0,0.0,0.0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                exponent    = 256
+                reflectance = 0.98
+            }
+        }
+    }
+
+    dielectric_clear = {
+        type = dielectric
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                ior          = 1.5
+                transparency = 0.98
+                reflectance  = 0.04
+            }
+        }
+    }
+}
+
+object = {
+    sphere = {
+        geometry = sphere
+        material = lambert_gray
+    }
+}
+
+variants = {
+    base = {
+        name        = Lambert Gray (Base)
+        description = White furnace test with a 0.5-albedo Lambert sphere under uniform white environment.
+    }
+
+    lambert_white = {
+        name        = Lambert White
+        description = White furnace test with a unit-albedo Lambert sphere under uniform white environment.
+        set = {
+            title       = Furnace Lambert White
+            description = White furnace test with a unit-albedo Lambert sphere under uniform white environment.
+            object = {
+                sphere = {
+                    material = lambert_white
+                }
+            }
+        }
+    }
+
+    blinn_high_spec = {
+        name        = Blinn High Spec
+        description = High-specular Blinn-Phong sphere under uniform white environment.
+        set = {
+            title       = Furnace Blinn High Spec
+            description = Furnace sanity scene with a high-specular Blinn-Phong sphere under uniform white environment.
+            object = {
+                sphere = {
+                    material = blinn_spec
+                }
+            }
+        }
+    }
+
+    dielectric_clear = {
+        name        = Dielectric Clear
+        description = Clear dielectric sphere under uniform white environment.
+        set = {
+            title       = Furnace Dielectric Clear
+            description = Furnace sanity scene with a clear dielectric sphere in uniform white environment.
+            object = {
+                sphere = {
+                    material = dielectric_clear
+                }
+            }
+        }
+    }
+}

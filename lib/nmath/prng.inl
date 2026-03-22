@@ -35,6 +35,9 @@
 #ifdef __cplusplus
     #include <cstdlib>
     #include <ctime>
+    #include <chrono>
+    #include <functional>
+    #include <thread>
 #else
     #include <stdlib.h>
     #include <time.h>
@@ -50,6 +53,32 @@ namespace nmath {
 #ifdef __cplusplus
 extern "C" {
 #endif	/* __cplusplus */
+
+#ifdef __cplusplus
+static inline uint64_t prng_splitmix64_next(uint64_t& state)
+{
+    state += 0x9E3779B97F4A7C15ULL;
+    uint64_t z = state;
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    return z ^ (z >> 31);
+}
+
+static inline uint64_t prng_xoroshiro64star_next()
+{
+    thread_local uint64_t state = []() -> uint64_t {
+        uint64_t seed = (uint64_t)std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        seed ^= (uint64_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
+        uint64_t mixed = prng_splitmix64_next(seed);
+        return mixed ? mixed : 0xA5A5A5A5A5A5A5A5ULL;
+    }();
+
+    state ^= state >> 12;
+    state ^= state << 25;
+    state ^= state >> 27;
+    return state * 2685821657736338717ULL;
+}
+#endif /* __cplusplus */
 
 static inline scalar_t prng_c(const scalar_t a, const scalar_t b)
 {
@@ -72,6 +101,11 @@ static inline scalar_t prng_c(const scalar_t a, const scalar_t b)
 
         etc..
     */
+#ifdef __cplusplus
+    if (a == b) return a;
+    const scalar_t unit = (scalar_t)((prng_xoroshiro64star_next() >> 11) * (1.0 / 9007199254740992.0));
+    return (unit * (b - a)) + a;
+#else
     static int initialized = 0;
 
     if (!initialized) {
@@ -80,6 +114,7 @@ static inline scalar_t prng_c(const scalar_t a, const scalar_t b)
     }
 
 	return ((scalar_t)rand() * ( (b - a) / (scalar_t)RAND_MAX)) + a;
+#endif /* __cplusplus */
 }
 
 static inline scalar_t prng_multiplyWithCarry(const scalar_t a, const scalar_t b)
@@ -192,6 +227,11 @@ static inline scalar_t prng_multiplyWithCarry(const scalar_t a, const scalar_t b
     /*
         We will use only 2 seeds for the fastest possible generation.
     */
+#ifdef __cplusplus
+    if (a == b) return a;
+    const scalar_t unit = (scalar_t)((prng_xoroshiro64star_next() >> 11) * (1.0 / 9007199254740992.0));
+    return (unit * (b - a)) + a;
+#else
     static uint32_t m_w , m_z, initialized = 0;
 
     if (!initialized)
@@ -205,6 +245,7 @@ static inline scalar_t prng_multiplyWithCarry(const scalar_t a, const scalar_t b
     m_w = 18000 * (m_w & 65535) + (m_w >> 16);
 
     return (scalar_t)(((m_z << 16) + m_w ) * (b - a) / 0xFFFFFFFF) + a;
+#endif /* __cplusplus */
 }
 
 #ifdef __cplusplus

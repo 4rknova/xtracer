@@ -1,214 +1,263 @@
-#include <iostream>
+#include <cstdio>
 #include <vector>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
 #include <nmath/sample.h>
+#include <xtcore/math/sampling_util.h>
 
-// helper to check and display for shader compiler errors
-bool check_shader_compile_status(GLuint obj) {
-    GLint status;
-    glGetShaderiv(obj, GL_COMPILE_STATUS, &status);
-    if(status == GL_FALSE) {
-        GLint length;
-        glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &length);
-        std::vector<char> log(length);
-        glGetShaderInfoLog(obj, length, &length, &log[0]);
-        std::cerr << &log[0];
-        return false;
+namespace {
+
+enum sample_mode_t
+{
+    MODE_SPHERE = 0,
+    MODE_HEMISPHERE,
+    MODE_DIFFUSE,
+    MODE_COSINE_HEMI,
+    MODE_POWER_LOBE,
+    MODE_COUNT
+};
+
+struct vertex_t
+{
+    float x;
+    float y;
+    float r;
+    float g;
+    float b;
+};
+
+const char *mode_name(sample_mode_t mode)
+{
+    switch (mode) {
+    case MODE_SPHERE: return "nmath::sample::sphere";
+    case MODE_HEMISPHERE: return "nmath::sample::hemisphere";
+    case MODE_DIFFUSE: return "nmath::sample::diffuse";
+    case MODE_COSINE_HEMI: return "xtcore::math::sampling::sample_cosine_hemisphere";
+    case MODE_POWER_LOBE: return "xtcore::math::sampling::sample_power_cosine_lobe";
+    default: return "unknown";
     }
-    return true;
 }
 
-// helper to check and display for shader linker error
-bool check_program_link_status(GLuint obj) {
-    GLint status;
-    glGetProgramiv(obj, GL_LINK_STATUS, &status);
-    if(status == GL_FALSE) {
-        GLint length;
-        glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &length);
-        std::vector<char> log(length);
-        glGetProgramInfoLog(obj, length, &length, &log[0]);
-        std::cerr << &log[0];
-        return false;
-    }
-    return true;
+void print_help(sample_mode_t mode)
+{
+    std::printf("Sampling visualization\n");
+    std::printf("  1 sphere\n");
+    std::printf("  2 hemisphere\n");
+    std::printf("  3 diffuse\n");
+    std::printf("  4 cosine hemisphere\n");
+    std::printf("  5 power cosine lobe\n");
+    std::printf("  SPACE regenerate points\n");
+    std::printf("Current mode: %s\n", mode_name(mode));
 }
 
-int main() {
-    int width  = 640;
-    int height = 480;
+bool check_shader_compile(GLuint shader)
+{
+    GLint ok = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (ok == GL_TRUE) return true;
 
-    if(glfwInit() == GL_FALSE) {
-        std::cerr << "failed to init GLFW" << std::endl;
+    GLint len = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    std::vector<char> log((size_t)len + 1, '\0');
+    glGetShaderInfoLog(shader, len, &len, log.data());
+    std::fprintf(stderr, "shader compile failed: %s\n", log.data());
+    return false;
+}
+
+bool check_program_link(GLuint prog)
+{
+    GLint ok = GL_FALSE;
+    glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+    if (ok == GL_TRUE) return true;
+
+    GLint len = 0;
+    glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+    std::vector<char> log((size_t)len + 1, '\0');
+    glGetProgramInfoLog(prog, len, &len, log.data());
+    std::fprintf(stderr, "program link failed: %s\n", log.data());
+    return false;
+}
+
+void regenerate(std::vector<vertex_t> &out, sample_mode_t mode, int count)
+{
+    out.clear();
+    out.reserve((size_t)count);
+
+    const nmath::Vector3f up(0.0f, 1.0f, 0.0f);
+    const nmath::Vector3f in_dir(0.0f, 1.0f, 0.0f);
+
+    for (int i = 0; i < count; ++i) {
+        nmath::Vector3f s;
+        nmath::scalar_t pdf = 0.0;
+        switch (mode) {
+        case MODE_SPHERE:
+            s = nmath::sample::sphere();
+            break;
+        case MODE_HEMISPHERE:
+            s = nmath::sample::hemisphere(up, in_dir);
+            break;
+        case MODE_DIFFUSE:
+            s = nmath::sample::diffuse(up);
+            break;
+        case MODE_COSINE_HEMI:
+            s = xtcore::math::sampling::sample_cosine_hemisphere(up, pdf);
+            break;
+        case MODE_POWER_LOBE:
+            s = xtcore::math::sampling::sample_power_cosine_lobe(up, 16.0f, pdf);
+            break;
+        default:
+            s = nmath::sample::sphere();
+            break;
+        }
+
+        // Visualize in XZ plane (Y drives color).
+        const float x = (float)s.x;
+        const float y = (float)s.z;
+        const float shade = (float)(0.5f * (s.y + 1.0f));
+
+        vertex_t v;
+        v.x = x;
+        v.y = y;
+        v.r = 0.15f + 0.85f * shade;
+        v.g = 0.35f + 0.65f * (1.0f - shade);
+        v.b = 1.0f - 0.5f * shade;
+        out.push_back(v);
+    }
+}
+
+} // namespace
+
+int main()
+{
+    const int width = 960;
+    const int height = 960;
+    const int point_count = 60000;
+
+    if (glfwInit() == GL_FALSE) {
+        std::fprintf(stderr, "failed to init glfw\n");
         return 1;
     }
 
-    // select opengl version
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // create a window
-    GLFWwindow *window;
-    if((window = glfwCreateWindow(width, height, "samples viz", 0, 0)) == 0) {
-        std::cerr << "failed to open window" << std::endl;
+    GLFWwindow *window = glfwCreateWindow(width, height, "xtracer sampling viz", nullptr, nullptr);
+    if (!window) {
+        std::fprintf(stderr, "failed to create window\n");
         glfwTerminate();
         return 1;
     }
 
     glfwMakeContextCurrent(window);
-
-
-    /* The following line is required for outdated versions
-    ** of libglew and is introduced as a fix for Ubuntu builds.
-    */
+    glfwSwapInterval(1);
     glewExperimental = GL_TRUE;
-
-    if(glewInit() != GLEW_OK) {
-        std::cerr << "failed to init GL3W" << std::endl;
+    if (glewInit() != GLEW_OK) {
+        std::fprintf(stderr, "failed to init glew\n");
         glfwDestroyWindow(window);
         glfwTerminate();
         return 1;
     }
 
-    // shader source code
-    std::string vertex_source =
-        "#version 330\n"
-        "in vec4 vposition;\n"
-        "in vec4 vcolor;\n"
-        "out vec4 fcolor;\n"
+    const char *vs_src =
+        "#version 330 core\n"
+        "layout(location=0) in vec2 a_pos;\n"
+        "layout(location=1) in vec3 a_col;\n"
+        "out vec3 v_col;\n"
         "void main() {\n"
-        "   fcolor = vcolor;\n"
-        "   gl_Position = vposition;\n"
+        "  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
+        "  gl_PointSize = 2.0;\n"
+        "  v_col = a_col;\n"
         "}\n";
 
-        std::string fragment_source =
-        "#version 330\n"
-        "in vec4 fcolor;\n"
-        "out vec4 FragColor;\n"
+    const char *fs_src =
+        "#version 330 core\n"
+        "in vec3 v_col;\n"
+        "out vec4 frag;\n"
         "void main() {\n"
-        "   FragColor = fcolor;\n"
+        "  frag = vec4(v_col, 1.0);\n"
         "}\n";
 
-    // program and shader handles
-    GLuint shader_program, vertex_shader, fragment_shader;
+    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &vs_src, nullptr);
+    glCompileShader(vs);
+    if (!check_shader_compile(vs)) return 1;
 
-    // we need these to properly pass the strings
-    const char *source;
-    int length;
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &fs_src, nullptr);
+    glCompileShader(fs);
+    if (!check_shader_compile(fs)) return 1;
 
-    // create and compiler vertex shader
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    source = vertex_source.c_str();
-    length = vertex_source.size();
-    glShaderSource(vertex_shader, 1, &source, &length);
-    glCompileShader(vertex_shader);
-    if(!check_shader_compile_status(vertex_shader)) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return 1;
-    }
+    GLuint prog = glCreateProgram();
+    glAttachShader(prog, vs);
+    glAttachShader(prog, fs);
+    glLinkProgram(prog);
+    if (!check_program_link(prog)) return 1;
 
-    // create and compiler fragment shader
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    source = fragment_source.c_str();
-    length = fragment_source.size();
-    glShaderSource(fragment_shader, 1, &source, &length);
-    glCompileShader(fragment_shader);
-    if(!check_shader_compile_status(fragment_shader)) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return 1;
-    }
-    // create program
-    shader_program = glCreateProgram();
-
-    // attach shaders
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-
-    // bind the attribute locations (inputs)
-    glBindAttribLocation(shader_program, 0, "vposition");
-    glBindAttribLocation(shader_program, 1, "vcolor");
-
-    // bind the FragDataLocation (output)
-    glBindFragDataLocation(shader_program, 0, "FragColor");
-
-    // link the program and check for errors
-    glLinkProgram(shader_program);
-    check_program_link_status(shader_program);
-
-    // vao and vbo handle
-    GLuint vao, vbo;
-
-    // generate and bind the vao
+    GLuint vao = 0;
+    GLuint vbo = 0;
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    // generate and bind the buffer object
     glGenBuffers(1, &vbo);
+
+    glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    // data for a fullscreen quad
-    GLfloat vertexData[] = {
-    //  X     Y     Z           R     G     B
-       1.0f, 1.0f, 0.0f,       1.0f, 0.0f, 0.0f, // vertex 0
-      -1.0f, 1.0f, 0.0f,       0.0f, 1.0f, 0.0f, // vertex 1
-       1.0f,-1.0f, 0.0f,       0.0f, 0.0f, 1.0f, // vertex 2
-       1.0f,-1.0f, 0.0f,       0.0f, 0.0f, 1.0f, // vertex 3
-      -1.0f, 1.0f, 0.0f,       0.0f, 1.0f, 0.0f, // vertex 4
-      -1.0f,-1.0f, 0.0f,       1.0f, 0.0f, 0.0f, // vertex 5
-    }; // 6 vertices with 6 components (floats) each
-
-    // fill with data
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*6*6, vertexData, GL_STATIC_DRAW);
-
-    // set up generic attrib pointers
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), (char*)0 + 0*sizeof(GLfloat));
-
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)(sizeof(float) * 2));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), (char*)0 + 3*sizeof(GLfloat));
 
-    while(!glfwWindowShouldClose(window)) {
+    sample_mode_t mode = MODE_SPHERE;
+    print_help(mode);
+
+    std::vector<vertex_t> points;
+    regenerate(points, mode, point_count);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(points.size() * sizeof(vertex_t)), points.data(), GL_DYNAMIC_DRAW);
+
+    bool last_space = false;
+    while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        // clear first
+        const bool k1 = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
+        const bool k2 = glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
+        const bool k3 = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
+        const bool k4 = glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS;
+        const bool k5 = glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS;
+        const bool space = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+
+        sample_mode_t wanted = mode;
+        if (k1) wanted = MODE_SPHERE;
+        else if (k2) wanted = MODE_HEMISPHERE;
+        else if (k3) wanted = MODE_DIFFUSE;
+        else if (k4) wanted = MODE_COSINE_HEMI;
+        else if (k5) wanted = MODE_POWER_LOBE;
+
+        if (wanted != mode || (space && !last_space)) {
+            mode = wanted;
+            regenerate(points, mode, point_count);
+            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(points.size() * sizeof(vertex_t)), points.data(), GL_DYNAMIC_DRAW);
+            std::printf("mode: %s (%d points)\n", mode_name(mode), point_count);
+        }
+        last_space = space;
+
+        glViewport(0, 0, width, height);
+        glClearColor(0.02f, 0.02f, 0.025f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // use the shader program
-        glUseProgram(shader_program);
-
-        // bind the vao
+        glUseProgram(prog);
         glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, (GLsizei)points.size());
 
-        // draw
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // check for errors
-        GLenum error = glGetError();
-        if(error != GL_NO_ERROR) {
-            std::cerr << error << std::endl;
-            break;
-        }
-
-        // finally swap buffers
         glfwSwapBuffers(window);
     }
 
-    // delete the created objects
-
-    glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
-
-    glDetachShader(shader_program, vertex_shader);
-    glDetachShader(shader_program, fragment_shader);
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-    glDeleteProgram(shader_program);
-
+    glDeleteVertexArrays(1, &vao);
+    glDeleteProgram(prog);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
-

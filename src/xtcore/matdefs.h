@@ -5,6 +5,7 @@
 #define MAT_SAMPLER_DIFFUSE      "diffuse"
 #define MAT_SAMPLER_SPECULAR     "specular"
 #define MAT_SAMPLER_EMISSIVE     "emissive"
+#define MAT_SAMPLER_NORMAL       "normal"
 
 #define MAT_SCALART_REFLECTANCE  "reflectance"
 #define MAT_SCALART_TRANSPARENCY "transparency"

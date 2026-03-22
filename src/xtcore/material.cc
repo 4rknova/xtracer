@@ -55,6 +55,43 @@ bool IMaterial::is_emissive() const
     return (has_emissive_scl || has_emissive_tex);
 }
 
+bool IMaterial::bsdf_is_delta() const
+{
+    return false;
+}
+
+bool IMaterial::bsdf_eval(
+            const hit_record_t &hit_record
+    , const Vector3f &wo
+    , const Vector3f &wi
+    , ColorRGBf &f
+    , scalar_t &pdf
+) const
+{
+    (void)hit_record;
+    (void)wo;
+    (void)wi;
+    f = ColorRGBf(0.0f, 0.0f, 0.0f);
+    pdf = 0.0f;
+    return false;
+}
+
+bool IMaterial::bsdf_sample(
+            const hit_record_t &hit_record
+    , const Vector3f &wo
+    , Vector3f &wi
+    , ColorRGBf &f
+    , scalar_t &pdf
+) const
+{
+    (void)hit_record;
+    (void)wo;
+    wi = Vector3f(0.0f, 0.0f, 0.0f);
+    f = ColorRGBf(0.0f, 0.0f, 0.0f);
+    pdf = 0.0f;
+    return false;
+}
+
 float IMaterial::get_scalar(const char *name) const
 {
     const std::map<std::string, float>::const_iterator it = m_scalars.find(name);
@@ -67,6 +104,12 @@ ColorRGBf IMaterial::get_sample(const char *name, const Vector3f &tc) const
     const std::map<std::string, ISampler*>::const_iterator it = m_samplers.find(name);
     if (it == m_samplers.end()) return ColorRGBf(0,0,0);
     return (*it).second->sample(tc);
+}
+
+bool IMaterial::has_sampler(const char *name) const
+{
+    if (!name) return false;
+    return m_samplers.find(name) != m_samplers.end();
 }
 
 float& IMaterial::get_scalar_by_index(size_t idx, std::string *name)

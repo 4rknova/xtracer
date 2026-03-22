@@ -1,0 +1,316 @@
+title = Procedural Generator and Modifiers Lab
+description = Demonstrates procedural mesh generators with transform modifiers and varying resolutions.
+version     = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.90,0.94,1.00)
+        b = col3(0.11,0.15,0.22)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 48
+        position = vec3(0.0,3.0,-13.0)
+        target   = vec3(0.0,0.4,3.5)
+        up       = vec3(0,1,0)
+    }
+
+    close = {
+        type     = thin-lens
+        fov      = 38
+        position = vec3(-1.5,2.0,-8.0)
+        target   = vec3(-0.2,0.7,4.0)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = -1.4
+    }
+
+    mesh_tetra = {
+        type   = mesh
+        source = gen(tetrahedron)
+        modifiers = {
+            scale       = vec3(1.2,1.2,1.2)
+            rotation    = vec3(0,18,0)
+            translation = vec3(-5.2,0.0,3.2)
+        }
+    }
+
+    mesh_cube = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(2.0,2.0,2.0)
+            rotation    = vec3(0,30,0)
+            translation = vec3(-2.7,0.0,3.3)
+        }
+    }
+
+    mesh_octa = {
+        type   = mesh
+        source = gen(octahedron)
+        modifiers = {
+            scale       = vec3(1.25,1.25,1.25)
+            rotation    = vec3(0,15,0)
+            translation = vec3(-0.1,0.0,3.1)
+        }
+    }
+
+    mesh_dodeca = {
+        type   = mesh
+        source = gen(dodecahedron)
+        modifiers = {
+            scale       = vec3(1.45,1.45,1.45)
+            rotation    = vec3(0,22,0)
+            translation = vec3(2.7,0.0,3.3)
+        }
+    }
+
+    mesh_ico = {
+        type   = mesh
+        source = gen(icosahedron)
+        modifiers = {
+            scale       = vec3(1.45,1.45,1.45)
+            rotation    = vec3(0,28,0)
+            translation = vec3(5.3,0.0,3.2)
+        }
+    }
+
+    mesh_plane_low = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 4
+        modifiers = {
+            scale       = vec3(2.2,2.2,2.2)
+            rotation    = vec3(90,0,0)
+            translation = vec3(-3.0,0.7,7.2)
+        }
+    }
+
+    mesh_plane_high = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 32
+        modifiers = {
+            scale       = vec3(2.2,2.2,2.2)
+            rotation    = vec3(90,0,0)
+            translation = vec3(0.0,0.7,7.2)
+        }
+    }
+
+    mesh_snowflake = {
+        type       = mesh
+        source     = gen(snowflake)
+        resolution = 4
+        modifiers = {
+            scale       = vec3(2.6,2.6,2.6)
+            rotation    = vec3(90,0,0)
+            translation = vec3(3.0,0.55,7.1)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(-2.0,5.2,-1.4)
+        radius   = 0.85
+    }
+}
+
+material = {
+    floor = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.66,0.68,0.72)
+                }
+            }
+        }
+    }
+
+    m_red = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.86,0.34,0.30)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.95,0.90,0.88)
+                }
+            }
+            scalars = {
+                exponent    = 80
+                reflectance = 0.18
+            }
+        }
+    }
+
+    m_green = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.30,0.78,0.52)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.95,0.96,0.94)
+                }
+            }
+            scalars = {
+                exponent    = 108
+                reflectance = 0.22
+            }
+        }
+    }
+
+    m_blue = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.36,0.56,0.94)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.86,0.92,0.98)
+                }
+            }
+            scalars = {
+                exponent    = 84
+                reflectance = 0.2
+            }
+        }
+    }
+
+    m_gold = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.88,0.70,0.30)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.98,0.94,0.80)
+                }
+            }
+            scalars = {
+                exponent    = 128
+                reflectance = 0.26
+            }
+        }
+    }
+
+    m_cyan = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.28,0.82,0.88)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.92,0.96,0.98)
+                }
+            }
+            scalars = {
+                exponent    = 96
+                reflectance = 0.22
+            }
+        }
+    }
+
+    m_panel = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.74,0.76,0.79)
+                }
+            }
+        }
+    }
+
+    m_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(5.4,4.6,3.7)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor
+    }
+
+    mesh_tetra = {
+        geometry = mesh_tetra
+        material = m_red
+    }
+
+    mesh_cube = {
+        geometry = mesh_cube
+        material = m_green
+    }
+
+    mesh_octa = {
+        geometry = mesh_octa
+        material = m_blue
+    }
+
+    mesh_dodeca = {
+        geometry = mesh_dodeca
+        material = m_gold
+    }
+
+    mesh_ico = {
+        geometry = mesh_ico
+        material = m_cyan
+    }
+
+    mesh_plane_low = {
+        geometry = mesh_plane_low
+        material = m_panel
+    }
+
+    mesh_plane_high = {
+        geometry = mesh_plane_high
+        material = m_panel
+    }
+
+    mesh_snowflake = {
+        geometry = mesh_snowflake
+        material = m_blue
+    }
+
+    key_light = {
+        geometry = key_light
+        material = m_light
+    }
+}

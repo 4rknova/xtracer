@@ -1,15 +1,18 @@
 #include <string>
 #include <mutex>
+#include <memory>
 
 #include <nmath/mutil.h>
 #include <nmath/prng.h>
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
+#include <nplatform/timer.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/integrator.h>
+#include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/macro.h>
 #include "argparse.h"
 
@@ -64,91 +67,124 @@ int main(int argc, char **argv)
 
 	xtcore::Log::handle().post_message("xtracer %s (C) 2010 Nikos Papadopoulos", xtcore::get_version());
 
-    std::string integrator_name, outdir, scene_path;
-    HASH_UINT64 camera;
+    std::string integrator_name, outdir, scene_path, variant;
+    HASH_UINT64 camera = HASH_ID_INVALID;
     xtcore::render::params_t params;
     std::list<std::string> modifiers;
 
-	if (setup(argc, argv
-            , integrator_name
-            , outdir
-            , scene_path
-            , modifiers
-            , camera
-            , params
-    )) return 1;
-
     xtcore::init();
-	xtcore::render::context_t context;
-	if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers)) {
-        if (context.scene.m_cameras.size() == 0) {
-            xtcore::Log::handle().post_error("no cameras found");
-            return 2;
-        }
-        context.params.camera = camera;
-    } else return 1;
-
-	xtcore::render::IIntegrator *integrator = NULL;
-/*
-    if      (RENDERER("depth"     )) integrator = new xtcore::integrator::depth::Integrator();
-    else if (RENDERER("stencil"   )) integrator = new xtcore::integrator::stencil::Integrator();
-    else if (RENDERER("normal"    )) integrator = new xtcore::integrator::normal::Integrator();
-    else if (RENDERER("uv"        )) integrator = new xtcore::integrator::uv::Integrator();
-    else if (RENDERER("raytracer" )) integrator = new xtcore::integrator::raytracer::Integrator();
-    else if (RENDERER("pathtracer")) integrator = new xtcore::integrator::pathtracer::Integrator();
-    else return 0;
-*/
-    context.params = params;
-    context.init();
-
-    xtcore::render::Tileset::iterator it = context.tiles.begin();
-    xtcore::render::Tileset::iterator et = context.tiles.end();
-    for (; it != et; ++it) {
-        (*it).setup_handler_on_init(&handler_init);
-        (*it).setup_handler_on_done(&handler_done);
+	if (setup(argc, argv
+	            , integrator_name
+	            , outdir
+	            , scene_path
+                , variant
+	            , modifiers
+	            , camera
+	            , params
+	    )) {
+        xtcore::deinit();
+        return 1;
     }
 
-    integrator->setup(context);
-    total =  context.tiles.size();
-
-	Timer timer;
-	timer.start();
-    printf("Rendering..");
-	integrator->render();
-	timer.stop();
-
-    std::string t;
-	print_time_breakdown(t, timer.get_time_in_mlsec());
-    printf("%c[2K\r", 27);
-    xtcore::Log::handle().post_message("Total time: %s", t.c_str());
-
-    // Export the frame
+    int exit_code = 0;
     {
-	    std::string file, base, extension, filename, random_token;
-		#ifdef _WIN32
-    		const char path_delim = '\\';
-	    #else
-		    const char path_delim = '/';
-		#endif /* _WIN32 */
+		xtcore::render::context_t context;
+        context.params = params;
+        const char *variant_name = variant.empty() ? nullptr : variant.c_str();
+        if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers, variant_name)) {
+            if (context.scene.m_cameras.size() == 0) {
+                xtcore::Log::handle().post_error("no cameras found");
+                exit_code = 2;
+            } else {
+                if (camera == HASH_ID_INVALID) {
+                    camera = context.scene.m_cameras.begin()->first;
+                }
+                if (!context.scene.get_camera(camera)) {
+                    xtcore::Log::handle().post_error("invalid active camera");
+                    exit_code = 2;
+                } else {
+                    context.params.camera = camera;
+                }
+            }
+        } else {
+            exit_code = 1;
+        }
 
-    	ncf::util::path_comp(scene_path, base, file, path_delim);
-    	ncf::util::path_comp(file, filename, extension, '.');
+        if (!exit_code) {
+            if (integrator_name.empty()) integrator_name = "pathtracer";
 
-    	if (outdir[outdir.length()-1] != path_delim && !outdir.empty()) {
-			outdir.append(1, path_delim);
-		}
+            std::unique_ptr<xtcore::render::IIntegrator> integrator;
+            if      (RENDERER("debug_views"   )) integrator.reset(new xtcore::integrator::debug_views::Integrator());
+            else if (RENDERER("depth"         )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
+            else if (RENDERER("stencil"       )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_STENCIL));
+            else if (RENDERER("normal"        )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_NORMAL));
+            else if (RENDERER("uv"            )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
+            else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
+            else if (RENDERER("ao"            )) integrator.reset(new xtcore::integrator::ao::Integrator());
+            else if (RENDERER("pathtracer"    )) integrator.reset(new xtcore::integrator::pathtracer::Integrator());
+            else if (RENDERER("pathtracer_mis")) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+            else if (RENDERER("pathtracer_is" )) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+            else if (RENDERER("pathtracer_mis_full")) integrator.reset(new xtcore::integrator::pathtracer_mis_full::Integrator());
+            else if (RENDERER("photon_mapping")) integrator.reset(new xtcore::integrator::photon_mapping::Integrator());
+            else if (RENDERER("raytracer"     )) integrator.reset(new xtcore::integrator::raytracer::Integrator());
+            else {
+                xtcore::Log::handle().post_error("unsupported renderer: %s", integrator_name.c_str());
+                exit_code = 2;
+            }
 
-	    file = outdir + filename + "_" + integrator_name + ".png";
-        nimg::Pixmap fb;
-        xtcore::render::assemble(fb, context);
-		xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
-		int res = nimg::io::save::png(file.c_str(), fb);
-        if (res) xtcore::Log::handle().post_error("Failed to export image file");
+            if (!exit_code) {
+                context.init();
+
+                xtcore::render::Tileset::iterator it = context.tiles.begin();
+                xtcore::render::Tileset::iterator et = context.tiles.end();
+                for (; it != et; ++it) {
+                    (*it).setup_handler_on_init(&handler_init);
+                    (*it).setup_handler_on_done(&handler_done);
+                }
+
+                integrator->setup(context);
+                total =  context.tiles.size();
+
+                Timer timer;
+                timer.start();
+                printf("Rendering..");
+                integrator->render();
+                timer.stop();
+
+                std::string t;
+                print_time_breakdown(t, timer.get_time_in_mlsec());
+                printf("%c[2K\r", 27);
+                xtcore::Log::handle().post_message("Total time: %s", t.c_str());
+
+                // Export the frame
+                {
+                    std::string file, base, extension, filename, random_token;
+                    #ifdef _WIN32
+                        const char path_delim = '\\';
+                    #else
+                        const char path_delim = '/';
+                    #endif /* _WIN32 */
+
+                    ncf::util::path_comp(scene_path, base, file, path_delim);
+                    ncf::util::path_comp(file, filename, extension, '.');
+
+                    if (!outdir.empty() && outdir[outdir.length()-1] != path_delim) {
+                        outdir.append(1, path_delim);
+                    }
+
+                    file = outdir + filename + "_" + integrator_name + ".png";
+                    nimg::Pixmap fb;
+                    xtcore::render::assemble(fb, context);
+                    nimg::Pixmap ldr = fb;
+                    xtcore::tonemapping::apply(ldr);
+                    xtcore::Log::handle().post_message("Exporting to %s..", file.c_str());
+                    int res = nimg::io::save::png(file.c_str(), ldr);
+                    if (res) xtcore::Log::handle().post_error("Failed to export image file");
+                }
+            }
+        }
     }
-
-	delete integrator;
 
     xtcore::deinit();
-
-    return 0;
+    return exit_code;
 }

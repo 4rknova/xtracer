@@ -56,7 +56,7 @@ inline const Vector2f& Vector2f::operator =(const Vector2f& v)
 {
     x = v.x;
     y = v.y;
-    return v;
+    return *this;
 }
 
 inline const Vector2f operator -(const Vector2f& v)
@@ -172,12 +172,12 @@ inline Vector2f& operator /=(Vector2f& v, scalar_t r)
 
 inline bool operator ==(const Vector2f& v1, const Vector2f& v2)
 {
-	return (fabs(v1.x - v2.x) < SCALAR_XXSMALL) && (fabs(v1.y - v2.x) < SCALAR_XXSMALL);
+	return (fabs(v1.x - v2.x) < SCALAR_XXSMALL) && (fabs(v1.y - v2.y) < SCALAR_XXSMALL);
 }
 
 inline bool operator !=(const Vector2f& v1, const Vector2f& v2)
 {
-	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) && (fabs(v1.y - v2.x) >= SCALAR_XXSMALL);
+	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) || (fabs(v1.y - v2.y) >= SCALAR_XXSMALL);
 }
 
 inline scalar_t Vector2f::length() const
@@ -192,19 +192,21 @@ inline scalar_t Vector2f::length_squared() const
 
 inline void Vector2f::normalize()
 {
-	scalar_t len = length();
-
-	if(!len)
-		return;
-
-	x /= len;
-	y /= len;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+	x *= inv_len;
+	y *= inv_len;
 }
 
 inline Vector2f Vector2f::normalized() const
 {
-	scalar_t len = length();
-	return (len != 0) ? Vector2f(x / len, y / len) : *this;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return *this;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return *this;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+    return Vector2f(x * inv_len, y * inv_len);
 }
 
 inline void Vector2f::reflect(const Vector2f &normal)
@@ -277,7 +279,7 @@ inline const Vector3f& Vector3f::operator =(const Vector3f& v)
     x = v.x;
     y = v.y;
     z = v.z;
-    return v;
+    return *this;
 }
 
 inline const Vector3f operator -(const Vector3f& v)
@@ -406,7 +408,7 @@ inline bool operator ==(const Vector3f& v1, const Vector3f& v2)
 
 inline bool operator !=(const Vector3f& v1, const Vector3f& v2)
 {
-	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) && (fabs(v1.y - v2.y) >= SCALAR_XXSMALL) && (fabs(v1.z - v2.z) >= SCALAR_XXSMALL);
+	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) || (fabs(v1.y - v2.y) >= SCALAR_XXSMALL) || (fabs(v1.z - v2.z) >= SCALAR_XXSMALL);
 }
 
 inline bool operator < (const Vector3f &v1, const Vector3f &v2)
@@ -431,20 +433,22 @@ inline scalar_t Vector3f::length_squared() const
 
 inline void Vector3f::normalize()
 {
-	scalar_t len = length();
-
-	if(!len)
-		return;
-
-	x /= len;
-	y /= len;
-	z /= len;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+	x *= inv_len;
+	y *= inv_len;
+	z *= inv_len;
 }
 
 inline Vector3f Vector3f::normalized() const
 {
-	scalar_t len = length();
-	return (len != 0) ? Vector3f(x / len, y / len, z / len) : *this;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return *this;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return *this;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+    return Vector3f(x * inv_len, y * inv_len, z * inv_len);
 }
 
 inline void Vector3f::reflect(const Vector3f &normal)
@@ -539,7 +543,7 @@ inline const Vector4f& Vector4f::operator =(const Vector4f& v)
     y = v.y;
     z = v.z;
     w = v.w;
-    return v;
+    return *this;
 }
 
 inline const Vector4f operator -(const Vector4f& v)
@@ -676,7 +680,7 @@ inline bool operator ==(const Vector4f& v1, const Vector4f& v2)
 
 inline bool operator !=(const Vector4f& v1, const Vector4f& v2)
 {
-	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) && (fabs(v1.y - v2.y) >= SCALAR_XXSMALL) && (fabs(v1.z - v2.z) >= SCALAR_XXSMALL) && (fabs(v1.w - v2.w) >= SCALAR_XXSMALL);
+	return (fabs(v1.x - v2.x) >= SCALAR_XXSMALL) || (fabs(v1.y - v2.y) >= SCALAR_XXSMALL) || (fabs(v1.z - v2.z) >= SCALAR_XXSMALL) || (fabs(v1.w - v2.w) >= SCALAR_XXSMALL);
 }
 
 inline scalar_t Vector4f::length() const
@@ -691,21 +695,23 @@ inline scalar_t Vector4f::length_squared() const
 
 inline void Vector4f::normalize()
 {
-	scalar_t len = length();
-
-	if(!len)
-		return;
-
-	x /= len;
-	y /= len;
-	z /= len;
-	w /= len;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+	x *= inv_len;
+	y *= inv_len;
+	z *= inv_len;
+	w *= inv_len;
 }
 
 inline Vector4f Vector4f::normalized() const
 {
-	scalar_t len = length();
-	return (len != 0) ? Vector4f(x / len, y / len, z / len, w / len) : *this;
+    const scalar_t len_sq = length_squared();
+    if (len_sq == 0) return *this;
+    if (nmath_abs(len_sq - (scalar_t)1.0) <= SCALAR_XSMALL) return *this;
+    const scalar_t inv_len = (scalar_t)1.0 / nmath_sqrt(len_sq);
+    return Vector4f(x * inv_len, y * inv_len, z * inv_len, w * inv_len);
 }
 
 inline void Vector4f::reflect(const Vector4f &normal)

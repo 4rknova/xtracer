@@ -22,6 +22,11 @@ namespace xtcore {
 class Mesh: public xtcore::asset::ISurface
 {
 	public:
+    enum uv_projection_t {
+        UV_PROJECTION_SOURCE = 0,
+        UV_PROJECTION_CYLINDRICAL_Y
+    };
+
  	 Mesh();
 	~Mesh();
 
@@ -30,12 +35,18 @@ class Mesh: public xtcore::asset::ISurface
 	void calc_aabb();
     void build_octree(shape_t &shape, attrib_t &attributes);
     void build_octree(object_t &object);
+    void set_uv_projection(uv_projection_t projection);
+    uv_projection_t uv_projection() const;
+    const std::vector<xtcore::surface::Triangle> &triangles() const;
 
     Vector3f point_sample() const;
     Ray ray_sample() const;
+    Vector3f emitter_position() const;
 
 	private:
+    uv_projection_t m_uv_projection;
 	Octree<Triangle> m_octree;
+    std::vector<xtcore::surface::Triangle> m_triangles;
 };
 
     } /* namespace surface */

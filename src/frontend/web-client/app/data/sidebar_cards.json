@@ -1,0 +1,55 @@
+{
+  "scene": [
+    "activeSceneControlsCard",
+    "sceneLoadingControlsCard",
+    "JobsControlsCard"
+  ],
+  "render": [
+    "activeSceneControlsCard",
+    "frameControlsCard",
+    "integratorControlsCard",
+    "qualityControlsCard",
+    "toneMappingControlsCard",
+    "postFiltersControlsCard",
+    "exportControlsCard",
+    "statisticsControlsCard",
+    "JobsControlsCard"
+  ],
+  "visual": {
+    "visual": [
+      "activeSceneControlsCard",
+      "frameControlsCard",
+      "visualControlsCard",
+      "sceneEditControlsCard",
+      "JobsControlsCard"
+    ],
+    "graph": [
+      "activeSceneControlsCard",
+      "frameControlsCard",
+      "sceneEditControlsCard",
+      "JobsControlsCard"
+    ],
+    "text": [
+      "activeSceneControlsCard",
+      "frameControlsCard",
+      "textEditorControlsCard",
+      "sceneEditControlsCard",
+      "JobsControlsCard"
+    ]
+  },
+  "logs": [
+    "activeSceneControlsCard",
+    "statisticsControlsCard",
+    "logsControlsCard",
+    "JobsControlsCard"
+  ],
+  "workspaces": [
+    "activeSceneControlsCard",
+    "workspaceControlsCard",
+    "JobsControlsCard"
+  ],
+  "settings": [
+    "settingsControlsCard",
+    "JobsControlsCard"
+  ]
+}

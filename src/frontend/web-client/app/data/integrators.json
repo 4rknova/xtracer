@@ -1,0 +1,135 @@
+{
+  "integrators": [
+    { "id": "raytracer", "label": "Raytracer (Whitted)" },
+    { "id": "pathtracer_mis", "label": "Pathtracer (MIS Diffuse)" },
+    { "id": "pathtracer_mis_full", "label": "Pathtracer (MIS Full)" },
+    { "id": "pathtracer", "label": "Pathtracer (Brute Force)" },
+    {
+      "id": "photon_mapping",
+      "label": "Photon Mapping",
+      "controls": [
+        {
+          "id": "emit_photons",
+          "label": "Emit Photons",
+          "type": "int",
+          "description": "Photon emission count",
+          "default": "20000",
+          "min": "1000",
+          "max": "10000000",
+          "step": "1000"
+        },
+        {
+          "id": "caustic_emit_photons",
+          "label": "Caustic Emit",
+          "type": "int",
+          "description": "Caustic photon emission count",
+          "default": "20000",
+          "min": "1000",
+          "max": "10000000",
+          "step": "1000"
+        },
+        {
+          "id": "gather_radius",
+          "label": "Gather Radius",
+          "type": "float",
+          "description": "Radius used for radiance estimate",
+          "default": "0.25",
+          "min": "0.001",
+          "max": "100",
+          "step": "0.001"
+        },
+        {
+          "id": "caustic_gather_radius",
+          "label": "Caustic Radius",
+          "type": "float",
+          "description": "Radius used for caustic estimate",
+          "default": "0.125",
+          "min": "0.0001",
+          "max": "100",
+          "step": "0.0001"
+        },
+        {
+          "id": "gather_k",
+          "label": "Gather K",
+          "type": "int",
+          "description": "Maximum photons to gather",
+          "default": "64",
+          "min": "1",
+          "max": "1024",
+          "step": "1"
+        },
+        {
+          "id": "caustic_gather_k",
+          "label": "Caustic Gather K",
+          "type": "int",
+          "description": "Maximum caustic photons to gather",
+          "default": "32",
+          "min": "1",
+          "max": "2048",
+          "step": "1"
+        }
+      ]
+    },
+    {
+      "id": "debug_views",
+      "label": "Debug Views",
+      "controls": [
+        {
+          "id": "mode",
+          "label": "Mode",
+          "type": "enum",
+          "description": "Debug output mode",
+          "default": "normal",
+          "options": [
+            { "value": "depth", "label": "Depth" },
+            { "value": "stencil", "label": "Stencil" },
+            { "value": "normal", "label": "Normal" },
+            { "value": "uv", "label": "UV" },
+            { "value": "emission", "label": "Emission" }
+          ]
+        },
+        {
+          "id": "depth_encoding",
+          "label": "Depth Encoding",
+          "type": "enum",
+          "description": "Depth output encoding",
+          "default": "legacy",
+          "visible_when": { "id": "mode", "value": "depth" },
+          "options": [
+            { "value": "legacy", "label": "Legacy (1/log(z))" },
+            { "value": "linear", "label": "Linear" },
+            { "value": "log", "label": "Logarithmic" },
+            { "value": "inverse", "label": "Inverse (1/(1+z))" }
+          ]
+        },
+        {
+          "id": "max_distance",
+          "label": "Max Distance",
+          "type": "float",
+          "description": "Used by depth mode",
+          "default": "1000",
+          "min": "0.01",
+          "max": "1000000",
+          "step": "0.01",
+          "visible_when": { "id": "mode", "value": "depth" }
+        }
+      ]
+    },
+    {
+      "id": "ao",
+      "label": "Ambient Occlusion",
+      "controls": [
+        {
+          "id": "max_distance",
+          "label": "Max Distance",
+          "type": "float",
+          "description": "Maximum AO ray distance",
+          "default": "100",
+          "min": "0.1",
+          "max": "1000",
+          "step": "0.1"
+        }
+      ]
+    }
+  ]
+}
