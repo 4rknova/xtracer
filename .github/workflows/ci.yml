@@ -4,7 +4,7 @@ on:
   push:
     branches: [ develop ]
     tags:
-      - "v*"
+      - "*.*"
   pull_request:
     branches: [ develop ]
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
         run: cmake --build build/intermediate/build -j --target xtracer_cli xtracer_web
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -74,3 +74,95 @@ jobs:
           files: |
             xtracer-*-linux-x86_64.tar.gz
             xtracer-*-linux-x86_64.tar.gz.sha256
+
+  docker_publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Docker publish policy
+        id: policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+
+          if [[ ! "${TAG}" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+            echo "reason=Tag must match X.Y (got ${TAG})" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          if (( MAJOR < 2 )); then
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+            echo "reason=Tag ${TAG} is below minimum supported release 2.0" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          LATEST_TAG="$(git tag --list '[0-9]*.[0-9]*' | grep -E '^[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)"
+          IS_LATEST=false
+          if [[ -n "${LATEST_TAG}" && "${TAG}" == "${LATEST_TAG}" ]]; then
+            IS_LATEST=true
+          fi
+
+          echo "publish=true" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "is_latest=${IS_LATEST}" >> "${GITHUB_OUTPUT}"
+
+      - name: Skip publish info
+        if: steps.policy.outputs.publish != 'true'
+        run: |
+          echo "Skipping Docker publish."
+          echo "${{ steps.policy.outputs.reason }}"
+
+      - name: Set up Docker Buildx
+        if: steps.policy.outputs.publish == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: steps.policy.outputs.publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Compute Docker tags
+        if: steps.policy.outputs.publish == 'true'
+        id: docker_tags
+        env:
+          IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/xtracer
+          RELEASE_TAG: ${{ steps.policy.outputs.tag }}
+          IS_LATEST: ${{ steps.policy.outputs.is_latest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAGS="${IMAGE_REPO}:${RELEASE_TAG}"
+          if [[ "${IS_LATEST}" == "true" ]]; then
+            TAGS="${TAGS}"$'\n'"${IMAGE_REPO}:latest"
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "${TAGS}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build and push image
+        if: steps.policy.outputs.publish == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
