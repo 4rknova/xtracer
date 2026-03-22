@@ -11,6 +11,7 @@ temp/
 *.pc
 *.ppm
 *.png
+!src/frontend/web-client/res/ftue.png
 *.jpg
 *.hdr
 *.swp
