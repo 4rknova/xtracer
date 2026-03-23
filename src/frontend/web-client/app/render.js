@@ -269,12 +269,29 @@ async function pollJob(jobId, token) {
   }
 }
 
-function interactiveMovingWidthLevels() {
-  return [8, 16, 24, 32, 48, 64, 96, 128, 160, 192, 256];
+function interactiveTargetDimensions() {
+  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  return { width, height };
 }
 
-function nearestInteractiveMovingWidth(v) {
-  const levels = interactiveMovingWidthLevels();
+function interactiveMovingWidthLevels(targetWidth) {
+  const fallbackWidth = interactiveTargetDimensions().width;
+  const width = Math.max(32, Number(targetWidth) || fallbackWidth);
+  const ratios = [0.1, 0.125, 0.16, 0.2, 0.28, 0.4, 0.56, 0.75, 1.0];
+  const levels = [];
+  for (let i = 0; i < ratios.length; i += 1) {
+    const scaled = Math.round(width * ratios[i]);
+    const clamped = Math.max(32, Math.min(width, scaled));
+    if (!levels.length || levels[levels.length - 1] !== clamped) levels.push(clamped);
+  }
+  if (!levels.length) levels.push(width);
+  if (levels[levels.length - 1] !== width) levels.push(width);
+  return levels;
+}
+
+function nearestInteractiveMovingWidth(v, targetWidth) {
+  const levels = interactiveMovingWidthLevels(targetWidth);
   const value = Math.max(levels[0], Math.min(levels[levels.length - 1], Number(v) || levels[0]));
   let best = levels[0];
   let bestErr = Math.abs(best - value);
@@ -290,14 +307,15 @@ function nearestInteractiveMovingWidth(v) {
 
 function interactiveAdaptiveAdjustAfterFrame(stageWidth, elapsedMs) {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 1) return;
-  const levels = interactiveMovingWidthLevels();
-  let idx = levels.indexOf(nearestInteractiveMovingWidth(stageWidth));
-  if (idx < 0) idx = levels.indexOf(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth));
+  const target = interactiveTargetDimensions();
+  const levels = interactiveMovingWidthLevels(target.width);
+  let idx = levels.indexOf(nearestInteractiveMovingWidth(stageWidth, target.width));
+  if (idx < 0) idx = levels.indexOf(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth, target.width));
   if (idx < 0) idx = 0;
-  const target = Math.max(40, Number(INTERACTIVE_PREVIEW_TARGET_FRAME_MS) || 110);
-  if (elapsedMs > target * 1.5 && idx > 0) {
+  const targetMs = Math.max(40, Number(INTERACTIVE_PREVIEW_TARGET_FRAME_MS) || 110);
+  if (elapsedMs > targetMs * 1.5 && idx > 0) {
     idx -= 1;
-  } else if (elapsedMs < target * 0.65 && idx + 1 < levels.length) {
+  } else if (elapsedMs < targetMs * 0.65 && idx + 1 < levels.length) {
     idx += 1;
   }
   interactivePreviewAdaptiveMovingWidth = levels[idx];
@@ -316,39 +334,64 @@ function interactivePreviewIsMoving() {
 }
 
 function interactiveResolutionStages(settleMode) {
-  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
-  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  const target = interactiveTargetDimensions();
+  const width = target.width;
+  const height = target.height;
   const samples = Math.max(1, Number.parseInt(String(el.samples && el.samples.value ? el.samples.value : "1"), 10) || 1);
   const aa = Math.max(1, Number.parseInt(String(el.aa && el.aa.value ? el.aa.value : "1"), 10) || 1);
   const rdepth = Math.max(1, Number.parseInt(String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"), 10) || 10);
   const pick = (targetW) => {
-    const w = Math.max(8, Math.min(width, targetW));
-    const h = Math.max(8, Math.round((height * w) / Math.max(1, width)));
+    const w = Math.max(32, Math.min(width, targetW));
+    const h = Math.max(32, Math.round((height * w) / Math.max(1, width)));
     return { width: w, height: h };
   };
-  const movingWidth = nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth);
-  const raw = settleMode ? [8, 16, 32, 64, 128, 256, 512, width] : [movingWidth];
-  const unique = [];
-  for (let i = 0; i < raw.length; i += 1) {
-    const v = raw[i];
-    if (!unique.length || unique[unique.length - 1] !== v) unique.push(v);
-  }
-  const out = [];
-  for (let i = 0; i < unique.length; i += 1) {
-    const dims = pick(unique[i]);
-    const moving = !settleMode;
-    out.push({
-      width: dims.width,
-      height: dims.height,
-      samples: String(settleMode && i + 1 >= unique.length ? samples : 1),
-      aa: String(settleMode && i + 1 >= unique.length ? aa : 1),
-      rdepth: String(settleMode && i + 1 >= unique.length ? rdepth : Math.min(rdepth, 3)),
-      tile_size: String(moving ? 8 : Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+  if (!settleMode) {
+    const navDims = pick(Math.round(width * 0.01));
+    return [{
+      width: navDims.width,
+      height: navDims.height,
+      samples: "1",
+      aa: "1",
+      rdepth: String(Math.min(rdepth, 3)),
+      tile_size: "8",
       tile_order: "random",
-      integrator: moving ? "raytracer" : String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
-      moving,
-    });
+      integrator: "raytracer",
+      moving: true,
+    }];
   }
+  const halfDims = pick(Math.round(width * 0.5));
+  const fullDims = pick(width);
+  const out = [{
+    width: halfDims.width,
+    height: halfDims.height,
+    samples: "1",
+    aa: "1",
+    rdepth: String(Math.min(rdepth, 3)),
+    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }, {
+    width: fullDims.width,
+    height: fullDims.height,
+    samples: "1",
+    aa: "1",
+    rdepth: String(Math.min(rdepth, 3)),
+    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }, {
+    width: fullDims.width,
+    height: fullDims.height,
+    samples: String(samples),
+    aa: String(aa),
+    rdepth: String(rdepth),
+    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }];
   return out;
 }
 
@@ -417,10 +460,7 @@ async function runInteractiveStage(stage, seq, loopToken, settleMode) {
   activeJobId = interactivePreviewJobId;
   syncGlobalsToWorkspaceRuntime();
   updateRenderActionButton();
-  const result = await pollJob(jobId, pollToken);
-  if (!settleMode && result && result.state === "done") {
-    interactiveAdaptiveAdjustAfterFrame(stage.width, Number(result.elapsedMs) || 0);
-  }
+  await pollJob(jobId, pollToken);
   if (activeJobId === interactivePreviewJobId) {
     activeJobId = "";
     syncGlobalsToWorkspaceRuntime();

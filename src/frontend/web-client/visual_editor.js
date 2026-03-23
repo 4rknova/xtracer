@@ -395,6 +395,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.textureLoader = null;
     this.cameraWidgetRoot = null;
     this.cameraWidget = null;
+    this.interactiveCameraWidget = null;
+    this.interactiveCameraWidgetSig = "";
     this.axisWidgetScene = null;
     this.axisWidgetCamera = null;
     this.axisWidgetRoot = null;
@@ -1147,6 +1149,72 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }
   };
 
+  SceneVisualEditor.prototype.clearInteractiveCameraWidget = function () {
+    if (this.interactiveCameraWidget) {
+      this.interactiveCameraWidget.traverse(function (node) {
+        if (node && node.geometry) node.geometry.dispose();
+        if (node && node.material) {
+          if (Array.isArray(node.material)) node.material.forEach(function (m) { if (m) m.dispose(); });
+          else node.material.dispose();
+        }
+      });
+      this.cameraWidgetRoot.remove(this.interactiveCameraWidget);
+      this.interactiveCameraWidget = null;
+      this.interactiveCameraWidgetSig = "";
+    }
+  };
+
+  SceneVisualEditor.prototype.resolveInteractivePreviewPose = function () {
+    var icam = null;
+    var mode = "";
+    try { if (typeof interactivePreviewCamera !== "undefined") icam = interactivePreviewCamera; } catch (_) { icam = null; }
+    try { if (typeof renderMode !== "undefined") mode = String(renderMode || "").toLowerCase(); } catch (_) { mode = ""; }
+    if (!icam || !icam.ready) return null;
+    if (mode && mode !== "interactive") return null;
+    if (this.currentSceneName && icam.sourceScene && String(icam.sourceScene) !== String(this.currentSceneName)) return null;
+
+    var pos = icam.position || [];
+    var target = icam.target || [];
+    var up = icam.up || [];
+    var nums = [
+      Number(pos[0]), Number(pos[1]), Number(pos[2]),
+      Number(target[0]), Number(target[1]), Number(target[2]),
+      Number(up[0]), Number(up[1]), Number(up[2]),
+    ];
+    for (var i = 0; i < nums.length; i += 1) {
+      if (!Number.isFinite(nums[i])) return null;
+    }
+    return {
+      position: vec3(nums[0], nums[1], nums[2]),
+      target: vec3(nums[3], nums[4], nums[5]),
+      up: vec3(nums[6], nums[7], nums[8]).normalize(),
+      hfov: clamp(Number(icam.hfov) || 45, 1, 179),
+    };
+  };
+
+  SceneVisualEditor.prototype.applyWidgetPose = function (widget, pose) {
+    if (!widget || !pose) return;
+    var position = pose.position.clone();
+    var target = pose.target.clone();
+    var upHint = (pose.up && pose.up.lengthSq() > 1e-10) ? pose.up.clone().normalize() : vec3(0, 1, 0);
+    var forward = target.sub(position);
+    if (forward.lengthSq() < 1e-10) forward.set(0, 0, 1);
+    forward.normalize();
+    var right = new THREE.Vector3().crossVectors(upHint, forward);
+    if (right.lengthSq() < 1e-10) {
+      upHint = Math.abs(forward.y) > 0.98 ? vec3(0, 0, 1) : vec3(0, 1, 0);
+      right.crossVectors(upHint, forward);
+    }
+    right.normalize();
+    var up = new THREE.Vector3().crossVectors(forward, right).normalize();
+    var basis = new THREE.Matrix4();
+    // Camera widget geometry is authored looking down +Z.
+    basis.makeBasis(right, up, forward);
+    var q = new THREE.Quaternion().setFromRotationMatrix(basis);
+    widget.position.copy(pose.position);
+    widget.quaternion.copy(q);
+  };
+
   SceneVisualEditor.prototype.clearPhotonPoints = function () {
     var clearPoints = function (obj, root) {
       if (!obj) return null;
@@ -1460,6 +1528,47 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }
 
     this.cameraWidgetRoot.add(this.cameraWidget);
+  };
+
+  SceneVisualEditor.prototype.updateInteractiveCameraWidget = function () {
+    if (!this.cameraWidgetRoot) return;
+    var pose = this.resolveInteractivePreviewPose();
+    if (!pose) {
+      this.clearInteractiveCameraWidget();
+      return;
+    }
+
+    var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
+      ? this.frameAspect
+      : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
+    var span = clamp((this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
+    var sig = [
+      Math.round(pose.hfov * 1000),
+      Math.round(aspect * 1000),
+      Math.round(span * 1000),
+    ].join(":");
+
+    if (!this.interactiveCameraWidget || this.interactiveCameraWidgetSig !== sig) {
+      this.clearInteractiveCameraWidget();
+      var g = this.buildCameraWidgetGeometry(pose.hfov, aspect, span);
+      var m = new THREE.LineDashedMaterial({
+        color: 0xffe34d,
+        dashSize: span * 0.08,
+        gapSize: span * 0.05,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: true,
+        depthWrite: false,
+      });
+      var lines = new THREE.LineSegments(g, m);
+      lines.computeLineDistances();
+      this.interactiveCameraWidget = new THREE.Group();
+      this.interactiveCameraWidget.add(lines);
+      this.interactiveCameraWidgetSig = sig;
+      this.cameraWidgetRoot.add(this.interactiveCameraWidget);
+    }
+
+    this.applyWidgetPose(this.interactiveCameraWidget, pose);
   };
 
   SceneVisualEditor.prototype.fitDistanceForRadius = function (radius) {
@@ -2107,6 +2216,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.updateProjectionForDistance();
     this.applyXtcoreCameraBasis(cp, this.target, this.viewUp);
     this.updateInfinitePlanes();
+    this.updateInteractiveCameraWidget();
 
     var vp = this.renderViewport || { x: 0, y: 0, w: 1, h: 1 };
     var canvas = this.renderer.domElement;

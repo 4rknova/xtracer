@@ -419,7 +419,7 @@ let interactivePreviewJobId = "";
 let interactivePreviewDirty = false;
 let interactivePreviewCameraSeq = 0;
 let interactivePreviewLastInputMs = 0;
-const INTERACTIVE_PREVIEW_SETTLE_MS = 320;
+const INTERACTIVE_PREVIEW_SETTLE_MS = 420;
 const INTERACTIVE_PREVIEW_ACTIVE_POLL_MS = 90;
 const INTERACTIVE_PREVIEW_FLY_SPEED = 2.5;
 const INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER = 3.0;
@@ -450,6 +450,10 @@ const interactivePreviewCamera = {
   target: [0, 0, -1],
   up: [0, 1, 0],
   hfov: 60,
+  pivot: [0, 0, 0],
+  orbitYaw: 0,
+  orbitPitch: 0,
+  orbitDistance: 1,
 };
 
 function isSafeClientId(value) {

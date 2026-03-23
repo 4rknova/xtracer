@@ -165,6 +165,7 @@ async function refreshInteractivePreviewCameraFromSelection() {
     interactivePreviewCamera.target = v3(target[0], target[1], target[2]);
     interactivePreviewCamera.up = v3norm(v3(up[0], up[1], up[2]), [0, 1, 0]);
     interactivePreviewCamera.hfov = Number.isFinite(hfov) ? clamp(hfov, 1, 179) : 60;
+    resetInteractiveOrbitFromCamera(true);
     interactivePreviewCameraSeq += 1;
     return true;
   } catch (err) {
@@ -174,15 +175,60 @@ async function refreshInteractivePreviewCameraFromSelection() {
 }
 
 function interactiveCameraBasis() {
-  const pos = interactivePreviewCamera.position;
-  const target = interactivePreviewCamera.target;
-  let forward = v3norm(v3sub(target, pos), [0, 0, -1]);
-  let right = v3cross(forward, interactivePreviewCamera.up);
+  const yaw = Number(interactivePreviewCamera.orbitYaw) || 0;
+  const pitch = Number(interactivePreviewCamera.orbitPitch) || 0;
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
+  const sy = Math.sin(yaw);
+  const cy = Math.cos(yaw);
+  let forward = v3norm([sy * cp, sp, -cy * cp], [0, 0, -1]);
+  let right = v3cross(forward, [0, 1, 0]);
+  if (v3len(right) < 1e-6) right = v3cross(forward, [1, 0, 0]);
   right = v3norm(right, [1, 0, 0]);
   let up = v3cross(right, forward);
   up = v3norm(up, [0, 1, 0]);
   forward = v3norm(forward, [0, 0, -1]);
   return { forward, right, up };
+}
+
+function applyInteractiveOrbitCameraState() {
+  const pivot = Array.isArray(interactivePreviewCamera.pivot)
+    ? v3(interactivePreviewCamera.pivot[0], interactivePreviewCamera.pivot[1], interactivePreviewCamera.pivot[2])
+    : [0, 0, 0];
+  const basis = interactiveCameraBasis();
+  const dist = clamp(Number(interactivePreviewCamera.orbitDistance) || 1, 0.02, 1e6);
+  interactivePreviewCamera.pivot = pivot;
+  interactivePreviewCamera.orbitDistance = dist;
+  interactivePreviewCamera.target = pivot;
+  interactivePreviewCamera.position = v3sub(pivot, v3scale(basis.forward, dist));
+  interactivePreviewCamera.up = basis.up;
+}
+
+function resetInteractiveOrbitFromCamera(anchorToOrigin) {
+  const pos = v3(
+    interactivePreviewCamera.position[0],
+    interactivePreviewCamera.position[1],
+    interactivePreviewCamera.position[2],
+  );
+  const target = v3(
+    interactivePreviewCamera.target[0],
+    interactivePreviewCamera.target[1],
+    interactivePreviewCamera.target[2],
+  );
+  const pivot = anchorToOrigin ? [0, 0, 0] : target;
+  let toPivot = v3sub(pivot, pos);
+  let distance = v3len(toPivot);
+  if (!Number.isFinite(distance) || distance < 1e-6) {
+    toPivot = v3sub(target, pos);
+    distance = v3len(toPivot);
+  }
+  if (!Number.isFinite(distance) || distance < 0.02) distance = 1.0;
+  const forward = v3norm(toPivot, [0, 0, -1]);
+  interactivePreviewCamera.pivot = pivot;
+  interactivePreviewCamera.orbitDistance = distance;
+  interactivePreviewCamera.orbitPitch = Math.asin(clamp(forward[1], -0.995, 0.995));
+  interactivePreviewCamera.orbitYaw = Math.atan2(forward[0], -forward[2]);
+  applyInteractiveOrbitCameraState();
 }
 
 function markInteractiveCameraDirty() {
@@ -198,19 +244,13 @@ function markInteractiveCameraDirty() {
 
 function interactiveLookCamera(dx, dy) {
   if (!interactivePreviewCamera.ready) return;
-  const basis = interactiveCameraBasis();
-  const dist = Math.max(0.1, v3len(v3sub(interactivePreviewCamera.target, interactivePreviewCamera.position)));
-  const yaw = -dx * 0.0045;
-  const pitch = -dy * 0.0045;
-  let forward = rotateAroundAxis(basis.forward, basis.up, yaw);
-  let right = v3norm(v3cross(forward, basis.up), basis.right);
-  forward = rotateAroundAxis(forward, right, pitch);
-  const upDot = clamp(v3dot(forward, basis.up), -0.985, 0.985);
-  const horiz = v3sub(forward, v3scale(basis.up, upDot));
-  const horizNorm = v3norm(horiz, [0, 0, -1]);
-  const corrected = v3norm(v3add(v3scale(horizNorm, Math.sqrt(Math.max(0.0, 1 - upDot * upDot))), v3scale(basis.up, upDot)), basis.forward);
-  interactivePreviewCamera.target = v3add(interactivePreviewCamera.position, v3scale(corrected, dist));
-  interactivePreviewCamera.up = basis.up;
+  interactivePreviewCamera.orbitYaw = (Number(interactivePreviewCamera.orbitYaw) || 0) - (dx * 0.005);
+  interactivePreviewCamera.orbitPitch = clamp(
+    (Number(interactivePreviewCamera.orbitPitch) || 0) - (dy * 0.005),
+    -1.45,
+    1.45,
+  );
+  applyInteractiveOrbitCameraState();
   markInteractiveCameraDirty();
 }
 
@@ -244,8 +284,11 @@ function tickInteractiveFly() {
   const moveNorm = v3norm(move, [0, 0, 0]);
   if (v3len(moveNorm) < 1e-6) return;
   const delta = v3scale(moveNorm, speed * dt);
-  interactivePreviewCamera.position = v3add(interactivePreviewCamera.position, delta);
-  interactivePreviewCamera.target = v3add(interactivePreviewCamera.target, delta);
+  interactivePreviewCamera.pivot = v3add(
+    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
+    delta,
+  );
+  applyInteractiveOrbitCameraState();
   markInteractiveCameraDirty();
 }
 
@@ -307,54 +350,30 @@ function bindInteractivePreviewKeyboard() {
 }
 
 function interactiveOrbitCamera(dx, dy) {
-  if (!interactivePreviewCamera.ready) return;
-  const pos = interactivePreviewCamera.position;
-  const target = interactivePreviewCamera.target;
-  const offset = v3sub(pos, target);
-  const radius = Math.max(0.001, v3len(offset));
-  const yaw = -dx * 0.005;
-  const pitch = -dy * 0.005;
-  const basis = interactiveCameraBasis();
-  let rotated = rotateAroundAxis(offset, basis.up, yaw);
-  const axis = v3norm(v3cross(rotated, basis.up), basis.right);
-  rotated = rotateAroundAxis(rotated, axis, pitch);
-  const minY = -0.995 * radius;
-  const maxY = 0.995 * radius;
-  const y = clamp(v3dot(rotated, basis.up), minY, maxY);
-  const horiz = v3sub(rotated, v3scale(basis.up, v3dot(rotated, basis.up)));
-  const horizLen = Math.max(1e-6, v3len(horiz));
-  const targetHorizLen = Math.sqrt(Math.max(0, radius * radius - y * y));
-  const fixed = v3add(v3scale(v3scale(horiz, 1 / horizLen), targetHorizLen), v3scale(basis.up, y));
-  interactivePreviewCamera.position = v3add(target, fixed);
-  interactivePreviewCamera.up = basis.up;
-  markInteractiveCameraDirty();
+  interactiveLookCamera(dx, dy);
 }
 
 function interactivePanCamera(dx, dy) {
   if (!interactivePreviewCamera.ready) return;
-  const pos = interactivePreviewCamera.position;
-  const target = interactivePreviewCamera.target;
   const basis = interactiveCameraBasis();
-  const dist = Math.max(0.001, v3len(v3sub(target, pos)));
+  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
   const k = dist * 0.0018;
   const move = v3add(v3scale(basis.right, -dx * k), v3scale(basis.up, dy * k));
-  interactivePreviewCamera.position = v3add(pos, move);
-  interactivePreviewCamera.target = v3add(target, move);
-  interactivePreviewCamera.up = basis.up;
+  interactivePreviewCamera.pivot = v3add(
+    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
+    move,
+  );
+  applyInteractiveOrbitCameraState();
   markInteractiveCameraDirty();
 }
 
 function interactiveZoomCamera(deltaY) {
   if (!interactivePreviewCamera.ready) return;
-  const pos = interactivePreviewCamera.position;
-  const target = interactivePreviewCamera.target;
-  const basis = interactiveCameraBasis();
-  const dist = Math.max(0.001, v3len(v3sub(target, pos)));
+  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
   const amount = clamp(Math.exp(deltaY * 0.0015), 0.8, 1.25);
   const nextDist = clamp(dist * amount, 0.02, 1e6);
-  const nextPos = v3sub(target, v3scale(basis.forward, nextDist));
-  interactivePreviewCamera.position = nextPos;
-  interactivePreviewCamera.up = basis.up;
+  interactivePreviewCamera.orbitDistance = nextDist;
+  applyInteractiveOrbitCameraState();
   markInteractiveCameraDirty();
 }
 
@@ -788,6 +807,8 @@ async function setRenderMode(nextModeRaw, options) {
   if (interactivePreviewEnabled) {
     ensureInteractiveFlyTicker();
     markInteractiveInputActivity();
+    const interactiveTargetWidth = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+    interactivePreviewAdaptiveMovingWidth = nearestInteractiveMovingWidth(Math.round(interactiveTargetWidth * 0.1), interactiveTargetWidth);
     interactivePreviewHudMode = "LOOK";
     interactivePreviewHudQuality = "active";
     renderInteractivePreviewHud();
