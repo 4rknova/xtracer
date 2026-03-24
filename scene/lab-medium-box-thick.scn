@@ -126,15 +126,15 @@ medium = {
         type = heterogeneous_noise
         sigma_a = col3(0.020,0.028,0.040)
         sigma_s = col3(0.75,0.92,1.20)
-        g = 0.05
+        g = 0.02
         emission = col3(0.00,0.00,0.00)
-        density = 1.4
-        noise_scale = 10
-        noise_min = 0.0
-        noise_max = 1.0
-        octaves = 6
-        lacunarity = 10
-        gain = 0.52
+        density = 2
+        noise_scale = 4
+        noise_min = 0
+        noise_max = 1
+        octaves = 4
+        lacunarity = 50
+        gain = 0.1
         seed = 37
     }
 }
