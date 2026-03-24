@@ -150,6 +150,13 @@ void Scene::release()
 	purge(m_materials);
 	purge(m_surface);
 	purge(m_objects);
+    if (!m_media.empty()) {
+        for (auto it = m_media.begin(); it != m_media.end(); ++it) {
+            delete it->second;
+            it->second = 0;
+        }
+        m_media.clear();
+    }
 
     m_tlas_items.clear();
     m_tlas_nodes.clear();
@@ -176,6 +183,7 @@ int Scene::destroy_surface(HASH_UINT64 id)
 int Scene::destroy_object(HASH_UINT64 id)
 {
     mark_spatial_index_dirty();
+    clear_object_medium(id);
     return purge(m_objects, id);
 }
 
@@ -202,6 +210,35 @@ xtcore::asset::ICamera *Scene::get_camera(HASH_UINT64 id)
     if (ft != et) return ft->second;
 
 	return 0;
+}
+
+const xtcore::asset::medium::IMedium *Scene::get_object_medium(HASH_UINT64 object_id) const
+{
+    auto it = m_media.find(object_id);
+    if (it == m_media.end()) return 0;
+    return (*it).second;
+}
+
+bool Scene::has_object_medium(HASH_UINT64 object_id) const
+{
+    return m_media.find(object_id) != m_media.end();
+}
+
+void Scene::set_object_medium(HASH_UINT64 object_id, xtcore::asset::medium::IMedium *medium)
+{
+    clear_object_medium(object_id);
+    if (!medium) return;
+    m_media[object_id] = medium;
+}
+
+void Scene::clear_object_medium(HASH_UINT64 object_id)
+{
+    auto it = m_media.find(object_id);
+    if (it != m_media.end()) {
+        delete it->second;
+        it->second = 0;
+        m_media.erase(it);
+    }
 }
 
 nmath::scalar_t Scene::distance(nmath::Vector3f p, HASH_ID &object) const

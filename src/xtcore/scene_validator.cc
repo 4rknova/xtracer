@@ -7,6 +7,7 @@
 #include <set>
 
 #include <ncf/ncf.h>
+#include <ncf/util.h>
 
 namespace xtcore {
 namespace io {
@@ -17,6 +18,7 @@ namespace {
 const char *k_node_camera = "camera";
 const char *k_node_geometry = "geometry";
 const char *k_node_material = "material";
+const char *k_node_medium = "medium";
 const char *k_node_object = "object";
 const char *k_prop_default_camera = "default_camera";
 const char *k_prop_source = "source";
@@ -24,6 +26,11 @@ const char *k_prop_geometry = "geometry";
 const char *k_prop_material = "material";
 const char *k_prop_type = "type";
 const char *k_prop_op = "op";
+const char *k_prop_medium = "medium";
+const char *k_prop_sigma_a = "sigma_a";
+const char *k_prop_sigma_s = "sigma_s";
+const char *k_prop_g = "g";
+const char *k_prop_emission = "emission";
 const char *k_group_left = "left";
 const char *k_group_right = "right";
 
@@ -31,6 +38,12 @@ bool has_named_group(ncf::NCF *node, const std::string &name)
 {
     if (!node || name.empty()) return false;
     return node->query_group(name.c_str());
+}
+
+bool parse_col3_value(const char *text, float &r, float &g, float &b)
+{
+    if (!text) return false;
+    return std::sscanf(text, "col3(%f,%f,%f)", &r, &g, &b) == 3;
 }
 
 ncf::NCF *optional_group(ncf::NCF *node, const char *name)
@@ -144,6 +157,7 @@ int validate(const char *filename, std::vector<std::string> *errors)
     ncf::NCF *camera = optional_group(&root, k_node_camera);
     ncf::NCF *geometry = optional_group(&root, k_node_geometry);
     ncf::NCF *material = optional_group(&root, k_node_material);
+    ncf::NCF *mediums = optional_group(&root, k_node_medium);
     ncf::NCF *object = optional_group(&root, k_node_object);
 
     if (!camera) add_error(errors, "missing top-level 'camera' group");
@@ -158,6 +172,122 @@ int validate(const char *filename, std::vector<std::string> *errors)
         std::ostringstream ss;
         ss << "default_camera '" << default_camera << "' does not exist in 'camera'";
         add_error(errors, ss.str());
+    }
+
+    if (mediums) {
+        const size_t medium_count = mediums->count_groups();
+        for (size_t i = 0; i < medium_count; ++i) {
+            ncf::NCF *entry = mediums->get_group_by_index(i);
+            if (!entry) continue;
+            const char *name_c = entry->get_name();
+            const std::string name = (name_c && *name_c) ? name_c : "<unnamed>";
+
+            const std::string type = normalize_token(entry->get_property_by_name(k_prop_type));
+            const bool is_homogeneous = (type == "homogeneous");
+            const bool is_heterogeneous_noise = (type == "heterogeneous_noise");
+            if (!is_homogeneous && !is_heterogeneous_noise) {
+                std::ostringstream ss;
+                ss << "medium '" << name << "' type must be 'homogeneous' or 'heterogeneous_noise'";
+                add_error(errors, ss.str());
+            }
+
+            const char *sigma_a = entry->get_property_by_name(k_prop_sigma_a);
+            const char *sigma_s = entry->get_property_by_name(k_prop_sigma_s);
+            const char *emission = entry->get_property_by_name(k_prop_emission);
+            const char *g_raw = entry->get_property_by_name(k_prop_g);
+
+            float r = 0.0f, g = 0.0f, b = 0.0f;
+            if (sigma_a && *sigma_a) {
+                if (!parse_col3_value(sigma_a, r, g, b) || r < 0.0f || g < 0.0f || b < 0.0f) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid sigma_a";
+                    add_error(errors, ss.str());
+                }
+            }
+            if (sigma_s && *sigma_s) {
+                if (!parse_col3_value(sigma_s, r, g, b) || r < 0.0f || g < 0.0f || b < 0.0f) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid sigma_s";
+                    add_error(errors, ss.str());
+                }
+            }
+            if (emission && *emission) {
+                if (!parse_col3_value(emission, r, g, b) || r < 0.0f || g < 0.0f || b < 0.0f) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid emission";
+                    add_error(errors, ss.str());
+                }
+            }
+            if (g_raw && *g_raw) {
+                const double gv = ncf::util::to_double(g_raw);
+                if (gv < -1.0 || gv > 1.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid g (must be in [-1,1])";
+                    add_error(errors, ss.str());
+                }
+            }
+
+            if (is_heterogeneous_noise) {
+                const char *density_raw = entry->get_property_by_name("density");
+                const char *noise_scale_raw = entry->get_property_by_name("noise_scale");
+                const char *noise_min_raw = entry->get_property_by_name("noise_min");
+                const char *noise_max_raw = entry->get_property_by_name("noise_max");
+                const char *octaves_raw = entry->get_property_by_name("octaves");
+                const char *lacunarity_raw = entry->get_property_by_name("lacunarity");
+                const char *gain_raw = entry->get_property_by_name("gain");
+
+                if (entry->query_property("density") && density_raw && *density_raw && ncf::util::to_double(density_raw) < 0.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid density";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("noise_scale") && noise_scale_raw && *noise_scale_raw && ncf::util::to_double(noise_scale_raw) <= 0.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid noise_scale";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("noise_min") && noise_min_raw && *noise_min_raw && ncf::util::to_double(noise_min_raw) < 0.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid noise_min";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("noise_max") && noise_max_raw && *noise_max_raw && ncf::util::to_double(noise_max_raw) < 0.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid noise_max";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("noise_min") && entry->query_property("noise_max")
+                    && noise_min_raw && *noise_min_raw && noise_max_raw && *noise_max_raw
+                    && ncf::util::to_double(noise_min_raw) > ncf::util::to_double(noise_max_raw)) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' requires noise_min <= noise_max";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("octaves") && octaves_raw && *octaves_raw && ncf::util::to_int(octaves_raw) <= 0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid octaves";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("lacunarity") && lacunarity_raw && *lacunarity_raw && ncf::util::to_double(lacunarity_raw) < 1.0) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid lacunarity";
+                    add_error(errors, ss.str());
+                }
+                if (entry->query_property("gain") && gain_raw && *gain_raw) {
+                    const double gain = ncf::util::to_double(gain_raw);
+                    if (gain <= 0.0 || gain >= 1.0) {
+                        std::ostringstream ss;
+                        ss << "medium '" << name << "' has invalid gain (must be in (0,1))";
+                        add_error(errors, ss.str());
+                    }
+                }
+                if (entry->query_property("lacunarity") && (!lacunarity_raw || !*lacunarity_raw)) {
+                    std::ostringstream ss;
+                    ss << "medium '" << name << "' has invalid lacunarity";
+                    add_error(errors, ss.str());
+                }
+            }
+        }
     }
 
     if (object) {
@@ -203,6 +333,25 @@ int validate(const char *filename, std::vector<std::string> *errors)
                 std::ostringstream ss;
                 ss << "object '" << name << "' references missing material '" << mat_name << "'";
                 add_error(errors, ss.str());
+            }
+
+            if (entry->query_group(k_prop_medium)) {
+                std::ostringstream ss;
+                ss << "object '" << name << "' uses inline medium block; use top-level 'medium' with 'medium = <id>' reference";
+                add_error(errors, ss.str());
+            }
+
+            if (entry->query_property(k_prop_medium)) {
+                const char *medium_name = entry->get_property_by_name(k_prop_medium);
+                if (!medium_name || !*medium_name) {
+                    std::ostringstream ss;
+                    ss << "object '" << name << "' has empty medium reference";
+                    add_error(errors, ss.str());
+                } else if (!mediums || !has_named_group(mediums, medium_name)) {
+                    std::ostringstream ss;
+                    ss << "object '" << name << "' references missing medium '" << medium_name << "'";
+                    add_error(errors, ss.str());
+                }
             }
         }
     }

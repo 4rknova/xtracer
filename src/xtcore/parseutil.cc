@@ -1443,6 +1443,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = new (std::nothrow) xtcore::asset::material::BlinnPhong();
 	else if (!type.compare(XTPROTO_LTRL_EMISSIVE)  ) data = new (std::nothrow) xtcore::asset::material::Emissive();
 	else if (!type.compare(XTPROTO_LTRL_DIELECTRIC)) data = new (std::nothrow) xtcore::asset::material::Dielectric();
+    else if (!type.compare(XTPROTO_LTRL_BOUNDARY  )) data = new (std::nothrow) xtcore::asset::material::Boundary();
 	else {
 		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
 		delete data;
@@ -1450,33 +1451,38 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 	}
 
     if (data) {
-        ncf::NCF *gsamplers = p->get_group_by_name(XTPROTO_PROPERTIES)->get_group_by_name(XTPROTO_SAMPLERS);
-        ncf::NCF *gscalars  = p->get_group_by_name(XTPROTO_PROPERTIES)->get_group_by_name(XTPROTO_SCALARS);
+        ncf::NCF *gprops = p->get_group_by_name(XTPROTO_PROPERTIES);
+        ncf::NCF *gsamplers = gprops ? gprops->get_group_by_name(XTPROTO_SAMPLERS) : 0;
+        ncf::NCF *gscalars  = gprops ? gprops->get_group_by_name(XTPROTO_SCALARS) : 0;
 
-        for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
-            ncf::NCF *entry = gsamplers->get_group_by_index(i);
+        if (gsamplers) {
+            for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
+                ncf::NCF *entry = gsamplers->get_group_by_index(i);
 
-            xtcore::sampler::ISampler *sampler = 0;
-            std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
+                xtcore::sampler::ISampler *sampler = 0;
+                std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
-                 if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
-            else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
-            else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
-            else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
-            else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
-            else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
-            else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
-            else if (!type.compare(XTPROTO_FBM_MARBLE)) sampler = deserialize_fbm_marble(entry);
-            else if (!type.compare(XTPROTO_VORONOI_NORMAL)) sampler = deserialize_voronoi_normal(entry);
-            else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
+                     if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
+                else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
+                else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
+                else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
+                else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
+                else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
+                else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
+                else if (!type.compare(XTPROTO_FBM_MARBLE)) sampler = deserialize_fbm_marble(entry);
+                else if (!type.compare(XTPROTO_VORONOI_NORMAL)) sampler = deserialize_voronoi_normal(entry);
+                else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
 
-            data->add_sampler(entry->get_name(), sampler);
+                data->add_sampler(entry->get_name(), sampler);
+            }
         }
 
-        for (size_t i = 0; i < gscalars->count_properties(); ++i) {
-            std::string     name  = deserialize_cstr(gscalars->get_property_name_by_index(i));
-            nmath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
-            data->add_scalar(name.c_str(), value);
+        if (gscalars) {
+            for (size_t i = 0; i < gscalars->count_properties(); ++i) {
+                std::string     name  = deserialize_cstr(gscalars->get_property_name_by_index(i));
+                nmath::scalar_t value = deserialize_numf(gscalars->get_property_by_index(i));
+                data->add_scalar(name.c_str(), value);
+            }
         }
     }
 
@@ -1573,6 +1579,92 @@ int create_geometry(Scene *scene, ncf::NCF *p)
     return 0;
 }
 
+int create_medium(std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> &media, ncf::NCF *p)
+{
+    if (!p) return -1;
+
+    const char *name = p->get_name();
+    HASH_UINT64 id = xtcore::pool::str::add(name);
+
+    const std::string mtype = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
+    if (mtype != XTPROTO_LTRL_HOMOGENEOUS && mtype != XTPROTO_LTRL_HETEROGENEOUS_NOISE) {
+        Log::handle().post_error("Unsupported medium type '%s' on medium %s", mtype.c_str(), name);
+        return 1;
+    }
+
+    const nimg::ColorRGBf sigma_a = deserialize_col3(p, XTPROTO_PROP_SIGMA_A, nimg::ColorRGBf(0.0f, 0.0f, 0.0f));
+    const nimg::ColorRGBf sigma_s = deserialize_col3(p, XTPROTO_PROP_SIGMA_S, nimg::ColorRGBf(0.0f, 0.0f, 0.0f));
+    const nimg::ColorRGBf emission = deserialize_col3(p, XTPROTO_PROP_EMISSION, nimg::ColorRGBf(0.0f, 0.0f, 0.0f));
+    const nmath::scalar_t g = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_G), 0.0f);
+
+    const bool bad_sigma =
+           sigma_a.r() < 0.0f || sigma_a.g() < 0.0f || sigma_a.b() < 0.0f
+        || sigma_s.r() < 0.0f || sigma_s.g() < 0.0f || sigma_s.b() < 0.0f;
+    const bool bad_emission = emission.r() < 0.0f || emission.g() < 0.0f || emission.b() < 0.0f;
+    if (bad_sigma || bad_emission || g < -1.0f || g > 1.0f) {
+        Log::handle().post_error("Invalid medium parameters on medium %s", name);
+        return 1;
+    }
+
+    auto it = media.find(id);
+    if (it != media.end()) {
+        delete it->second;
+        it->second = 0;
+        media.erase(it);
+    }
+
+    xtcore::asset::medium::IMedium *medium = 0;
+    if (mtype == XTPROTO_LTRL_HOMOGENEOUS) {
+        medium = new (std::nothrow) xtcore::asset::medium::Homogeneous(sigma_a, sigma_s, emission, g);
+    } else {
+        const nmath::scalar_t density = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_DENSITY), 1.0f);
+        const nmath::scalar_t noise_scale = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_NOISE_SCALE), 1.0f);
+        const nmath::scalar_t noise_min = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_NOISE_MIN), 0.25f);
+        const nmath::scalar_t noise_max = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_NOISE_MAX), 1.0f);
+        const int octaves = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_OCTAVES), 4);
+        const nmath::scalar_t lacunarity = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_LACUNARITY), 2.0f);
+        const nmath::scalar_t gain = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_GAIN), 0.5f);
+        const int seed = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), 1337);
+
+        const bool bad_noise =
+               density < 0.0f
+            || noise_scale <= 0.0f
+            || noise_min < 0.0f
+            || noise_max < 0.0f
+            || octaves <= 0
+            || lacunarity < 1.0f
+            || gain <= 0.0f
+            || gain >= 1.0f;
+        if (bad_noise) {
+            Log::handle().post_error("Invalid heterogeneous noise parameters on medium %s", name);
+            return 1;
+        }
+
+        medium = new (std::nothrow) xtcore::asset::medium::HeterogeneousNoise(
+              sigma_a
+            , sigma_s
+            , emission
+            , g
+            , density
+            , noise_scale
+            , noise_min
+            , noise_max
+            , octaves
+            , lacunarity
+            , gain
+            , seed
+        );
+    }
+
+    media[id] = medium;
+    if (!media[id]) {
+        Log::handle().post_error("Failed to allocate medium %s", name);
+        return 1;
+    }
+
+    return 0;
+}
+
 xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture, float value[3], bool white_fallback_on_missing)
 {
      xtcore::sampler::ISampler *sampler = 0;
@@ -1610,7 +1702,10 @@ xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture,
      return sampler;
 }
 
-int create_object(Scene *scene, const char *filepath, const char *prefix)
+int create_object(Scene *scene,
+                  const char *filepath,
+                  const char *prefix,
+                  const xtcore::asset::medium::IMedium *medium_proto)
 {
     if (!scene) return -1;
 
@@ -1736,6 +1831,13 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
             obj->material = matids[(size_t)material_index];
         }
         scene->m_objects[id] = obj;
+        if (medium_proto) {
+            scene->set_object_medium(id, medium_proto->clone());
+            if (!scene->has_object_medium(id)) {
+                Log::handle().post_error("Failed to bind medium to imported object %s", name.c_str());
+                return 1;
+            }
+        }
         Log::handle().post_message("creating object %s : %s"
                                  , name.c_str()
                                  , xtcore::pool::str::get(obj->material));
@@ -1746,7 +1848,14 @@ int create_object(Scene *scene, const char *filepath, const char *prefix)
     return 0;
 }
 
-int create_object(Scene *scene, ncf::NCF *p)
+int create_object(Scene *scene, const char *filepath, const char *prefix)
+{
+    return create_object(scene, filepath, prefix, 0);
+}
+
+int create_object(Scene *scene,
+                  ncf::NCF *p,
+                  const std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> &media_defs)
 {
     if (!scene) return -1;
 
@@ -1756,8 +1865,36 @@ int create_object(Scene *scene, ncf::NCF *p)
     if (!data) return 1;
     scene->destroy_object(id);
     scene->m_objects[id] = data;
+
+    scene->clear_object_medium(id);
+    if (p->query_group(XTPROTO_PROP_MEDIUM)) {
+        Log::handle().post_error("Object %s uses inline medium block; only top-level medium assets are supported", name);
+        return 1;
+    }
+
+    if (p->query_property(XTPROTO_PROP_MEDIUM)) {
+        const std::string medium_name = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_MEDIUM));
+        const HASH_UINT64 medium_id = xtcore::pool::str::add(medium_name.c_str());
+        auto it = media_defs.find(medium_id);
+        if (it == media_defs.end() || !it->second) {
+            Log::handle().post_error("Object %s references unknown medium '%s'", name, medium_name.c_str());
+            return 1;
+        }
+        scene->set_object_medium(id, it->second->clone());
+        if (!scene->has_object_medium(id)) {
+            Log::handle().post_error("Failed to allocate medium for object %s", name);
+            return 1;
+        }
+    }
+
     scene->mark_spatial_index_dirty();
     return 0;
+}
+
+int create_object(Scene *scene, ncf::NCF *p)
+{
+    static const std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> k_empty_media_defs;
+    return create_object(scene, p, k_empty_media_defs);
 }
 
 int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers, const char *variant)
@@ -1829,6 +1966,23 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(env_data);
     else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (env_data);
 
+    std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> medium_defs;
+    ncf::NCF *medium_root = root.get_group_by_name(XTPROTO_NODE_MEDIUM);
+    if (medium_root) {
+        const size_t medium_count = medium_root->count_groups();
+        for (size_t i = 0; i < medium_count; ++i) {
+            ncf::NCF *mnode = medium_root->get_group_by_index(i);
+            Log::handle().post_message("Creating medium / %s..", mnode->get_name());
+            if (create_medium(medium_defs, mnode)) {
+                Log::handle().post_error("Failed to load medium: %s", mnode->get_name());
+                for (auto it = medium_defs.begin(); it != medium_defs.end(); ++it) delete it->second;
+                medium_defs.clear();
+                scene->release();
+                return 1;
+            }
+        }
+    }
+
 	std::list<std::string> sections;
 	sections.push_back(XTPROTO_NODE_CAMERA);
 	sections.push_back(XTPROTO_NODE_GEOMETRY);
@@ -1874,16 +2028,39 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 
                         std::string flpath = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_SOURCE));
                         std::string prefix = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_PREFIX));
+                        const xtcore::asset::medium::IMedium *medium_proto = 0;
+                        if (lnode->query_group(XTPROTO_PROP_MEDIUM)) {
+                            Log::handle().post_error("Object %s uses inline medium block; only top-level medium assets are supported", lnode->get_name());
+                            for (auto it = medium_defs.begin(); it != medium_defs.end(); ++it) delete it->second;
+                            medium_defs.clear();
+                            scene->release();
+                            return 1;
+                        }
+                        if (lnode->query_property(XTPROTO_PROP_MEDIUM)) {
+                            const std::string medium_name = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_MEDIUM));
+                            const HASH_UINT64 mid = xtcore::pool::str::add(medium_name.c_str());
+                            auto mit = medium_defs.find(mid);
+                            if (mit == medium_defs.end() || !mit->second) {
+                                Log::handle().post_error("Object %s references unknown medium '%s'", lnode->get_name(), medium_name.c_str());
+                                for (auto it = medium_defs.begin(); it != medium_defs.end(); ++it) delete it->second;
+                                medium_defs.clear();
+                                scene->release();
+                                return 1;
+                            }
+                            medium_proto = mit->second;
+                        }
 
                         base.append(flpath);
-                        res = create_object(scene, base.c_str(), prefix.c_str());
+                        res = create_object(scene, base.c_str(), prefix.c_str(), medium_proto);
                     }
-                    else res = create_object(scene, lnode);
+                    else res = create_object(scene, lnode, medium_defs);
                 }
 
                 // Check for parsing errors
                 if (res) {
                     Log::handle().post_error("Failed to load: %s", lnode->get_name());
+                    for (auto mit = medium_defs.begin(); mit != medium_defs.end(); ++mit) delete mit->second;
+                    medium_defs.clear();
                     scene->release();
                     return 1;
                 }
@@ -1904,6 +2081,8 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     }
 
     scene->rebuild_spatial_index();
+    for (auto it = medium_defs.begin(); it != medium_defs.end(); ++it) delete it->second;
+    medium_defs.clear();
 	Log::handle().post_message("Scene loaded.");
     auto t_load_1 = std::chrono::steady_clock::now();
     const double load_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_load_1 - t_load_0).count();

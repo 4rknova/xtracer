@@ -80,5 +80,6 @@ class IMaterial
 #include "material/blinnphong.h"
 #include "material/emissive.h"
 #include "material/dielectric.h"
+#include "material/boundary.h"
 
 #endif /* XTCORE_MATERIAL_H_INCLUDED */

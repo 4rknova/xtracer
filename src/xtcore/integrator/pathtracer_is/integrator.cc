@@ -11,6 +11,8 @@
 #include <xtcore/math/sphere.h>
 #include <xtcore/math/triangle.h>
 #include <xtcore/mesh.h>
+#include <xtcore/material/boundary.h>
+#include <xtcore/medium_util.h>
 
 #include "integrator.h"
 
@@ -183,15 +185,26 @@ inline bool visible_to_light(xtcore::render::context_t *ctx, const nmath::Vector
     const nmath::scalar_t dist = v.length();
     if (dist <= (nmath::scalar_t)EPSILON) return false;
 
+    const nmath::Vector3f dir = v / dist;
     xtcore::Ray shadow_ray;
-    shadow_ray.origin = origin + v.normalized() * EPSILON;
-    shadow_ray.direction = v / dist;
+    shadow_ray.origin = origin + dir * EPSILON;
+    shadow_ray.direction = dir;
 
-    xtcore::hit_record_t occ;
-    if (!ctx->scene.intersection(shadow_ray, occ)) return false;
-    if (occ.id_object != light_object_id) return false;
+    for (size_t step = 0; step < 16; ++step) {
+        xtcore::hit_record_t occ;
+        if (!ctx->scene.intersection(shadow_ray, occ)) return false;
 
-    return occ.t >= dist - (nmath::scalar_t)1e-4;
+        if (occ.t >= dist - (nmath::scalar_t)1e-4) return occ.id_object == light_object_id;
+        if (occ.id_object == light_object_id) return true;
+
+        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(occ.id_object);
+        if (!mat) return false;
+        if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
+
+        shadow_ray.origin = occ.point + dir * EPSILON;
+    }
+
+    return false;
 }
 
 inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
@@ -223,6 +236,73 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit_record;
         bool hit = ctx->scene.intersection(ray, hit_record);
+        const nmath::scalar_t t_surface = hit ? hit_record.t : INFINITY;
+
+        HASH_ID medium_object_id = HASH_ID_INVALID;
+        nmath::scalar_t t_exit = INFINITY;
+        const xtcore::asset::medium::IMedium *medium = xtcore::medium::find_containing_medium(ctx->scene, ray.origin, medium_object_id, t_exit, ray.direction);
+        if (medium) {
+            const nmath::scalar_t segment_dist = std::min(t_surface, t_exit);
+            const bool exits_before_surface = t_exit <= t_surface + (nmath::scalar_t)EPSILON;
+
+            nmath::scalar_t event_dist = segment_dist;
+            const bool scatter = xtcore::medium::sample_distance(*medium, ray.origin, ray.direction, segment_dist, event_dist);
+            const nimg::ColorRGBf tr = xtcore::medium::transmittance(*medium, ray.origin, ray.direction, event_dist);
+            const nmath::Vector3f event_pos = ray.origin + ray.direction * event_dist;
+            radiance += throughput * xtcore::medium::emission(*medium, event_pos) * event_dist;
+            throughput *= tr;
+
+            if (scatter) {
+                throughput *= xtcore::medium::scattering_weight(*medium, event_pos);
+
+                if (!lights.empty()) {
+                    const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
+                    size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)lights.size());
+                    if (light_idx >= lights.size()) light_idx = lights.size() - 1;
+
+                    const area_light_t &light = lights[light_idx];
+                    nmath::Vector3f lp, ln, ltc;
+                    nmath::scalar_t p_area = 0.0;
+                    if (sample_light_point(light, lp, ln, ltc, p_area)) {
+                        const nmath::Vector3f scatter_pos = event_pos;
+                        const nmath::Vector3f to_light = lp - scatter_pos;
+                        const nmath::scalar_t dist2 = to_light.length_squared();
+                        if (dist2 > (nmath::scalar_t)EPSILON) {
+                            const nmath::Vector3f wi = to_light / nmath_sqrt(dist2);
+                            const nmath::scalar_t cos_l = std::max((nmath::scalar_t)0.0, nmath::dot(ln, -wi));
+                            if (cos_l > (nmath::scalar_t)EPSILON &&
+                                visible_to_light(ctx, scatter_pos + wi * EPSILON, lp, light.object_id)) {
+                                const nmath::scalar_t p_light = p_select * p_area * dist2 / cos_l;
+                                if (p_light > (nmath::scalar_t)EPSILON) {
+                                    const nmath::scalar_t phase = xtcore::medium::phase_hg(nmath::dot(-ray.direction, wi), medium->asymmetry());
+                                    const nimg::ColorRGBf le = light.material->get_sample(MAT_SAMPLER_EMISSIVE, ltc);
+                                    const nmath::scalar_t tr_dist = std::min(nmath_sqrt(dist2), std::max((nmath::scalar_t)0.0, t_exit - event_dist));
+                                    const nimg::ColorRGBf tr_light = xtcore::medium::transmittance(*medium, scatter_pos, wi, tr_dist);
+                                    radiance += throughput * tr_light * le * (phase / p_light);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const nmath::Vector3f scatter_pos = event_pos;
+                const nmath::Vector3f new_dir = xtcore::medium::sample_hg_direction(ray.direction, medium->asymmetry());
+                ray.origin = scatter_pos + new_dir * EPSILON;
+                ray.direction = new_dir;
+                prev_was_diffuse_sample = false;
+                prev_bsdf_pdf = 0.0;
+                prev_point = scatter_pos;
+                continue;
+            }
+
+            if (exits_before_surface) {
+                ray.origin = ray.origin + ray.direction * (segment_dist + (nmath::scalar_t)EPSILON);
+                prev_was_diffuse_sample = false;
+                prev_bsdf_pdf = 0.0;
+                continue;
+            }
+        }
+
         if (!hit) {
             radiance += throughput * ctx->scene.sample_environment(ray.direction);
             break;

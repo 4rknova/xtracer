@@ -4,6 +4,7 @@
 #include <vector>
 #include <list>
 #include <cstddef>
+#include <map>
 
 #include <nmath/vector.h>
 
@@ -13,6 +14,7 @@
 #include "strpool.h"
 #include "camera.h"
 #include "material.h"
+#include "medium.h"
 #include "sampler/sampler_tex.h"
 #include "sampler.h"
 #include "object.h"
@@ -26,6 +28,7 @@ typedef std::map<HASH_UINT64, xtcore::asset::ICamera   *> CamCollection;
 typedef std::map<HASH_UINT64, xtcore::asset::IMaterial *> MatCollection;
 typedef std::map<HASH_UINT64, xtcore::asset::ISurface  *> GeoCollection;
 typedef std::map<HASH_UINT64, xtcore::asset::Object    *> ObjCollection;
+typedef std::map<HASH_UINT64, xtcore::asset::medium::IMedium *> MediumCollection;
 
 struct light_t
 {
@@ -67,6 +70,10 @@ class Scene
 	void ambient(const ColorRGBf &ambient);
 
 	xtcore::asset::ICamera *get_camera(HASH_UINT64 id);
+    const xtcore::asset::medium::IMedium *get_object_medium(HASH_UINT64 object_id) const;
+    bool has_object_medium(HASH_UINT64 object_id) const;
+    void set_object_medium(HASH_UINT64 object_id, xtcore::asset::medium::IMedium *medium);
+    void clear_object_medium(HASH_UINT64 object_id);
 
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
 	bool intersection(const Ray &ray, hit_record_t &hit_record);
@@ -83,6 +90,7 @@ class Scene
 	MatCollection m_materials;
 	GeoCollection m_surface;
 	ObjCollection m_objects;
+    MediumCollection m_media;
 
 	// Ambient
 	nimg::ColorRGBf m_ambient;	// intensity
