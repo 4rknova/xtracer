@@ -1,0 +1,196 @@
+title = Box Fog Density Variants
+description = Box-bounded fog with low/medium/high density variants, floor contact, and an overhead light.
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.72,0.84,1.00)
+        b = col3(0.05,0.10,0.26)
+    }
+}
+
+camera = {
+    hero = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(0.0,2.2,-8.0)
+        target   = vec3(0.0,1.2,0.0)
+        up       = vec3(0,1,0)
+    }
+	interactive_hero = {
+		type = thin-lens
+		position = vec3(-0.104437, 2.540782, -4.315834)
+		target = vec3(-0.104437, 1.258736, 0.346152)
+		up = vec3(0, 0.964205, 0.265156)
+		fov = 45
+		flength = 1.0
+		aperture = 0.0
+	}
+}
+
+geometry = {
+    medium_box = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(3.0,1.0,3.0)
+            translation = vec3(0.0,1.1,0.0)
+        }
+    }
+
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(16.0,1.0,16.0)
+            translation = vec3(0.0,0.0,0.0)
+        }
+    }
+
+    top_light = {
+        type     = sphere
+        position = vec3(0.0,4.2,0.0)
+        radius   = 0.35
+    }
+
+    center_sphere = {
+        type     = sphere
+        position = vec3(0.0,1.0,0.0)
+        radius   = 0.55
+    }
+}
+
+material = {
+    medium_boundary = {
+        type = boundary
+    }
+
+    floor_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(1,1,1) }
+            }
+        }
+    }
+
+    light_emissive = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(11.0,10.0,9.0) }
+            }
+        }
+    }
+
+    center_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.72,0.74,0.78) }
+            }
+        }
+    }
+}
+
+medium = {
+    fog_low = {
+        type = homogeneous
+        sigma_a = col3(0.003,0.004,0.006)
+        sigma_s = col3(0.08,0.10,0.14)
+        g = 0.02
+        emission = col3(0.00,0.00,0.00)
+    }
+
+    fog_medium = {
+        type = homogeneous
+        sigma_a = col3(0.014,0.018,0.026)
+        sigma_s = col3(0.50,0.62,0.82)
+        g = 0.02
+        emission = col3(0.00,0.00,0.00)
+    }
+
+    fog_high = {
+        type = homogeneous
+        sigma_a = col3(0.045,0.060,0.085)
+        sigma_s = col3(1.90,2.30,3.10)
+        g = 0.02
+        emission = col3(0.00,0.00,0.00)
+    }
+
+    fog_noise = {
+        type = heterogeneous_noise
+        sigma_a = col3(0.020,0.028,0.040)
+        sigma_s = col3(0.75,0.92,1.20)
+        g = 0.05
+        emission = col3(0.00,0.00,0.00)
+        density = 1.4
+        noise_scale = 10
+        noise_min = 0.0
+        noise_max = 1.0
+        octaves = 6
+        lacunarity = 10
+        gain = 0.52
+        seed = 37
+    }
+}
+
+object = {
+    fog_box = {
+        geometry = medium_box
+        material = medium_boundary
+        medium = fog_medium
+    }
+
+    floor = { geometry = floor, material = floor_matte }
+    top_light = { geometry = top_light, material = light_emissive }
+    center = { geometry = center_sphere, material = center_matte }
+}
+
+variants = {
+    hide_base = true
+
+    low = {
+        name = Low Fog
+        description = Light haze with long visibility through the volume.
+        set = {
+            object = {
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_low }
+            }
+        }
+    }
+
+    medium = {
+        name = Medium Fog
+        description = Balanced fog density for visible shafts and soft depth loss.
+        set = {
+            object = {
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_medium }
+            }
+        }
+    }
+
+    high = {
+        name = High Fog
+        description = Heavy fog with strong extinction and tighter light bloom.
+        set = {
+            object = {
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_high }
+            }
+        }
+    }
+
+    noise = {
+        name = Noise Fog
+        description = Procedural heterogeneous fog with patchy density.
+        set = {
+            object = {
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_noise }
+            }
+        }
+    }
+}

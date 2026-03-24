@@ -32,7 +32,7 @@ cmake --build build/intermediate/build -j
 Run web server:
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
+./build/intermediate/build/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -40,13 +40,13 @@ Open: `http://127.0.0.1:8080`
 Run CLI:
 
 ```bash
-./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
 With scene variant:
 
 ```bash
-./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -variant night -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -variant night -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
 ## Repository Layout
@@ -213,6 +213,53 @@ Supported generator types:
 | `blinn_phong` |
 | `emissive` |
 | `dielectric` |
+| `boundary` |
+
+`boundary` is an interface-only material. It does not add surface shading and forwards rays through the hit point unchanged (useful for object-local medium boundaries).
+
+#### Object-Local Participating Media (v1)
+
+Participating media are defined in a top-level `medium` group and referenced by object.
+
+If an object has no `medium` reference, the renderer uses vacuum behavior.
+
+Current v1 constraints:
+- medium types: `homogeneous`, `heterogeneous_noise`
+- intended boundary material: `boundary`
+- currently applied in path tracers (`pathtracer`, `pathtracer_mis`, `pathtracer_mis_full`)
+- inline `object.medium = { ... }` blocks are not supported
+
+Example:
+
+```text
+medium = {
+  fog_main = {
+    type = homogeneous
+    sigma_a = col3(0.06,0.04,0.03)
+    sigma_s = col3(0.24,0.20,0.14)
+    g = 0.15
+    emission = col3(0.00,0.00,0.00)
+  }
+}
+
+object = {
+  fog_shell = {
+    geometry = fog_volume
+    material = boundary_shell
+    medium = fog_main
+  }
+}
+```
+
+`heterogeneous_noise` supports these extra parameters (all optional):
+- `density` (default `1.0`)
+- `noise_scale` (default `1.0`)
+- `noise_min` (default `0.25`)
+- `noise_max` (default `1.0`)
+- `octaves` (default `4`)
+- `lacunarity` (default `2.0`)
+- `gain` (default `0.5`)
+- `seed` (default `1337`)
 
 #### Sampler Types
 
@@ -337,7 +384,7 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/scenes/{scene}/cameras` | List cameras in scene (optional `variant=<name>`; includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
 | GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (optional `variant=<name>`; returns `202` while async scene load is in progress) |
-| GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/cameras) (optional `variant=<name>`; returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/media/cameras; object entries may include `medium`) (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
@@ -391,7 +438,7 @@ cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON
 cmake --build build/intermediate/build -j
 ```
 
-> Note: native binaries are configured to output under repo-local `build/debug` (Debug) or `build/release` (non-Debug).
+> Note: native binaries are configured to output under the chosen CMake build directory (for example `build/intermediate/build/`).
 
 ### CMake Options
 
@@ -402,24 +449,26 @@ cmake --build build/intermediate/build -j
 | `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
 | `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
 | `XTRACER_ENABLE_VIZ` | `OFF` | Build OpenGL sampling visualization tool (`xtracer_viz_sampling`) |
-| `XTRACER_ENABLE_NMATH_SIMD` | `OFF` | Enable x86 SSE2 SIMD fast-paths for `nmath::Vector3f` in double-precision builds |
+| `XTRACER_ENABLE_NMATH_SIMD` | `ON` | Enable x86 SSE2 SIMD fast-paths for `nmath` double-precision vector and matrix operations |
+| `XTRACER_ENABLE_NMATH_SIMD_AVX` | `ON` | Use AVX path for `nmath` SIMD (`XTRACER_ENABLE_NMATH_SIMD` must be `ON`) |
 
 Notes:
 - `XTRACER_ENABLE_NMATH_SIMD` currently targets native x86/x86_64 builds and is ignored for Emscripten.
 - SIMD paths are used only when `nmath` is built in double precision (default configuration); scalar fallback remains available.
+- `XTRACER_ENABLE_NMATH_SIMD_AVX` enables AVX codegen and runtime AVX instructions for supported hosts.
 
 ## Run
 
 ### CLI
 
 ```bash
-./build/release/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
 ```
 
 ### Web Server
 
 ```bash
-./build/release/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
+./build/intermediate/build/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -462,7 +511,7 @@ docker compose down
 ### Math Microbenchmark
 
 ```bash
-./build/release/bench_nmath
+./build/intermediate/build/bench_nmath
 ```
 
 ### Sampling Visualization Tool
@@ -477,7 +526,7 @@ cmake --build build/intermediate/build-viz -j --target xtracer_viz_sampling
 Run:
 
 ```bash
-./build/release/xtracer_viz_sampling
+./build/intermediate/build-viz/xtracer_viz_sampling
 ```
 
 ### WASM Runtime Build
@@ -494,7 +543,7 @@ Expected output:
 
 - `src/frontend/web-client/xtracer_wasm.js`
 - `src/frontend/web-client/xtracer_wasm.wasm`
-- copied self-contained scenes from `scene/` into build output `build/release/scenes/` (or `build/debug/scenes/` for Debug-native builds)
+- copied self-contained scenes from `scene/` into build output `<build-dir>/scenes/` (for example `build/intermediate/build-wasm/scenes/`)
 
 Optional static packaging:
 
@@ -506,25 +555,37 @@ Optional static packaging:
 
 | Test Name (CTest) | Binary |
 |---|---|
-| `colorspace::roundtrip` | `build/debug/test/test_nimg_colorspace` or `build/release/test/test_nimg_colorspace` |
-| `colorspace::vectors` | `build/debug/test/test_nimg_colorspace_vectors` or `build/release/test/test_nimg_colorspace_vectors` |
-| `xtcore::tile` | `build/debug/test/test_xtcore_tile` or `build/release/test/test_xtcore_tile` |
-| `xtcore::context` | `build/debug/test/test_xtcore_context` or `build/release/test/test_xtcore_context` |
-| `xtcore::sphere` | `build/debug/test/test_xtcore_sphere` or `build/release/test/test_xtcore_sphere` |
-| `xtcore::triangle` | `build/debug/test/test_xtcore_triangle` or `build/release/test/test_xtcore_triangle` |
-| `xtcore::white_furnace` | `build/debug/test/test_xtcore_white_furnace` or `build/release/test/test_xtcore_white_furnace` |
-| `xtcore::raytracer_emissive` | `build/debug/test/test_xtcore_raytracer_emissive` or `build/release/test/test_xtcore_raytracer_emissive` |
-| `cli::setup_parse` | `build/debug/test/test_xtracer_cli_setup` or `build/release/test/test_xtracer_cli_setup` |
-| `ncf::inline_and_utf8` | `build/debug/test/test_ncf_parser` or `build/release/test/test_ncf_parser` |
-| `scene::validate_all` | `build/debug/test/test_xtcore_scene_validator` or `build/release/test/test_xtcore_scene_validator` |
-| `nmath::sampling` | `build/debug/test/test_nmath_sampling` or `build/release/test/test_nmath_sampling` |
-| `cli::stencil_smoke` | `build/debug/xtracer_cli` or `build/release/xtracer_cli` smoke render |
+| `colorspace::roundtrip` | `<build-dir>/test/test_nimg_colorspace` |
+| `colorspace::vectors` | `<build-dir>/test/test_nimg_colorspace_vectors` |
+| `xtcore::tile` | `<build-dir>/test/test_xtcore_tile` |
+| `xtcore::context` | `<build-dir>/test/test_xtcore_context` |
+| `xtcore::sphere` | `<build-dir>/test/test_xtcore_sphere` |
+| `xtcore::triangle` | `<build-dir>/test/test_xtcore_triangle` |
+| `xtcore::boundary_material` | `<build-dir>/test/test_xtcore_boundary_material` |
+| `xtcore::white_furnace` | `<build-dir>/test/test_xtcore_white_furnace` |
+| `xtcore::raytracer_emissive` | `<build-dir>/test/test_xtcore_raytracer_emissive` |
+| `xtcore::object_medium_parse` | `<build-dir>/test/test_xtcore_object_medium_parse` |
+| `cli::setup_parse` | `<build-dir>/test/test_xtracer_cli_setup` |
+| `ncf::inline_and_utf8` | `<build-dir>/test/test_ncf_parser` |
+| `scene::validate_all` | `<build-dir>/test/test_xtcore_scene_validator` |
+| `nmath::sampling` | `<build-dir>/test/test_nmath_sampling` |
+| `cli::stencil_smoke` | `<build-dir>/xtracer_cli` smoke render |
 
 Run all tests:
 
 ```bash
 ctest --test-dir build/intermediate/build --output-on-failure
 ```
+
+Convenience one-liners:
+
+```bash
+make check
+make perf
+```
+
+- `make check`: configures/builds `build/intermediate/build` and runs all tests.
+- `make perf`: configures/builds `build/perf-release` and runs `nmath::simd_perf_compare` via `nmath_perf_check`.
 
 ## Third-Party Dependencies
 
