@@ -30,6 +30,7 @@
 #include <xtcore/math/fractal.h>
 #include <xtcore/math/csg.h>
 #include <xtcore/material.h>
+#include <xtcore/medium/homogeneous.h>
 #include <xtcore/mesh.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/resolution_preset.h>
@@ -830,6 +831,14 @@ const char *sampler_type_name(const xtcore::sampler::ISampler *sampler)
     return "sampler";
 }
 
+const char *medium_type_name(const xtcore::asset::medium::IMedium *medium)
+{
+    if (!medium) return "medium";
+    if (dynamic_cast<const xtcore::asset::medium::Homogeneous *>(medium)) return "homogeneous";
+    if (dynamic_cast<const xtcore::asset::medium::HeterogeneousNoise *>(medium)) return "heterogeneous_noise";
+    return "medium";
+}
+
 std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, const xtcore::Scene &scene)
 {
     std::ostringstream ss;
@@ -988,12 +997,41 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         const std::string surface_name = surface_name_c ? std::string(surface_name_c) : std::string();
         const char *material_name_c = xtcore::pool::str::get(obj->material);
         const std::string material_name = material_name_c ? std::string(material_name_c) : std::string();
+        const xtcore::asset::medium::IMedium *medium = scene.get_object_medium((*it).first);
+        const std::string medium_name = medium ? obj_name : std::string();
         if (!first) ss << ",";
         first = false;
         ss << "{"
            << "\"id\":\"" << json_escape(obj_name) << "\","
            << "\"surface\":\"" << json_escape(surface_name) << "\","
-           << "\"material\":\"" << json_escape(material_name) << "\""
+           << "\"material\":\"" << json_escape(material_name) << "\","
+           << "\"medium\":\"" << json_escape(medium_name) << "\""
+           << "}";
+    }
+    ss << "],";
+
+    ss << "\"media\":[";
+    first = true;
+    for (auto it = scene.m_objects.begin(); it != scene.m_objects.end(); ++it) {
+        const xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+        const char *obj_name_c = xtcore::pool::str::get((*it).first);
+        const std::string obj_name = obj_name_c ? std::string(obj_name_c) : std::string();
+        if (obj_name.empty()) continue;
+        const xtcore::asset::medium::IMedium *medium = scene.get_object_medium((*it).first);
+        if (!medium) continue;
+        if (!first) ss << ",";
+        first = false;
+        const nimg::ColorRGBf sigma_a = medium->sigma_a();
+        const nimg::ColorRGBf sigma_s = medium->sigma_s();
+        const nimg::ColorRGBf emission = medium->emission();
+        ss << "{"
+           << "\"id\":\"" << json_escape(obj_name) << "\","
+           << "\"type\":\"" << medium_type_name(medium) << "\","
+           << "\"sigma_a\":[" << sigma_a.r() << "," << sigma_a.g() << "," << sigma_a.b() << "],"
+           << "\"sigma_s\":[" << sigma_s.r() << "," << sigma_s.g() << "," << sigma_s.b() << "],"
+           << "\"emission\":[" << emission.r() << "," << emission.g() << "," << emission.b() << "],"
+           << "\"g\":" << medium->asymmetry()
            << "}";
     }
     ss << "]";

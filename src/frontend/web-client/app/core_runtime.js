@@ -747,13 +747,14 @@ function createServerApi() {
       return { meshes: (data && data.meshes) || {} };
     },
     async getSceneRuntimeGraph(scene, variant) {
-      if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [] };
+      if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [], media: [] };
       const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/runtime_graph`, variant));
       return {
         cameras: Array.isArray(data && data.cameras) ? data.cameras : [],
         objects: Array.isArray(data && data.objects) ? data.objects : [],
         surfaces: Array.isArray(data && data.surfaces) ? data.surfaces : [],
         materials: Array.isArray(data && data.materials) ? data.materials : [],
+        media: Array.isArray(data && data.media) ? data.media : [],
       };
     },
     async getSceneResolvedCamera(scene, variant, camera) {

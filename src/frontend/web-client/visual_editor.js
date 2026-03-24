@@ -23,6 +23,59 @@
     return t === "thin-lens" || t === "perspective";
   }
 
+  function clamp01(v) {
+    return clamp(Number(v) || 0, 0, 1);
+  }
+
+  function colorFromArray3(arr) {
+    if (!Array.isArray(arr) || arr.length < 3) return new THREE.Color(0, 0, 0);
+    return new THREE.Color(clamp01(arr[0]), clamp01(arr[1]), clamp01(arr[2]));
+  }
+
+  function buildMediumVisualParams(mediumDef) {
+    var sigmaA = colorFromArray3(mediumDef && mediumDef.sigmaA);
+    var sigmaS = colorFromArray3(mediumDef && mediumDef.sigmaS);
+    var emission = colorFromArray3(mediumDef && mediumDef.emission);
+    var sigmaT = sigmaA.clone().add(sigmaS);
+    var color = sigmaS.clone().multiplyScalar(1.35).add(emission.clone().multiplyScalar(1.65)).add(sigmaA.clone().multiplyScalar(0.35));
+    color.r = clamp01(color.r);
+    color.g = clamp01(color.g);
+    color.b = clamp01(color.b);
+
+    var density = (sigmaT.r + sigmaT.g + sigmaT.b) / 3.0;
+    var emissionBoost = (emission.r + emission.g + emission.b) / 3.0;
+    var opacity = clamp(0.08 + density * 0.65 + emissionBoost * 0.25, 0.1, 0.5);
+    var edgeOpacity = clamp(opacity * 1.35, 0.2, 0.85);
+    return {
+      color: color,
+      opacity: opacity,
+      edgeOpacity: edgeOpacity,
+    };
+  }
+
+  function disposeObjectHierarchy(root) {
+    if (!root || typeof root.traverse !== "function") return;
+    var seenGeometries = [];
+    var seenMaterials = [];
+    root.traverse(function (node) {
+      if (!node) return;
+      var g = node.geometry || null;
+      if (g && seenGeometries.indexOf(g) < 0) {
+        seenGeometries.push(g);
+        g.dispose();
+      }
+      var mats = [];
+      if (Array.isArray(node.material)) mats = node.material;
+      else if (node.material) mats = [node.material];
+      for (var mi = 0; mi < mats.length; mi += 1) {
+        var m = mats[mi];
+        if (!m || seenMaterials.indexOf(m) >= 0) continue;
+        seenMaterials.push(m);
+        m.dispose();
+      }
+    });
+  }
+
   function generatedMeshGeometry(token, resolution) {
     var t = String(token || "").trim().toLowerCase();
     var seg = Math.max(8, Math.floor(Number(resolution) || 24));
@@ -254,6 +307,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       cameras: [],
       geometries: {},
       materials: {},
+      media: {},
       objects: [],
     };
 
@@ -341,6 +395,26 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       parsed.materials[mid] = outMat;
     });
 
+    var media = Array.isArray(runtime.media) ? runtime.media : [];
+    media.forEach(function (medium) {
+      if (!medium || !medium.id) return;
+      var medId = String(medium.id || "");
+      parsed.media[medId] = {
+        id: medId,
+        type: String(medium.type || "").toLowerCase(),
+        sigmaA: (Array.isArray(medium.sigma_a) && medium.sigma_a.length >= 3)
+          ? [Number(medium.sigma_a[0]) || 0, Number(medium.sigma_a[1]) || 0, Number(medium.sigma_a[2]) || 0]
+          : [0, 0, 0],
+        sigmaS: (Array.isArray(medium.sigma_s) && medium.sigma_s.length >= 3)
+          ? [Number(medium.sigma_s[0]) || 0, Number(medium.sigma_s[1]) || 0, Number(medium.sigma_s[2]) || 0]
+          : [0, 0, 0],
+        emission: (Array.isArray(medium.emission) && medium.emission.length >= 3)
+          ? [Number(medium.emission[0]) || 0, Number(medium.emission[1]) || 0, Number(medium.emission[2]) || 0]
+          : [0, 0, 0],
+        g: Number.isFinite(Number(medium.g)) ? Number(medium.g) : 0,
+      };
+    });
+
     var objects = Array.isArray(runtime.objects) ? runtime.objects : [];
     objects.forEach(function (obj) {
       if (!obj || !obj.id || !obj.surface) return;
@@ -348,6 +422,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         id: String(obj.id || ""),
         geometry: String(obj.surface || ""),
         material: String(obj.material || ""),
+        medium: String(obj.medium || ""),
       });
     });
 
@@ -1740,6 +1815,49 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return geometryForDef(def);
   };
 
+  SceneVisualEditor.prototype.addMediumOverlay = function (mesh, mediumDef) {
+    if (!mesh || !mesh.geometry || !mediumDef) return;
+    var geoType = String((mesh.userData && mesh.userData.geometryType) || "").toLowerCase();
+    if (geoType === "plane") return;
+
+    var vis = buildMediumVisualParams(mediumDef);
+    var shell = new THREE.Mesh(
+      mesh.geometry,
+      new THREE.MeshPhongMaterial({
+        color: vis.color,
+        emissive: vis.color.clone().multiplyScalar(0.35),
+        emissiveIntensity: 0.6,
+        transparent: true,
+        opacity: vis.opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    shell.name = String(mesh.name || "object") + "__medium";
+    shell.scale.set(1.012, 1.012, 1.012);
+    shell.renderOrder = 2;
+    shell.userData = shell.userData || {};
+    shell.userData.mediumOverlay = true;
+    shell.userData.mediumId = String(mediumDef.id || "");
+
+    var edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry, 32),
+      new THREE.LineBasicMaterial({
+        color: vis.color,
+        transparent: true,
+        opacity: vis.edgeOpacity,
+        depthWrite: false,
+      })
+    );
+    edges.renderOrder = 3;
+    edges.userData = edges.userData || {};
+    edges.userData.mediumOverlay = true;
+
+    shell.add(edges);
+    mesh.add(shell);
+  };
+
   SceneVisualEditor.prototype.fitDirectionalShadowToBox = function (light, box) {
     if (!light || !light.shadow || !light.shadow.camera || !box || box.isEmpty()) return;
     var cam = light.shadow.camera;
@@ -1796,11 +1914,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.clearPhotonPoints();
     while (this.modelRoot.children.length > 0) {
       var c = this.modelRoot.children.pop();
-      if (c.geometry) c.geometry.dispose();
-      if (c.material) {
-        if (Array.isArray(c.material)) c.material.forEach(function (m) { if (m) m.dispose(); });
-        else c.material.dispose();
-      }
+      disposeObjectHierarchy(c);
     }
     this.infinitePlanes = [];
 
@@ -1830,6 +1944,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         cameras: [],
         geometries: {},
         materials: {},
+        media: {},
         objects: [],
       };
     }
@@ -1862,13 +1977,17 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       mesh.userData.objectId = obj.id;
       mesh.userData.geometryId = obj.geometry;
       mesh.userData.materialId = obj.material || "";
+      mesh.userData.mediumId = obj.medium || "";
       mesh.userData.geometryType = String(geoDef.type || "").toLowerCase();
       mesh.userData.infinitePlane = mesh.userData.geometryType === "plane";
       this.objectMeshById[obj.id] = mesh;
+      var mediumDef = parsed.media[obj.medium] || null;
       this.objectMetaById[obj.id] = {
         objectId: obj.id,
         geometryId: obj.geometry,
         materialId: obj.material || "",
+        mediumId: obj.medium || "",
+        mediumType: mediumDef ? (mediumDef.type || "") : "",
         geometryType: mesh.userData.geometryType,
       };
       var isEmissive = !!(matDef && String(matDef.type || "").toLowerCase() === "emissive");
@@ -1877,6 +1996,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.applyDefTransform(mesh, geoDef);
       if (mesh.userData.geometryType === "csg") {
         this.decorateCsgPlaceholder(mesh);
+      }
+      if (mediumDef) {
+        this.addMediumOverlay(mesh, mediumDef);
       }
       this.modelRoot.add(mesh);
 
@@ -1945,6 +2067,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       backendMesh.userData.objectId = backendMeshId;
       backendMesh.userData.geometryId = backendMeshId;
       backendMesh.userData.materialId = "";
+      backendMesh.userData.mediumId = "";
       backendMesh.userData.geometryType = "mesh";
       backendMesh.userData.infinitePlane = false;
       backendMesh.userData.syntheticFromBackend = true;
@@ -1953,6 +2076,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         objectId: backendMeshId,
         geometryId: backendMeshId,
         materialId: "",
+        mediumId: "",
+        mediumType: "",
         geometryType: "mesh",
       };
       backendMesh.castShadow = true;

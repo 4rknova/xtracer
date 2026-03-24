@@ -381,7 +381,8 @@ function isGraphExpandableNode(key) {
   return raw.indexOf("camera:") === 0
     || raw.indexOf("object:") === 0
     || raw.indexOf("geometry:") === 0
-    || raw.indexOf("material:") === 0;
+    || raw.indexOf("material:") === 0
+    || raw.indexOf("medium:") === 0;
 }
 
 function fitGraphToViewport() {
@@ -715,6 +716,7 @@ function renderSceneGraphView() {
   let objects = [];
   let geometries = [];
   let materials = [];
+  let media = [];
 
   if (runtime) {
     cameras = (runtime.cameras || [])
@@ -737,6 +739,7 @@ function renderSceneGraphView() {
         id: String((o && o.id) || "").trim(),
         geometry: String((o && o.surface) || "").trim(),
         material: String((o && o.material) || "").trim(),
+        medium: String((o && o.medium) || "").trim(),
       }))
       .filter((o) => o.id)
       .sort((a, b) => a.id.localeCompare(b.id));
@@ -786,6 +789,17 @@ function renderSceneGraphView() {
       }))
       .filter((m) => m.id)
       .sort((a, b) => a.id.localeCompare(b.id));
+    media = (runtime.media || [])
+      .map((m) => ({
+        id: String((m && m.id) || "").trim(),
+        type: String((m && m.type) || "medium"),
+        sigma_a: Array.isArray(m && m.sigma_a) ? m.sigma_a.slice(0, 3).map((v) => Number(v) || 0) : null,
+        sigma_s: Array.isArray(m && m.sigma_s) ? m.sigma_s.slice(0, 3).map((v) => Number(v) || 0) : null,
+        emission: Array.isArray(m && m.emission) ? m.emission.slice(0, 3).map((v) => Number(v) || 0) : null,
+        g: Number.isFinite(Number(m && m.g)) ? Number(m.g) : null,
+      }))
+      .filter((m) => m.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
   } else {
     const source = el.sceneSource ? String(el.sceneSource.value || "") : "";
     const model = parseSceneEditModel(source);
@@ -795,6 +809,7 @@ function renderSceneGraphView() {
     materials = Array.from((model.materials || new Map()).values())
       .map((m) => ({ ...m, scalars: [], samplers: [] }))
       .sort((a, b) => a.id.localeCompare(b.id));
+    media = [];
   }
 
   const sortByObjectRefs = (items, idFromItem, refFromObject) => {
@@ -819,6 +834,7 @@ function renderSceneGraphView() {
 
   geometries = sortByObjectRefs(geometries, (g) => g.id, (o) => o.geometry);
   materials = sortByObjectRefs(materials, (m) => m.id, (o) => o.material);
+  media = sortByObjectRefs(media, (m) => m.id, (o) => o.medium);
 
   const nodeW = 248;
   const nodeH = 48;
@@ -849,6 +865,7 @@ function renderSceneGraphView() {
     { key: "object", title: "Object", color: "#9a6846", count: objects.length },
     { key: "geometry", title: "Surface", color: "#4f9a8f", count: geometries.length },
     { key: "material", title: "Material", color: "#5a9a4f", count: materials.length },
+    { key: "medium", title: "Medium", color: "#7d66b4", count: media.length },
   ];
   let xCursor = 40;
   kinds.forEach((k) => {
@@ -930,6 +947,7 @@ function renderSceneGraphView() {
     const propertyRows = [
       { key: "surface", value: String(o.geometry || "-") },
       { key: "material", value: String(o.material || "-") },
+      { key: "medium", value: String(o.medium || "-") },
     ];
     pushNode("object", o.id, runtime ? "runtime object" : "scene object", {
       h: detailsNodeHeight(expanded, propertyRows.length, 0),
@@ -995,14 +1013,32 @@ function renderSceneGraphView() {
       texturePreviews,
     });
   });
+  media.forEach((m) => {
+    const nodeKey = `medium:${String(m.id || "")}`;
+    const expanded = graphView.expandedNodeKeys.has(nodeKey);
+    const propertyRows = [];
+    propertyRows.push({ key: "type", value: String(m && m.type ? m.type : "medium") });
+    if (Array.isArray(m.sigma_a)) propertyRows.push({ key: "sigma_a", value: graphColorLabel(m.sigma_a), color: m.sigma_a.slice(0, 3) });
+    if (Array.isArray(m.sigma_s)) propertyRows.push({ key: "sigma_s", value: graphColorLabel(m.sigma_s), color: m.sigma_s.slice(0, 3) });
+    if (Array.isArray(m.emission)) propertyRows.push({ key: "emission", value: graphColorLabel(m.emission), color: m.emission.slice(0, 3) });
+    if (Number.isFinite(m.g)) propertyRows.push({ key: "g", value: formatGraphNumeric(m.g) });
+    pushNode("medium", m.id, m.type || "medium", {
+      h: detailsNodeHeight(expanded, propertyRows.length, 0),
+      expanded,
+      propertyRows,
+      texturePreviews: [],
+    });
+  });
 
   const links = [];
   objects.forEach((o) => {
     const src = pos.get(`object:${o.id}`);
     const geo = pos.get(`geometry:${o.geometry || ""}`);
     const mat = pos.get(`material:${o.material || ""}`);
+    const med = pos.get(`medium:${o.medium || ""}`);
     if (src && geo) links.push({ from: src, to: geo });
     if (src && mat) links.push({ from: src, to: mat });
+    if (src && med) links.push({ from: src, to: med });
   });
 
   const viewH = Math.max(
@@ -1036,6 +1072,7 @@ function renderSceneGraphView() {
         ["Object", objects.length],
         ["Surface", geometries.length],
         ["Material", materials.length],
+        ["Medium", media.length],
       ];
       rows.forEach(([label, count]) => {
         const tr = document.createElement("tr");

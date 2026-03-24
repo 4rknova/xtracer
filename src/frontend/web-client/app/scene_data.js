@@ -1425,7 +1425,7 @@ async function loadSceneRuntimeGraph(scene, variant) {
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
   const data = await api.getSceneRuntimeGraph(sceneName, variantName);
   const key = runtimeGraphCacheKey(sceneName, variantName);
-  runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [] });
+  runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [], media: [] });
   applyCameraTypesFromRuntimeGraph(sceneName, runtimeGraphByScene.get(key), variantName);
   if (String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName) {
     renderSceneGraphView();
