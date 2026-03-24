@@ -43,11 +43,13 @@ inline nmath::scalar_t smoothstep_perlin(nmath::scalar_t x)
     return t * t * t * (t * (t * (nmath::scalar_t)6.0 - (nmath::scalar_t)15.0) + (nmath::scalar_t)10.0);
 }
 
-inline nmath::Vector3f gradient_dir(int x, int y, int z, int seed, uint32_t channel)
+inline nmath::Vector3f gradient_dir(int x, int y, int z, int seed)
 {
-    const nmath::scalar_t gx = hash01(x, y, z, seed, channel + 0u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
-    const nmath::scalar_t gy = hash01(x, y, z, seed, channel + 1u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
-    const nmath::scalar_t gz = hash01(x, y, z, seed, channel + 2u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
+    // Gradient must depend only on lattice coordinates (not cell-corner role),
+    // otherwise neighboring cells see different gradients at shared corners.
+    const nmath::scalar_t gx = hash01(x, y, z, seed, 0u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
+    const nmath::scalar_t gy = hash01(x, y, z, seed, 1u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
+    const nmath::scalar_t gz = hash01(x, y, z, seed, 2u) * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0;
     nmath::Vector3f g(gx, gy, gz);
     if (g.length_squared() <= (nmath::scalar_t)EPSILON) return nmath::Vector3f((nmath::scalar_t)1.0, (nmath::scalar_t)0.0, (nmath::scalar_t)0.0);
     return g.normalized();
@@ -67,14 +69,14 @@ inline nmath::scalar_t perlin_noise_3d(nmath::scalar_t x, nmath::scalar_t y, nma
     const nmath::scalar_t uy = smoothstep_perlin(fy);
     const nmath::scalar_t uz = smoothstep_perlin(fz);
 
-    const nmath::Vector3f g000 = gradient_dir(ix + 0, iy + 0, iz + 0, seed, 0u);
-    const nmath::Vector3f g100 = gradient_dir(ix + 1, iy + 0, iz + 0, seed, 3u);
-    const nmath::Vector3f g010 = gradient_dir(ix + 0, iy + 1, iz + 0, seed, 6u);
-    const nmath::Vector3f g110 = gradient_dir(ix + 1, iy + 1, iz + 0, seed, 9u);
-    const nmath::Vector3f g001 = gradient_dir(ix + 0, iy + 0, iz + 1, seed, 12u);
-    const nmath::Vector3f g101 = gradient_dir(ix + 1, iy + 0, iz + 1, seed, 15u);
-    const nmath::Vector3f g011 = gradient_dir(ix + 0, iy + 1, iz + 1, seed, 18u);
-    const nmath::Vector3f g111 = gradient_dir(ix + 1, iy + 1, iz + 1, seed, 21u);
+    const nmath::Vector3f g000 = gradient_dir(ix + 0, iy + 0, iz + 0, seed);
+    const nmath::Vector3f g100 = gradient_dir(ix + 1, iy + 0, iz + 0, seed);
+    const nmath::Vector3f g010 = gradient_dir(ix + 0, iy + 1, iz + 0, seed);
+    const nmath::Vector3f g110 = gradient_dir(ix + 1, iy + 1, iz + 0, seed);
+    const nmath::Vector3f g001 = gradient_dir(ix + 0, iy + 0, iz + 1, seed);
+    const nmath::Vector3f g101 = gradient_dir(ix + 1, iy + 0, iz + 1, seed);
+    const nmath::Vector3f g011 = gradient_dir(ix + 0, iy + 1, iz + 1, seed);
+    const nmath::Vector3f g111 = gradient_dir(ix + 1, iy + 1, iz + 1, seed);
 
     const nmath::scalar_t c000 = nmath::dot(g000, nmath::Vector3f(fx - (nmath::scalar_t)0.0, fy - (nmath::scalar_t)0.0, fz - (nmath::scalar_t)0.0));
     const nmath::scalar_t c100 = nmath::dot(g100, nmath::Vector3f(fx - (nmath::scalar_t)1.0, fy - (nmath::scalar_t)0.0, fz - (nmath::scalar_t)0.0));
