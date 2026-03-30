@@ -20,6 +20,13 @@ const FONT_SIZE_PRESET_DEFAULT = "default";
 const FONT_SIZE_PRESET_LARGE = "large";
 const POST_FILTER_CATALOG = [
   { id: "desaturate", label: "Desaturate" },
+  { id: "chromatic_aberration", label: "Chromatic Aberration" },
+  { id: "vignette", label: "Vignette" },
+  { id: "film_grain", label: "Film Grain" },
+  { id: "sharpen", label: "Sharpen" },
+  { id: "brightness", label: "Brightness" },
+  { id: "contrast", label: "Contrast" },
+  { id: "raindrops_lens", label: "Raindrops on Lens" },
 ];
 
 function normalizeFontSizePreset(value) {
@@ -659,11 +666,21 @@ function appendToneMappingQuery(parts, opts) {
   parts.push(`tm_mantiuk_detail=${encodeURIComponent(effectiveMantiukDetail)}`);
 }
 
+function appendPostFiltersQuery(parts, opts) {
+  const enabled = !!(opts && opts.postFiltersEnabled);
+  if (!enabled) return;
+  const raw = String((opts && opts.postFilters) || "").trim();
+  if (!raw) return;
+  parts.push("post_filters_enabled=1");
+  parts.push(`post_filters=${encodeURIComponent(raw)}`);
+}
+
 function blobUrlForJobImage(jobId, opts) {
   const parts = [];
   if (opts && opts.partial) parts.push("partial=1");
   if (opts && opts.final) parts.push("final=1");
   appendToneMappingQuery(parts, opts);
+  appendPostFiltersQuery(parts, opts);
   if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
   const qs = parts.length ? `?${parts.join("&")}` : "";
   return `/api/jobs/${jobId}/image${qs}`;
@@ -676,6 +693,7 @@ function urlForJobImageDelta(jobId, opts) {
   parts.push(`since=${encodeURIComponent(Number.isFinite(since) && since >= 0 ? Math.floor(since) : 0)}`);
   parts.push(`limit=${encodeURIComponent(Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 16)}`);
   appendToneMappingQuery(parts, opts);
+  appendPostFiltersQuery(parts, opts);
   if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
   const qs = parts.length ? `?${parts.join("&")}` : "";
   return `/api/jobs/${encodeURIComponent(jobId)}/image_delta${qs}`;
@@ -815,6 +833,7 @@ function createServerApi() {
       const encoded = encodeURIComponent(jobId);
       const body = new URLSearchParams();
       body.set("client_id", clientId || ensureClientId());
+      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
       const res = await fetch(`/api/jobs/abort/${encoded}`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -869,9 +888,11 @@ function createServerApi() {
       if (!res.ok) return null;
       return res.arrayBuffer();
     },
-    async getJobExport(jobId, format) {
+    async getJobExport(jobId, format, opts) {
       const fmt = encodeURIComponent(String(format || "png").toLowerCase());
-      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/export?format=${fmt}`);
+      const parts = [`format=${fmt}`];
+      appendPostFiltersQuery(parts, opts || {});
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/export?${parts.join("&")}`);
       if (!res.ok) {
         let message = `HTTP ${res.status}`;
         try {

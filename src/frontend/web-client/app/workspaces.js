@@ -470,7 +470,11 @@ function workspaceStateLabel(workspace) {
   const id = String((workspace && workspace.id) || "");
   const activeJob = String((workspace && workspace.active_job_id) || "");
   if (activeJob) return "Rendering";
-  if (id && id === activeWorkspaceId) return "Active";
+  const hasOwned = !!(workspace && Object.prototype.hasOwnProperty.call(workspace, "is_owned_by_client"));
+  const isMine = hasOwned
+    ? !!workspace.is_owned_by_client
+    : !!(workspace && workspace.is_active_for_client);
+  if (isMine || (id && id === activeWorkspaceId)) return "Active";
   return "Idle";
 }
 
@@ -516,11 +520,11 @@ function workspaceSettingsPayload() {
       interactive_moving_width: String(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth)),
     },
     post_filters: Array.isArray(postFilterChain)
-      ? postFilterChain.map((entry) => ({
-        filter: normalizePostFilterId(entry && entry.filter),
-        stage: normalizePostFilterStage(entry && entry.stage),
-      })).filter((entry) => !!entry.filter)
+      ? postFilterChain
+        .map((entry) => normalizePostFilterEntry(entry))
+        .filter((entry) => !!entry && !!entry.filter)
       : [],
+    post_filters_enabled: !!postFilterStackEnabled,
   };
 }
 
@@ -622,12 +626,15 @@ function applyWorkspaceSettings(settings) {
     }
 
     if (Array.isArray(cfg.post_filters)) {
-      postFilterChain = cfg.post_filters.map((entry) => ({
-        filter: normalizePostFilterId(entry && entry.filter),
-        stage: normalizePostFilterStage(entry && entry.stage),
-      })).filter((entry) => !!entry.filter);
-      renderPostFilterChain();
+      postFilterChain = cfg.post_filters
+        .map((entry) => normalizePostFilterEntry(entry))
+        .filter((entry) => !!entry && !!entry.filter);
     }
+    if (cfg.post_filters_enabled !== undefined) {
+      postFilterStackEnabled = !!cfg.post_filters_enabled;
+    }
+    if (el.postFiltersEnabled) el.postFiltersEnabled.checked = !!postFilterStackEnabled;
+    updatePostFilterUiState();
   } finally {
     suppressWorkspaceSettingsSave = false;
   }
@@ -797,6 +804,8 @@ function renderWorkspaceList(items) {
 
   list.forEach((ws) => {
     const id = String((ws && ws.id) || "");
+    const hasOwned = !!(ws && Object.prototype.hasOwnProperty.call(ws, "is_owned_by_client"));
+    const isMine = hasOwned ? !!ws.is_owned_by_client : !!(ws && ws.is_active_for_client);
     const scene = String((ws && ws.active_scene) || "").trim();
     const activeJob = String((ws && ws.active_job_id) || "").trim();
     const lastJob = String((ws && ws.last_job_id) || "").trim();
@@ -833,6 +842,12 @@ function renderWorkspaceList(items) {
     state.className = "workspace-item-state";
     state.textContent = workspaceStateLabel(ws);
     head.appendChild(title);
+    if (isMine) {
+      const mineBadge = document.createElement("span");
+      mineBadge.className = "workspace-item-state";
+      mineBadge.textContent = "This Client";
+      head.appendChild(mineBadge);
+    }
     head.appendChild(state);
 
     const actions = document.createElement("div");
@@ -916,6 +931,7 @@ function renderWorkspaceList(items) {
       meta.appendChild(row);
     };
     addMeta("ID", id || "-");
+    addMeta("This Client", isMine ? "Yes" : "No");
     addMeta("Scene", scene || "-");
     addMeta("Clients", String(clients));
     addMeta("Drafts", String(drafts));
@@ -959,6 +975,7 @@ function renderWorkspaceList(items) {
         metaStrip.appendChild(chip);
       };
       addChip("ID", id || "-");
+      addChip("This Client", isMine ? "Yes" : "No");
       addChip("Users", String(clients));
       addChip("Drafts", String(drafts));
       addChip("Job", activeJob || lastJob || "-");

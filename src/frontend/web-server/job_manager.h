@@ -89,27 +89,35 @@ class job_manager_t
     std::string create(const common::render_request_t &request,
                        const std::string &scene_name,
                        const std::string &workspace_id,
+                       const std::string &owner_client_id,
                        const std::string &cleanup_scene_path);
     bool snapshot(const std::string &id, job_snapshot_t &out);
     bool image(const std::string &id,
                std::vector<unsigned char> &out,
                bool allow_partial,
-               const xtcore::tonemapping::settings_t &tm_settings);
+               const xtcore::tonemapping::settings_t &tm_settings,
+               bool post_filters_enabled,
+               const std::string &post_filters);
     bool image_delta(const std::string &id,
                      size_t since_done,
                      size_t max_tiles,
                      const xtcore::tonemapping::settings_t &tm_settings,
+                     bool post_filters_enabled,
+                     const std::string &post_filters,
                      job_image_delta_t &out);
     bool image_export(const std::string &id,
                       const std::string &format,
                       std::vector<unsigned char> &out,
                       std::string &mime_type,
-                      std::string &extension);
+                      std::string &extension,
+                      bool post_filters_enabled,
+                      const std::string &post_filters);
     bool photons(const std::string &id,
                  std::vector<common::render_result_t::point3_t> &diffuse_out,
                  std::vector<common::render_result_t::point3_t> &caustic_out,
                  size_t limit_per_set);
     bool abort(const std::string &id);
+    bool belongs_to_client(const std::string &id, const std::string &client_id);
     bool move_queue_up(const std::string &id);
     bool move_queue_down(const std::string &id);
     bool list_active(std::vector<job_snapshot_t> &out);
@@ -120,6 +128,7 @@ class job_manager_t
         mutable std::mutex mut;
         std::string id;
         std::string workspace_id;
+        std::string owner_client_id;
         std::string scene;
         std::string integrator;
         std::atomic<job_state_t> state;
@@ -156,6 +165,8 @@ class job_manager_t
         float preview_last_tm_mantiuk_contrast;
         float preview_last_tm_mantiuk_saturation;
         float preview_last_tm_mantiuk_detail;
+        bool preview_last_post_filters_enabled;
+        std::string preview_last_post_filters;
         std::vector<unsigned char> preview_png_cache;
         size_t effective_threads;
         common::render_request_t request;

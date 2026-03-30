@@ -4718,7 +4718,7 @@ button:disabled {
 
 .post-filters-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: end;
 }
@@ -4752,6 +4752,17 @@ button:disabled {
   line-height: 1;
 }
 
+.post-filter-recalc-btn {
+  grid-column: 1 / -1;
+  width: auto !important;
+  justify-self: stretch;
+  width: 100% !important;
+  min-width: 108px;
+  min-height: 36px;
+  margin: 0 !important;
+  padding-inline: 12px;
+}
+
 .post-filters-chain {
   display: grid;
   gap: 8px;
@@ -4764,22 +4775,87 @@ button:disabled {
 }
 
 .post-filter-entry {
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 10px;
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--field-bg) 86%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 72%, transparent) 100%);
+  overflow: clip;
+}
+
+.post-filter-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px auto;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px 8px;
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--field-bg) 78%, transparent);
-  padding: 7px 8px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 10px;
+  border-bottom: 1px solid transparent;
+}
+
+.post-filter-summary::-webkit-details-marker {
+  display: none;
+}
+
+.post-filter-summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  justify-self: end;
+  border-right: 2px solid color-mix(in srgb, var(--muted) 82%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--muted) 82%, transparent);
+  transform: rotate(45deg);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+  margin-right: 2px;
+}
+
+.post-filter-entry[open] .post-filter-summary {
+  border-bottom-color: color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.post-filter-entry[open] .post-filter-summary::after {
+  transform: rotate(225deg) translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 82%, transparent);
 }
 
 .post-filter-name {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 650;
+  line-height: 1.15;
 }
 
-.post-filter-stage {
+.post-filter-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 74%, transparent);
+  color: color-mix(in srgb, var(--ink) 85%, var(--muted));
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.post-filter-body {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+
+.post-filter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.post-filter-controls .post-filter-stage {
   min-width: 0;
 }
 
@@ -4787,6 +4863,36 @@ button:disabled {
   width: auto;
   min-width: 84px;
   margin: 0 !important;
+}
+
+.post-filter-params {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.control-section-body .post-filter-params .post-filter-param {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.control-section-body .post-filter-params .post-filter-param > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-section-body .post-filter-params .post-filter-param > input {
+  margin: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .post-filters-note {
@@ -4843,6 +4949,15 @@ button:disabled {
 
   .post-filters-toolbar > button {
     width: 100% !important;
+  }
+
+  .post-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .post-filter-remove {
+    width: 100%;
+    min-width: 0;
   }
 }
 
@@ -5234,6 +5349,94 @@ button:disabled {
 
 .preview-frame:not(.is-empty) #previewCanvas {
   cursor: grab;
+}
+
+.post-pipeline-card {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--field-bg) 86%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 72%, transparent) 100%);
+}
+
+.post-pipeline-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.post-pipeline-title {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
+.post-pipeline-summary {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.post-pipeline-graph {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.post-pipeline-lane {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 100%;
+}
+
+.post-pipeline-node {
+  flex: 0 0 auto;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.post-pipeline-node.is-filter {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 40%, transparent);
+}
+
+.post-pipeline-node.is-tone {
+  border-color: color-mix(in srgb, #f5b041 52%, var(--line));
+  background: color-mix(in srgb, #f5b041 18%, transparent);
+}
+
+.post-pipeline-node.is-conversion {
+  border-style: dashed;
+  color: color-mix(in srgb, var(--ink) 84%, var(--muted));
+}
+
+.post-pipeline-node.is-disabled {
+  opacity: 0.72;
+}
+
+.post-pipeline-arrow {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 1100px) {

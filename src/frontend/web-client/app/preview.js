@@ -967,7 +967,7 @@ function bindPreviewInteraction() {
       const dy = evt.clientY - previewView.lastY;
       previewView.lastX = evt.clientX;
       previewView.lastY = evt.clientY;
-      if (previewView.panMode === "pan") interactivePanCamera(dx, dy);
+      if (previewView.panMode === "pan") interactivePanCamera(-dx, -dy);
       else interactiveLookCamera(dx, dy);
       return;
     }
@@ -1233,6 +1233,8 @@ async function refreshProgressivePreviewDelta(jobId) {
   const id = String(jobId || "").trim();
   if (!id) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
+  const postFilters = gatherPostFilterParams();
+  const postFiltersEnabled = !!postFilterStackEnabled;
   const tmKey = [
     el.toneMapping ? el.toneMapping.value : "aces",
     el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
@@ -1240,6 +1242,8 @@ async function refreshProgressivePreviewDelta(jobId) {
     el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled ? "post:on" : "post:off",
+    postFilters,
   ].join("|");
   if (tmKey !== progressiveDeltaTmKey) {
     progressiveDeltaTmKey = tmKey;
@@ -1256,6 +1260,8 @@ async function refreshProgressivePreviewDelta(jobId) {
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled,
+    postFilters,
   });
   if (!packet) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (renderActive && activeJobId && id === String(activeJobId)) {
@@ -1295,6 +1301,8 @@ function previewToneMappingParamsForJob(jobId) {
       toneMappingMantiukContrast: "0.1",
       toneMappingMantiukSaturation: "0.8",
       toneMappingMantiukDetail: "1.0",
+      postFiltersEnabled: false,
+      postFilters: "",
     };
   }
   return {
@@ -1304,6 +1312,8 @@ function previewToneMappingParamsForJob(jobId) {
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled: !!postFilterStackEnabled,
+    postFilters: gatherPostFilterParams(),
   };
 }
 
@@ -1319,6 +1329,8 @@ async function refreshProgressivePreview(jobId) {
     toneMappingMantiukContrast: tm.toneMappingMantiukContrast,
     toneMappingMantiukSaturation: tm.toneMappingMantiukSaturation,
     toneMappingMantiukDetail: tm.toneMappingMantiukDetail,
+    postFiltersEnabled: tm.postFiltersEnabled,
+    postFilters: tm.postFilters,
   });
   if (!blob || blob.size === 0) return false;
   if (renderActive && activeJobId && id === String(activeJobId)) {
@@ -1333,6 +1345,7 @@ async function refreshProgressivePreview(jobId) {
 }
 
 async function refreshPreviewForToneMapping() {
+  if (typeof renderPostPipelineGraph === "function") renderPostPipelineGraph();
   try {
     if (renderActive && activeJobId) {
       await refreshProgressivePreview(activeJobId);
@@ -1348,6 +1361,8 @@ async function refreshPreviewForToneMapping() {
         toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+        postFiltersEnabled: !!postFilterStackEnabled,
+        postFilters: gatherPostFilterParams(),
       });
       if (finalBlob && finalBlob.size > 0) await setPreviewFromBlob(finalBlob);
     }
@@ -1431,6 +1446,8 @@ async function restorePreviewForActiveWorkspace() {
       toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
       toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
       toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+      postFiltersEnabled: !!postFilterStackEnabled,
+      postFilters: gatherPostFilterParams(),
     });
     if (finalBlob && finalBlob.size > 0) {
       await setPreviewFromBlob(finalBlob);

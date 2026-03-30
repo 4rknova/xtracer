@@ -127,6 +127,8 @@ const el = {
   toneMappingMantiukDetail: $("toneMappingMantiukDetail"),
   postFilterType: $("postFilterType"),
   postFilterAddBtn: $("postFilterAddBtn"),
+  postFiltersRecalcBtn: $("postFiltersRecalcBtn"),
+  postFiltersEnabled: $("postFiltersEnabled"),
   postFiltersChain: $("postFiltersChain"),
   clearPreviewOnRender: $("clearPreviewOnRender"),
   renderBtn: $("renderBtn"),
@@ -162,6 +164,8 @@ const el = {
   interactivePreviewHudQuality: $("interactivePreviewHudQuality"),
   previewCanvas: $("previewCanvas"),
   preview: $("preview"),
+  postPipelineGraph: $("postPipelineGraph"),
+  postPipelineSummary: $("postPipelineSummary"),
   resetViewBtn: $("resetViewBtn"),
   interactivePreviewControls: $("interactivePreviewControls"),
   interactivePreviewSpeed: $("interactivePreviewSpeed"),
@@ -326,6 +330,7 @@ const historyStores = {
 let textHistoryCommitTimer = null;
 let suppressHistoryTracking = false;
 let postFilterChain = [];
+let postFilterStackEnabled = true;
 let integratorCatalog = [];
 let integratorById = new Map();
 const integratorControlState = new Map();

@@ -357,6 +357,44 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
     return true;
 }
 
+bool parse_post_filter_settings(const httplib::Request &req,
+                                bool &enabled,
+                                std::string &post_filters,
+                                std::string &error_json)
+{
+    enabled = false;
+    post_filters.clear();
+    error_json.clear();
+
+    if (req.has_param("post_filters_enabled")) {
+        const std::string raw = req.get_param_value("post_filters_enabled");
+        if (raw == "1" || raw == "true") enabled = true;
+        else if (raw == "0" || raw == "false" || raw.empty()) enabled = false;
+        else {
+            error_json = "{\"error\":\"invalid post_filters_enabled\"}";
+            return false;
+        }
+    }
+
+    if (req.has_param("post_filters")) {
+        post_filters = req.get_param_value("post_filters");
+    }
+
+    if (!enabled) {
+        post_filters.clear();
+        return true;
+    }
+
+    for (size_t i = 0; i < post_filters.size(); ++i) {
+        const unsigned char c = (unsigned char)post_filters[i];
+        if (std::isalnum(c) || c == '_' || c == ':' || c == ',' || c == '-' || c == '.' || c == '=') continue;
+        if (std::isspace(c)) continue;
+        error_json = "{\"error\":\"invalid post_filters\"}";
+        return false;
+    }
+    return true;
+}
+
 void append_u32le(std::vector<unsigned char> &out, uint32_t v)
 {
     out.push_back((unsigned char)(v & 0xFFu));
@@ -422,6 +460,31 @@ std::string utc_timestamp_for_filename()
         return "unknown_time";
     }
     return std::string(buf);
+}
+
+std::string sanitize_filename_token(const std::string &value, const char *fallback)
+{
+    std::string out;
+    out.reserve(value.size());
+    for (size_t i = 0; i < value.size(); ++i) {
+        const unsigned char c = (unsigned char)value[i];
+        if (std::isalnum(c) || c == '_' || c == '-' || c == '.') out.push_back((char)c);
+        else out.push_back('_');
+    }
+
+    while (!out.empty() && out[0] == '_') out.erase(out.begin());
+    while (!out.empty() && out[out.size() - 1] == '_') out.erase(out.size() - 1, 1);
+
+    if (out.empty()) return std::string(fallback ? fallback : "value");
+    return out;
+}
+
+std::string scene_basename_for_filename(const std::string &scene)
+{
+    if (scene.size() >= 4 && scene.compare(scene.size() - 4, 4, ".scn") == 0) {
+        return scene.substr(0, scene.size() - 4);
+    }
+    return scene;
 }
 
 std::string lower_ascii(std::string s)
@@ -1467,10 +1530,13 @@ void setup_routes(httplib::Server &server,
            << "\"workspaces\":[";
         for (size_t i = 0; i < list.size(); ++i) {
             const workspace_snapshot_t &w = list[i];
+            const bool is_active_for_client = !active_workspace.empty() && (w.id == active_workspace);
             if (i) ss << ",";
             ss << "{"
                << "\"id\":\"" << json_escape(w.id) << "\","
                << "\"name\":\"" << json_escape(w.name) << "\","
+               << "\"is_owned_by_client\":" << (w.is_owned_by_client ? "true" : "false") << ","
+               << "\"is_active_for_client\":" << (is_active_for_client ? "true" : "false") << ","
                << "\"active_scene\":\"" << json_escape(w.active_scene) << "\","
                << "\"active_job_id\":\"" << json_escape(w.active_job_id) << "\","
                << "\"last_job_id\":\"" << json_escape(w.last_job_id) << "\","
@@ -1491,7 +1557,7 @@ void setup_routes(httplib::Server &server,
     server.Post("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
         const std::string client_id = read_client_id(req);
         const std::string name = req.has_param("name") ? req.get_param_value("name") : "";
-        const std::string workspace_id = workspaces.create(name);
+        const std::string workspace_id = workspaces.create(name, client_id);
         if (!client_id.empty()) {
             workspaces.set_active(client_id, workspace_id);
         }
@@ -2056,14 +2122,15 @@ void setup_routes(httplib::Server &server,
             return;
         }
 
+        const std::string requester_client_id = read_client_id(req);
+
         std::string workspace_id;
         if (req.has_param("workspace_id")) {
             workspace_id = req.get_param_value("workspace_id");
         }
         if (workspace_id.empty()) {
-            const std::string client_id = read_client_id(req);
-            if (!client_id.empty()) {
-                workspaces.get_active(client_id, workspace_id);
+            if (!requester_client_id.empty()) {
+                workspaces.get_active(requester_client_id, workspace_id);
             }
         }
         if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
@@ -2217,7 +2284,7 @@ void setup_routes(httplib::Server &server,
             backend_log_t::handle().add("debug", policy_log.str());
         }
 
-        std::string job_id = jobs.create(rr, scene, workspace_id, cleanup_scene_path);
+        std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path);
         workspaces.mark_job_started(workspace_id, job_id);
         std::ostringstream ss;
         ss << "{"
@@ -2236,8 +2303,15 @@ void setup_routes(httplib::Server &server,
             send_json(res, tm_error_json, 400);
             return;
         }
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
         std::vector<unsigned char> image;
-        if (!jobs.image(id, image, !final_only, tm_settings)) {
+        if (!jobs.image(id, image, !final_only, tm_settings, post_filters_enabled, post_filters)) {
             backend_log_t::handle().add("warn", "job image missing id=" + id);
             send_json(res, "{\"error\":\"image not available\"}", 404);
             return;
@@ -2270,9 +2344,16 @@ void setup_routes(httplib::Server &server,
             send_json(res, tm_error_json, 400);
             return;
         }
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
 
         job_image_delta_t delta;
-        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, delta)) {
+        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, post_filters_enabled, post_filters, delta)) {
             send_json(res, "{\"error\":\"image delta not available\"}", 404);
             return;
         }
@@ -2317,13 +2398,31 @@ void setup_routes(httplib::Server &server,
         std::vector<unsigned char> image;
         std::string mime_type;
         std::string extension;
-        if (!jobs.image_export(id, format, image, mime_type, extension)) {
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
+        if (!jobs.image_export(id, format, image, mime_type, extension, post_filters_enabled, post_filters)) {
             backend_log_t::handle().add("warn", "job export unavailable id=" + id + " format=" + format);
             send_json(res, "{\"error\":\"export not available\"}", 404);
             return;
         }
 
-        const std::string filename = "xtracer_" + id + "_" + utc_timestamp_for_filename() + "." + extension;
+        job_snapshot_t snap;
+        std::string scene_token = "scene";
+        if (jobs.snapshot(id, snap)) {
+            scene_token = sanitize_filename_token(scene_basename_for_filename(snap.scene), "scene");
+        }
+        const std::string requester_client_id = read_client_id(req);
+        const std::string client_token = sanitize_filename_token(requester_client_id, "client");
+        const std::string filename = "xtracer_"
+            + scene_token + "_"
+            + client_token + "_"
+            + utc_timestamp_for_filename()
+            + "." + extension;
         const std::string content_disposition = "attachment; filename=\"" + filename + "\"";
         res.set_header("Cache-Control", "no-store");
         res.set_header("Content-Disposition", content_disposition.c_str());
@@ -2393,11 +2492,60 @@ void setup_routes(httplib::Server &server,
 
     server.Post(R"(/api/jobs/abort/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
         std::string id = req.matches[1];
+        job_snapshot_t snap;
+        if (!jobs.snapshot(id, snap)) {
+            send_json(res, "{\"error\":\"job not found\"}", 404);
+            return;
+        }
+
+        const std::string requester_client_id = read_client_id(req);
+        if (requester_client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!jobs.belongs_to_client(id, requester_client_id)) {
+            backend_log_t::handle().add(
+                "warn",
+                "job abort rejected id=" + id
+                + " requester_client=" + requester_client_id
+            );
+            send_json(res, "{\"error\":\"job does not belong to requesting client\"}", 403);
+            return;
+        }
+
+        std::string requester_workspace_id;
+        if (req.has_param("workspace_id")) {
+            requester_workspace_id = req.get_param_value("workspace_id");
+        }
+        if (requester_workspace_id.empty()) {
+            const std::string client_id = read_client_id(req);
+            if (!client_id.empty()) {
+                workspaces.get_active(client_id, requester_workspace_id);
+            }
+        }
+        if (requester_workspace_id.empty()) {
+            send_json(res, "{\"error\":\"workspace context required\"}", 400);
+            return;
+        }
+        if (snap.workspace_id != requester_workspace_id) {
+            backend_log_t::handle().add(
+                "warn",
+                "job abort rejected id=" + id
+                + " requester_workspace=" + requester_workspace_id
+                + " job_workspace=" + snap.workspace_id
+            );
+            send_json(res, "{\"error\":\"job does not belong to active workspace\"}", 403);
+            return;
+        }
+
         if (!jobs.abort(id)) {
             send_json(res, "{\"error\":\"job not found\"}", 404);
             return;
         }
-        backend_log_t::handle().add("info", "job abort requested id=" + id);
+        backend_log_t::handle().add(
+            "info",
+            "job abort requested id=" + id + " workspace=" + requester_workspace_id
+        );
         send_json(res, "{\"ok\":true}");
     });
 

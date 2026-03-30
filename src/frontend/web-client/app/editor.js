@@ -3,6 +3,10 @@ function postFilterCatalogById(id) {
   return POST_FILTER_CATALOG.find((it) => it.id === key) || null;
 }
 
+function isPostFilterStackEnabled() {
+  return !!postFilterStackEnabled;
+}
+
 function normalizePostFilterStage(stage) {
   return String(stage || "").toLowerCase() === "before" ? "before" : "after";
 }
@@ -12,29 +16,358 @@ function normalizePostFilterId(id) {
   return item ? item.id : "";
 }
 
+function defaultPostFilterParams(filterId) {
+  if (filterId === "chromatic_aberration") {
+    return {
+      amount: "1.5",
+      center_x: "0.5",
+      center_y: "0.5",
+      falloff: "1.0",
+    };
+  }
+  if (filterId === "vignette") {
+    return {
+      strength: "0.35",
+      radius: "0.5",
+      softness: "0.35",
+      center_x: "0.5",
+      center_y: "0.5",
+    };
+  }
+  if (filterId === "film_grain") {
+    return {
+      amount: "0.06",
+      size: "1.0",
+      seed: "1",
+      luma_weighted: "1",
+    };
+  }
+  if (filterId === "sharpen") {
+    return {
+      amount: "0.8",
+      radius: "1.0",
+      threshold: "0.02",
+    };
+  }
+  if (filterId === "brightness") {
+    return {
+      amount: "0.0",
+    };
+  }
+  if (filterId === "contrast") {
+    return {
+      amount: "1.0",
+      pivot: "0.5",
+    };
+  }
+  if (filterId === "raindrops_lens") {
+    return {
+      density: "0.35",
+      size: "0.45",
+      distortion: "12.0",
+      seed: "1",
+    };
+  }
+  return {};
+}
+
+function normalizeChromaticAberrationParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const centerXNum = Number(src.center_x);
+  const centerYNum = Number(src.center_y);
+  const falloffNum = Number(src.falloff);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(64, amountNum)) : 1.5;
+  const centerX = Number.isFinite(centerXNum) ? Math.max(0, Math.min(1, centerXNum)) : 0.5;
+  const centerY = Number.isFinite(centerYNum) ? Math.max(0, Math.min(1, centerYNum)) : 0.5;
+  const falloff = Number.isFinite(falloffNum) ? Math.max(0, Math.min(8, falloffNum)) : 1.0;
+  return {
+    amount: amount.toFixed(3),
+    center_x: centerX.toFixed(3),
+    center_y: centerY.toFixed(3),
+    falloff: falloff.toFixed(3),
+  };
+}
+
+function normalizeVignetteParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const strengthNum = Number(src.strength);
+  const radiusNum = Number(src.radius);
+  const softnessNum = Number(src.softness);
+  const centerXNum = Number(src.center_x);
+  const centerYNum = Number(src.center_y);
+  const strength = Number.isFinite(strengthNum) ? Math.max(0, Math.min(1, strengthNum)) : 0.35;
+  const radius = Number.isFinite(radiusNum) ? Math.max(0, Math.min(1, radiusNum)) : 0.5;
+  const softness = Number.isFinite(softnessNum) ? Math.max(0.001, Math.min(1, softnessNum)) : 0.35;
+  const centerX = Number.isFinite(centerXNum) ? Math.max(0, Math.min(1, centerXNum)) : 0.5;
+  const centerY = Number.isFinite(centerYNum) ? Math.max(0, Math.min(1, centerYNum)) : 0.5;
+  return {
+    strength: strength.toFixed(3),
+    radius: radius.toFixed(3),
+    softness: softness.toFixed(3),
+    center_x: centerX.toFixed(3),
+    center_y: centerY.toFixed(3),
+  };
+}
+
+function normalizeFilmGrainParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const sizeNum = Number(src.size);
+  const seedNum = Number(src.seed);
+  const lumaRaw = String(src.luma_weighted === undefined ? "1" : src.luma_weighted).toLowerCase();
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(1, amountNum)) : 0.06;
+  const size = Number.isFinite(sizeNum) ? Math.max(1, Math.min(16, sizeNum)) : 1.0;
+  const seed = Number.isFinite(seedNum) ? Math.max(0, Math.min(1000000, Math.floor(seedNum))) : 1;
+  const lumaWeighted = (lumaRaw === "0" || lumaRaw === "false" || lumaRaw === "off") ? "0" : "1";
+  return {
+    amount: amount.toFixed(3),
+    size: size.toFixed(3),
+    seed: String(seed),
+    luma_weighted: lumaWeighted,
+  };
+}
+
+function normalizeSharpenParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const radiusNum = Number(src.radius);
+  const thresholdNum = Number(src.threshold);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(4, amountNum)) : 0.8;
+  const radius = Number.isFinite(radiusNum) ? Math.max(1, Math.min(4, radiusNum)) : 1.0;
+  const threshold = Number.isFinite(thresholdNum) ? Math.max(0, Math.min(1, thresholdNum)) : 0.02;
+  return {
+    amount: amount.toFixed(3),
+    radius: radius.toFixed(3),
+    threshold: threshold.toFixed(3),
+  };
+}
+
+function normalizeBrightnessParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const amount = Number.isFinite(amountNum) ? Math.max(-4, Math.min(4, amountNum)) : 0.0;
+  return {
+    amount: amount.toFixed(3),
+  };
+}
+
+function normalizeContrastParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const pivotNum = Number(src.pivot);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(4, amountNum)) : 1.0;
+  const pivot = Number.isFinite(pivotNum) ? Math.max(0, Math.min(4, pivotNum)) : 0.5;
+  return {
+    amount: amount.toFixed(3),
+    pivot: pivot.toFixed(3),
+  };
+}
+
+function normalizeRaindropsLensParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const densityNum = Number(src.density);
+  const sizeNum = Number(src.size);
+  const distortionNum = Number(src.distortion);
+  const seedNum = Number(src.seed);
+  const density = Number.isFinite(densityNum) ? Math.max(0, Math.min(1, densityNum)) : 0.35;
+  const size = Number.isFinite(sizeNum) ? Math.max(0, Math.min(1, sizeNum)) : 0.45;
+  const distortion = Number.isFinite(distortionNum) ? Math.max(0, Math.min(64, distortionNum)) : 12.0;
+  const seed = Number.isFinite(seedNum) ? Math.max(0, Math.min(1000000, Math.floor(seedNum))) : 1;
+  return {
+    density: density.toFixed(3),
+    size: size.toFixed(3),
+    distortion: distortion.toFixed(3),
+    seed: String(seed),
+  };
+}
+
+function normalizePostFilterParams(filterId, raw) {
+  if (filterId === "chromatic_aberration") return normalizeChromaticAberrationParams(raw);
+  if (filterId === "vignette") return normalizeVignetteParams(raw);
+  if (filterId === "film_grain") return normalizeFilmGrainParams(raw);
+  if (filterId === "sharpen") return normalizeSharpenParams(raw);
+  if (filterId === "brightness") return normalizeBrightnessParams(raw);
+  if (filterId === "contrast") return normalizeContrastParams(raw);
+  if (filterId === "raindrops_lens") return normalizeRaindropsLensParams(raw);
+  return {};
+}
+
+function normalizePostFilterEntry(entry) {
+  const filterId = normalizePostFilterId(entry && entry.filter);
+  if (!filterId) return null;
+  return {
+    filter: filterId,
+    stage: normalizePostFilterStage(entry && entry.stage),
+    params: normalizePostFilterParams(filterId, entry && entry.params),
+  };
+}
+
+function postFilterParamSpecs(filterId) {
+  if (filterId === "chromatic_aberration") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "64", step: "0.1" },
+      { key: "center_x", label: "Center X", min: "0", max: "1", step: "0.01" },
+      { key: "center_y", label: "Center Y", min: "0", max: "1", step: "0.01" },
+      { key: "falloff", label: "Falloff", min: "0", max: "8", step: "0.1" },
+    ];
+  }
+  if (filterId === "vignette") {
+    return [
+      { key: "strength", label: "Strength", min: "0", max: "1", step: "0.01" },
+      { key: "radius", label: "Radius", min: "0", max: "1", step: "0.01" },
+      { key: "softness", label: "Softness", min: "0.001", max: "1", step: "0.01" },
+      { key: "center_x", label: "Center X", min: "0", max: "1", step: "0.01" },
+      { key: "center_y", label: "Center Y", min: "0", max: "1", step: "0.01" },
+    ];
+  }
+  if (filterId === "film_grain") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "1", step: "0.01" },
+      { key: "size", label: "Size", min: "1", max: "16", step: "0.5" },
+      { key: "seed", label: "Seed", min: "0", max: "1000000", step: "1" },
+      { key: "luma_weighted", label: "Luma Weighted (1/0)", min: "0", max: "1", step: "1" },
+    ];
+  }
+  if (filterId === "sharpen") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "4", step: "0.1" },
+      { key: "radius", label: "Radius", min: "1", max: "4", step: "1" },
+      { key: "threshold", label: "Threshold", min: "0", max: "1", step: "0.01" },
+    ];
+  }
+  if (filterId === "brightness") {
+    return [
+      { key: "amount", label: "Amount", min: "-4", max: "4", step: "0.05" },
+    ];
+  }
+  if (filterId === "contrast") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "4", step: "0.05" },
+      { key: "pivot", label: "Pivot", min: "0", max: "4", step: "0.05" },
+    ];
+  }
+  if (filterId === "raindrops_lens") {
+    return [
+      { key: "density", label: "Density", min: "0", max: "1", step: "0.01" },
+      { key: "size", label: "Size", min: "0", max: "1", step: "0.01" },
+      { key: "distortion", label: "Distortion", min: "0", max: "64", step: "0.1" },
+      { key: "seed", label: "Seed", min: "0", max: "1000000", step: "1" },
+    ];
+  }
+  return [];
+}
+
+function currentToneMappingLabel() {
+  if (!el.toneMapping) return "ACES (Fitted)";
+  const selected = el.toneMapping.options && el.toneMapping.selectedIndex >= 0
+    ? el.toneMapping.options[el.toneMapping.selectedIndex]
+    : null;
+  return String((selected && selected.textContent) || el.toneMapping.value || "ACES (Fitted)");
+}
+
+function renderPostPipelineGraph() {
+  if (!el.postPipelineGraph) return;
+  const stackEnabled = isPostFilterStackEnabled();
+  const chain = Array.isArray(postFilterChain) ? postFilterChain : [];
+  const before = [];
+  const after = [];
+  chain.forEach((entry) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    const info = postFilterCatalogById(normalized.filter);
+    const label = info ? info.label : normalized.filter;
+    if (normalized.stage === "before") before.push(label);
+    else after.push(label);
+  });
+
+  const nodes = [];
+  nodes.push({ kind: "io", label: "Input sRGB" });
+  nodes.push({ kind: "conversion", label: "sRGB -> Linear" });
+  if (stackEnabled) {
+    before.forEach((label) => nodes.push({ kind: "filter", label: `FX: ${label}` }));
+  } else {
+    nodes.push({ kind: "disabled", label: "Post Filters Disabled" });
+  }
+  nodes.push({ kind: "tone", label: `Tone Mapping: ${currentToneMappingLabel()}` });
+  if (stackEnabled) {
+    after.forEach((label) => nodes.push({ kind: "filter", label: `FX: ${label}` }));
+  }
+  nodes.push({ kind: "conversion", label: "Linear -> sRGB" });
+  nodes.push({ kind: "io", label: "Preview Output sRGB" });
+
+  const lane = document.createElement("div");
+  lane.className = "post-pipeline-lane";
+  nodes.forEach((node, i) => {
+    const n = document.createElement("div");
+    n.className = `post-pipeline-node is-${node.kind}`;
+    n.textContent = node.label;
+    lane.appendChild(n);
+    if (i < nodes.length - 1) {
+      const arrow = document.createElement("span");
+      arrow.className = "post-pipeline-arrow";
+      arrow.textContent = "->";
+      lane.appendChild(arrow);
+    }
+  });
+
+  el.postPipelineGraph.innerHTML = "";
+  el.postPipelineGraph.appendChild(lane);
+  if (el.postPipelineSummary) {
+    const beforeCount = before.length;
+    const afterCount = after.length;
+    el.postPipelineSummary.textContent = stackEnabled
+      ? `${beforeCount} before TM, ${afterCount} after TM`
+      : "Post filters disabled";
+  }
+}
+
 function renderPostFilterChain() {
   if (!el.postFiltersChain) return;
   el.postFiltersChain.innerHTML = "";
+  const stackEnabled = isPostFilterStackEnabled();
   if (!Array.isArray(postFilterChain) || postFilterChain.length === 0) {
     const empty = document.createElement("p");
     empty.className = "post-filters-empty";
     empty.textContent = "No filters in chain.";
     el.postFiltersChain.appendChild(empty);
+    renderPostPipelineGraph();
     return;
   }
 
   postFilterChain.forEach((entry, index) => {
-    const filterId = normalizePostFilterId(entry && entry.filter);
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    postFilterChain[index] = normalized;
+    const filterId = normalized.filter;
     const filterInfo = postFilterCatalogById(filterId);
     if (!filterInfo) return;
 
-    const row = document.createElement("div");
+    const row = document.createElement("details");
     row.className = "post-filter-entry";
     row.dataset.index = String(index);
+    row.open = index === 0;
+
+    const summary = document.createElement("summary");
+    summary.className = "post-filter-summary";
 
     const name = document.createElement("span");
     name.className = "post-filter-name";
     name.textContent = filterInfo.label;
+
+    const stageChip = document.createElement("span");
+    stageChip.className = "post-filter-stage-chip";
+    stageChip.textContent = normalized.stage === "before" ? "Before TM" : "After TM";
+
+    summary.appendChild(name);
+    summary.appendChild(stageChip);
+    row.appendChild(summary);
+
+    const body = document.createElement("div");
+    body.className = "post-filter-body";
+
+    const controls = document.createElement("div");
+    controls.className = "post-filter-controls";
 
     const stage = document.createElement("select");
     stage.className = "post-filter-stage";
@@ -47,12 +380,15 @@ function renderPostFilterChain() {
     afterOpt.textContent = "After TM";
     stage.appendChild(beforeOpt);
     stage.appendChild(afterOpt);
-    stage.value = normalizePostFilterStage(entry && entry.stage);
+    stage.value = normalized.stage;
+    stage.disabled = !stackEnabled;
     stage.addEventListener("change", () => {
       const idx = Number(row.dataset.index);
       if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
       postFilterChain[idx].stage = normalizePostFilterStage(stage.value);
+      stageChip.textContent = postFilterChain[idx].stage === "before" ? "Before TM" : "After TM";
       appendLog(`post_filter stage idx=${idx} stage=${postFilterChain[idx].stage}`);
+      renderPostPipelineGraph();
       queueWorkspaceSettingsSave();
     });
 
@@ -60,6 +396,7 @@ function renderPostFilterChain() {
     removeBtn.type = "button";
     removeBtn.className = "post-filter-remove";
     removeBtn.textContent = "Remove";
+    removeBtn.disabled = !stackEnabled;
     removeBtn.addEventListener("click", () => {
       const idx = Number(row.dataset.index);
       if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
@@ -69,17 +406,68 @@ function renderPostFilterChain() {
       queueWorkspaceSettingsSave();
     });
 
-    row.appendChild(name);
-    row.appendChild(stage);
-    row.appendChild(removeBtn);
+    controls.appendChild(stage);
+    controls.appendChild(removeBtn);
+    body.appendChild(controls);
+
+    const paramSpecs = postFilterParamSpecs(filterId);
+    if (paramSpecs.length > 0) {
+      const params = normalized.params || defaultPostFilterParams(filterId);
+      const paramsWrap = document.createElement("div");
+      paramsWrap.className = "post-filter-params";
+      paramSpecs.forEach((field) => {
+        const label = document.createElement("label");
+        label.className = "post-filter-param";
+        const text = document.createElement("span");
+        text.textContent = field.label;
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = field.min;
+        input.max = field.max;
+        input.step = field.step;
+        input.value = String((params && params[field.key]) || "");
+        input.disabled = !stackEnabled;
+        input.setAttribute("aria-label", `${field.label} for ${filterInfo.label}`);
+        input.addEventListener("change", () => {
+          const idx = Number(row.dataset.index);
+          if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+          const current = normalizePostFilterEntry(postFilterChain[idx]);
+          if (!current) return;
+          const nextParams = { ...(current.params || {}), [field.key]: String(input.value || "") };
+          current.params = normalizePostFilterParams(current.filter, nextParams);
+          postFilterChain[idx] = current;
+          input.value = current.params[field.key];
+          appendLog(`post_filter param idx=${idx} ${field.key}=${input.value}`);
+          queueWorkspaceSettingsSave();
+        });
+        label.appendChild(text);
+        label.appendChild(input);
+        paramsWrap.appendChild(label);
+      });
+      body.appendChild(paramsWrap);
+    }
+    row.appendChild(body);
     el.postFiltersChain.appendChild(row);
   });
+  renderPostPipelineGraph();
+}
+
+function updatePostFilterUiState() {
+  const stackEnabled = isPostFilterStackEnabled();
+  if (el.postFilterType) el.postFilterType.disabled = !stackEnabled;
+  if (el.postFilterAddBtn) el.postFilterAddBtn.disabled = !stackEnabled;
+  if (el.postFiltersRecalcBtn) el.postFiltersRecalcBtn.disabled = !stackEnabled;
+  renderPostFilterChain();
 }
 
 function addPostFilterToChain() {
   const filterId = normalizePostFilterId(el.postFilterType && el.postFilterType.value);
   if (!filterId) return;
-  postFilterChain.push({ filter: filterId, stage: "after" });
+  postFilterChain.push({
+    filter: filterId,
+    stage: "after",
+    params: defaultPostFilterParams(filterId),
+  });
   renderPostFilterChain();
   appendLog(`post_filter add filter=${filterId} stage=after`);
   queueWorkspaceSettingsSave();
@@ -100,12 +488,25 @@ function populatePostFilterTypeOptions() {
 }
 
 function gatherPostFilterParams() {
+  if (!isPostFilterStackEnabled()) return "";
   const parts = [];
   (postFilterChain || []).forEach((entry) => {
-    const filterId = normalizePostFilterId(entry && entry.filter);
-    if (!filterId) return;
-    const stage = normalizePostFilterStage(entry && entry.stage);
-    parts.push(`${stage}:${filterId}`);
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    const stage = normalized.stage;
+    const filterId = normalized.filter;
+    const paramPairs = [];
+    const params = normalized.params || {};
+    const specs = postFilterParamSpecs(filterId);
+    specs.forEach((spec) => {
+      if (params[spec.key] === undefined) return;
+      paramPairs.push(`${spec.key}=${params[spec.key]}`);
+    });
+    if (paramPairs.length > 0) {
+      parts.push(`${stage}:${filterId}:${paramPairs.join(":")}`);
+    } else {
+      parts.push(`${stage}:${filterId}`);
+    }
   });
   return parts.join(",");
 }

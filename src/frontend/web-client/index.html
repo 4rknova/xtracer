@@ -387,14 +387,28 @@
                 <span class="control-card-note">Filter chain order</span>
               </summary>
               <div class="control-section-body">
+                <label class="inline-check" for="postFiltersEnabled">
+                  <input id="postFiltersEnabled" type="checkbox" checked>
+                  <span>Enable Post Filters</span>
+                </label>
                 <div class="post-filters-toolbar">
                   <label for="postFilterType">Add Filter
                     <select id="postFilterType">
                       <option value="desaturate">Desaturate</option>
+                      <option value="chromatic_aberration">Chromatic Aberration</option>
+                      <option value="vignette">Vignette</option>
+                      <option value="film_grain">Film Grain</option>
+                      <option value="sharpen">Sharpen</option>
+                      <option value="brightness">Brightness</option>
+                      <option value="contrast">Contrast</option>
+                      <option value="raindrops_lens">Raindrops on Lens</option>
                     </select>
                   </label>
                   <button id="postFilterAddBtn" class="action-btn post-filter-add-btn" type="button" title="Add to chain" aria-label="Add to chain">
                     <span aria-hidden="true">+</span>
+                  </button>
+                  <button id="postFiltersRecalcBtn" class="action-btn post-filter-recalc-btn" type="button" title="Recalculate post filters preview">
+                    Recalculate
                   </button>
                 </div>
                 <div id="postFiltersChain" class="post-filters-chain" aria-live="polite"></div>
@@ -725,6 +739,13 @@
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
             </div>
+            <section class="post-pipeline-card" aria-label="Post process pipeline graph">
+              <div class="post-pipeline-head">
+                <h3 class="post-pipeline-title">Post Process Pipeline</h3>
+                <p id="postPipelineSummary" class="post-pipeline-summary">Live preview path</p>
+              </div>
+              <div id="postPipelineGraph" class="post-pipeline-graph" aria-live="polite"></div>
+            </section>
           </section>
         </section>
 

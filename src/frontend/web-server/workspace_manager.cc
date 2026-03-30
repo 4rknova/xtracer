@@ -36,10 +36,11 @@ workspace_manager_t::workspace_manager_t()
     , clients_()
     , next_id_(0)
 {
-    create_locked("Workspace 1");
+    create_locked("Workspace 1", "");
 }
 
-std::string workspace_manager_t::create_locked(const std::string &name)
+std::string workspace_manager_t::create_locked(const std::string &name,
+                                               const std::string &owner_client_id)
 {
     const unsigned long long id = ++next_id_;
     std::ostringstream ss;
@@ -57,6 +58,7 @@ std::string workspace_manager_t::create_locked(const std::string &name)
     ws.quality_sample_distribution = "grid";
     ws.quality_rdepth = 10;
     ws.settings_json = "{}";
+    ws.owner_client_id = owner_client_id;
     ws.updated_ms = now_ms();
 
     workspaces_[ws.id] = ws;
@@ -82,13 +84,23 @@ void workspace_manager_t::touch_client_locked(const std::string &client_id)
     if (it == clients_.end()) {
         client_t c;
         c.last_seen_ms = now_ms();
-        c.workspace_id = workspaces_.empty() ? create_locked("Workspace 1") : workspaces_.begin()->first;
+        c.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+        auto wit = workspaces_.find(c.workspace_id);
+        if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+            wit->second.owner_client_id = client_id;
+            wit->second.updated_ms = now_ms();
+        }
         clients_[client_id] = c;
         return;
     }
     it->second.last_seen_ms = now_ms();
     if (!exists_locked(it->second.workspace_id)) {
-        it->second.workspace_id = workspaces_.empty() ? create_locked("Workspace 1") : workspaces_.begin()->first;
+        it->second.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+    }
+    auto wit = workspaces_.find(it->second.workspace_id);
+    if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+        wit->second.owner_client_id = client_id;
+        wit->second.updated_ms = now_ms();
     }
 }
 
@@ -106,16 +118,16 @@ void workspace_manager_t::prune_clients_locked(long long now)
 std::string workspace_manager_t::ensure_client(const std::string &client_id)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
     touch_client_locked(client_id);
     if (client_id.empty()) return workspaces_.begin()->first;
     return clients_[client_id].workspace_id;
 }
 
-std::string workspace_manager_t::create(const std::string &name)
+std::string workspace_manager_t::create(const std::string &name, const std::string &owner_client_id)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    return create_locked(name);
+    return create_locked(name, owner_client_id);
 }
 
 workspace_manager_t::remove_result_t workspace_manager_t::remove(const std::string &workspace_id,
@@ -145,13 +157,18 @@ bool workspace_manager_t::set_active(const std::string &client_id, const std::st
     if (client_id.empty()) return false;
     touch_client_locked(client_id);
     clients_[client_id].workspace_id = workspace_id;
+    auto wit = workspaces_.find(workspace_id);
+    if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+        wit->second.owner_client_id = client_id;
+        wit->second.updated_ms = now_ms();
+    }
     return true;
 }
 
 bool workspace_manager_t::get_active(const std::string &client_id, std::string &workspace_id_out)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
     if (client_id.empty()) {
         workspace_id_out = workspaces_.begin()->first;
         return true;
@@ -166,7 +183,7 @@ bool workspace_manager_t::list(const std::string &client_id,
                                std::string &active_workspace_out)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
 
     if (!client_id.empty()) touch_client_locked(client_id);
     prune_clients_locked(now_ms());
@@ -195,6 +212,7 @@ bool workspace_manager_t::list(const std::string &client_id,
         snap.quality_sample_distribution = ws.quality_sample_distribution;
         snap.quality_rdepth = ws.quality_rdepth;
         snap.settings_json = ws.settings_json;
+        snap.is_owned_by_client = !client_id.empty() && (ws.owner_client_id == client_id);
         snap.updated_ms = ws.updated_ms;
         out.push_back(snap);
     }

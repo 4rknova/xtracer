@@ -24,6 +24,7 @@ struct workspace_snapshot_t
     std::string quality_sample_distribution;
     size_t quality_rdepth;
     std::string settings_json;
+    bool is_owned_by_client;
     long long updated_ms;
 };
 
@@ -39,7 +40,7 @@ class workspace_manager_t
     workspace_manager_t();
 
     std::string ensure_client(const std::string &client_id);
-    std::string create(const std::string &name);
+    std::string create(const std::string &name, const std::string &owner_client_id = "");
     remove_result_t remove(const std::string &workspace_id, std::string &replacement_workspace_id_out);
     bool set_active(const std::string &client_id, const std::string &workspace_id);
     bool get_active(const std::string &client_id, std::string &workspace_id_out);
@@ -81,6 +82,7 @@ class workspace_manager_t
         std::string quality_sample_distribution;
         size_t quality_rdepth;
         std::string settings_json;
+        std::string owner_client_id;
         long long updated_ms;
     };
 
@@ -89,7 +91,7 @@ class workspace_manager_t
         long long last_seen_ms;
     };
 
-    std::string create_locked(const std::string &name);
+    std::string create_locked(const std::string &name, const std::string &owner_client_id = "");
     bool exists_locked(const std::string &workspace_id) const;
     void touch_client_locked(const std::string &client_id);
     void prune_clients_locked(long long now_ms);

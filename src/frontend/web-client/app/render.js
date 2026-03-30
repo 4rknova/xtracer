@@ -139,6 +139,24 @@ function triggerSceneSave() {
     });
 }
 
+function sanitizeExportNameToken(value, fallback) {
+  const raw = String(value || "").trim();
+  const cleaned = raw.replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/^_+|_+$/g, "");
+  return cleaned || String(fallback || "");
+}
+
+function sceneBaseNameForExport(sceneName) {
+  const raw = String(sceneName || "").trim();
+  if (!raw) return "scene";
+  return raw.replace(/\.scn$/i, "") || "scene";
+}
+
+function exportTimestampUtc() {
+  const now = new Date();
+  const pad2 = (n) => String(n).padStart(2, "0");
+  return `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}_${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}`;
+}
+
 async function pollJob(jobId, token) {
   let lastState = "";
   resetProgressiveDeltaState(jobId);
@@ -223,6 +241,8 @@ async function pollJob(jobId, token) {
         toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+        postFiltersEnabled: !!postFilterStackEnabled,
+        postFilters: gatherPostFilterParams(),
       });
       if (finalBlob && finalBlob.size > 0) {
         recordPreviewTransfer("full", finalBlob.size || 0);
@@ -557,9 +577,14 @@ async function handleExportClick(event) {
   if (!hasBackendMethod(api, "getJobExport")) return;
 
   const format = selectedExportFormat();
-  const filename = `xtracer_${lastCompletedJobId}.${format}`;
+  const sceneToken = sanitizeExportNameToken(sceneBaseNameForExport(lastCompletedJobScene), "scene");
+  const clientToken = sanitizeExportNameToken(clientId, "client");
+  const filename = `xtracer_${sceneToken}_${clientToken}_${exportTimestampUtc()}.${format}`;
   try {
-    const blob = await api.getJobExport(lastCompletedJobId, format);
+    const blob = await api.getJobExport(lastCompletedJobId, format, {
+      postFiltersEnabled: !!postFilterStackEnabled,
+      postFilters: gatherPostFilterParams(),
+    });
     if (!blob || blob.size <= 0) {
       throw new Error("empty export payload");
     }

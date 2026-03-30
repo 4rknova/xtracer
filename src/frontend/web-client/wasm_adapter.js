@@ -373,10 +373,11 @@
         if (!result || !result.bytes || !result.bytes.byteLength) return null;
         return new Blob([result.bytes], { type: result.mime || "image/png" });
       },
-      async getJobExport(jobId, format) {
+      async getJobExport(jobId, format, opts) {
         const result = await callWorker("getJobExport", {
           job_id: jobId,
           format: format || "png",
+          opts: opts || {},
         });
         if (!result || !result.bytes || !result.bytes.byteLength) {
           throw makeError("export not available", 404);

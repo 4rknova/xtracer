@@ -601,10 +601,27 @@ async function boot() {
   }
   updateToneMappingControlState();
   populatePostFilterTypeOptions();
-  renderPostFilterChain();
+  updatePostFilterUiState();
+  if (typeof renderPostPipelineGraph === "function") renderPostPipelineGraph();
+  if (el.postFiltersEnabled) {
+    el.postFiltersEnabled.checked = !!postFilterStackEnabled;
+    el.postFiltersEnabled.addEventListener("change", () => {
+      postFilterStackEnabled = !!el.postFiltersEnabled.checked;
+      updatePostFilterUiState();
+      appendLog(`post_filter stack=${postFilterStackEnabled ? "on" : "off"}`);
+      refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
+    });
+  }
   if (el.postFilterAddBtn) {
     el.postFilterAddBtn.addEventListener("click", () => {
       addPostFilterToChain();
+    });
+  }
+  if (el.postFiltersRecalcBtn) {
+    el.postFiltersRecalcBtn.addEventListener("click", () => {
+      appendLog("post_filter recalculate");
+      refreshPreviewForToneMapping();
     });
   }
 
