@@ -4765,46 +4765,271 @@ button:disabled {
 
 .post-filters-chain {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .post-filters-empty {
   margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.35;
+  padding: 12px 14px 12px 18px;
+  border: 1px dashed color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 58%, transparent);
+  position: relative;
+}
+
+.post-filters-empty::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 88%, transparent);
+  transform: translateY(-50%);
+}
+
+.post-filters-empty.is-after::before {
+  background: color-mix(in srgb, #f5b041 88%, transparent);
+}
+
+.post-filter-chain-flow {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.post-filter-chain-flow::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 28%, transparent) 0%,
+    color-mix(in srgb, #f5b041 22%, transparent) 58%,
+    color-mix(in srgb, var(--line) 82%, transparent) 100%);
+}
+
+.post-filter-stage-banner,
+.post-filter-stage-pivot,
+.post-filter-entry {
+  position: relative;
+  margin-left: 28px;
+}
+
+.post-filter-stage-banner::before,
+.post-filter-stage-pivot::before,
+.post-filter-entry::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 22px;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 82%, transparent);
+  pointer-events: none;
+}
+
+.post-filter-stage-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 92%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 86%, transparent) 100%);
+}
+
+.post-filter-stage-banner::after {
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 88%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-soft) 42%, transparent);
+}
+
+.post-filter-stage-banner.is-after::after {
+  background: color-mix(in srgb, #f5b041 88%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, #f5b041 24%, transparent);
+}
+
+.post-filter-stage-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.post-filter-stage-banner-meta {
+  grid-column: 2;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.post-filter-stage-note {
+  margin: 0;
+  font-size: 0.73rem;
+  color: var(--muted);
+}
+
+.post-filter-stage-pivot {
+  display: grid;
+}
+
+.post-filter-pivot-core {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, #f5b041 58%, var(--line));
+  background:
+    radial-gradient(circle at 18% 20%,
+      color-mix(in srgb, #f5b041 20%, transparent) 0%,
+      transparent 46%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 94%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 88%, transparent) 100%);
+  box-shadow:
+    0 10px 24px color-mix(in srgb, #000 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent);
+}
+
+.post-filter-pivot-label {
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+}
+
+.post-filter-pivot-name {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-align: left;
 }
 
 .post-filter-entry {
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  border-radius: 10px;
+  border-radius: 14px;
   background:
     linear-gradient(160deg,
       color-mix(in srgb, var(--field-bg) 86%, transparent) 0%,
       color-mix(in srgb, var(--field-bg) 72%, transparent) 100%);
   overflow: clip;
+  box-shadow: 0 10px 20px color-mix(in srgb, #000000 10%, transparent);
+}
+
+.post-filter-entry.is-dragging {
+  opacity: 0.68;
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  box-shadow: 0 14px 28px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.post-filter-entry.is-drop-before::after,
+.post-filter-entry.is-drop-after::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 88%, white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 28%, transparent);
+  pointer-events: none;
+}
+
+.post-filter-entry.is-drop-before::after {
+  top: -1px;
+}
+
+.post-filter-entry.is-drop-after::after {
+  bottom: -1px;
 }
 
 .post-filter-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 6px 8px;
+  grid-template-columns: 22px minmax(0, 1fr) 12px;
+  gap: 10px;
   align-items: center;
-  list-style: none;
   cursor: pointer;
   user-select: none;
-  padding: 8px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   border-bottom: 1px solid transparent;
 }
 
-.post-filter-summary::-webkit-details-marker {
-  display: none;
+.post-filter-summary-meta {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  justify-self: start;
+  text-align: left;
+  align-self: center;
+  min-width: 0;
+  display: block;
 }
 
-.post-filter-summary::after {
-  content: "";
+.post-filter-summary-icon {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 36%, transparent);
+  color: color-mix(in srgb, var(--ink) 96%, white);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.post-filter-summary-icon:active {
+  cursor: grabbing;
+}
+
+.post-filter-summary-icon:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 1px;
+}
+
+.post-filter-summary-chevron {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
   width: 8px;
   height: 8px;
-  justify-self: end;
   border-right: 2px solid color-mix(in srgb, var(--muted) 82%, transparent);
   border-bottom: 2px solid color-mix(in srgb, var(--muted) 82%, transparent);
   transform: rotate(45deg);
@@ -4812,40 +5037,36 @@ button:disabled {
   margin-right: 2px;
 }
 
-.post-filter-entry[open] .post-filter-summary {
+.post-filter-entry.is-open .post-filter-summary {
   border-bottom-color: color-mix(in srgb, var(--line) 76%, transparent);
 }
 
-.post-filter-entry[open] .post-filter-summary::after {
+.post-filter-entry.is-open .post-filter-summary-chevron {
   transform: rotate(225deg) translateY(-2px);
   border-color: color-mix(in srgb, var(--accent) 82%, transparent);
 }
 
+.post-filter-summary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: -1px;
+}
+
 .post-filter-name {
-  font-size: 0.82rem;
-  font-weight: 650;
+  display: block;
+  text-align: left;
+  font-size: 0.84rem;
+  font-weight: 700;
   line-height: 1.15;
 }
 
-.post-filter-stage-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  background: color-mix(in srgb, var(--field-bg) 74%, transparent);
-  color: color-mix(in srgb, var(--ink) 85%, var(--muted));
-  font-size: 0.7rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+.post-filter-body {
+  display: none;
+  gap: 8px;
+  padding: 10px 12px 12px;
 }
 
-.post-filter-body {
+.post-filter-entry.is-open .post-filter-body {
   display: grid;
-  gap: 8px;
-  padding: 8px 10px 10px;
 }
 
 .post-filter-controls {
@@ -4855,8 +5076,47 @@ button:disabled {
   align-items: center;
 }
 
-.post-filter-controls .post-filter-stage {
+.post-filter-stage-switch {
   min-width: 0;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+}
+
+.post-filter-stage-toggle {
+  min-width: 0;
+  min-height: 32px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+  font-size: 0.73rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.post-filter-stage-toggle.is-active {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 44%, transparent);
+  color: color-mix(in srgb, var(--ink) 96%, white);
+}
+
+.post-filter-stage-toggle:disabled {
+  opacity: 0.6;
+}
+
+.post-filter-stage-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 1px;
 }
 
 .post-filter-remove {

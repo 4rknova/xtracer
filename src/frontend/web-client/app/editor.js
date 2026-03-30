@@ -266,6 +266,89 @@ function currentToneMappingLabel() {
   return String((selected && selected.textContent) || el.toneMapping.value || "ACES (Fitted)");
 }
 
+let postFilterDragState = null;
+let postFilterOpenState = Object.create(null);
+
+function clearPostFilterDragMarkers() {
+  document.querySelectorAll(".post-filter-entry.is-dragging, .post-filter-entry.is-drop-before, .post-filter-entry.is-drop-after")
+    .forEach((node) => {
+      node.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
+    });
+}
+
+function getPostFilterStageIndices(stageName) {
+  const indices = [];
+  if (!Array.isArray(postFilterChain)) return indices;
+  postFilterChain.forEach((entry, index) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    if (normalized.stage === stageName) indices.push(index);
+  });
+  return indices;
+}
+
+function reorderPostFiltersWithinStage(stageName, fromPos, toPos) {
+  const stageIndices = getPostFilterStageIndices(stageName);
+  if (stageIndices.length <= 1) return false;
+  if (!Number.isFinite(fromPos) || !Number.isFinite(toPos)) return false;
+  if (fromPos < 0 || fromPos >= stageIndices.length) return false;
+  if (toPos < 0) toPos = 0;
+  if (toPos >= stageIndices.length) toPos = stageIndices.length - 1;
+  if (fromPos === toPos) return false;
+
+  const stageEntries = stageIndices.map((idx) => postFilterChain[idx]);
+  const moved = stageEntries.splice(fromPos, 1)[0];
+  stageEntries.splice(toPos, 0, moved);
+  stageIndices.forEach((idx, pos) => {
+    postFilterChain[idx] = stageEntries[pos];
+  });
+  return true;
+}
+
+function findPostFilterDragInsertion(stageName, clientY) {
+  if (!el.postFiltersChain) return null;
+  const rows = Array.from(el.postFiltersChain.querySelectorAll(`.post-filter-entry[data-stage="${stageName}"]`));
+  if (rows.length === 0) return null;
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const rect = rows[i].getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+    if (clientY < midpoint) {
+      return { position: i, row: rows[i], side: "before" };
+    }
+  }
+
+  return { position: rows.length, row: rows[rows.length - 1], side: "after" };
+}
+
+function finishPostFilterDrag(cancelled) {
+  const state = postFilterDragState;
+  if (!state) return;
+  document.removeEventListener("pointermove", state.onPointerMove);
+  document.removeEventListener("pointerup", state.onPointerUp);
+  document.removeEventListener("pointercancel", state.onPointerUp);
+  if (state.handle && state.pointerId !== null && state.pointerId !== undefined) {
+    try {
+      state.handle.releasePointerCapture(state.pointerId);
+    } catch (_) {
+      // ignore release errors from non-captured pointers
+    }
+  }
+  clearPostFilterDragMarkers();
+
+  if (!cancelled && state.dragging) {
+    let targetPos = Number.isFinite(state.insertionPosition) ? state.insertionPosition : state.stageOrder;
+    if (targetPos > state.stageOrder) targetPos -= 1;
+    if (reorderPostFiltersWithinStage(state.stageName, state.stageOrder, targetPos)) {
+      appendLog(`post_filter reorder stage=${state.stageName} from=${state.stageOrder} to=${targetPos}`);
+      renderPostFilterChain();
+      queueWorkspaceSettingsSave();
+    }
+  }
+
+  postFilterDragState = null;
+}
+
 function renderPostPipelineGraph() {
   if (!el.postPipelineGraph) return;
   const stackEnabled = isPostFilterStackEnabled();
@@ -326,16 +409,51 @@ function renderPostFilterChain() {
   if (!el.postFiltersChain) return;
   el.postFiltersChain.innerHTML = "";
   const stackEnabled = isPostFilterStackEnabled();
-  if (!Array.isArray(postFilterChain) || postFilterChain.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "post-filters-empty";
-    empty.textContent = "No filters in chain.";
-    el.postFiltersChain.appendChild(empty);
-    renderPostPipelineGraph();
-    return;
-  }
+  const board = document.createElement("div");
+  board.className = "post-filter-chain-flow";
 
-  postFilterChain.forEach((entry, index) => {
+  const createStageHeader = (title, note, stageName) => {
+    const head = document.createElement("section");
+    head.className = `post-filter-stage-banner is-${stageName}`;
+    const meta = document.createElement("div");
+    meta.className = "post-filter-stage-banner-meta";
+    const titleEl = document.createElement("h4");
+    titleEl.className = "post-filter-stage-title";
+    titleEl.textContent = title;
+    const noteEl = document.createElement("p");
+    noteEl.className = "post-filter-stage-note";
+    noteEl.textContent = note;
+    meta.appendChild(titleEl);
+    meta.appendChild(noteEl);
+    head.appendChild(meta);
+    return head;
+  };
+
+  const createPivot = () => {
+    const pivotStage = document.createElement("section");
+    pivotStage.className = "post-filter-stage-pivot";
+    const pivotCore = document.createElement("div");
+    pivotCore.className = "post-filter-pivot-core";
+    const pivotLabel = document.createElement("span");
+    pivotLabel.className = "post-filter-pivot-label";
+    pivotLabel.textContent = "Tone Mapping";
+    const pivotName = document.createElement("strong");
+    pivotName.className = "post-filter-pivot-name";
+    pivotName.textContent = currentToneMappingLabel();
+    pivotCore.appendChild(pivotLabel);
+    pivotCore.appendChild(pivotName);
+    pivotStage.appendChild(pivotCore);
+    return pivotStage;
+  };
+
+  const appendStageEmpty = (message, stageName) => {
+    const empty = document.createElement("p");
+    empty.className = `post-filters-empty is-${stageName}`;
+    empty.textContent = message;
+    board.appendChild(empty);
+  };
+
+  const appendFilterCard = (target, entry, index, stageOrder) => {
     const normalized = normalizePostFilterEntry(entry);
     if (!normalized) return;
     postFilterChain[index] = normalized;
@@ -343,24 +461,118 @@ function renderPostFilterChain() {
     const filterInfo = postFilterCatalogById(filterId);
     if (!filterInfo) return;
 
-    const row = document.createElement("details");
+    const row = document.createElement("section");
     row.className = "post-filter-entry";
     row.dataset.index = String(index);
-    row.open = index === 0;
+    row.dataset.stage = normalized.stage;
+    row.dataset.stageOrder = String(stageOrder);
+    const isOpen = Object.prototype.hasOwnProperty.call(postFilterOpenState, String(index))
+      ? !!postFilterOpenState[String(index)]
+      : index === 0;
+    row.classList.toggle("is-open", isOpen);
 
-    const summary = document.createElement("summary");
+    const summary = document.createElement("div");
     summary.className = "post-filter-summary";
+    summary.setAttribute("role", "button");
+    summary.setAttribute("tabindex", stackEnabled ? "0" : "-1");
+    summary.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+    const icon = document.createElement("button");
+    icon.type = "button";
+    icon.className = "post-filter-summary-icon";
+    icon.setAttribute("aria-label", `Drag ${filterInfo.label} to reorder within ${normalized.stage === "before" ? "Before TM" : "After TM"}`);
+    icon.textContent = "ƒ";
+    icon.disabled = !stackEnabled;
+    icon.title = "Drag to reorder within this stage";
+    icon.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+    });
+    icon.addEventListener("pointerdown", (evt) => {
+      if (!stackEnabled) return;
+      if (evt.button !== undefined && evt.button !== 0) return;
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      if (postFilterDragState) finishPostFilterDrag(true);
+
+      const stageName = row.dataset.stage || "after";
+      const stageOrder = Number(row.dataset.stageOrder);
+      const startX = evt.clientX;
+      const startY = evt.clientY;
+      icon.setPointerCapture(evt.pointerId);
+
+      const state = {
+        pointerId: evt.pointerId,
+        handle: icon,
+        sourceIndex: index,
+        stageName,
+        stageOrder: Number.isFinite(stageOrder) ? stageOrder : 0,
+        startX,
+        startY,
+        dragging: false,
+        insertionPosition: Number.isFinite(stageOrder) ? stageOrder : 0,
+        onPointerMove: null,
+        onPointerUp: null,
+      };
+
+      state.onPointerMove = (moveEvt) => {
+        if (moveEvt.pointerId !== state.pointerId) return;
+        const dx = moveEvt.clientX - state.startX;
+        const dy = moveEvt.clientY - state.startY;
+        if (!state.dragging) {
+          if ((dx * dx + dy * dy) < 36) return;
+          state.dragging = true;
+          row.classList.add("is-dragging");
+        }
+        moveEvt.preventDefault();
+        clearPostFilterDragMarkers();
+        row.classList.add("is-dragging");
+        const insertion = findPostFilterDragInsertion(state.stageName, moveEvt.clientY);
+        if (!insertion) return;
+        state.insertionPosition = insertion.position;
+        if (insertion.row && insertion.row !== row) {
+          insertion.row.classList.add(insertion.side === "before" ? "is-drop-before" : "is-drop-after");
+        }
+      };
+
+      state.onPointerUp = (upEvt) => {
+        if (upEvt.pointerId !== state.pointerId) return;
+        finishPostFilterDrag(false);
+      };
+
+      postFilterDragState = state;
+      document.addEventListener("pointermove", state.onPointerMove, { passive: false });
+      document.addEventListener("pointerup", state.onPointerUp);
+      document.addEventListener("pointercancel", state.onPointerUp);
+    });
+
+    const summaryMeta = document.createElement("div");
+    summaryMeta.className = "post-filter-summary-meta";
 
     const name = document.createElement("span");
     name.className = "post-filter-name";
     name.textContent = filterInfo.label;
 
-    const stageChip = document.createElement("span");
-    stageChip.className = "post-filter-stage-chip";
-    stageChip.textContent = normalized.stage === "before" ? "Before TM" : "After TM";
+    const expandIcon = document.createElement("span");
+    expandIcon.className = "post-filter-summary-chevron";
+    expandIcon.setAttribute("aria-hidden", "true");
 
-    summary.appendChild(name);
-    summary.appendChild(stageChip);
+    summary.appendChild(icon);
+    summaryMeta.appendChild(name);
+    summary.appendChild(summaryMeta);
+    summary.appendChild(expandIcon);
+    summary.addEventListener("click", () => {
+      const nextOpen = !row.classList.contains("is-open");
+      row.classList.toggle("is-open", nextOpen);
+      postFilterOpenState[String(index)] = nextOpen;
+      summary.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+    });
+    summary.addEventListener("keydown", (evt) => {
+      if (evt.key !== "Enter" && evt.key !== " ") return;
+      evt.preventDefault();
+      summary.click();
+    });
     row.appendChild(summary);
 
     const body = document.createElement("div");
@@ -369,27 +581,38 @@ function renderPostFilterChain() {
     const controls = document.createElement("div");
     controls.className = "post-filter-controls";
 
-    const stage = document.createElement("select");
-    stage.className = "post-filter-stage";
+    const stage = document.createElement("div");
+    stage.className = "post-filter-stage-switch";
+    stage.setAttribute("role", "group");
     stage.setAttribute("aria-label", `Filter stage for ${filterInfo.label}`);
-    const beforeOpt = document.createElement("option");
-    beforeOpt.value = "before";
-    beforeOpt.textContent = "Before TM";
-    const afterOpt = document.createElement("option");
-    afterOpt.value = "after";
-    afterOpt.textContent = "After TM";
-    stage.appendChild(beforeOpt);
-    stage.appendChild(afterOpt);
-    stage.value = normalized.stage;
-    stage.disabled = !stackEnabled;
-    stage.addEventListener("change", () => {
+
+    const applyStageChange = (nextStage) => {
       const idx = Number(row.dataset.index);
       if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
-      postFilterChain[idx].stage = normalizePostFilterStage(stage.value);
-      stageChip.textContent = postFilterChain[idx].stage === "before" ? "Before TM" : "After TM";
+      postFilterChain[idx].stage = normalizePostFilterStage(nextStage);
+      const buttons = stage.querySelectorAll("button[data-stage]");
+      buttons.forEach((btn) => {
+        const active = btn.getAttribute("data-stage") === postFilterChain[idx].stage;
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
       appendLog(`post_filter stage idx=${idx} stage=${postFilterChain[idx].stage}`);
-      renderPostPipelineGraph();
+      renderPostFilterChain();
       queueWorkspaceSettingsSave();
+    };
+
+    ["before", "after"].forEach((stageName) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "post-filter-stage-toggle";
+      btn.setAttribute("data-stage", stageName);
+      btn.textContent = stageName === "before" ? "Before TM" : "After TM";
+      const active = normalized.stage === stageName;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      btn.disabled = !stackEnabled;
+      btn.addEventListener("click", () => applyStageChange(stageName));
+      stage.appendChild(btn);
     });
 
     const removeBtn = document.createElement("button");
@@ -447,8 +670,37 @@ function renderPostFilterChain() {
       body.appendChild(paramsWrap);
     }
     row.appendChild(body);
-    el.postFiltersChain.appendChild(row);
-  });
+    board.appendChild(row);
+  };
+
+  const before = [];
+  const after = [];
+  if (Array.isArray(postFilterChain) && postFilterChain.length > 0) {
+    postFilterChain.forEach((entry, index) => {
+      const normalized = normalizePostFilterEntry(entry);
+      if (!normalized) return;
+      if (normalized.stage === "before") before.push({ entry: normalized, index });
+      else after.push({ entry: normalized, index });
+    });
+  }
+
+  board.appendChild(createStageHeader("Before TM", "Linear-space effects", "before"));
+  if (before.length === 0) {
+    appendStageEmpty("No filters before tone mapping.", "before");
+  } else {
+    before.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
+  }
+
+  board.appendChild(createPivot());
+
+  board.appendChild(createStageHeader("After TM", "Display-space finishing", "after"));
+  if (after.length === 0) {
+    appendStageEmpty("No filters after tone mapping.", "after");
+  } else {
+    after.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
+  }
+
+  el.postFiltersChain.appendChild(board);
   renderPostPipelineGraph();
 }
 
