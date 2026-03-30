@@ -4721,18 +4721,13 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: end;
+  margin-bottom: 12px;
 }
 
-.post-filters-toolbar > label {
+.post-filters-toolbar > select {
   margin: 0;
   min-width: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.post-filters-toolbar > label > select {
   width: 100%;
-  min-width: 0;
 }
 
 .post-filters-toolbar > button {
@@ -4759,13 +4754,14 @@ button:disabled {
   width: 100% !important;
   min-width: 108px;
   min-height: 36px;
-  margin: 0 !important;
+  margin: 6px 0 10px !important;
   padding-inline: 12px;
 }
 
 .post-filters-chain {
   display: grid;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .post-filters-empty {
@@ -4830,12 +4826,13 @@ button:disabled {
   content: "";
   position: absolute;
   left: -18px;
-  top: 22px;
+  top: 50%;
   width: 18px;
   height: 2px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--line) 82%, transparent);
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .post-filter-stage-banner {
@@ -4843,13 +4840,7 @@ button:disabled {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--panel) 92%, transparent) 0%,
-      color-mix(in srgb, var(--field-bg) 86%, transparent) 100%);
+  padding: 2px 0 2px 4px;
 }
 
 .post-filter-stage-banner::after {
@@ -5095,7 +5086,7 @@ button:disabled {
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
-  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+  color: color-mix(in srgb, var(--muted) 82%, #6f7b88);
   font-size: 0.73rem;
   font-weight: 650;
   letter-spacing: 0.01em;
