@@ -456,6 +456,37 @@ bool extract_rect_from_framebuffer(const nimg::Pixmap &src,
     return true;
 }
 
+size_t post_filter_padding_pixels(const post_filter_chain_t &chain)
+{
+    float max_radius = 0.0f;
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const post_filter_entry_t &e = chain[i];
+        if (e.id == "chromatic_aberration") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.ca_amount));
+        } else if (e.id == "raindrops_lens") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.raindrops_distortion));
+        } else if (e.id == "sharpen") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.sharpen_radius));
+        }
+    }
+    return (size_t)std::ceil(max_radius);
+}
+
+void expand_rect_with_padding(size_t width,
+                              size_t height,
+                              size_t padding,
+                              size_t &x0,
+                              size_t &y0,
+                              size_t &x1,
+                              size_t &y1)
+{
+    if (width == 0 || height == 0 || padding == 0) return;
+    x0 = (x0 > padding) ? (x0 - padding) : 0;
+    y0 = (y0 > padding) ? (y0 - padding) : 0;
+    x1 = std::min(width, x1 + padding);
+    y1 = std::min(height, y1 + padding);
+}
+
 bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::tile_t *tile)
 {
     if (!tile) return false;
@@ -1120,6 +1151,7 @@ bool job_manager_t::image_delta(const std::string &id,
     std::vector<pending_tile_t> pending;
     pending.reserve(max_tiles);
     nimg::Pixmap preview_fb;
+    const size_t filter_padding = post_filter_padding_pixels(post_chain);
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
@@ -1151,6 +1183,13 @@ bool job_manager_t::image_delta(const std::string &id,
             entry.y0 = t.rect.y0;
             entry.x1 = t.rect.x1;
             entry.y1 = t.rect.y1;
+            expand_rect_with_padding(src.width(),
+                                     src.height(),
+                                     filter_padding,
+                                     entry.x0,
+                                     entry.y0,
+                                     entry.x1,
+                                     entry.y1);
             entry.done_index = t.done_index;
             pending.push_back(entry);
         }
