@@ -409,6 +409,7 @@ NCF* NCF::get_group_by_name(const char *name) const
 	if (it == m_p_groups.end())
 	{
 		m_p_groups[name] = new NCF();
+		m_p_groups[name]->m_p_name = name ? name : "";
 		m_p_groups[name]->m_p_level = m_p_level + 1;
 
 #ifdef CONFIG_DEBUG
