@@ -4653,6 +4653,12 @@ button:disabled {
   padding: 7px 8px;
 }
 
+.visual-scene-scale-inline {
+  width: 100%;
+  margin: 0;
+  padding: 7px 8px;
+}
+
 .visual-load-btn {
   white-space: nowrap;
 }

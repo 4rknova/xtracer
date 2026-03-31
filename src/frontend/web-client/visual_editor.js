@@ -482,6 +482,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.photonRoot = null;
     this.photonDiffuse = null;
     this.photonCaustic = null;
+    this.sceneScaleMultiplier = 1.0;
+    this.sceneBaseRadius = 2.0;
     this.sceneRadius = 2.0;
     this.infinitePlanes = [];
     this.viewUp = vec3(0, 1, 0);
@@ -508,6 +510,12 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.onObjectTransformChanged = null;
 
     this._animateBound = this.animate.bind(this);
+  }
+
+  function normalizeSceneScaleMultiplier(value) {
+    var n = Number(value);
+    if (!Number.isFinite(n)) return 1.0;
+    return clamp(n, 0.01, 100.0);
   }
 
   SceneVisualEditor.prototype.setStatus = function (msg) {
@@ -559,6 +567,102 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     });
   };
 
+  SceneVisualEditor.prototype.applySceneScaleToRoots = function () {
+    var scale = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    if (this.modelRoot) this.modelRoot.scale.setScalar(scale);
+    if (this.cameraWidgetRoot) this.cameraWidgetRoot.scale.setScalar(scale);
+    if (this.photonRoot) this.photonRoot.scale.setScalar(scale);
+  };
+
+  SceneVisualEditor.prototype.collectAreaLightCenters = function () {
+    var centers = [];
+    if (!this.modelRoot) return centers;
+    for (var i = 0; i < this.modelRoot.children.length; i += 1) {
+      var mesh = this.modelRoot.children[i];
+      if (!mesh || !mesh.userData || !mesh.userData.isEmissiveAreaLight) continue;
+      var center = new THREE.Vector3();
+      new THREE.Box3().setFromObject(mesh).getCenter(center);
+      if (Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z)) {
+        centers.push(center);
+      }
+    }
+    return centers;
+  };
+
+  SceneVisualEditor.prototype.refreshSceneBoundsAndLighting = function (options) {
+    var opts = options || {};
+    var updateTarget = opts.updateTarget !== false;
+    var preserveDistance = !!opts.preserveDistance;
+    if (!this.modelRoot || this.modelRoot.children.length === 0) {
+      this.sceneBaseRadius = 2.0;
+      this.sceneRadius = this.sceneBaseRadius * this.sceneScaleMultiplier;
+      this.updateCameraWidget();
+      return;
+    }
+
+    this.modelRoot.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(this.modelRoot);
+    var size = new THREE.Vector3();
+    var center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    var radius = Math.max(size.x, Math.max(size.y, size.z)) * 0.5;
+    this.sceneRadius = Math.max(0.25, radius);
+    this.sceneBaseRadius = this.sceneRadius / Math.max(1e-6, this.sceneScaleMultiplier);
+    if (updateTarget) this.target.copy(center);
+    if (!preserveDistance) {
+      this.distance = clamp(this.fitDistanceForRadius(this.sceneRadius), 1.5, 120);
+    }
+
+    var areaLightCenters = this.collectAreaLightCenters();
+    if (this.keyLight) {
+      var lr = Math.max(1.5, this.sceneRadius * 2.0);
+      if (areaLightCenters.length > 0) {
+        var la = new THREE.Vector3();
+        for (var ai = 0; ai < areaLightCenters.length; ai += 1) la.add(areaLightCenters[ai]);
+        la.multiplyScalar(1.0 / areaLightCenters.length);
+        this.keyLight.position.copy(la);
+      } else {
+        this.keyLight.position.set(center.x + lr, center.y + lr * 1.4, center.z + lr * 0.8);
+      }
+      this.keyLight.target.position.copy(center);
+      this.keyLight.target.updateMatrixWorld();
+      this.fitDirectionalShadowToBox(this.keyLight, box);
+    }
+
+    if (this.rimLight) {
+      if (areaLightCenters.length > 1) this.rimLight.position.copy(areaLightCenters[1]);
+      else this.rimLight.position.set(center.x - this.sceneRadius * 1.5, center.y + this.sceneRadius, center.z - this.sceneRadius * 1.2);
+    }
+    this.updateCameraWidget();
+  };
+
+  SceneVisualEditor.prototype.setSceneScaleMultiplier = function (value, preserveView) {
+    var prev = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    var next = normalizeSceneScaleMultiplier(value);
+    this.sceneScaleMultiplier = next;
+    this.applySceneScaleToRoots();
+    this.sceneRadius = this.sceneBaseRadius * next;
+    if (preserveView !== false) {
+      var ratio = next / Math.max(1e-6, prev);
+      this.target.multiplyScalar(ratio);
+      this.refreshSceneBoundsAndLighting({ updateTarget: false, preserveDistance: true });
+    } else {
+      this.refreshSceneBoundsAndLighting({ updateTarget: true, preserveDistance: false });
+    }
+    return Math.abs(next - prev) > 1e-6;
+  };
+
+  SceneVisualEditor.prototype.getScaledSelectedCameraPose = function () {
+    if (!this.selectedCameraPose) return null;
+    var scale = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    return {
+      position: this.selectedCameraPose.position.clone().multiplyScalar(scale),
+      target: this.selectedCameraPose.target.clone().multiplyScalar(scale),
+      up: this.selectedCameraPose.up ? this.selectedCameraPose.up.clone() : vec3(0, 1, 0),
+    };
+  };
+
   SceneVisualEditor.prototype.init = function () {
     if (!this.viewportEl || typeof THREE === "undefined") return false;
 
@@ -585,6 +689,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.initAxisWidget();
     this.photonRoot = new THREE.Group();
     this.scene.add(this.photonRoot);
+    this.applySceneScaleToRoots();
 
     this.grid = new THREE.GridHelper(24, 24, 0x5f7a8e, 0x2b3642);
     this.grid.position.y = -0.003;
@@ -1021,13 +1126,14 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
   };
 
   SceneVisualEditor.prototype.jumpToSelectedCameraView = function () {
-    if (!this.selectedCameraPose) {
+    var pose = this.getScaledSelectedCameraPose();
+    if (!pose) {
       this.setStatus("View: no selected camera");
       return false;
     }
 
-    var pos = this.selectedCameraPose.position.clone();
-    var tgt = this.selectedCameraPose.target.clone();
+    var pos = pose.position.clone();
+    var tgt = pose.target.clone();
     var toCam = pos.clone().sub(tgt);
     var dist = clamp(toCam.length(), 0.3, 120);
     if (toCam.lengthSq() < 1e-8) toCam.set(0, 0, 1);
@@ -1526,7 +1632,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
       ? this.frameAspect
       : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
-    var span = clamp((this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
+    var span = clamp((this.sceneBaseRadius || this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
     var g = this.buildCameraWidgetGeometry(this.selectedCameraHFov, aspect, span);
     var m = new THREE.LineBasicMaterial({ color: 0x55d3ff });
     this.cameraWidget = new THREE.Group();
@@ -1616,7 +1722,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
       ? this.frameAspect
       : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
-    var span = clamp((this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
+    var span = clamp((this.sceneBaseRadius || this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
     var sig = [
       Math.round(pose.hfov * 1000),
       Math.round(aspect * 1000),
@@ -1957,7 +2063,6 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.sceneCameraOrder.push(cam.id);
     }
     var count = 0;
-    var areaLightCenters = [];
     var referencedMeshIds = {};
 
     for (var i = 0; i < parsed.objects.length; i += 1) {
@@ -1991,6 +2096,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         geometryType: mesh.userData.geometryType,
       };
       var isEmissive = !!(matDef && String(matDef.type || "").toLowerCase() === "emissive");
+      mesh.userData.isEmissiveAreaLight = isEmissive;
       mesh.castShadow = !isEmissive;
       mesh.receiveShadow = !isEmissive;
       this.applyDefTransform(mesh, geoDef);
@@ -2001,14 +2107,6 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         this.addMediumOverlay(mesh, mediumDef);
       }
       this.modelRoot.add(mesh);
-
-      if (isEmissive) {
-        var lc = new THREE.Vector3();
-        new THREE.Box3().setFromObject(mesh).getCenter(lc);
-        if (Number.isFinite(lc.x) && Number.isFinite(lc.y) && Number.isFinite(lc.z)) {
-          areaLightCenters.push(lc);
-        }
-      }
 
       if (String(geoDef.type || "").toLowerCase() === "plane") {
         var n = (geoDef.normal || vec3(0, 1, 0)).clone();
@@ -2071,6 +2169,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       backendMesh.userData.geometryType = "mesh";
       backendMesh.userData.infinitePlane = false;
       backendMesh.userData.syntheticFromBackend = true;
+      backendMesh.userData.isEmissiveAreaLight = false;
       this.objectMeshById[backendMeshId] = backendMesh;
       this.objectMetaById[backendMeshId] = {
         objectId: backendMeshId,
@@ -2108,38 +2207,11 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       count += 1;
     }
 
-    if (count > 0) {
-      var box = new THREE.Box3().setFromObject(this.modelRoot);
-      var size = new THREE.Vector3();
-      var center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
-      var radius = Math.max(size.x, Math.max(size.y, size.z)) * 0.5;
-      this.sceneRadius = Math.max(0.25, radius);
-      this.target.copy(center);
-      this.distance = clamp(this.fitDistanceForRadius(this.sceneRadius), 1.5, 120);
-
-      if (this.keyLight) {
-        var lr = Math.max(1.5, this.sceneRadius * 2.0);
-        if (areaLightCenters.length > 0) {
-          var la = new THREE.Vector3();
-          for (var ai = 0; ai < areaLightCenters.length; ai += 1) la.add(areaLightCenters[ai]);
-          la.multiplyScalar(1.0 / areaLightCenters.length);
-          this.keyLight.position.copy(la);
-        } else {
-          this.keyLight.position.set(center.x + lr, center.y + lr * 1.4, center.z + lr * 0.8);
-        }
-        this.keyLight.target.position.copy(center);
-        this.keyLight.target.updateMatrixWorld();
-        this.fitDirectionalShadowToBox(this.keyLight, box);
-      }
-
-      if (this.rimLight) {
-        if (areaLightCenters.length > 1) this.rimLight.position.copy(areaLightCenters[1]);
-        else this.rimLight.position.set(center.x - this.sceneRadius * 1.5, center.y + this.sceneRadius, center.z - this.sceneRadius * 1.2);
-      }
-    } else {
-      this.sceneRadius = 2.0;
+    if (count > 0) this.refreshSceneBoundsAndLighting({ updateTarget: true, preserveDistance: false });
+    else {
+      this.sceneBaseRadius = 2.0;
+      this.sceneRadius = this.sceneBaseRadius * this.sceneScaleMultiplier;
+      this.updateCameraWidget();
     }
 
     if (this.sceneCameraMap.default) this.setActiveCamera("default");

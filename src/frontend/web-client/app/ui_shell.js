@@ -659,6 +659,12 @@ function clampHistoryLimit(v) {
   return Math.max(10, Math.min(2000, Math.floor(n)));
 }
 
+function clampVisualSceneScale(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 1.0;
+  return Math.max(0.01, Math.min(100, n));
+}
+
 function clampLogPollMs(v, fallback, min, max) {
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback;
@@ -693,6 +699,7 @@ function loadUIOptions() {
   );
   uiOptions.textHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-text-history-limit") || "200");
   uiOptions.visualHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-visual-history-limit") || "200");
+  uiOptions.visualSceneScale = clampVisualSceneScale(localStorage.getItem("xtracer-visual-scene-scale") || "1");
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
@@ -720,6 +727,7 @@ function loadUIOptions() {
   if (el.logPollBackgroundInterval) el.logPollBackgroundInterval.value = String(uiOptions.logPollBackgroundMs);
   if (el.textHistorySize) el.textHistorySize.value = String(uiOptions.textHistoryLimit);
   if (el.visualHistorySize) el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
+  if (el.visualSceneScale) el.visualSceneScale.value = String(uiOptions.visualSceneScale);
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
@@ -753,6 +761,7 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-log-poll-background-ms", String(uiOptions.logPollBackgroundMs));
   localStorage.setItem("xtracer-text-history-limit", String(uiOptions.textHistoryLimit));
   localStorage.setItem("xtracer-visual-history-limit", String(uiOptions.visualHistoryLimit));
+  localStorage.setItem("xtracer-visual-scene-scale", String(uiOptions.visualSceneScale));
   localStorage.setItem("xtracer-auto-load-editor", uiOptions.autoLoadEditor ? "1" : "0");
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");

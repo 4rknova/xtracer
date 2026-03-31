@@ -180,6 +180,9 @@ async function boot() {
       if (el.visualProjection && visualEditor.setProjectionMode) {
         visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
       }
+      if (el.visualSceneScale && visualEditor.setSceneScaleMultiplier) {
+        visualEditor.setSceneScaleMultiplier(uiOptions.visualSceneScale, false);
+      }
       try {
         await loadVisualSceneFromSelected();
       } catch (err) {
@@ -211,6 +214,18 @@ async function boot() {
       const mode = String(el.visualProjection.value || "perspective").toLowerCase();
       visualEditor.setProjectionMode(mode);
       appendLog(`visual projection=${mode}`);
+    });
+  }
+  if (el.visualSceneScale) {
+    el.visualSceneScale.addEventListener("change", () => {
+      const next = clampVisualSceneScale(el.visualSceneScale.value || "1");
+      uiOptions.visualSceneScale = next;
+      el.visualSceneScale.value = String(next);
+      persistUIOptions();
+      if (visualEditor && visualEditor.setSceneScaleMultiplier) {
+        visualEditor.setSceneScaleMultiplier(next, true);
+      }
+      appendLog(`visual scene scale=${next}`);
     });
   }
   if (el.visualShowGrid) {
@@ -389,6 +404,7 @@ async function boot() {
       if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(sceneName, variantName));
       Promise.all(tasks)
         .then(() => {
+          reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName);
           if (visualEditor) return loadVisualSceneFromSelected();
           return null;
         })

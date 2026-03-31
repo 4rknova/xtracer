@@ -204,6 +204,7 @@ const el = {
   visualLoadBtn: $("visualLoadBtn"),
   visualCamera: $("visualCamera"),
   visualProjection: $("visualProjection"),
+  visualSceneScale: $("visualSceneScale"),
   visualSelectionTag: $("visualSelectionTag"),
   visualShowGrid: $("visualShowGrid"),
   visualViewport: $("visualViewport"),
@@ -244,6 +245,7 @@ const uiOptions = {
   logPollBackgroundMs: 20000,
   textHistoryLimit: 200,
   visualHistoryLimit: 200,
+  visualSceneScale: 1.0,
   autoLoadEditor: true,
   autoScrollLogs: true,
   clearPreviewOnRender: false,
@@ -263,6 +265,8 @@ let cameraCatalog = [];
 let cameraBrowserSelectedName = "";
 let variantCatalog = [];
 let variantBrowserSelectedName = "";
+let cameraLoadToken = 0;
+let runtimeGraphLoadToken = 0;
 let lastBackendLogId = 0;
 let backendLogWaitAbortController = null;
 let previewObjectUrl = "";

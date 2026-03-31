@@ -870,18 +870,39 @@ function applyCameraTypesFromRuntimeGraph(sceneName, graphData, variantName) {
   const targetVariant = variantName !== undefined ? normalizeVariantName(variantName) : activeVariant;
   if (!currentScene || !activeScene || currentScene !== activeScene) return;
   if (normalizeVariantName(activeVariant) !== targetVariant) return;
-  if (!Array.isArray(cameraCatalog) || cameraCatalog.length === 0) return;
 
   const graphCameras = Array.isArray(graphData && graphData.cameras) ? graphData.cameras : [];
   if (!graphCameras.length) return;
   const typeById = new Map();
+  const graphOrder = [];
   graphCameras.forEach((cam) => {
     const id = String(cam && cam.id ? cam.id : "").trim();
     const type = String(cam && cam.type ? cam.type : "").trim();
-    if (id) typeById.set(id, type);
+    if (!id) return;
+    typeById.set(id, type);
+    graphOrder.push(id);
   });
 
   let changed = false;
+  if (!Array.isArray(cameraCatalog)) cameraCatalog = [];
+  const catalogById = new Map();
+  cameraCatalog.forEach((item) => {
+    const value = String(item && item.value ? item.value : "").trim();
+    if (value) catalogById.set(value, item);
+  });
+
+  graphOrder.forEach((id) => {
+    if (catalogById.has(id)) return;
+    const next = {
+      value: id,
+      label: id,
+      type: String(typeById.get(id) || "").trim(),
+    };
+    cameraCatalog.push(next);
+    catalogById.set(id, next);
+    changed = true;
+  });
+
   cameraCatalog = cameraCatalog.map((item) => {
     const value = String(item && item.value ? item.value : "").trim();
     const prevType = String(item && item.type ? item.type : "").trim();
@@ -892,7 +913,29 @@ function applyCameraTypesFromRuntimeGraph(sceneName, graphData, variantName) {
     return { ...item, type: nextType };
   });
 
-  if (changed) renderCameraBrowser();
+  cameraCatalog.sort((a, b) => String(a && a.value ? a.value : "").localeCompare(String(b && b.value ? b.value : "")));
+
+  if (el.camera) {
+    const previous = String(el.camera.value || "").trim();
+    el.camera.innerHTML = "";
+    cameraCatalog.forEach((item) => addOption(el.camera, item.value, item.label || item.value));
+    if (cameraCatalogHasName(previous)) el.camera.value = previous;
+    else if (el.camera.options.length > 0) el.camera.selectedIndex = 0;
+  }
+
+  if (changed) {
+    renderCameraBrowser();
+    updateCameraActivePanel();
+  }
+}
+
+function reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName) {
+  const currentScene = String(sceneName || "").trim();
+  if (!currentScene) return;
+  const targetVariant = normalizeVariantName(variantName !== undefined ? variantName : selectedSceneVariantValue());
+  const cachedGraph = getRuntimeGraphForScene(currentScene, targetVariant);
+  if (!cachedGraph) return;
+  applyCameraTypesFromRuntimeGraph(currentScene, cachedGraph, targetVariant);
 }
 
 function updateCameraFileCount() {
@@ -1283,6 +1326,7 @@ async function loadScenes() {
 
 async function loadCameras(scene, variant) {
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const requestToken = ++cameraLoadToken;
   if (!scene) {
     el.camera.innerHTML = "";
     cameraCatalog = [];
@@ -1292,6 +1336,7 @@ async function loadCameras(scene, variant) {
   }
 
   const info = await api.getCameras(scene, variantName);
+  if (requestToken !== cameraLoadToken) return info;
   el.camera.innerHTML = "";
   const sceneName = String(scene || "").trim();
   const infoObj = Array.isArray(info) ? { cameras: info } : (info || {});
@@ -1311,9 +1356,6 @@ async function loadCameras(scene, variant) {
     cameraCatalog = cameras.map((name) => ({ value: name, label: name, type: "" }));
   }
 
-  const cachedGraph = getRuntimeGraphForScene(sceneName, variantName);
-  if (cachedGraph) applyCameraTypesFromRuntimeGraph(sceneName, cachedGraph, variantName);
-
   if (defaultCamera && cameras.includes(defaultCamera)) {
     el.camera.value = defaultCamera;
   } else if (cameras.length > 0) {
@@ -1324,6 +1366,7 @@ async function loadCameras(scene, variant) {
   if (!cameraCatalogHasName(cameraBrowserSelectedName)) {
     cameraBrowserSelectedName = String(el.camera.value || "");
   }
+  reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName);
   renderCameraBrowser();
 
   syncVisualCameraFromRenderSelection();
@@ -1423,7 +1466,9 @@ async function loadSceneRuntimeGraph(scene, variant) {
   const sceneName = String(scene || "").trim();
   if (!sceneName || !hasBackendMethod(api, "getSceneRuntimeGraph")) return null;
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const requestToken = ++runtimeGraphLoadToken;
   const data = await api.getSceneRuntimeGraph(sceneName, variantName);
+  if (requestToken !== runtimeGraphLoadToken) return data || null;
   const key = runtimeGraphCacheKey(sceneName, variantName);
   runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [], media: [] });
   applyCameraTypesFromRuntimeGraph(sceneName, runtimeGraphByScene.get(key), variantName);
