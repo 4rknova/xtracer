@@ -5,6 +5,7 @@
 
 #include <ostream>
 #include <cstdio>
+#include <cstddef>
 
 namespace nmath {
 
@@ -152,6 +153,30 @@ class Vector3f
 
 inline scalar_t dot(const Vector3f &v1, const Vector3f &v2);
 inline Vector3f cross(const Vector3f &v1, const Vector3f &v2);
+
+namespace batch {
+inline void vec3_normalize_soa(
+    const scalar_t *in_x,
+    const scalar_t *in_y,
+    const scalar_t *in_z,
+    scalar_t *out_x,
+    scalar_t *out_y,
+    scalar_t *out_z,
+    std::size_t count);
+
+inline void vec3_dot_cross_soa(
+    const scalar_t *ax,
+    const scalar_t *ay,
+    const scalar_t *az,
+    const scalar_t *bx,
+    const scalar_t *by,
+    const scalar_t *bz,
+    scalar_t *out_dot,
+    scalar_t *out_cx,
+    scalar_t *out_cy,
+    scalar_t *out_cz,
+    std::size_t count);
+} /* namespace batch */
 
 class Vector4f
 {

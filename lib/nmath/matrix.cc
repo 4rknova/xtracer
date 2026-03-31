@@ -1,9 +1,204 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#if defined(NMATH_ENABLE_SIMD) && !defined(MATH_SINGLE_PRECISION)
+    #if defined(NMATH_ENABLE_SIMD_AVX) && defined(__AVX__)
+        #include <immintrin.h>
+        #define NMATH_SIMD_DOUBLE_MAT4_AVX 1
+    #elif defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && (_M_IX86_FP >= 2))
+        #include <emmintrin.h>
+        #define NMATH_SIMD_DOUBLE_MAT4_SSE2 1
+    #endif
+#endif
+#ifndef NMATH_SIMD_DOUBLE_MAT4_AVX
+    #define NMATH_SIMD_DOUBLE_MAT4_AVX 0
+#endif
+#ifndef NMATH_SIMD_DOUBLE_MAT4_SSE2
+    #define NMATH_SIMD_DOUBLE_MAT4_SSE2 0
+#endif
+#if NMATH_SIMD_DOUBLE_MAT4_AVX || NMATH_SIMD_DOUBLE_MAT4_SSE2
+    #define NMATH_SIMD_DOUBLE_MAT4 1
+#else
+    #define NMATH_SIMD_DOUBLE_MAT4 0
+#endif
+
 #include "matrix.h"
 #include "vector.h"
 
 namespace nmath {
+
+namespace detail {
+#if NMATH_SIMD_DOUBLE_MAT4_AVX
+inline scalar_t hsum4_pd(__m256d v)
+{
+    const __m128d lo = _mm256_castpd256_pd128(v);
+    const __m128d hi = _mm256_extractf128_pd(v, 1);
+    const __m128d s = _mm_add_pd(lo, hi);
+    return _mm_cvtsd_f64(_mm_add_sd(s, _mm_unpackhi_pd(s, s)));
+}
+
+inline Matrix4x4f mat4_add(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    for (int i = 0; i < 4; ++i) {
+        const __m256d a = _mm256_loadu_pd(&m1.data[i][0]);
+        const __m256d b = _mm256_loadu_pd(&m2.data[i][0]);
+        _mm256_storeu_pd(&res.data[i][0], _mm256_add_pd(a, b));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_sub(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    for (int i = 0; i < 4; ++i) {
+        const __m256d a = _mm256_loadu_pd(&m1.data[i][0]);
+        const __m256d b = _mm256_loadu_pd(&m2.data[i][0]);
+        _mm256_storeu_pd(&res.data[i][0], _mm256_sub_pd(a, b));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_mul_scalar(const Matrix4x4f &m, scalar_t r)
+{
+    Matrix4x4f res;
+    const __m256d vr = _mm256_set1_pd(r);
+    for (int i = 0; i < 4; ++i) {
+        const __m256d a = _mm256_loadu_pd(&m.data[i][0]);
+        _mm256_storeu_pd(&res.data[i][0], _mm256_mul_pd(a, vr));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_mul(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    const __m256d b0 = _mm256_loadu_pd(&m2.data[0][0]);
+    const __m256d b1 = _mm256_loadu_pd(&m2.data[1][0]);
+    const __m256d b2 = _mm256_loadu_pd(&m2.data[2][0]);
+    const __m256d b3 = _mm256_loadu_pd(&m2.data[3][0]);
+    for (int i = 0; i < 4; ++i) {
+        const __m256d a0 = _mm256_set1_pd(m1.data[i][0]);
+        const __m256d a1 = _mm256_set1_pd(m1.data[i][1]);
+        const __m256d a2 = _mm256_set1_pd(m1.data[i][2]);
+        const __m256d a3 = _mm256_set1_pd(m1.data[i][3]);
+        __m256d row = _mm256_mul_pd(a0, b0);
+        row = _mm256_add_pd(row, _mm256_mul_pd(a1, b1));
+        row = _mm256_add_pd(row, _mm256_mul_pd(a2, b2));
+        row = _mm256_add_pd(row, _mm256_mul_pd(a3, b3));
+        _mm256_storeu_pd(&res.data[i][0], row);
+    }
+    return res;
+}
+
+inline Vector4f mat4_mul_vec4(const Matrix4x4f &mat, const Vector4f &vec)
+{
+    const __m256d v = _mm256_set_pd(vec.w, vec.z, vec.y, vec.x);
+    return Vector4f(
+        hsum4_pd(_mm256_mul_pd(_mm256_loadu_pd(&mat.data[0][0]), v)),
+        hsum4_pd(_mm256_mul_pd(_mm256_loadu_pd(&mat.data[1][0]), v)),
+        hsum4_pd(_mm256_mul_pd(_mm256_loadu_pd(&mat.data[2][0]), v)),
+        hsum4_pd(_mm256_mul_pd(_mm256_loadu_pd(&mat.data[3][0]), v))
+    );
+}
+#elif NMATH_SIMD_DOUBLE_MAT4_SSE2
+inline scalar_t hsum2_pd(__m128d v)
+{
+    return _mm_cvtsd_f64(_mm_add_sd(v, _mm_unpackhi_pd(v, v)));
+}
+
+inline Matrix4x4f mat4_add(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    for (int i = 0; i < 4; ++i) {
+        const __m128d a0 = _mm_loadu_pd(&m1.data[i][0]);
+        const __m128d a1 = _mm_loadu_pd(&m1.data[i][2]);
+        const __m128d b0 = _mm_loadu_pd(&m2.data[i][0]);
+        const __m128d b1 = _mm_loadu_pd(&m2.data[i][2]);
+        _mm_storeu_pd(&res.data[i][0], _mm_add_pd(a0, b0));
+        _mm_storeu_pd(&res.data[i][2], _mm_add_pd(a1, b1));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_sub(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    for (int i = 0; i < 4; ++i) {
+        const __m128d a0 = _mm_loadu_pd(&m1.data[i][0]);
+        const __m128d a1 = _mm_loadu_pd(&m1.data[i][2]);
+        const __m128d b0 = _mm_loadu_pd(&m2.data[i][0]);
+        const __m128d b1 = _mm_loadu_pd(&m2.data[i][2]);
+        _mm_storeu_pd(&res.data[i][0], _mm_sub_pd(a0, b0));
+        _mm_storeu_pd(&res.data[i][2], _mm_sub_pd(a1, b1));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_mul_scalar(const Matrix4x4f &m, scalar_t r)
+{
+    Matrix4x4f res;
+    const __m128d vr = _mm_set1_pd(r);
+    for (int i = 0; i < 4; ++i) {
+        const __m128d a0 = _mm_loadu_pd(&m.data[i][0]);
+        const __m128d a1 = _mm_loadu_pd(&m.data[i][2]);
+        _mm_storeu_pd(&res.data[i][0], _mm_mul_pd(a0, vr));
+        _mm_storeu_pd(&res.data[i][2], _mm_mul_pd(a1, vr));
+    }
+    return res;
+}
+
+inline Matrix4x4f mat4_mul(const Matrix4x4f &m1, const Matrix4x4f &m2)
+{
+    Matrix4x4f res;
+    const __m128d b0l = _mm_loadu_pd(&m2.data[0][0]);
+    const __m128d b0h = _mm_loadu_pd(&m2.data[0][2]);
+    const __m128d b1l = _mm_loadu_pd(&m2.data[1][0]);
+    const __m128d b1h = _mm_loadu_pd(&m2.data[1][2]);
+    const __m128d b2l = _mm_loadu_pd(&m2.data[2][0]);
+    const __m128d b2h = _mm_loadu_pd(&m2.data[2][2]);
+    const __m128d b3l = _mm_loadu_pd(&m2.data[3][0]);
+    const __m128d b3h = _mm_loadu_pd(&m2.data[3][2]);
+    for (int i = 0; i < 4; ++i) {
+        const __m128d a0 = _mm_set1_pd(m1.data[i][0]);
+        const __m128d a1 = _mm_set1_pd(m1.data[i][1]);
+        const __m128d a2 = _mm_set1_pd(m1.data[i][2]);
+        const __m128d a3 = _mm_set1_pd(m1.data[i][3]);
+        __m128d lo = _mm_mul_pd(a0, b0l);
+        lo = _mm_add_pd(lo, _mm_mul_pd(a1, b1l));
+        lo = _mm_add_pd(lo, _mm_mul_pd(a2, b2l));
+        lo = _mm_add_pd(lo, _mm_mul_pd(a3, b3l));
+        __m128d hi = _mm_mul_pd(a0, b0h);
+        hi = _mm_add_pd(hi, _mm_mul_pd(a1, b1h));
+        hi = _mm_add_pd(hi, _mm_mul_pd(a2, b2h));
+        hi = _mm_add_pd(hi, _mm_mul_pd(a3, b3h));
+        _mm_storeu_pd(&res.data[i][0], lo);
+        _mm_storeu_pd(&res.data[i][2], hi);
+    }
+    return res;
+}
+
+inline Vector4f mat4_mul_vec4(const Matrix4x4f &mat, const Vector4f &vec)
+{
+    const __m128d vxy = _mm_set_pd(vec.y, vec.x);
+    const __m128d vzw = _mm_set_pd(vec.w, vec.z);
+    const __m128d r0xy = _mm_mul_pd(_mm_loadu_pd(&mat.data[0][0]), vxy);
+    const __m128d r0zw = _mm_mul_pd(_mm_loadu_pd(&mat.data[0][2]), vzw);
+    const __m128d r1xy = _mm_mul_pd(_mm_loadu_pd(&mat.data[1][0]), vxy);
+    const __m128d r1zw = _mm_mul_pd(_mm_loadu_pd(&mat.data[1][2]), vzw);
+    const __m128d r2xy = _mm_mul_pd(_mm_loadu_pd(&mat.data[2][0]), vxy);
+    const __m128d r2zw = _mm_mul_pd(_mm_loadu_pd(&mat.data[2][2]), vzw);
+    const __m128d r3xy = _mm_mul_pd(_mm_loadu_pd(&mat.data[3][0]), vxy);
+    const __m128d r3zw = _mm_mul_pd(_mm_loadu_pd(&mat.data[3][2]), vzw);
+    return Vector4f(
+        hsum2_pd(r0xy) + hsum2_pd(r0zw),
+        hsum2_pd(r1xy) + hsum2_pd(r1zw),
+        hsum2_pd(r2xy) + hsum2_pd(r2zw),
+        hsum2_pd(r3xy) + hsum2_pd(r3zw)
+    );
+}
+#endif
+} /* namespace detail */
 
 const Matrix3x3f Matrix3x3f::identity = Matrix3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
@@ -354,6 +549,9 @@ Matrix4x4f::Matrix4x4f(const Matrix3x3f &mat3)
 
 Matrix4x4f operator +(const Matrix4x4f &m1, const Matrix4x4f &m2)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_add(m1, m2);
+#else
 	Matrix4x4f res;
 	const scalar_t *op1 = m1.data[0], *op2 = m2.data[0];
 	scalar_t *dest = res.data[0];
@@ -362,10 +560,14 @@ Matrix4x4f operator +(const Matrix4x4f &m1, const Matrix4x4f &m2)
         *dest++ = *op1++ + *op2++;
     }
     return res;
+#endif
 }
 
 Matrix4x4f operator -(const Matrix4x4f &m1, const Matrix4x4f &m2)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_sub(m1, m2);
+#else
     Matrix4x4f res;
     const scalar_t *op1 = m1.data[0], *op2 = m2.data[0];
     scalar_t *dest = res.data[0];
@@ -374,10 +576,14 @@ Matrix4x4f operator -(const Matrix4x4f &m1, const Matrix4x4f &m2)
         *dest++ = *op1++ - *op2++;
     }
     return res;
+#endif
 }
 
 Matrix4x4f operator *(const Matrix4x4f &m1, const Matrix4x4f &m2)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_mul(m1, m2);
+#else
     Matrix4x4f res;
 
 		for(int i=0; i<4; i++) {
@@ -389,6 +595,7 @@ Matrix4x4f operator *(const Matrix4x4f &m1, const Matrix4x4f &m2)
 	        }
 	    }
     return res;
+#endif
 }
 
 void operator +=(Matrix4x4f &m1, const Matrix4x4f &m2)
@@ -413,6 +620,9 @@ void operator -=(Matrix4x4f &m1, const Matrix4x4f &m2)
 
 void operator *=(Matrix4x4f &m1, const Matrix4x4f &m2)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    m1 = detail::mat4_mul(m1, m2);
+#else
     Matrix4x4f res;
     for(int i=0; i<4; i++) {
         for(int j=0; j<4; j++) {
@@ -424,10 +634,14 @@ void operator *=(Matrix4x4f &m1, const Matrix4x4f &m2)
         }
     }
     memcpy(m1.data, res.data, 16 * sizeof(scalar_t));
+#endif
 }
 
 Matrix4x4f operator *(const Matrix4x4f &mat, scalar_t r)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_mul_scalar(mat, r);
+#else
 	Matrix4x4f res;
 	const scalar_t *mptr = mat.data[0];
 	scalar_t *dptr = res.data[0];
@@ -436,10 +650,14 @@ Matrix4x4f operator *(const Matrix4x4f &mat, scalar_t r)
 		*dptr++ = *mptr++ * r;
 	}
 	return res;
+#endif
 }
 
 Matrix4x4f operator *(scalar_t r, const Matrix4x4f &mat)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_mul_scalar(mat, r);
+#else
 	Matrix4x4f res;
 	const scalar_t *mptr = mat.data[0];
 	scalar_t *dptr = res.data[0];
@@ -448,10 +666,14 @@ Matrix4x4f operator *(scalar_t r, const Matrix4x4f &mat)
 		*dptr++ = *mptr++ * r;
 	}
 	return res;
+#endif
 }
 
 Vector4f operator *(const Matrix4x4f &mat, const Vector4f &vec)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    return detail::mat4_mul_vec4(mat, vec);
+#else
 	Vector4f res;
 
 	res.x = (mat[0][0] * vec.x) + (mat[0][1] * vec.y) + (mat[0][2] * vec.z) + (mat[0][3] * vec.w);
@@ -460,17 +682,20 @@ Vector4f operator *(const Matrix4x4f &mat, const Vector4f &vec)
 	res.w = (mat[3][0] * vec.x) + (mat[3][1] * vec.y) + (mat[3][2] * vec.z) + (mat[3][3] * vec.w);
 
 	return res;
+#endif
 }
 
 void operator *=(Matrix4x4f &mat, scalar_t r)
 {
+#if NMATH_SIMD_DOUBLE_MAT4
+    mat = detail::mat4_mul_scalar(mat, r);
+#else
 	scalar_t *mptr = mat.data[0];
-
 	for(int i=0; i<16; i++) {
 		*mptr++ *= r;
 	}
+#endif
 }
-
 void Matrix4x4f::translate(const Vector3f &trans)
 {
 	Matrix4x4f tmat(1, 0, 0, trans.x, 0, 1, 0, trans.y, 0, 0, 1, trans.z, 0, 0, 0, 1);
