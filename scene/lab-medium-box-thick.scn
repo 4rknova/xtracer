@@ -41,6 +41,46 @@ geometry = {
         }
     }
 
+    wall_left = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(0.14,1.0,3.0)
+            translation = vec3(-1.56,1.1,0.0)
+        }
+    }
+
+    wall_right = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(0.14,1.0,3.0)
+            translation = vec3(1.56,1.1,0.0)
+        }
+    }
+
+    wall_far = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(3.0,1.0,0.14)
+            translation = vec3(0.0,1.1,1.56)
+        }
+    }
+
+    wall_bottom = {
+        type       = mesh
+        source     = gen(cube)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(3.0,0.14,3.0)
+            translation = vec3(0.0,0.53,0.0)
+        }
+    }
+
     floor = {
         type       = mesh
         source     = gen(plane)
@@ -57,10 +97,14 @@ geometry = {
         radius   = 0.35
     }
 
-    center_sphere = {
-        type     = sphere
-        position = vec3(0.0,1.0,0.0)
-        radius   = 0.55
+    center_julia = {
+        type       = julia
+        position   = vec3(0.0,1.0,0.0)
+        radius     = 0.55
+        resolution = 32
+        power      = 2.0
+        bailout    = 8.0
+        julia_c    = vec3(-0.12, 0.74, 0.28)
     }
 }
 
@@ -78,11 +122,20 @@ material = {
         }
     }
 
+    wall_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.72,0.72,0.76) }
+            }
+        }
+    }
+
     light_emissive = {
         type = emissive
         properties = {
             samplers = {
-                emissive = { type = color, value = col3(11.0,10.0,9.0) }
+                emissive = { type = color, value = col3(1.0,1.0,1.0) }
             }
         }
     }
@@ -91,7 +144,7 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.72,0.74,0.78) }
+                diffuse = { type = color, value = col3(0.62,0.44,0.28) }
             }
         }
     }
@@ -128,7 +181,7 @@ medium = {
         sigma_s = col3(0.75,0.92,1.20)
         g = 0.02
         emission = col3(0.00,0.00,0.00)
-        density = 2
+        density = 1
         noise_scale = 4
         noise_min = 0
         noise_max = 1
@@ -148,7 +201,11 @@ object = {
 
     floor = { geometry = floor, material = floor_matte }
     top_light = { geometry = top_light, material = light_emissive }
-    center = { geometry = center_sphere, material = center_matte }
+    center = { geometry = center_julia, material = center_matte }
+    wall_left = { geometry = wall_left, material = wall_matte }
+    wall_right = { geometry = wall_right, material = wall_matte }
+    wall_far = { geometry = wall_far, material = wall_matte }
+    wall_bottom = { geometry = wall_bottom, material = wall_matte }
 }
 
 variants = {
