@@ -3,11 +3,28 @@
 DIR_RES="./src/xtcore/res/"
 OUT_LICENSE="$DIR_RES/license.h"
 mkdir -p $DIR_RES
-xxd -i ./LICENSE | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
+CURRENT_YEAR=$(date +%Y)
+TMP_LICENSE_TEXT="${OUT_LICENSE}.tmp.txt"
+trap 'rm -f "$TMP_LICENSE_TEXT"' EXIT
+awk -v year="$CURRENT_YEAR" '
+BEGIN { updated = 0 }
+{
+    if (!updated && match($0, /^Copyright \(c\) ([0-9][0-9][0-9][0-9])(-[0-9][0-9][0-9][0-9])?, /, m)) {
+        start = m[1]
+        rest = substr($0, RLENGTH + 1)
+        $0 = "Copyright (c) " start "-" year ", " rest
+        updated = 1
+    }
+    print
+}
+' ./LICENSE > "$TMP_LICENSE_TEXT"
+xxd -i -n __LICENSE "$TMP_LICENSE_TEXT" | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
 BUILD=${BUILD:-Debug}
 XTRACER_ENABLE_RTMIDI=${XTRACER_ENABLE_RTMIDI:-ON}
 BUILD_DIR=${BUILD_DIR:-build/intermediate/build}
-make -C ./automation
+if [ -d ./automation ]; then
+    make -C ./automation
+fi
 cmake -S . -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD" \
     -DXTRACER_ENABLE_RTMIDI="$XTRACER_ENABLE_RTMIDI"

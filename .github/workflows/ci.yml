@@ -56,11 +56,12 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME}"
+          BUILD_DIR="build/intermediate/build-release"
           STAGE="build/intermediate/release-stage"
           ARCHIVE="xtracer-${VERSION}-linux-x86_64.tar.gz"
           mkdir -p "${STAGE}/bin" "${STAGE}/web-client"
-          cp build/release/xtracer_cli "${STAGE}/bin/"
-          cp build/release/xtracer_web "${STAGE}/bin/"
+          cp "${BUILD_DIR}/xtracer_cli" "${STAGE}/bin/"
+          cp "${BUILD_DIR}/xtracer_web" "${STAGE}/bin/"
           cp -r src/frontend/web-client "${STAGE}/"
           cp -r scene "${STAGE}/"
           cp LICENSE README.md "${STAGE}/"
