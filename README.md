@@ -349,8 +349,8 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), and render modes (`Normal`, `Progressive`, `Interactive`) with interactive camera controls/ramping available in Interactive mode |
-| Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
+| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Normal`, `Progressive`, `Interactive`) with interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
+| Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, 3D scene scale multiplier, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party license notices |
@@ -360,6 +360,9 @@ First-time use tutorial (FTUE):
 - In `Settings`, enable `Show tutorial on next launch` to reset onboarding state for the next app start.
 - In `Settings`, use `Start Tutorial Now` to reopen the tutorial immediately.
 - Tutorial steps are config-driven via `src/frontend/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
+
+Post-filter stack:
+- Current filters: `desaturate`; `chromatic_aberration` (`amount`, `center_x`, `center_y`, `falloff`); `vignette` (`strength`, `radius`, `softness`, `center_x`, `center_y`); `film_grain` (`amount`, `size`, `seed`, `luma_weighted`); `sharpen` (`amount`, `radius`, `threshold`); `brightness` (`amount`); `contrast` (`amount`, `pivot`); `raindrops_lens` (`density`, `size`, `distortion`, `seed`).
 
 Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 - `Left drag`: look around
@@ -403,9 +406,9 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
 | POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
-| GET | `/api/jobs/{id}/image` | PNG preview/final image |
-| GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, tone mapping params supported) |
-| GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph) |
+| GET | `/api/jobs/{id}/image` | PNG preview/final image (supports tone mapping + optional post-filter query params) |
+| GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, supports tone mapping + optional post-filter query params) |
+| GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph; supports optional post-filter query params) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
 | GET | `/api/logs/wait?since={id}&timeout_ms={n}` | Wait for new backend logs (long-poll) |

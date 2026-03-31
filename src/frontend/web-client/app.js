@@ -164,8 +164,6 @@ const el = {
   interactivePreviewHudQuality: $("interactivePreviewHudQuality"),
   previewCanvas: $("previewCanvas"),
   preview: $("preview"),
-  postPipelineGraph: $("postPipelineGraph"),
-  postPipelineSummary: $("postPipelineSummary"),
   resetViewBtn: $("resetViewBtn"),
   interactivePreviewControls: $("interactivePreviewControls"),
   interactivePreviewSpeed: $("interactivePreviewSpeed"),

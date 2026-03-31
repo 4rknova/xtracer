@@ -199,6 +199,7 @@ function normalizePostFilterEntry(entry) {
   return {
     filter: filterId,
     stage: normalizePostFilterStage(entry && entry.stage),
+    enabled: entry && entry.enabled !== undefined ? !!entry.enabled : true,
     params: normalizePostFilterParams(filterId, entry && entry.params),
   };
 }
@@ -270,7 +271,7 @@ let postFilterDragState = null;
 let postFilterOpenState = Object.create(null);
 
 function clearPostFilterDragMarkers() {
-  document.querySelectorAll(".post-filter-entry.is-dragging, .post-filter-entry.is-drop-before, .post-filter-entry.is-drop-after")
+  document.querySelectorAll(".post-filter-entry.is-dragging, .post-filter-entry.is-drop-before, .post-filter-entry.is-drop-after, .post-filters-empty.is-drop-before, .post-filters-empty.is-drop-after, .post-filter-stage-banner.is-drop-before, .post-filter-stage-banner.is-drop-after")
     .forEach((node) => {
       node.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
     });
@@ -287,38 +288,75 @@ function getPostFilterStageIndices(stageName) {
   return indices;
 }
 
-function reorderPostFiltersWithinStage(stageName, fromPos, toPos) {
-  const stageIndices = getPostFilterStageIndices(stageName);
-  if (stageIndices.length <= 1) return false;
-  if (!Number.isFinite(fromPos) || !Number.isFinite(toPos)) return false;
-  if (fromPos < 0 || fromPos >= stageIndices.length) return false;
-  if (toPos < 0) toPos = 0;
-  if (toPos >= stageIndices.length) toPos = stageIndices.length - 1;
-  if (fromPos === toPos) return false;
+function movePostFilterToStage(sourceIndex, targetStage, targetPos) {
+  if (!Array.isArray(postFilterChain)) return false;
+  if (!Number.isFinite(sourceIndex) || sourceIndex < 0 || sourceIndex >= postFilterChain.length) return false;
 
-  const stageEntries = stageIndices.map((idx) => postFilterChain[idx]);
-  const moved = stageEntries.splice(fromPos, 1)[0];
-  stageEntries.splice(toPos, 0, moved);
-  stageIndices.forEach((idx, pos) => {
-    postFilterChain[idx] = stageEntries[pos];
+  const source = normalizePostFilterEntry(postFilterChain[sourceIndex]);
+  if (!source) return false;
+
+  const targetEntries = [];
+  const otherEntries = [];
+  postFilterChain.forEach((entry, index) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    if (index === sourceIndex) return;
+    if (normalized.stage === targetStage) targetEntries.push(normalized);
+    else otherEntries.push(normalized);
   });
+
+  const sourceWasTargetStage = source.stage === targetStage;
+  const originalTargetCount = targetEntries.length + (sourceWasTargetStage ? 1 : 0);
+  if (!Number.isFinite(targetPos)) targetPos = targetEntries.length;
+  if (targetPos < 0) targetPos = 0;
+  if (targetPos > targetEntries.length) targetPos = targetEntries.length;
+
+  if (sourceWasTargetStage) {
+    const sourceStageIndices = getPostFilterStageIndices(targetStage);
+    const sourceStagePos = sourceStageIndices.indexOf(sourceIndex);
+    if (sourceStagePos === targetPos || (sourceStagePos === originalTargetCount - 1 && targetPos === targetEntries.length)) {
+      return false;
+    }
+  }
+
+  source.stage = targetStage;
+  targetEntries.splice(targetPos, 0, source);
+
+  const nextChain = [];
+  if (targetStage === "before") {
+    targetEntries.forEach((entry) => nextChain.push(entry));
+    otherEntries.forEach((entry) => nextChain.push(entry));
+  } else {
+    otherEntries.forEach((entry) => nextChain.push(entry));
+    targetEntries.forEach((entry) => nextChain.push(entry));
+  }
+
+  postFilterChain.length = 0;
+  nextChain.forEach((entry) => postFilterChain.push(entry));
   return true;
 }
 
-function findPostFilterDragInsertion(stageName, clientY) {
+function findPostFilterDragInsertion(clientY) {
   if (!el.postFiltersChain) return null;
-  const rows = Array.from(el.postFiltersChain.querySelectorAll(`.post-filter-entry[data-stage="${stageName}"]`));
-  if (rows.length === 0) return null;
+  const pivot = el.postFiltersChain.querySelector(".post-filter-stage-pivot");
+  const pivotRect = pivot ? pivot.getBoundingClientRect() : null;
+  const targetStage = pivotRect && clientY >= (pivotRect.top + pivotRect.height / 2) ? "after" : "before";
+  const rows = Array.from(el.postFiltersChain.querySelectorAll(`.post-filter-entry[data-stage="${targetStage}"]`));
+
+  if (rows.length === 0) {
+    const anchor = el.postFiltersChain.querySelector(`.post-filters-empty.is-${targetStage}`) || el.postFiltersChain.querySelector(`.post-filter-stage-banner.is-${targetStage}`);
+    return { stageName: targetStage, position: 0, row: anchor, side: "after" };
+  }
 
   for (let i = 0; i < rows.length; i += 1) {
     const rect = rows[i].getBoundingClientRect();
     const midpoint = rect.top + rect.height / 2;
     if (clientY < midpoint) {
-      return { position: i, row: rows[i], side: "before" };
+      return { stageName: targetStage, position: i, row: rows[i], side: "before" };
     }
   }
 
-  return { position: rows.length, row: rows[rows.length - 1], side: "after" };
+  return { stageName: targetStage, position: rows.length, row: rows[rows.length - 1], side: "after" };
 }
 
 function finishPostFilterDrag(cancelled) {
@@ -338,71 +376,17 @@ function finishPostFilterDrag(cancelled) {
 
   if (!cancelled && state.dragging) {
     let targetPos = Number.isFinite(state.insertionPosition) ? state.insertionPosition : state.stageOrder;
-    if (targetPos > state.stageOrder) targetPos -= 1;
-    if (reorderPostFiltersWithinStage(state.stageName, state.stageOrder, targetPos)) {
-      appendLog(`post_filter reorder stage=${state.stageName} from=${state.stageOrder} to=${targetPos}`);
+    const targetStage = state.targetStageName || state.stageName;
+    if (targetStage === state.stageName && targetPos > state.stageOrder) targetPos -= 1;
+    if (movePostFilterToStage(state.sourceIndex, targetStage, targetPos)) {
+      appendLog(`post_filter reorder from_stage=${state.stageName} to_stage=${targetStage} to=${targetPos}`);
       renderPostFilterChain();
       queueWorkspaceSettingsSave();
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
     }
   }
 
   postFilterDragState = null;
-}
-
-function renderPostPipelineGraph() {
-  if (!el.postPipelineGraph) return;
-  const stackEnabled = isPostFilterStackEnabled();
-  const chain = Array.isArray(postFilterChain) ? postFilterChain : [];
-  const before = [];
-  const after = [];
-  chain.forEach((entry) => {
-    const normalized = normalizePostFilterEntry(entry);
-    if (!normalized) return;
-    const info = postFilterCatalogById(normalized.filter);
-    const label = info ? info.label : normalized.filter;
-    if (normalized.stage === "before") before.push(label);
-    else after.push(label);
-  });
-
-  const nodes = [];
-  nodes.push({ kind: "io", label: "Input sRGB" });
-  nodes.push({ kind: "conversion", label: "sRGB -> Linear" });
-  if (stackEnabled) {
-    before.forEach((label) => nodes.push({ kind: "filter", label: `FX: ${label}` }));
-  } else {
-    nodes.push({ kind: "disabled", label: "Post Filters Disabled" });
-  }
-  nodes.push({ kind: "tone", label: `Tone Mapping: ${currentToneMappingLabel()}` });
-  if (stackEnabled) {
-    after.forEach((label) => nodes.push({ kind: "filter", label: `FX: ${label}` }));
-  }
-  nodes.push({ kind: "conversion", label: "Linear -> sRGB" });
-  nodes.push({ kind: "io", label: "Preview Output sRGB" });
-
-  const lane = document.createElement("div");
-  lane.className = "post-pipeline-lane";
-  nodes.forEach((node, i) => {
-    const n = document.createElement("div");
-    n.className = `post-pipeline-node is-${node.kind}`;
-    n.textContent = node.label;
-    lane.appendChild(n);
-    if (i < nodes.length - 1) {
-      const arrow = document.createElement("span");
-      arrow.className = "post-pipeline-arrow";
-      arrow.textContent = "->";
-      lane.appendChild(arrow);
-    }
-  });
-
-  el.postPipelineGraph.innerHTML = "";
-  el.postPipelineGraph.appendChild(lane);
-  if (el.postPipelineSummary) {
-    const beforeCount = before.length;
-    const afterCount = after.length;
-    el.postPipelineSummary.textContent = stackEnabled
-      ? `${beforeCount} before TM, ${afterCount} after TM`
-      : "Post filters disabled";
-  }
 }
 
 function renderPostFilterChain() {
@@ -412,7 +396,7 @@ function renderPostFilterChain() {
   const board = document.createElement("div");
   board.className = "post-filter-chain-flow";
 
-  const createStageHeader = (title, note, stageName) => {
+  const createStageHeader = (title, note, stageName, emptyLabel = "") => {
     const head = document.createElement("section");
     head.className = `post-filter-stage-banner is-${stageName}`;
     const meta = document.createElement("div");
@@ -426,6 +410,12 @@ function renderPostFilterChain() {
     meta.appendChild(titleEl);
     meta.appendChild(noteEl);
     head.appendChild(meta);
+    if (emptyLabel) {
+      const pill = document.createElement("span");
+      pill.className = "post-filter-stage-empty-pill";
+      pill.textContent = emptyLabel;
+      head.appendChild(pill);
+    }
     return head;
   };
 
@@ -446,13 +436,6 @@ function renderPostFilterChain() {
     return pivotStage;
   };
 
-  const appendStageEmpty = (message, stageName) => {
-    const empty = document.createElement("p");
-    empty.className = `post-filters-empty is-${stageName}`;
-    empty.textContent = message;
-    board.appendChild(empty);
-  };
-
   const appendFilterCard = (target, entry, index, stageOrder) => {
     const normalized = normalizePostFilterEntry(entry);
     if (!normalized) return;
@@ -466,6 +449,7 @@ function renderPostFilterChain() {
     row.dataset.index = String(index);
     row.dataset.stage = normalized.stage;
     row.dataset.stageOrder = String(stageOrder);
+    row.classList.toggle("is-disabled", !normalized.enabled);
     const isOpen = Object.prototype.hasOwnProperty.call(postFilterOpenState, String(index))
       ? !!postFilterOpenState[String(index)]
       : index === 0;
@@ -510,6 +494,7 @@ function renderPostFilterChain() {
         stageOrder: Number.isFinite(stageOrder) ? stageOrder : 0,
         startX,
         startY,
+        targetStageName: stageName,
         dragging: false,
         insertionPosition: Number.isFinite(stageOrder) ? stageOrder : 0,
         onPointerMove: null,
@@ -528,8 +513,9 @@ function renderPostFilterChain() {
         moveEvt.preventDefault();
         clearPostFilterDragMarkers();
         row.classList.add("is-dragging");
-        const insertion = findPostFilterDragInsertion(state.stageName, moveEvt.clientY);
+        const insertion = findPostFilterDragInsertion(moveEvt.clientY);
         if (!insertion) return;
+        state.targetStageName = insertion.stageName;
         state.insertionPosition = insertion.position;
         if (insertion.row && insertion.row !== row) {
           insertion.row.classList.add(insertion.side === "before" ? "is-drop-before" : "is-drop-after");
@@ -553,6 +539,25 @@ function renderPostFilterChain() {
     const name = document.createElement("span");
     name.className = "post-filter-name";
     name.textContent = filterInfo.label;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "post-filter-remove";
+    removeBtn.setAttribute("aria-label", `Remove ${filterInfo.label}`);
+    removeBtn.title = `Remove ${filterInfo.label}`;
+    removeBtn.textContent = "×";
+    removeBtn.disabled = !stackEnabled;
+    removeBtn.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      const idx = Number(row.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+      postFilterChain.splice(idx, 1);
+      renderPostFilterChain();
+      appendLog(`post_filter removed idx=${idx}`);
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
+    });
 
     const expandIcon = document.createElement("span");
     expandIcon.className = "post-filter-summary-chevron";
@@ -584,49 +589,38 @@ function renderPostFilterChain() {
     const stage = document.createElement("div");
     stage.className = "post-filter-stage-switch";
     stage.setAttribute("role", "group");
-    stage.setAttribute("aria-label", `Filter stage for ${filterInfo.label}`);
+    stage.setAttribute("aria-label", `FX enabled state for ${filterInfo.label}`);
+    stage.dataset.state = normalized.enabled ? "enabled" : "disabled";
 
-    const applyStageChange = (nextStage) => {
+    const applyEnabledChange = (nextEnabled) => {
       const idx = Number(row.dataset.index);
       if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
-      postFilterChain[idx].stage = normalizePostFilterStage(nextStage);
+      postFilterChain[idx].enabled = !!nextEnabled;
+      stage.dataset.state = postFilterChain[idx].enabled ? "enabled" : "disabled";
       const buttons = stage.querySelectorAll("button[data-stage]");
       buttons.forEach((btn) => {
-        const active = btn.getAttribute("data-stage") === postFilterChain[idx].stage;
+        const active = (btn.getAttribute("data-stage") === "enabled") === postFilterChain[idx].enabled;
         btn.classList.toggle("is-active", active);
         btn.setAttribute("aria-pressed", active ? "true" : "false");
       });
-      appendLog(`post_filter stage idx=${idx} stage=${postFilterChain[idx].stage}`);
-      renderPostFilterChain();
+      row.classList.toggle("is-disabled", !postFilterChain[idx].enabled);
+      appendLog(`post_filter enabled idx=${idx} value=${postFilterChain[idx].enabled ? "1" : "0"}`);
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
       queueWorkspaceSettingsSave();
     };
 
-    ["before", "after"].forEach((stageName) => {
+    [{ key: "enabled", label: "FX On", value: true }, { key: "disabled", label: "FX Off", value: false }].forEach((stateDef) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "post-filter-stage-toggle";
-      btn.setAttribute("data-stage", stageName);
-      btn.textContent = stageName === "before" ? "Before TM" : "After TM";
-      const active = normalized.stage === stageName;
+      btn.setAttribute("data-stage", stateDef.key);
+      btn.textContent = stateDef.label;
+      const active = normalized.enabled === stateDef.value;
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-pressed", active ? "true" : "false");
       btn.disabled = !stackEnabled;
-      btn.addEventListener("click", () => applyStageChange(stageName));
+      btn.addEventListener("click", () => applyEnabledChange(stateDef.value));
       stage.appendChild(btn);
-    });
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "post-filter-remove";
-    removeBtn.textContent = "Remove";
-    removeBtn.disabled = !stackEnabled;
-    removeBtn.addEventListener("click", () => {
-      const idx = Number(row.dataset.index);
-      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
-      postFilterChain.splice(idx, 1);
-      renderPostFilterChain();
-      appendLog(`post_filter removed idx=${idx}`);
-      queueWorkspaceSettingsSave();
     });
 
     controls.appendChild(stage);
@@ -684,24 +678,19 @@ function renderPostFilterChain() {
     });
   }
 
-  board.appendChild(createStageHeader("Before TM", "Linear-space effects", "before"));
-  if (before.length === 0) {
-    appendStageEmpty("No filters before tone mapping.", "before");
-  } else {
+  board.appendChild(createStageHeader("Before TM", "Linear-space effects", "before", before.length === 0 ? "No filters" : ""));
+  if (before.length !== 0) {
     before.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
   }
 
   board.appendChild(createPivot());
 
-  board.appendChild(createStageHeader("After TM", "Display-space finishing", "after"));
-  if (after.length === 0) {
-    appendStageEmpty("No filters after tone mapping.", "after");
-  } else {
+  board.appendChild(createStageHeader("After TM", "Display-space finishing", "after", after.length === 0 ? "No filters" : ""));
+  if (after.length !== 0) {
     after.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
   }
 
   el.postFiltersChain.appendChild(board);
-  renderPostPipelineGraph();
 }
 
 function updatePostFilterUiState() {
@@ -718,10 +707,12 @@ function addPostFilterToChain() {
   postFilterChain.push({
     filter: filterId,
     stage: "after",
+    enabled: true,
     params: defaultPostFilterParams(filterId),
   });
   renderPostFilterChain();
   appendLog(`post_filter add filter=${filterId} stage=after`);
+  if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
   queueWorkspaceSettingsSave();
 }
 
@@ -745,6 +736,7 @@ function gatherPostFilterParams() {
   (postFilterChain || []).forEach((entry) => {
     const normalized = normalizePostFilterEntry(entry);
     if (!normalized) return;
+    if (!normalized.enabled) return;
     const stage = normalized.stage;
     const filterId = normalized.filter;
     const paramPairs = [];
