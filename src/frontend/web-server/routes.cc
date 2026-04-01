@@ -51,6 +51,7 @@
 
 #include "backend_log.h"
 #include "job_manager.h"
+#include "post_filters.h"
 #include "workspace_manager.h"
 
 namespace xtracer {
@@ -157,6 +158,29 @@ bool file_exists(const std::string &path)
     return in.good();
 }
 
+const char *integrator_status_name(xtcore::render::integrator_status_t status)
+{
+    switch (status) {
+        case xtcore::render::INTEGRATOR_STATUS_RECOMMENDED: return "recommended";
+        case xtcore::render::INTEGRATOR_STATUS_STABLE: return "stable";
+        case xtcore::render::INTEGRATOR_STATUS_EXPERIMENTAL: return "experimental";
+        case xtcore::render::INTEGRATOR_STATUS_LEGACY: return "legacy";
+        case xtcore::render::INTEGRATOR_STATUS_HIDDEN: return "hidden";
+        default: return "stable";
+    }
+}
+
+const char *filter_status_name(xtcore::filter::filter_status_t status)
+{
+    switch (status) {
+        case xtcore::filter::FILTER_STATUS_STABLE: return "stable";
+        case xtcore::filter::FILTER_STATUS_EXPERIMENTAL: return "experimental";
+        case xtcore::filter::FILTER_STATUS_LEGACY: return "legacy";
+        case xtcore::filter::FILTER_STATUS_HIDDEN: return "hidden";
+        default: return "stable";
+    }
+}
+
 bool finite_aabb3(const xtcore::AABB3 &box)
 {
     return std::isfinite((double)box.min.x) && std::isfinite((double)box.min.y) && std::isfinite((double)box.min.z)
@@ -235,8 +259,8 @@ bool parse_render_mode_param(const httplib::Request &req,
     std::string s = req.get_param_value(key);
     std::transform(s.begin(), s.end(), s.begin(),
         [](unsigned char c) { return (char)std::tolower(c); });
-    if (s == "normal") {
-        out = common::render_request_t::RENDER_MODE_NORMAL;
+    if (s == "direct" || s == "normal") {
+        out = common::render_request_t::RENDER_MODE_DIRECT;
         return true;
     }
     if (s == "progressive") {
@@ -262,7 +286,7 @@ bool parse_sample_distribution_param(const httplib::Request &req,
         out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID;
         return true;
     }
-    if (s == "random" || s == "monte_carlo") {
+    if (s == "random" || s == "jittered") {
         out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_RANDOM;
         return true;
     }
@@ -543,6 +567,46 @@ void append_integrator_controls_json(std::ostringstream &ss, const common::integ
     ss << "]";
 }
 
+void append_post_filter_params_json(std::ostringstream &ss, const post_filter_info_t &filter)
+{
+    ss << "\"params\":[";
+    for (size_t j = 0; j < filter.params_count; ++j) {
+        const post_filter_param_info_t &param = filter.params[j];
+        if (j) ss << ',';
+        ss << "{"
+           << "\"id\":\"" << json_escape(param.id ? param.id : "") << "\","
+           << "\"label\":\"" << json_escape(param.label ? param.label : "") << "\","
+           << "\"type\":\"" << json_escape(param.type ? param.type : "") << "\"";
+        if (param.description && *(param.description)) {
+            ss << ",\"description\":\"" << json_escape(param.description) << "\"";
+        }
+        if (param.default_value && *(param.default_value)) {
+            ss << ",\"default\":\"" << json_escape(param.default_value) << "\"";
+        }
+        if (param.min_value && *(param.min_value)) {
+            ss << ",\"min\":\"" << json_escape(param.min_value) << "\"";
+        }
+        if (param.max_value && *(param.max_value)) {
+            ss << ",\"max\":\"" << json_escape(param.max_value) << "\"";
+        }
+        if (param.step_value && *(param.step_value)) {
+            ss << ",\"step\":\"" << json_escape(param.step_value) << "\"";
+        }
+        if (param.options_count > 0 && param.options) {
+            ss << ",\"options\":[";
+            for (size_t k = 0; k < param.options_count; ++k) {
+                if (k) ss << ',';
+                const post_filter_param_option_t &opt = param.options[k];
+                ss << "{\"value\":\"" << json_escape(opt.value ? opt.value : "")
+                   << "\",\"label\":\"" << json_escape(opt.label ? opt.label : "") << "\"}";
+            }
+            ss << "]";
+        }
+        ss << "}";
+    }
+    ss << "]";
+}
+
 bool is_scene_name_safe(const std::string &scene)
 {
     if (scene.empty()) return false;
@@ -779,7 +843,7 @@ camera_list_info_t list_cameras_from_scene(const xtcore::Scene &scene)
     return out;
 }
 
-std::string scene_geometry_json_from_scene(const xtcore::Scene &scene)
+std::string scene_geometry_json_from_scene(xtcore::Scene &scene)
 {
     std::ostringstream ss;
     ss << "{\"meshes\":{";
@@ -834,7 +898,45 @@ std::string scene_geometry_json_from_scene(const xtcore::Scene &scene)
         ss << "]}";
     }
 
-    ss << "}}";
+    ss << "},\"debug\":{";
+
+    std::vector<xtcore::AABB3> global_bvh;
+    scene.collect_tlas_aabbs(global_bvh);
+    ss << "\"global_bvh\":[";
+    for (size_t i = 0; i < global_bvh.size(); ++i) {
+        if (i > 0) ss << ",";
+        const xtcore::AABB3 &box = global_bvh[i];
+        ss << "{\"min\":["
+           << box.min.x << "," << box.min.y << "," << box.min.z
+           << "],\"max\":["
+           << box.max.x << "," << box.max.y << "," << box.max.z
+           << "]}";
+    }
+    ss << "],\"mesh_bvh\":{";
+
+    first_mesh = true;
+    for (auto it = scene.m_surface.begin(); it != scene.m_surface.end(); ++it) {
+        const xtcore::surface::Mesh *mesh = dynamic_cast<const xtcore::surface::Mesh *>((*it).second);
+        if (!mesh) continue;
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+        if (!first_mesh) ss << ",";
+        first_mesh = false;
+        ss << "\"" << json_escape(name) << "\":[";
+        std::vector<xtcore::AABB3> mesh_boxes;
+        mesh->collect_bvh_aabbs(mesh_boxes);
+        for (size_t i = 0; i < mesh_boxes.size(); ++i) {
+            if (i > 0) ss << ",";
+            const xtcore::AABB3 &box = mesh_boxes[i];
+            ss << "{\"min\":["
+               << box.min.x << "," << box.min.y << "," << box.min.z
+               << "],\"max\":["
+               << box.max.x << "," << box.max.y << "," << box.max.z
+               << "]}";
+        }
+        ss << "]";
+    }
+    ss << "}}}";
     return ss.str();
 }
 
@@ -2076,9 +2178,36 @@ void setup_routes(httplib::Server &server,
         ss << "{\"integrators\":[";
         for (size_t i = 0; i < list.size(); ++i) {
             if (i) ss << ',';
-            ss << "{\"id\":\"" << json_escape(list[i].id)
-               << "\",\"label\":\"" << json_escape(list[i].label) << "\",";
+            ss << "{\"id\":\"" << json_escape(list[i].metadata.id)
+               << "\",\"label\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"name\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"status\":\"" << json_escape(integrator_status_name(list[i].metadata.status))
+               << "\",\"description\":\"" << json_escape(list[i].metadata.description)
+               << "\",\"replacement_id\":\"" << json_escape(list[i].metadata.replacement_id)
+               << "\",";
             append_integrator_controls_json(ss, list[i]);
+            ss << "}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Get("/api/post_filters", [](const httplib::Request &, httplib::Response &res) {
+        std::vector<post_filter_info_t> list = list_post_filters();
+        std::ostringstream ss;
+        ss << "{\"post_filters\":[";
+        for (size_t i = 0; i < list.size(); ++i) {
+            if (i) ss << ',';
+            ss << "{\"id\":\"" << json_escape(list[i].metadata.id)
+               << "\",\"label\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"name\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"status\":\"" << json_escape(filter_status_name(list[i].metadata.status))
+               << "\",\"description\":\"" << json_escape(list[i].metadata.description)
+               << "\",\"replacement_id\":\"" << json_escape(list[i].metadata.replacement_id)
+               << "\",\"allow_before_tm\":" << (list[i].allow_before_tm ? "true" : "false")
+               << ",\"allow_after_tm\":" << (list[i].allow_after_tm ? "true" : "false")
+               << ",";
+            append_post_filter_params_json(ss, list[i]);
             ss << "}";
         }
         ss << "]}";
@@ -2391,8 +2520,7 @@ void setup_routes(httplib::Server &server,
         std::string format = "png";
         if (req.has_param("format")) format = lower_ascii(req.get_param_value("format"));
         if (format != "png" && format != "exr" && format != "hdr"
-            && format != "jpg" && format != "bmp" && format != "tga"
-            && format != "ply") {
+            && format != "jpg" && format != "bmp" && format != "tga") {
             send_json(res, "{\"error\":\"unsupported format\"}", 400);
             return;
         }

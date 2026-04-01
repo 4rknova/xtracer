@@ -56,7 +56,7 @@ std::string workspace_manager_t::create_locked(const std::string &name,
     ws.quality_samples = 1;
     ws.quality_aa = 1;
     ws.quality_sample_distribution = "grid";
-    ws.quality_rdepth = 10;
+    ws.quality_rdepth = 15;
     ws.settings_json = "{}";
     ws.owner_client_id = owner_client_id;
     ws.updated_ms = now_ms();

@@ -3,6 +3,34 @@ function postFilterCatalogById(id) {
   return POST_FILTER_CATALOG.find((it) => it.id === key) || null;
 }
 
+function postFilterDefaultsFromCatalog(filterId) {
+  const item = postFilterCatalogById(filterId);
+  const params = item && Array.isArray(item.params) ? item.params : null;
+  if (!params || params.length === 0) return null;
+  const out = {};
+  params.forEach((param) => {
+    const key = String((param && param.id) || "").trim();
+    if (!key) return;
+    out[key] = String(param && param.default !== undefined ? param.default : "");
+  });
+  return out;
+}
+
+function postFilterParamSpecsFromCatalog(filterId) {
+  const item = postFilterCatalogById(filterId);
+  const params = item && Array.isArray(item.params) ? item.params : null;
+  if (!params || params.length === 0) return null;
+  return params
+    .map((param) => ({
+      key: String((param && param.id) || "").trim(),
+      label: String((param && param.label) || (param && param.id) || "").trim(),
+      min: String((param && param.min) || ""),
+      max: String((param && param.max) || ""),
+      step: String((param && param.step) || ""),
+    }))
+    .filter((param) => !!param.key);
+}
+
 function isPostFilterStackEnabled() {
   return !!postFilterStackEnabled;
 }
@@ -17,6 +45,8 @@ function normalizePostFilterId(id) {
 }
 
 function defaultPostFilterParams(filterId) {
+  const catalogDefaults = postFilterDefaultsFromCatalog(filterId);
+  if (catalogDefaults) return catalogDefaults;
   if (filterId === "chromatic_aberration") {
     return {
       amount: "1.5",
@@ -40,6 +70,20 @@ function defaultPostFilterParams(filterId) {
       size: "1.0",
       seed: "1",
       luma_weighted: "1",
+    };
+  }
+  if (filterId === "denoise") {
+    return {
+      strength: "0.65",
+      radius: "2.0",
+      sigma: "0.12",
+    };
+  }
+  if (filterId === "fxaa") {
+    return {
+      subpix: "0.75",
+      edge_threshold: "0.125",
+      edge_threshold_min: "0.031",
     };
   }
   if (filterId === "sharpen") {
@@ -143,6 +187,36 @@ function normalizeSharpenParams(raw) {
   };
 }
 
+function normalizeDenoiseParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const strengthNum = Number(src.strength);
+  const radiusNum = Number(src.radius);
+  const sigmaNum = Number(src.sigma);
+  const strength = Number.isFinite(strengthNum) ? Math.max(0, Math.min(1, strengthNum)) : 0.65;
+  const radius = Number.isFinite(radiusNum) ? Math.max(1, Math.min(6, radiusNum)) : 2.0;
+  const sigma = Number.isFinite(sigmaNum) ? Math.max(0.001, Math.min(2, sigmaNum)) : 0.12;
+  return {
+    strength: strength.toFixed(3),
+    radius: radius.toFixed(3),
+    sigma: sigma.toFixed(3),
+  };
+}
+
+function normalizeFXAAParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const subpixNum = Number(src.subpix);
+  const edgeThresholdNum = Number(src.edge_threshold);
+  const edgeThresholdMinNum = Number(src.edge_threshold_min);
+  const subpix = Number.isFinite(subpixNum) ? Math.max(0, Math.min(1, subpixNum)) : 0.75;
+  const edgeThreshold = Number.isFinite(edgeThresholdNum) ? Math.max(0.001, Math.min(1, edgeThresholdNum)) : 0.125;
+  const edgeThresholdMin = Number.isFinite(edgeThresholdMinNum) ? Math.max(0.0001, Math.min(1, edgeThresholdMinNum)) : 0.0312;
+  return {
+    subpix: subpix.toFixed(3),
+    edge_threshold: edgeThreshold.toFixed(3),
+    edge_threshold_min: edgeThresholdMin.toFixed(3),
+  };
+}
+
 function normalizeBrightnessParams(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const amountNum = Number(src.amount);
@@ -186,6 +260,8 @@ function normalizePostFilterParams(filterId, raw) {
   if (filterId === "chromatic_aberration") return normalizeChromaticAberrationParams(raw);
   if (filterId === "vignette") return normalizeVignetteParams(raw);
   if (filterId === "film_grain") return normalizeFilmGrainParams(raw);
+  if (filterId === "denoise") return normalizeDenoiseParams(raw);
+  if (filterId === "fxaa") return normalizeFXAAParams(raw);
   if (filterId === "sharpen") return normalizeSharpenParams(raw);
   if (filterId === "brightness") return normalizeBrightnessParams(raw);
   if (filterId === "contrast") return normalizeContrastParams(raw);
@@ -205,6 +281,8 @@ function normalizePostFilterEntry(entry) {
 }
 
 function postFilterParamSpecs(filterId) {
+  const catalogSpecs = postFilterParamSpecsFromCatalog(filterId);
+  if (catalogSpecs) return catalogSpecs;
   if (filterId === "chromatic_aberration") {
     return [
       { key: "amount", label: "Amount", min: "0", max: "64", step: "0.1" },
@@ -228,6 +306,20 @@ function postFilterParamSpecs(filterId) {
       { key: "size", label: "Size", min: "1", max: "16", step: "0.5" },
       { key: "seed", label: "Seed", min: "0", max: "1000000", step: "1" },
       { key: "luma_weighted", label: "Luma Weighted (1/0)", min: "0", max: "1", step: "1" },
+    ];
+  }
+  if (filterId === "denoise") {
+    return [
+      { key: "strength", label: "Strength", min: "0", max: "1", step: "0.01" },
+      { key: "radius", label: "Radius", min: "1", max: "6", step: "1" },
+      { key: "sigma", label: "Sigma", min: "0.001", max: "2", step: "0.01" },
+    ];
+  }
+  if (filterId === "fxaa") {
+    return [
+      { key: "subpix", label: "Subpix", min: "0", max: "1", step: "0.01" },
+      { key: "edge_threshold", label: "Edge Threshold", min: "0.001", max: "1", step: "0.01" },
+      { key: "edge_threshold_min", label: "Edge Threshold Min", min: "0.0001", max: "1", step: "0.01" },
     ];
   }
   if (filterId === "sharpen") {
@@ -257,6 +349,15 @@ function postFilterParamSpecs(filterId) {
     ];
   }
   return [];
+}
+
+async function loadPostFilters() {
+  if (!api || typeof api.getPostFilters !== "function") return;
+  const filters = await api.getPostFilters();
+  if (!Array.isArray(filters) || filters.length === 0) return;
+  POST_FILTER_CATALOG = filters.slice();
+  populatePostFilterTypeOptions();
+  renderPostFilterChain();
 }
 
 function currentToneMappingLabel() {
@@ -540,6 +641,9 @@ function renderPostFilterChain() {
     name.className = "post-filter-name";
     name.textContent = filterInfo.label;
 
+    const description = String(filterInfo.description || "").trim();
+    summaryMeta.appendChild(name);
+
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "post-filter-remove";
@@ -564,7 +668,6 @@ function renderPostFilterChain() {
     expandIcon.setAttribute("aria-hidden", "true");
 
     summary.appendChild(icon);
-    summaryMeta.appendChild(name);
     summary.appendChild(summaryMeta);
     summary.appendChild(expandIcon);
     summary.addEventListener("click", () => {
@@ -626,6 +729,13 @@ function renderPostFilterChain() {
     controls.appendChild(stage);
     controls.appendChild(removeBtn);
     body.appendChild(controls);
+
+    if (description) {
+      const desc = document.createElement("div");
+      desc.className = "post-filter-description";
+      desc.textContent = description;
+      body.appendChild(desc);
+    }
 
     const paramSpecs = postFilterParamSpecs(filterId);
     if (paramSpecs.length > 0) {

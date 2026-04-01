@@ -139,6 +139,43 @@
     return new THREE.BoxGeometry(0.5, 0.5, 0.5);
   }
 
+  function buildIndexedEdgeSourceGeometry(geometry) {
+    if (!geometry || typeof geometry.getAttribute !== "function") return geometry;
+    var position = geometry.getAttribute("position");
+    if (!position || position.itemSize !== 3 || position.count < 3) return geometry;
+
+    // Scene mesh payloads arrive as raw triangle soup. Build a temporary indexed
+    // copy keyed by identical positions so EdgesGeometry can identify shared
+    // edges instead of drawing every triangle diagonal.
+    var precision = 1e6;
+    var dedup = new Map();
+    var uniquePositions = [];
+    var indices = new Array(position.count);
+
+    for (var i = 0; i < position.count; i += 1) {
+      var x = position.getX(i);
+      var y = position.getY(i);
+      var z = position.getZ(i);
+      var key = [
+        Math.round(x * precision),
+        Math.round(y * precision),
+        Math.round(z * precision),
+      ].join(",");
+      var index = dedup.get(key);
+      if (index === undefined) {
+        index = uniquePositions.length / 3;
+        uniquePositions.push(x, y, z);
+        dedup.set(key, index);
+      }
+      indices[i] = index;
+    }
+
+    var indexed = new THREE.BufferGeometry();
+    indexed.setAttribute("position", new THREE.Float32BufferAttribute(uniquePositions, 3));
+    indexed.setIndex(indices);
+    return indexed;
+  }
+
 async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
   var scene = String(sceneName || "").trim();
   var relpath = String(sourcePath || "").trim();
@@ -173,14 +210,22 @@ async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
   return tex;
 }
 
+function applySurfaceDepthBias(mat) {
+  if (!mat) return mat;
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = 1;
+  mat.polygonOffsetUnits = 1;
+  return mat;
+}
+
 async function materialForDefAsync(ctx, sceneName, matDef) {
   if (!matDef) {
-    return new THREE.MeshPhongMaterial({
+    return applySurfaceDepthBias(new THREE.MeshPhongMaterial({
       color: 0x95a4b5,
       specular: 0x111111,
       shininess: 50,
       side: THREE.DoubleSide,
-    });
+    }));
   }
 
   var diffuseMap = await loadTextureForScene(ctx, sceneName, matDef.diffuseTextureSource, true);
@@ -191,25 +236,25 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
   if (matDef.type === "emissive") {
     var e = matDef.emissive || new THREE.Color(1, 0.95, 0.8);
-    var emissiveMat = new THREE.MeshPhongMaterial({
+    var emissiveMat = applySurfaceDepthBias(new THREE.MeshPhongMaterial({
       color: diffuseMap ? new THREE.Color(1, 1, 1) : (matDef.diffuse || new THREE.Color(0.08, 0.08, 0.08)),
       emissive: e,
       emissiveIntensity: 2.0,
       specular: matDef.specular || new THREE.Color(0.0, 0.0, 0.0),
       shininess: 20,
       side: THREE.DoubleSide,
-    });
+    }));
     if (diffuseMap) emissiveMat.map = diffuseMap;
     if (normalMap) emissiveMat.normalMap = normalMap;
     return emissiveMat;
   }
 
-  var mat = new THREE.MeshPhongMaterial({
+  var mat = applySurfaceDepthBias(new THREE.MeshPhongMaterial({
     color: diffuseMap ? new THREE.Color(1, 1, 1) : baseDiffuse,
     specular: baseSpecular,
     shininess: 90,
     side: THREE.DoubleSide,
-  });
+  }));
   if (diffuseMap) mat.map = diffuseMap;
   if (specularMap) mat.specularMap = specularMap;
   if (normalMap) mat.normalMap = normalMap;
@@ -429,6 +474,41 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return parsed;
   }
 
+  function buildAabbBoxLines(boxes, color, opacity) {
+    var list = Array.isArray(boxes) ? boxes : [];
+    if (list.length === 0) return null;
+    var positions = [];
+    var edges = [
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [4, 5], [5, 6], [6, 7], [7, 4],
+      [0, 4], [1, 5], [2, 6], [3, 7],
+    ];
+    for (var i = 0; i < list.length; i += 1) {
+      var box = list[i];
+      if (!box || !Array.isArray(box.min) || !Array.isArray(box.max) || box.min.length < 3 || box.max.length < 3) continue;
+      var minX = Number(box.min[0]); var minY = Number(box.min[1]); var minZ = Number(box.min[2]);
+      var maxX = Number(box.max[0]); var maxY = Number(box.max[1]); var maxZ = Number(box.max[2]);
+      if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(minZ) ||
+          !Number.isFinite(maxX) || !Number.isFinite(maxY) || !Number.isFinite(maxZ)) continue;
+      var corners = [
+        [minX, minY, minZ], [maxX, minY, minZ], [maxX, maxY, minZ], [minX, maxY, minZ],
+        [minX, minY, maxZ], [maxX, minY, maxZ], [maxX, maxY, maxZ], [minX, maxY, maxZ],
+      ];
+      for (var e = 0; e < edges.length; e += 1) {
+        var a = corners[edges[e][0]];
+        var b = corners[edges[e][1]];
+        positions.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      }
+    }
+    if (positions.length === 0) return null;
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    return new THREE.LineSegments(
+      geometry,
+      new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity, depthWrite: false, toneMapped: false })
+    );
+  }
+
   function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry, fetchSceneRuntimeGraph, fetchSceneAssetText) {
     this.viewportEl = viewportEl;
     this.statusEl = statusEl;
@@ -482,6 +562,11 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.photonRoot = null;
     this.photonDiffuse = null;
     this.photonCaustic = null;
+    this.bvhOverlayRoot = null;
+    this.globalBvhOverlay = null;
+    this.meshBvhOverlay = null;
+    this.showGlobalBvh = false;
+    this.showMeshBvh = false;
     this.sceneScaleMultiplier = 1.0;
     this.sceneBaseRadius = 2.0;
     this.sceneRadius = 2.0;
@@ -542,6 +627,46 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.onObjectTransformChanged = (typeof handler === "function") ? handler : null;
   };
 
+  SceneVisualEditor.prototype.clearBvhOverlays = function () {
+    if (this.globalBvhOverlay && this.bvhOverlayRoot) {
+      this.bvhOverlayRoot.remove(this.globalBvhOverlay);
+      disposeObjectHierarchy(this.globalBvhOverlay);
+      this.globalBvhOverlay = null;
+    }
+    if (this.meshBvhOverlay && this.bvhOverlayRoot) {
+      this.bvhOverlayRoot.remove(this.meshBvhOverlay);
+      disposeObjectHierarchy(this.meshBvhOverlay);
+      this.meshBvhOverlay = null;
+    }
+  };
+
+  SceneVisualEditor.prototype.rebuildBvhOverlays = function () {
+    if (!this.bvhOverlayRoot) return;
+    this.clearBvhOverlays();
+    var debug = (this.sceneGeometry && this.sceneGeometry.debug) ? this.sceneGeometry.debug : null;
+    if (!debug) return;
+
+    this.globalBvhOverlay = buildAabbBoxLines(debug.global_bvh || [], 0x56b7ff, 0.34);
+    if (this.globalBvhOverlay) {
+      this.globalBvhOverlay.visible = !!this.showGlobalBvh;
+      this.bvhOverlayRoot.add(this.globalBvhOverlay);
+    }
+
+    var meshMap = debug.mesh_bvh || {};
+    var meshIds = Object.keys(meshMap);
+    var merged = [];
+    for (var i = 0; i < meshIds.length; i += 1) {
+      var boxes = meshMap[meshIds[i]];
+      if (!Array.isArray(boxes)) continue;
+      for (var j = 0; j < boxes.length; j += 1) merged.push(boxes[j]);
+    }
+    this.meshBvhOverlay = buildAabbBoxLines(merged, 0xffb24c, 0.28);
+    if (this.meshBvhOverlay) {
+      this.meshBvhOverlay.visible = !!this.showMeshBvh;
+      this.bvhOverlayRoot.add(this.meshBvhOverlay);
+    }
+  };
+
   SceneVisualEditor.prototype.notifySelectionChanged = function () {
     if (!this.onSelectionChanged) return;
     var selectedId = this.getSelectedObjectId();
@@ -572,6 +697,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     if (this.modelRoot) this.modelRoot.scale.setScalar(scale);
     if (this.cameraWidgetRoot) this.cameraWidgetRoot.scale.setScalar(scale);
     if (this.photonRoot) this.photonRoot.scale.setScalar(scale);
+    if (this.bvhOverlayRoot) this.bvhOverlayRoot.scale.setScalar(scale);
   };
 
   SceneVisualEditor.prototype.collectAreaLightCenters = function () {
@@ -689,6 +815,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.initAxisWidget();
     this.photonRoot = new THREE.Group();
     this.scene.add(this.photonRoot);
+    this.bvhOverlayRoot = new THREE.Group();
+    this.scene.add(this.bvhOverlayRoot);
     this.applySceneScaleToRoots();
 
     this.grid = new THREE.GridHelper(24, 24, 0x5f7a8e, 0x2b3642);
@@ -1835,6 +1963,21 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return g;
   };
 
+  SceneVisualEditor.prototype.resolveSceneMeshId = function (def, objectId) {
+    if (!def || !this.sceneGeometry || !this.sceneGeometry.meshes) return "";
+    var meshes = this.sceneGeometry.meshes;
+    var candidates = [];
+    if (def.id) candidates.push(String(def.id));
+    if (objectId) candidates.push(String(objectId));
+    for (var i = 0; i < candidates.length; i += 1) {
+      var candidate = candidates[i];
+      if (candidate && Object.prototype.hasOwnProperty.call(meshes, candidate)) {
+        return candidate;
+      }
+    }
+    return "";
+  };
+
   SceneVisualEditor.prototype.decorateCsgPlaceholder = function (mesh) {
     if (!mesh || !mesh.isMesh) return;
 
@@ -1901,9 +2044,10 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }
   };
 
-  SceneVisualEditor.prototype.geometryForDefAsync = async function (sceneName, def) {
+  SceneVisualEditor.prototype.geometryForDefAsync = async function (sceneName, def, objectId) {
     if (String(def.type || "").toLowerCase() !== "mesh") return geometryForDef(def);
-    var meshFromScene = this.geometryFromSceneData(def);
+    var meshSceneId = this.resolveSceneMeshId(def, objectId);
+    var meshFromScene = meshSceneId ? this.geometryFromSceneData({ id: meshSceneId }) : null;
     if (meshFromScene) return meshFromScene;
     var srcResolved = String(def.sourceResolved || def.source || "").trim();
     if (this.fetchSceneAssetText && sceneName && srcResolved && /\.obj$/i.test(srcResolved)) {
@@ -2032,6 +2176,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         this.sceneGeometry = { meshes: {} };
       }
     }
+    this.rebuildBvhOverlays();
 
     var parsed = null;
     var runtimeGraph = runtimeGraphData || null;
@@ -2069,11 +2214,15 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       var obj = parsed.objects[i];
       var geoDef = parsed.geometries[obj.geometry];
       if (!geoDef) continue;
-      if (String(geoDef.type || "").toLowerCase() === "mesh" && geoDef.id) {
-        referencedMeshIds[geoDef.id] = true;
+      var resolvedMeshId = "";
+      if (String(geoDef.type || "").toLowerCase() === "mesh") {
+        resolvedMeshId = this.resolveSceneMeshId(geoDef, obj.id);
       }
 
-      var geo = await this.geometryForDefAsync(sceneName, geoDef);
+      var geo = await this.geometryForDefAsync(sceneName, geoDef, obj.id);
+      if (resolvedMeshId) {
+        referencedMeshIds[resolvedMeshId] = true;
+      }
       var matDef = parsed.materials[obj.material];
       var mat = await materialForDefAsync(this, sceneName, matDef);
       var mesh = new THREE.Mesh(geo, mat);
@@ -2136,75 +2285,81 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
           count += 1;
           continue;
         }
+        var edgeSourceGeo = buildIndexedEdgeSourceGeometry(geo);
         var edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(geo, 35),
+          new THREE.EdgesGeometry(edgeSourceGeo, 35),
           new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
         );
+        if (edgeSourceGeo !== geo) edgeSourceGeo.dispose();
         mesh.add(edges);
       }
 
       count += 1;
     }
 
-    // Backend geometry export includes mesh surfaces after scene load (including OBJ-import object forms).
-    // If a mesh surface has no parsed object binding in the source parser, still visualize it here.
-    var backendMeshes = (this.sceneGeometry && this.sceneGeometry.meshes) ? this.sceneGeometry.meshes : {};
-    var backendMeshIds = Object.keys(backendMeshes);
-    for (var bi = 0; bi < backendMeshIds.length; bi += 1) {
-      var backendMeshId = backendMeshIds[bi];
-      if (!backendMeshId || referencedMeshIds[backendMeshId] || this.objectMeshById[backendMeshId]) continue;
+    // Backend-only synthetic meshes are a fallback for scenes where runtime graph parsing produced no objects.
+    // When parsed objects exist, adding every unreferenced backend mesh also shows unused geometry definitions.
+    if (!parsed.objects || parsed.objects.length === 0) {
+      var backendMeshes = (this.sceneGeometry && this.sceneGeometry.meshes) ? this.sceneGeometry.meshes : {};
+      var backendMeshIds = Object.keys(backendMeshes);
+      for (var bi = 0; bi < backendMeshIds.length; bi += 1) {
+        var backendMeshId = backendMeshIds[bi];
+        if (!backendMeshId || referencedMeshIds[backendMeshId] || this.objectMeshById[backendMeshId]) continue;
 
-      var backendGeoDef = { id: backendMeshId, type: "mesh", modifiers: null };
-      var backendGeo = this.geometryFromSceneData(backendGeoDef);
-      if (!backendGeo) continue;
+        var backendGeoDef = { id: backendMeshId, type: "mesh", modifiers: null };
+        var backendGeo = this.geometryFromSceneData(backendGeoDef);
+        if (!backendGeo) continue;
 
-      var backendMat = await materialForDefAsync(this, sceneName, null);
-      var backendMesh = new THREE.Mesh(backendGeo, backendMat);
-      backendMesh.name = backendMeshId;
-      backendMesh.userData = backendMesh.userData || {};
-      backendMesh.userData.objectId = backendMeshId;
-      backendMesh.userData.geometryId = backendMeshId;
-      backendMesh.userData.materialId = "";
-      backendMesh.userData.mediumId = "";
-      backendMesh.userData.geometryType = "mesh";
-      backendMesh.userData.infinitePlane = false;
-      backendMesh.userData.syntheticFromBackend = true;
-      backendMesh.userData.isEmissiveAreaLight = false;
-      this.objectMeshById[backendMeshId] = backendMesh;
-      this.objectMetaById[backendMeshId] = {
-        objectId: backendMeshId,
-        geometryId: backendMeshId,
-        materialId: "",
-        mediumId: "",
-        mediumType: "",
-        geometryType: "mesh",
-      };
-      backendMesh.castShadow = true;
-      backendMesh.receiveShadow = true;
-      this.modelRoot.add(backendMesh);
+        var backendMat = await materialForDefAsync(this, sceneName, null);
+        var backendMesh = new THREE.Mesh(backendGeo, backendMat);
+        backendMesh.name = backendMeshId;
+        backendMesh.userData = backendMesh.userData || {};
+        backendMesh.userData.objectId = backendMeshId;
+        backendMesh.userData.geometryId = backendMeshId;
+        backendMesh.userData.materialId = "";
+        backendMesh.userData.mediumId = "";
+        backendMesh.userData.geometryType = "mesh";
+        backendMesh.userData.infinitePlane = false;
+        backendMesh.userData.syntheticFromBackend = true;
+        backendMesh.userData.isEmissiveAreaLight = false;
+        this.objectMeshById[backendMeshId] = backendMesh;
+        this.objectMetaById[backendMeshId] = {
+          objectId: backendMeshId,
+          geometryId: backendMeshId,
+          materialId: "",
+          mediumId: "",
+          mediumType: "",
+          geometryType: "mesh",
+        };
+        backendMesh.castShadow = true;
+        backendMesh.receiveShadow = true;
+        this.modelRoot.add(backendMesh);
 
-      var addBackendEdges = true;
-      if (backendGeo && backendGeo.boundingBox === null && typeof backendGeo.computeBoundingBox === "function") {
-        backendGeo.computeBoundingBox();
-      }
-      if (backendGeo && backendGeo.boundingBox) {
-        var backendEdgeSize = new THREE.Vector3();
-        backendGeo.boundingBox.getSize(backendEdgeSize);
-        var backendEdgeMax = Math.max(backendEdgeSize.x, Math.max(backendEdgeSize.y, backendEdgeSize.z));
-        var backendEdgeMin = Math.min(backendEdgeSize.x, Math.min(backendEdgeSize.y, backendEdgeSize.z));
-        if (backendEdgeMax > 1e-6 && (backendEdgeMin / backendEdgeMax) < 0.02) {
-          addBackendEdges = false;
+        var addBackendEdges = true;
+        if (backendGeo && backendGeo.boundingBox === null && typeof backendGeo.computeBoundingBox === "function") {
+          backendGeo.computeBoundingBox();
         }
-      }
-      if (addBackendEdges) {
-        var backendEdges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(backendGeo, 35),
-          new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
-        );
-        backendMesh.add(backendEdges);
-      }
+        if (backendGeo && backendGeo.boundingBox) {
+          var backendEdgeSize = new THREE.Vector3();
+          backendGeo.boundingBox.getSize(backendEdgeSize);
+          var backendEdgeMax = Math.max(backendEdgeSize.x, Math.max(backendEdgeSize.y, backendEdgeSize.z));
+          var backendEdgeMin = Math.min(backendEdgeSize.x, Math.min(backendEdgeSize.y, backendEdgeSize.z));
+          if (backendEdgeMax > 1e-6 && (backendEdgeMin / backendEdgeMax) < 0.02) {
+            addBackendEdges = false;
+          }
+        }
+        if (addBackendEdges) {
+          var backendEdgeSourceGeo = buildIndexedEdgeSourceGeometry(backendGeo);
+          var backendEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(backendEdgeSourceGeo, 35),
+            new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
+          );
+          if (backendEdgeSourceGeo !== backendGeo) backendEdgeSourceGeo.dispose();
+          backendMesh.add(backendEdges);
+        }
 
-      count += 1;
+        count += 1;
+      }
     }
 
     if (count > 0) this.refreshSceneBoundsAndLighting({ updateTarget: true, preserveDistance: false });
@@ -2342,6 +2497,16 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
   SceneVisualEditor.prototype.setGridVisible = function (visible) {
     if (!this.grid) return;
     this.grid.visible = !!visible;
+  };
+
+  SceneVisualEditor.prototype.setGlobalBvhVisible = function (visible) {
+    this.showGlobalBvh = !!visible;
+    if (this.globalBvhOverlay) this.globalBvhOverlay.visible = this.showGlobalBvh;
+  };
+
+  SceneVisualEditor.prototype.setMeshBvhVisible = function (visible) {
+    this.showMeshBvh = !!visible;
+    if (this.meshBvhOverlay) this.meshBvhOverlay.visible = this.showMeshBvh;
   };
 
   SceneVisualEditor.prototype.computeXtcoreBasis = function (position, target, upHint) {

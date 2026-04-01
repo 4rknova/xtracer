@@ -8,6 +8,7 @@
 #include <atomic>
 
 #include <xtcore/context.h>
+#include <xtcore/integrator.h>
 #include <nimg/pixmap.h>
 
 namespace xtracer {
@@ -38,8 +39,7 @@ struct integrator_control_info_t
 
 struct integrator_info_t
 {
-    const char *id;
-    const char *label;
+    xtcore::render::integrator_metadata_t metadata;
     const integrator_control_info_t *controls;
     size_t controls_count;
 };
@@ -47,7 +47,7 @@ struct integrator_info_t
 struct render_request_t
 {
     enum render_mode_t {
-        RENDER_MODE_NORMAL = 0,
+        RENDER_MODE_DIRECT = 0,
         RENDER_MODE_PROGRESSIVE,
         RENDER_MODE_INTERACTIVE
     };
@@ -101,7 +101,6 @@ struct render_result_t
     std::string error;
     nimg::Pixmap framebuffer;
     std::vector<unsigned char> image_png;
-    std::vector<unsigned char> raygraph_ply;
     std::vector<point3_t> photon_diffuse_points;
     std::vector<point3_t> photon_caustic_points;
     size_t tiles_done;

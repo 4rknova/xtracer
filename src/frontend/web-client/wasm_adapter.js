@@ -10,6 +10,18 @@
     { id: "debug_views", label: "Debug Views" },
     { id: "ao", label: "Ambient Occlusion" },
   ];
+  const DEFAULT_POST_FILTERS = [
+    { id: "desaturate", label: "Desaturate" },
+    { id: "chromatic_aberration", label: "Chromatic Aberration" },
+    { id: "vignette", label: "Vignette" },
+    { id: "film_grain", label: "Film Grain" },
+    { id: "denoise", label: "Bilateral Denoise" },
+    { id: "fxaa", label: "FXAA" },
+    { id: "sharpen", label: "Sharpen" },
+    { id: "brightness", label: "Brightness" },
+    { id: "contrast", label: "Contrast" },
+    { id: "raindrops_lens", label: "Raindrops on Lens" },
+  ];
   const DEFAULT_RESOLUTIONS = [
     { id: 0, description: "Square", width: 500, height: 500 },
     { id: 1, description: "VGA/SD", width: 640, height: 480 },
@@ -204,6 +216,18 @@
       }
     }
 
+    async function loadPostFilters() {
+      if (serverApi && typeof serverApi.getPostFilters === "function") {
+        try {
+          const list = await serverApi.getPostFilters();
+          if (Array.isArray(list) && list.length > 0) return list;
+        } catch (_) {
+          // fallback below
+        }
+      }
+      return DEFAULT_POST_FILTERS.slice();
+    }
+
     async function loadResolutions() {
       try {
         return await serverApi.getResolutionPresets();
@@ -300,6 +324,9 @@
       },
       async getIntegrators() {
         return loadIntegrators();
+      },
+      async getPostFilters() {
+        return loadPostFilters();
       },
       async getResolutionPresets() {
         return loadResolutions();

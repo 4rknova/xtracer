@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   startupScreen: $("startupScreen"),
   startupLabel: $("startupLabel"),
+  startupPercent: $("startupPercent"),
   startupProgressFill: $("startupProgressFill"),
   mainMenuToggle: $("mainMenuToggle"),
   mainTabs: $("mainTabs"),
@@ -72,6 +73,7 @@ const el = {
   settingsJobsList: $("settingsJobsList"),
   activeSceneCardScene: $("activeSceneCardScene"),
   activeSceneCardDescription: $("activeSceneCardDescription"),
+  activeSceneCardSource: $("activeSceneCardSource"),
   activeSceneCardCamera: $("activeSceneCardCamera"),
   activeSceneCardVariant: $("activeSceneCardVariant"),
   workspaceList: $("workspaceList"),
@@ -205,6 +207,8 @@ const el = {
   visualSceneScale: $("visualSceneScale"),
   visualSelectionTag: $("visualSelectionTag"),
   visualShowGrid: $("visualShowGrid"),
+  visualShowGlobalBvh: $("visualShowGlobalBvh"),
+  visualShowMeshBvh: $("visualShowMeshBvh"),
   visualViewport: $("visualViewport"),
   visualPanel: $("visualPanel"),
   graphPanel: $("graphPanel"),
@@ -415,10 +419,10 @@ const previewView = {
   lastX: 0,
   lastY: 0,
 };
-const RENDER_MODE_NORMAL = "normal";
+const RENDER_MODE_DIRECT = "direct";
 const RENDER_MODE_PROGRESSIVE = "progressive";
 const RENDER_MODE_INTERACTIVE = "interactive";
-let renderMode = RENDER_MODE_NORMAL;
+let renderMode = RENDER_MODE_PROGRESSIVE;
 let interactivePreviewEnabled = false;
 let interactivePreviewLoopToken = 0;
 let interactivePreviewLoopActive = false;

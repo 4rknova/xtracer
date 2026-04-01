@@ -3,8 +3,18 @@ async function boot() {
   api = initializeBackendApi();
   renderSceneLoadStatus();
   const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
-  const startupRequestTotal = 8 + (hasWorkspaceApi ? 1 : 0);
-  resetStartupProgress(startupRequestTotal);
+  const startupPhases = [
+    "Preparing layout",
+    "Restoring appearance",
+    ...(hasWorkspaceApi ? ["Syncing workspaces"] : []),
+    "Loading scenes",
+    "Loading integrators",
+    "Loading post filters",
+    "Loading presets",
+    "Resolving startup scene",
+    "Loading runtime details",
+  ];
+  resetStartupProgress(startupPhases.length, startupPhases);
   const trackStartupRequest = (promise) => Promise.resolve(promise).finally(() => advanceStartupProgress(1));
 
   if (!hasBackendMethod(api, "getWorkspaces")) {
@@ -37,6 +47,7 @@ async function boot() {
   await Promise.all([
     trackStartupRequest(loadScenes()),
     trackStartupRequest(loadIntegrators()),
+    trackStartupRequest(loadPostFilters()),
     trackStartupRequest(loadResolutionPresets()),
   ]);
   const tryLoadSceneBundle = async (sceneName) => {
@@ -131,11 +142,11 @@ async function boot() {
       el.visualSelectionTag || null,
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneGeometry")) throw new Error("geometry endpoint unavailable");
-        return api.getSceneGeometry(sceneName);
+        return api.getSceneGeometry(sceneName, selectedSceneVariantValue());
       },
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneRuntimeGraph")) throw new Error("runtime graph endpoint unavailable");
-        return api.getSceneRuntimeGraph(sceneName);
+        return api.getSceneRuntimeGraph(sceneName, selectedSceneVariantValue());
       },
       async (sceneName, relpath) => {
         if (!hasBackendMethod(api, "getSceneAssetText")) throw new Error("asset endpoint unavailable");
@@ -182,6 +193,12 @@ async function boot() {
       }
       if (el.visualSceneScale && visualEditor.setSceneScaleMultiplier) {
         visualEditor.setSceneScaleMultiplier(uiOptions.visualSceneScale, false);
+      }
+      if (el.visualShowGlobalBvh && visualEditor.setGlobalBvhVisible) {
+        visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+      }
+      if (el.visualShowMeshBvh && visualEditor.setMeshBvhVisible) {
+        visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
       }
       try {
         await loadVisualSceneFromSelected();
@@ -234,6 +251,20 @@ async function boot() {
       appendLog(`visual grid=${el.visualShowGrid.checked ? "on" : "off"}`);
     });
     if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(!!el.visualShowGrid.checked);
+  }
+  if (el.visualShowGlobalBvh) {
+    el.visualShowGlobalBvh.addEventListener("change", () => {
+      if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+      appendLog(`visual global bvh=${el.visualShowGlobalBvh.checked ? "on" : "off"}`);
+    });
+    if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+  }
+  if (el.visualShowMeshBvh) {
+    el.visualShowMeshBvh.addEventListener("change", () => {
+      if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
+      appendLog(`visual mesh bvh=${el.visualShowMeshBvh.checked ? "on" : "off"}`);
+    });
+    if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
   }
   if (el.resetViewBtn) {
     el.resetViewBtn.addEventListener("click", () => {

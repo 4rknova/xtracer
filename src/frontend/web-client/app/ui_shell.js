@@ -527,16 +527,17 @@ function initSidebarAccordion() {
 async function loadVisualSceneFromSelected() {
   if (!visualEditor) return;
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const variantName = selectedSceneVariantValue();
   if (!sceneName) {
     visualEditor.setStatus("No scene selected.");
     return;
   }
 
-  visualEditor.setStatus("Loading " + sceneName + " ...");
+  visualEditor.setStatus("Loading " + sceneName + (variantName ? " (" + variantName + ")" : "") + " ...");
   const pair = await Promise.all([
-    api.getSceneGeometry(sceneName),
+    api.getSceneGeometry(sceneName, variantName),
     hasBackendMethod(api, "getSceneRuntimeGraph")
-      ? loadSceneRuntimeGraph(sceneName).catch(() => null)
+      ? loadSceneRuntimeGraph(sceneName, variantName).catch(() => null)
       : Promise.resolve(null),
   ]);
   const geometryData = pair[0] || { meshes: {} };
@@ -549,7 +550,7 @@ async function loadVisualSceneFromSelected() {
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
   refreshVisualPhotonOverlay().catch(() => {});
-  appendLog("visual loaded: " + sceneName);
+  appendLog("visual loaded: " + sceneName + (variantName ? " (" + variantName + ")" : ""));
 }
 
 function refreshVisualCameraOptions() {

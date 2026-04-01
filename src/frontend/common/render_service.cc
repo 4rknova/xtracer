@@ -7,6 +7,7 @@
 #include <iterator>
 #include <mutex>
 #include <memory>
+#include <map>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <xtcore/strpool.h>
@@ -164,14 +165,40 @@ static const integrator_control_info_t k_photon_mapping_controls[] = {
 };
 
 static const integrator_info_t k_integrators[] = {
-      { "raytracer", "Raytracer (Whitted)", k_no_controls, 0 }
-    , { "pathtracer_mis", "Pathtracer (MIS Diffuse)", k_no_controls, 0 }
-    , { "pathtracer_mis_full", "Pathtracer (MIS Full)", k_no_controls, 0 }
-    , { "pathtracer", "Pathtracer (Brute Force)", k_no_controls, 0 }
-    , { "photon_mapping", "Photon Mapping", k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
-    , { "debug_views", "Debug Views", k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
-    , { "ao"        , "Ambient Occlusion", k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
+      { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
+    , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
+    , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
+    , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
+    , { xtcore::render::integrator_metadata_t(), k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
+    , { xtcore::render::integrator_metadata_t(), k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
+    , { xtcore::render::integrator_metadata_t(), k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
 };
+
+static const char *k_integrator_ids[] = {
+      "raytracer"
+    , "pathtracer_mis"
+    , "pathtracer_mis_full"
+    , "pathtracer"
+    , "photon_mapping"
+    , "debug_views"
+    , "ao"
+};
+
+std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name);
+
+const std::vector<integrator_info_t> &integrator_catalog()
+{
+    static const std::vector<integrator_info_t> catalog = []() {
+        std::vector<integrator_info_t> out(k_integrators, k_integrators + sizeof(k_integrators) / sizeof(k_integrators[0]));
+        for (size_t i = 0; i < out.size(); ++i) {
+            std::unique_ptr<xtcore::render::IIntegrator> integrator = create_integrator(k_integrator_ids[i]);
+            if (integrator) out[i].metadata = integrator->metadata();
+            else out[i].metadata.id = k_integrator_ids[i];
+        }
+        return out;
+    }();
+    return catalog;
+}
 
 std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name)
 {
@@ -191,83 +218,10 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }
 
-bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
-{
-    std::ifstream in(path, std::ios::binary);
-    if (!in.good()) return false;
-    out.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-    return true;
-}
-
 bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, std::string &error)
 {
-#ifdef __EMSCRIPTEN__
-    const char *tmp_path = "/tmp/xtracer_wasm.png";
-    mkdir("/tmp", 0777);
-
-    int png_err = nimg::io::save::png(tmp_path, pixmap);
-    if (png_err != 0) {
+    if (nimg::io::save::png_memory(pixmap, out) != 0) {
         error = "failed to encode png";
-        return false;
-    }
-
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
-    if (!ok) {
-        error = "failed to read generated png";
-        return false;
-    }
-    return true;
-#else
-    char tmp_path[] = "/tmp/xtracer_web_png_XXXXXX";
-    int fd = mkstemp(tmp_path);
-    if (fd < 0) {
-        error = "failed to create temporary file";
-        return false;
-    }
-    close(fd);
-
-    int png_err = nimg::io::save::png(tmp_path, pixmap);
-    if (png_err != 0) {
-        unlink(tmp_path);
-        error = "failed to encode png";
-        return false;
-    }
-
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
-    if (!ok) {
-        error = "failed to read generated png";
-        return false;
-    }
-
-    return true;
-#endif
-}
-
-bool encode_raygraph_ply_memory(const xtcore::raygraph::raygraph_t &raygraph,
-                                std::vector<unsigned char> &out,
-                                std::string &error)
-{
-    char tmp_path[] = "/tmp/xtracer_web_raygraph_XXXXXX";
-    int fd = mkstemp(tmp_path);
-    if (fd < 0) {
-        error = "failed to create temporary file";
-        return false;
-    }
-    close(fd);
-
-    int write_err = xtcore::raygraph::write(tmp_path, raygraph);
-    if (write_err != 0) {
-        unlink(tmp_path);
-        error = "failed to export raygraph";
-        return false;
-    }
-
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
-    if (!ok) {
-        error = "failed to read generated raygraph";
         return false;
     }
     return true;
@@ -294,11 +248,11 @@ render_request_t::render_request_t()
     , threads(0)
     , samples(1)
     , aa(1)
-    , rdepth(10)
+    , rdepth(15)
     , tile_size(32)
     , sample_distribution(xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID)
     , tile_order(xtcore::render::TILE_ORDER_RANDOM)
-    , render_mode(RENDER_MODE_NORMAL)
+    , render_mode(RENDER_MODE_PROGRESSIVE)
 {
     camera_override.enabled = false;
     camera_override.px = 0.0;
@@ -319,7 +273,6 @@ render_result_t::render_result_t()
     , error()
     , framebuffer()
     , image_png()
-    , raygraph_ply()
     , tiles_done(0)
     , tiles_total(0)
     , elapsed_ms(0.0)
@@ -327,7 +280,7 @@ render_result_t::render_result_t()
 
 std::vector<integrator_info_t> list_integrators()
 {
-    return std::vector<integrator_info_t>(k_integrators, k_integrators + sizeof(k_integrators) / sizeof(k_integrators[0]));
+    return integrator_catalog();
 }
 
 bool is_integrator_supported(const std::string &name)
@@ -337,8 +290,9 @@ bool is_integrator_supported(const std::string &name)
 
 const integrator_info_t *find_integrator_info(const std::string &name)
 {
-    for (size_t i = 0; i < sizeof(k_integrators) / sizeof(k_integrators[0]); ++i) {
-        if (name == k_integrators[i].id) return &k_integrators[i];
+    const std::vector<integrator_info_t> &catalog = integrator_catalog();
+    for (size_t i = 0; i < catalog.size(); ++i) {
+        if (catalog[i].metadata.id == name) return &catalog[i];
     }
     return nullptr;
 }
@@ -476,7 +430,7 @@ render_result_t render_scene_to_png(const render_request_t &request,
             }
 
             render_request_t pass_request = request;
-            pass_request.render_mode = render_request_t::RENDER_MODE_NORMAL;
+            pass_request.render_mode = render_request_t::RENDER_MODE_DIRECT;
             pass_request.samples = pass_samples[pass_index];
             const float pass_weight = static_cast<float>(pass_samples[pass_index]);
             render_result_t pass_result = render_scene_to_png(
@@ -561,18 +515,17 @@ render_result_t render_scene_to_png(const render_request_t &request,
             }
 
             if (pass_index + 1 == pass_samples.size()) {
-                result.raygraph_ply = pass_result.raygraph_ply;
                 result.photon_diffuse_points = pass_result.photon_diffuse_points;
                 result.photon_caustic_points = pass_result.photon_caustic_points;
             }
         }
 
-        result.framebuffer = accum_fb;
         nimg::Pixmap ldr_framebuffer = accum_fb;
         xtcore::tonemapping::apply(ldr_framebuffer);
         if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
             return result;
         }
+        result.framebuffer = std::move(accum_fb);
         result.tiles_total = global_tiles_total;
         result.tiles_done = global_tiles_total;
         result.ok = true;
@@ -704,21 +657,14 @@ render_result_t render_scene_to_png(const render_request_t &request,
         }
     }
 
-    xtcore::raygraph::raygraph_t raygraph;
-    xtcore::render::assemble(raygraph, context);
-    std::string raygraph_error;
-    if (!encode_raygraph_ply_memory(raygraph, result.raygraph_ply, raygraph_error)) {
-        result.raygraph_ply.clear();
-    }
-
     nimg::Pixmap framebuffer;
     xtcore::render::assemble(framebuffer, context);
-    result.framebuffer = framebuffer;
     nimg::Pixmap ldr_framebuffer = framebuffer;
     xtcore::tonemapping::apply(ldr_framebuffer);
     if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
         return result;
     }
+    result.framebuffer = std::move(framebuffer);
 
     result.tiles_done = result.tiles_total;
     result.ok = true;

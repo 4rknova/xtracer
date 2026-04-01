@@ -493,7 +493,7 @@ function workspaceSettingsPayload() {
       samples: String(el.samples && el.samples.value ? el.samples.value : "1"),
       aa: String(el.aa && el.aa.value ? el.aa.value : "1"),
       sample_distribution: String(el.sampleDistribution && el.sampleDistribution.value ? el.sampleDistribution.value : "grid"),
-      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"),
+      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "15"),
     },
     frame: {
       width: String(el.width && el.width.value ? el.width.value : "500"),
@@ -610,7 +610,7 @@ function applyWorkspaceSettings(settings) {
     if (preview && typeof setRenderMode === "function") {
       let nextMode = normalizeRenderMode(preview.render_mode);
       if (preview.render_mode === undefined && preview.interactive !== undefined) {
-        nextMode = preview.interactive ? RENDER_MODE_INTERACTIVE : RENDER_MODE_NORMAL;
+        nextMode = preview.interactive ? RENDER_MODE_INTERACTIVE : RENDER_MODE_PROGRESSIVE;
       }
       setRenderMode(nextMode, { log: false }).catch(() => {});
     }

@@ -9,11 +9,15 @@
 <body>
   <div id="startupScreen" class="startup-screen" role="status" aria-live="polite" aria-label="Loading XTRACER">
     <div class="startup-screen-inner">
+      <div class="startup-aura" aria-hidden="true"></div>
       <img class="startup-logo" src="/logo.svg" alt="XTRACER">
       <div class="startup-loader" aria-hidden="true">
         <span></span><span></span><span></span>
       </div>
-      <p id="startupLabel" class="startup-label">Loading app... 0%</p>
+      <div class="startup-meta">
+        <p id="startupLabel" class="startup-footnote">Preparing runtime</p>
+        <span id="startupPercent" class="startup-percent">0%</span>
+      </div>
       <div class="startup-progress" aria-hidden="true">
         <div id="startupProgressFill" class="startup-progress-fill"></div>
       </div>
@@ -71,6 +75,7 @@
                 <section class="settings-section workspace-info-section active-scene-sidebar">
                   <div id="activeSceneCardScene" class="active-scene-header"></div>
                   <p id="activeSceneCardDescription" class="active-scene-description">-</p>
+                  <div id="activeSceneCardSource" class="active-scene-row"></div>
                   <div id="activeSceneCardCamera" class="active-scene-row"></div>
                   <div id="activeSceneCardVariant" class="active-scene-row"></div>
                 </section>
@@ -103,8 +108,8 @@
                 <p id="threadsPolicyHint" class="info-widget">Threads 0 uses auto mode.</p>
                 <label>Render Mode
                   <select id="renderMode">
-                    <option value="normal">Normal</option>
-                    <option value="progressive">Progressive</option>
+                    <option value="direct">Direct</option>
+                    <option value="progressive" selected>Progressive</option>
                     <option value="interactive">Interactive</option>
                   </select>
                 </label>
@@ -176,6 +181,14 @@
                 <label class="inline-check" title="Show or hide visual grid">
                   <input id="visualShowGrid" type="checkbox" checked>
                   Grid
+                </label>
+                <label class="inline-check" title="Show scene-wide BVH boxes">
+                  <input id="visualShowGlobalBvh" type="checkbox">
+                  Global BVH
+                </label>
+                <label class="inline-check" title="Show mesh-local BVH boxes">
+                  <input id="visualShowMeshBvh" type="checkbox">
+                  Mesh BVH
                 </label>
                 <section class="visual-controls-info" aria-label="3D controls help">
                   <h4 class="visual-controls-title">Controls</h4>
@@ -354,7 +367,7 @@
                       <option value="random">Monte Carlo</option>
                     </select>
                   </label>
-                  <label>Ray Depth <input id="rdepth" type="number" min="1" max="4096" value="10"></label>
+                  <label>Ray Depth <input id="rdepth" type="number" min="1" max="4096" value="15"></label>
                 </div>
               </div>
             </details>
@@ -400,6 +413,8 @@
                     <option value="chromatic_aberration">Chromatic Aberration</option>
                     <option value="vignette">Vignette</option>
                     <option value="film_grain">Film Grain</option>
+                    <option value="denoise">Bilateral Denoise</option>
+                    <option value="fxaa">FXAA</option>
                     <option value="sharpen">Sharpen</option>
                     <option value="brightness">Brightness</option>
                     <option value="contrast">Contrast</option>
@@ -446,7 +461,6 @@
                     <option value="tga">TGA</option>
                     <option value="exr">EXR</option>
                     <option value="hdr">HDR</option>
-                    <option value="ply">Raygraph (PLY)</option>
                   </select>
                 </label>
                 <button id="download" class="reset-view-btn is-disabled export-download-link" type="button" disabled aria-disabled="true" aria-label="Export Render" title="Export Render">Export Render</button>

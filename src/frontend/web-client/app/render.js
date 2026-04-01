@@ -29,7 +29,7 @@ async function startRender(extraParams) {
   const height = sanitizeIntField(el.height, 500, 32, 8192);
   const samples = sanitizeIntField(el.samples, 1, 1, 1024);
   const aa = sanitizeIntField(el.aa, 1, 1, 16);
-  const rdepth = sanitizeIntField(el.rdepth, 10, 1, 4096);
+  const rdepth = sanitizeIntField(el.rdepth, 15, 1, 4096);
   const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
   const threads = sanitizeIntField(el.threads, 0, 0, 256);
 
@@ -359,7 +359,7 @@ function interactiveResolutionStages(settleMode) {
   const height = target.height;
   const samples = Math.max(1, Number.parseInt(String(el.samples && el.samples.value ? el.samples.value : "1"), 10) || 1);
   const aa = Math.max(1, Number.parseInt(String(el.aa && el.aa.value ? el.aa.value : "1"), 10) || 1);
-  const rdepth = Math.max(1, Number.parseInt(String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"), 10) || 10);
+  const rdepth = Math.max(1, Number.parseInt(String(el.rdepth && el.rdepth.value ? el.rdepth.value : "15"), 10) || 15);
   const pick = (targetW) => {
     const w = Math.max(32, Math.min(width, targetW));
     const h = Math.max(32, Math.round((height * w) / Math.max(1, width)));
@@ -458,7 +458,7 @@ async function runInteractiveStage(stage, seq, loopToken, settleMode) {
       tile_size: stage.tile_size,
       tile_order: stage.tile_order,
       integrator: stage.integrator,
-      render_mode: RENDER_MODE_NORMAL,
+      render_mode: RENDER_MODE_DIRECT,
       __skipIntegratorOptions: !!stage.moving,
       __skipPostFilters: !!stage.moving,
       ...cameraParams,

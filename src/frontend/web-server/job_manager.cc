@@ -17,6 +17,7 @@
 #include <xtcore/tonemapping/tonemapping.h>
 
 #include "backend_log.h"
+#include "post_filters.h"
 
 namespace xtracer {
 namespace frontend {
@@ -42,8 +43,6 @@ bool write_file_bytes(const char *path, const std::vector<unsigned char> &bytes)
     return out.good();
 }
 
-typedef int (*save_fn_t)(const char *, nimg::Pixmap &);
-
 struct post_filter_entry_t
 {
     bool before_tm;
@@ -61,6 +60,12 @@ struct post_filter_entry_t
     float grain_size;
     float grain_seed;
     float grain_luma_weighted;
+    float denoise_strength;
+    float denoise_radius;
+    float denoise_sigma;
+    float fxaa_subpix;
+    float fxaa_edge_threshold;
+    float fxaa_edge_threshold_min;
     float sharpen_amount;
     float sharpen_radius;
     float sharpen_threshold;
@@ -74,24 +79,6 @@ struct post_filter_entry_t
 };
 
 typedef std::vector<post_filter_entry_t> post_filter_chain_t;
-
-bool encode_memory(nimg::Pixmap &pixmap, save_fn_t save_fn, std::vector<unsigned char> &out)
-{
-    char tmp_path[] = "/tmp/xtracer_web_job_img_XXXXXX";
-    int fd = mkstemp(tmp_path);
-    if (fd < 0) return false;
-    close(fd);
-
-    int save_err = save_fn(tmp_path, pixmap);
-    if (save_err != 0) {
-        unlink(tmp_path);
-        return false;
-    }
-
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
-    return ok;
-}
 
 std::string lower_ascii_copy(std::string s)
 {
@@ -152,6 +139,11 @@ bool parse_post_filter_chain(bool enabled,
             if (idx >= tokens.size()) return false;
             const std::string filter_id = trim_ascii_copy(tokens[idx]);
             idx += 1;
+            const post_filter_info_t *filter_info = find_post_filter_info(filter_id);
+            if (!filter_info) return false;
+            if ((before_tm && !filter_info->allow_before_tm) || (!before_tm && !filter_info->allow_after_tm)) {
+                return false;
+            }
 
             post_filter_entry_t e;
             e.before_tm = before_tm;
@@ -169,6 +161,12 @@ bool parse_post_filter_chain(bool enabled,
             e.grain_size = 1.0f;
             e.grain_seed = 1.0f;
             e.grain_luma_weighted = 1.0f;
+            e.denoise_strength = 0.65f;
+            e.denoise_radius = 2.0f;
+            e.denoise_sigma = 0.12f;
+            e.fxaa_subpix = 0.75f;
+            e.fxaa_edge_threshold = 0.125f;
+            e.fxaa_edge_threshold_min = 0.0312f;
             e.sharpen_amount = 0.8f;
             e.sharpen_radius = 1.0f;
             e.sharpen_threshold = 0.02f;
@@ -213,6 +211,16 @@ bool parse_post_filter_chain(bool enabled,
                     else if (key == "seed") e.grain_seed = std::max(0.0f, std::min(1000000.0f, std::floor(f)));
                     else if (key == "luma_weighted") e.grain_luma_weighted = (f >= 0.5f) ? 1.0f : 0.0f;
                     else return false;
+                } else if (filter_id == "denoise") {
+                    if (key == "strength") e.denoise_strength = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "radius") e.denoise_radius = std::max(1.0f, std::min(6.0f, std::round(f)));
+                    else if (key == "sigma") e.denoise_sigma = std::max(0.001f, std::min(2.0f, f));
+                    else return false;
+                } else if (filter_id == "fxaa") {
+                    if (key == "subpix") e.fxaa_subpix = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "edge_threshold") e.fxaa_edge_threshold = std::max(0.001f, std::min(1.0f, f));
+                    else if (key == "edge_threshold_min") e.fxaa_edge_threshold_min = std::max(0.0001f, std::min(1.0f, f));
+                    else return false;
                 } else if (filter_id == "sharpen") {
                     if (key == "amount") e.sharpen_amount = std::max(0.0f, std::min(4.0f, f));
                     else if (key == "radius") e.sharpen_radius = std::max(1.0f, std::min(4.0f, std::round(f)));
@@ -242,6 +250,8 @@ bool parse_post_filter_chain(bool enabled,
                 && filter_id != "chromatic_aberration"
                 && filter_id != "vignette"
                 && filter_id != "film_grain"
+                && filter_id != "denoise"
+                && filter_id != "fxaa"
                 && filter_id != "sharpen"
                 && filter_id != "brightness"
                 && filter_id != "contrast"
@@ -278,6 +288,20 @@ bool parse_post_filter_chain(bool enabled,
                    << ":size=" << e.grain_size
                    << ":seed=" << e.grain_seed
                    << ":luma_weighted=" << e.grain_luma_weighted;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "denoise") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":strength=" << e.denoise_strength
+                   << ":radius=" << e.denoise_radius
+                   << ":sigma=" << e.denoise_sigma;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "fxaa") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":subpix=" << e.fxaa_subpix
+                   << ":edge_threshold=" << e.fxaa_edge_threshold
+                   << ":edge_threshold_min=" << e.fxaa_edge_threshold_min;
                 out_normalized_key += ps.str();
             } else if (filter_id == "sharpen") {
                 std::ostringstream ps;
@@ -347,6 +371,18 @@ void apply_post_filters_for_stage(nimg::Pixmap &pixmap,
             op.seed = e.grain_seed;
             op.luma_weighted = e.grain_luma_weighted;
             op.render(&pixmap);
+        } else if (e.id == "denoise") {
+            xtcore::filter::Denoise op;
+            op.strength = e.denoise_strength;
+            op.radius = e.denoise_radius;
+            op.sigma = e.denoise_sigma;
+            op.render(&pixmap);
+        } else if (e.id == "fxaa") {
+            xtcore::filter::FXAA op;
+            op.subpix = e.fxaa_subpix;
+            op.edge_threshold = e.fxaa_edge_threshold;
+            op.edge_threshold_min = e.fxaa_edge_threshold_min;
+            op.render(&pixmap);
         } else if (e.id == "sharpen") {
             xtcore::filter::Sharpen op;
             op.amount = e.sharpen_amount;
@@ -378,24 +414,22 @@ bool encode_png_memory(nimg::Pixmap &pixmap,
                        const post_filter_chain_t &post_filters,
                        std::vector<unsigned char> &out)
 {
-    nimg::Pixmap hdr = pixmap;
-    apply_post_filters_for_stage(hdr, post_filters, true);
-    nimg::Pixmap ldr = hdr;
-    xtcore::tonemapping::apply(ldr, tm_settings);
-    apply_post_filters_for_stage(ldr, post_filters, false);
-    return encode_memory(ldr, nimg::io::save::png, out);
+    nimg::Pixmap work = pixmap;
+    apply_post_filters_for_stage(work, post_filters, true);
+    xtcore::tonemapping::apply(work, tm_settings);
+    apply_post_filters_for_stage(work, post_filters, false);
+    return nimg::io::save::png_memory(work, out) == 0;
 }
 
 bool encode_jpg_memory(nimg::Pixmap &pixmap,
                        const post_filter_chain_t &post_filters,
                        std::vector<unsigned char> &out)
 {
-    nimg::Pixmap hdr = pixmap;
-    apply_post_filters_for_stage(hdr, post_filters, true);
-    nimg::Pixmap ldr = hdr;
-    xtcore::tonemapping::apply(ldr);
-    apply_post_filters_for_stage(ldr, post_filters, false);
-    return encode_memory(ldr, nimg::io::save::jpg, out);
+    nimg::Pixmap work = pixmap;
+    apply_post_filters_for_stage(work, post_filters, true);
+    xtcore::tonemapping::apply(work);
+    apply_post_filters_for_stage(work, post_filters, false);
+    return nimg::io::save::jpg_memory(work, out) == 0;
 }
 
 void build_preview_pixmap(nimg::Pixmap &pixmap,
@@ -463,6 +497,10 @@ size_t post_filter_padding_pixels(const post_filter_chain_t &chain)
         const post_filter_entry_t &e = chain[i];
         if (e.id == "chromatic_aberration") {
             max_radius = std::max(max_radius, std::max(0.0f, e.ca_amount));
+        } else if (e.id == "denoise") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.denoise_radius));
+        } else if (e.id == "fxaa") {
+            max_radius = std::max(max_radius, 1.0f);
         } else if (e.id == "raindrops_lens") {
             max_radius = std::max(max_radius, std::max(0.0f, e.raindrops_distortion));
         } else if (e.id == "sharpen") {
@@ -487,15 +525,6 @@ void expand_rect_with_padding(size_t width,
     y1 = std::min(height, y1 + padding);
 }
 
-bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::tile_t *tile)
-{
-    if (!tile) return false;
-    return a.x0 == tile->x0()
-        && a.y0 == tile->y0()
-        && a.x1 == tile->x1()
-        && a.y1 == tile->y1();
-}
-
 unsigned long long parse_job_sequence(const std::string &id)
 {
     if (id.size() <= 4 || id.substr(0, 4) != "job_") return 0;
@@ -513,8 +542,8 @@ const char *render_mode_label(common::render_request_t::render_mode_t mode)
     switch (mode) {
         case common::render_request_t::RENDER_MODE_PROGRESSIVE: return "progressive";
         case common::render_request_t::RENDER_MODE_INTERACTIVE: return "interactive";
-        case common::render_request_t::RENDER_MODE_NORMAL:
-        default: return "normal";
+        case common::render_request_t::RENDER_MODE_DIRECT:
+        default: return "direct";
     }
 }
 
@@ -536,6 +565,55 @@ size_t progressive_pass_count(size_t total_samples)
 }
 
 } // namespace
+
+job_manager_t::job_t::active_tile_key_t job_manager_t::make_active_tile_key(size_t x0, size_t y0, size_t x1, size_t y1)
+{
+    job_t::active_tile_key_t key;
+    key.x0 = x0;
+    key.y0 = y0;
+    key.x1 = x1;
+    key.y1 = y1;
+    return key;
+}
+
+job_manager_t::job_t::active_tile_key_t job_manager_t::make_active_tile_key(const xtcore::render::tile_t *tile,
+                                                                             const common::progress_tile_update_t *upd)
+{
+    const bool has_upd_rect = upd && upd->has_rect;
+    return make_active_tile_key(has_upd_rect ? upd->x0 : tile->x0(),
+                                has_upd_rect ? upd->y0 : tile->y0(),
+                                has_upd_rect ? upd->x1 : tile->x1(),
+                                has_upd_rect ? upd->y1 : tile->y1());
+}
+
+void job_manager_t::add_active_tile(job_t &job, const job_t::active_tile_key_t &key)
+{
+    if (job.active_tile_index.find(key) != job.active_tile_index.end()) return;
+
+    job_snapshot_t::tile_rect_t rect;
+    rect.x0 = key.x0;
+    rect.y0 = key.y0;
+    rect.x1 = key.x1;
+    rect.y1 = key.y1;
+    job.active_tiles.push_back(rect);
+    job.active_tile_index[key] = job.active_tiles.size() - 1;
+}
+
+void job_manager_t::remove_active_tile(job_t &job, const job_t::active_tile_key_t &key)
+{
+    std::map<job_t::active_tile_key_t, size_t>::iterator it = job.active_tile_index.find(key);
+    if (it == job.active_tile_index.end()) return;
+
+    const size_t idx = it->second;
+    const size_t last_idx = job.active_tiles.size() - 1;
+    if (idx != last_idx) {
+        job.active_tiles[idx] = job.active_tiles[last_idx];
+        const job_snapshot_t::tile_rect_t &moved = job.active_tiles[idx];
+        job.active_tile_index[make_active_tile_key(moved.x0, moved.y0, moved.x1, moved.y1)] = idx;
+    }
+    job.active_tiles.pop_back();
+    job.active_tile_index.erase(it);
+}
 
 job_manager_t::job_t::job_t()
     : mut()
@@ -559,7 +637,6 @@ job_manager_t::job_t::job_t()
     , image_jpg()
     , image_bmp()
     , image_tga()
-    , image_raygraph_ply()
     , progressive_fb()
     , finished_tiles()
     , photon_diffuse_points()
@@ -776,28 +853,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
                 std::lock_guard<std::mutex> lock(job->mut);
                 if (event == common::PROGRESS_EVENT_TILE_STARTED) {
                     const bool has_upd_rect = upd && upd->has_rect;
-                    if (tile || has_upd_rect) {
-                        const size_t rx0 = has_upd_rect ? upd->x0 : tile->x0();
-                        const size_t ry0 = has_upd_rect ? upd->y0 : tile->y0();
-                        const size_t rx1 = has_upd_rect ? upd->x1 : tile->x1();
-                        const size_t ry1 = has_upd_rect ? upd->y1 : tile->y1();
-                        bool exists = false;
-                        for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                            const job_snapshot_t::tile_rect_t &r = job->active_tiles[i];
-                            if (r.x0 == rx0 && r.y0 == ry0 && r.x1 == rx1 && r.y1 == ry1) {
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if (!exists) {
-                            job_snapshot_t::tile_rect_t rect;
-                            rect.x0 = rx0;
-                            rect.y0 = ry0;
-                            rect.x1 = rx1;
-                            rect.y1 = ry1;
-                            job->active_tiles.push_back(rect);
-                        }
-                    }
+                    if (tile || has_upd_rect) add_active_tile(*job, make_active_tile_key(tile, upd));
                 } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
                     const bool has_upd_rect = upd && upd->has_rect;
                     if (has_upd_rect && upd->source_fb) {
@@ -816,18 +872,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
                         finished.done_index = done;
                         job->finished_tiles.push_back(finished);
                     }
-                    for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                        const bool match_tile = tile && same_tile_rect(job->active_tiles[i], tile);
-                        const bool match_upd = has_upd_rect
-                            && job->active_tiles[i].x0 == upd->x0
-                            && job->active_tiles[i].y0 == upd->y0
-                            && job->active_tiles[i].x1 == upd->x1
-                            && job->active_tiles[i].y1 == upd->y1;
-                        if (match_tile || match_upd) {
-                            job->active_tiles.erase(job->active_tiles.begin() + i);
-                            break;
-                        }
-                    }
+                    if (tile || has_upd_rect) remove_active_tile(*job, make_active_tile_key(tile, upd));
                 }
             }
             job->tiles_total = total;
@@ -848,7 +893,6 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
             backend_log_t::handle().add("info", "job aborted id=" + job->id);
         } else if (rr.ok) {
             job->image_png.swap(rr.image_png);
-            job->image_raygraph_ply.swap(rr.raygraph_ply);
             job->final_fb = rr.framebuffer;
             job->image_exr.clear();
             job->image_hdr.clear();
@@ -871,6 +915,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
             job->preview_last_post_filters_enabled = false;
             job->preview_last_post_filters.clear();
             job->active_tiles.clear();
+            job->active_tile_index.clear();
             job->state = JOB_DONE;
             std::ostringstream log;
             log << "job completed id=" << job->id
@@ -879,6 +924,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
         } else {
             job->error = rr.error;
             job->active_tiles.clear();
+            job->active_tile_index.clear();
             job->state = JOB_ERROR;
             backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + rr.error);
         }
@@ -984,7 +1030,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.workspace_id = e.workspace_id;
         out.scene = e.scene;
         out.integrator = e.integrator;
-        out.render_mode = "normal";
+        out.render_mode = "direct";
         out.state = e.state;
         out.error = e.error;
         out.elapsed_ms = e.elapsed_ms;
@@ -1085,43 +1131,67 @@ bool job_manager_t::image(const std::string &id,
     std::string post_key;
     if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key)) return false;
 
-    std::lock_guard<std::mutex> lock(job->mut);
+    bool use_final = false;
+    size_t done = 0;
+    bool cache_invalid = false;
+    nimg::Pixmap work;
 
-    const bool use_final = (job->state == JOB_DONE
-                            && job->final_fb.width() > 0
-                            && job->final_fb.height() > 0);
-    if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
 
-    const nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
-    const size_t done = use_final ? job->tiles_total.load() : job->tiles_done.load();
-    const bool cache_invalid = job->preview_png_cache.empty()
-                            || job->preview_last_encoded_done != done
-                            || job->preview_last_from_final != use_final
-                            || job->preview_last_tm_op != tm_settings.op
-                            || std::fabs(job->preview_last_tm_exposure - tm_settings.exposure) > 1e-6f
-                            || std::fabs(job->preview_last_tm_white_point - tm_settings.white_point) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_contrast - tm_settings.mantiuk_contrast) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_saturation - tm_settings.mantiuk_saturation) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_detail - tm_settings.mantiuk_detail) > 1e-6f
-                            || job->preview_last_post_filters_enabled != post_filters_enabled
-                            || job->preview_last_post_filters != post_key;
+        use_final = (job->state == JOB_DONE
+                     && job->final_fb.width() > 0
+                     && job->final_fb.height() > 0);
+        if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
 
-    if (cache_invalid) {
-        nimg::Pixmap work = src;
-        if (!encode_png_memory(work, tm_settings, post_chain, job->preview_png_cache)) return false;
-        job->preview_last_encoded_done = done;
-        job->preview_last_from_final = use_final;
-        job->preview_last_tm_op = tm_settings.op;
-        job->preview_last_tm_exposure = tm_settings.exposure;
-        job->preview_last_tm_white_point = tm_settings.white_point;
-        job->preview_last_tm_mantiuk_contrast = tm_settings.mantiuk_contrast;
-        job->preview_last_tm_mantiuk_saturation = tm_settings.mantiuk_saturation;
-        job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
-        job->preview_last_post_filters_enabled = post_filters_enabled;
-        job->preview_last_post_filters = post_key;
+        done = use_final ? job->tiles_total.load() : job->tiles_done.load();
+        cache_invalid = job->preview_png_cache.empty()
+                     || job->preview_last_encoded_done != done
+                     || job->preview_last_from_final != use_final
+                     || job->preview_last_tm_op != tm_settings.op
+                     || std::fabs(job->preview_last_tm_exposure - tm_settings.exposure) > 1e-6f
+                     || std::fabs(job->preview_last_tm_white_point - tm_settings.white_point) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_contrast - tm_settings.mantiuk_contrast) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_saturation - tm_settings.mantiuk_saturation) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_detail - tm_settings.mantiuk_detail) > 1e-6f
+                     || job->preview_last_post_filters_enabled != post_filters_enabled
+                     || job->preview_last_post_filters != post_key;
+
+        if (!cache_invalid) {
+            out = job->preview_png_cache;
+            return true;
+        }
+
+        work = use_final ? job->final_fb : job->progressive_fb;
     }
 
-    out = job->preview_png_cache;
+    std::vector<unsigned char> encoded;
+    if (!encode_png_memory(work, tm_settings, post_chain, encoded)) return false;
+
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        const bool still_use_final = (job->state == JOB_DONE
+                                      && job->final_fb.width() > 0
+                                      && job->final_fb.height() > 0);
+        const size_t still_done = still_use_final ? job->tiles_total.load() : job->tiles_done.load();
+        if (still_use_final == use_final && still_done == done) {
+            job->preview_png_cache = encoded;
+            job->preview_last_encoded_done = done;
+            job->preview_last_from_final = use_final;
+            job->preview_last_tm_op = tm_settings.op;
+            job->preview_last_tm_exposure = tm_settings.exposure;
+            job->preview_last_tm_white_point = tm_settings.white_point;
+            job->preview_last_tm_mantiuk_contrast = tm_settings.mantiuk_contrast;
+            job->preview_last_tm_mantiuk_saturation = tm_settings.mantiuk_saturation;
+            job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
+            job->preview_last_post_filters_enabled = post_filters_enabled;
+            job->preview_last_post_filters = post_key;
+            out = job->preview_png_cache;
+            return true;
+        }
+    }
+
+    out.swap(encoded);
     return true;
 }
 
@@ -1146,12 +1216,15 @@ bool job_manager_t::image_delta(const std::string &id,
         size_t x1;
         size_t y1;
         size_t done_index;
+        nimg::Pixmap fb;
     };
 
     std::vector<pending_tile_t> pending;
     pending.reserve(max_tiles);
     nimg::Pixmap preview_fb;
     const size_t filter_padding = post_filter_padding_pixels(post_chain);
+    const bool can_process_tiles_individually =
+        post_chain.empty() && tm_settings.op != xtcore::tonemapping::OP_MANTIUK_2006;
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
@@ -1168,7 +1241,9 @@ bool job_manager_t::image_delta(const std::string &id,
         if (!use_final && !job->progressive_ready) return true;
 
         const nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
-        preview_fb = src;
+        if (!can_process_tiles_individually) {
+            preview_fb = src;
+        }
         for (size_t i = 0; i < job->finished_tiles.size(); ++i) {
             const job_t::finished_tile_t &t = job->finished_tiles[i];
             if (t.done_index <= since_done) continue;
@@ -1191,27 +1266,43 @@ bool job_manager_t::image_delta(const std::string &id,
                                      entry.x1,
                                      entry.y1);
             entry.done_index = t.done_index;
+            if (can_process_tiles_individually
+                && !extract_rect_from_framebuffer(src,
+                                                  entry.x0,
+                                                  entry.y0,
+                                                  entry.x1,
+                                                  entry.y1,
+                                                  entry.fb)) {
+                continue;
+            }
             pending.push_back(entry);
         }
     }
 
     if (pending.empty()) return true;
 
-    build_preview_pixmap(preview_fb, tm_settings, post_chain);
+    if (!can_process_tiles_individually) {
+        build_preview_pixmap(preview_fb, tm_settings, post_chain);
+    }
 
     out.tiles.reserve(pending.size());
     for (size_t i = 0; i < pending.size(); ++i) {
         nimg::Pixmap tile_fb;
-        if (!extract_rect_from_framebuffer(preview_fb,
-                                           pending[i].x0,
-                                           pending[i].y0,
-                                           pending[i].x1,
-                                           pending[i].y1,
-                                           tile_fb)) {
-            continue;
+        if (can_process_tiles_individually) {
+            tile_fb = std::move(pending[i].fb);
+            xtcore::tonemapping::apply(tile_fb, tm_settings);
+        } else {
+            if (!extract_rect_from_framebuffer(preview_fb,
+                                               pending[i].x0,
+                                               pending[i].y0,
+                                               pending[i].x1,
+                                               pending[i].y1,
+                                               tile_fb)) {
+                continue;
+            }
         }
         std::vector<unsigned char> encoded;
-        if (!encode_memory(tile_fb, nimg::io::save::png, encoded)) continue;
+        if (nimg::io::save::png_memory(tile_fb, encoded) != 0) continue;
 
         job_image_delta_t::tile_t tile;
         tile.x0 = pending[i].x0;
@@ -1272,7 +1363,7 @@ bool job_manager_t::image_export(const std::string &id,
     if (format == "exr") {
         nimg::Pixmap work = job->final_fb;
         apply_post_filters_for_stage(work, post_chain, true);
-        if (!encode_memory(work, nimg::io::save::exr, out)) return false;
+        if (nimg::io::save::exr_memory(work, out) != 0) return false;
         mime_type = "image/x-exr";
         extension = "exr";
         return true;
@@ -1281,7 +1372,7 @@ bool job_manager_t::image_export(const std::string &id,
     if (format == "hdr") {
         nimg::Pixmap work = job->final_fb;
         apply_post_filters_for_stage(work, post_chain, true);
-        if (!encode_memory(work, nimg::io::save::hdr, out)) return false;
+        if (nimg::io::save::hdr_memory(work, out) != 0) return false;
         mime_type = "image/vnd.radiance";
         extension = "hdr";
         return true;
@@ -1296,34 +1387,24 @@ bool job_manager_t::image_export(const std::string &id,
     }
 
     if (format == "bmp") {
-        nimg::Pixmap hdr = job->final_fb;
-        apply_post_filters_for_stage(hdr, post_chain, true);
-        nimg::Pixmap ldr = hdr;
-        xtcore::tonemapping::apply(ldr);
-        apply_post_filters_for_stage(ldr, post_chain, false);
-        if (!encode_memory(ldr, nimg::io::save::bmp, out)) return false;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        xtcore::tonemapping::apply(work);
+        apply_post_filters_for_stage(work, post_chain, false);
+        if (nimg::io::save::bmp_memory(work, out) != 0) return false;
         mime_type = "image/bmp";
         extension = "bmp";
         return true;
     }
 
     if (format == "tga") {
-        nimg::Pixmap hdr = job->final_fb;
-        apply_post_filters_for_stage(hdr, post_chain, true);
-        nimg::Pixmap ldr = hdr;
-        xtcore::tonemapping::apply(ldr);
-        apply_post_filters_for_stage(ldr, post_chain, false);
-        if (!encode_memory(ldr, nimg::io::save::tga, out)) return false;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        xtcore::tonemapping::apply(work);
+        apply_post_filters_for_stage(work, post_chain, false);
+        if (nimg::io::save::tga_memory(work, out) != 0) return false;
         mime_type = "image/x-tga";
         extension = "tga";
-        return true;
-    }
-
-    if (format == "ply") {
-        if (job->image_raygraph_ply.empty()) return false;
-        out = job->image_raygraph_ply;
-        mime_type = "application/octet-stream";
-        extension = "ply";
         return true;
     }
 

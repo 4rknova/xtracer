@@ -6,9 +6,10 @@ let workspacePollingJobId = "";
 
 function normalizeRenderMode(value) {
   const mode = String(value || "").trim().toLowerCase();
+  if (mode === "normal") return RENDER_MODE_DIRECT;
   if (mode === RENDER_MODE_PROGRESSIVE) return RENDER_MODE_PROGRESSIVE;
   if (mode === RENDER_MODE_INTERACTIVE) return RENDER_MODE_INTERACTIVE;
-  return RENDER_MODE_NORMAL;
+  return RENDER_MODE_DIRECT;
 }
 
 function isInteractiveRenderMode() {
@@ -581,6 +582,67 @@ function ensurePreviewCanvasSize() {
   return { cssW, cssH, dpr };
 }
 
+function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
+  if (!ctx || !dims || !fitted) return;
+  if (!hasPreviewImage()) return;
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) return;
+
+  const miniMargin = 14;
+  const miniSize = clamp(Math.round(Math.min(dims.cssW, dims.cssH) * 0.22), 96, 180);
+  const miniX = dims.cssW - miniSize - miniMargin;
+  const miniY = dims.cssH - miniSize - miniMargin;
+  const aspect = Math.max(1e-6, el.preview.naturalWidth / Math.max(1, el.preview.naturalHeight));
+  let mapW = miniSize;
+  let mapH = Math.round(mapW / aspect);
+  if (mapH > miniSize) {
+    mapH = miniSize;
+    mapW = Math.round(mapH * aspect);
+  }
+  const mapX = miniX + Math.round((miniSize - mapW) * 0.5);
+  const mapY = miniY + Math.round((miniSize - mapH) * 0.5);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(9, 16, 24, 0.62)";
+  ctx.strokeStyle = "rgba(173, 214, 255, 0.72)";
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  ctx.roundRect(miniX - 6, miniY - 6, miniSize + 12, miniSize + 12, 10);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(mapX, mapY, mapW, mapH);
+  ctx.clip();
+  ctx.imageSmoothingEnabled = !isNearestPreviewSampling();
+  ctx.drawImage(el.preview, mapX, mapY, mapW, mapH);
+  ctx.restore();
+
+  const imgToMapX = mapW / Math.max(1e-6, imageW);
+  const imgToMapY = mapH / Math.max(1e-6, imageH);
+  const viewLeft = Math.max(0, -imageX);
+  const viewTop = Math.max(0, -imageY);
+  const viewRight = Math.min(imageW, fitted.frameW - imageX);
+  const viewBottom = Math.min(imageH, fitted.frameH - imageY);
+
+  if (viewRight > viewLeft && viewBottom > viewTop) {
+    const rectX = mapX + viewLeft * imgToMapX;
+    const rectY = mapY + viewTop * imgToMapY;
+    const rectW = Math.max(6, (viewRight - viewLeft) * imgToMapX);
+    const rectH = Math.max(6, (viewBottom - viewTop) * imgToMapY);
+    ctx.fillStyle = "rgba(255, 214, 92, 0.14)";
+    ctx.strokeStyle = "rgba(255, 196, 64, 0.95)";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(rectX, rectY, rectW, rectH);
+    ctx.strokeRect(rectX, rectY, rectW, rectH);
+  }
+
+  ctx.strokeStyle = "rgba(232, 240, 248, 0.78)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mapX, mapY, mapW, mapH);
+  ctx.restore();
+}
+
 function drawPreviewCanvas() {
   if (!el.previewCanvas) return;
   const dims = ensurePreviewCanvasSize();
@@ -608,6 +670,7 @@ function drawPreviewCanvas() {
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(el.preview, x, y, drawW, drawH);
   drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
+  drawPreviewMinimap(ctx, dims, fitted, x, y, drawW, drawH);
 }
 
 function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
@@ -791,7 +854,7 @@ function updateResetViewUi(enabled) {
 }
 
 async function setInteractivePreviewEnabled(enabled) {
-  return setRenderMode(enabled ? RENDER_MODE_INTERACTIVE : RENDER_MODE_NORMAL, { log: true });
+  return setRenderMode(enabled ? RENDER_MODE_INTERACTIVE : RENDER_MODE_DIRECT, { log: true });
 }
 
 async function setRenderMode(nextModeRaw, options) {

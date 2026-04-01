@@ -18,11 +18,13 @@ const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
 const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
 const FONT_SIZE_PRESET_DEFAULT = "default";
 const FONT_SIZE_PRESET_LARGE = "large";
-const POST_FILTER_CATALOG = [
+let POST_FILTER_CATALOG = [
   { id: "desaturate", label: "Desaturate" },
   { id: "chromatic_aberration", label: "Chromatic Aberration" },
   { id: "vignette", label: "Vignette" },
   { id: "film_grain", label: "Film Grain" },
+  { id: "denoise", label: "Bilateral Denoise" },
+  { id: "fxaa", label: "FXAA" },
   { id: "sharpen", label: "Sharpen" },
   { id: "brightness", label: "Brightness" },
   { id: "contrast", label: "Contrast" },
@@ -574,22 +576,51 @@ function dismissStartupScreen(immediate) {
   }, 460);
 }
 
+let startupProgressPhases = [];
+let startupLabelMotionTimer = null;
+
+function startupPhaseText(done, total) {
+  if (!Array.isArray(startupProgressPhases) || !startupProgressPhases.length) {
+    return done >= total ? "Ready" : "Preparing runtime";
+  }
+  if (done >= total) return "Ready";
+  return startupProgressPhases[Math.max(0, Math.min(done, startupProgressPhases.length - 1))] || "Preparing runtime";
+}
+
+function setStartupLabel(text) {
+  if (!el.startupLabel) return;
+  const nextText = String(text || "");
+  if (el.startupLabel.textContent === nextText) return;
+  el.startupLabel.textContent = nextText;
+  el.startupLabel.classList.remove("is-entering");
+  void el.startupLabel.offsetWidth;
+  el.startupLabel.classList.add("is-entering");
+  if (startupLabelMotionTimer) clearTimeout(startupLabelMotionTimer);
+  startupLabelMotionTimer = setTimeout(() => {
+    if (el.startupLabel) el.startupLabel.classList.remove("is-entering");
+    startupLabelMotionTimer = null;
+  }, 320);
+}
+
 function renderStartupProgress() {
   const total = Math.max(1, Number(startupProgressTotal) || 1);
   const done = Math.max(0, Math.min(total, Number(startupProgressDone) || 0));
   const ratio = done / total;
   const pct = Math.round(ratio * 100);
+  const stageText = startupPhaseText(done, total);
   if (el.startupProgressFill) {
     el.startupProgressFill.style.width = `${pct}%`;
   }
-  if (el.startupLabel) {
-    el.startupLabel.textContent = `Loading app... ${pct}%`;
+  if (el.startupPercent) {
+    el.startupPercent.textContent = `${pct}%`;
   }
+  setStartupLabel(stageText);
 }
 
-function resetStartupProgress(total) {
+function resetStartupProgress(total, phases) {
   startupProgressTotal = Math.max(1, Number(total) || 1);
   startupProgressDone = 0;
+  startupProgressPhases = Array.isArray(phases) ? phases.slice() : [];
   renderStartupProgress();
 }
 
@@ -749,6 +780,10 @@ function createServerApi() {
       const data = await getJSON("/api/integrators");
       return data.integrators || [];
     },
+    async getPostFilters() {
+      const data = await getJSON("/api/post_filters");
+      return data.post_filters || [];
+    },
     async getResolutionPresets() {
       const data = await getJSON("/api/resolutions");
       return data.presets || [];
@@ -762,7 +797,10 @@ function createServerApi() {
     async getSceneGeometry(scene, variant) {
       if (!scene) return { meshes: {} };
       const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/geometry`, variant));
-      return { meshes: (data && data.meshes) || {} };
+      return {
+        meshes: (data && data.meshes) || {},
+        debug: (data && data.debug) || null,
+      };
     },
     async getSceneRuntimeGraph(scene, variant) {
       if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [], media: [] };

@@ -146,7 +146,6 @@ class job_manager_t
         std::vector<unsigned char> image_jpg;
         std::vector<unsigned char> image_bmp;
         std::vector<unsigned char> image_tga;
-        std::vector<unsigned char> image_raygraph_ply;
         nimg::Pixmap progressive_fb;
         struct finished_tile_t {
             job_snapshot_t::tile_rect_t rect;
@@ -155,7 +154,22 @@ class job_manager_t
         std::vector<finished_tile_t> finished_tiles;
         std::vector<common::render_result_t::point3_t> photon_diffuse_points;
         std::vector<common::render_result_t::point3_t> photon_caustic_points;
+        struct active_tile_key_t {
+            size_t x0;
+            size_t y0;
+            size_t x1;
+            size_t y1;
+
+            bool operator<(const active_tile_key_t &rhs) const
+            {
+                if (x0 != rhs.x0) return x0 < rhs.x0;
+                if (y0 != rhs.y0) return y0 < rhs.y0;
+                if (x1 != rhs.x1) return x1 < rhs.x1;
+                return y1 < rhs.y1;
+            }
+        };
         std::vector<job_snapshot_t::tile_rect_t> active_tiles;
+        std::map<active_tile_key_t, size_t> active_tile_index;
         bool progressive_ready;
         size_t preview_last_encoded_done;
         bool preview_last_from_final;
@@ -196,6 +210,11 @@ class job_manager_t
     void prune_completed_jobs_locked();
     void cache_evicted_job_locked(const std::shared_ptr<job_t> &job);
     void prune_evicted_jobs_locked();
+    static job_t::active_tile_key_t make_active_tile_key(size_t x0, size_t y0, size_t x1, size_t y1);
+    static job_t::active_tile_key_t make_active_tile_key(const xtcore::render::tile_t *tile,
+                                                         const common::progress_tile_update_t *upd);
+    static void add_active_tile(job_t &job, const job_t::active_tile_key_t &key);
+    static void remove_active_tile(job_t &job, const job_t::active_tile_key_t &key);
 
     mutable std::mutex jobs_mut;
     std::map<std::string, std::shared_ptr<job_t> > jobs;
