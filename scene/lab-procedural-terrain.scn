@@ -1,0 +1,214 @@
+title = Procedural Terrain Showcase
+description = Demonstrates gen(terrain) with seeded fBm height, dimensions, noise scale, octaves, lacunarity, and gain.
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction = vec3(-0.22,0.78,-0.58)
+        sun_intensity = col3(13,12,10)
+        beta_rayleigh = col3(0.18,0.34,0.78)
+        ground_color = col3(0.06,0.06,0.07)
+        density = 1.0
+        horizon_falloff = 1.7
+        sun_disk_radius = 1.0
+        sun_disk_intensity = 1.2
+        sun_glow_radius = 8.0
+        sun_glow_intensity = 0.22
+        sun_glow_falloff = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type = thin-lens
+        fov = 34
+        position = vec3(0.0,4.6,-11.5)
+        target = vec3(0.0,0.8,0.0)
+        up = vec3(0,1,0)
+        flength = 45
+        aperture = 0
+    }
+
+    low = {
+        type = thin-lens
+        fov = 30
+        position = vec3(0.0,2.2,-8.0)
+        target = vec3(0.0,0.9,1.0)
+        up = vec3(0,1,0)
+        flength = 55
+        aperture = 0
+    }
+}
+
+geometry = {
+    terrain_main = {
+        type = mesh
+        source = gen(terrain)
+        resolution = 160
+        dimensions = vec3(14.0,2.1,14.0)
+        height_sampler = {
+            type = scenery_heightfield
+            seed = 4102
+            scale = 0.22
+            octaves = 5
+            lacunarity = 2.1
+            gain = 0.52
+            ridge_strength = 0.72
+            mountain_strength = 0.86
+            valley_strength = 0.56
+        }
+        modifiers = {
+            translation = vec3(0,0,2.0)
+        }
+    }
+
+    key_light = {
+        type = sphere
+        position = vec3(-4.5,7.5,-3.2)
+        radius = 0.9
+    }
+}
+
+material = {
+    terrain_earth = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = fbm_marble
+                    a = col3(0.36,0.28,0.20)
+                    b = col3(0.52,0.42,0.28)
+                    vein = col3(0.16,0.28,0.14)
+                    scale = 3.6
+                    vein_frequency = 6.0
+                    turbulence = 2.8
+                    octaves = 4
+                    lacunarity = 2.0
+                    gain = 0.5
+                    vein_strength = 0.35
+                    vein_sharpness = 2.6
+                }
+            }
+        }
+    }
+
+    terrain_moon = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.62,0.63,0.66)
+                }
+            }
+        }
+    }
+
+    terrain_sheen = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type = color
+                    value = col3(0.48,0.38,0.24)
+                }
+            }
+            scalars = {
+                metallic = 0.0
+                roughness = 0.44
+                ior = 1.45
+            }
+        }
+    }
+
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type = color
+                    value = col3(18,15,12)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    terrain = { geometry = terrain_main, material = terrain_earth }
+    key_light = { geometry = key_light, material = key_light_mat }
+}
+
+variants = {
+    base = {
+        name = Base
+        description = Balanced rolling terrain with earth-toned material response.
+    }
+
+    craggy = {
+        name = Craggy
+        description = Higher relief and denser frequency for sharper ridges.
+        set = {
+            default_camera = low
+            geometry = {
+                terrain_main = {
+                    type = mesh
+                    source = gen(terrain)
+                    resolution = 192
+                    dimensions = vec3(14.0,3.4,14.0)
+                    height_sampler = {
+                        type = scenery_heightfield
+                        seed = 4102
+                        scale = 0.38
+                        octaves = 6
+                        lacunarity = 2.35
+                        gain = 0.48
+                        ridge_strength = 0.92
+                        mountain_strength = 1.0
+                        valley_strength = 0.45
+                    }
+                    modifiers = {
+                        translation = vec3(0,0,2.0)
+                    }
+                }
+            }
+            object = {
+                terrain = { geometry = terrain_main, material = terrain_moon }
+            }
+        }
+    }
+
+    dunes = {
+        name = Dunes
+        description = Lower relief and softer fractal stacking for dune-like terrain.
+        set = {
+            geometry = {
+                terrain_main = {
+                    type = mesh
+                    source = gen(terrain)
+                    resolution = 144
+                    dimensions = vec3(16.0,1.0,16.0)
+                    height_sampler = {
+                        type = scenery_heightfield
+                        seed = 9001
+                        scale = 0.12
+                        octaves = 4
+                        lacunarity = 1.7
+                        gain = 0.62
+                        ridge_strength = 0.28
+                        mountain_strength = 0.32
+                        valley_strength = 0.78
+                    }
+                    modifiers = {
+                        translation = vec3(0,0,2.0)
+                    }
+                }
+            }
+            object = {
+                terrain = { geometry = terrain_main, material = terrain_moon }
+            }
+        }
+    }
+}

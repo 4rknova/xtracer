@@ -1,0 +1,487 @@
+title = Nature Hero Stack
+description = Cinematic outdoor hero scene with layered valley depth, a stronger overlook composition, and the newer material stack staged as a single landscape shot.
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction = vec3(-0.34,0.72,-0.60)
+        sun_intensity = col3(11,10,9)
+        beta_rayleigh = col3(0.17,0.32,0.76)
+        ground_color = col3(0.08,0.09,0.10)
+        density = 1.02
+        horizon_falloff = 1.7
+        sun_disk_radius = 1.0
+        sun_disk_intensity = 1.1
+        sun_glow_radius = 8.0
+        sun_glow_intensity = 0.18
+        sun_glow_falloff = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type = thin-lens
+        fov = 31
+        position = vec3(-1.2,2.0,-8.2)
+        target = vec3(0.45,0.92,2.95)
+        up = vec3(0,1,0)
+        flength = 68
+        aperture = 0.18
+    }
+
+    low = {
+        type = thin-lens
+        fov = 27
+        position = vec3(-0.7,1.25,-6.2)
+        target = vec3(0.35,0.86,2.85)
+        up = vec3(0,1,0)
+        flength = 82
+        aperture = 0.24
+    }
+}
+
+geometry = {
+    valley = {
+        type = mesh
+        source = gen(terrain)
+        resolution = 180
+        dimensions = vec3(28.0,3.1,34.0)
+        height_sampler = {
+            type = scenery_heightfield
+            seed = 1204
+            scale = 0.12
+            octaves = 5
+            lacunarity = 2.0
+            gain = 0.54
+            ridge_strength = 0.62
+            mountain_strength = 0.82
+            valley_strength = 0.74
+        }
+        modifiers = {
+            translation = vec3(0.0,-1.55,7.2)
+        }
+    }
+
+    ridge_far = {
+        type = mesh
+        source = gen(terrain)
+        resolution = 140
+        dimensions = vec3(36.0,5.4,28.0)
+        height_sampler = {
+            type = scenery_heightfield
+            seed = 9211
+            scale = 0.08
+            octaves = 4
+            lacunarity = 1.9
+            gain = 0.58
+            ridge_strength = 0.48
+            mountain_strength = 0.92
+            valley_strength = 0.64
+        }
+        modifiers = {
+            translation = vec3(0.0,-1.85,18.0)
+            rotation = vec3(0,12,0)
+        }
+    }
+
+    ridge_mid = {
+        type = mesh
+        source = gen(terrain)
+        resolution = 132
+        dimensions = vec3(24.0,2.8,16.0)
+        height_sampler = {
+            type = scenery_heightfield
+            seed = 4471
+            scale = 0.11
+            octaves = 4
+            lacunarity = 1.95
+            gain = 0.56
+            ridge_strength = 0.40
+            mountain_strength = 0.54
+            valley_strength = 0.78
+        }
+        modifiers = {
+            translation = vec3(3.4,-1.45,10.4)
+            rotation = vec3(0,-14,0)
+        }
+    }
+
+    overlook = {
+        type = mesh
+        source = gen(cube)
+        modifiers = {
+            scale = vec3(5.2,0.32,4.2)
+            rotation = vec3(0,12,0)
+            translation = vec3(0.4,-0.48,2.15)
+        }
+    }
+
+    waystone = {
+        type = mesh
+        source = gen(pyramid)
+        base_size = 1.2
+        height = 2.1
+        modifiers = {
+            rotation = vec3(0,34,0)
+            translation = vec3(-1.75,0.54,2.35)
+        }
+    }
+
+    glass_marker = {
+        type = sphere
+        position = vec3(1.32,0.18,2.82)
+        radius = 0.46
+    }
+
+    metal_ring = {
+        type = mesh
+        source = gen(ring)
+        modifiers = {
+            scale = vec3(0.92,0.92,0.92)
+            rotation = vec3(78,32,-8)
+            translation = vec3(2.0,0.66,2.18)
+        }
+    }
+
+    cloth = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 78
+        dimensions = vec3(2.5,0.78,3.2)
+        folds = 2.9
+        edge_lift = 0.22
+        curl = 0.26
+        taper = 0.20
+        sway = -0.16
+        asymmetry = 0.20
+        pinned = 0.66
+        modifiers = {
+            translation = vec3(0.55,1.38,1.86)
+            rotation = vec3(4,-18,0)
+        }
+    }
+
+    leaf_left = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 56
+        dimensions = vec3(1.0,0.46,2.3)
+        folds = 1.8
+        edge_lift = 0.18
+        curl = -0.22
+        taper = 0.28
+        sway = -0.16
+        asymmetry = -0.12
+        pinned = 0.54
+        modifiers = {
+            translation = vec3(-3.55,0.46,1.62)
+            rotation = vec3(-10,28,18)
+        }
+    }
+
+    leaf_right = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 56
+        dimensions = vec3(0.94,0.44,2.1)
+        folds = 1.7
+        edge_lift = 0.14
+        curl = 0.20
+        taper = 0.24
+        sway = 0.18
+        asymmetry = 0.16
+        pinned = 0.50
+        modifiers = {
+            translation = vec3(3.75,0.34,1.92)
+            rotation = vec3(12,-34,-14)
+        }
+    }
+
+    sun_kicker = {
+        type = sphere
+        position = vec3(-4.8,5.1,-2.4)
+        radius = 0.44
+    }
+}
+
+material = {
+    valley_ground = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = fbm_marble
+                    a = col3(0.24,0.30,0.18)
+                    b = col3(0.40,0.34,0.20)
+                    vein = col3(0.18,0.22,0.12)
+                    scale = 2.8
+                    vein_frequency = 4.8
+                    turbulence = 1.8
+                    octaves = 4
+                    lacunarity = 2.0
+                    gain = 0.5
+                    vein_strength = 0.28
+                    vein_sharpness = 2.2
+                }
+            }
+        }
+    }
+
+    ridge_ground = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.32,0.38,0.42)
+                }
+            }
+        }
+    }
+
+    ridge_mid_ground = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.38,0.42,0.34)
+                }
+            }
+        }
+    }
+
+    overlook_stone = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type = fbm_marble
+                    a = col3(0.34,0.31,0.28)
+                    b = col3(0.54,0.50,0.44)
+                    vein = col3(0.22,0.20,0.18)
+                    scale = 3.8
+                    vein_frequency = 7.0
+                    turbulence = 2.6
+                    octaves = 4
+                    lacunarity = 2.0
+                    gain = 0.5
+                    vein_strength = 0.22
+                    vein_sharpness = 2.8
+                }
+                roughness = {
+                    type = checker
+                    a = col3(0.52,0.52,0.52)
+                    b = col3(0.68,0.68,0.68)
+                    scale_u = 6
+                    scale_v = 6
+                }
+                normal = {
+                    type = voronoi_normal
+                    cells = 30
+                    max_deviation = 4
+                    seed = 11
+                }
+            }
+            scalars = {
+                metallic = 0.0
+                roughness = 0.58
+                ior = 1.48
+            }
+        }
+    }
+
+    jade_waystone = {
+        type = subsurface
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.34,0.46,0.38) }
+                subsurface_color = { type = color, value = col3(0.66,0.92,0.72) }
+                subsurface_radius = { type = color, value = col3(0.72,0.40,0.22) }
+                normal = { type = voronoi_normal, cells = 26, max_deviation = 3, seed = 13 }
+            }
+            scalars = {
+                subsurface = 0.62
+                thickness = 0.66
+            }
+        }
+    }
+
+    cloth_banner = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.42,0.16,0.12) }
+                sheen_color = { type = color, value = col3(0.92,0.46,0.30) }
+                normal = { type = voronoi_normal, cells = 34, max_deviation = 4, seed = 17 }
+            }
+            scalars = {
+                sheen = 0.82
+            }
+        }
+    }
+
+    glass_orb = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.98,1.0,0.98) }
+                roughness = { type = color, value = col3(0.08,0.08,0.08) }
+                absorption_color = { type = color, value = col3(0.74,0.88,0.72) }
+            }
+            scalars = {
+                ior = 1.48
+                transparency = 0.98
+                roughness = 0.08
+                absorption_distance = 1.6
+            }
+        }
+    }
+
+    ring_metal = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.74,0.62,0.46) }
+                roughness = { type = color, value = col3(0.22,0.22,0.22) }
+                metallic = { type = color, value = col3(1.0,1.0,1.0) }
+            }
+            scalars = {
+                metallic = 1.0
+                roughness = 0.22
+                ior = 1.45
+                anisotropy = 0.58
+                anisotropy_rotation = 28
+                clearcoat = 0.12
+                clearcoat_roughness = 0.18
+            }
+        }
+    }
+
+    leaf_mat_left = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.14,0.24,0.10) }
+                translucency_color = { type = color, value = col3(0.58,0.88,0.26) }
+                normal = { type = voronoi_normal, cells = 22, max_deviation = 4, seed = 19 }
+            }
+            scalars = {
+                translucency = 0.84
+                thickness = 0.16
+            }
+        }
+    }
+
+    leaf_mat_right = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.18,0.28,0.12) }
+                translucency_color = { type = color, value = col3(0.72,0.94,0.34) }
+                normal = { type = voronoi_normal, cells = 24, max_deviation = 4, seed = 23 }
+            }
+            scalars = {
+                translucency = 0.78
+                thickness = 0.22
+            }
+        }
+    }
+
+    sun_kicker_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(18,14,10) }
+            }
+        }
+    }
+}
+
+object = {
+    valley = { geometry = valley, material = valley_ground }
+    ridge_mid = { geometry = ridge_mid, material = ridge_mid_ground }
+    ridge = { geometry = ridge_far, material = ridge_ground }
+    overlook = { geometry = overlook, material = overlook_stone }
+    waystone = { geometry = waystone, material = jade_waystone }
+    glass_marker = { geometry = glass_marker, material = glass_orb }
+    ring = { geometry = metal_ring, material = ring_metal }
+    cloth = { geometry = cloth, material = cloth_banner }
+    leaf_left = { geometry = leaf_left, material = leaf_mat_left }
+    leaf_right = { geometry = leaf_right, material = leaf_mat_right }
+    sun_kicker = { geometry = sun_kicker, material = sun_kicker_mat }
+}
+
+variants = {
+    base = {
+        name = Base
+        description = Balanced hero framing with layered ridge depth, a warm cloth accent, and foreground foliage framing the overlook props.
+    }
+
+    golden_hour = {
+        name = Golden Hour
+        description = Warmer low sun and tighter framing to favor translucency, subsurface edges, and coat highlights.
+        set = {
+            default_camera = low
+            environment = {
+                type = rayleigh_sky
+                config = {
+                    sun_direction = vec3(-0.56,0.46,-0.58)
+                    sun_intensity = col3(14,10,7)
+                    beta_rayleigh = col3(0.20,0.27,0.58)
+                    ground_color = col3(0.10,0.08,0.07)
+                    density = 1.08
+                    horizon_falloff = 1.45
+                    sun_disk_radius = 1.2
+                    sun_disk_intensity = 1.4
+                    sun_glow_radius = 9.0
+                    sun_glow_intensity = 0.28
+                    sun_glow_falloff = 2.6
+                }
+            }
+        }
+    }
+
+    alpine_clear = {
+        name = Alpine Clear
+        description = Cooler, clearer air with a cleaner glass read and more distant mountain separation.
+        set = {
+            environment = {
+                type = rayleigh_sky
+                config = {
+                    sun_direction = vec3(-0.20,0.82,-0.54)
+                    sun_intensity = col3(12,12,12)
+                    beta_rayleigh = col3(0.16,0.34,0.84)
+                    ground_color = col3(0.06,0.08,0.09)
+                    density = 0.92
+                    horizon_falloff = 1.9
+                    sun_disk_radius = 0.9
+                    sun_disk_intensity = 1.0
+                    sun_glow_radius = 6.5
+                    sun_glow_intensity = 0.12
+                    sun_glow_falloff = 3.4
+                }
+            }
+            material = {
+                glass_orb = {
+                    type = rough_dielectric
+                    properties = {
+                        samplers = {
+                            diffuse = { type = color, value = col3(0.98,1.0,1.0) }
+                            roughness = { type = color, value = col3(0.04,0.04,0.04) }
+                            absorption_color = { type = color, value = col3(0.84,0.92,0.90) }
+                        }
+                        scalars = {
+                            ior = 1.48
+                            transparency = 0.99
+                            roughness = 0.04
+                            absorption_distance = 2.4
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

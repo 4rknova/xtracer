@@ -83,7 +83,7 @@ With scene variant:
 | `raytracer` | Whitted-style | Yes |
 | `pathtracer` | Brute-force path tracing | Yes |
 | `pathtracer_mis` | MIS diffuse path tracing | Yes |
-| `pathtracer_mis_full` | MIS full path tracing | Yes |
+| `pathtracer_mis_full` | MIS path tracing with emissive-area and environment sampling | Yes |
 | `photon_mapping` | Photon mapping | Yes |
 | `ao` | Ambient occlusion | Yes |
 | `debug_views` | Multi-mode debug integrator | Yes |
@@ -170,6 +170,7 @@ geometry = {
 | `menger_sponge_implicit` | `sierpinski_tetrahedron_implicit` |  |  |
 | `klein_bottle` | `hairball` | `shell_spiral` | `rock` |
 | `chain_link` | `lathe` | `snowflake` | `pyramid` |
+| `terrain` | `draped_cloth_strip` |  |  |
 
 Note: `menger_sponge` and `sierpinski_tetrahedron` can be used either as:
 - `geometry.type` values (native implicit xtcore surfaces), or
@@ -181,6 +182,44 @@ Sizing note:
 `gen(pyramid)` supports:
 - `base_size` (float, `> 0`, default `1.0`)
 - `height` (float, `> 0`, default `1.0`)
+
+`gen(ring)` supports:
+- `radius` (float, `> 0`): outer radius
+- `height` (float, `> 0`): ring height
+- `thickness` (float, `> 0`): wall thickness as `outer_radius - inner_radius`
+- `height_resolution` (integer, `>= 1`): vertical side tessellation
+
+`gen(rounded_ring)` supports:
+- `radius` (float, `> 0`): outer radius
+- `height` (float, `> 0`): rounded profile height
+- `thickness` (float, `> 0`): ring thickness as `outer_radius - inner_radius`
+- `profile_resolution` (integer, `>= 8`): cross-section tessellation for the rounded profile
+
+`gen(terrain)` supports:
+- `resolution` (integer, `>= 2`): grid resolution
+- `dimensions` (`vec3`): terrain width, height amplitude, and depth
+- `height_sampler` (group): sampler used to drive terrain displacement; defaults to `type = scenery_heightfield`
+
+`gen(draped_cloth_strip)` supports:
+- `resolution` (integer, `>= 8`): strip tessellation
+- `dimensions` (`vec3`): strip width, sag amplitude, and length
+- `folds` (float): longitudinal fold count
+- `edge_lift` (float): raises or lowers the strip edges relative to the center
+- `curl` (float): adds a gentle twist/curl along the strip
+- `taper` (float): narrows or widens the strip toward the free end
+- `sway` (float): shifts the hanging strip laterally for a wind/pull feel
+- `asymmetry` (float): biases the drape so one side hangs differently from the other
+- `pinned` (float `[0,1]`): blends between freer hanging and more pinned-end draping
+
+`scenery_heightfield` sampler supports:
+- `seed` (integer)
+- `scale` (float)
+- `octaves` (integer, `>= 1`)
+- `lacunarity` (float, `> 1`)
+- `gain` (float, `(0,1)`)
+- `ridge_strength` (float)
+- `mountain_strength` (float)
+- `valley_strength` (float)
 
 #### Seeded Random Generators (`random`)
 
@@ -214,9 +253,23 @@ Supported generator types:
 | `blinn_phong` |
 | `emissive` |
 | `dielectric` |
+| `principled` |
+| `rough_dielectric` |
+| `thin_dielectric` |
+| `subsurface` |
+| `sheen` |
+| `thin_translucent` |
 | `boundary` |
 
 `boundary` is an interface-only material. It does not add surface shading and forwards rays through the hit point unchanged (useful for object-local medium boundaries).
+
+Modern PBR-oriented material notes:
+- `principled`: GGX metal/roughness material. Common inputs are `samplers.base_color`, optional grayscale `samplers.roughness` / `samplers.metallic`, and scalars `metallic`, `roughness`, `anisotropy`, `anisotropy_rotation`, `ior`, `clearcoat`, `clearcoat_roughness`. `clearcoat` acts as a visible dielectric top layer over the base lobe, while `clearcoat_roughness` controls the sharpness of that coat highlight. Falls back to `diffuse` if `base_color` is omitted.
+- `rough_dielectric`: rough transmissive dielectric for frosted glass/acrylic style surfaces. Common inputs are `samplers.transmission`, optional grayscale `samplers.roughness`, optional `samplers.normal`, optional `samplers.absorption_color`, and scalars `roughness`, `ior`, `transparency`, `absorption_distance`. Absorption is applied as a slab-style Beer-Lambert approximation along transmissive events.
+- `thin_dielectric`: thin-sheet transmissive dielectric for windows, visors, and packaging films. Common inputs are `samplers.transmission`, optional `samplers.normal`, and scalars `roughness`, `ior`, `transparency`. It keeps the path in the current medium instead of treating the surface as a solid volume boundary, and rough sheets participate in the BSDF/MIS path while near-ideal sheets stay on the delta path.
+- `subsurface`: pragmatic diffuse-plus-transmission material for wax, jade, soap, and resin-style surfaces. Common inputs are `samplers.base_color` or `samplers.diffuse`, optional `samplers.subsurface_color`, optional `samplers.subsurface_radius`, optional `samplers.normal`, and scalars `subsurface` plus `thickness`. `subsurface_radius` and `thickness` drive a thickness-aware exit tint on the transmitted lobe.
+- `sheen`: cloth-like diffuse material with a bounded retroreflective edge tint. Common inputs are `samplers.base_color` or `samplers.diffuse`, optional `samplers.sheen_color`, optional `samplers.normal`, and scalar `sheen`.
+- `thin_translucent`: thin-sheet diffuse transmission material for leaves, paper, curtains, and lampshades. Common inputs are `samplers.base_color` or `samplers.diffuse`, optional `samplers.translucency_color` (or `transmission`), optional `samplers.normal`, and scalars `translucency` plus `thickness`.
 
 #### Object-Local Participating Media (v1)
 
@@ -277,7 +330,7 @@ object = {
 | `fbm_marble` | Procedural marble |
 | `voronoi_normal` | Procedural Voronoi tangent-space normal map |
 
-Lambert material supports an optional sampler named `normal` for tangent-space normal mapping.
+Lambert, `principled`, `rough_dielectric`, `thin_dielectric`, `subsurface`, `sheen`, and `thin_translucent` support an optional sampler named `normal` for tangent-space normal mapping.
 Supported normal sampler types:
 - `texture` (normal-map texture)
 - `voronoi_normal` (procedural normal generator)
@@ -350,7 +403,7 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Normal`, `Progressive`, `Interactive`) with interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
+| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, 3D scene scale multiplier, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
@@ -363,7 +416,7 @@ First-time use tutorial (FTUE):
 - Tutorial steps are config-driven via `src/frontend/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
 
 Post-filter stack:
-- Current filters: `desaturate`; `chromatic_aberration` (`amount`, `center_x`, `center_y`, `falloff`); `vignette` (`strength`, `radius`, `softness`, `center_x`, `center_y`); `film_grain` (`amount`, `size`, `seed`, `luma_weighted`); `sharpen` (`amount`, `radius`, `threshold`); `brightness` (`amount`); `contrast` (`amount`, `pivot`); `raindrops_lens` (`density`, `size`, `distortion`, `seed`).
+- Current filters: `desaturate`; `chromatic_aberration` (`amount`, `center_x`, `center_y`, `falloff`); `vignette` (`strength`, `radius`, `softness`, `center_x`, `center_y`); `film_grain` (`amount`, `size`, `seed`, `luma_weighted`); `denoise` (bilateral: `strength`, `radius`, `sigma`); `fxaa` (`subpix`, `edge_threshold`, `edge_threshold_min`); `sharpen` (`amount`, `radius`, `threshold`); `brightness` (`amount`); `contrast` (`amount`, `pivot`); `raindrops_lens` (`density`, `size`, `distortion`, `seed`).
 
 Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 - `Left drag`: look around
@@ -401,15 +454,16 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | POST | `/api/workspaces/delete` | Delete workspace |
 | POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft |
 | POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters) |
-| GET | `/api/integrators` | List backend integrators + controls |
+| GET | `/api/integrators` | List backend integrator metadata + controls |
+| GET | `/api/post_filters` | List backend post-filter metadata, stage support, and parameter schema |
 | GET | `/api/resolutions` | Resolution presets |
-| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={normal,progressive,interactive}`, and optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`) |
+| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,interactive}`; legacy `normal` is also accepted, and optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`) |
 | GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
 | POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image (supports tone mapping + optional post-filter query params) |
 | GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, supports tone mapping + optional post-filter query params) |
-| GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr,ply}` | Download final export (PLY is raygraph; supports optional post-filter query params) |
+| GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr}` | Download final export (supports optional post-filter query params) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
 | GET | `/api/logs/wait?since={id}&timeout_ms={n}` | Wait for new backend logs (long-poll) |
@@ -516,6 +570,18 @@ docker compose down
 
 ```bash
 ./build/intermediate/build/bench_nmath
+```
+
+### Mesh Intersection Benchmark
+
+```bash
+./build/intermediate/build/bench_mesh_intersection
+```
+
+Optional tuning:
+
+```bash
+./build/intermediate/build/bench_mesh_intersection --resolution 128 --width 512 --height 512 --passes 8
 ```
 
 ### Sampling Visualization Tool

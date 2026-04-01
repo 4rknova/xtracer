@@ -807,7 +807,6 @@ object = {
 		material = white
 	}
 
-
 	# Tall box
 	tall_block_1_1 = {
     	geometry = tall_block_1_1

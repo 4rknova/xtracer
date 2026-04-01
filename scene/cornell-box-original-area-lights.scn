@@ -83,7 +83,6 @@ material = {
 	}
 }
 
-# The scene geometry
 geometry = {
 
 	# The room box
@@ -840,7 +839,6 @@ geometry = {
 	}
 }
 
-# The scene objects
 object = {
 	# Light
 	light_1 = {

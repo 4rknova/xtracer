@@ -1,0 +1,386 @@
+title = Rough Dielectric Variants Lab
+description = Variant-driven showcase for rough dielectric transmission from near-clear glass to dense frosted acrylic.
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction = vec3(0.22,0.78,-0.58)
+        sun_intensity = col3(13,12,10)
+        beta_rayleigh = col3(0.17,0.33,0.76)
+        ground_color = col3(0.04,0.045,0.05)
+        density = 1.05
+        horizon_falloff = 1.8
+        sun_disk_radius = 1.1
+        sun_disk_intensity = 1.3
+        sun_glow_radius = 9.0
+        sun_glow_intensity = 0.25
+        sun_glow_falloff = 3.2
+    }
+}
+
+camera = {
+    hero = {
+        type = thin-lens
+        fov = 45
+        position = vec3(0.0,2.0,-4.8)
+        target = vec3(0.0,0.9,3.1)
+        up = vec3(0,1,0)
+        flength = 50
+        aperture = 0
+    }
+
+    close = {
+        type = thin-lens
+        fov = 25
+        position = vec3(0.0,1.8,-3.6)
+        target = vec3(0.0,1.0,3.5)
+        up = vec3(0,1,0)
+        flength = 60
+        aperture = 0
+    }
+}
+
+geometry = {
+    floor = {
+        type = plane
+        normal = vec3(0,1,0)
+        distance = -1.0
+    }
+
+    backdrop = {
+        type = plane
+        normal = vec3(0,0,-1.5)
+        distance = -50.5
+    }
+
+    left_glass = {
+        type = sphere
+        position = vec3(-3.2,0.1,3.0)
+        radius = 1.1
+    }
+
+    center_glass = {
+        type = sphere
+        position = vec3(0.0,0.1,3.0)
+        radius = 1.1
+    }
+
+    right_glass = {
+        type = sphere
+        position = vec3(3.2,0.1,3.0)
+        radius = 1.1
+    }
+
+    rear_card_left = {
+        type = mesh
+        source = gen(plane)
+        modifiers = {
+            scale = vec3(1.4,1.8,1.0)
+            translation = vec3(-2.6,0.9,6.6)
+            rotation = vec3(0,0,0)
+        }
+    }
+
+    rear_card_center = {
+        type = mesh
+        source = gen(plane)
+        modifiers = {
+            scale = vec3(1.4,1.8,1.0)
+            translation = vec3(0.0,0.9,6.8)
+            rotation = vec3(0,0,0)
+        }
+    }
+
+    rear_card_right = {
+        type = mesh
+        source = gen(plane)
+        modifiers = {
+            scale = vec3(1.4,1.8,1.0)
+            translation = vec3(2.6,0.9,6.6)
+            rotation = vec3(0,0,0)
+        }
+    }
+
+    key_light = {
+        type = sphere
+        position = vec3(-4.0,5.5,-1.0)
+        radius = 0.7
+    }
+
+    fill_light = {
+        type = sphere
+        position = vec3(4.6,3.8,0.8)
+        radius = 0.5
+    }
+}
+
+material = {
+    floor_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = checker
+                    a = col3(0.80,0.82,0.84)
+                    b = col3(0.66,0.69,0.72)
+                    scale_u = 8
+                    scale_v = 8
+                }
+            }
+        }
+    }
+
+    backdrop_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = color
+                    value = col3(0.84,0.87,0.92)
+                }
+            }
+        }
+    }
+
+    card_red = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.90,0.28,0.24) }
+            }
+        }
+    }
+
+    card_green = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.24,0.72,0.48) }
+            }
+        }
+    }
+
+    card_blue = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.22,0.42,0.88) }
+            }
+        }
+    }
+
+    glass_clear = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                roughness = 0.04
+                ior = 1.5
+                transparency = 0.98
+            }
+        }
+    }
+
+    glass_frosted = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type = color
+                    value = col3(0.95,0.97,1.0)
+                }
+                roughness = {
+                    type = checker
+                    a = col3(0.16,0.16,0.16)
+                    b = col3(0.28,0.28,0.28)
+                    scale_u = 8
+                    scale_v = 8
+                }
+            }
+            scalars = {
+                roughness = 0.18
+                ior = 1.48
+                transparency = 0.97
+            }
+        }
+    }
+
+    glass_dense = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type = color
+                    value = col3(0.84,0.92,1.0)
+                }
+                roughness = {
+                    type = graphpaper
+                    base = col3(0.34,0.34,0.34)
+                    minor = col3(0.44,0.44,0.44)
+                    major = col3(0.58,0.58,0.58)
+                    scale = 6
+                    major_every = 4
+                    minor_width = 0.04
+                    major_width = 0.08
+                }
+            }
+            scalars = {
+                roughness = 0.38
+                ior = 1.46
+                transparency = 0.94
+            }
+        }
+    }
+
+    glass_relief = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type = color
+                    value = col3(0.93,0.97,1.0)
+                }
+                roughness = {
+                    type = checker
+                    a = col3(0.14,0.14,0.14)
+                    b = col3(0.24,0.24,0.24)
+                    scale_u = 10
+                    scale_v = 10
+                }
+                normal = {
+                    type = voronoi_normal
+                    cells = 180
+                    max_deviation = 10
+                    seed = 53
+                }
+            }
+            scalars = {
+                roughness = 0.14
+                ior = 1.48
+                transparency = 0.97
+            }
+        }
+    }
+
+    glass_tinted = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type = color
+                    value = col3(1.0,1.0,1.0)
+                }
+                absorption_color = {
+                    type = color
+                    value = col3(0.62,0.82,0.98)
+                }
+            }
+            scalars = {
+                roughness = 0.08
+                ior = 1.48
+                transparency = 0.98
+                absorption_distance = 0.9
+            }
+        }
+    }
+
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type = color
+                    value = col3(36,31,26)
+                }
+            }
+        }
+    }
+
+    fill_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type = color
+                    value = col3(7,9,13)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    floor = { geometry = floor, material = floor_mat }
+    backdrop = { geometry = backdrop, material = backdrop_mat }
+    glass_left = { geometry = left_glass, material = glass_clear }
+    glass_center = { geometry = center_glass, material = glass_frosted }
+    glass_right = { geometry = right_glass, material = glass_dense }
+    card_left = { geometry = rear_card_left, material = card_red }
+    card_center = { geometry = rear_card_center, material = card_green }
+    card_right = { geometry = rear_card_right, material = card_blue }
+    key_light = { geometry = key_light, material = key_light_mat }
+    fill_light = { geometry = fill_light, material = fill_light_mat }
+}
+
+variants = {
+    base = {
+        name = Base
+        description = Left-to-right progression from nearly clear glass to dense frosted dielectric.
+    }
+
+    all_clear = {
+        name = All Clear
+        description = Uses mostly clear rough dielectric to check refraction alignment and highlight sharpness.
+        set = {
+            object = {
+                glass_left = { geometry = left_glass, material = glass_clear }
+                glass_center = { geometry = center_glass, material = glass_clear }
+                glass_right = { geometry = right_glass, material = glass_frosted }
+            }
+        }
+    }
+
+    all_frosted = {
+        name = All Frosted
+        description = Pushes the lineup toward broad transmission blur for frosted acrylic validation.
+        set = {
+            default_camera = close
+            object = {
+                glass_left = { geometry = left_glass, material = glass_frosted }
+                glass_center = { geometry = center_glass, material = glass_dense }
+                glass_right = { geometry = right_glass, material = glass_dense }
+            }
+        }
+    }
+
+    normal_mapped = {
+        name = Normal Mapped
+        description = Adds procedural surface relief to the center dielectric so reflection and transmission breakup read on the rough glass path.
+        set = {
+            object = {
+                glass_left = { geometry = left_glass, material = glass_clear }
+                glass_center = { geometry = center_glass, material = glass_relief }
+                glass_right = { geometry = right_glass, material = glass_dense }
+            }
+        }
+    }
+
+    absorbed = {
+        name = Absorbed
+        description = Uses absorption-tinted dielectric to show thicker blue transmission instead of perfectly clean glass.
+        set = {
+            object = {
+                glass_left = { geometry = left_glass, material = glass_tinted }
+                glass_center = { geometry = center_glass, material = glass_relief }
+                glass_right = { geometry = right_glass, material = glass_tinted }
+            }
+        }
+    }
+}
