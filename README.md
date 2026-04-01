@@ -103,6 +103,7 @@ With scene variant:
 | `color` | Uses `config.value` |
 | `cubemap` | Uses face sources: `posx/posy/posz/negx/negy/negz` |
 | `erp` | Uses panoramic source texture |
+| `rayleigh_sky` | Procedural sky using `sun_direction`, `sun_intensity`, `beta_rayleigh`, `ground_color`, `density`, `horizon_falloff`, `sun_disk_radius`, `sun_disk_intensity`, `sun_glow_radius`, `sun_glow_intensity`, `sun_glow_falloff` |
 
 #### Camera Types
 

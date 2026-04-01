@@ -513,43 +513,53 @@
 
             <details class="control-section control-card" id="logsControlsCard" open hidden>
               <summary>
-                <span class="control-card-title">Logs</span>
+                <span class="control-card-title">Log Filters</span>
                 <span class="control-card-note">Live log filters</span>
               </summary>
               <div class="control-section-body">
-                <div class="settings-stack">
-                  <section class="settings-section">
-                    <h3>Message Types</h3>
-                    <label class="inline-check">
+                <section class="log-filter-list" aria-labelledby="logFilterHeading">
+                  <div class="log-filter-list-head">
+                    <h3 id="logFilterHeading">Message Types</h3>
+                    <span class="log-filter-list-note">Live visibility</span>
+                  </div>
+                  <div class="log-filter-list-grid" aria-label="Log message type filters">
+                    <label class="log-filter-item log-filter-item-debug">
+                      <span class="log-filter-item-main">
+                        <span class="log-filter-item-dot" aria-hidden="true"></span>
+                        <span class="log-filter-item-label">Debug</span>
+                      </span>
                       <input id="logFilterDebug" type="checkbox">
-                      Debug
                     </label>
-                    <label class="inline-check">
+                    <label class="log-filter-item log-filter-item-message">
+                      <span class="log-filter-item-main">
+                        <span class="log-filter-item-dot" aria-hidden="true"></span>
+                        <span class="log-filter-item-label">Message</span>
+                      </span>
                       <input id="logFilterMessage" type="checkbox" checked>
-                      Message
                     </label>
-                    <label class="inline-check">
+                    <label class="log-filter-item log-filter-item-warning">
+                      <span class="log-filter-item-main">
+                        <span class="log-filter-item-dot" aria-hidden="true"></span>
+                        <span class="log-filter-item-label">Warning</span>
+                      </span>
                       <input id="logFilterWarning" type="checkbox" checked>
-                      Warning
                     </label>
-                    <label class="inline-check">
+                    <label class="log-filter-item log-filter-item-error">
+                      <span class="log-filter-item-main">
+                        <span class="log-filter-item-dot" aria-hidden="true"></span>
+                        <span class="log-filter-item-label">Error</span>
+                      </span>
                       <input id="logFilterError" type="checkbox" checked>
-                      Error
                     </label>
-                    <label class="inline-check">
+                    <label class="log-filter-item log-filter-item-ui">
+                      <span class="log-filter-item-main">
+                        <span class="log-filter-item-dot" aria-hidden="true"></span>
+                        <span class="log-filter-item-label">UI</span>
+                      </span>
                       <input id="logFilterUi" type="checkbox" checked>
-                      UI
                     </label>
-                  </section>
-                  <section class="settings-section">
-                    <h3>Behavior</h3>
-                    <label class="inline-check">
-                      <input id="autoScrollLogs" type="checkbox" checked>
-                      Auto-scroll frontend log output
-                    </label>
-                  </section>
-                </div>
-                <button id="clearLogsBtn" type="button">Clear Logs</button>
+                  </div>
+                </section>
               </div>
             </details>
 
@@ -878,7 +888,11 @@
               <h2>Log</h2>
             </div>
             <div class="log-actions">
-              <span class="log-pill">Live</span>
+              <label class="log-head-toggle" title="Auto-scroll frontend log output">
+                <span>Auto-scroll</span>
+                <input id="autoScrollLogs" type="checkbox" checked>
+              </label>
+              <button id="clearLogsBtn" class="log-clear-btn" type="button" aria-label="Clear logs" title="Clear logs">Clear</button>
             </div>
           </div>
           <pre id="logOutput" class="log-output"></pre>

@@ -45,6 +45,7 @@
 #include "sampler/sampler_checker.h"
 #include "sampler/sampler_weave.h"
 #include "sampler/sampler_fbm_marble.h"
+#include "sampler/sampler_rayleigh_sky.h"
 #include "sampler/sampler_voronoi_normal.h"
 #include "macro.h"
 
@@ -644,6 +645,25 @@ xtcore::sampler::Gradient *deserialize_gradient(const ncf::NCF *p)
         data->b = deserialize_col3(p, "b");
     }
 
+    return data;
+}
+
+xtcore::sampler::RayleighSky *deserialize_rayleigh_sky(const ncf::NCF *p)
+{
+    xtcore::sampler::RayleighSky *data = new (std::nothrow) xtcore::sampler::RayleighSky();
+    if (!data || !p) return data;
+
+    data->sun_direction = deserialize_vec3(p, "sun_direction", data->sun_direction);
+    data->sun_intensity = deserialize_col3(p, "sun_intensity", data->sun_intensity);
+    data->beta_rayleigh = deserialize_col3(p, "beta_rayleigh", data->beta_rayleigh);
+    data->ground_color = deserialize_col3(p, "ground_color", data->ground_color);
+    data->density = deserialize_numf(p->get_property_by_name("density"), data->density);
+    data->horizon_falloff = deserialize_numf(p->get_property_by_name("horizon_falloff"), data->horizon_falloff);
+    data->sun_disk_radius = deserialize_numf(p->get_property_by_name("sun_disk_radius"), data->sun_disk_radius);
+    data->sun_disk_intensity = deserialize_numf(p->get_property_by_name("sun_disk_intensity"), data->sun_disk_intensity);
+    data->sun_glow_radius = deserialize_numf(p->get_property_by_name("sun_glow_radius"), data->sun_glow_radius);
+    data->sun_glow_intensity = deserialize_numf(p->get_property_by_name("sun_glow_intensity"), data->sun_glow_intensity);
+    data->sun_glow_falloff = deserialize_numf(p->get_property_by_name("sun_glow_falloff"), data->sun_glow_falloff);
     return data;
 }
 
@@ -1463,9 +1483,10 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
                 std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
 
                      if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
-                else if (!type.compare(XTPROTO_CUBEMAP )) sampler = deserialize_cubemap (source, entry);
-                else if (!type.compare(XTPROTO_ERP     )) sampler = deserialize_erp     (source, entry);
-                else if (!type.compare(XTPROTO_GRADIENT)) sampler = deserialize_gradient(entry);
+                else if (!type.compare(XTPROTO_CUBEMAP     )) sampler = deserialize_cubemap     (source, entry);
+                else if (!type.compare(XTPROTO_ERP         )) sampler = deserialize_erp         (source, entry);
+                else if (!type.compare(XTPROTO_GRADIENT    )) sampler = deserialize_gradient    (entry);
+                else if (!type.compare(XTPROTO_RAYLEIGH_SKY)) sampler = deserialize_rayleigh_sky(entry);
                 else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
                 else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
                 else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
@@ -1961,10 +1982,11 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     ncf::NCF *env_data = env_node->get_group_by_name(XTPROTO_CONFIG);
 
     std::string environment = deserialize_cstr(env_node->get_property_by_name(XTPROTO_PROP_TYPE));
-         if (!environment.compare(XTPROTO_CUBEMAP )) scene->m_environment = deserialize_cubemap (scene->m_source.c_str(), env_data);
-         if (!environment.compare(XTPROTO_ERP     )) scene->m_environment = deserialize_erp     (scene->m_source.c_str(), env_data);
-    else if (!environment.compare(XTPROTO_GRADIENT)) scene->m_environment = deserialize_gradient(env_data);
-    else if (!environment.compare(XTPROTO_COLOR   )) scene->m_environment = deserialize_rgba    (env_data);
+         if (!environment.compare(XTPROTO_CUBEMAP     )) scene->m_environment = deserialize_cubemap     (scene->m_source.c_str(), env_data);
+    else if (!environment.compare(XTPROTO_ERP         )) scene->m_environment = deserialize_erp         (scene->m_source.c_str(), env_data);
+    else if (!environment.compare(XTPROTO_GRADIENT    )) scene->m_environment = deserialize_gradient    (env_data);
+    else if (!environment.compare(XTPROTO_COLOR       )) scene->m_environment = deserialize_rgba        (env_data);
+    else if (!environment.compare(XTPROTO_RAYLEIGH_SKY)) scene->m_environment = deserialize_rayleigh_sky(env_data);
 
     std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> medium_defs;
     ncf::NCF *medium_root = root.get_group_by_name(XTPROTO_NODE_MEDIUM);

@@ -1,0 +1,132 @@
+title = Rayleigh Sky ERP Panorama
+description = Procedural Rayleigh sky demo framed with ERP cameras and representative atmospheric variants.
+version = 1.0
+default_camera = erp
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(-0.35,0.88,-0.18)
+        sun_intensity      = col3(22.0,19.5,15.5)
+        beta_rayleigh      = col3(0.16,0.33,0.78)
+        ground_color       = col3(0.025,0.023,0.026)
+        density            = 1.1
+        horizon_falloff    = 1.7
+        sun_disk_radius    = 0.9
+        sun_disk_intensity = 1.2
+        sun_glow_radius    = 8.5
+        sun_glow_intensity = 0.32
+        sun_glow_falloff   = 3.5
+    }
+}
+
+camera = {
+    erp = {
+        type        = erp
+        position    = vec3(0,0,0)
+        orientation = vec3(0,0,0)
+    }
+
+    cubemap = {
+	type     = cubemap
+	position = vec3(278,273,0)
+    }
+}
+
+geometry = {}
+material = {}
+object = {}
+
+variants = {
+  base = {
+    name = Base Daylight
+    description = Balanced daytime Rayleigh sky with a high sun and moderate glow.
+  }
+
+  noon_clear = {
+    name = Noon Clear
+    description = Tighter, clearer midday atmosphere with a smaller bright sun disk.
+    set = {
+      environment = {
+        config = {
+          sun_direction      = vec3(0.00,0.98,-0.08)
+          sun_intensity      = col3(26.0,24.0,20.0)
+          beta_rayleigh      = col3(0.14,0.30,0.74)
+          density            = 0.85
+          horizon_falloff    = 1.2
+          sun_disk_radius    = 0.55
+          sun_disk_intensity = 1.45
+          sun_glow_radius    = 4.8
+          sun_glow_intensity = 0.18
+          sun_glow_falloff   = 5.0
+        }
+      }
+    }
+  }
+
+  golden_hour = {
+    name = Golden Hour
+    description = Warm low-angle sun with stronger horizon scattering and a broader solar glow.
+    set = {
+      environment = {
+        config = {
+          sun_direction      = vec3(-0.85,0.22,-0.18)
+          sun_intensity      = col3(19.0,13.5,8.0)
+          beta_rayleigh      = col3(0.20,0.28,0.52)
+          ground_color       = col3(0.055,0.040,0.028)
+          density            = 1.45
+          horizon_falloff    = 2.6
+          sun_disk_radius    = 1.05
+          sun_disk_intensity = 1.0
+          sun_glow_radius    = 13.0
+          sun_glow_intensity = 0.60
+          sun_glow_falloff   = 2.4
+        }
+      }
+    }
+  }
+
+  twilight = {
+    name = Twilight
+    description = After-sunset cool sky with reduced direct solar energy and elevated blue scattering.
+    set = {
+      environment = {
+        config = {
+          sun_direction      = vec3(-0.95,-0.10,-0.20)
+          sun_intensity      = col3(4.0,3.0,2.2)
+          beta_rayleigh      = col3(0.16,0.34,0.92)
+          ground_color       = col3(0.018,0.018,0.030)
+          density            = 1.30
+          horizon_falloff    = 2.1
+          sun_disk_radius    = 0.8
+          sun_disk_intensity = 0.25
+          sun_glow_radius    = 7.0
+          sun_glow_intensity = 0.10
+          sun_glow_falloff   = 4.4
+        }
+      }
+    }
+  }
+
+  hazy = {
+    name = Hazy
+    description = Milkier atmosphere with a softer sun and compressed sky contrast.
+    set = {
+      environment = {
+        config = {
+          sun_direction      = vec3(-0.45,0.72,-0.10)
+          sun_intensity      = col3(18.0,17.0,14.0)
+          beta_rayleigh      = col3(0.18,0.24,0.40)
+          ground_color       = col3(0.040,0.040,0.044)
+          density            = 2.10
+          horizon_falloff    = 3.0
+          sun_disk_radius    = 1.35
+          sun_disk_intensity = 0.75
+          sun_glow_radius    = 18.0
+          sun_glow_intensity = 0.72
+          sun_glow_falloff   = 1.7
+        }
+      }
+    }
+  }
+}

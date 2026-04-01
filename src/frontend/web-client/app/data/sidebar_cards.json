@@ -39,7 +39,6 @@
   },
   "logs": [
     "activeSceneControlsCard",
-    "statisticsControlsCard",
     "logsControlsCard",
     "JobsControlsCard"
   ],

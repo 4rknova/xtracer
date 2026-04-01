@@ -194,6 +194,7 @@
 #define XTPROTO_CUBEMAP             "cubemap"
 #define XTPROTO_ERP                 "erp"
 #define XTPROTO_COLOR               "color"
+#define XTPROTO_RAYLEIGH_SKY        "rayleigh_sky"
 #define XTPROTO_GRAPHPAPER          "graphpaper"
 #define XTPROTO_CHECKER             "checker"
 #define XTPROTO_WEAVE               "weave"

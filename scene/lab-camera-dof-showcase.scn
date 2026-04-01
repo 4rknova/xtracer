@@ -1,5 +1,5 @@
 title = Camera Depth of Field Showcase
-description = From-scratch DOF bokeh lab: strong foreground/background blur, sharp focus band, and aperture-shape comparison cameras.
+description = DOF bokeh lab with mixed procedural forms, distinct material samplers, and aperture-shape comparison cameras.
 version = 2.0
 default_camera = default
 
@@ -119,15 +119,23 @@ geometry = {
     }
 
     fg_left = {
-        type     = sphere
-        position = vec3(-4.9,1.35,2.0)
-        radius   = 1.25
+        type   = mesh
+        source = gen(cube)
+        modifiers = {
+            scale       = vec3(1.7,2.3,1.7)
+            rotation    = vec3(12,26,-8)
+            translation = vec3(-4.9,1.35,2.0)
+        }
     }
 
     fg_right = {
-        type     = sphere
-        position = vec3(5.1,1.22,2.3)
-        radius   = 1.08
+        type   = mesh
+        source = gen(octahedron)
+        modifiers = {
+            scale       = vec3(1.45,1.45,1.45)
+            rotation    = vec3(18,-12,24)
+            translation = vec3(5.1,1.22,2.3)
+        }
     }
 
     fg_center = {
@@ -149,15 +157,23 @@ geometry = {
     }
 
     focus_left = {
-        type     = sphere
-        position = vec3(-2.9,0.92,5.2)
-        radius   = 0.78
+        type   = mesh
+        source = gen(icosahedron)
+        modifiers = {
+            scale       = vec3(1.0,1.0,1.0)
+            rotation    = vec3(8,32,0)
+            translation = vec3(-2.9,0.92,5.2)
+        }
     }
 
     focus_right = {
-        type     = sphere
-        position = vec3(3.0,0.95,5.9)
-        radius   = 0.82
+        type   = mesh
+        source = gen(cube)
+        modifiers = {
+            scale       = vec3(1.2,1.2,1.2)
+            rotation    = vec3(0,34,9)
+            translation = vec3(3.0,0.95,5.9)
+        }
     }
 
     spec_probe_focus = {
@@ -167,21 +183,33 @@ geometry = {
     }
 
     bg_left = {
-        type     = sphere
-        position = vec3(-5.3,1.55,11.3)
-        radius   = 1.52
+        type   = mesh
+        source = gen(ring)
+        modifiers = {
+            scale       = vec3(2.0,2.0,2.0)
+            rotation    = vec3(74,18,0)
+            translation = vec3(-5.3,1.55,11.3)
+        }
     }
 
     bg_right = {
-        type     = sphere
-        position = vec3(5.7,1.20,12.4)
-        radius   = 1.05
+        type   = mesh
+        source = gen(octahedron)
+        modifiers = {
+            scale       = vec3(1.35,1.35,1.35)
+            rotation    = vec3(0,18,32)
+            translation = vec3(5.7,1.20,12.4)
+        }
     }
 
     bg_center = {
-        type     = sphere
-        position = vec3(0.8,0.70,13.6)
-        radius   = 0.64
+        type   = mesh
+        source = gen(icosahedron)
+        modifiers = {
+            scale       = vec3(0.86,0.86,0.86)
+            rotation    = vec3(20,0,12)
+            translation = vec3(0.8,0.70,13.6)
+        }
     }
 
     spec_probe_far = {
@@ -249,49 +277,182 @@ material = {
         }
     }
 
-    near_mat = {
-        type = blinn_phong
+    near_ceramic = {
+        type = lambert
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.92,0.40,0.29) }
-                specular = { type = color, value = col3(0.26,0.22,0.22) }
-            }
-            scalars = {
-                exponent    = 74
-                reflectance = 0.08
+                diffuse = {
+                    type    = checker
+                    a       = col3(0.90,0.38,0.26)
+                    b       = col3(0.60,0.22,0.16)
+                    scale_u = 7
+                    scale_v = 7
+                }
             }
         }
     }
 
-    focus_mat = {
+    fg_right_metal = {
         type = blinn_phong
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.33,0.75,0.54) }
-                specular = { type = color, value = col3(0.72,0.75,0.75) }
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.18,0.19,0.22)
+                    minor       = col3(0.40,0.34,0.22)
+                    major       = col3(0.72,0.60,0.34)
+                    scale       = 9
+                    major_every = 4
+                    minor_width = 0.028
+                    major_width = 0.050
+                }
+                specular = { type = color, value = col3(0.96,0.82,0.58) }
             }
             scalars = {
-                exponent    = 132
-                reflectance = 0.14
+                exponent    = 420
+                reflectance = 0.30
             }
         }
     }
 
-    far_mat = {
+    fg_center_metal = {
         type = blinn_phong
         properties = {
             samplers = {
-                diffuse  = { type = color, value = col3(0.35,0.56,0.92) }
-                specular = { type = color, value = col3(0.24,0.29,0.35) }
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.12,0.14,0.18)
+                    minor       = col3(0.20,0.42,0.56)
+                    major       = col3(0.58,0.82,0.94)
+                    scale       = 11
+                    major_every = 5
+                    minor_width = 0.026
+                    major_width = 0.048
+                }
+                specular = { type = color, value = col3(0.88,0.94,0.98) }
             }
             scalars = {
-                exponent    = 92
-                reflectance = 0.10
+                exponent    = 360
+                reflectance = 0.26
             }
         }
     }
 
-    spec_probe_mat = {
+    focus_left_gloss = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type       = weave
+                    base       = col3(0.08,0.12,0.10)
+                    warp       = col3(0.24,0.76,0.52)
+                    weft       = col3(0.12,0.44,0.30)
+                    scale      = 12
+                    band_width = 0.58
+                }
+                specular = { type = color, value = col3(0.94,0.97,0.96) }
+            }
+            scalars = {
+                exponent    = 110
+                reflectance = 0.18
+            }
+        }
+    }
+
+    focus_right_gloss = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type       = weave
+                    base       = col3(0.12,0.08,0.12)
+                    warp       = col3(0.72,0.36,0.84)
+                    weft       = col3(0.34,0.18,0.42)
+                    scale      = 11
+                    band_width = 0.61
+                }
+                specular = { type = color, value = col3(0.96,0.92,0.98) }
+            }
+            scalars = {
+                exponent    = 124
+                reflectance = 0.20
+            }
+        }
+    }
+
+    focus_glass = {
+        type = dielectric
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.98,1.0,1.0) }
+            }
+            scalars = {
+                ior          = 1.52
+                transparency = 0.95
+                reflectance  = 0.05
+            }
+        }
+    }
+
+    bg_left_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type           = fbm_marble
+                    a              = col3(0.40,0.62,0.96)
+                    b              = col3(0.20,0.34,0.58)
+                    vein           = col3(0.10,0.16,0.28)
+                    scale          = 4.8
+                    vein_frequency = 8.5
+                    turbulence     = 3.0
+                    octaves        = 5
+                    lacunarity     = 2.0
+                    gain           = 0.5
+                    vein_strength  = 0.55
+                    vein_sharpness = 3.6
+                }
+            }
+        }
+    }
+
+    bg_center_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type           = fbm_marble
+                    a              = col3(0.88,0.66,0.38)
+                    b              = col3(0.46,0.28,0.12)
+                    vein           = col3(0.20,0.12,0.08)
+                    scale          = 5.3
+                    vein_frequency = 10.0
+                    turbulence     = 3.4
+                    octaves        = 5
+                    lacunarity     = 2.0
+                    gain           = 0.5
+                    vein_strength  = 0.62
+                    vein_sharpness = 4.0
+                }
+            }
+        }
+    }
+
+    bg_right_satin = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.58,0.34,0.88) }
+                specular = { type = color, value = col3(0.42,0.36,0.52) }
+            }
+            scalars = {
+                exponent    = 64
+                reflectance = 0.12
+            }
+        }
+    }
+
+    spec_probe_near_mat = {
         type = blinn_phong
         properties = {
             samplers = {
@@ -305,7 +466,35 @@ material = {
         }
     }
 
-    light_warm = {
+    spec_probe_focus_mat = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.04,0.05,0.05) }
+                specular = { type = color, value = col3(0.92,0.98,0.94) }
+            }
+            scalars = {
+                exponent    = 260
+                reflectance = 0.46
+            }
+        }
+    }
+
+    spec_probe_far_mat = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse  = { type = color, value = col3(0.06,0.05,0.07) }
+                specular = { type = color, value = col3(0.98,0.94,0.90) }
+            }
+            scalars = {
+                exponent    = 180
+                reflectance = 0.38
+            }
+        }
+    }
+
+    near_light_l_mat = {
         type = emissive
         properties = {
             samplers = {
@@ -314,11 +503,56 @@ material = {
         }
     }
 
-    light_cool = {
+    near_light_r_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(8.8,4.2,3.0) }
+            }
+        }
+    }
+
+    near_light_c_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(7.2,3.2,2.6) }
+            }
+        }
+    }
+
+    far_light_l_mat = {
         type = emissive
         properties = {
             samplers = {
                 emissive = { type = color, value = col3(3.6,6.2,9.3) }
+            }
+        }
+    }
+
+    far_light_r_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(3.2,5.6,8.6) }
+            }
+        }
+    }
+
+    far_light_c0_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(4.2,7.4,10.2) }
+            }
+        }
+    }
+
+    far_light_c1_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(2.8,5.0,7.6) }
             }
         }
     }
@@ -336,29 +570,29 @@ material = {
 object = {
     floor = { geometry = floor, material = floor_matte }
 
-    fg_left = { geometry = fg_left, material = near_mat }
-    fg_right = { geometry = fg_right, material = near_mat }
-    fg_center = { geometry = fg_center, material = near_mat }
-    spec_probe_near = { geometry = spec_probe_near, material = spec_probe_mat }
+    fg_left = { geometry = fg_left, material = near_ceramic }
+    fg_right = { geometry = fg_right, material = fg_right_metal }
+    fg_center = { geometry = fg_center, material = fg_center_metal }
+    spec_probe_near = { geometry = spec_probe_near, material = spec_probe_near_mat }
 
-    focus_center = { geometry = focus_center, material = focus_mat }
-    focus_left = { geometry = focus_left, material = focus_mat }
-    focus_right = { geometry = focus_right, material = focus_mat }
-    spec_probe_focus = { geometry = spec_probe_focus, material = spec_probe_mat }
+    focus_center = { geometry = focus_center, material = focus_glass }
+    focus_left = { geometry = focus_left, material = focus_left_gloss }
+    focus_right = { geometry = focus_right, material = focus_right_gloss }
+    spec_probe_focus = { geometry = spec_probe_focus, material = spec_probe_focus_mat }
 
-    bg_left = { geometry = bg_left, material = far_mat }
-    bg_right = { geometry = bg_right, material = far_mat }
-    bg_center = { geometry = bg_center, material = far_mat }
-    spec_probe_far = { geometry = spec_probe_far, material = spec_probe_mat }
+    bg_left = { geometry = bg_left, material = bg_left_matte }
+    bg_right = { geometry = bg_right, material = bg_right_satin }
+    bg_center = { geometry = bg_center, material = bg_center_matte }
+    spec_probe_far = { geometry = spec_probe_far, material = spec_probe_far_mat }
 
-    near_light_l = { geometry = near_light_l, material = light_warm }
-    near_light_r = { geometry = near_light_r, material = light_warm }
-    near_light_c = { geometry = near_light_c, material = light_warm }
+    near_light_l = { geometry = near_light_l, material = near_light_l_mat }
+    near_light_r = { geometry = near_light_r, material = near_light_r_mat }
+    near_light_c = { geometry = near_light_c, material = near_light_c_mat }
 
-    far_light_l = { geometry = far_light_l, material = light_cool }
-    far_light_r = { geometry = far_light_r, material = light_cool }
-    far_light_c0 = { geometry = far_light_c0, material = light_cool }
-    far_light_c1 = { geometry = far_light_c1, material = light_cool }
+    far_light_l = { geometry = far_light_l, material = far_light_l_mat }
+    far_light_r = { geometry = far_light_r, material = far_light_r_mat }
+    far_light_c0 = { geometry = far_light_c0, material = far_light_c0_mat }
+    far_light_c1 = { geometry = far_light_c1, material = far_light_c1_mat }
 
     key_light = { geometry = key_light, material = light_key }
 }

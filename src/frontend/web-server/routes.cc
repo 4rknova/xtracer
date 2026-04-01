@@ -40,6 +40,7 @@
 #include <xtcore/sampler/sampler_erp.h>
 #include <xtcore/sampler/sampler_fbm_marble.h>
 #include <xtcore/sampler/sampler_gradient.h>
+#include <xtcore/sampler/sampler_rayleigh_sky.h>
 #include <xtcore/sampler/sampler_graphpaper.h>
 #include <xtcore/sampler/sampler_tex.h>
 #include <xtcore/sampler/sampler_weave.h>
@@ -886,6 +887,7 @@ const char *sampler_type_name(const xtcore::sampler::ISampler *sampler)
     if (dynamic_cast<const xtcore::sampler::Cubemap *>(sampler)) return "cubemap";
     if (dynamic_cast<const xtcore::sampler::ERP *>(sampler)) return "erp";
     if (dynamic_cast<const xtcore::sampler::Gradient *>(sampler)) return "gradient";
+    if (dynamic_cast<const xtcore::sampler::RayleighSky *>(sampler)) return "rayleigh_sky";
     if (dynamic_cast<const xtcore::sampler::Checker *>(sampler)) return "checker";
     if (dynamic_cast<const xtcore::sampler::GraphPaper *>(sampler)) return "graphpaper";
     if (dynamic_cast<const xtcore::sampler::Weave *>(sampler)) return "weave";

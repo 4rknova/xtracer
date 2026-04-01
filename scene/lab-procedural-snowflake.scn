@@ -14,8 +14,8 @@ camera = {
     default = {
         type     = thin-lens
         fov      = 40
-        position = vec3(0.0,2.4,-9.0)
-        target   = vec3(0.0,1.0,1.8)
+        position = vec3(0.0,2.4,-4.0)
+        target   = vec3(0.0,0.75,0.5)
         up       = vec3(0,1,0)
     }
 }
@@ -32,9 +32,9 @@ geometry = {
         source     = gen(snowflake)
         resolution = 4
         modifiers = {
-            scale       = vec3(2.2,2.2,2.2)
-            rotation    = vec3(0,20,0)
-            translation = vec3(0.0,1.1,2.4)
+            scale       = vec3(1,1,1)
+            rotation    = vec3(90,0,0)
+            translation = vec3(0.0,0.6,0.5)
         }
     }
 
@@ -56,15 +56,10 @@ material = {
     }
 
     snowflake_ice = {
-        type = dielectric
+        type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.92,0.97,1.00) }
-            }
-            scalars = {
-                ior          = 1.31
-                transparency = 0.90
-                reflectance  = 0.10
+                diffuse = { type = color, value = col3(0.92,0.47,0.20) }
             }
         }
     }
