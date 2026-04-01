@@ -11,6 +11,13 @@ class RaindropsLens : public IFilter
     public:
     RaindropsLens();
 
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "raindrops_lens";
+        meta.name = "Raindrops on Lens";
+        meta.description = "Applies stylized raindrop lens distortion.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 
     float density;

@@ -4,6 +4,8 @@
 #include <xtcore/filter/chromatic_aberration.h>
 #include <xtcore/filter/vignette.h>
 #include <xtcore/filter/film_grain.h>
+#include <xtcore/filter/denoise.h>
+#include <xtcore/filter/fxaa.h>
 #include <xtcore/filter/sharpen.h>
 #include <xtcore/filter/brightness.h>
 #include <xtcore/filter/contrast.h>

@@ -40,6 +40,21 @@ const std::string &Texture2D::source_path() const
     return m_source_path;
 }
 
+size_t Texture2D::width() const
+{
+    return m_map.width();
+}
+
+size_t Texture2D::height() const
+{
+    return m_map.height();
+}
+
+const nimg::ColorRGBAf &Texture2D::pixel_ro(size_t x, size_t y) const
+{
+    return m_map.pixel_ro(x, y);
+}
+
 nimg::ColorRGBf Texture2D::sample(const nmath::Vector3f &tc) const
 {
     switch (m_filtering) {

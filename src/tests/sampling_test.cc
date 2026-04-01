@@ -85,6 +85,41 @@ int main()
         }
     }
 
+    {
+        // GGX half-vector sampling should remain normalized and above the normal.
+        for (int i = 0; i < 20000; ++i) {
+            nmath::scalar_t pdf = 0.0;
+            const nmath::Vector3f h = xtcore::math::sampling::sample_ggx_half_vector(up, 0.35f, pdf);
+            if (nmath::dot(h, up) < -1e-5f) return fail("ggx half vector below normal");
+            if (!closef((float)h.length(), 1.0f, 1e-3f)) return fail("ggx half vector not normalized");
+            if (!(pdf > 0.0f)) return fail("ggx half vector pdf not positive");
+        }
+    }
+
+    {
+        // Anisotropic GGX half-vector sampling should remain normalized and above the normal.
+        const nmath::Vector3f t = xtcore::math::sampling::build_tangent(up);
+        const nmath::Vector3f b = nmath::cross(up, t).normalized();
+        for (int i = 0; i < 20000; ++i) {
+            nmath::scalar_t pdf = 0.0;
+            const nmath::Vector3f h = xtcore::math::sampling::sample_ggx_half_vector_anisotropic(up, t, b, 0.15f, 0.55f, pdf);
+            if (nmath::dot(h, up) < -1e-5f) return fail("anisotropic ggx half vector below normal");
+            if (!closef((float)h.length(), 1.0f, 1e-3f)) return fail("anisotropic ggx half vector not normalized");
+            if (!(pdf > 0.0f)) return fail("anisotropic ggx half vector pdf not positive");
+            const nmath::scalar_t d = xtcore::math::sampling::ggx_ndf_anisotropic(up, t, b, h, 0.15f, 0.55f);
+            if (!(d > 0.0f)) return fail("anisotropic ggx ndf not positive");
+        }
+    }
+
+    {
+        // Fresnel helpers should stay bounded.
+        const nmath::scalar_t f = xtcore::math::sampling::fresnel_dielectric(0.5f, 1.0f, 1.5f);
+        if (f < 0.0f || f > 1.0f) return fail("dielectric fresnel out of bounds");
+
+        const nimg::ColorRGBf s = xtcore::math::sampling::fresnel_schlick(nimg::ColorRGBf(0.04f, 0.04f, 0.04f), 0.5f);
+        if (s.r() < 0.04f || s.r() > 1.0f) return fail("schlick fresnel out of bounds");
+    }
+
     std::printf("sampling_test: ok\n");
     return 0;
 }

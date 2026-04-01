@@ -4,6 +4,7 @@
 #define TINYEXR_IMPLEMENTATION
 
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -87,6 +88,54 @@ void pack_rgba8_srgb(const ColorRGBAf &pixel, unsigned char out[4])
     out[3] = to_u8(pixel.a());
 }
 
+bool build_rgba8_srgb_buffer(Pixmap &map, std::vector<unsigned char> &out)
+{
+    const int w = (int)map.width();
+    const int h = (int)map.height();
+    if (w < 0 || h < 0) return false;
+
+    out.resize((size_t)w * (size_t)h * 4u);
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            const size_t idx = (size_t)(y * w + x) * 4u;
+            unsigned char pixel[4];
+            pack_rgba8_srgb(map.pixel(x, y), pixel);
+            out[idx  ] = pixel[0];
+            out[idx+1] = pixel[1];
+            out[idx+2] = pixel[2];
+            out[idx+3] = pixel[3];
+        }
+    }
+    return true;
+}
+
+bool build_rgba32f_buffer(Pixmap &map, std::vector<float> &out)
+{
+    const int w = (int)map.width();
+    const int h = (int)map.height();
+    if (w < 0 || h < 0) return false;
+
+    out.resize((size_t)w * (size_t)h * 4u);
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            const size_t idx = (size_t)(y * w + x) * 4u;
+            out[idx  ] = map.pixel(x, y).r();
+            out[idx+1] = map.pixel(x, y).g();
+            out[idx+2] = map.pixel(x, y).b();
+            out[idx+3] = map.pixel(x, y).a();
+        }
+    }
+    return true;
+}
+
+void append_write_callback(void *context, void *data, int size)
+{
+    if (!context || !data || size <= 0) return;
+    std::vector<unsigned char> *out = (std::vector<unsigned char> *)context;
+    const unsigned char *bytes = (const unsigned char *)data;
+    out->insert(out->end(), bytes, bytes + size);
+}
+
 } // namespace
 
 int exr(const char *filename, Pixmap &map)
@@ -163,6 +212,77 @@ int exr(const char *filename, Pixmap &map)
     return res;
 }
 
+int exr_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    const int w = (int)map.width();
+    const int h = (int)map.height();
+    const int sz = w * h;
+
+    EXRHeader header;
+    InitEXRHeader(&header);
+
+    EXRImage image;
+    InitEXRImage(&image);
+
+    image.num_channels = 3;
+
+    std::vector<float> images[3];
+    images[0].resize(sz);
+    images[1].resize(sz);
+    images[2].resize(sz);
+
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            const int idx = y * w + x;
+            images[0][idx] = map.pixel(x, y).r();
+            images[1][idx] = map.pixel(x, y).g();
+            images[2][idx] = map.pixel(x, y).b();
+        }
+    }
+
+    float* image_ptr[3];
+    image_ptr[0] = &(images[2].at(0));
+    image_ptr[1] = &(images[1].at(0));
+    image_ptr[2] = &(images[0].at(0));
+
+    image.images = (unsigned char**)image_ptr;
+    image.width  = w;
+    image.height = h;
+
+    header.num_channels = 3;
+    header.channels = (EXRChannelInfo *)malloc(sizeof(EXRChannelInfo) * header.num_channels);
+    strncpy(header.channels[0].name, "B", 255); header.channels[0].name[strlen("B")] = '\0';
+    strncpy(header.channels[1].name, "G", 255); header.channels[1].name[strlen("G")] = '\0';
+    strncpy(header.channels[2].name, "R", 255); header.channels[2].name[strlen("R")] = '\0';
+
+    header.pixel_types = (int *)malloc(sizeof(int) * header.num_channels);
+    header.requested_pixel_types = (int *)malloc(sizeof(int) * header.num_channels);
+    for (int i = 0; i < header.num_channels; i++) {
+        header.pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT;
+        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT;
+    }
+
+    const char *err = NULL;
+    unsigned char *mem = NULL;
+    const size_t mem_size = SaveEXRImageToMemory(&image, &header, &mem, &err);
+    int res = 0;
+    if (mem_size == 0 || !mem) {
+        if (err) {
+            printf("%s\n", err);
+            FreeEXRErrorMessage(err);
+        }
+        res = 1;
+    } else {
+        out.assign(mem, mem + mem_size);
+        free(mem);
+    }
+
+    free(header.channels);
+    free(header.pixel_types);
+    free(header.requested_pixel_types);
+    return res;
+}
+
 int png(const char *filename, Pixmap &map)
 {
     if (!filename) return 1;
@@ -195,6 +315,21 @@ int png(const char *filename, Pixmap &map)
     return res == 0 ? 1 : 0;
 }
 
+int png_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    const int w = (int)map.width();
+    const int h = (int)map.height();
+    std::vector<unsigned char> data;
+    if (!build_rgba8_srgb_buffer(map, data)) return 1;
+
+    int len = 0;
+    unsigned char *png = stbi_write_png_to_mem(data.data(), w * 4, w, h, 4, &len);
+    if (!png || len <= 0) return 1;
+    out.assign(png, png + len);
+    STBIW_FREE(png);
+    return 0;
+}
+
 int jpg(const char *filename, Pixmap &map)
 {
     if (!filename) return 1;
@@ -224,6 +359,17 @@ int jpg(const char *filename, Pixmap &map)
 
     free(data);
 
+    return res == 0 ? 1 : 0;
+}
+
+int jpg_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    const int w = (int)map.width();
+    const int h = (int)map.height();
+    std::vector<unsigned char> data;
+    if (!build_rgba8_srgb_buffer(map, data)) return 1;
+    out.clear();
+    const int res = stbi_write_jpg_to_func(append_write_callback, &out, w, h, 4, data.data(), 90);
     return res == 0 ? 1 : 0;
 }
 
@@ -260,6 +406,15 @@ int bmp(const char *filename, Pixmap &map)
     return res == 0 ? 1 : 0;
 }
 
+int bmp_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    std::vector<unsigned char> data;
+    if (!build_rgba8_srgb_buffer(map, data)) return 1;
+    out.clear();
+    const int res = stbi_write_bmp_to_func(append_write_callback, &out, (int)map.width(), (int)map.height(), 4, data.data());
+    return res == 0 ? 1 : 0;
+}
+
 int tga(const char *filename, Pixmap &map)
 {
     if (!filename) return 1;
@@ -293,6 +448,15 @@ int tga(const char *filename, Pixmap &map)
     return res == 0 ? 1 : 0;
 }
 
+int tga_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    std::vector<unsigned char> data;
+    if (!build_rgba8_srgb_buffer(map, data)) return 1;
+    out.clear();
+    const int res = stbi_write_tga_to_func(append_write_callback, &out, (int)map.width(), (int)map.height(), 4, data.data());
+    return res == 0 ? 1 : 0;
+}
+
 int hdr(const char *filename, Pixmap &map)
 {
     if (!filename) return 1;
@@ -321,6 +485,15 @@ int hdr(const char *filename, Pixmap &map)
 
     free(data);
 
+    return res == 0 ? 1 : 0;
+}
+
+int hdr_memory(Pixmap &map, std::vector<unsigned char> &out)
+{
+    std::vector<float> data;
+    if (!build_rgba32f_buffer(map, data)) return 1;
+    out.clear();
+    const int res = stbi_write_hdr_to_func(append_write_callback, &out, (int)map.width(), (int)map.height(), 4, data.data());
     return res == 0 ? 1 : 0;
 }
 

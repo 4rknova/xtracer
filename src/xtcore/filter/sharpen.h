@@ -11,6 +11,13 @@ class Sharpen : public IFilter
     public:
     Sharpen();
 
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "sharpen";
+        meta.name = "Sharpen";
+        meta.description = "Local contrast enhancement for crisper edges.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 
     float amount;

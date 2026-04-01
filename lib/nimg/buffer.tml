@@ -15,20 +15,32 @@ namespace nimg {
 template <class T>
 Buffer<T>::Buffer()
 	: m_count(0)
+	, m_single_object()
 	, m_data(NULL)
 {}
 
 template <class T>
 Buffer<T>::Buffer(const Buffer &rhs)
+	: m_count(0)
+	, m_single_object()
+	, m_data(NULL)
 {
 	if (&rhs == this) return;
-
-	release();
 
 	if(init(rhs.count())) return;
 
 	std::copy(rhs.m_data, rhs.m_data + m_count, m_data);
 	m_count = rhs.count();
+}
+
+template <class T>
+Buffer<T>::Buffer(Buffer &&rhs) noexcept
+	: m_count(rhs.m_count)
+	, m_single_object(std::move(rhs.m_single_object))
+	, m_data(rhs.m_data)
+{
+	rhs.m_count = 0;
+	rhs.m_data = NULL;
 }
 
 template <class T>
@@ -45,6 +57,21 @@ Buffer<T> &Buffer<T>::operator =(const Buffer<T> &rhs)
 	std::copy(rhs.m_data, rhs.m_data + m_count, m_data);
 	m_count = rhs.count();
 
+	return *this;
+}
+
+template <class T>
+Buffer<T> &Buffer<T>::operator =(Buffer<T> &&rhs) noexcept
+{
+	if (&rhs == this) return *this;
+
+	release();
+	m_count = rhs.m_count;
+	m_single_object = std::move(rhs.m_single_object);
+	m_data = rhs.m_data;
+
+	rhs.m_count = 0;
+	rhs.m_data = NULL;
 	return *this;
 }
 

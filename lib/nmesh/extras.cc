@@ -1127,6 +1127,41 @@ static float hash_noise3(const Vec3 &p, uint32_t seed)
     return fractf(nmath_sin(v) * 43758.5453f) * 2.0f - 1.0f;
 }
 
+static float hash_noise2(float x, float y, uint32_t seed)
+{
+    const float s = (float)(seed & 0xffffu) * 0.017113f;
+    const float v = x * 127.1f + y * 311.7f + s;
+    return fractf(nmath_sin(v) * 43758.5453f) * 2.0f - 1.0f;
+}
+
+static float smoothstepf(float t)
+{
+    t = std::max(0.0f, std::min(1.0f, t));
+    return t * t * (3.0f - 2.0f * t);
+}
+
+static float lerpf(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
+static float value_noise2(float x, float y, uint32_t seed)
+{
+    const float xf = std::floor(x);
+    const float yf = std::floor(y);
+    const float tx = smoothstepf(x - xf);
+    const float ty = smoothstepf(y - yf);
+
+    const float n00 = hash_noise2(xf, yf, seed);
+    const float n10 = hash_noise2(xf + 1.0f, yf, seed);
+    const float n01 = hash_noise2(xf, yf + 1.0f, seed);
+    const float n11 = hash_noise2(xf + 1.0f, yf + 1.0f, seed);
+
+    const float nx0 = lerpf(n00, n10, tx);
+    const float nx1 = lerpf(n01, n11, tx);
+    return lerpf(nx0, nx1, ty);
+}
+
 static float fbm_noise(const Vec3 &p, uint32_t seed, size_t octaves)
 {
     float sum = 0.0f;
@@ -1140,6 +1175,50 @@ static float fbm_noise(const Vec3 &p, uint32_t seed, size_t octaves)
         amp *= 0.5f;
         f *= 2.03f;
     }
+    if (norm <= 1e-8f) return 0.0f;
+    return sum / norm;
+}
+
+static float fbm_noise2_adv(float x, float y, uint32_t seed, size_t octaves, float lacunarity, float gain)
+{
+    float sum = 0.0f;
+    float amp = 1.0f;
+    float f = 1.0f;
+    float norm = 0.0f;
+    lacunarity = std::max(1.01f, lacunarity);
+    gain = std::max(0.05f, std::min(0.95f, gain));
+
+    for (size_t i = 0; i < octaves; ++i) {
+        const float ox = (float)i * 13.17f;
+        const float oy = (float)i * 7.31f;
+        sum += amp * value_noise2(x * f + ox, y * f + oy, seed + (uint32_t)(i * 1664525u));
+        norm += amp;
+        amp *= gain;
+        f *= lacunarity;
+    }
+
+    if (norm <= 1e-8f) return 0.0f;
+    return sum / norm;
+}
+
+static float ridged_noise2_adv(float x, float y, uint32_t seed, size_t octaves, float lacunarity, float gain)
+{
+    float sum = 0.0f;
+    float amp = 0.5f;
+    float f = 1.0f;
+    float norm = 0.0f;
+    lacunarity = std::max(1.01f, lacunarity);
+    gain = std::max(0.05f, std::min(0.95f, gain));
+
+    for (size_t i = 0; i < octaves; ++i) {
+        const float n = value_noise2(x * f + (float)i * 5.13f, y * f + (float)i * 9.27f, seed + (uint32_t)(911382323u + i * 2654435761u));
+        const float r = 1.0f - std::fabs(n);
+        sum += amp * (r * r);
+        norm += amp;
+        amp *= gain;
+        f *= lacunarity;
+    }
+
     if (norm <= 1e-8f) return 0.0f;
     return sum / norm;
 }
@@ -1415,6 +1494,183 @@ void rock(object_t *obj, size_t resolution, int seed, float radius, float roughn
     for (size_t i = 0; i < sphere_faces.size(); ++i) {
         const tri_t &t = sphere_faces[i];
         append_triangle(out, remap[t.a], remap[t.b], remap[t.c], false);
+    }
+}
+
+void terrain(object_t *obj, size_t resolution, int seed, const nmath::Vector3f &dimensions, float noise_scale, size_t octaves, float lacunarity, float gain)
+{
+    if (!obj) return;
+
+    const size_t seg = std::max((size_t)2, resolution);
+    const float width = std::max(0.1f, (float)dimensions.x);
+    const float height = std::max(0.0f, (float)dimensions.y);
+    const float depth = std::max(0.1f, (float)dimensions.z);
+    const float freq = std::max(0.01f, noise_scale);
+    octaves = (size_t)clampi((int)octaves, 1, 10);
+    lacunarity = std::max(1.01f, std::min(lacunarity, 8.0f));
+    gain = std::max(0.05f, std::min(gain, 0.95f));
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<float> heights((seg + 1) * (seg + 1), 0.0f);
+    const uint32_t u_seed = (uint32_t)seed ^ 0x51b2d3a7u;
+
+    for (size_t z = 0; z <= seg; ++z) {
+        const float vz = (float)z / (float)seg;
+        for (size_t x = 0; x <= seg; ++x) {
+            const float vx = (float)x / (float)seg;
+            const float px = (vx - 0.5f) * width;
+            const float pz = (vz - 0.5f) * depth;
+            const float nx = px * freq;
+            const float nz = pz * freq;
+
+            // Broad continent mass first, then mountain ridges on top.
+            const float base = fbm_noise2_adv(nx * 0.35f, nz * 0.35f, u_seed, std::max((size_t)2, octaves), 1.9f, 0.55f);
+            const float ridges = ridged_noise2_adv(nx, nz, u_seed ^ 0x9e3779b9u, std::max((size_t)2, octaves - 1), lacunarity, gain);
+
+            // Shape lowlands and mountains into smoother natural relief.
+            const float basin = base * 0.5f + 0.5f;
+            const float continent = basin * basin;
+            const float mountains = std::max(0.0f, base) * ridges;
+            const float terrain_h = (continent * 0.65f) + (mountains * 0.7f) - 0.35f;
+
+            heights[z * (seg + 1) + x] = terrain_h * height;
+        }
+    }
+
+    for (size_t z = 0; z <= seg; ++z) {
+        const float vz = (float)z / (float)seg;
+        for (size_t x = 0; x <= seg; ++x) {
+            const float vx = (float)x / (float)seg;
+            const float px = (vx - 0.5f) * width;
+            const float pz = (vz - 0.5f) * depth;
+            const float py = heights[z * (seg + 1) + x];
+
+            const size_t xl = (x > 0) ? x - 1 : x;
+            const size_t xr = (x < seg) ? x + 1 : x;
+            const size_t zd = (z > 0) ? z - 1 : z;
+            const size_t zu = (z < seg) ? z + 1 : z;
+
+            const float h_l = heights[z * (seg + 1) + xl];
+            const float h_r = heights[z * (seg + 1) + xr];
+            const float h_d = heights[zd * (seg + 1) + x];
+            const float h_u = heights[zu * (seg + 1) + x];
+
+            const float dx = (seg > 0) ? width / (float)seg : width;
+            const float dz = (seg > 0) ? depth / (float)seg : depth;
+            Vec3 normal(-(h_r - h_l) / std::max(1e-6f, (2.0f * dx)),
+                         1.0f,
+                        -(h_u - h_d) / std::max(1e-6f, (2.0f * dz)));
+            if (normal.length() <= 1e-8f) normal = Vec3(0.0f, 1.0f, 0.0f);
+            normal.normalize();
+
+            uv_t uv = { vx, vz };
+            append_vertex(obj, Vec3(px, py, pz), normal, &uv);
+        }
+    }
+
+    for (size_t z = 0; z < seg; ++z) {
+        for (size_t x = 0; x < seg; ++x) {
+            const int i0 = (int)(x + z * (seg + 1));
+            const int i1 = i0 + 1;
+            const int i3 = i0 + (int)(seg + 1);
+            const int i2 = i3 + 1;
+            append_quad(out, i0, i3, i2, i1, true);
+        }
+    }
+}
+
+void draped_cloth_strip(object_t *obj, size_t resolution, const nmath::Vector3f &dimensions, float folds, float edge_lift, float curl, float taper, float sway, float asymmetry, float pinned)
+{
+    if (!obj) return;
+
+    const size_t seg_u = std::max((size_t)8, resolution);
+    const size_t seg_v = std::max((size_t)12, resolution + resolution / 2);
+    const float width = std::max(0.1f, (float)dimensions.x);
+    const float sag = std::max(0.0f, (float)dimensions.y);
+    const float length = std::max(0.1f, (float)dimensions.z);
+    folds = std::max(0.0f, std::min(folds, 12.0f));
+    edge_lift = std::max(-1.0f, std::min(edge_lift, 1.0f));
+    curl = std::max(-1.5f, std::min(curl, 1.5f));
+    taper = std::max(-0.95f, std::min(taper, 0.95f));
+    sway = std::max(-2.0f, std::min(sway, 2.0f));
+    asymmetry = std::max(-1.0f, std::min(asymmetry, 1.0f));
+    pinned = std::max(0.0f, std::min(pinned, 1.0f));
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<Vec3> pos((seg_u + 1) * (seg_v + 1), Vec3(0.0f, 0.0f, 0.0f));
+
+    for (size_t v = 0; v <= seg_v; ++v) {
+        const float fv = (float)v / (float)seg_v;
+        const float pin_curve = (nmath::scalar_t)1.0
+                              - (float)std::pow((double)((nmath::scalar_t)1.0 - fv), (double)((nmath::scalar_t)(1.2f + pinned * 2.2f)));
+        const float free_hang = nmath_sin(fv * nmath::PI);
+        const float z = (fv - 0.5f) * length;
+        const float center_drop = -sag * ((1.0f - pinned) * free_hang + pinned * pin_curve);
+        const float tip_bias = -sag * (0.10f + 0.18f * pinned) * fv;
+        const float width_scale = std::max(0.18f, 1.0f - taper * fv);
+        const float center_sway = sway * width * 0.20f * nmath_sin(fv * nmath::PI * (1.2f + 0.4f * pinned));
+        const float asym_bias = asymmetry * width * 0.08f * (0.3f + 0.7f * fv);
+
+        for (size_t u = 0; u <= seg_u; ++u) {
+            const float fu = (float)u / (float)seg_u;
+            const float side = fu * 2.0f - 1.0f;
+            const float edge = std::fabs(side);
+            const float x_base = side * (width * 0.5f * width_scale);
+
+            const float fold_env = free_hang;
+            const float phase_skew = asymmetry * side * 0.8f + sway * 0.3f;
+            const float fold_wave = nmath_sin((float)(folds * nmath::PI * 2.0f) * fv + side * 0.65f + phase_skew);
+            const float fold_offset = fold_wave * width * 0.035f * fold_env * (0.85f + 0.15f * width_scale);
+
+            const float edge_raise = edge_lift * sag * (edge * edge) * (0.35f + 0.65f * fold_env) * (1.0f + asymmetry * side * 0.35f);
+            const float center_channel = -sag * (0.05f + 0.06f * pinned) * (1.0f - edge) * fold_env;
+            const float side_bias = asymmetry * sag * 0.10f * side * (0.2f + 0.8f * fv);
+            const float y = center_drop + tip_bias + edge_raise + center_channel + side_bias;
+
+            const float twist = curl * fold_env * side * (0.45f + 0.55f * fv) + asymmetry * 0.18f * fv;
+            const float x = x_base + fold_offset + center_sway + asym_bias;
+            const float y_twist = y + nmath_sin(twist) * edge * width * 0.08f;
+            const float z_twist = z + nmath_abs(side) * length * 0.05f * (1.0f - nmath_cos(twist))
+                                    + sway * length * 0.035f * side * fold_env;
+
+            pos[v * (seg_u + 1) + u] = Vec3(x, y_twist, z_twist);
+        }
+    }
+
+    for (size_t v = 0; v <= seg_v; ++v) {
+        const float fv = (float)v / (float)seg_v;
+        for (size_t u = 0; u <= seg_u; ++u) {
+            const float fu = (float)u / (float)seg_u;
+            const size_t ul = (u > 0) ? u - 1 : u;
+            const size_t ur = (u < seg_u) ? u + 1 : u;
+            const size_t vd = (v > 0) ? v - 1 : v;
+            const size_t vu = (v < seg_v) ? v + 1 : v;
+
+            const Vec3 dpdu = pos[v * (seg_u + 1) + ur] - pos[v * (seg_u + 1) + ul];
+            const Vec3 dpdv = pos[vu * (seg_u + 1) + u] - pos[vd * (seg_u + 1) + u];
+            Vec3 normal = nmath::cross(dpdv, dpdu);
+            if (normal.length() <= 1e-8f) normal = Vec3(0.0f, 1.0f, 0.0f);
+            normal.normalize();
+
+            uv_t uv = { fu, fv };
+            append_vertex(obj, pos[v * (seg_u + 1) + u], normal, &uv);
+        }
+    }
+
+    for (size_t v = 0; v < seg_v; ++v) {
+        for (size_t u = 0; u < seg_u; ++u) {
+            const int i0 = (int)(u + v * (seg_u + 1));
+            const int i1 = i0 + 1;
+            const int i3 = i0 + (int)(seg_u + 1);
+            const int i2 = i3 + 1;
+            append_quad(out, i0, i3, i2, i1, true);
+        }
     }
 }
 

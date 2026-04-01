@@ -11,6 +11,13 @@ class FilmGrain : public IFilter
     public:
     FilmGrain();
 
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "film_grain";
+        meta.name = "Film Grain";
+        meta.description = "Adds stylized film-like luminance grain.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 
     float amount;

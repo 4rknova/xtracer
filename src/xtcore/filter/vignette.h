@@ -11,6 +11,13 @@ class Vignette : public IFilter
     public:
     Vignette();
 
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "vignette";
+        meta.name = "Vignette";
+        meta.description = "Darkens image edges with radial falloff.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 
     float strength;

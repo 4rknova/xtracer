@@ -11,6 +11,13 @@ class ChromaticAberration : public IFilter
     public:
     ChromaticAberration();
 
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "chromatic_aberration";
+        meta.name = "Chromatic Aberration";
+        meta.description = "Shifts color channels radially for lens-fringe styling.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 
     float amount;

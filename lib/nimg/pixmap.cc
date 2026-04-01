@@ -8,12 +8,23 @@ Pixmap::Pixmap()
 {}
 
 Pixmap::Pixmap(const Pixmap &img)
+	: m_width (0)
+    , m_height(0)
 {
 	if (&img == this) return;
 
 	m_pixels = img.m_pixels;
 	m_width  = img.width();
 	m_height = img.height();
+}
+
+Pixmap::Pixmap(Pixmap &&img) noexcept
+	: m_width(img.m_width)
+    , m_height(img.m_height)
+    , m_pixels(std::move(img.m_pixels))
+{
+	img.m_width = 0;
+	img.m_height = 0;
 }
 
 Pixmap &Pixmap::operator =(const Pixmap &img)
@@ -25,6 +36,20 @@ Pixmap &Pixmap::operator =(const Pixmap &img)
 	m_width  = img.width();
 	m_height = img.height();
 
+	return *this;
+}
+
+Pixmap &Pixmap::operator =(Pixmap &&img) noexcept
+{
+	if (&img == this)
+		return *this;
+
+	m_pixels = std::move(img.m_pixels);
+	m_width  = img.m_width;
+	m_height = img.m_height;
+
+	img.m_width = 0;
+	img.m_height = 0;
 	return *this;
 }
 

@@ -93,6 +93,7 @@ int main()
 
     const std::string inline_path = "/tmp/xtracer_object_medium_inline_reject_test.scn";
     const std::string sky_path = "/tmp/xtracer_rayleigh_sky_parse_test.scn";
+    const std::string modern_material_path = "/tmp/xtracer_modern_material_parse_test.scn";
     const std::string inline_scene_text =
         "title = Object Medium Inline Reject Test\n"
         "description = inline medium blocks must be rejected\n"
@@ -171,9 +172,127 @@ int main()
         "  }\n"
         "}\n";
 
+    const std::string modern_material_scene_text =
+        "title = Modern Material Parse Test\n"
+        "description = parser smoke test for modern materials\n"
+        "version = 1.0\n"
+        "default_camera = cam\n"
+        "environment = { type = color, config = { value = col3(0,0,0) } }\n"
+        "camera = {\n"
+        "  cam = {\n"
+        "    type = thin-lens\n"
+        "    fov = 45\n"
+        "    position = vec3(0,0,-4)\n"
+        "    target = vec3(0,0,0)\n"
+        "    up = vec3(0,1,0)\n"
+        "  }\n"
+        "}\n"
+        "geometry = {\n"
+        "  left_geo = { type = sphere, position = vec3(-1,0,0), radius = 0.9 }\n"
+        "  right_geo = { type = sphere, position = vec3(1,0,0), radius = 0.9 }\n"
+        "  center_geo = { type = sphere, position = vec3(0,0,0), radius = 0.7 }\n"
+        "}\n"
+        "material = {\n"
+        "  painted = {\n"
+        "    type = principled\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        base_color = { type = color, value = col3(0.8,0.2,0.1) }\n"
+        "        normal = { type = voronoi_normal, cells = 24, max_deviation = 8, seed = 7 }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        roughness = 0.35\n"
+        "        metallic = 0.7\n"
+        "        anisotropy = 0.75\n"
+        "        anisotropy_rotation = 32\n"
+        "        ior = 1.5\n"
+        "        clearcoat = 0.7\n"
+        "        clearcoat_roughness = 0.08\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  frosted = {\n"
+        "    type = rough_dielectric\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        transmission = { type = color, value = col3(0.9,0.95,1.0) }\n"
+        "        normal = { type = voronoi_normal, cells = 20, max_deviation = 6, seed = 9 }\n"
+        "        absorption_color = { type = color, value = col3(0.72,0.88,0.98) }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        roughness = 0.2\n"
+        "        ior = 1.45\n"
+        "        transparency = 0.98\n"
+        "        absorption_distance = 0.7\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  visor = {\n"
+        "    type = thin_dielectric\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        transmission = { type = color, value = col3(0.92,0.96,1.0) }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        roughness = 0.08\n"
+        "        ior = 1.45\n"
+        "        transparency = 0.96\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  wax = {\n"
+        "    type = subsurface\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        base_color = { type = color, value = col3(0.88,0.62,0.44) }\n"
+        "        subsurface_color = { type = color, value = col3(1.0,0.48,0.32) }\n"
+        "        subsurface_radius = { type = color, value = col3(0.65,1.10,1.80) }\n"
+        "        normal = { type = voronoi_normal, cells = 16, max_deviation = 4, seed = 11 }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        subsurface = 0.65\n"
+        "        thickness = 0.6\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  cloth = {\n"
+        "    type = sheen\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        base_color = { type = color, value = col3(0.28,0.24,0.36) }\n"
+        "        sheen_color = { type = color, value = col3(0.84,0.40,0.28) }\n"
+        "        normal = { type = voronoi_normal, cells = 18, max_deviation = 5, seed = 13 }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        sheen = 0.7\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  leaf = {\n"
+        "    type = thin_translucent\n"
+        "    properties = {\n"
+        "      samplers = {\n"
+        "        base_color = { type = color, value = col3(0.22,0.34,0.14) }\n"
+        "        translucency_color = { type = color, value = col3(0.56,0.86,0.24) }\n"
+        "        normal = { type = voronoi_normal, cells = 20, max_deviation = 4, seed = 15 }\n"
+        "      }\n"
+        "      scalars = {\n"
+        "        translucency = 0.72\n"
+        "        thickness = 0.28\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "}\n"
+        "object = {\n"
+        "  left = { geometry = left_geo, material = painted }\n"
+        "  right = { geometry = right_geo, material = frosted }\n"
+        "  center = { geometry = center_geo, material = wax }\n"
+        "}\n";
+
     if (!write_text(path, scene_text)) return fail("failed to write temporary scene");
     if (!write_text(inline_path, inline_scene_text)) return fail("failed to write temporary inline scene");
     if (!write_text(sky_path, sky_scene_text)) return fail("failed to write temporary rayleigh scene");
+    if (!write_text(modern_material_path, modern_material_scene_text)) return fail("failed to write temporary modern material scene");
 
     {
         xtcore::Scene scene;
@@ -215,6 +334,25 @@ int main()
 
         const nimg::ColorRGBf sample = scene_sky.sample_environment(nmath::Vector3f(0.0f, 1.0f, 0.0f));
         if (sample.r() <= 0.0f || sample.g() <= 0.0f || sample.b() <= 0.0f) return fail("rayleigh sky sample was not positive");
+    }
+
+    {
+        xtcore::Scene scene_modern;
+        const int rc = xtcore::io::scn::load(&scene_modern, modern_material_path.c_str(), nullptr, nullptr);
+        if (rc != 0) return fail("modern material scene load failed");
+
+        const HASH_UINT64 painted_id = xtcore::pool::str::add("painted");
+        const HASH_UINT64 frosted_id = xtcore::pool::str::add("frosted");
+        const HASH_UINT64 visor_id = xtcore::pool::str::add("visor");
+        const HASH_UINT64 wax_id = xtcore::pool::str::add("wax");
+        const HASH_UINT64 cloth_id = xtcore::pool::str::add("cloth");
+        const HASH_UINT64 leaf_id = xtcore::pool::str::add("leaf");
+        if (scene_modern.m_materials.find(painted_id) == scene_modern.m_materials.end()) return fail("principled material missing");
+        if (scene_modern.m_materials.find(frosted_id) == scene_modern.m_materials.end()) return fail("rough dielectric material missing");
+        if (scene_modern.m_materials.find(visor_id) == scene_modern.m_materials.end()) return fail("thin dielectric material missing");
+        if (scene_modern.m_materials.find(wax_id) == scene_modern.m_materials.end()) return fail("subsurface material missing");
+        if (scene_modern.m_materials.find(cloth_id) == scene_modern.m_materials.end()) return fail("sheen material missing");
+        if (scene_modern.m_materials.find(leaf_id) == scene_modern.m_materials.end()) return fail("thin translucent material missing");
     }
 
     xtcore::deinit();

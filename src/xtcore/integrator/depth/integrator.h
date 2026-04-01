@@ -15,6 +15,14 @@ class Integrator : public xtcore::render::IIntegrator
 {
 	public:
     Integrator();
+    virtual xtcore::render::integrator_metadata_t metadata() const {
+        xtcore::render::integrator_metadata_t meta;
+        meta.id = "depth";
+        meta.name = "Depth";
+        meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+        meta.description = "Depth debug integrator.";
+        return meta;
+    }
     virtual void configure(const std::map<std::string, std::string> &options);
     void render_tile(xtcore::render::tile_t *tile);
 

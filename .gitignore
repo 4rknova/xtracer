@@ -43,6 +43,7 @@ src/xtcore/license.h
 
 # other files
 *.cbp
+.codex
 
 # generated web assets
 res/web/license.txt

@@ -20,6 +20,9 @@ Triangle::Triangle()
     tc[0] = nmath::Vector2f(0.0f, 0.0f);
     tc[1] = nmath::Vector2f(1.0f, 0.0f);
     tc[2] = nmath::Vector2f(0.0f, 1.0f);
+    edge1 = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    edge2 = nmath::Vector3f(0.0f, 0.0f, 0.0f);
+    face_normal = nmath::Vector3f(0.0f, 0.0f, 0.0f);
 }
 
 nmath::scalar_t Triangle::distance(nmath::Vector3f p) const
@@ -88,10 +91,10 @@ nmath::scalar_t Triangle::distance(nmath::Vector3f p) const
 bool Triangle::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 {
     // Moller-Trumbore intersection (two-sided).
-    const Vector3f edge1 = v[1] - v[0];
-    const Vector3f edge2 = v[2] - v[0];
-    const Vector3f pvec = cross(ray.direction, edge2);
-    const scalar_t det = dot(edge1, pvec);
+    const Vector3f local_edge1 = edge1.length_squared() > (scalar_t)0.0 ? edge1 : (v[1] - v[0]);
+    const Vector3f local_edge2 = edge2.length_squared() > (scalar_t)0.0 ? edge2 : (v[2] - v[0]);
+    const Vector3f pvec = cross(ray.direction, local_edge2);
+    const scalar_t det = dot(local_edge1, pvec);
 
     if (nmath_abs(det) < EPSILON) return false;
 
@@ -100,24 +103,28 @@ bool Triangle::intersection(const Ray &ray, hit_record_t* i_hit_record) const
     const scalar_t u = dot(tvec, pvec) * inv_det;
     if (u < 0.0f || u > 1.0f) return false;
 
-    const Vector3f qvec = cross(tvec, edge1);
+    const Vector3f qvec = cross(tvec, local_edge1);
     const scalar_t vv = dot(ray.direction, qvec) * inv_det;
     if (vv < 0.0f || (u + vv) > 1.0f) return false;
 
-    const scalar_t t = dot(edge2, qvec) * inv_det;
+    const scalar_t t = dot(local_edge2, qvec) * inv_det;
     if (t < EPSILON) return false;
 
     if (i_hit_record) {
         const scalar_t w = 1.0f - u - vv;
         const Vector3f pos = ray.origin + ray.direction * t;
-        const Vector3f face_n = cross(edge1, edge2).normalized();
+        Vector3f local_face_normal = face_normal;
+        if (!local_face_normal.length_squared()) {
+            local_face_normal = cross(local_edge1, local_edge2);
+            if (local_face_normal.length()) local_face_normal = local_face_normal.normalized();
+        }
 
         i_hit_record->t = t;
         i_hit_record->point = pos;
         i_hit_record->texcoord = tc[0] * w + tc[1] * u + tc[2] * vv;
 
         Vector3f pn = n[0] * w + n[1] * u + n[2] * vv;
-        i_hit_record->normal = pn.length() ? pn.normalized() : face_n;
+        i_hit_record->normal = pn.length() ? pn.normalized() : local_face_normal;
         i_hit_record->incident_direction = ray.direction;
     }
 
@@ -128,6 +135,10 @@ void Triangle::calc_aabb()
 {
 	aabb.max = Vector3f(-INFINITY, -INFINITY, -INFINITY);
 	aabb.min = Vector3f( INFINITY,  INFINITY,  INFINITY);
+    edge1 = v[1] - v[0];
+    edge2 = v[2] - v[0];
+    face_normal = cross(edge1, edge2);
+    if (face_normal.length()) face_normal = face_normal.normalized();
 
 	for(unsigned int i=0; i<3; i++)
 	{
@@ -189,15 +200,13 @@ Vector3f Triangle::point_sample() const
 {
     scalar_t b0, b1, b2;
 
-    b0 = nmath::prng_c(0, 1);
-    b1 = nmath::prng_c(0, 1);
-    b2 = nmath::prng_c(0, 1);
+    const scalar_t u = nmath::prng_c(0, 1);
+    const scalar_t w = nmath::prng_c(0, 1);
+    const scalar_t su = nmath_sqrt(std::max((scalar_t)0.0, u));
 
-    scalar_t bt = b0 + b1 + b2;
-
-    b0 /= bt;
-    b1 /= bt;
-    b2 /= bt;
+    b0 = (scalar_t)1.0 - su;
+    b1 = su * ((scalar_t)1.0 - w);
+    b2 = su * w;
 
     return Vector3f(b0 * v[0] + b1 * v[1] + b2 * v[2]);
 }

@@ -20,6 +20,14 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
+    virtual xtcore::render::integrator_metadata_t metadata() const {
+        xtcore::render::integrator_metadata_t meta;
+        meta.id = "pathtracer";
+        meta.name = "Pathtracer (Brute Force)";
+        meta.status = xtcore::render::INTEGRATOR_STATUS_STABLE;
+        meta.description = "Baseline brute-force path tracer.";
+        return meta;
+    }
 	virtual void render_tile(xtcore::render::tile_t *tile);
     nimg::ColorRGBf eval(size_t depth, hit_result_t &in);
 };

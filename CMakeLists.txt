@@ -118,6 +118,7 @@ set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
 set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
+set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
 set(PATH_SRC_UTIL_VIZ     ${PATH_SRC}/util/viz)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
@@ -145,6 +146,7 @@ set(OUT_EXE_SCENE_VALIDATOR_TEST test_xtcore_scene_validator)
 set(OUT_EXE_SAMPLING_TEST test_nmath_sampling)
 set(OUT_EXE_NMATH_SIMD_TEST test_nmath_simd)
 set(OUT_EXE_NMATH_BENCH bench_nmath)
+set(OUT_EXE_MESH_BENCH bench_mesh_intersection)
 set(OUT_EXE_NMATH_BENCH_SIMD bench_nmath_simd)
 set(OUT_EXE_NMATH_BENCH_AVX bench_nmath_avx)
 set(OUT_EXE_NMATH_BENCH_SCALAR bench_nmath_scalar)
@@ -267,6 +269,7 @@ add_executable(${OUT_EXE_SCENE_VALIDATOR_TEST} ${PATH_SRC_TESTS}/scene_validator
 add_executable(${OUT_EXE_SAMPLING_TEST} ${PATH_SRC_TESTS}/sampling_test.cc)
 add_executable(${OUT_EXE_NMATH_SIMD_TEST} ${PATH_SRC_TESTS}/nmath_simd_test.cc)
 add_executable(${OUT_EXE_NMATH_BENCH} ${PATH_SRC_TESTS}/nmath_bench.cc)
+add_executable(${OUT_EXE_MESH_BENCH} ${PATH_SRC_BENCH}/mesh_intersection_bench.cc)
 add_executable(${OUT_EXE_NMATH_BENCH_SIMD} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
 add_executable(${OUT_EXE_NMATH_BENCH_AVX} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
 add_executable(${OUT_EXE_NMATH_BENCH_SCALAR} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
@@ -320,6 +323,9 @@ set_target_properties(${OUT_EXE_NMATH_SIMD_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_NMATH_BENCH} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_MESH_BENCH} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
 )
 set_target_properties(${OUT_EXE_NMATH_BENCH_SIMD} PROPERTIES
@@ -461,6 +467,13 @@ target_include_directories(${OUT_EXE_NMATH_BENCH} PUBLIC
 target_include_directories(${OUT_EXE_NMATH_BENCH} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_MESH_BENCH} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_MESH_BENCH} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_NMATH_BENCH_SIMD} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -512,6 +525,7 @@ target_link_libraries(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE xtcore_static pthr
 target_link_libraries(${OUT_EXE_SAMPLING_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_SIMD_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_MESH_BENCH} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE pthread)
@@ -673,6 +687,7 @@ target_compile_definitions(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SAMPLING_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_SIMD_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_MESH_BENCH} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE ${DEFS})
@@ -695,6 +710,7 @@ add_dependencies (${OUT_EXE_SCENE_VALIDATOR_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SAMPLING_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_SIMD_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_BENCH} xtcore_static)
+add_dependencies (${OUT_EXE_MESH_BENCH} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_SIMD_PERF_COMPARE} ${OUT_EXE_NMATH_BENCH_SIMD} ${OUT_EXE_NMATH_BENCH_AVX} ${OUT_EXE_NMATH_BENCH_SCALAR})
 
 add_custom_target(check

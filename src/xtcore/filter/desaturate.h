@@ -9,6 +9,13 @@ namespace xtcore {
 class Desaturate : public IFilter
 {
     public:
+    virtual xtcore::filter::filter_metadata_t metadata() const {
+        xtcore::filter::filter_metadata_t meta;
+        meta.id = "desaturate";
+        meta.name = "Desaturate";
+        meta.description = "Reduces image saturation toward grayscale.";
+        return meta;
+    }
     virtual void render(Pixmap *p);
 };
 

@@ -22,6 +22,14 @@ namespace xtcore {
 class Integrator : public xtcore::render::IIntegrator
 {
 	public:
+    virtual xtcore::render::integrator_metadata_t metadata() const {
+        xtcore::render::integrator_metadata_t meta;
+        meta.id = "normal";
+        meta.name = "Normal";
+        meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+        meta.description = "Normal debug integrator.";
+        return meta;
+    }
 	virtual void render_tile(xtcore::render::tile_t *tile);
 };
 

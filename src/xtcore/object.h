@@ -6,14 +6,23 @@
 namespace xtcore {
     namespace asset {
 
+class IMaterial;
+class ISurface;
+
 class Object
 {
 	public:
+    Object()
+        : surface(0)
+        , material(0)
+        , ptr_material(0)
+        , ptr_surface(0)
+    {}
+
 	HASH_UINT64 surface;
 	HASH_UINT64 material;
-
-//    IMaterial *ptr_material;
-//    ISurface  *ptr_surface;
+    IMaterial *ptr_material;
+    ISurface  *ptr_surface;
 };
 
     } /* namespace asset */

@@ -21,6 +21,10 @@
 #include "parseutil.h"
 #include "log.h"
 #include "scene.h"
+#include "math/sampling_util.h"
+#include "sampler/sampler_cubemap.h"
+#include "sampler/sampler_erp.h"
+#include "sampler/sampler_rayleigh_sky.h"
 
 using nmath::Vector2f;
 using nmath::Vector3f;
@@ -32,6 +36,20 @@ namespace {
 
 std::mutex g_spatial_stats_mut;
 spatial_index_stats_t g_spatial_stats = {0, 0, 0, 0, 0, 0.0, 0};
+
+inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
+{
+    return std::max(lo, std::min(v, hi));
+}
+
+inline nmath::scalar_t rayleigh_sun_exponent(const xtcore::sampler::RayleighSky *sky)
+{
+    if (!sky) return (nmath::scalar_t)64.0;
+    const nmath::scalar_t glow_radius = std::max((nmath::scalar_t)0.25, sky->sun_glow_radius);
+    const nmath::scalar_t disk_radius = std::max((nmath::scalar_t)0.1, sky->sun_disk_radius);
+    const nmath::scalar_t combined = std::max(glow_radius, disk_radius * (nmath::scalar_t)2.0);
+    return clamp_scalar((nmath::scalar_t)320.0 / combined, (nmath::scalar_t)8.0, (nmath::scalar_t)256.0);
+}
 
 } // namespace
 
@@ -56,6 +74,11 @@ Scene::Scene()
     : time(0)
     , m_environment(0)
     , m_spatial_index_dirty(true)
+    , m_environment_cached_base(0)
+    , m_environment_cubemap(0)
+    , m_environment_erp(0)
+    , m_environment_rayleigh_sky(0)
+    , m_environment_sampler_type(ENV_SAMPLER_UNKNOWN)
 {}
 
 Scene::~Scene()
@@ -73,16 +96,26 @@ const xtcore::asset::Object *Scene::get_object(HASH_ID obj_id)
 const xtcore::asset::IMaterial *Scene::get_material(HASH_ID obj_id)
 {
     const xtcore::asset::Object *obj = get_object(obj_id);
+    if (!obj) return 0;
+    if (obj->ptr_material) return obj->ptr_material;
+
+    xtcore::asset::Object *mutable_obj = m_objects[obj_id];
     auto it = m_materials.find(obj->material);
     if (it == m_materials.end()) return 0;
+    mutable_obj->ptr_material = (*it).second;
     return (*it).second;
 }
 
 const xtcore::asset::ISurface *Scene::get_surface(HASH_ID obj_id)
 {
     const xtcore::asset::Object *obj = get_object(obj_id);
+    if (!obj) return 0;
+    if (obj->ptr_surface) return obj->ptr_surface;
+
+    xtcore::asset::Object *mutable_obj = m_objects[obj_id];
     auto it = m_surface.find(obj->surface);
     if (it == m_surface.end()) return 0;
+    mutable_obj->ptr_surface = (*it).second;
     return (*it).second;
 }
 
@@ -171,11 +204,21 @@ int Scene::destroy_camera(HASH_UINT64 id)
 
 int Scene::destroy_material(HASH_UINT64 id)
 {
+    for (auto it = m_objects.begin(); it != m_objects.end(); ++it) {
+        xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+        if (obj->material == id) obj->ptr_material = 0;
+    }
     return purge(m_materials, id);
 }
 
 int Scene::destroy_surface(HASH_UINT64 id)
 {
+    for (auto it = m_objects.begin(); it != m_objects.end(); ++it) {
+        xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+        if (obj->surface == id) obj->ptr_surface = 0;
+    }
     mark_spatial_index_dirty();
     return purge(m_surface, id);
 }
@@ -190,6 +233,107 @@ int Scene::destroy_object(HASH_UINT64 id)
 nimg::ColorRGBf Scene::sample_environment(const Vector3f &direction) const
 {
     return m_environment ? m_environment->sample(direction) : nimg::ColorRGBf(0,0,0);
+}
+
+void Scene::sync_environment_sampler_cache() const
+{
+    if (m_environment == m_environment_cached_base && m_environment_sampler_type != ENV_SAMPLER_UNKNOWN) return;
+
+    m_environment_cached_base = m_environment;
+    m_environment_cubemap = 0;
+    m_environment_erp = 0;
+    m_environment_rayleigh_sky = 0;
+
+    if (!m_environment) {
+        m_environment_sampler_type = ENV_SAMPLER_GENERIC;
+        return;
+    }
+
+    m_environment_rayleigh_sky = dynamic_cast<const xtcore::sampler::RayleighSky *>(m_environment);
+    if (m_environment_rayleigh_sky) {
+        m_environment_sampler_type = ENV_SAMPLER_RAYLEIGH_SKY;
+        return;
+    }
+
+    m_environment_erp = dynamic_cast<const xtcore::sampler::ERP *>(m_environment);
+    if (m_environment_erp) {
+        m_environment_sampler_type = ENV_SAMPLER_ERP;
+        return;
+    }
+
+    m_environment_cubemap = dynamic_cast<const xtcore::sampler::Cubemap *>(m_environment);
+    if (m_environment_cubemap) {
+        m_environment_sampler_type = ENV_SAMPLER_CUBEMAP;
+        return;
+    }
+
+    m_environment_sampler_type = ENV_SAMPLER_GENERIC;
+}
+
+bool Scene::sample_environment_direction(Vector3f &direction, nmath::scalar_t &pdf, nimg::ColorRGBf &radiance) const
+{
+    if (!m_environment) {
+        direction = Vector3f(0.0f, 1.0f, 0.0f);
+        pdf = 0.0;
+        radiance = nimg::ColorRGBf(0, 0, 0);
+        return false;
+    }
+
+    sync_environment_sampler_cache();
+
+    if (m_environment_sampler_type == ENV_SAMPLER_RAYLEIGH_SKY) {
+        const xtcore::sampler::RayleighSky *rayleigh = m_environment_rayleigh_sky;
+        const nmath::scalar_t p_sun = (nmath::scalar_t)0.65;
+        const nmath::scalar_t exponent = rayleigh_sun_exponent(rayleigh);
+        if (nmath::prng_c(0.0, 1.0) < p_sun) {
+            nmath::scalar_t sun_pdf = 0.0;
+            direction = xtcore::math::sampling::sample_power_cosine_lobe(rayleigh->sun_direction.normalized(), exponent, sun_pdf);
+        } else {
+            direction = xtcore::math::sampling::sample_uniform_sphere(pdf);
+        }
+        pdf = sample_environment_pdf(direction);
+        radiance = sample_environment(direction);
+        return pdf > (nmath::scalar_t)EPSILON;
+    }
+
+    if (m_environment_sampler_type == ENV_SAMPLER_ERP && m_environment_erp) {
+        return m_environment_erp->sample_direction(direction, pdf, radiance);
+    }
+
+    if (m_environment_sampler_type == ENV_SAMPLER_CUBEMAP && m_environment_cubemap) {
+        return m_environment_cubemap->sample_direction(direction, pdf, radiance);
+    }
+
+    direction = xtcore::math::sampling::sample_uniform_sphere(pdf);
+    radiance = sample_environment(direction);
+    return pdf > (nmath::scalar_t)EPSILON;
+}
+
+nmath::scalar_t Scene::sample_environment_pdf(const Vector3f &direction) const
+{
+    if (!m_environment) return 0.0;
+
+    sync_environment_sampler_cache();
+
+    if (m_environment_sampler_type == ENV_SAMPLER_RAYLEIGH_SKY && m_environment_rayleigh_sky) {
+        const xtcore::sampler::RayleighSky *rayleigh = m_environment_rayleigh_sky;
+        const nmath::scalar_t p_uniform = (nmath::scalar_t)0.35;
+        const nmath::scalar_t p_sun = (nmath::scalar_t)0.65;
+        const nmath::scalar_t exponent = rayleigh_sun_exponent(rayleigh);
+        const nmath::scalar_t uniform_pdf = xtcore::math::sampling::uniform_sphere_pdf();
+        const nmath::scalar_t sun_pdf = xtcore::math::sampling::power_cosine_lobe_pdf(rayleigh->sun_direction.normalized(), direction.normalized(), exponent);
+        return p_uniform * uniform_pdf + p_sun * sun_pdf;
+    }
+
+    if (m_environment_sampler_type == ENV_SAMPLER_ERP && m_environment_erp) {
+        return m_environment_erp->pdf_direction(direction);
+    }
+
+    if (m_environment_sampler_type == ENV_SAMPLER_CUBEMAP && m_environment_cubemap) {
+        return m_environment_cubemap->pdf_direction(direction);
+    }
+
+    return xtcore::math::sampling::uniform_sphere_pdf();
 }
 
 const ColorRGBf &Scene::ambient()
@@ -426,6 +570,16 @@ void Scene::rebuild_spatial_index()
     m_spatial_index_dirty = false;
 }
 
+void Scene::collect_tlas_aabbs(std::vector<AABB3> &out)
+{
+    if (m_spatial_index_dirty) rebuild_spatial_index();
+    out.clear();
+    out.reserve(m_tlas_nodes.size());
+    for (size_t i = 0; i < m_tlas_nodes.size(); ++i) {
+        out.push_back(m_tlas_nodes[i].aabb);
+    }
+}
+
 bool Scene::intersection(const Ray &ray, hit_record_t &hit_record)
 {
     if (m_spatial_index_dirty) rebuild_spatial_index();
@@ -451,11 +605,16 @@ bool Scene::intersection(const Ray &ray, hit_record_t &hit_record)
 
                     auto obj_it = m_objects.find(object_id);
                     if (obj_it == m_objects.end() || !obj_it->second) continue;
+                    xtcore::asset::Object *obj = obj_it->second;
+                    xtcore::asset::ISurface *surface = obj->ptr_surface;
+                    if (!surface) {
+                        auto surf_it = m_surface.find(obj->surface);
+                        if (surf_it == m_surface.end() || !surf_it->second) continue;
+                        surface = surf_it->second;
+                        obj->ptr_surface = surface;
+                    }
 
-                    auto surf_it = m_surface.find(obj_it->second->surface);
-                    if (surf_it == m_surface.end() || !surf_it->second) continue;
-
-                    if (surf_it->second->intersection(ray, &test) && res.t > test.t) {
+                    if (surface->intersection(ray, &test) && res.t > test.t) {
                         hit = true;
                         res = test;
                         res.id_object = object_id;
@@ -474,11 +633,16 @@ bool Scene::intersection(const Ray &ray, hit_record_t &hit_record)
 
         auto obj_it = m_objects.find(object_id);
         if (obj_it == m_objects.end() || !obj_it->second) continue;
+        xtcore::asset::Object *obj = obj_it->second;
+        xtcore::asset::ISurface *surface = obj->ptr_surface;
+        if (!surface) {
+            auto surf_it = m_surface.find(obj->surface);
+            if (surf_it == m_surface.end() || !surf_it->second) continue;
+            surface = surf_it->second;
+            obj->ptr_surface = surface;
+        }
 
-        auto surf_it = m_surface.find(obj_it->second->surface);
-        if (surf_it == m_surface.end() || !surf_it->second) continue;
-
-        if (surf_it->second->intersection(ray, &test) && res.t > test.t) {
+        if (surface->intersection(ray, &test) && res.t > test.t) {
             hit = true;
             res = test;
             res.id_object = object_id;

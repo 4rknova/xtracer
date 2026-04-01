@@ -25,6 +25,7 @@
 #define XTPROTO_LTRL_DODECAHEDRON   "dodecahedron"      /* string     */ /* Dodecahedron */
 #define XTPROTO_LTRL_PYRAMID        "pyramid"           /* string     */ /* Pyramid */
 #define XTPROTO_LTRL_RING           "ring"              /* string     */ /* Ring (torus) */
+#define XTPROTO_LTRL_ROUNDED_RING   "rounded_ring"      /* string     */ /* Rounded ring */
 #define XTPROTO_LTRL_SNOWFLAKE      "snowflake"         /* string     */ /* Koch snowflake */
 #define XTPROTO_LTRL_CAPSULE        "capsule"           /* string     */ /* Capsule */
 #define XTPROTO_LTRL_CAPPED_CYLINDER "capped_cylinder"  /* string     */ /* Capped cylinder */
@@ -46,6 +47,8 @@
 #define XTPROTO_LTRL_ROCK			"rock"				/* string     */ /* Rock */
 #define XTPROTO_LTRL_CHAIN_LINK		"chain_link"		/* string     */ /* Chain links */
 #define XTPROTO_LTRL_LATHE			"lathe"				/* string     */ /* Lathe */
+#define XTPROTO_LTRL_TERRAIN        "terrain"           /* string     */ /* Terrain */
+#define XTPROTO_LTRL_DRAPED_CLOTH_STRIP "draped_cloth_strip" /* string */ /* Draped cloth strip */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -116,6 +119,12 @@
 #define XTPROTO_LTRL_BLINNPHONG		"blinn_phong"		/* string     */ /* BRDF: Blinn Phong */
 #define XTPROTO_LTRL_EMISSIVE		"emissive"	     	/* string     */ /* BRDF: Emissive */
 #define XTPROTO_LTRL_DIELECTRIC     "dielectric"        /* string     */ /* BRDF: Dielectric */
+#define XTPROTO_LTRL_PRINCIPLED     "principled"        /* string     */ /* BRDF: GGX principled */
+#define XTPROTO_LTRL_ROUGH_DIELECTRIC "rough_dielectric" /* string    */ /* BRDF: Rough dielectric */
+#define XTPROTO_LTRL_THIN_DIELECTRIC "thin_dielectric"  /* string     */ /* BRDF: Thin dielectric sheet */
+#define XTPROTO_LTRL_SUBSURFACE    "subsurface"         /* string     */ /* BRDF: Pragmatic subsurface */
+#define XTPROTO_LTRL_SHEEN        "sheen"              /* string     */ /* BRDF: Cloth-like sheen */
+#define XTPROTO_LTRL_THIN_TRANSLUCENT "thin_translucent" /* string    */ /* BRDF: Thin translucent sheet */
 #define XTPROTO_LTRL_BOUNDARY       "boundary"          /* string     */ /* Interface-only boundary */
 #define XTPROTO_LTRL_HOMOGENEOUS    "homogeneous"       /* string     */ /* Homogeneous medium */
 #define XTPROTO_LTRL_HETEROGENEOUS_NOISE "heterogeneous_noise" /* string */ /* Procedural heterogeneous medium */
@@ -153,6 +162,11 @@
 #define XTPROTO_PROP_JULIA_C        "julia_c"           /* Vector3f   */ /* Julia constant */
 #define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
 #define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
+#define XTPROTO_PROP_PROFILE_RESOLUTION "profile_resolution" /* integer */ /* Profile resolution */
+#define XTPROTO_PROP_CAP_TOP        "cap_top"           /* string     */ /* Top cap profile */
+#define XTPROTO_PROP_CAP_BOTTOM     "cap_bottom"        /* string     */ /* Bottom cap profile */
+#define XTPROTO_PROP_CAP_ROUNDNESS  "cap_roundness"     /* scalar_t   */ /* Rounded cap radius */
+#define XTPROTO_PROP_CAP_RESOLUTION "cap_resolution"    /* integer    */ /* Rounded cap tessellation */
 #define XTPROTO_PROP_OCTAVES        "octaves"           /* integer    */ /* Octave count */
 #define XTPROTO_PROP_COUNT          "count"             /* integer    */ /* Count */
 #define XTPROTO_PROP_MAJOR_RADIUS   "major_radius"      /* scalar_t   */ /* Major radius */
@@ -163,6 +177,8 @@
 #define XTPROTO_PROP_SPLINE         "spline"            /* group      */ /* Spline */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
+#define XTPROTO_LTRL_FLAT           "flat"              /* string     */ /* Flat profile */
+#define XTPROTO_LTRL_ROUND          "round"             /* string     */ /* Rounded profile */
 #define XTPROTO_PROP_VRTXDATA		"vecdata"			/* group      */ /* Vertex data */
 #define XTPROTO_PROP_OP				"op"				/* string     */ /* CSG boolean operator */
 #define XTPROTO_PROP_SMOOTHNESS		"smoothness"		/* scalar_t   */ /* CSG soft union smoothing */
@@ -200,6 +216,7 @@
 #define XTPROTO_WEAVE               "weave"
 #define XTPROTO_FBM_MARBLE          "fbm_marble"
 #define XTPROTO_VORONOI_NORMAL      "voronoi_normal"
+#define XTPROTO_SCENERY_HEIGHTFIELD "scenery_heightfield"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"
@@ -210,5 +227,6 @@
 #define XTPROTO_MODIFIERS           "modifiers"
 #define XTPROTO_EXTRUDE             "extrude"
 #define XTPROTO_MULTIPLIER          "multiplier"
+#define XTPROTO_PROP_HEIGHT_SAMPLER "height_sampler"
 
 #endif /* XTCORE_PROTO_H_INCLUDED */

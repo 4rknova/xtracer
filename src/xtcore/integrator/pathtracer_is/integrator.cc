@@ -22,13 +22,7 @@ namespace xtcore {
 
 namespace {
 
-struct area_light_t
-{
-    HASH_ID object_id;
-    const xtcore::asset::ISurface *surface;
-    const xtcore::asset::IMaterial *material;
-    nmath::scalar_t area;
-};
+typedef Integrator::area_light_t area_light_t;
 
 inline nmath::scalar_t triangle_area(const nmath::Vector3f &a, const nmath::Vector3f &b, const nmath::Vector3f &c)
 {
@@ -91,15 +85,13 @@ inline void collect_area_lights(xtcore::render::context_t *ctx, std::vector<area
 
 inline void sample_barycentric(nmath::scalar_t &b0, nmath::scalar_t &b1, nmath::scalar_t &b2)
 {
-    b0 = nmath::prng_c(0.0, 1.0);
-    b1 = nmath::prng_c(0.0, 1.0);
-    b2 = nmath::prng_c(0.0, 1.0);
-    const nmath::scalar_t sum = b0 + b1 + b2;
-    if (sum > (nmath::scalar_t)EPSILON) {
-        b0 /= sum;
-        b1 /= sum;
-        b2 /= sum;
-    }
+    const nmath::scalar_t u = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t v = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t su = nmath_sqrt(std::max((nmath::scalar_t)0.0, u));
+
+    b0 = (nmath::scalar_t)1.0 - su;
+    b1 = su * ((nmath::scalar_t)1.0 - v);
+    b2 = su * v;
 }
 
 inline bool sample_light_point(const area_light_t &light, nmath::Vector3f &point, nmath::Vector3f &normal, nmath::Vector3f &texcoord, nmath::scalar_t &pdf_area)
@@ -214,16 +206,25 @@ inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath
 
 } // namespace
 
+void Integrator::setup_auxiliary()
+{
+    m_lights.clear();
+    m_light_index_by_objid.clear();
+    collect_area_lights(ctx, m_lights);
+    for (size_t i = 0; i < m_lights.size(); ++i) {
+        m_light_index_by_objid[m_lights[i].object_id] = i;
+    }
+}
+
+void Integrator::clean_auxiliary()
+{
+    m_lights.clear();
+    m_light_index_by_objid.clear();
+}
+
 nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 {
     if (depth == 0) return nimg::ColorRGBf(0, 0, 0);
-
-    std::vector<area_light_t> lights;
-    collect_area_lights(ctx, lights);
-    std::map<HASH_ID, size_t> light_index_by_objid;
-    for (size_t i = 0; i < lights.size(); ++i) {
-        light_index_by_objid[lights[i].object_id] = i;
-    }
 
     nimg::ColorRGBf radiance(0, 0, 0);
     nimg::ColorRGBf throughput = in.intensity;
@@ -255,12 +256,12 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             if (scatter) {
                 throughput *= xtcore::medium::scattering_weight(*medium, event_pos);
 
-                if (!lights.empty()) {
-                    const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
-                    size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)lights.size());
-                    if (light_idx >= lights.size()) light_idx = lights.size() - 1;
+                if (!m_lights.empty()) {
+                    const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)m_lights.size();
+                    size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)m_lights.size());
+                    if (light_idx >= m_lights.size()) light_idx = m_lights.size() - 1;
 
-                    const area_light_t &light = lights[light_idx];
+                    const area_light_t &light = m_lights[light_idx];
                     nmath::Vector3f lp, ln, ltc;
                     nmath::scalar_t p_area = 0.0;
                     if (sample_light_point(light, lp, ln, ltc, p_area)) {
@@ -316,15 +317,15 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             nimg::ColorRGBf le = m->get_sample(MAT_SAMPLER_EMISSIVE, hit_record.texcoord);
             nmath::scalar_t mis_w = 1.0;
 
-            if (bounce > 0 && prev_was_diffuse_sample && !lights.empty()) {
-                auto lit = light_index_by_objid.find(hit_record.id_object);
-                if (lit != light_index_by_objid.end()) {
-                    const area_light_t &light = lights[(*lit).second];
+            if (bounce > 0 && prev_was_diffuse_sample && !m_lights.empty()) {
+                auto lit = m_light_index_by_objid.find(hit_record.id_object);
+                if (lit != m_light_index_by_objid.end()) {
+                    const area_light_t &light = m_lights[(*lit).second];
                     const nmath::scalar_t cos_light = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, -ray.direction));
                     const nmath::Vector3f d = hit_record.point - prev_point;
                     const nmath::scalar_t dist2 = d.length_squared();
                     if (cos_light > (nmath::scalar_t)EPSILON && dist2 > (nmath::scalar_t)EPSILON) {
-                        const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
+                        const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)m_lights.size();
                         const nmath::scalar_t p_area = 1.0 / light.area;
                         const nmath::scalar_t p_light = p_select * p_area * dist2 / cos_light;
                         mis_w = power_heuristic(prev_bsdf_pdf, p_light);
@@ -340,11 +341,11 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         const nmath::scalar_t kd_luma = nimg::eval::luminance(kd);
 
         if (kd_luma > (nmath::scalar_t)0.0) {
-            if (!lights.empty()) {
-                const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)lights.size();
-                size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)lights.size());
-                if (light_idx >= lights.size()) light_idx = lights.size() - 1;
-                const area_light_t &light = lights[light_idx];
+            if (!m_lights.empty()) {
+                const nmath::scalar_t p_select = 1.0 / (nmath::scalar_t)m_lights.size();
+                size_t light_idx = (size_t)(nmath::prng_c(0.0, 1.0) * (nmath::scalar_t)m_lights.size());
+                if (light_idx >= m_lights.size()) light_idx = m_lights.size() - 1;
+                const area_light_t &light = m_lights[light_idx];
 
                 nmath::Vector3f lp, ln, ltc;
                 nmath::scalar_t p_area = 0.0;

@@ -47,6 +47,7 @@
 #include "sampler/sampler_fbm_marble.h"
 #include "sampler/sampler_rayleigh_sky.h"
 #include "sampler/sampler_voronoi_normal.h"
+#include "sampler/sampler_scenery_heightfield.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -172,6 +173,83 @@ xtcore::sampler::ISampler *create_sampler(const char *base,
                                           const char *texture,
                                           float value[3],
                                           bool white_fallback_on_missing = false);
+xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::NCF *p);
+xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF *p);
+xtcore::sampler::ERP *deserialize_erp(const char *source, const ncf::NCF *p);
+xtcore::sampler::Gradient *deserialize_gradient(const ncf::NCF *p);
+xtcore::sampler::RayleighSky *deserialize_rayleigh_sky(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_rgba(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_graphpaper(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_checker(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_weave(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_fbm_marble(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_voronoi_normal(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_scenery_heightfield(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const ncf::NCF *p);
+
+static void apply_heightfield_to_mesh(nmesh::object_t &obj,
+                                      const xtcore::sampler::ISampler *height_sampler,
+                                      const nmath::Vector3f &dimensions)
+{
+    if (!height_sampler) return;
+    const size_t vertex_count = obj.attributes.v.size() / 3;
+    if (vertex_count == 0) return;
+
+    const size_t side = (size_t)(std::sqrt((double)vertex_count) + 0.5);
+    if (side < 2 || side * side != vertex_count) return;
+
+    const size_t seg = side - 1;
+    const nmath::scalar_t width = std::max((nmath::scalar_t)0.1, dimensions.x);
+    const nmath::scalar_t amplitude = std::max((nmath::scalar_t)0.0, dimensions.y);
+    const nmath::scalar_t depth = std::max((nmath::scalar_t)0.1, dimensions.z);
+
+    std::vector<nmath::scalar_t> heights(vertex_count, (nmath::scalar_t)0.0);
+
+    for (size_t z = 0; z <= seg; ++z) {
+        const nmath::scalar_t vz = (nmath::scalar_t)z / (nmath::scalar_t)seg;
+        for (size_t x = 0; x <= seg; ++x) {
+            const nmath::scalar_t vx = (nmath::scalar_t)x / (nmath::scalar_t)seg;
+            const nmath::scalar_t px = (vx - (nmath::scalar_t)0.5) * width;
+            const nmath::scalar_t pz = (vz - (nmath::scalar_t)0.5) * depth;
+            const nimg::ColorRGBf sample = height_sampler->sample(nmath::Vector3f(px, (nmath::scalar_t)0.0, pz));
+            const nmath::scalar_t h = (((nmath::scalar_t)sample.r() + (nmath::scalar_t)sample.g() + (nmath::scalar_t)sample.b()) / (nmath::scalar_t)3.0);
+            heights[z * side + x] = (h * (nmath::scalar_t)2.0 - (nmath::scalar_t)1.0) * amplitude;
+            obj.attributes.v[(z * side + x) * 3 + 0] = (float)px;
+            obj.attributes.v[(z * side + x) * 3 + 1] = (float)heights[z * side + x];
+            obj.attributes.v[(z * side + x) * 3 + 2] = (float)pz;
+            if (obj.attributes.uv.size() >= (z * side + x) * 2 + 2) {
+                obj.attributes.uv[(z * side + x) * 2 + 0] = (float)vx;
+                obj.attributes.uv[(z * side + x) * 2 + 1] = (float)vz;
+            }
+        }
+    }
+
+    const nmath::scalar_t dx = width / (nmath::scalar_t)seg;
+    const nmath::scalar_t dz = depth / (nmath::scalar_t)seg;
+    for (size_t z = 0; z <= seg; ++z) {
+        for (size_t x = 0; x <= seg; ++x) {
+            const size_t xl = (x > 0) ? x - 1 : x;
+            const size_t xr = (x < seg) ? x + 1 : x;
+            const size_t zd = (z > 0) ? z - 1 : z;
+            const size_t zu = (z < seg) ? z + 1 : z;
+
+            const nmath::scalar_t h_l = heights[z * side + xl];
+            const nmath::scalar_t h_r = heights[z * side + xr];
+            const nmath::scalar_t h_d = heights[zd * side + x];
+            const nmath::scalar_t h_u = heights[zu * side + x];
+
+            nmath::Vector3f normal(-(h_r - h_l) / std::max((nmath::scalar_t)1e-6, (nmath::scalar_t)2.0 * dx),
+                                    (nmath::scalar_t)1.0,
+                                   -(h_u - h_d) / std::max((nmath::scalar_t)1e-6, (nmath::scalar_t)2.0 * dz));
+            if (normal.length() <= (nmath::scalar_t)EPSILON) normal = nmath::Vector3f(0.0f, 1.0f, 0.0f);
+            normal.normalize();
+
+            obj.attributes.n[(z * side + x) * 3 + 0] = (float)normal.x;
+            obj.attributes.n[(z * side + x) * 3 + 1] = (float)normal.y;
+            obj.attributes.n[(z * side + x) * 3 + 2] = (float)normal.z;
+        }
+    }
+}
 
 namespace {
 
@@ -882,7 +960,46 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
                 if (hres < 1) hres = 1;
             }
 
-            nmesh::generator::ring(&obj, (size_t)i, radius, height, thickness, (size_t)hres);
+            nmesh::generator::ring(&obj,
+                                   (size_t)i,
+                                   radius,
+                                   height,
+                                   thickness,
+                                   (size_t)hres);
+        }
+        else if (!token.compare(XTPROTO_LTRL_ROUNDED_RING)) {
+            int i = 0;
+            float radius = 1.0f;
+            float height = 0.64f;
+            float thickness = -1.0f;
+            int pres = 18;
+
+            if (p) {
+                i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
+                if (i < 24) i = 24;
+
+                radius = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), radius);
+                if (radius <= 0.0f) radius = 1.0f;
+
+                height = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_HEIGHT), height);
+                if (height <= 0.0f) height = 0.64f;
+
+                thickness = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_THICKNESS), thickness);
+                if (thickness <= 0.0f) thickness = -1.0f;
+
+                pres = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_PROFILE_RESOLUTION), pres);
+                if (pres < 8) {
+                    pres = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_CAP_RESOLUTION), pres);
+                }
+                if (pres < 8) pres = 8;
+            }
+
+            nmesh::generator::rounded_ring(&obj,
+                                           (size_t)i,
+                                           radius,
+                                           height,
+                                           thickness,
+                                           (size_t)pres);
         }
         else if (!token.compare(XTPROTO_LTRL_TORUS_KNOT)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 48);
@@ -986,6 +1103,46 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             if (octaves_i > 8) octaves_i = 8;
 
             nmesh::generator::rock(&obj, (size_t)i, seed, radius, roughness, (size_t)octaves_i);
+        }
+        else if (!token.compare(XTPROTO_LTRL_TERRAIN)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 128);
+            if (i < 2) i = 2;
+            if (i > 1024) i = 1024;
+
+            nmath::Vector3f dimensions = deserialize_vec3(p, XTPROTO_PROP_DIMENSIONS, nmath::Vector3f(8.0f, 1.5f, 8.0f));
+            if (dimensions.x <= 0.0f) dimensions.x = 8.0f;
+            if (dimensions.y < 0.0f) dimensions.y = 1.5f;
+            if (dimensions.z <= 0.0f) dimensions.z = 8.0f;
+            nmesh::generator::plane(&obj, (size_t)i);
+
+            xtcore::sampler::ISampler *height_sampler = 0;
+            if (p && p->query_group(XTPROTO_PROP_HEIGHT_SAMPLER)) {
+                height_sampler = deserialize_sampler_node(source, p->get_group_by_name(XTPROTO_PROP_HEIGHT_SAMPLER));
+            }
+            if (!height_sampler) {
+                height_sampler = new (std::nothrow) xtcore::sampler::SceneryHeightfield();
+            }
+            apply_heightfield_to_mesh(obj, height_sampler, dimensions);
+            delete height_sampler;
+        }
+        else if (!token.compare(XTPROTO_LTRL_DRAPED_CLOTH_STRIP)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 96);
+            if (i < 8) i = 8;
+            if (i > 512) i = 512;
+
+            nmath::Vector3f dimensions = deserialize_vec3(p, XTPROTO_PROP_DIMENSIONS, nmath::Vector3f(2.0f, 0.9f, 3.2f));
+            if (dimensions.x <= 0.0f) dimensions.x = 2.0f;
+            if (dimensions.y < 0.0f) dimensions.y = 0.9f;
+            if (dimensions.z <= 0.0f) dimensions.z = 3.2f;
+
+            float folds = (float)deserialize_numf(p ? p->get_property_by_name("folds") : 0, 3.0f);
+            float edge_lift = (float)deserialize_numf(p ? p->get_property_by_name("edge_lift") : 0, 0.18f);
+            float curl = (float)deserialize_numf(p ? p->get_property_by_name("curl") : 0, 0.28f);
+            float taper = (float)deserialize_numf(p ? p->get_property_by_name("taper") : 0, 0.12f);
+            float sway = (float)deserialize_numf(p ? p->get_property_by_name("sway") : 0, 0.20f);
+            float asymmetry = (float)deserialize_numf(p ? p->get_property_by_name("asymmetry") : 0, 0.0f);
+            float pinned = (float)deserialize_numf(p ? p->get_property_by_name("pinned") : 0, 0.55f);
+            nmesh::generator::draped_cloth_strip(&obj, (size_t)i, dimensions, folds, edge_lift, curl, taper, sway, asymmetry, pinned);
         }
         else if (!token.compare(XTPROTO_LTRL_CHAIN_LINK)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
@@ -1450,6 +1607,42 @@ xtcore::sampler::ISampler *deserialize_voronoi_normal(const ncf::NCF *p)
     return sampler;
 }
 
+xtcore::sampler::ISampler *deserialize_scenery_heightfield(const ncf::NCF *p)
+{
+    xtcore::sampler::SceneryHeightfield *sampler = new (std::nothrow) xtcore::sampler::SceneryHeightfield();
+    if (!sampler || !p) return sampler;
+
+    sampler->seed = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), sampler->seed);
+    sampler->scale = deserialize_numf(p->get_property_by_name("scale"), sampler->scale);
+    sampler->octaves = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_OCTAVES), sampler->octaves);
+    sampler->lacunarity = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_LACUNARITY), sampler->lacunarity);
+    sampler->gain = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_GAIN), sampler->gain);
+    sampler->ridge_strength = deserialize_numf(p->get_property_by_name("ridge_strength"), sampler->ridge_strength);
+    sampler->mountain_strength = deserialize_numf(p->get_property_by_name("mountain_strength"), sampler->mountain_strength);
+    sampler->valley_strength = deserialize_numf(p->get_property_by_name("valley_strength"), sampler->valley_strength);
+    return sampler;
+}
+
+xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const ncf::NCF *entry)
+{
+    if (!entry) return 0;
+    std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
+
+         if (!type.compare(XTPROTO_TEXTURE )) return deserialize_texture(source, entry);
+    else if (!type.compare(XTPROTO_CUBEMAP )) return deserialize_cubemap(source, entry);
+    else if (!type.compare(XTPROTO_ERP     )) return deserialize_erp(source, entry);
+    else if (!type.compare(XTPROTO_GRADIENT)) return deserialize_gradient(entry);
+    else if (!type.compare(XTPROTO_RAYLEIGH_SKY)) return deserialize_rayleigh_sky(entry);
+    else if (!type.compare(XTPROTO_GRAPHPAPER)) return deserialize_graphpaper(entry);
+    else if (!type.compare(XTPROTO_CHECKER)) return deserialize_checker(entry);
+    else if (!type.compare(XTPROTO_WEAVE)) return deserialize_weave(entry);
+    else if (!type.compare(XTPROTO_FBM_MARBLE)) return deserialize_fbm_marble(entry);
+    else if (!type.compare(XTPROTO_VORONOI_NORMAL)) return deserialize_voronoi_normal(entry);
+    else if (!type.compare(XTPROTO_SCENERY_HEIGHTFIELD)) return deserialize_scenery_heightfield(entry);
+    else if (!type.compare(XTPROTO_COLOR)) return deserialize_rgba(entry);
+    return 0;
+}
+
 xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NCF *p)
 {
 	if (!p) return 0;
@@ -1463,6 +1656,12 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
 	else if (!type.compare(XTPROTO_LTRL_BLINNPHONG)) data = new (std::nothrow) xtcore::asset::material::BlinnPhong();
 	else if (!type.compare(XTPROTO_LTRL_EMISSIVE)  ) data = new (std::nothrow) xtcore::asset::material::Emissive();
 	else if (!type.compare(XTPROTO_LTRL_DIELECTRIC)) data = new (std::nothrow) xtcore::asset::material::Dielectric();
+    else if (!type.compare(XTPROTO_LTRL_PRINCIPLED)) data = new (std::nothrow) xtcore::asset::material::Principled();
+    else if (!type.compare(XTPROTO_LTRL_ROUGH_DIELECTRIC)) data = new (std::nothrow) xtcore::asset::material::RoughDielectric();
+    else if (!type.compare(XTPROTO_LTRL_THIN_DIELECTRIC)) data = new (std::nothrow) xtcore::asset::material::ThinDielectric();
+    else if (!type.compare(XTPROTO_LTRL_SUBSURFACE)) data = new (std::nothrow) xtcore::asset::material::Subsurface();
+    else if (!type.compare(XTPROTO_LTRL_SHEEN)) data = new (std::nothrow) xtcore::asset::material::Sheen();
+    else if (!type.compare(XTPROTO_LTRL_THIN_TRANSLUCENT)) data = new (std::nothrow) xtcore::asset::material::ThinTranslucent();
     else if (!type.compare(XTPROTO_LTRL_BOUNDARY  )) data = new (std::nothrow) xtcore::asset::material::Boundary();
 	else {
 		Log::handle().post_warning("Unsupported material %s. Skipping..", p->get_name());
@@ -1479,21 +1678,7 @@ xtcore::asset::IMaterial *deserialize_material(const char *source, const ncf::NC
             for (size_t i = 0; i < gsamplers->count_groups(); ++i) {
                 ncf::NCF *entry = gsamplers->get_group_by_index(i);
 
-                xtcore::sampler::ISampler *sampler = 0;
-                std::string type = deserialize_cstr(entry->get_property_by_name(XTPROTO_PROP_TYPE));
-
-                     if (!type.compare(XTPROTO_TEXTURE )) sampler = deserialize_texture (source, entry);
-                else if (!type.compare(XTPROTO_CUBEMAP     )) sampler = deserialize_cubemap     (source, entry);
-                else if (!type.compare(XTPROTO_ERP         )) sampler = deserialize_erp         (source, entry);
-                else if (!type.compare(XTPROTO_GRADIENT    )) sampler = deserialize_gradient    (entry);
-                else if (!type.compare(XTPROTO_RAYLEIGH_SKY)) sampler = deserialize_rayleigh_sky(entry);
-                else if (!type.compare(XTPROTO_GRAPHPAPER)) sampler = deserialize_graphpaper(entry);
-                else if (!type.compare(XTPROTO_CHECKER)) sampler = deserialize_checker(entry);
-                else if (!type.compare(XTPROTO_WEAVE)) sampler = deserialize_weave(entry);
-                else if (!type.compare(XTPROTO_FBM_MARBLE)) sampler = deserialize_fbm_marble(entry);
-                else if (!type.compare(XTPROTO_VORONOI_NORMAL)) sampler = deserialize_voronoi_normal(entry);
-                else if (!type.compare(XTPROTO_COLOR   )) sampler = deserialize_rgba    (entry);
-
+                xtcore::sampler::ISampler *sampler = deserialize_sampler_node(source, entry);
                 data->add_sampler(entry->get_name(), sampler);
             }
         }

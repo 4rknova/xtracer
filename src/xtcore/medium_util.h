@@ -157,13 +157,35 @@ inline bool surface_first_hit(const xtcore::asset::ISurface *surface,
     return false;
 }
 
+inline int surface_intersection_count(const xtcore::asset::ISurface *surface,
+                                      const nmath::Vector3f &origin,
+                                      const nmath::Vector3f &direction,
+                                      int max_hits = 128)
+{
+    if (!surface) return 0;
+    if (direction.length_squared() <= (nmath::scalar_t)EPSILON) return 0;
+
+    const nmath::Vector3f dir = direction.normalized();
+    const nmath::scalar_t eps = (nmath::scalar_t)EPSILON;
+    nmath::Vector3f probe_origin = origin + dir * (eps * (nmath::scalar_t)8.0);
+    int hits = 0;
+
+    for (int i = 0; i < max_hits; ++i) {
+        xtcore::hit_record_t hit;
+        if (!surface_first_hit(surface, probe_origin, dir, hit)) break;
+        if (hit.t <= eps) break;
+        ++hits;
+        probe_origin = hit.point + dir * (eps * (nmath::scalar_t)8.0);
+    }
+
+    return hits;
+}
+
 inline bool is_inside_medium(const xtcore::Scene &scene, HASH_ID object_id, const nmath::Vector3f &p)
 {
     const xtcore::asset::ISurface *surface = get_medium_surface(scene, object_id);
     if (!surface) return false;
 
-    // For closed, consistently oriented boundaries, the first hit normal faces with the ray
-    // when starting inside and against the ray when starting outside.
     static const nmath::Vector3f k_probe_dirs[] = {
         nmath::Vector3f(1.0f, 0.0f, 0.0f),
         nmath::Vector3f(0.0f, 1.0f, 0.0f),
@@ -172,13 +194,17 @@ inline bool is_inside_medium(const xtcore::Scene &scene, HASH_ID object_id, cons
         nmath::Vector3f(-0.456f, 0.812f, -0.364f)
     };
 
+    int inside_votes = 0;
+    int valid_votes = 0;
     for (size_t i = 0; i < sizeof(k_probe_dirs) / sizeof(k_probe_dirs[0]); ++i) {
-        xtcore::hit_record_t hit;
-        if (!surface_first_hit(surface, p, k_probe_dirs[i], hit)) continue;
-        return nmath::dot(hit.normal, k_probe_dirs[i]) > (nmath::scalar_t)0.0;
+        const int hits = surface_intersection_count(surface, p, k_probe_dirs[i]);
+        if (hits <= 0) continue;
+        ++valid_votes;
+        if ((hits & 1) != 0) ++inside_votes;
     }
 
-    return false;
+    if (valid_votes <= 0) return false;
+    return inside_votes * 2 >= valid_votes;
 }
 
 inline bool distance_to_medium_boundary(const xtcore::Scene &scene,

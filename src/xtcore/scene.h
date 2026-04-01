@@ -24,6 +24,12 @@ using nimg::ColorRGBf;
 
 namespace xtcore {
 
+namespace sampler {
+class Cubemap;
+class ERP;
+class RayleighSky;
+}
+
 typedef std::map<HASH_UINT64, xtcore::asset::ICamera   *> CamCollection;
 typedef std::map<HASH_UINT64, xtcore::asset::IMaterial *> MatCollection;
 typedef std::map<HASH_UINT64, xtcore::asset::ISurface  *> GeoCollection;
@@ -76,9 +82,12 @@ class Scene
     void clear_object_medium(HASH_UINT64 object_id);
 
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
+    bool sample_environment_direction(Vector3f &direction, nmath::scalar_t &pdf, nimg::ColorRGBf &radiance) const;
+    nmath::scalar_t sample_environment_pdf(const Vector3f &direction) const;
 	bool intersection(const Ray &ray, hit_record_t &hit_record);
     void rebuild_spatial_index();
     void mark_spatial_index_dirty();
+    void collect_tlas_aabbs(std::vector<AABB3> &out);
 
 	int destroy_camera   (HASH_UINT64 id);
 	int destroy_material (HASH_UINT64 id);
@@ -105,9 +114,17 @@ class Scene
     xtcore::sampler::ISampler *m_environment;
 
 	// This will cleanup all the allocated memory
-	void release();
+    void release();
 
     private:
+    enum environment_sampler_type_t {
+        ENV_SAMPLER_UNKNOWN = 0,
+        ENV_SAMPLER_GENERIC,
+        ENV_SAMPLER_CUBEMAP,
+        ENV_SAMPLER_ERP,
+        ENV_SAMPLER_RAYLEIGH_SKY
+    };
+
     struct tlas_item_t {
         HASH_ID object_id;
         AABB3 aabb;
@@ -126,11 +143,17 @@ class Scene
     bool intersects_node(const AABB3 &aabb, const Ray &ray) const;
     int build_tlas_node(size_t first, size_t count);
     void update_tlas_node_bounds(tlas_node_t &node);
+    void sync_environment_sampler_cache() const;
 
     bool m_spatial_index_dirty;
     std::vector<tlas_item_t> m_tlas_items;
     std::vector<tlas_node_t> m_tlas_nodes;
     std::vector<HASH_ID> m_infinite_objects;
+    mutable xtcore::sampler::ISampler *m_environment_cached_base;
+    mutable const xtcore::sampler::Cubemap *m_environment_cubemap;
+    mutable const xtcore::sampler::ERP *m_environment_erp;
+    mutable const xtcore::sampler::RayleighSky *m_environment_rayleigh_sky;
+    mutable environment_sampler_type_t m_environment_sampler_type;
 };
 
 } /* namespace xtcore */

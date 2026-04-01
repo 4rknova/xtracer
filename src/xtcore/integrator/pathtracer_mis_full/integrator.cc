@@ -24,14 +24,7 @@ namespace xtcore {
 
 namespace {
 
-struct area_light_t
-{
-    HASH_ID object_id;
-    const xtcore::asset::ISurface *surface;
-    const xtcore::asset::IMaterial *material;
-    nmath::scalar_t area;
-    nmath::scalar_t select_weight;
-};
+typedef Integrator::area_light_t area_light_t;
 
 inline nmath::scalar_t triangle_area(const nmath::Vector3f &a,
                                      const nmath::Vector3f &b,
@@ -114,17 +107,37 @@ inline bool visible_to_light(xtcore::render::context_t *ctx,
     return false;
 }
 
+inline bool visible_to_environment(xtcore::render::context_t *ctx,
+                                   const nmath::Vector3f &origin,
+                                   const nmath::Vector3f &dir)
+{
+    xtcore::Ray shadow_ray;
+    shadow_ray.origin = origin + dir * EPSILON;
+    shadow_ray.direction = dir.normalized();
+
+    for (size_t step = 0; step < 16; ++step) {
+        xtcore::hit_record_t occ;
+        if (!ctx->scene.intersection(shadow_ray, occ)) return true;
+
+        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(occ.id_object);
+        if (!mat) return false;
+        if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
+
+        shadow_ray.origin = occ.point + shadow_ray.direction * EPSILON;
+    }
+
+    return false;
+}
+
 inline void sample_barycentric(nmath::scalar_t &b0, nmath::scalar_t &b1, nmath::scalar_t &b2)
 {
-    b0 = nmath::prng_c(0.0, 1.0);
-    b1 = nmath::prng_c(0.0, 1.0);
-    b2 = nmath::prng_c(0.0, 1.0);
-    const nmath::scalar_t sum = b0 + b1 + b2;
-    if (sum > (nmath::scalar_t)EPSILON) {
-        b0 /= sum;
-        b1 /= sum;
-        b2 /= sum;
-    }
+    const nmath::scalar_t u = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t v = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t su = nmath_sqrt(std::max((nmath::scalar_t)0.0, u));
+
+    b0 = (nmath::scalar_t)1.0 - su;
+    b1 = su * ((nmath::scalar_t)1.0 - v);
+    b2 = su * v;
 }
 
 inline bool sample_light_point(const area_light_t &light,
@@ -269,17 +282,28 @@ inline bool sample_light_index(const std::vector<nmath::scalar_t> &cdf,
 
 } // namespace
 
+void Integrator::setup_auxiliary()
+{
+    m_lights.clear();
+    m_light_cdf.clear();
+    m_light_select_pdf.clear();
+    m_light_weight_sum = 0.0;
+
+    collect_area_lights(ctx, m_lights);
+    prepare_light_distribution(m_lights, m_light_cdf, m_light_weight_sum, m_light_select_pdf);
+}
+
+void Integrator::clean_auxiliary()
+{
+    m_lights.clear();
+    m_light_cdf.clear();
+    m_light_select_pdf.clear();
+    m_light_weight_sum = 0.0;
+}
+
 nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 {
     if (depth == 0) return nimg::ColorRGBf(0, 0, 0);
-
-    std::vector<area_light_t> lights;
-    collect_area_lights(ctx, lights);
-
-    std::vector<nmath::scalar_t> light_cdf;
-    std::map<HASH_ID, nmath::scalar_t> light_select_pdf;
-    nmath::scalar_t light_weight_sum = 0.0;
-    prepare_light_distribution(lights, light_cdf, light_weight_sum, light_select_pdf);
 
     nimg::ColorRGBf radiance(0, 0, 0);
     nimg::ColorRGBf throughput = in.intensity;
@@ -312,11 +336,11 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             if (scatter) {
                 throughput *= xtcore::medium::scattering_weight(*medium, event_pos);
 
-                if (!lights.empty() && light_weight_sum > (nmath::scalar_t)EPSILON) {
+                if (!m_lights.empty() && m_light_weight_sum > (nmath::scalar_t)EPSILON) {
                     size_t light_idx = 0;
-                    if (sample_light_index(light_cdf, light_weight_sum, light_idx)) {
-                        const area_light_t &light = lights[light_idx];
-                        const nmath::scalar_t p_select = light.select_weight / light_weight_sum;
+                    if (sample_light_index(m_light_cdf, m_light_weight_sum, light_idx)) {
+                        const area_light_t &light = m_lights[light_idx];
+                        const nmath::scalar_t p_select = light.select_weight / m_light_weight_sum;
 
                         nmath::Vector3f lp, ln, ltc;
                         nmath::scalar_t p_area = 0.0;
@@ -366,7 +390,15 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         if (!hit) {
-            radiance += throughput * ctx->scene.sample_environment(ray.direction);
+            nimg::ColorRGBf le = ctx->scene.sample_environment(ray.direction);
+            nmath::scalar_t mis_w = 1.0;
+            if (bounce > 0 && !prev_bsdf_delta) {
+                const nmath::scalar_t p_env = ctx->scene.sample_environment_pdf(ray.direction);
+                if (p_env > (nmath::scalar_t)EPSILON) {
+                    mis_w = power_heuristic(prev_bsdf_pdf, p_env);
+                }
+            }
+            radiance += throughput * le * mis_w;
             break;
         }
 
@@ -378,9 +410,9 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             nimg::ColorRGBf le = m->get_sample(MAT_SAMPLER_EMISSIVE, hit_record.texcoord);
             nmath::scalar_t mis_w = 1.0;
 
-            if (bounce > 0 && !prev_bsdf_delta && !lights.empty()) {
-                auto lit = light_select_pdf.find(hit_record.id_object);
-                if (lit != light_select_pdf.end()) {
+            if (bounce > 0 && !prev_bsdf_delta && !m_lights.empty()) {
+                auto lit = m_light_select_pdf.find(hit_record.id_object);
+                if (lit != m_light_select_pdf.end()) {
                     const nmath::scalar_t cos_light = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, -ray.direction));
                     const nmath::Vector3f d = hit_record.point - prev_point;
                     const nmath::scalar_t dist2 = d.length_squared();
@@ -402,11 +434,11 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
         const nmath::Vector3f wo = (-ray.direction).normalized();
 
-        if (!lights.empty() && light_weight_sum > (nmath::scalar_t)EPSILON && !m->bsdf_is_delta()) {
+        if (!m_lights.empty() && m_light_weight_sum > (nmath::scalar_t)EPSILON && !m->bsdf_is_delta()) {
             size_t light_idx = 0;
-            if (sample_light_index(light_cdf, light_weight_sum, light_idx)) {
-                const area_light_t &light = lights[light_idx];
-                const nmath::scalar_t p_select = light.select_weight / light_weight_sum;
+            if (sample_light_index(m_light_cdf, m_light_weight_sum, light_idx)) {
+                const area_light_t &light = m_lights[light_idx];
+                const nmath::scalar_t p_select = light.select_weight / m_light_weight_sum;
 
                 nmath::Vector3f lp, ln, ltc;
                 nmath::scalar_t p_area = 0.0;
@@ -415,12 +447,12 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                     const nmath::scalar_t dist2 = to_light.length_squared();
                     if (dist2 > (nmath::scalar_t)EPSILON) {
                         const nmath::Vector3f wi = to_light / nmath_sqrt(dist2);
-                        const nmath::scalar_t cos_s = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, wi));
+                        const nmath::scalar_t cos_s = nmath_abs(nmath::dot(hit_record.normal, wi));
                         const nmath::scalar_t cos_l = std::max((nmath::scalar_t)0.0, nmath::dot(ln, -wi));
 
                         if (cos_s > (nmath::scalar_t)EPSILON &&
                             cos_l > (nmath::scalar_t)EPSILON &&
-                            visible_to_light(ctx, hit_record.point + hit_record.normal * EPSILON, lp, light.object_id)) {
+                            visible_to_light(ctx, hit_record.point + wi * EPSILON, lp, light.object_id)) {
                             nimg::ColorRGBf f;
                             nmath::scalar_t p_bsdf = 0.0;
                             if (m->bsdf_eval(hit_record, wo, wi, f, p_bsdf)) {
@@ -437,11 +469,30 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             }
         }
 
+        if (!m->bsdf_is_delta()) {
+            nmath::Vector3f env_dir;
+            nmath::scalar_t p_env = 0.0;
+            nimg::ColorRGBf le_env;
+            if (ctx->scene.sample_environment_direction(env_dir, p_env, le_env) &&
+                p_env > (nmath::scalar_t)EPSILON &&
+                visible_to_environment(ctx, hit_record.point + env_dir * EPSILON, env_dir)) {
+                const nmath::scalar_t cos_s = nmath_abs(nmath::dot(hit_record.normal, env_dir));
+                if (cos_s > (nmath::scalar_t)EPSILON) {
+                    nimg::ColorRGBf f_env;
+                    nmath::scalar_t p_bsdf_env = 0.0;
+                    if (m->bsdf_eval(hit_record, wo, env_dir, f_env, p_bsdf_env)) {
+                        const nmath::scalar_t mis_w = power_heuristic(p_env, p_bsdf_env);
+                        radiance += throughput * f_env * le_env * (cos_s / p_env) * mis_w;
+                    }
+                }
+            }
+        }
+
         nmath::Vector3f wi;
         nimg::ColorRGBf f;
         nmath::scalar_t bsdf_pdf = 0.0;
         if (!m->bsdf_is_delta() && m->bsdf_sample(hit_record, wo, wi, f, bsdf_pdf)) {
-            const nmath::scalar_t cos_theta = std::max((nmath::scalar_t)0.0, nmath::dot(hit_record.normal, wi));
+            const nmath::scalar_t cos_theta = nmath_abs(nmath::dot(hit_record.normal, wi));
             if (cos_theta <= (nmath::scalar_t)EPSILON || bsdf_pdf <= (nmath::scalar_t)EPSILON) break;
 
             throughput *= f * (cos_theta / bsdf_pdf);
@@ -449,7 +500,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             prev_bsdf_pdf = bsdf_pdf;
             prev_point = hit_record.point;
 
-            ray.origin = hit_record.point + hit_record.normal * EPSILON;
+            ray.origin = hit_record.point + wi * EPSILON;
             ray.direction = wi;
         } else {
             xtcore::hit_result_t next_hit;
