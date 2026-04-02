@@ -1,13 +1,22 @@
 title = Box Fog Density Variants
-description = Box-bounded fog with low/medium/high density variants, floor contact, and an overhead light.
+description = Box-bounded fog study with stronger volumetric lighting and clearer low/medium/high density reads.
 version = 1.0
 default_camera = hero
 
 environment = {
-    type = gradient
+    type = rayleigh_sky
     config = {
-        a = col3(0.72,0.84,1.00)
-        b = col3(0.05,0.10,0.26)
+        sun_direction = vec3(-0.38,0.74,-0.30)
+        sun_intensity = col3(18.0,16.0,13.0)
+        beta_rayleigh = col3(0.16,0.31,0.74)
+        ground_color = col3(0.030,0.032,0.040)
+        density = 1.15
+        horizon_falloff = 1.8
+        sun_disk_radius = 0.95
+        sun_disk_intensity = 1.1
+        sun_glow_radius = 8.0
+        sun_glow_intensity = 0.22
+        sun_glow_falloff = 3.0
     }
 }
 
@@ -135,7 +144,7 @@ material = {
         type = emissive
         properties = {
             samplers = {
-                emissive = { type = color, value = col3(1.0,1.0,1.0) }
+                emissive = { type = color, value = col3(60.0,60.0,60.0) }
             }
         }
     }
@@ -145,6 +154,15 @@ material = {
         properties = {
             samplers = {
                 diffuse = { type = color, value = col3(0.62,0.44,0.28) }
+            }
+        }
+    }
+
+    center_emissive = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(24.0,12.0,6.0) }
             }
         }
     }
@@ -161,24 +179,24 @@ medium = {
 
     fog_medium = {
         type = homogeneous
-        sigma_a = col3(0.014,0.018,0.026)
-        sigma_s = col3(0.50,0.62,0.82)
+        sigma_a = col3(0.006,0.008,0.012)
+        sigma_s = col3(0.18,0.24,0.34)
         g = 0.02
         emission = col3(0.00,0.00,0.00)
     }
 
     fog_high = {
         type = homogeneous
-        sigma_a = col3(0.045,0.060,0.085)
-        sigma_s = col3(1.90,2.30,3.10)
+        sigma_a = col3(0.020,0.028,0.040)
+        sigma_s = col3(0.55,0.72,0.98)
         g = 0.02
         emission = col3(0.00,0.00,0.00)
     }
 
     fog_noise = {
         type = heterogeneous_noise
-        sigma_a = col3(0.020,0.028,0.040)
-        sigma_s = col3(0.75,0.92,1.20)
+        sigma_a = col3(0.010,0.014,0.020)
+        sigma_s = col3(0.24,0.30,0.40)
         g = 0.02
         emission = col3(0.00,0.00,0.00)
         density = 1
@@ -211,6 +229,37 @@ object = {
 variants = {
     hide_base = true
 
+    debug = {
+        name = Debug Volume
+        description = Bright internal read for validating that the fog volume is actually scattering light.
+        set = {
+            material = {
+                light_emissive = {
+                    type = emissive
+                    properties = {
+                        samplers = {
+                            emissive = { type = color, value = col3(120.0,120.0,120.0) }
+                        }
+                    }
+                }
+            }
+            object = {
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_low }
+            }
+        }
+    }
+
+    emissive_center = {
+        name = Emissive Center
+        description = Makes the internal fractal emissive to verify in-volume glow and local scattering.
+        set = {
+            object = {
+                center = { geometry = center_julia, material = center_emissive }
+                fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_low }
+            }
+        }
+    }
+
     low = {
         name = Low Fog
         description = Light haze with long visibility through the volume.
@@ -223,7 +272,7 @@ variants = {
 
     medium = {
         name = Medium Fog
-        description = Balanced fog density for visible shafts and soft depth loss.
+        description = Moderate fog density with readable shafts and retained interior detail.
         set = {
             object = {
                 fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_medium }
@@ -233,7 +282,7 @@ variants = {
 
     high = {
         name = High Fog
-        description = Heavy fog with strong extinction and tighter light bloom.
+        description = Heavy fog with pronounced extinction while remaining visibly lit.
         set = {
             object = {
                 fog_box = { geometry = medium_box, material = medium_boundary, medium = fog_high }

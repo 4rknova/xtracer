@@ -46,6 +46,7 @@ class Integrator : public xtcore::render::IIntegrator
     private:
     std::vector<area_light_t> m_lights;
     std::vector<nmath::scalar_t> m_light_cdf;
+    std::map<HASH_ID, size_t> m_light_index_by_objid;
     std::map<HASH_ID, nmath::scalar_t> m_light_select_pdf;
     nmath::scalar_t m_light_weight_sum;
 };

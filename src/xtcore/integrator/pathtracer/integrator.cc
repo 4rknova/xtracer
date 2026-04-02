@@ -28,15 +28,28 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     nimg::ColorRGBf throughput = in.intensity;
     xtcore::Ray ray = in.ray;
     nmath::scalar_t ior = in.ior;
+    HASH_ID current_medium_object_id = HASH_ID_INVALID;
+    nmath::scalar_t current_medium_exit = INFINITY;
+    const xtcore::asset::medium::IMedium *current_medium =
+        xtcore::medium::find_containing_medium(ctx->scene, ray.origin, current_medium_object_id, current_medium_exit, ray.direction);
 
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit_record;
         const bool hit = ctx->scene.intersection(ray, hit_record);
         const nmath::scalar_t t_surface = hit ? hit_record.t : INFINITY;
 
-        HASH_ID medium_object_id = HASH_ID_INVALID;
         nmath::scalar_t t_exit = INFINITY;
-        const xtcore::asset::medium::IMedium *medium = xtcore::medium::find_containing_medium(ctx->scene, ray.origin, medium_object_id, t_exit, ray.direction);
+        const xtcore::asset::medium::IMedium *medium = current_medium;
+        if (medium) {
+            if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
+                current_medium_object_id = HASH_ID_INVALID;
+                current_medium_exit = INFINITY;
+                medium = 0;
+                current_medium = 0;
+            } else {
+                current_medium_exit = t_exit;
+            }
+        }
         if (medium) {
             const nmath::scalar_t segment_dist = std::min(t_surface, t_exit);
             const bool exits_before_surface = t_exit <= t_surface + (nmath::scalar_t)EPSILON;
@@ -54,11 +67,15 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                 const nmath::Vector3f new_dir = xtcore::medium::sample_hg_direction(ray.direction, medium->asymmetry());
                 ray.origin = scatter_pos + new_dir * EPSILON;
                 ray.direction = new_dir;
+                current_medium_exit = std::max((nmath::scalar_t)0.0, t_exit - event_dist);
                 continue;
             }
 
             if (exits_before_surface) {
                 ray.origin = ray.origin + ray.direction * (segment_dist + (nmath::scalar_t)EPSILON);
+                current_medium_object_id = HASH_ID_INVALID;
+                current_medium_exit = INFINITY;
+                current_medium = 0;
                 continue;
             }
         }
@@ -71,6 +88,8 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         hit_record.ior = ior;
         const xtcore::asset::IMaterial *m = ctx->scene.get_material(hit_record.id_object);
         if (!m) break;
+        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene.get_object_medium(hit_record.id_object);
+        const xtcore::asset::material::Boundary *boundary = dynamic_cast<const xtcore::asset::material::Boundary *>(m);
 
         xtcore::hit_result_t next_hit;
         next_hit.ior = ior;
@@ -78,6 +97,24 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         throughput *= next_hit.intensity;
         ray = next_hit.ray;
         ior = next_hit.ior;
+
+        if (boundary && boundary_medium) {
+            const nmath::scalar_t medium_side = nmath::dot(hit_record.incident_direction.normalized(), hit_record.normal.normalized());
+            if (medium_side < (nmath::scalar_t)0.0) {
+                current_medium_object_id = hit_record.id_object;
+                current_medium = boundary_medium;
+                if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                    current_medium_object_id = HASH_ID_INVALID;
+                    current_medium_exit = INFINITY;
+                    current_medium = 0;
+                }
+            } else if (current_medium_object_id == hit_record.id_object) {
+                current_medium_object_id = HASH_ID_INVALID;
+                current_medium_exit = INFINITY;
+                current_medium = 0;
+            }
+        }
+
         if (!path_continues) break;
     }
 
