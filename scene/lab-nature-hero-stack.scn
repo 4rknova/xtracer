@@ -25,9 +25,9 @@ camera = {
         type = thin-lens
         fov = 31
         position = vec3(-1.2,2.0,-8.2)
-        target = vec3(0.45,0.92,2.95)
+        target = vec3(0.35,0.86,2.85)
         up = vec3(0,1,0)
-        flength = 68
+        flength = 12
         aperture = 0.18
     }
 
@@ -364,7 +364,7 @@ material = {
         type = thin_translucent
         properties = {
             samplers = {
-                base_color = { type = color, value = col3(0.14,0.24,0.10) }
+                base_color = { type = color, value = col3(0.74,0.24,0.10) }
                 translucency_color = { type = color, value = col3(0.58,0.88,0.26) }
                 normal = { type = voronoi_normal, cells = 22, max_deviation = 4, seed = 19 }
             }

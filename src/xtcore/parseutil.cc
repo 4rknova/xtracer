@@ -1044,7 +1044,11 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         else if (!token.compare(XTPROTO_LTRL_MOBIUS_STRIP)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
             if (i < 24) i = 24;
-            nmesh::generator::mobius_strip(&obj, (size_t)i);
+            float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, 1.0f);
+            if (radius <= 0.0f) radius = 1.0f;
+            float width = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WIDTH) : 0, 0.64f);
+            if (width <= 0.0f) width = 0.64f;
+            nmesh::generator::mobius_strip(&obj, (size_t)i, radius, width);
         }
         else if (!token.compare(XTPROTO_LTRL_KLEIN_BOTTLE)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);

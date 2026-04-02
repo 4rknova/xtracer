@@ -976,13 +976,13 @@ void sierpinski_tetrahedron_implicit(object_t *obj, size_t resolution)
                         });
 }
 
-void mobius_strip(object_t *obj, size_t resolution)
+void mobius_strip(object_t *obj, size_t resolution, float radius, float width)
 {
     if (!obj) return;
     const size_t seg_u = std::max((size_t)64, resolution);
     const size_t seg_v = std::max((size_t)12, resolution / 4);
-    const float R = 1.0f;
-    const float W = 0.32f;
+    const float R = std::max(0.05f, radius);
+    const float W = std::max(0.01f, width * 0.5f);
 
     shape_t shape;
     obj->shapes.push_back(shape);

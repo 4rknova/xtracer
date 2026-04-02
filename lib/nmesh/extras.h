@@ -22,7 +22,7 @@ void menger_sponge(object_t *obj, size_t resolution = 2);
 void menger_sponge_implicit(object_t *obj, size_t resolution = 2);
 void sierpinski_tetrahedron(object_t *obj, size_t resolution = 2);
 void sierpinski_tetrahedron_implicit(object_t *obj, size_t resolution = 2);
-void mobius_strip(object_t *obj, size_t resolution = 64);
+void mobius_strip(object_t *obj, size_t resolution = 64, float radius = 1.0f, float width = 0.64f);
 void klein_bottle(object_t *obj, size_t resolution = 64);
 void hairball(object_t *obj, size_t resolution = 32, int seed = 1337, float radius = 1.0f, size_t fibers = 0);
 void shell_spiral(object_t *obj, size_t resolution = 64, float turns = 4.0f, float growth = 0.22f, float tube_radius = 0.14f);

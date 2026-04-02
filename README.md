@@ -183,6 +183,11 @@ Sizing note:
 - `base_size` (float, `> 0`, default `1.0`)
 - `height` (float, `> 0`, default `1.0`)
 
+`gen(mobius_strip)` supports:
+- `resolution` (integer, `>= 24`, default `64`): strip tessellation around the loop and across the band
+- `radius` (float, `> 0`, default `1.0`): major loop radius from the strip centerline
+- `width` (float, `> 0`, default `0.64`): full strip width across the band
+
 `gen(ring)` supports:
 - `radius` (float, `> 0`): outer radius
 - `height` (float, `> 0`): ring height

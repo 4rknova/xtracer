@@ -148,6 +148,7 @@
 #define XTPROTO_PROP_ROTATION		"rotation"			/* Vector3f   */ /* Rotation */
 #define XTPROTO_PROP_SCALE			"scale"				/* Vector3f   */ /* Scale */
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
+#define XTPROTO_PROP_WIDTH          "width"             /* scalar_t   */ /* Width */
 #define XTPROTO_PROP_BASE_SIZE      "base_size"         /* scalar_t   */ /* Base size */
 #define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
 #define XTPROTO_PROP_CELLS          "cells"             /* integer    */ /* Cell count */
