@@ -1,8 +1,11 @@
 function updatePreviewSizing() {
+  syncPreviewFrameSquareSize();
   applyPreviewTransform();
 }
 
 let workspacePollingJobId = "";
+let previewMinimapLayout = null;
+let previewLayoutObserver = null;
 
 function normalizeRenderMode(value) {
   const mode = String(value || "").trim().toLowerCase();
@@ -86,6 +89,7 @@ function renderInteractivePreviewHud() {
   if (el.interactivePreviewControls) {
     el.interactivePreviewControls.hidden = !isInteractiveRenderMode();
   }
+  if (typeof syncRenderPreviewAuxPanel === "function") syncRenderPreviewAuxPanel();
   if (el.renderMode) {
     el.renderMode.value = normalizeRenderMode(renderMode);
   }
@@ -501,6 +505,14 @@ function refreshThroughputEta(progress, activeCount) {
 
 function setTileHeatmapRow(node, label, value) {
   if (!node) return;
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
+    window.XTracerWidgets.renderStatHint(node, {
+      label,
+      value,
+      className: "workspace-active-hint",
+    });
+    return;
+  }
   node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
 }
 
@@ -560,8 +572,62 @@ function getPreviewFittedSize() {
   };
 }
 
+function syncPreviewFrameSquareSize() {
+  if (!el.previewFrame) return;
+  const panel = el.previewFrame.closest(".panel-preview");
+  if (!panel) return;
+  const toolbar = panel.querySelector(".preview-toolbar");
+  const aux = document.getElementById("renderPreviewAuxPanel");
+  const panelWidth = Math.max(0, Math.floor(panel.clientWidth || 0));
+  const panelHeight = Math.max(0, Math.floor(panel.clientHeight || 0));
+  if (panelWidth <= 0) {
+    el.previewFrame.style.removeProperty("--preview-frame-size");
+    return;
+  }
+
+  let size = panelWidth;
+  if (panelHeight > 0) {
+    const styles = window.getComputedStyle(panel);
+    const gap = parseFloat(styles.rowGap || styles.gap || "0");
+    const toolbarHeight = toolbar ? Math.max(0, Math.ceil(toolbar.getBoundingClientRect().height || 0)) : 0;
+    const auxVisible = !!(aux && !aux.hidden);
+    const auxHeight = auxVisible ? Math.max(0, Math.ceil(aux.getBoundingClientRect().height || 0)) : 0;
+    const gapCount = 1 + (auxVisible ? 1 : 0);
+    const availableHeight = panelHeight - toolbarHeight - auxHeight - (Number.isFinite(gap) ? gap * gapCount : 0);
+    if (Number.isFinite(availableHeight) && availableHeight > 0) {
+      size = Math.min(size, Math.floor(availableHeight));
+    }
+  }
+
+  if (!Number.isFinite(size) || size <= 0) {
+    el.previewFrame.style.removeProperty("--preview-frame-size");
+    return;
+  }
+  el.previewFrame.style.setProperty("--preview-frame-size", `${size}px`);
+}
+
+function bindPreviewLayoutObserver() {
+  if (!el.previewFrame || previewLayoutObserver) return;
+  const panel = el.previewFrame.closest(".panel-preview");
+  const toolbar = panel ? panel.querySelector(".preview-toolbar") : null;
+  const aux = document.getElementById("renderPreviewAuxPanel");
+  if (typeof ResizeObserver !== "function" || !panel) {
+    syncPreviewFrameSquareSize();
+    return;
+  }
+  previewLayoutObserver = new ResizeObserver(() => {
+    syncPreviewFrameSquareSize();
+    applyPreviewTransform();
+  });
+  previewLayoutObserver.observe(panel);
+  if (toolbar) previewLayoutObserver.observe(toolbar);
+  if (aux) previewLayoutObserver.observe(aux);
+  syncPreviewFrameSquareSize();
+}
+
 function clearPreviewCanvas() {
   if (!el.previewCanvas) return;
+  previewMinimapLayout = null;
   const ctx = el.previewCanvas.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -582,10 +648,12 @@ function ensurePreviewCanvasSize() {
   return { cssW, cssH, dpr };
 }
 
-function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
-  if (!ctx || !dims || !fitted) return;
-  if (!hasPreviewImage()) return;
-  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) return;
+function computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, imageH) {
+  if (!dims || !fitted) return null;
+  if (!hasPreviewImage()) return null;
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) {
+    return null;
+  }
 
   const miniMargin = 14;
   const miniSize = clamp(Math.round(Math.min(dims.cssW, dims.cssH) * 0.22), 96, 180);
@@ -601,6 +669,80 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   const mapX = miniX + Math.round((miniSize - mapW) * 0.5);
   const mapY = miniY + Math.round((miniSize - mapH) * 0.5);
 
+  return {
+    miniX,
+    miniY,
+    miniSize,
+    mapX,
+    mapY,
+    mapW,
+    mapH,
+    imageW,
+    imageH,
+  };
+}
+
+function getPreviewMinimapHit(clientX, clientY, clampToBounds) {
+  if (!previewMinimapLayout || !el.previewFrame) return null;
+  const rect = el.previewFrame.getBoundingClientRect();
+  const localX = clientX - rect.left;
+  const localY = clientY - rect.top;
+  const layout = previewMinimapLayout;
+  const minX = layout.mapX;
+  const maxX = layout.mapX + layout.mapW;
+  const minY = layout.mapY;
+  const maxY = layout.mapY + layout.mapH;
+  if (!clampToBounds) {
+    if (localX < minX || localX > maxX) return null;
+    if (localY < minY || localY > maxY) return null;
+  }
+  const hitX = clampToBounds ? clamp(localX, minX, maxX) : localX;
+  const hitY = clampToBounds ? clamp(localY, minY, maxY) : localY;
+  return {
+    u: clamp((hitX - layout.mapX) / Math.max(1e-6, layout.mapW), 0, 1),
+    v: clamp((hitY - layout.mapY) / Math.max(1e-6, layout.mapH), 0, 1),
+    layout,
+  };
+}
+
+function recenterPreviewFromMinimap(clientX, clientY, clampToBounds) {
+  const hit = getPreviewMinimapHit(clientX, clientY, !!clampToBounds);
+  if (!hit) return false;
+  previewView.tx = (0.5 - hit.u) * hit.layout.imageW;
+  previewView.ty = (0.5 - hit.v) * hit.layout.imageH;
+  applyPreviewTransform();
+  return true;
+}
+
+function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
+  previewMinimapLayout = null;
+  if (!ctx || !dims || !fitted) {
+    positionResetViewButton(null);
+    return;
+  }
+  if (!hasPreviewImage()) {
+    positionResetViewButton(null);
+    return;
+  }
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) {
+    positionResetViewButton(null);
+    return;
+  }
+
+  const layout = computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, imageH);
+  if (!layout) {
+    positionResetViewButton(null);
+    return;
+  }
+  previewMinimapLayout = layout;
+  const miniX = layout.miniX;
+  const miniY = layout.miniY;
+  const miniSize = layout.miniSize;
+  const mapX = layout.mapX;
+  const mapY = layout.mapY;
+  const mapW = layout.mapW;
+  const mapH = layout.mapH;
+
   ctx.save();
   ctx.fillStyle = "rgba(9, 16, 24, 0.62)";
   ctx.strokeStyle = "rgba(173, 214, 255, 0.72)";
@@ -609,6 +751,10 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   ctx.roundRect(miniX - 6, miniY - 6, miniSize + 12, miniSize + 12, 10);
   ctx.fill();
   ctx.stroke();
+  positionResetViewButton({
+    x: miniX + miniSize - 38,
+    y: Math.max(12, miniY - 44),
+  });
 
   ctx.save();
   ctx.beginPath();
@@ -641,6 +787,17 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   ctx.lineWidth = 1;
   ctx.strokeRect(mapX, mapY, mapW, mapH);
   ctx.restore();
+}
+
+function positionResetViewButton(layout) {
+  if (!el.resetViewBtn) return;
+  if (!layout) {
+    el.resetViewBtn.style.left = "";
+    el.resetViewBtn.style.top = "";
+    return;
+  }
+  el.resetViewBtn.style.left = `${Math.round(layout.x)}px`;
+  el.resetViewBtn.style.top = `${Math.round(layout.y)}px`;
 }
 
 function drawPreviewCanvas() {
@@ -816,20 +973,20 @@ function clampPreviewPan() {
 
 function applyPreviewTransform() {
   if (!el.preview || !el.previewCanvas) return;
+  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
+  updateResetViewUi(isZoomed);
   if (!hasPreviewImage()) {
     if (el.preview.getAttribute("src")) {
       // Keep the last drawn frame visible while the next blob is decoding.
-      updateResetViewUi(false);
       return;
     }
     el.previewFrame.classList.remove("is-zoomed");
     el.previewFrame.classList.remove("is-panning");
     clearPreviewCanvas();
-    updateResetViewUi(false);
+    if (!isZoomed) updateResetViewUi(false);
     return;
   }
   clampPreviewPan();
-  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
   el.previewFrame.classList.toggle("is-zoomed", isZoomed);
   el.previewFrame.classList.toggle("is-panning", !!previewView.panning);
   drawPreviewCanvas();
@@ -843,14 +1000,17 @@ function resetPreviewView() {
   previewView.panning = false;
   previewView.pointerId = null;
   applyPreviewTransform();
+  updateResetViewUi(false);
 }
 
 function updateResetViewUi(enabled) {
   if (!el.resetViewBtn) return;
   const active = !!enabled;
+  el.resetViewBtn.hidden = !active;
   el.resetViewBtn.classList.toggle("is-disabled", !active);
   el.resetViewBtn.disabled = !active;
   el.resetViewBtn.setAttribute("aria-disabled", active ? "false" : "true");
+  if (!active) positionResetViewButton(null);
 }
 
 async function setInteractivePreviewEnabled(enabled) {
@@ -888,7 +1048,8 @@ async function setRenderMode(nextModeRaw, options) {
     interactivePreviewHudMode = "LOOK";
     renderInteractivePreviewHud();
     appendLog("interactive preview off");
-    if (typeof stopInteractivePreviewLoop === "function") {
+    if ((prevInteractive || interactivePreviewLoopActive || interactivePreviewJobId)
+      && typeof stopInteractivePreviewLoop === "function") {
       stopInteractivePreviewLoop(true).catch(() => {});
     }
     if (prevInteractive && opts.log !== false) appendLog("interactive preview off");
@@ -923,10 +1084,20 @@ function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
 function bindPreviewInteraction() {
   if (!el.previewFrame || !el.preview) return;
   el.preview.draggable = false;
+  bindPreviewLayoutObserver();
   const touchPoints = {};
   let pinchDistance = 0;
   let pinchCenterX = 0;
   let pinchCenterY = 0;
+
+  if (el.resetViewBtn) {
+    const swallowPreviewButtonEvent = (evt) => {
+      evt.stopPropagation();
+    };
+    el.resetViewBtn.addEventListener("pointerdown", swallowPreviewButtonEvent);
+    el.resetViewBtn.addEventListener("click", swallowPreviewButtonEvent);
+    el.resetViewBtn.addEventListener("dblclick", swallowPreviewButtonEvent);
+  }
 
   el.preview.addEventListener("load", () => {
     if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
@@ -967,6 +1138,7 @@ function bindPreviewInteraction() {
   });
 
   el.previewFrame.addEventListener("pointerdown", (evt) => {
+    if (evt.target instanceof Element && evt.target.closest("#resetViewBtn")) return;
     const interactive = interactivePreviewAvailable();
     if (!interactive && !hasPreviewImage()) return;
     if (evt.button !== 0 && evt.button !== 1 && evt.button !== 2) return;
@@ -993,7 +1165,17 @@ function bindPreviewInteraction() {
       el.previewFrame.setPointerCapture(evt.pointerId);
       return;
     }
+    if (evt.button === 0 && recenterPreviewFromMinimap(evt.clientX, evt.clientY)) {
+      previewView.panning = true;
+      previewView.panMode = "minimap";
+      previewView.pointerId = evt.pointerId;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      el.previewFrame.setPointerCapture(evt.pointerId);
+      return;
+    }
     previewView.panning = true;
+    previewView.panMode = "image";
     previewView.pointerId = evt.pointerId;
     previewView.lastX = evt.clientX;
     previewView.lastY = evt.clientY;
@@ -1035,6 +1217,12 @@ function bindPreviewInteraction() {
       return;
     }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
+    if (previewView.panMode === "minimap") {
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      recenterPreviewFromMinimap(evt.clientX, evt.clientY, true);
+      return;
+    }
     const dx = evt.clientX - previewView.lastX;
     const dy = evt.clientY - previewView.lastY;
     previewView.lastX = evt.clientX;

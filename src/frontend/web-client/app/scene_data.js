@@ -508,15 +508,31 @@ async function reloadSceneFile(sceneFile) {
 
 function ensureSceneContextMenu() {
   if (document.getElementById("sceneFileContextMenu")) return;
-  const menu = document.createElement("div");
+  const widgets = window.XTracerWidgets || {};
+  const menu = (typeof widgets.createMenu === "function" && typeof widgets.createMenuItem === "function")
+    ? widgets.createMenu({
+        id: "sceneFileContextMenu",
+        className: "scene-file-context-menu",
+        label: "Scene actions",
+        children: [
+          widgets.createMenuItem({ id: "sceneCtxSetActive", label: "Set Active" }),
+          widgets.createMenuItem({ id: "sceneCtxRefetch", label: "Refetch" }),
+          widgets.createMenuItem({ id: "sceneCtxReload", label: "Reload" }),
+          widgets.createMenuDivider ? widgets.createMenuDivider() : null,
+          widgets.createMenuItem({ id: "sceneCtxDelete", label: "Delete", danger: true }),
+        ],
+      })
+    : document.createElement("div");
   menu.id = "sceneFileContextMenu";
-  menu.className = "scene-file-context-menu";
+  if (!menu.classList.contains("scene-file-context-menu")) menu.className = "scene-file-context-menu";
   menu.hidden = true;
-  menu.innerHTML = ""
-    + "<button id=\"sceneCtxSetActive\" type=\"button\">Set Active</button>"
-    + "<button id=\"sceneCtxRefetch\" type=\"button\">Refetch</button>"
-    + "<button id=\"sceneCtxReload\" type=\"button\">Reload</button>"
-    + "<button id=\"sceneCtxDelete\" type=\"button\" class=\"danger\">Delete</button>";
+  if (!menu.children.length) {
+    menu.innerHTML = ""
+      + "<button id=\"sceneCtxSetActive\" type=\"button\">Set Active</button>"
+      + "<button id=\"sceneCtxRefetch\" type=\"button\">Refetch</button>"
+      + "<button id=\"sceneCtxReload\" type=\"button\">Reload</button>"
+      + "<button id=\"sceneCtxDelete\" type=\"button\" class=\"danger\">Delete</button>";
+  }
   document.body.appendChild(menu);
 
   const close = () => {
@@ -689,7 +705,6 @@ async function refetchSceneFile(sceneFile) {
     el.sceneName.value = data.scene || sceneName;
     el.sceneSource.value = source;
     updateEditorMetrics();
-    refreshSceneEditControls();
     syncEditorScroll();
     renderSceneGraphView();
     resetSceneHistoriesFromCurrentSource();
@@ -704,6 +719,7 @@ async function refetchSceneFile(sceneFile) {
 
 function renderSceneFileBrowser() {
   if (!el.sceneFileList) return;
+  const widgets = window.XTracerWidgets || {};
   const preservedScrollTop = el.sceneFileList.scrollTop;
   const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
   if (!sceneBrowserSelectedFile || !sceneCatalogHasFile(sceneBrowserSelectedFile)) {
@@ -734,76 +750,90 @@ function renderSceneFileBrowser() {
     const isSelected = sceneBrowserSelectedFile === sceneFile;
     const isActive = activeScene === sceneFile;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.scene = sceneFile;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
+    const button = typeof widgets.createSceneCard === "function"
+      ? widgets.createSceneCard({
+        sceneFile,
+        title,
+        sourceOrigin: normalizeSceneSourceOrigin(sourceOrigin),
+        dependsExternal,
+        hasVariants,
+        variantCount,
+        cameraCount,
+        selected: isSelected,
+        active: isActive,
+        icon: createSceneFileIcon(),
+      })
+      : (() => {
+        const legacyButton = document.createElement("button");
+        legacyButton.type = "button";
+        legacyButton.className = "scene-file-item";
+        legacyButton.setAttribute("role", "option");
+        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
+        legacyButton.dataset.scene = sceneFile;
+        if (isSelected) legacyButton.classList.add("is-selected");
+        if (isActive) legacyButton.classList.add("is-active");
+        legacyButton.appendChild(createSceneFileIcon());
 
-    button.appendChild(createSceneFileIcon());
+        const body = document.createElement("span");
+        body.className = "scene-file-meta";
 
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
+        const nameNode = document.createElement("span");
+        nameNode.className = "scene-file-name";
+        nameNode.textContent = sceneFile;
+        body.appendChild(nameNode);
 
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    nameNode.textContent = sceneFile;
-    body.appendChild(nameNode);
+        if (title && title !== sceneFile) {
+          const titleNode = document.createElement("span");
+          titleNode.className = "scene-file-title";
+          titleNode.textContent = title;
+          body.appendChild(titleNode);
+        }
 
-    if (title && title !== sceneFile) {
-      const titleNode = document.createElement("span");
-      titleNode.className = "scene-file-title";
-      titleNode.textContent = title;
-      body.appendChild(titleNode);
-    }
+        if (dependsExternal || hasVariants || sourceOrigin) {
+          const badgesNode = document.createElement("span");
+          badgesNode.className = "scene-file-badges";
 
-    if (dependsExternal || hasVariants || sourceOrigin) {
-      const badgesNode = document.createElement("span");
-      badgesNode.className = "scene-file-badges";
+          if (sourceOrigin) {
+            const sourceNode = document.createElement("span");
+            sourceNode.className = `scene-file-ext scene-file-source scene-file-source--${normalizeSceneSourceOrigin(sourceOrigin)}`;
+            sourceNode.textContent = normalizeSceneSourceOrigin(sourceOrigin) === "workspace" ? "DRAFT" : "DISK";
+            badgesNode.appendChild(sourceNode);
+          }
 
-      if (sourceOrigin) {
-        const sourceNode = document.createElement("span");
-        sourceNode.className = `scene-file-ext scene-file-source scene-file-source--${normalizeSceneSourceOrigin(sourceOrigin)}`;
-        sourceNode.textContent = normalizeSceneSourceOrigin(sourceOrigin) === "workspace" ? "DRAFT" : "DISK";
-        badgesNode.appendChild(sourceNode);
-      }
+          if (dependsExternal) {
+            const extNode = document.createElement("span");
+            extNode.className = "scene-file-ext";
+            extNode.textContent = "EXT";
+            badgesNode.appendChild(extNode);
+          }
 
-      if (dependsExternal) {
-        const extNode = document.createElement("span");
-        extNode.className = "scene-file-ext";
-        extNode.textContent = "EXT";
-        badgesNode.appendChild(extNode);
-      }
+          if (hasVariants) {
+            const variantNode = document.createElement("span");
+            variantNode.className = "scene-file-ext scene-file-var";
+            variantNode.textContent = "VAR";
+            badgesNode.appendChild(variantNode);
+          }
 
-      if (hasVariants) {
-        const variantNode = document.createElement("span");
-        variantNode.className = "scene-file-ext scene-file-var";
-        variantNode.textContent = "VAR";
-        badgesNode.appendChild(variantNode);
-      }
+          body.appendChild(badgesNode);
+        }
 
-      body.appendChild(badgesNode);
-    }
+        const statsNode = document.createElement("span");
+        statsNode.className = "scene-file-stats";
 
-    const statsNode = document.createElement("span");
-    statsNode.className = "scene-file-stats";
+        const camerasNode = document.createElement("span");
+        camerasNode.className = "scene-file-stat";
+        camerasNode.textContent = `${cameraCount || 0} camera${cameraCount === 1 ? "" : "s"}`;
+        statsNode.appendChild(camerasNode);
 
-    const camerasNode = document.createElement("span");
-    camerasNode.className = "scene-file-stat";
-    camerasNode.textContent = `${cameraCount || 0} camera${cameraCount === 1 ? "" : "s"}`;
-    statsNode.appendChild(camerasNode);
+        const variantsNode = document.createElement("span");
+        variantsNode.className = "scene-file-stat";
+        variantsNode.textContent = variantCount > 0 ? `${variantCount} variant${variantCount === 1 ? "" : "s"}` : "base only";
+        statsNode.appendChild(variantsNode);
 
-    const variantsNode = document.createElement("span");
-    variantsNode.className = "scene-file-stat";
-    variantsNode.textContent = variantCount > 0 ? `${variantCount} variant${variantCount === 1 ? "" : "s"}` : "base only";
-    statsNode.appendChild(variantsNode);
-
-    body.appendChild(statsNode);
-
-    button.appendChild(body);
+        body.appendChild(statsNode);
+        legacyButton.appendChild(body);
+        return legacyButton;
+      })();
     button.addEventListener("click", () => {
       if (sceneBrowserSelectedFile === sceneFile) {
         activateSceneFile(sceneFile);
@@ -1106,6 +1136,7 @@ function updateVariantActivePanel() {
 
 function renderCameraBrowser() {
   if (!el.cameraFileList) return;
+  const widgets = window.XTracerWidgets || {};
   if (!cameraBrowserSelectedName || !cameraCatalogHasName(cameraBrowserSelectedName)) {
     cameraBrowserSelectedName = String(el.camera && el.camera.value ? el.camera.value : "");
   }
@@ -1129,31 +1160,40 @@ function renderCameraBrowser() {
     const isSelected = cameraBrowserSelectedName === value;
     const isActive = String(el.camera && el.camera.value ? el.camera.value : "") === value;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item camera-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.camera = value;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
+    const button = typeof widgets.createCameraCard === "function"
+      ? widgets.createCameraCard({
+        value,
+        label: label || value || "-",
+        description: `${cameraTypeLabel(camType)} camera`,
+        selected: isSelected,
+        active: isActive,
+        icon: createCameraIcon(camType),
+      })
+      : (() => {
+        const legacyButton = document.createElement("button");
+        legacyButton.type = "button";
+        legacyButton.className = "scene-file-item camera-file-item";
+        legacyButton.setAttribute("role", "option");
+        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
+        legacyButton.dataset.camera = value;
+        if (isSelected) legacyButton.classList.add("is-selected");
+        if (isActive) legacyButton.classList.add("is-active");
+        const header = document.createElement("span");
+        header.className = "scene-file-header-row";
+        header.appendChild(createCameraIcon(camType));
 
-    button.appendChild(createCameraIcon(camType));
+        const nameNode = document.createElement("span");
+        nameNode.className = "scene-file-name";
+        nameNode.textContent = label || value || "-";
+        header.appendChild(nameNode);
+        legacyButton.appendChild(header);
 
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    nameNode.textContent = label || value || "-";
-    body.appendChild(nameNode);
-
-    const descNode = document.createElement("span");
-    descNode.className = "scene-file-title camera-file-description";
-    descNode.textContent = `${cameraTypeLabel(camType)} camera`;
-    body.appendChild(descNode);
-
-    button.appendChild(body);
+        const descNode = document.createElement("span");
+        descNode.className = "scene-file-title camera-file-description";
+        descNode.textContent = `${cameraTypeLabel(camType)} camera`;
+        legacyButton.appendChild(descNode);
+        return legacyButton;
+      })();
     button.addEventListener("click", () => {
       cameraBrowserSelectedName = value;
       renderCameraBrowser();
@@ -1174,6 +1214,7 @@ function renderCameraBrowser() {
 
 function renderVariantBrowser() {
   if (!el.variantFileList) return;
+  const widgets = window.XTracerWidgets || {};
   if (!variantBrowserSelectedName || !variantCatalogHasName(variantBrowserSelectedName)) {
     variantBrowserSelectedName = selectedSceneVariantValue();
   }
@@ -1198,39 +1239,50 @@ function renderVariantBrowser() {
     const isSelected = normalizeVariantName(variantBrowserSelectedName) === value;
     const isActive = selectedSceneVariantValue() === value;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item camera-file-item variant-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.variant = value;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
-    if (isBase) button.classList.add("is-base");
-    if (description) button.classList.add("has-description");
-    else button.classList.add("no-description");
+    const button = typeof widgets.createVariantCard === "function"
+      ? widgets.createVariantCard({
+        value,
+        label,
+        description,
+        base: isBase,
+        selected: isSelected,
+        active: isActive,
+        icon: createVariantIcon(isBase),
+      })
+      : (() => {
+        const legacyButton = document.createElement("button");
+        legacyButton.type = "button";
+        legacyButton.className = "scene-file-item camera-file-item variant-file-item";
+        legacyButton.setAttribute("role", "option");
+        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
+        legacyButton.dataset.variant = value;
+        if (isSelected) legacyButton.classList.add("is-selected");
+        if (isActive) legacyButton.classList.add("is-active");
+        if (isBase) legacyButton.classList.add("is-base");
+        if (description) legacyButton.classList.add("has-description");
+        else legacyButton.classList.add("no-description");
 
-    button.appendChild(createVariantIcon(isBase));
+        const header = document.createElement("span");
+        header.className = "scene-file-header-row";
 
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
+        const nameNode = document.createElement("span");
+        nameNode.className = "scene-file-name";
+        nameNode.appendChild(createVariantIcon(isBase));
+        const nameTextNode = document.createElement("span");
+        nameTextNode.className = "scene-file-name-text";
+        nameTextNode.textContent = label;
+        nameNode.appendChild(nameTextNode);
+        header.appendChild(nameNode);
+        legacyButton.appendChild(header);
 
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    const nameTextNode = document.createElement("span");
-    nameTextNode.className = "scene-file-name-text";
-    nameTextNode.textContent = label;
-    nameNode.appendChild(nameTextNode);
-    body.appendChild(nameNode);
-
-    if (description) {
-      const descNode = document.createElement("span");
-      descNode.className = "scene-file-title variant-file-description";
-      descNode.textContent = description;
-      body.appendChild(descNode);
-    }
-
-    button.appendChild(body);
+        if (description) {
+          const descNode = document.createElement("span");
+          descNode.className = "scene-file-title variant-file-description";
+          descNode.textContent = description;
+          legacyButton.appendChild(descNode);
+        }
+        return legacyButton;
+      })();
     button.addEventListener("click", () => {
       variantBrowserSelectedName = value;
       renderVariantBrowser();
@@ -1584,7 +1636,6 @@ async function loadSceneSource(scene) {
     currentSceneSourceOrigin = "";
     el.sceneSource.value = "";
     updateEditorMetrics();
-    refreshSceneEditControls();
     renderSceneGraphView();
     resetSceneHistoriesFromCurrentSource();
     updateActiveSceneSidebarCard();
@@ -1595,7 +1646,6 @@ async function loadSceneSource(scene) {
   el.sceneName.value = data.scene || scene;
   el.sceneSource.value = data.source || "";
   updateEditorMetrics();
-  refreshSceneEditControls();
   syncEditorScroll();
   renderSceneGraphView();
   resetSceneHistoriesFromCurrentSource();
@@ -1623,38 +1673,32 @@ function renderThirdPartyLicenses(rawItems) {
     ? rawItems
     : DEFAULT_THIRD_PARTY_LICENSES;
   if (!el.aboutThirdPartyList) return;
-  el.aboutThirdPartyList.replaceChildren();
-
-  items.forEach((item) => {
-    const name = item && item.name ? String(item.name) : "Unknown";
-    const license = item && item.license ? String(item.license) : "Unknown";
-    const url = item && item.url ? String(item.url) : "";
-
-    const row = document.createElement("div");
-    row.className = "about-third-party-row";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "about-third-party-name";
-    nameNode.textContent = name;
-    row.appendChild(nameNode);
-
-    const licenseNode = document.createElement("code");
-    licenseNode.className = "about-third-party-license";
-    licenseNode.textContent = license;
-    row.appendChild(licenseNode);
-
-    if (url) {
-      const link = document.createElement("a");
-      link.className = "about-third-party-link";
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = url;
-      row.appendChild(link);
-    }
-
-    el.aboutThirdPartyList.appendChild(row);
-  });
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderDependencyList === "function") {
+    window.XTracerWidgets.renderDependencyList(el.aboutThirdPartyList, items);
+    return;
+  }
+  el.aboutThirdPartyList.replaceChildren(...items.map((item) => {
+    const entry = document.createElement("article");
+    entry.className = "xui-dependency";
+    entry.innerHTML = `
+      <div class="xui-dependency__main">
+        <h4 class="xui-dependency__name">${escapeHtml(item && item.name ? String(item.name) : "Unknown")}</h4>
+        ${item && item.description ? `<p class="xui-dependency__description">${escapeHtml(String(item.description))}</p>` : ""}
+        <div class="xui-dependency__facts">
+          <div class="xui-dependency__fact">
+            <span class="xui-dependency__fact-label">Used in</span>
+            <span class="xui-dependency__fact-value xui-dependency__usage">${escapeHtml(item && item.used_in ? String(item.used_in) : "Unknown")}</span>
+          </div>
+          <div class="xui-dependency__fact">
+            <span class="xui-dependency__fact-label">License</span>
+            <span class="xui-dependency__fact-value xui-dependency__license">${escapeHtml(item && item.license ? String(item.license) : "Unknown")}</span>
+          </div>
+        </div>
+      </div>
+      ${item && item.url ? `<a class="xui-dependency__link" href="${escapeAttr(String(item.url))}" target="_blank" rel="noopener noreferrer"><span class="xui-dependency__link-label">Repository</span><span class="xui-dependency__link-value">${escapeHtml(String(item.url))}</span></a>` : ""}
+    `;
+    return entry;
+  }));
 }
 
 function fitAboutLicenseText() {

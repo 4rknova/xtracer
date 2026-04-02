@@ -496,6 +496,68 @@ function renderPostFilterChain() {
   const stackEnabled = isPostFilterStackEnabled();
   const board = document.createElement("div");
   board.className = "post-filter-chain-flow";
+  const createStageEmptyPill = (label) => {
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
+      return window.XTracerWidgets.createTag({
+        label,
+        tone: "neutral",
+        className: "post-filter-stage-empty-pill",
+      });
+    }
+    const pill = document.createElement("span");
+    pill.className = "post-filter-stage-empty-pill";
+    pill.textContent = label;
+    return pill;
+  };
+  const createStageToggleButton = (stateKey, label, active, disabled, onClick) => {
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.createPill === "function") {
+      const btn = window.XTracerWidgets.createPill({
+        label,
+        active,
+        pressable: true,
+        disabled,
+        className: `post-filter-stage-toggle${active ? " is-active" : ""}`,
+        onClick,
+      });
+      btn.setAttribute("data-stage", stateKey);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      return btn;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "post-filter-stage-toggle";
+    btn.setAttribute("data-stage", stateKey);
+    btn.textContent = label;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.disabled = disabled;
+    btn.addEventListener("click", onClick);
+    return btn;
+  };
+  const createRemoveButton = (label, disabled, onClick) => {
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.createIconButton === "function") {
+      return window.XTracerWidgets.createIconButton({
+        title: label,
+        label,
+        disabled,
+        variant: "ghost",
+        className: "post-filter-remove",
+        icon: window.XTracerWidgets.dom && typeof window.XTracerWidgets.dom.svgIcon === "function"
+          ? window.XTracerWidgets.dom.svgIcon("M5 5l6 6M11 5L5 11")
+          : null,
+        onClick,
+      });
+    }
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "post-filter-remove";
+    removeBtn.setAttribute("aria-label", label);
+    removeBtn.title = label;
+    removeBtn.textContent = "×";
+    removeBtn.disabled = disabled;
+    removeBtn.addEventListener("click", onClick);
+    return removeBtn;
+  };
 
   const createStageHeader = (title, note, stageName, emptyLabel = "") => {
     const head = document.createElement("section");
@@ -512,10 +574,7 @@ function renderPostFilterChain() {
     meta.appendChild(noteEl);
     head.appendChild(meta);
     if (emptyLabel) {
-      const pill = document.createElement("span");
-      pill.className = "post-filter-stage-empty-pill";
-      pill.textContent = emptyLabel;
-      head.appendChild(pill);
+      head.appendChild(createStageEmptyPill(emptyLabel));
     }
     return head;
   };
@@ -644,14 +703,7 @@ function renderPostFilterChain() {
     const description = String(filterInfo.description || "").trim();
     summaryMeta.appendChild(name);
 
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "post-filter-remove";
-    removeBtn.setAttribute("aria-label", `Remove ${filterInfo.label}`);
-    removeBtn.title = `Remove ${filterInfo.label}`;
-    removeBtn.textContent = "×";
-    removeBtn.disabled = !stackEnabled;
-    removeBtn.addEventListener("click", (evt) => {
+    const removeBtn = createRemoveButton(`Remove ${filterInfo.label}`, !stackEnabled, (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
       const idx = Number(row.dataset.index);
@@ -713,16 +765,14 @@ function renderPostFilterChain() {
     };
 
     [{ key: "enabled", label: "FX On", value: true }, { key: "disabled", label: "FX Off", value: false }].forEach((stateDef) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "post-filter-stage-toggle";
-      btn.setAttribute("data-stage", stateDef.key);
-      btn.textContent = stateDef.label;
       const active = normalized.enabled === stateDef.value;
-      btn.classList.toggle("is-active", active);
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
-      btn.disabled = !stackEnabled;
-      btn.addEventListener("click", () => applyEnabledChange(stateDef.value));
+      const btn = createStageToggleButton(
+        stateDef.key,
+        stateDef.label,
+        active,
+        !stackEnabled,
+        () => applyEnabledChange(stateDef.value)
+      );
       stage.appendChild(btn);
     });
 
@@ -748,6 +798,7 @@ function renderPostFilterChain() {
         const text = document.createElement("span");
         text.textContent = field.label;
         const input = document.createElement("input");
+        input.className = "xui-input";
         input.type = "number";
         input.min = field.min;
         input.max = field.max;
@@ -1034,7 +1085,6 @@ function applyHistoryStep(type, direction) {
   try {
     el.sceneSource.value = String(snap.source || "");
     updateEditorMetrics();
-    refreshSceneEditControls();
     syncEditorScroll();
     renderSceneGraphView();
     if (type === "text" && el.sceneSource && editorViewMode === "text") {
@@ -1050,12 +1100,7 @@ function applyHistoryStep(type, direction) {
 
   queueWorkspaceDraftSave();
   if (type === "visual" && visualEditor) {
-    rebuildVisualFromEditorSource()
-      .then(() => {
-        const selected = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
-        if (selected && visualEditor.selectObjectById) visualEditor.selectObjectById(selected, false);
-      })
-      .catch((err) => appendLog(`visual refresh error: ${err.message}`));
+    rebuildVisualFromEditorSource().catch((err) => appendLog(`visual refresh error: ${err.message}`));
   }
   return true;
 }
@@ -1087,7 +1132,6 @@ function updateSceneSourceText(nextSource, options) {
   el.sceneSource.value = next;
   updateEditorMetrics();
   syncEditorScroll();
-  refreshSceneEditControls();
   renderSceneGraphView();
   if (!suppressHistoryTracking) {
     if (historyType === "visual") {
@@ -1097,78 +1141,6 @@ function updateSceneSourceText(nextSource, options) {
     }
   }
   queueWorkspaceDraftSave();
-}
-
-function refreshSceneEditControls() {
-  if (!el.editObjectSelect || !el.createMaterialSelect) return;
-  const source = el.sceneSource ? (el.sceneSource.value || "") : "";
-  const model = parseSceneEditModel(source);
-  const prevObject = String(el.editObjectSelect.value || "");
-  const prevMaterial = String(el.createMaterialSelect.value || "");
-
-  el.editObjectSelect.innerHTML = "";
-  addOption(el.editObjectSelect, "", "Select object...");
-  Array.from(model.objects.values())
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .forEach((obj) => {
-      const g = model.geometries.get(obj.geometry);
-      const type = g ? (g.type || "?") : "?";
-      addOption(el.editObjectSelect, obj.id, `${obj.id} (${type})`);
-    });
-  if (prevObject && model.objects.has(prevObject)) el.editObjectSelect.value = prevObject;
-  else el.editObjectSelect.value = "";
-
-  el.createMaterialSelect.innerHTML = "";
-  const materialIds = Array.from((model.materials || new Map()).keys());
-  if (!materialIds.length) {
-    addOption(el.createMaterialSelect, "", "No material");
-  } else {
-    materialIds.forEach((id) => addOption(el.createMaterialSelect, id, id));
-    if (prevMaterial && materialIds.includes(prevMaterial)) el.createMaterialSelect.value = prevMaterial;
-    else el.createMaterialSelect.value = materialIds[0];
-  }
-  syncTransformInputsFromObject(el.editObjectSelect.value || "");
-}
-
-function setTransformInputs(values) {
-  const t = values && values.translation ? values.translation : [0, 0, 0];
-  const r = values && values.rotation ? values.rotation : [0, 0, 0];
-  const s = values && values.scale ? values.scale : [1, 1, 1];
-  if (el.editTranslateX) el.editTranslateX.value = formatSceneNumber(t[0], 0);
-  if (el.editTranslateY) el.editTranslateY.value = formatSceneNumber(t[1], 0);
-  if (el.editTranslateZ) el.editTranslateZ.value = formatSceneNumber(t[2], 0);
-  if (el.editRotateX) el.editRotateX.value = formatSceneNumber(r[0], 0);
-  if (el.editRotateY) el.editRotateY.value = formatSceneNumber(r[1], 0);
-  if (el.editRotateZ) el.editRotateZ.value = formatSceneNumber(r[2], 0);
-  if (el.editScaleX) el.editScaleX.value = formatSceneNumber(s[0], 1);
-  if (el.editScaleY) el.editScaleY.value = formatSceneNumber(s[1], 1);
-  if (el.editScaleZ) el.editScaleZ.value = formatSceneNumber(s[2], 1);
-}
-
-function currentTransformInputs() {
-  return {
-    translation: [
-      readSceneNumber(el.editTranslateX ? el.editTranslateX.value : 0, 0),
-      readSceneNumber(el.editTranslateY ? el.editTranslateY.value : 0, 0),
-      readSceneNumber(el.editTranslateZ ? el.editTranslateZ.value : 0, 0),
-    ],
-    rotation: [
-      readSceneNumber(el.editRotateX ? el.editRotateX.value : 0, 0),
-      readSceneNumber(el.editRotateY ? el.editRotateY.value : 0, 0),
-      readSceneNumber(el.editRotateZ ? el.editRotateZ.value : 0, 0),
-    ],
-    scale: [
-      Math.max(0.0001, readSceneNumber(el.editScaleX ? el.editScaleX.value : 1, 1)),
-      Math.max(0.0001, readSceneNumber(el.editScaleY ? el.editScaleY.value : 1, 1)),
-      Math.max(0.0001, readSceneNumber(el.editScaleZ ? el.editScaleZ.value : 1, 1)),
-    ],
-  };
-}
-
-function syncTransformInputsFromObject(objectId) {
-  const info = objectId ? getObjectTransformFromSource(el.sceneSource.value || "", objectId) : null;
-  if (el.editGeometryType) el.editGeometryType.value = info ? (info.geometryType || "") : "";
-  setTransformInputs(info || null);
 }
 
 async function rebuildVisualFromEditorSource() {

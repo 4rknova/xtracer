@@ -159,10 +159,13 @@ function appendBackendLog(entry) {
 }
 
 function setStatus(text) {
-  const statusText = renderActive ? text : "Idle";
+  const controls = (typeof el !== "undefined" && el) ? el : null;
+  if (!controls || !controls.status) return;
+  const isRenderActive = (typeof renderActive !== "undefined") && !!renderActive;
+  const statusText = isRenderActive ? text : "Idle";
   const lower = String(statusText || "").toLowerCase();
   let state = "idle";
-  if (renderActive) {
+  if (isRenderActive) {
     if (lower.indexOf("error") >= 0) state = "error";
     else state = "running";
   }
@@ -171,16 +174,16 @@ function setStatus(text) {
   const statusPercent = match ? `${match[2]}%` : "";
   const statusTimer = match ? String(match[3] || "").trim() : "";
 
-  el.status.textContent = statusLabel || "Idle";
-  el.status.classList.remove("is-idle", "is-running", "is-error");
-  el.status.classList.add(`is-${state}`);
-  if (el.statusPercent) {
-    el.statusPercent.hidden = !statusPercent;
-    el.statusPercent.textContent = statusPercent || "0.0%";
+  controls.status.textContent = statusLabel || "Idle";
+  controls.status.classList.remove("is-idle", "is-running", "is-error");
+  controls.status.classList.add(`is-${state}`);
+  if (controls.statusPercent) {
+    controls.statusPercent.hidden = !statusPercent;
+    controls.statusPercent.textContent = statusPercent || "0.0%";
   }
-  if (el.renderTimer) {
-    el.renderTimer.hidden = !statusTimer;
-    el.renderTimer.textContent = statusTimer || "00:00";
+  if (controls.renderTimer) {
+    controls.renderTimer.hidden = !statusTimer;
+    controls.renderTimer.textContent = statusTimer || "00:00";
   }
 }
 
@@ -291,43 +294,39 @@ function formatBytesShort(bytes) {
 
 function renderPreviewTransferStats() {
   if (!el.previewTransferStats) return;
+  const renderStat = (node, label, value) => {
+    if (!node) return;
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
+      window.XTracerWidgets.renderStatHint(node, {
+        label,
+        value,
+        className: "workspace-active-hint",
+      });
+      return;
+    }
+    node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+  };
 
   if (el.statsFrameRender) {
     const frameMs = Math.max(0, Number(previewTransferStatsState.fullFrameRenderMs) || 0);
     const frameText = frameMs > 0
       ? `${formatElapsed(frameMs)} (${Math.round(frameMs)} ms)`
       : "-";
-    el.statsFrameRender.innerHTML = `<span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">${frameText}</code>`;
+    renderStat(el.statsFrameRender, "Full Frame Render", frameText);
   }
 
   const hasData = (previewTransferStatsState.deltaReqs + previewTransferStatsState.fullReqs) > 0;
   if (!hasData) {
-    if (el.statsDeltaBytes) {
-      el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsDeltaReqs) {
-      el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsFullBytes) {
-      el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsFullReqs) {
-      el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code>`;
-    }
+    renderStat(el.statsDeltaBytes, "Delta Bytes", "-");
+    renderStat(el.statsDeltaReqs, "Delta Requests", "-");
+    renderStat(el.statsFullBytes, "Full Bytes", "-");
+    renderStat(el.statsFullReqs, "Full Requests", "-");
     return;
   }
-  if (el.statsDeltaBytes) {
-    el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.deltaBytes)}</code>`;
-  }
-  if (el.statsDeltaReqs) {
-    el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">${previewTransferStatsState.deltaReqs}</code>`;
-  }
-  if (el.statsFullBytes) {
-    el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.fullBytes)}</code>`;
-  }
-  if (el.statsFullReqs) {
-    el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">${previewTransferStatsState.fullReqs}</code>`;
-  }
+  renderStat(el.statsDeltaBytes, "Delta Bytes", formatBytesShort(previewTransferStatsState.deltaBytes));
+  renderStat(el.statsDeltaReqs, "Delta Requests", previewTransferStatsState.deltaReqs);
+  renderStat(el.statsFullBytes, "Full Bytes", formatBytesShort(previewTransferStatsState.fullBytes));
+  renderStat(el.statsFullReqs, "Full Requests", previewTransferStatsState.fullReqs);
 }
 
 function resetPreviewTransferStats() {
@@ -609,7 +608,16 @@ function renderStartupProgress() {
   const pct = Math.round(ratio * 100);
   const stageText = startupPhaseText(done, total);
   if (el.startupProgressFill) {
+    if (pct >= 100) {
+      el.startupProgressFill.style.transition = "none";
+    } else {
+      el.startupProgressFill.style.transition = "";
+    }
     el.startupProgressFill.style.width = `${pct}%`;
+    if (pct >= 100) {
+      void el.startupProgressFill.offsetWidth;
+      el.startupProgressFill.style.transition = "";
+    }
   }
   if (el.startupPercent) {
     el.startupPercent.textContent = `${pct}%`;

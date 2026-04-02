@@ -9,6 +9,112 @@ function sanitizeIntField(input, fallback, min, max) {
   return String(value);
 }
 
+function sanitizeThreadField(input) {
+  const maxAttr = Number.parseInt(String(input && input.max ? input.max : ""), 10);
+  const max = Number.isFinite(maxAttr) && maxAttr > 0 ? maxAttr : 256;
+  return sanitizeIntField(input, 0, 0, max);
+}
+
+const TILE_SIZE_MIN = 8;
+const TILE_SIZE_MAX = 1024;
+const TILE_SIZE_AUTO = "auto";
+
+function isBuiltinTileSizePreset(value) {
+  return value === TILE_SIZE_AUTO || value === "8" || value === "32" || value === "64";
+}
+
+function normalizeTileSizeControlValue(raw, fallback) {
+  const fallbackValue = String(fallback || "32").trim().toLowerCase() === TILE_SIZE_AUTO
+    ? TILE_SIZE_AUTO
+    : "32";
+  const value = String(raw || "").trim().toLowerCase();
+  if (value === TILE_SIZE_AUTO) return TILE_SIZE_AUTO;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallbackValue;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(TILE_SIZE_MAX, parsed)));
+}
+
+function ensureTileSizeSelectOption(rawValue) {
+  const normalized = normalizeTileSizeControlValue(rawValue, "32");
+  const select = el.tileSize;
+  if (!select || !select.options) return normalized;
+  Array.from(select.options).forEach((option) => {
+    if (option.dataset.customTileSize === "true" && option.value !== normalized) option.remove();
+  });
+  const existing = Array.from(select.options).some((option) => option.value === normalized);
+  if (!existing && normalized !== TILE_SIZE_AUTO && !isBuiltinTileSizePreset(normalized)) {
+    const option = document.createElement("option");
+    option.value = normalized;
+    option.textContent = `${normalized} (Custom)`;
+    option.dataset.customTileSize = "true";
+    select.appendChild(option);
+  }
+  return normalized;
+}
+
+function currentAutoRenderThreadCount() {
+  const datasetValue = Number.parseInt(String(el.threads && el.threads.dataset ? el.threads.dataset.autoThreadCount || "" : ""), 10);
+  if (Number.isFinite(datasetValue) && datasetValue > 0) return Math.max(1, datasetValue);
+  const hardware = Number(globalThis.navigator && navigator.hardwareConcurrency);
+  if (Number.isFinite(hardware) && hardware > 0) return Math.max(1, Math.floor(hardware));
+  const maxAttr = Number.parseInt(String(el.threads && el.threads.max ? el.threads.max : ""), 10);
+  if (Number.isFinite(maxAttr) && maxAttr > 0) return Math.max(1, maxAttr);
+  return 8;
+}
+
+function effectiveRequestedRenderThreads() {
+  const manual = Number.parseInt(String(el.threads && el.threads.value ? el.threads.value : "0"), 10);
+  if (Number.isFinite(manual) && manual > 0) {
+    return Math.max(1, Math.min(Math.floor(manual), currentAutoRenderThreadCount()));
+  }
+  return currentAutoRenderThreadCount();
+}
+
+function computeAutoTileSize(width, height, threads, maxClamp) {
+  const w = Math.max(32, Number.parseInt(String(width || "500"), 10) || 500);
+  const h = Math.max(32, Number.parseInt(String(height || "500"), 10) || 500);
+  const t = Math.max(1, Number.parseInt(String(threads || "1"), 10) || 1);
+  const derived = Math.sqrt((w * h) / t);
+  const rounded = Math.max(TILE_SIZE_MIN, Math.round(derived / TILE_SIZE_MIN) * TILE_SIZE_MIN || TILE_SIZE_MIN);
+  const limit = Number.isFinite(maxClamp) && maxClamp > 0 ? Math.floor(maxClamp) : TILE_SIZE_MAX;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(limit, rounded)));
+}
+
+function resolveTileSizeForDimensions(width, height, maxClamp) {
+  const raw = ensureTileSizeSelectOption(el.tileSize && el.tileSize.value !== undefined ? el.tileSize.value : "32");
+  if (raw === TILE_SIZE_AUTO) {
+    return computeAutoTileSize(width, height, effectiveRequestedRenderThreads(), maxClamp);
+  }
+  const parsed = Number.parseInt(raw, 10);
+  const limit = Number.isFinite(maxClamp) && maxClamp > 0 ? Math.floor(maxClamp) : TILE_SIZE_MAX;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(limit, Number.isFinite(parsed) ? parsed : 32)));
+}
+
+function syncTileSizeControlUi() {
+  if (!el.tileSize) return;
+  const normalized = ensureTileSizeSelectOption(el.tileSize.value);
+  if (String(el.tileSize.value || "") !== normalized) el.tileSize.value = normalized;
+  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  const threads = effectiveRequestedRenderThreads();
+  const resolved = resolveTileSizeForDimensions(width, height, TILE_SIZE_MAX);
+  if (normalized === TILE_SIZE_AUTO) {
+    el.tileSize.title = `Auto derives tile size from ${width}x${height} using ${threads} thread${threads === 1 ? "" : "s"}; current tile size ${resolved}.`;
+  } else if (isBuiltinTileSizePreset(normalized)) {
+    el.tileSize.title = `Tile size ${resolved}.`;
+  } else {
+    el.tileSize.title = `Custom tile size ${resolved}.`;
+  }
+}
+
+function setTileSizeControlValue(value) {
+  if (!el.tileSize) return "";
+  const normalized = ensureTileSizeSelectOption(value);
+  el.tileSize.value = normalized;
+  syncTileSizeControlUi();
+  return normalized;
+}
+
 function updateRenderActionButton() {
   if (!el.renderBtn) return;
   const running = !!renderActive;
@@ -30,8 +136,8 @@ async function startRender(extraParams) {
   const samples = sanitizeIntField(el.samples, 1, 1, 1024);
   const aa = sanitizeIntField(el.aa, 1, 1, 16);
   const rdepth = sanitizeIntField(el.rdepth, 15, 1, 4096);
-  const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
-  const threads = sanitizeIntField(el.threads, 0, 0, 256);
+  const tileSize = resolveTileSizeForDimensions(width, height, TILE_SIZE_MAX);
+  const threads = sanitizeThreadField(el.threads);
 
   const extra = (extraParams && typeof extraParams === "object") ? { ...extraParams } : {};
   const skipIntegratorOptions = !!extra.__skipIntegratorOptions;
@@ -381,13 +487,15 @@ function interactiveResolutionStages(settleMode) {
   }
   const halfDims = pick(Math.round(width * 0.5));
   const fullDims = pick(width);
+  const halfTileSize = resolveTileSizeForDimensions(halfDims.width, halfDims.height, 32);
+  const fullTileSize = resolveTileSizeForDimensions(fullDims.width, fullDims.height, 32);
   const out = [{
     width: halfDims.width,
     height: halfDims.height,
     samples: "1",
     aa: "1",
     rdepth: String(Math.min(rdepth, 3)),
-    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_size: halfTileSize,
     tile_order: "random",
     integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
     moving: false,
@@ -397,7 +505,7 @@ function interactiveResolutionStages(settleMode) {
     samples: "1",
     aa: "1",
     rdepth: String(Math.min(rdepth, 3)),
-    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_size: fullTileSize,
     tile_order: "random",
     integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
     moving: false,
@@ -407,7 +515,7 @@ function interactiveResolutionStages(settleMode) {
     samples: String(samples),
     aa: String(aa),
     rdepth: String(rdepth),
-    tile_size: String(Math.max(8, Math.min(32, Number.parseInt(String(el.tileSize && el.tileSize.value ? el.tileSize.value : "32"), 10) || 32))),
+    tile_size: fullTileSize,
     tile_order: "random",
     integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
     moving: false,
@@ -416,7 +524,10 @@ function interactiveResolutionStages(settleMode) {
 }
 
 async function abortInteractivePreviewJob() {
-  const jobId = String(interactivePreviewJobId || activeJobId || "").trim();
+  // Only abort jobs explicitly owned by the interactive preview loop.
+  // Falling back to the workspace active job can cancel a normal render
+  // during boot, refresh, or workspace state restore.
+  const jobId = String(interactivePreviewJobId || "").trim();
   if (!jobId || !hasBackendMethod(api, "abortJob")) return;
   try {
     await abortRenderJob(jobId);
@@ -572,7 +683,7 @@ function requestInteractivePreviewRender() {
 
 async function handleExportClick(event) {
   if (event) event.preventDefault();
-  if (el.download.classList.contains("is-disabled")) return;
+  if (el.download.classList.contains("is-disabled") || exportRequestInFlight) return;
   if (!lastCompletedJobId) return;
   if (!hasBackendMethod(api, "getJobExport")) return;
 
@@ -580,6 +691,8 @@ async function handleExportClick(event) {
   const sceneToken = sanitizeExportNameToken(sceneBaseNameForExport(lastCompletedJobScene), "scene");
   const clientToken = sanitizeExportNameToken(clientId, "client");
   const filename = `xtracer_${sceneToken}_${clientToken}_${exportTimestampUtc()}.${format}`;
+  exportRequestInFlight = true;
+  updateDownloadUi();
   try {
     const blob = await api.getJobExport(lastCompletedJobId, format, {
       postFiltersEnabled: !!postFilterStackEnabled,
@@ -601,6 +714,9 @@ async function handleExportClick(event) {
   } catch (err) {
     appendLog(`export failed: ${err.message}`);
     setStatus(`error: ${err.message}`);
+  } finally {
+    exportRequestInFlight = false;
+    updateDownloadUi();
   }
 }
 

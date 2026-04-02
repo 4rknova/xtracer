@@ -707,6 +707,7 @@ function renderSceneGraphView() {
   if (!el.graphCanvas) return;
 
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const variantName = String(el.variant && el.variant.value ? el.variant.value : "").trim();
   const runtime = sceneName
     ? ((typeof getRuntimeGraphForScene === "function")
       ? getRuntimeGraphForScene(sceneName)
@@ -773,14 +774,21 @@ function renderSceneGraphView() {
           value: Number.isFinite(Number(s && s.value)) ? Number(s.value) : (s && s.value),
         })).filter((s) => s.name) : [],
         samplers: Array.isArray(m && m.samplers) ? m.samplers.map((s) => {
+          const materialId = String((m && m.id) || "").trim();
+          const samplerName = String((s && s.name) || "").trim();
+          const samplerType = String((s && s.type) || "sampler");
           const asset = String((s && s.asset) || "").trim();
-          const previewUrl = (sceneName && asset)
+          let previewUrl = (sceneName && asset)
             ? `/api/scenes/${encodeURIComponent(sceneName)}/asset?path=${encodeURIComponent(asset)}`
             : "";
+          if (!previewUrl && sceneName && materialId && samplerName && samplerType === "texture") {
+            previewUrl = `/api/scenes/${encodeURIComponent(sceneName)}/runtime_texture?material=${encodeURIComponent(materialId)}&sampler=${encodeURIComponent(samplerName)}`;
+            if (variantName) previewUrl += `&variant=${encodeURIComponent(variantName)}`;
+          }
           const color = Array.isArray(s && s.color) ? s.color.slice(0, 3).map((v) => Number(v) || 0) : null;
           return {
-            name: String((s && s.name) || "").trim(),
-            type: String((s && s.type) || "sampler"),
+            name: samplerName,
+            type: samplerType,
             asset,
             previewUrl,
             color,

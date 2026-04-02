@@ -1,6 +1,38 @@
+function upgradeLegacyStatMarkup() {
+  const widgets = window.XTracerWidgets || {};
+  if (typeof widgets.renderStatHint !== "function") return;
+  document.querySelectorAll(".workspace-active-hint").forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const labelNode = node.querySelector(".workspace-active-label, .xui-stat__label");
+    const valueNode = node.querySelector(".workspace-active-value, .xui-stat__value");
+    let label = labelNode ? String(labelNode.textContent || "").trim() : "";
+    let value = valueNode ? String(valueNode.textContent || "").trim() : "";
+    if (!label) {
+      const raw = String(node.textContent || "").trim();
+      const split = raw.indexOf(":");
+      if (split >= 0) {
+        label = raw.slice(0, split).trim();
+        value = raw.slice(split + 1).trim();
+      } else {
+        label = raw;
+      }
+    }
+    widgets.renderStatHint(node, { label, value: value || "-" });
+  });
+}
+
+function adoptStaticWidgetMarkup() {
+  upgradeLegacyStatMarkup();
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelects === "function") {
+    window.XTracerWidgets.enhanceSelects(document);
+  }
+}
+
 async function boot() {
   ensureClientId();
   api = initializeBackendApi();
+  adoptStaticWidgetMarkup();
+  if (typeof bindSettingsJobsCardLifecycle === "function") bindSettingsJobsCardLifecycle();
   renderSceneLoadStatus();
   const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
   const startupPhases = [
@@ -36,6 +68,7 @@ async function boot() {
   setWorkspaceViewMode(localStorage.getItem(WORKSPACE_VIEW_MODE_KEY) || "cards", false);
   setWorkspaceSortMode(localStorage.getItem(WORKSPACE_SORT_MODE_KEY) || "name", false);
   pollBackendLogs();
+  advanceStartupProgress(1);
 
   setStatus("loading...");
   setSceneLoadStatus("loading", "Bootstrapping scene metadata...", "");
@@ -64,6 +97,11 @@ async function boot() {
     return true;
   };
 
+  const activeWorkspaceScene = () => {
+    const snapshot = activeWorkspaceId ? workspaceSnapshotById.get(activeWorkspaceId) : null;
+    return String((snapshot && snapshot.active_scene) || "").trim();
+  };
+
   const chooseStartupSceneCandidates = () => {
     const seen = new Set();
     const out = [];
@@ -73,11 +111,13 @@ async function boot() {
       seen.add(name);
       out.push(name);
     };
+    push(activeWorkspaceScene());
     push(el.scene && el.scene.value ? el.scene.value : "");
     sceneCatalog.forEach((item) => push(item && item.sceneFile ? item.sceneFile : ""));
     return out;
   };
 
+  let loadedStartupScene = "";
   await trackStartupRequest((async () => {
     const candidates = chooseStartupSceneCandidates();
     let loaded = false;
@@ -92,6 +132,7 @@ async function boot() {
           updateSceneDependencyPill(candidate);
         }
         await tryLoadSceneBundle(candidate);
+        loadedStartupScene = candidate;
         loaded = true;
         break;
       } catch (err) {
@@ -105,7 +146,9 @@ async function boot() {
     }
   })());
   if (hasWorkspaceApi && activeWorkspaceId) {
-    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null)
+    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null, {
+      skipSceneReloadIfCurrent: loadedStartupScene,
+    })
       .catch((err) => appendLog(`workspace restore error: ${err.message}`));
   }
   if (!activeJobId && typeof restorePreviewForActiveWorkspace === "function") {
@@ -154,39 +197,6 @@ async function boot() {
       }
     );
     if (visualEditor.init()) {
-      if (visualEditor.setSelectionChangeHandler) {
-        visualEditor.setSelectionChangeHandler((meta) => {
-          const id = meta && meta.objectId ? String(meta.objectId) : "";
-          if (el.editObjectSelect) {
-            el.editObjectSelect.value = id;
-            syncTransformInputsFromObject(id);
-          }
-        });
-      }
-      if (visualEditor.setObjectTransformChangeHandler) {
-        visualEditor.setObjectTransformChangeHandler((evt) => {
-          const objectId = evt && evt.objectId ? String(evt.objectId) : "";
-          const transform = evt && evt.transform ? evt.transform : null;
-          if (!objectId || !transform) return;
-          try {
-            const deltaTranslation = Array.isArray(evt && evt.deltaTranslation)
-              ? evt.deltaTranslation
-              : [0, 0, 0];
-            const nextSource = updateObjectTransformInSource(
-              el.sceneSource.value || "",
-              objectId,
-              transform,
-              { useDelta: true, deltaTranslation }
-            );
-            updateSceneSourceText(nextSource);
-            if (el.editObjectSelect) el.editObjectSelect.value = objectId;
-            syncTransformInputsFromObject(objectId);
-            appendLog(`scene edit moved: ${objectId}`);
-          } catch (err) {
-            appendLog(`scene edit move error: ${err.message}`);
-          }
-        });
-      }
       syncVisualFrameAspect();
       if (el.visualProjection && visualEditor.setProjectionMode) {
         visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
@@ -484,6 +494,19 @@ async function boot() {
     appendLog(`theme=${el.theme.value}`);
   });
 
+  if (el.themeToggle) {
+    el.themeToggle.addEventListener("click", () => {
+      const order = ["system", "light", "dark"];
+      const current = String(el.theme && el.theme.value ? el.theme.value : localStorage.getItem("xtracer-theme") || "system").toLowerCase();
+      const next = order[(Math.max(order.indexOf(current), 0) + 1) % order.length];
+      if (el.theme) el.theme.value = next;
+      applyTheme(next);
+      refreshPaletteOptions();
+      persistUIOptions();
+      appendLog(`theme=${next}`);
+    });
+  }
+
   if (el.darkPalette) {
     el.darkPalette.addEventListener("change", () => {
       const mode = effectiveThemeMode(el.theme ? el.theme.value : "system");
@@ -500,6 +523,7 @@ async function boot() {
     const onSchemeChange = () => {
       if (el.theme && el.theme.value === "system") {
         refreshPaletteOptions();
+        refreshThemeToggleButton();
       }
     };
     if (typeof mq.addEventListener === "function") mq.addEventListener("change", onSchemeChange);
@@ -519,12 +543,15 @@ async function boot() {
   });
   if (el.tileSize) {
     el.tileSize.addEventListener("change", () => {
+      if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
       appendLog(`tile_size=${el.tileSize.value}`);
       queueWorkspaceSettingsSave();
     });
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
   }
   if (el.threads) {
     el.threads.addEventListener("change", () => {
+      if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
       appendLog(`threads=${el.threads.value}`);
       queueWorkspaceSettingsSave();
     });
@@ -676,6 +703,7 @@ async function boot() {
     syncResolutionPresetFromInputs();
     updatePreviewSizing();
     syncVisualFrameAspect();
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
     queueWorkspaceSettingsSave();
   };
   [
@@ -704,6 +732,7 @@ async function boot() {
     el.height.value = String(preset.height);
     updatePreviewSizing();
     syncVisualFrameAspect();
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
     queueWorkspaceSettingsSave();
   });
   el.width.addEventListener("input", onSizeChanged);
@@ -847,6 +876,7 @@ async function boot() {
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
+  if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
   if (el.mainMenuToggle) {
     el.mainMenuToggle.addEventListener("click", () => {
@@ -953,6 +983,13 @@ async function boot() {
         .catch((err) => appendLog(`workspace create error: ${err.message}`));
     });
   }
+  if (el.workspaceCreateName) {
+    el.workspaceCreateName.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      if (el.workspaceCreateBtn) el.workspaceCreateBtn.click();
+    });
+  }
   if (el.sceneRefreshBtn) {
     el.sceneRefreshBtn.addEventListener("click", () => {
       const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
@@ -988,7 +1025,7 @@ async function boot() {
     if (typeof refreshSettingsJobsCard !== "function") return;
     if (typeof isJobsControlsCardVisible === "function" && !isJobsControlsCardVisible()) return;
     refreshSettingsJobsCard().catch((err) => appendLog(`settings jobs refresh error: ${err.message}`));
-  }, 2000);
+  }, 1000);
 
   el.loadSceneBtn.addEventListener("click", () => {
     setSceneLoadStatus("loading", `Loading source for ${el.scene.value || "scene"}...`, "");
@@ -1015,7 +1052,6 @@ async function boot() {
         el.sceneName.value = "new_scene.scn";
         el.sceneSource.value = source || "";
         updateEditorMetrics();
-        refreshSceneEditControls();
         syncEditorScroll();
         renderSceneGraphView();
         resetSceneHistoriesFromCurrentSource();
@@ -1031,81 +1067,6 @@ async function boot() {
   });
 
   el.saveSceneBtn.addEventListener("click", triggerSceneSave);
-
-  if (el.editObjectSelect) {
-    el.editObjectSelect.addEventListener("change", () => {
-      const objectId = String(el.editObjectSelect.value || "").trim();
-      syncTransformInputsFromObject(objectId);
-      if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
-    });
-  }
-
-  if (el.editSyncFromVisualBtn) {
-    el.editSyncFromVisualBtn.addEventListener("click", () => {
-      if (!visualEditor || !visualEditor.getSelectedObjectId) return;
-      const objectId = String(visualEditor.getSelectedObjectId() || "").trim();
-      if (!objectId) {
-        setStatus("error: no visual selection");
-        appendLog("scene edit: no visual selection");
-        return;
-      }
-      if (el.editObjectSelect) el.editObjectSelect.value = objectId;
-      syncTransformInputsFromObject(objectId);
-      appendLog(`scene edit selection=${objectId}`);
-    });
-  }
-
-  if (el.editApplyTransformBtn) {
-    el.editApplyTransformBtn.addEventListener("click", () => {
-      const objectId = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
-      if (!objectId) {
-        setStatus("error: select an object first");
-        appendLog("scene edit: apply transform failed (no object)");
-        return;
-      }
-      try {
-        const nextSource = updateObjectTransformInSource(el.sceneSource.value || "", objectId, currentTransformInputs());
-        updateSceneSourceText(nextSource);
-        rebuildVisualFromEditorSource()
-          .then(() => {
-            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
-          })
-          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
-        setStatus(`updated ${objectId}`);
-        appendLog(`scene edit transform updated: ${objectId}`);
-      } catch (err) {
-        setStatus(`error: ${err.message}`);
-        appendLog(`scene edit transform error: ${err.message}`);
-      }
-    });
-  }
-
-  if (el.createGeometryBtn) {
-    el.createGeometryBtn.addEventListener("click", () => {
-      try {
-        const added = addMeshObjectToSceneSource(el.sceneSource.value || "", {
-          generator: String(el.createGeometryType && el.createGeometryType.value ? el.createGeometryType.value : "cube").toLowerCase(),
-          material: String(el.createMaterialSelect && el.createMaterialSelect.value ? el.createMaterialSelect.value : "").trim(),
-          geometryId: String(el.createGeometryId && el.createGeometryId.value ? el.createGeometryId.value : "").trim(),
-          objectId: String(el.createObjectId && el.createObjectId.value ? el.createObjectId.value : "").trim(),
-          ...currentTransformInputs(),
-        });
-        updateSceneSourceText(added.source);
-        if (el.editObjectSelect) el.editObjectSelect.value = added.objectId;
-        syncTransformInputsFromObject(added.objectId);
-        rebuildVisualFromEditorSource()
-          .then(() => {
-            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(added.objectId, true);
-          })
-          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
-        setStatus(`created ${added.objectId}`);
-        appendLog(`scene edit created: object=${added.objectId} geometry=${added.geometryId}`);
-      } catch (err) {
-        setStatus(`error: ${err.message}`);
-        appendLog(`scene edit create error: ${err.message}`);
-      }
-    });
-  }
 
   el.clearLogsBtn.addEventListener("click", () => {
     logEntries.length = 0;
@@ -1129,7 +1090,6 @@ async function boot() {
 
   el.sceneSource.addEventListener("input", () => {
     updateEditorMetrics();
-    refreshSceneEditControls();
     renderSceneGraphView();
     if (!suppressHistoryTracking) {
       scheduleTextHistoryCommit();
@@ -1141,7 +1101,6 @@ async function boot() {
   el.sceneSource.addEventListener("keyup", syncEditorScroll);
   el.sceneSource.addEventListener("click", syncEditorScroll);
   updateEditorMetrics();
-  refreshSceneEditControls();
   syncEditorScroll();
   initializeFtueTutorial();
 }

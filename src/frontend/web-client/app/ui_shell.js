@@ -3,9 +3,7 @@ function normalizeTabMode(mode) {
   if (raw === "editor") return "visual";
   if (raw === "workspace") return "workspaces";
   if (raw === "scene_setup" || raw === "scenesetup") return "scene";
-  // Backward compatibility for previously stored "about" tab.
-  if (raw === "about") return "settings";
-  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs") {
+  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs" || raw === "about") {
     return raw;
   }
   return "scene";
@@ -41,7 +39,7 @@ function normalizeSidebarCardVisibilityConfig(rawConfig) {
       source = rawConfig[mode];
     } else if (rawConfig && mode === "visual" && Array.isArray(rawConfig.editor)) {
       source = rawConfig.editor;
-    } else if (rawConfig && mode === "settings" && Array.isArray(rawConfig.about)) {
+    } else if (rawConfig && mode === "about" && Array.isArray(rawConfig.about)) {
       source = rawConfig.about;
     }
     normalized[mode] = normalizeIds(source);
@@ -239,29 +237,45 @@ function refreshMobileCardSwitcher() {
     switcher.hidden = true;
     switcher.innerHTML = "";
     allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    delete container.dataset.mobileSelectedCardId;
     scheduleMobileLogsViewportSync();
     return;
   }
 
-  const openCard = cards.find((card) => card.open) || cards[0];
+  const preferredId = container.dataset.mobileSelectedCardId || "";
+  const selectedCard = cards.find((card) => card.id === preferredId)
+    || cards.find((card) => card.open)
+    || cards[0];
+  container.dataset.mobileSelectedCardId = selectedCard ? selectedCard.id : "";
+
   cards.forEach((card) => {
-    card.classList.toggle("mobile-card-hidden", card !== openCard);
+    card.classList.toggle("mobile-card-hidden", card !== selectedCard);
   });
   switcher.hidden = false;
   switcher.innerHTML = "";
   cards.forEach((card) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "mobile-card-chip";
-    chip.textContent = getSidebarCardTitle(card);
-    chip.classList.toggle("is-active", card === openCard);
-    chip.setAttribute("aria-pressed", card === openCard ? "true" : "false");
+    const useWidgetPill = window.XTracerWidgets && typeof window.XTracerWidgets.createPill === "function";
+    const isActive = card === selectedCard;
+    const chip = useWidgetPill
+      ? window.XTracerWidgets.createPill({
+        label: getSidebarCardTitle(card),
+        active: isActive,
+        pressable: true,
+        className: "mobile-card-chip",
+      })
+      : document.createElement("button");
+    if (!useWidgetPill) {
+      chip.type = "button";
+      chip.className = "mobile-card-chip";
+      chip.textContent = getSidebarCardTitle(card);
+      chip.classList.toggle("is-active", isActive);
+      chip.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
     chip.addEventListener("click", () => {
       if (!isMobileTabMenuViewport()) return;
-      if (card.open) return;
-      const summary = card.querySelector("summary");
-      if (summary) summary.click();
-      else card.open = true;
+      container.dataset.mobileSelectedCardId = card.id;
+      if (!card.open) card.open = true;
+      refreshMobileCardSwitcher();
       requestAnimationFrame(() => {
         card.scrollIntoView({ block: "start", inline: "nearest", behavior: "smooth" });
       });
@@ -301,13 +315,6 @@ function applySidebarCardLayout(mode) {
     setSidebarCardVisibility(card, visibleSet.has(card.id));
   });
 
-  // On tab switch, keep at least one visible card expanded.
-  const visibleCards = visibleIds
-    .map((id) => cardById.get(id))
-    .filter((card) => !!card);
-  if (visibleCards.length > 0 && !visibleCards.some((card) => card.open)) {
-    visibleCards[0].open = true;
-  }
   requestAnimationFrame(refreshMobileCardSwitcher);
 }
 
@@ -357,18 +364,21 @@ function setActiveTab(mode) {
   const isWorkspaces = nextMode === "workspaces";
   const isSettings = nextMode === "settings";
   const isLogs = nextMode === "logs";
+  const isAbout = nextMode === "about";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
   setActive(el.tabScene, isScene);
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabWorkspaces, isWorkspaces);
   setActive(el.tabSettings, isSettings);
+  setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
   setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneWorkspaces, isWorkspaces);
   setActive(el.paneSettings, isSettings);
+  setActive(el.paneAbout, isAbout);
   setActive(el.paneLogs, isLogs);
   applySidebarCardLayout(nextMode);
   void refreshSidebarCardVisibilityConfig(nextMode);
@@ -472,29 +482,12 @@ function initSidebarAccordion() {
     }, 220);
   };
 
-  const enforceSingleOpen = () => {
-    const firstOpen = cards.find((card) => card.open) || cards[0];
-    cards.forEach((card) => {
-      card.open = card === firstOpen;
-    });
-    refreshMobileCardSwitcher();
-    scheduleMobileLogsViewportSync();
-  };
-
-  enforceSingleOpen();
   window.addEventListener("resize", () => {
-    enforceSingleOpen();
+    refreshMobileCardSwitcher();
     scheduleMobileLogsViewportSync();
   });
   cards.forEach((card) => {
     card.addEventListener("toggle", () => {
-      if (card.open) {
-        cards.forEach((other) => {
-          if (other !== card) other.open = false;
-        });
-      } else if (!cards.some((other) => other.open) && cards[0]) {
-        cards[0].open = true;
-      }
       requestAnimationFrame(() => {
         refreshMobileCardSwitcher();
         scheduleMobileLogsViewportSync();
@@ -511,10 +504,6 @@ function initSidebarAccordion() {
         animateClose(card);
         return;
       }
-      cards.forEach((other) => {
-        if (other === card) return;
-        animateClose(other);
-      });
       animateOpen(card);
       requestAnimationFrame(() => {
         refreshMobileCardSwitcher();
@@ -544,9 +533,6 @@ async function loadVisualSceneFromSelected() {
   const runtimeData = pair[1] || null;
   await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
   visualLoadedSceneName = sceneName;
-  if (el.editObjectSelect && el.editObjectSelect.value && visualEditor.selectObjectById) {
-    visualEditor.selectObjectById(el.editObjectSelect.value, false);
-  }
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
   refreshVisualPhotonOverlay().catch(() => {});
@@ -609,6 +595,17 @@ function applyTheme(mode) {
   if (mode === "light" || mode === "dark") root.setAttribute("data-theme", mode);
   else root.setAttribute("data-theme", "system");
   localStorage.setItem("xtracer-theme", mode);
+  refreshThemeToggleButton();
+}
+
+function refreshThemeToggleButton() {
+  if (!el.themeToggle) return;
+  const selected = String(el.theme && el.theme.value ? el.theme.value : localStorage.getItem("xtracer-theme") || "system").toLowerCase();
+  const effective = effectiveThemeMode(selected);
+  const label = selected === "system" ? `Theme: system (${effective})` : `Theme: ${selected}`;
+  el.themeToggle.setAttribute("aria-label", label);
+  el.themeToggle.setAttribute("title", label);
+  el.themeToggle.dataset.themeMode = selected;
 }
 
 function effectiveThemeMode(mode) {
@@ -734,6 +731,7 @@ function loadUIOptions() {
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
   if (el.tileHeatmapEnabled) el.tileHeatmapEnabled.checked = !!uiOptions.tileHeatmapEnabled;
   if (el.previewSampling) el.previewSampling.value = uiOptions.previewSampling;
+  if (typeof syncRenderPreviewSamplingSwitch === "function") syncRenderPreviewSamplingSwitch();
   applyDarkPalette(uiOptions.darkPalette);
   applyLightPalette(uiOptions.lightPalette);
   refreshPaletteOptions();

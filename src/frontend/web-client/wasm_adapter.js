@@ -31,13 +31,14 @@
     { id: 5, description: "4K UHD", width: 3840, height: 2160 },
   ];
   const THIRD_PARTY_LICENSES = [
-    { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
-    { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
-    { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
-    { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
-    { name: "cpp-httplib", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
-    { name: "RtMidi", license: "MIT-style", url: "https://github.com/thestk/rtmidi" },
-    { name: "Three.js", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+    { name: "cgltf", description: "Single-file glTF 2.0 loader used for importing compact scene assets into the renderer.", used_in: "xtcore", license: "MIT", url: "https://github.com/jkuhlmann/cgltf" },
+    { name: "TinyObjLoader", description: "Wavefront OBJ and MTL loader used by the mesh pipeline and scene import path.", used_in: "lib/nmesh, xtcore", license: "MIT", url: "https://github.com/tinyobjloader/tinyobjloader" },
+    { name: "STB", description: "Collection of single-header image and utility libraries used for texture IO and image helpers.", used_in: "lib/nimg, xtcore, xtracer-web", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
+    { name: "TinyEXR", description: "OpenEXR reader and writer used for high-dynamic-range image support.", used_in: "lib/nimg", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
+    { name: "strpool", description: "String interning helper used to keep repeated identifiers compact in runtime data structures.", used_in: "xtcore, frontend/common, xtracer-web, xtracer-wasm", license: "MIT / Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
+    { name: "cpp-httplib", description: "HTTP server and client header library used by the web backend API layer.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
+    { name: "Three.js", description: "3D scene graph and rendering toolkit used by the web visualizer and interactive previews.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+    { name: "ufbx", description: "FBX parser and evaluator used to read production-style geometry, transforms, and animation data.", used_in: "xtcore", license: "MIT", url: "https://github.com/ufbx/ufbx" },
   ];
 
   function makeError(message, status) {

@@ -67,13 +67,11 @@
     },
     {
       "title": "Export Format",
-      "body": "Choose output format for export. PNG/JPG are convenient; EXR/HDR preserve more data.",
+      "body": "Choose the preview-toolbar export format. PNG/JPG are convenient; EXR/HDR preserve more data.",
       "target_selector": "#exportFormat",
       "placement": "right",
       "tab": "render",
-      "open_cards": [
-        "exportControlsCard"
-      ]
+      "open_cards": []
     },
     {
       "title": "Start Rendering",
@@ -86,14 +84,12 @@
       ]
     },
     {
-      "title": "Export Render",
-      "body": "After a render finishes, use Export Render to download your output.",
+      "title": "Save Render",
+      "body": "After a render finishes, choose a format and use the save button in the preview toolbar to download the output.",
       "target_selector": "#download",
       "placement": "right",
       "tab": "render",
-      "open_cards": [
-        "exportControlsCard"
-      ]
+      "open_cards": []
     },
     {
       "title": "Open Editor",
