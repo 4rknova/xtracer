@@ -343,6 +343,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    xtcore::Log::handle().max_size(1024);
     xtcore::Log::handle().callback(&forward_xtcore_log, nullptr);
     xtcore::init();
     xtcore::Log::handle().echo(false);

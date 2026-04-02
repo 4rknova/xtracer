@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <list>
 #include <ctime>
 #include <vector>
 #include <thread>
@@ -48,6 +49,7 @@
 #include <xtcore/strpool.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
+#include <nimg/img.h>
 
 #include "backend_log.h"
 #include "job_manager.h"
@@ -83,6 +85,26 @@ size_t compute_auto_render_threads(size_t reserve_threads)
     const size_t capacity = (openmp_max_threads > 0) ? openmp_max_threads : logical_cores;
     return (capacity > reserve_threads) ? (capacity - reserve_threads) : 1;
 }
+
+struct pooled_hash_guard_t
+{
+    HASH_ID value;
+
+    pooled_hash_guard_t()
+        : value(HASH_ID_INVALID)
+    {}
+
+    ~pooled_hash_guard_t()
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+    }
+
+    void reset(HASH_ID next)
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+        value = next;
+    }
+};
 
 std::string json_escape(const std::string &s)
 {
@@ -441,34 +463,52 @@ bool has_prefix(const std::string &s, const char *prefix)
     return s.size() >= n && s.compare(0, n, prefix) == 0;
 }
 
-struct third_party_dep_t {
-    const char *name;
-    const char *license;
-    const char *url;
-};
-
-void append_third_party_licenses_json(std::ostringstream &ss)
+std::string trim_ascii(const std::string &s)
 {
-    static const third_party_dep_t deps[] = {
-        { "TinyObjLoader", "MIT", "https://github.com/syoyo/tinyobjloader" },
-        { "STB", "Public Domain / MIT", "https://github.com/nothings/stb" },
-        { "TinyEXR", "BSD-3-Clause", "https://github.com/syoyo/tinyexr" },
-        { "strpool", "Public Domain", "https://github.com/mattiasgustavsson/libs" },
-        { "cpp-httplib", "MIT", "https://github.com/yhirose/cpp-httplib" },
-        { "RtMidi", "MIT-style", "https://github.com/thestk/rtmidi" },
-        { "Three.js", "MIT", "https://github.com/mrdoob/three.js" },
-    };
+    size_t start = 0;
+    while (start < s.size() && std::isspace((unsigned char)s[start])) ++start;
 
-    ss << '[';
-    for (size_t i = 0; i < (sizeof(deps) / sizeof(deps[0])); ++i) {
-        if (i) ss << ',';
-        ss << "{"
-           << "\"name\":\"" << json_escape(deps[i].name ? deps[i].name : "") << "\","
-           << "\"license\":\"" << json_escape(deps[i].license ? deps[i].license : "") << "\","
-           << "\"url\":\"" << json_escape(deps[i].url ? deps[i].url : "") << "\""
-           << "}";
+    size_t end = s.size();
+    while (end > start && std::isspace((unsigned char)s[end - 1])) --end;
+
+    return s.substr(start, end - start);
+}
+
+std::string third_party_licenses_data_path(const std::string &web_root)
+{
+    if (web_root.empty()) {
+        return "src/frontend/web-server/app/data/third_party_licenses.json";
     }
-    ss << ']';
+
+    std::string path = web_root;
+    while (!path.empty() && (path[path.size() - 1] == '/' || path[path.size() - 1] == '\\')) {
+        path.erase(path.size() - 1, 1);
+    }
+
+    const std::string suffix = "/web-client";
+    if (path.size() >= suffix.size() && path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        return path.substr(0, path.size() - suffix.size()) + "/web-server/app/data/third_party_licenses.json";
+    }
+
+    return path + "/../web-server/app/data/third_party_licenses.json";
+}
+
+void append_third_party_licenses_json(std::ostringstream &ss, const std::string &web_root)
+{
+    std::string json;
+    if (!read_text_file(third_party_licenses_data_path(web_root), json)) {
+        backend_log_t::handle().add("warning", "failed to read third-party dependency registry json");
+        ss << "[]";
+        return;
+    }
+
+    json = trim_ascii(json);
+    if (json.empty()) {
+        ss << "[]";
+        return;
+    }
+
+    ss << json;
 }
 
 std::string utc_timestamp_for_filename()
@@ -979,6 +1019,13 @@ const char *material_type_name(const xtcore::asset::IMaterial *mat)
     if (dynamic_cast<const xtcore::asset::material::BlinnPhong *>(mat)) return "blinn_phong";
     if (dynamic_cast<const xtcore::asset::material::Emissive *>(mat)) return "emissive";
     if (dynamic_cast<const xtcore::asset::material::Dielectric *>(mat)) return "dielectric";
+    if (dynamic_cast<const xtcore::asset::material::Principled *>(mat)) return "principled";
+    if (dynamic_cast<const xtcore::asset::material::RoughDielectric *>(mat)) return "rough_dielectric";
+    if (dynamic_cast<const xtcore::asset::material::ThinDielectric *>(mat)) return "thin_dielectric";
+    if (dynamic_cast<const xtcore::asset::material::Subsurface *>(mat)) return "subsurface";
+    if (dynamic_cast<const xtcore::asset::material::Sheen *>(mat)) return "sheen";
+    if (dynamic_cast<const xtcore::asset::material::ThinTranslucent *>(mat)) return "thin_translucent";
+    if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat)) return "boundary";
     return "material";
 }
 
@@ -1251,6 +1298,13 @@ struct scene_pending_load_t
 {
     std::uint64_t mtime;
     unsigned long long job_id;
+    long long completed_ms;
+
+    scene_pending_load_t()
+        : mtime(0ULL)
+        , job_id(0ULL)
+        , completed_ms(0LL)
+    {}
 };
 
 class scene_cache_t
@@ -1266,6 +1320,7 @@ class scene_cache_t
     {
         scene_cache_lookup_t out;
         const std::string key = scene_cache_key(scene_path, variant);
+        const long long now = now_ms();
 
         std::uint64_t mtime = 0ULL;
         if (!file_mtime(scene_path, mtime)) {
@@ -1274,27 +1329,31 @@ class scene_cache_t
         }
 
         unsigned long long pending_job_id = 0ULL;
+        std::vector<unsigned long long> expired_jobs;
         {
             std::lock_guard<std::mutex> lock(mut);
+            prune_completed_pending_locked(now, expired_jobs);
             auto it = entries.find(key);
             if (it != entries.end() && it->second && it->second->mtime == mtime) {
                 out.cache_hit = true;
+                touch_entry_locked(key);
                 backend_log_t::handle().add("debug",
                                             "scene cache hit path=" + scene_path + " variant=" + variant);
                 out.entry = it->second;
-                return out;
-            }
-
-            auto pit = pending.find(key);
-            if (pit != pending.end()) {
-                if (pit->second.mtime == mtime) {
-                    pending_job_id = pit->second.job_id;
-                } else {
-                    xtcore::io::scn::load_async_discard(pit->second.job_id);
-                    pending.erase(pit);
+            } else {
+                auto pit = pending.find(key);
+                if (pit != pending.end()) {
+                    if (pit->second.mtime == mtime) {
+                        pending_job_id = pit->second.job_id;
+                    } else {
+                        xtcore::io::scn::load_async_discard(pit->second.job_id);
+                        pending.erase(pit);
+                    }
                 }
             }
         }
+        discard_pending_jobs(expired_jobs);
+        if (out.entry) return out;
 
         if (!pending_job_id) {
             const char *variant_name = variant.empty() ? nullptr : variant.c_str();
@@ -1308,6 +1367,7 @@ class scene_cache_t
                 scene_pending_load_t p;
                 p.mtime = mtime;
                 p.job_id = pending_job_id;
+                p.completed_ms = 0LL;
                 pending[key] = p;
             }
             std::ostringstream log;
@@ -1345,6 +1405,10 @@ class scene_cache_t
             return out;
         }
 
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            mark_pending_completed_locked(key, pending_job_id, now);
+        }
         std::shared_ptr<xtcore::Scene> loaded_scene = xtcore::io::scn::load_async_take_scene(pending_job_id);
         if (!loaded_scene) {
             out.loading = true;
@@ -1369,6 +1433,8 @@ class scene_cache_t
         {
             std::lock_guard<std::mutex> lock(mut);
             entries[key] = entry;
+            touch_entry_locked(key);
+            prune_entries_locked();
             auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
         }
@@ -1396,28 +1462,159 @@ class scene_cache_t
                 ++pit;
             }
         }
-        for (auto eit = entries.begin(); eit != entries.end(); ) {
+        std::vector<std::string> keys_to_erase;
+        for (auto eit = entries.begin(); eit != entries.end(); ++eit) {
             if (scene_cache_key_matches_path(eit->first, scene_path)) {
-                eit = entries.erase(eit);
-            } else {
-                ++eit;
+                keys_to_erase.push_back(eit->first);
             }
+        }
+        for (size_t i = 0; i < keys_to_erase.size(); ++i) {
+            erase_entry_locked(keys_to_erase[i]);
         }
     }
 
     bool load_job_snapshot(unsigned long long id, xtcore::io::scn::async_load_snapshot_t &snapshot)
     {
-        return xtcore::io::scn::load_async_snapshot(id, &snapshot);
+        const long long now = now_ms();
+        std::vector<unsigned long long> expired_jobs;
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            prune_completed_pending_locked(now, expired_jobs);
+        }
+        discard_pending_jobs(expired_jobs);
+
+        if (!xtcore::io::scn::load_async_snapshot(id, &snapshot)) {
+            std::lock_guard<std::mutex> lock(mut);
+            erase_pending_by_job_locked(id);
+            return false;
+        }
+
+        if (snapshot.state == xtcore::io::scn::ASYNC_LOAD_DONE
+            || snapshot.state == xtcore::io::scn::ASYNC_LOAD_ERROR) {
+            std::vector<unsigned long long> completed_expired_jobs;
+            {
+                std::lock_guard<std::mutex> lock(mut);
+                mark_pending_completed_by_job_locked(id, now);
+                prune_completed_pending_locked(now, completed_expired_jobs);
+            }
+            discard_pending_jobs(completed_expired_jobs);
+        }
+        return true;
     }
 
     private:
-    scene_cache_t() = default;
+    scene_cache_t()
+        : mut()
+        , entries()
+        , pending()
+        , lru_order()
+        , lru_index()
+        , max_entries(8)
+    {}
     scene_cache_t(const scene_cache_t &) = delete;
     scene_cache_t &operator=(const scene_cache_t &) = delete;
+
+    long long now_ms() const
+    {
+        const auto now = std::chrono::system_clock::now();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+        return (long long)ms.count();
+    }
+
+    void touch_entry_locked(const std::string &key)
+    {
+        auto it = lru_index.find(key);
+        if (it != lru_index.end()) {
+            lru_order.erase(it->second);
+        }
+        lru_order.push_back(key);
+        std::list<std::string>::iterator last = lru_order.end();
+        --last;
+        lru_index[key] = last;
+    }
+
+    void erase_entry_locked(const std::string &key)
+    {
+        auto it = lru_index.find(key);
+        if (it != lru_index.end()) {
+            lru_order.erase(it->second);
+            lru_index.erase(it);
+        }
+        entries.erase(key);
+    }
+
+    void erase_pending_by_job_locked(unsigned long long job_id)
+    {
+        if (!job_id) return;
+        for (auto pit = pending.begin(); pit != pending.end(); ++pit) {
+            if (pit->second.job_id == job_id) {
+                pending.erase(pit);
+                return;
+            }
+        }
+    }
+
+    void mark_pending_completed_locked(const std::string &key,
+                                       unsigned long long job_id,
+                                       long long completed_ms)
+    {
+        if (!job_id) return;
+        auto pit = pending.find(key);
+        if (pit == pending.end()) return;
+        if (pit->second.job_id != job_id) return;
+        if (pit->second.completed_ms == 0LL) pit->second.completed_ms = completed_ms;
+    }
+
+    void mark_pending_completed_by_job_locked(unsigned long long job_id, long long completed_ms)
+    {
+        if (!job_id) return;
+        for (auto pit = pending.begin(); pit != pending.end(); ++pit) {
+            if (pit->second.job_id != job_id) continue;
+            if (pit->second.completed_ms == 0LL) pit->second.completed_ms = completed_ms;
+            return;
+        }
+    }
+
+    void prune_completed_pending_locked(long long now, std::vector<unsigned long long> &jobs_to_discard)
+    {
+        static const long long k_completed_pending_ttl_ms = 30LL * 1000LL;
+        for (auto pit = pending.begin(); pit != pending.end();) {
+            if (pit->second.completed_ms > 0LL
+                && (now - pit->second.completed_ms) > k_completed_pending_ttl_ms) {
+                if (pit->second.job_id) jobs_to_discard.push_back(pit->second.job_id);
+                pit = pending.erase(pit);
+                continue;
+            }
+            ++pit;
+        }
+    }
+
+    void discard_pending_jobs(const std::vector<unsigned long long> &jobs)
+    {
+        if (jobs.empty()) return;
+        for (size_t i = 0; i < jobs.size(); ++i) {
+            if (!jobs[i]) continue;
+            xtcore::io::scn::load_async_discard(jobs[i]);
+        }
+        xtcore::io::scn::load_async_gc_done(128);
+    }
+
+    void prune_entries_locked()
+    {
+        while (max_entries > 0 && entries.size() > max_entries && !lru_order.empty()) {
+            const std::string victim = lru_order.front();
+            lru_order.pop_front();
+            lru_index.erase(victim);
+            entries.erase(victim);
+        }
+    }
 
     std::mutex mut;
     std::unordered_map<std::string, std::shared_ptr<scene_cache_entry_t> > entries;
     std::unordered_map<std::string, scene_pending_load_t> pending;
+    std::list<std::string> lru_order;
+    std::unordered_map<std::string, std::list<std::string>::iterator> lru_index;
+    size_t max_entries;
 };
 
 camera_list_info_t list_cameras(const std::string &scene_path,
@@ -1528,6 +1725,76 @@ std::string scene_runtime_graph_json(const std::string &scene_path,
     return entry->runtime_graph_json;
 }
 
+bool encode_texture_sampler_png(const xtcore::sampler::Texture2D *tex, std::vector<unsigned char> &out)
+{
+    if (!tex) return false;
+    if (tex->width() == 0 || tex->height() == 0) return false;
+
+    nimg::Pixmap pixmap;
+    if (pixmap.init(tex->width(), tex->height()) != 0) return false;
+
+    for (size_t y = 0; y < tex->height(); ++y) {
+        for (size_t x = 0; x < tex->width(); ++x) {
+            pixmap.pixel(x, y) = tex->pixel_ro(x, y);
+        }
+    }
+
+    return nimg::io::save::png_memory(pixmap, out) == 0;
+}
+
+bool scene_runtime_texture_png(const std::string &scene_path,
+                               const std::string &variant,
+                               const std::string &material_name,
+                               const std::string &sampler_name,
+                               std::vector<unsigned char> &png,
+                               std::string &error,
+                               bool &loading,
+                               unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry || !entry->scene) {
+        if (error.empty() && !loading) error = "scene not loaded";
+        return false;
+    }
+
+    pooled_hash_guard_t material_id_guard;
+    material_id_guard.reset(xtcore::pool::str::add(material_name.c_str()));
+    const HASH_UINT64 material_id = material_id_guard.value;
+    auto it = entry->scene->m_materials.find(material_id);
+    if (it == entry->scene->m_materials.end() || !it->second) {
+        error = "material not found";
+        return false;
+    }
+
+    xtcore::asset::IMaterial *mat = it->second;
+    xtcore::sampler::ISampler *sampler = 0;
+    for (size_t i = 0; i < mat->get_sampler_count(); ++i) {
+        std::string name;
+        xtcore::sampler::ISampler *candidate = mat->get_sampler_by_index(i, &name);
+        if (name == sampler_name) {
+            sampler = candidate;
+            break;
+        }
+    }
+
+    xtcore::sampler::Texture2D *tex = dynamic_cast<xtcore::sampler::Texture2D *>(sampler);
+    if (!tex) {
+        error = "texture sampler not found";
+        return false;
+    }
+
+    if (!encode_texture_sampler_png(tex, png)) {
+        error = "failed to encode texture preview";
+        return false;
+    }
+
+    return true;
+}
+
 void send_scene_loading(httplib::Response &res, unsigned long long load_job_id)
 {
     std::ostringstream ss;
@@ -1575,7 +1842,7 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/about", [&jobs, thread_policy](const httplib::Request &, httplib::Response &res) {
+    server.Get("/api/about", [&jobs, &web_root, thread_policy](const httplib::Request &, httplib::Response &res) {
         std::time_t now = std::time(nullptr);
         std::tm *utc = std::gmtime(&now);
         int year = utc ? (utc->tm_year + 1900) : 2010;
@@ -1606,7 +1873,7 @@ void setup_routes(httplib::Server &server,
            << "\"render_reserve_threads\":" << reserve_threads << ","
            << "\"render_auto_threads\":" << auto_render_threads << ","
            << "\"third_party_licenses\":";
-        append_third_party_licenses_json(ss);
+        append_third_party_licenses_json(ss, web_root);
         ss
            << "}";
         send_json(res, ss.str());
@@ -1662,6 +1929,11 @@ void setup_routes(httplib::Server &server,
         const std::string client_id = read_client_id(req);
         const std::string name = req.has_param("name") ? req.get_param_value("name") : "";
         const std::string workspace_id = workspaces.create(name, client_id);
+        if (workspace_id.empty()) {
+            backend_log_t::handle().add("warn", "workspace create rejected: retained workspace limit reached");
+            send_json(res, "{\"error\":\"workspace limit reached\"}", 409);
+            return;
+        }
         if (!client_id.empty()) {
             workspaces.set_active(client_id, workspace_id);
         }
@@ -1747,7 +2019,13 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-        if (!workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"))) {
+        const workspace_manager_t::store_result_t rc =
+            workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"));
+        if (rc == workspace_manager_t::STORE_TOO_LARGE) {
+            send_json(res, "{\"error\":\"scene draft too large\"}", 413);
+            return;
+        }
+        if (rc != workspace_manager_t::STORE_OK) {
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
@@ -1768,11 +2046,13 @@ void setup_routes(httplib::Server &server,
         std::string workspace_id;
         workspaces.get_active(client_id, workspace_id);
         const std::string settings_json = req.get_param_value("settings_json");
-        if (settings_json.size() > 65536) {
-            send_json(res, "{\"error\":\"settings_json too large\"}", 400);
+        const workspace_manager_t::store_result_t rc =
+            workspaces.set_settings_json(workspace_id, settings_json);
+        if (rc == workspace_manager_t::STORE_TOO_LARGE) {
+            send_json(res, "{\"error\":\"settings_json too large\"}", 413);
             return;
         }
-        if (!workspaces.set_settings_json(workspace_id, settings_json)) {
+        if (rc != workspace_manager_t::STORE_OK) {
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
@@ -2005,6 +2285,44 @@ void setup_routes(httplib::Server &server,
         send_json(res, payload);
     });
 
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/runtime_texture)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "runtime_texture rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+        if (!req.has_param("material") || !req.has_param("sampler")) {
+            send_json(res, "{\"error\":\"material and sampler are required\"}", 400);
+            return;
+        }
+
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
+
+        const std::string material = req.get_param_value("material");
+        const std::string sampler = req.get_param_value("sampler");
+        std::vector<unsigned char> png;
+        std::string error;
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        if (!scene_runtime_texture_png(join_path(scene_dir, scene), variant, material, sampler, png, error, loading, load_job_id)) {
+            if (loading) {
+                send_scene_loading(res, load_job_id);
+                return;
+            }
+            send_json(res, "{\"error\":\"texture preview unavailable\"}", 404);
+            return;
+        }
+
+        res.set_header("Cache-Control", "no-store");
+        res.set_content((const char *)png.data(), png.size(), "image/png");
+    });
+
     server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/camera_resolve)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
         std::string scene = req.matches[1];
         if (!is_scene_name_safe(scene)) {
@@ -2127,7 +2445,11 @@ void setup_routes(httplib::Server &server,
         if (!client_id.empty()) {
             std::string workspace_id;
             workspaces.get_active(client_id, workspace_id);
-            workspaces.set_scene_draft(workspace_id, scene_name, source);
+            const workspace_manager_t::store_result_t draft_rc =
+                workspaces.set_scene_draft(workspace_id, scene_name, source);
+            if (draft_rc == workspace_manager_t::STORE_TOO_LARGE) {
+                backend_log_t::handle().add("warn", "scene draft cache skipped: source too large scene=" + scene_name);
+            }
             workspaces.set_active_scene(workspace_id, scene_name);
         }
         backend_log_t::handle().add("info", "scene saved scene=" + scene_name);
@@ -2416,6 +2738,12 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path);
+        if (job_id.empty()) {
+            if (!cleanup_scene_path.empty()) unlink(cleanup_scene_path.c_str());
+            backend_log_t::handle().add("warn", "render rejected: queue full workspace=" + workspace_id);
+            send_json(res, "{\"error\":\"render queue is full\"}", 503);
+            return;
+        }
         workspaces.mark_job_started(workspace_id, job_id);
         std::ostringstream ss;
         ss << "{"
@@ -2745,13 +3073,26 @@ void setup_routes(httplib::Server &server,
         serve_static_file(join_path(web_root, "index.html"), "text/html", res);
     });
 
+    server.Get("/showcase.html", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "showcase.html"), "text/html", res);
+    });
+
     server.Get("/app.js", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
+    });
+
+    server.Get("/showcase.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "showcase.js"), "application/javascript", res);
     });
 
     server.Get(R"(/app/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
         const std::string name = req.matches[1];
         serve_static_file(join_path(web_root, "app/" + name), "application/javascript", res);
+    });
+
+    server.Get(R"(/app/widgets/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "app/widgets/" + name), "application/javascript", res);
     });
 
     server.Get("/visual_editor.js", [web_root](const httplib::Request &, httplib::Response &res) {
@@ -2790,6 +3131,11 @@ void setup_routes(httplib::Server &server,
 
     server.Get("/styles.css", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "styles.css"), "text/css", res);
+    });
+
+    server.Get(R"(/styles/([A-Za-z0-9_.-]+\.css))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "styles/" + name), "text/css", res);
     });
 
     server.Get("/preview.jpg", [web_root](const httplib::Request &, httplib::Response &res) {

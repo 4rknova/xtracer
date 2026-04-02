@@ -189,6 +189,12 @@ class job_manager_t
         job_t();
     };
 
+    struct scheduled_job_t
+    {
+        std::shared_ptr<job_t> job;
+        size_t granted_threads;
+    };
+
     struct evicted_job_t
     {
         std::string id;
@@ -204,9 +210,11 @@ class job_manager_t
         std::string png_path;
     };
 
-    void run(const std::shared_ptr<job_t> &job);
+    void run(const std::shared_ptr<job_t> &job, size_t granted_threads);
     std::shared_ptr<job_t> get_job(const std::string &id);
     void on_job_finished(const std::string &id);
+    void dispatch_queued_jobs();
+    void release_render_slots(size_t released_threads);
     void prune_completed_jobs_locked();
     void cache_evicted_job_locked(const std::shared_ptr<job_t> &job);
     void prune_evicted_jobs_locked();
@@ -223,6 +231,7 @@ class job_manager_t
     std::map<std::string, evicted_job_t> evicted_jobs;
     std::deque<std::string> evicted_job_order;
     size_t max_evicted_jobs;
+    size_t max_queued_jobs;
     std::atomic<unsigned long long> next_id;
 
     // Limit concurrent renders to avoid unbounded oversubscription.

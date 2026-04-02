@@ -235,6 +235,26 @@ size_t progressive_pass_sample_step(size_t total_samples)
     return 8;
 }
 
+struct pooled_hash_guard_t
+{
+    HASH_ID value;
+
+    pooled_hash_guard_t()
+        : value(HASH_ID_INVALID)
+    {}
+
+    ~pooled_hash_guard_t()
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+    }
+
+    void reset(HASH_ID next)
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+        value = next;
+    }
+};
+
 } // namespace
 
 render_request_t::render_request_t()
@@ -547,8 +567,10 @@ render_result_t render_scene_to_png(const render_request_t &request,
         return result;
     }
 
+    pooled_hash_guard_t camera_guard;
     if (!request.camera.empty()) {
-        context.params.camera = xtcore::pool::str::add(request.camera.c_str());
+        camera_guard.reset(xtcore::pool::str::add(request.camera.c_str()));
+        context.params.camera = camera_guard.value;
     } else {
         context.params.camera = find_camera_id_by_name(context.scene, context.scene.m_default_camera);
         if (context.params.camera == HASH_ID_INVALID) {

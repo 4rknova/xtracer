@@ -667,6 +667,7 @@ job_manager_t::job_manager_t()
     , evicted_jobs()
     , evicted_job_order()
     , max_evicted_jobs(64)
+    , max_queued_jobs(32)
     , next_id(0)
     , render_slots_mut()
     , render_slots_cv()
@@ -680,17 +681,23 @@ job_manager_t::job_manager_t()
 void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
 {
     if (max_concurrent == 0) max_concurrent = 1;
-    std::lock_guard<std::mutex> lock(render_slots_mut);
-    max_concurrent_renders = max_concurrent;
-    render_slots_cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        max_concurrent_renders = max_concurrent;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
 }
 
 void job_manager_t::set_render_thread_budget(size_t max_threads)
 {
     if (max_threads == 0) max_threads = 1;
-    std::lock_guard<std::mutex> lock(render_slots_mut);
-    render_thread_budget = max_threads;
-    render_slots_cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        render_thread_budget = max_threads;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
 }
 
 size_t job_manager_t::get_max_concurrent_renders() const
@@ -723,26 +730,27 @@ std::string job_manager_t::create(const common::render_request_t &request,
     job->integrator = request.integrator;
     job->request = request;
     job->cleanup_scene_path = cleanup_scene_path;
-    job->progressive_fb.init(request.width, request.height);
-    for (size_t y = 0; y < request.height; ++y) {
-        for (size_t x = 0; x < request.width; ++x) {
-            // Start unfinished pixels as fully transparent in progressive previews.
-            job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 0);
-        }
-    }
 
     {
         std::lock_guard<std::mutex> lock(jobs_mut);
         jobs[job->id] = job;
     }
+    bool queue_full = false;
     {
         std::lock_guard<std::mutex> lock(render_slots_mut);
-        queued_job_order.push_back(job->id);
-        render_slots_cv.notify_all();
+        if (queued_job_order.size() >= max_queued_jobs) {
+            queue_full = true;
+        } else {
+            queued_job_order.push_back(job->id);
+            render_slots_cv.notify_all();
+        }
     }
-
-    std::thread t(&job_manager_t::run, this, job);
-    t.detach();
+    if (queue_full) {
+        std::lock_guard<std::mutex> lock(jobs_mut);
+        jobs.erase(job->id);
+        return "";
+    }
+    dispatch_queued_jobs();
 
     std::ostringstream log;
     log << "job accepted id=" << job->id
@@ -756,94 +764,143 @@ std::string job_manager_t::create(const common::render_request_t &request,
     return job->id;
 }
 
-void job_manager_t::run(const std::shared_ptr<job_t> &job)
+void job_manager_t::dispatch_queued_jobs()
 {
-    if (!job) return;
-    const size_t requested_threads = job->request.threads;
-    size_t granted_threads = 1;
+    std::vector<scheduled_job_t> to_start;
+    while (true) {
+        std::string next_id;
+        {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (active_renders >= max_concurrent_renders) break;
+            if (queued_job_order.empty()) break;
+            next_id = queued_job_order.front();
+        }
+
+        std::shared_ptr<job_t> job = get_job(next_id);
+        if (!job) {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (!queued_job_order.empty() && queued_job_order.front() == next_id) {
+                queued_job_order.pop_front();
+            }
+            continue;
+        }
+
+        if (job->cancel_requested.load()) {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (!queued_job_order.empty() && queued_job_order.front() == next_id) {
+                queued_job_order.pop_front();
+            }
+            continue;
+        }
+
+        size_t granted_threads = 1;
+        {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (active_renders >= max_concurrent_renders) break;
+            if (queued_job_order.empty() || queued_job_order.front() != next_id) continue;
+
+            const size_t requested_threads = job->request.threads;
+            if (requested_threads > 0) {
+                if (active_render_threads + requested_threads > render_thread_budget) break;
+                granted_threads = requested_threads;
+            } else {
+                if (active_render_threads >= render_thread_budget) break;
+                const size_t free_threads = (render_thread_budget > active_render_threads)
+                    ? (render_thread_budget - active_render_threads)
+                    : 0;
+                granted_threads = (free_threads > 0) ? free_threads : 1;
+            }
+            queued_job_order.pop_front();
+            ++active_renders;
+            active_render_threads += granted_threads;
+            render_slots_cv.notify_all();
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(job->mut);
+            job->state = JOB_RUNNING;
+            job->effective_threads = granted_threads;
+        }
+
+        scheduled_job_t entry;
+        entry.job = job;
+        entry.granted_threads = granted_threads;
+        to_start.push_back(entry);
+    }
+
+    for (size_t i = 0; i < to_start.size(); ++i) {
+        std::thread t(&job_manager_t::run, this, to_start[i].job, to_start[i].granted_threads);
+        t.detach();
+    }
+}
+
+void job_manager_t::release_render_slots(size_t released_threads)
+{
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        if (active_renders > 0) --active_renders;
+        if (active_render_threads >= released_threads) active_render_threads -= released_threads;
+        else active_render_threads = 0;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
+}
+
+void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_threads)
+{
+    if (!job) {
+        release_render_slots(granted_threads);
+        return;
+    }
+
+    struct render_slot_guard_t {
+        job_manager_t *owner;
+        size_t release_threads;
+
+        render_slot_guard_t(job_manager_t *o, size_t rt)
+            : owner(o)
+            , release_threads(rt)
+        {}
+
+        ~render_slot_guard_t()
+        {
+            if (owner) owner->release_render_slots(release_threads);
+        }
+    } render_slot_guard(this, granted_threads);
 
     if (job->cancel_requested.load()) {
-        job->state = JOB_ABORTED;
+        std::lock_guard<std::mutex> lock(job->mut);
         job->error = "render aborted";
+        job->state = JOB_ABORTED;
+        backend_log_t::handle().add("info", "job aborted id=" + job->id + " state=queued");
         on_job_finished(job->id);
         return;
     }
 
     {
-        std::unique_lock<std::mutex> lock(render_slots_mut);
-        render_slots_cv.wait(lock, [this, job, requested_threads]() {
-            if (job->cancel_requested.load()) return true;
-            if (active_renders >= max_concurrent_renders) return false;
-            if (queued_job_order.empty()) return false;
-            if (requested_threads > 0) {
-                if (active_render_threads + requested_threads > render_thread_budget) return false;
-            } else {
-                // Auto mode: allow start as soon as at least one render thread is free.
-                if (active_render_threads >= render_thread_budget) return false;
-            }
-            return queued_job_order.front() == job->id;
-        });
-        if (job->cancel_requested.load()) {
-            for (auto it = queued_job_order.begin(); it != queued_job_order.end(); ++it) {
-                if (*it == job->id) {
-                    queued_job_order.erase(it);
-                    break;
+        std::lock_guard<std::mutex> lock(job->mut);
+        if (job->progressive_fb.init(job->request.width, job->request.height) != 0) {
+            job->error = "failed to allocate progressive framebuffer";
+            job->state = JOB_ERROR;
+        } else {
+            for (size_t y = 0; y < job->request.height; ++y) {
+                for (size_t x = 0; x < job->request.width; ++x) {
+                    // Start unfinished pixels as fully transparent in progressive previews.
+                    job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 0);
                 }
             }
-            lock.unlock();
-            std::lock_guard<std::mutex> job_lock(job->mut);
-            const job_state_t st = job->state.load();
-            if (st == JOB_QUEUED || st == JOB_RUNNING) {
-                job->error = "render aborted";
-                job->state = JOB_ABORTED;
-                backend_log_t::handle().add("info", "job aborted id=" + job->id + " state=queued");
-                on_job_finished(job->id);
-            }
-            return;
+            job->started_at = std::chrono::steady_clock::now();
+            job->has_started = true;
+            job->effective_threads = granted_threads;
+            job->state = JOB_RUNNING;
         }
-        if (!queued_job_order.empty() && queued_job_order.front() == job->id) {
-            queued_job_order.pop_front();
-        }
-        if (requested_threads > 0) {
-            granted_threads = requested_threads;
-        } else {
-            const size_t free_threads = (render_thread_budget > active_render_threads)
-                ? (render_thread_budget - active_render_threads)
-                : 0;
-            granted_threads = (free_threads > 0) ? free_threads : 1;
-        }
-        ++active_renders;
-        active_render_threads += granted_threads;
-        render_slots_cv.notify_all();
     }
-
-    job->state = JOB_RUNNING;
-    {
-        std::lock_guard<std::mutex> lock(job->mut);
-        job->started_at = std::chrono::steady_clock::now();
-        job->has_started = true;
-        job->effective_threads = granted_threads;
+    if (job->state.load() != JOB_RUNNING) {
+        backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + job->error);
+        on_job_finished(job->id);
+        return;
     }
     backend_log_t::handle().add("info", "job started id=" + job->id);
-
-    struct render_slot_guard_t {
-        std::mutex &mut;
-        std::condition_variable &cv;
-        size_t &active;
-        size_t &active_threads;
-        const size_t release_threads;
-        render_slot_guard_t(std::mutex &m, std::condition_variable &c, size_t &a, size_t &at, size_t rt)
-            : mut(m), cv(c), active(a), active_threads(at), release_threads(rt) {}
-        ~render_slot_guard_t() {
-            {
-                std::lock_guard<std::mutex> lock(mut);
-                if (active > 0) --active;
-                if (active_threads >= release_threads) active_threads -= release_threads;
-                else active_threads = 0;
-            }
-            cv.notify_one();
-        }
-    } render_slot_guard(render_slots_mut, render_slots_cv, active_renders, active_render_threads, granted_threads);
 
     common::render_request_t request = job->request;
     request.threads = granted_threads;
@@ -914,6 +971,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
             job->preview_last_tm_mantiuk_detail = 1.0f;
             job->preview_last_post_filters_enabled = false;
             job->preview_last_post_filters.clear();
+            job->progressive_fb.init(0, 0);
             job->active_tiles.clear();
             job->active_tile_index.clear();
             job->state = JOB_DONE;
@@ -1244,8 +1302,17 @@ bool job_manager_t::image_delta(const std::string &id,
         if (!can_process_tiles_individually) {
             preview_fb = src;
         }
-        for (size_t i = 0; i < job->finished_tiles.size(); ++i) {
-            const job_t::finished_tile_t &t = job->finished_tiles[i];
+        const size_t target_done = since_done + 1;
+        std::vector<job_t::finished_tile_t>::const_iterator begin_it = std::lower_bound(
+            job->finished_tiles.begin(),
+            job->finished_tiles.end(),
+            target_done,
+            [](const job_t::finished_tile_t &tile, size_t target) {
+                return tile.done_index < target;
+            });
+        for (std::vector<job_t::finished_tile_t>::const_iterator it = begin_it;
+             it != job->finished_tiles.end(); ++it) {
+            const job_t::finished_tile_t &t = *it;
             if (t.done_index <= since_done) continue;
             if (max_tiles > 0 && pending.size() >= max_tiles) break;
 
@@ -1476,6 +1543,7 @@ bool job_manager_t::abort(const std::string &id)
             on_job_finished(job->id);
         }
     }
+    dispatch_queued_jobs();
     return true;
 }
 
