@@ -28,6 +28,14 @@ int Texture2D::load(const char *file)
     return res;
 }
 
+int Texture2D::load_memory(const unsigned char *data, size_t size)
+{
+    const int res = nimg::io::load::image_memory(data, size, m_map);
+    m_source_path.clear();
+    Log::handle().post_message("Loading texture from memory (%i)", res);
+    return res;
+}
+
 int Texture2D::load(const nimg::Pixmap &map)
 {
 	m_map = map;

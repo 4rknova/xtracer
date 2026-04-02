@@ -20,11 +20,9 @@ BEGIN { updated = 0 }
 ' ./LICENSE > "$TMP_LICENSE_TEXT"
 xxd -i -n __LICENSE "$TMP_LICENSE_TEXT" | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
 BUILD=${BUILD:-Debug}
-XTRACER_ENABLE_RTMIDI=${XTRACER_ENABLE_RTMIDI:-ON}
 BUILD_DIR=${BUILD_DIR:-build/intermediate/build}
 if [ -d ./automation ]; then
     make -C ./automation
 fi
 cmake -S . -B "$BUILD_DIR" \
-    -DCMAKE_BUILD_TYPE="$BUILD" \
-    -DXTRACER_ENABLE_RTMIDI="$XTRACER_ENABLE_RTMIDI"
+    -DCMAKE_BUILD_TYPE="$BUILD"

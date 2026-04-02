@@ -16,14 +16,11 @@ namespace nimg {
     namespace io {
         namespace load {
 
-int image(const char *filename, Pixmap &map)
+namespace {
+
+int decode_image_buffer(const unsigned char *data, int w, int h, int bpp, Pixmap &map)
 {
-    if (!filename) return 1;
-
-    int w, h, bpp;
-    unsigned char *data = stbi_load(filename, &w, &h, &bpp, 0);
-
-    if (data == NULL) return 2;
+    if (!data || w <= 0 || h <= 0) return 2;
 
     map.init(w,h);
 
@@ -53,17 +50,45 @@ int image(const char *filename, Pixmap &map)
                 pixel.g(srgb_to_linear(data[i+1] / 255.f));
                 pixel.b(srgb_to_linear(data[i+2] / 255.f));
                 pixel.a(data[i+3] / 255.f);
-
                 map.pixel(x, y) = pixel;
             }
         }
-
+    }
+    else {
+        res = -1;
     }
 
-    else  res = -1; // incompatible format
+    return res;
+}
+
+} // namespace
+
+int image(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+
+    int w, h, bpp;
+    unsigned char *data = stbi_load(filename, &w, &h, &bpp, 0);
+
+    if (data == NULL) return 2;
+
+    int res = decode_image_buffer(data, w, h, bpp, map);
 
     stbi_image_free(data);
 
+    return res;
+}
+
+int image_memory(const unsigned char *buffer, size_t size, Pixmap &map)
+{
+    if (!buffer || size == 0u) return 1;
+
+    int w, h, bpp;
+    unsigned char *data = stbi_load_from_memory(buffer, (int)size, &w, &h, &bpp, 0);
+    if (data == NULL) return 2;
+
+    const int res = decode_image_buffer(data, w, h, bpp, map);
+    stbi_image_free(data);
     return res;
 }
 

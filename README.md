@@ -19,7 +19,7 @@ Install dependencies (Debian/Ubuntu):
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
 ```
 
 Configure + build:
@@ -36,6 +36,8 @@ Run web server:
 ```
 
 Open: `http://127.0.0.1:8080`
+
+UI showcase: `http://127.0.0.1:8080/showcase.html`
 
 Run CLI:
 
@@ -60,7 +62,15 @@ With scene variant:
 | Web static app | `src/frontend/web-client/` | SPA for Render / Editor / Settings / Logs / About, including runtime JSON config in `app/data/` |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
-| Third-party deps | `ext/` | Vendored external dependencies |
+| Third-party deps | `ext/` | Vendored external dependencies (registry: `docs/DEPENDENCIES.md`) |
+
+### Web UI Widget Library
+
+- Widget builders live under `src/frontend/web-client/app/widgets/`.
+- The web client uses plain JavaScript DOM-builder helpers rather than custom elements or a frontend framework.
+- Layered stylesheets live under `src/frontend/web-client/styles/`, with `src/frontend/web-client/styles.css` as the entrypoint.
+- The standalone widget showcase is served from `src/frontend/web-client/showcase.html`.
+- Add a reusable widget only when a pattern is stable and repeated; one-off feature markup should stay local.
 
 ## Feature Matrix
 
@@ -131,7 +141,7 @@ With scene variant:
 | `mandelbulb` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`) |
 | `julia` | Implicit fractal surface (`position`, `radius`, `resolution`, `power`, `bailout`, `julia_c`) |
 | `csg` | Constructive solid geometry tree (`op`, `left`, `right`) |
-| `mesh` | External OBJ or procedural generator |
+| `mesh` | External OBJ/FBX/glTF or procedural generator |
 
 #### CSG (`geometry.type = csg`)
 
@@ -320,6 +330,47 @@ object = {
 - `gain` (default `0.5`)
 - `seed` (default `1337`)
 
+#### External Object Import (`object.source`)
+
+`object.source` can import external mesh assets directly and auto-create runtime objects and materials from the file contents.
+
+Supported formats:
+- `.obj`
+- `.fbx`
+- `.gltf`
+- `.glb`
+
+Behavior:
+- `object.source = ...` creates one or more runtime objects from the external asset
+- material assignments are taken from the imported file
+- the generated materials do not need explicit `material = ...` entries in the `.scn`
+- `prefix` is used when generating runtime geometry/material/object ids
+
+Example:
+
+```scn
+object = {
+  imported = {
+    source = assets/fbx/blender_272_cube_7400_binary.fbx
+    prefix = imported_
+  }
+}
+```
+
+Notes for FBX:
+- current support is for static mesh import
+- node transforms are flattened during import
+- importer reads base color, emissive, normal, roughness, and metallic data when available
+- both referenced texture files and embedded texture blobs are supported
+- animation, skinning, and advanced material graphs are not imported yet
+
+Notes for glTF:
+- current support is for static mesh import from `.gltf` and `.glb`
+- node transforms are flattened during import
+- importer maps glTF PBR materials into xtracer `principled` materials where possible
+- external texture files and GLB-embedded images are supported
+- animation, skinning, morph targets, and advanced extensions are not imported yet
+
 #### Sampler Types
 
 | Type | Notes |
@@ -408,11 +459,14 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, preview, export, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
+| Render | Scene/camera/integrator selection, render settings, a square preview container that fills the render pane as the largest square that fits, tile-size presets (`8`, `32`, `64`, `Auto` where auto derives a square tile from frame size and effective thread count), a preview-toolbar export format dropdown + live format-aware save button, preview sampling toggle, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, 3D scene scale multiplier, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
-| About | Build/backend metadata, project license text, and third-party license notices |
+| About | Build/backend metadata, project license text, and third-party dependency notices including usage/location |
+
+Shared sidebar jobs card:
+- Shows a live 1 minute thread-usage graph plus current active/queued jobs, queue ordering controls, and abort actions wherever the card is enabled.
 
 First-time use tutorial (FTUE):
 - On first launch, the web app opens a guided tutorial for scene selection, rendering, and scene editing flow.
@@ -422,6 +476,13 @@ First-time use tutorial (FTUE):
 
 Post-filter stack:
 - Current filters: `desaturate`; `chromatic_aberration` (`amount`, `center_x`, `center_y`, `falloff`); `vignette` (`strength`, `radius`, `softness`, `center_x`, `center_y`); `film_grain` (`amount`, `size`, `seed`, `luma_weighted`); `denoise` (bilateral: `strength`, `radius`, `sigma`); `fxaa` (`subpix`, `edge_threshold`, `edge_threshold_min`); `sharpen` (`amount`, `radius`, `threshold`); `brightness` (`amount`); `contrast` (`amount`, `pivot`); `raindrops_lens` (`density`, `size`, `distortion`, `seed`).
+
+Render preview interactions:
+- Mouse wheel zooms the preview image.
+- Drag pans the preview while zoomed.
+- Double-click or `Reset View` resets preview pan/zoom.
+- Clicking or dragging on the preview minimap recenters the current zoom on that region.
+- The preview toolbar includes export format + save controls and a two-icon sampling switch (`Smooth`, `Nearest`).
 
 Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 - `Left drag`: look around
@@ -441,12 +502,13 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/health` | Health probe |
-| GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields |
+| GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields including dependency usage/location |
 | GET | `/api/scenes` | List available scenes |
 | GET | `/api/scenes/{scene}/cameras` | List cameras in scene (optional `variant=<name>`; includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
 | GET | `/api/scenes/{scene}/geometry` | Extract mesh geometry payload (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/media/cameras; object entries may include `medium`) (optional `variant=<name>`; returns `202` while async scene load is in progress) |
+| GET | `/api/scenes/{scene}/runtime_texture?material=...&sampler=...` | Fetch a runtime material texture preview PNG, including embedded imported textures (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
@@ -454,15 +516,15 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | POST | `/api/scenes/save` | Save scene source |
 | POST | `/api/scenes/delete` | Delete a scene file by name |
 | GET | `/api/workspaces?client_id={id}` | List workspaces + active workspace + workspace-scoped settings snapshot |
-| POST | `/api/workspaces` | Create workspace for client context |
+| POST | `/api/workspaces` | Create workspace for client context (returns `409` when the retained workspace cap is saturated by active workspaces) |
 | POST | `/api/workspaces/active` | Switch active workspace for client |
 | POST | `/api/workspaces/delete` | Delete workspace |
-| POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft |
-| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters) |
+| POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft (returns `413` when the draft payload exceeds the backend limit; the backend retains up to 16 drafts per workspace) |
+| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters; returns `413` when `settings_json` exceeds the backend limit) |
 | GET | `/api/integrators` | List backend integrator metadata + controls |
 | GET | `/api/post_filters` | List backend post-filter metadata, stage support, and parameter schema |
 | GET | `/api/resolutions` | Resolution presets |
-| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,interactive}`; legacy `normal` is also accepted, and optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`) |
+| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,interactive}`; legacy `normal` is also accepted, optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`; returns `503` when the bounded server queue is full) |
 | GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
 | POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
@@ -480,12 +542,6 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 ```bash
 sudo apt update
 sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
-```
-
-RtMidi/ALSA support (`XTRACER_ENABLE_RTMIDI=ON`):
-
-```bash
-sudo apt install -y libasound2-dev
 ```
 
 WASM toolchain (`XTRACER_ENABLE_WASM=ON`):
@@ -507,7 +563,6 @@ cmake --build build/intermediate/build -j
 
 | Option | Default | Description |
 |---|---:|---|
-| `XTRACER_ENABLE_RTMIDI` | `ON` | Build RtMidi/ALSA support |
 | `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
 | `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
 | `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
@@ -539,6 +594,8 @@ Open: `http://127.0.0.1:8080`
 `--max-concurrent-renders` controls how many render jobs execute simultaneously (default: `1`).
 `--render-reserve-threads` controls how many threads auto-render mode keeps free for server responsiveness (default: `1`).
 When `/api/render` uses `threads=0`, backend auto mode resolves to `max(1, runtime_threads - reserve_threads)` (single-core hosts still render with `1` thread).
+The web backend also bounds pending render backlog to `32` queued jobs; extra `/api/render` requests return `503` instead of accumulating unbounded queued state.
+Workspace state is also bounded: the backend retains at most `32` workspaces, evicts orphaned idle workspaces after `60` minutes, and returns `409` from `/api/workspaces` if all retained slots are still active.
 Startup prints an ASCII banner with runtime info (host/port, paths, concurrency, and detected core/thread limits).
 
 ### Docker Deployment
@@ -562,7 +619,6 @@ Open: `http://127.0.0.1:${XTRACER_PORT:-8080}`
 Notes:
 
 - Scene files are mounted from `./scene` into the container at `/app/scene`.
-- The image builds web frontend support with `XTRACER_ENABLE_RTMIDI=OFF` for simpler runtime dependencies.
 - Set `XTRACER_OMP_NUM_THREADS` in `.env` to control OpenMP worker count.
 
 Stop:
@@ -609,7 +665,6 @@ Run:
 ```bash
 emcmake cmake -S . -B build/intermediate/build-wasm \
   -DXTRACER_ENABLE_WEB=OFF \
-  -DXTRACER_ENABLE_RTMIDI=OFF \
   -DXTRACER_ENABLE_WASM=ON
 cmake --build build/intermediate/build-wasm -j --target xtracer_wasm
 ```
@@ -671,7 +726,6 @@ make perf
 | TinyEXR | BSD-3-Clause | https://github.com/syoyo/tinyexr |
 | strpool | Public Domain | https://github.com/mattiasgustavsson/libs |
 | cpp-httplib | MIT | https://github.com/yhirose/cpp-httplib |
-| RtMidi | MIT-style | https://github.com/thestk/rtmidi |
 
 ## License
 

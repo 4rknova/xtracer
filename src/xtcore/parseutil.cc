@@ -40,6 +40,7 @@
 #include "camera.h"
 #include "material.h"
 #include "sampler.h"
+#include "import_asset.h"
 #include "sampler/sampler_erp.h"
 #include "sampler/sampler_graphpaper.h"
 #include "sampler/sampler_checker.h"
@@ -420,36 +421,18 @@ static std::vector<nmath::Vector3f> deserialize_spline_points(const ncf::NCF *sp
     return points;
 }
 
-static bool path_exists(const std::string &path)
-{
-    std::ifstream in(path.c_str(), std::ios::binary);
-    return in.good();
-}
-
-static std::string resolve_obj_case_path(const std::string &path)
-{
-    if (path.empty()) return path;
-    if (path_exists(path)) return path;
-
-    const size_t dot = path.find_last_of('.');
-    if (dot == std::string::npos) return path;
-
-    std::string ext = path.substr(dot + 1);
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-    if (ext != "obj") return path;
-
-    static const char *variants[] = { "obj", "OBJ", "Obj" };
-    for (size_t i = 0; i < (sizeof(variants) / sizeof(variants[0])); ++i) {
-        std::string candidate = path.substr(0, dot + 1);
-        candidate.append(variants[i]);
-        if (path_exists(candidate)) return candidate;
-    }
-    return path;
-}
-
 static nmath::scalar_t clampf(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
 {
     return std::max(lo, std::min(v, hi));
+}
+
+static bool path_is_absolute(const std::string &path)
+{
+    if (path.empty()) return false;
+    if (path[0] == '/' || path[0] == '\\') return true;
+    return path.size() > 1
+        && ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z'))
+        && path[1] == ':';
 }
 
 static int create_random_sphere_grid(Scene *scene, const ncf::NCF *p)
@@ -1216,24 +1199,26 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         // Open source file from relative path
 	    std::string base, file, fsource = source;
 		ncf::util::path_comp(fsource, base, file);
-    	base.append(f);
+        if (!path_is_absolute(f)) base.append(f);
+        else base = f;
 
-        std::string import_path = resolve_obj_case_path(base);
-        if (import_path != base) {
-            Log::handle().post_warning("OBJ path case fallback: %s -> %s", base.c_str(), import_path.c_str());
-        }
-	    Log::handle().post_message("Loading data from %s", import_path.c_str());
+	    Log::handle().post_message("Loading data from %s", base.c_str());
         auto t_import_0 = std::chrono::steady_clock::now();
-
-	    if (nmesh::io::import::obj(import_path.c_str(), obj))
-    	{
-    		Log::handle().post_warning("Failed to load mesh from %s", f.c_str());
-	    	delete data;
+        xtcore::imported_asset_t imported;
+        std::string import_error;
+        if (!xtcore::import_asset_file(base.c_str(), imported, import_error)) {
+            Log::handle().post_warning("Failed to load mesh from %s (%s)", f.c_str(), import_error.c_str());
+            delete data;
             return 0;
-		}
+        }
+        obj.attributes = imported.attributes;
+        obj.shapes.clear();
+        for (size_t i = 0; i < imported.shapes.size(); ++i) {
+            obj.shapes.push_back(imported.shapes[i].shape);
+        }
         auto t_import_1 = std::chrono::steady_clock::now();
         const double ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_import_1 - t_import_0).count();
-        Log::handle().post_message("OBJ import done: %s (%.0f ms)", base.c_str(), ms);
+        Log::handle().post_message("Asset import done: %s (%.0f ms)", base.c_str(), ms);
     }
 
     if (p->query_group(XTPROTO_MODIFIERS)) {
@@ -1920,141 +1905,22 @@ int create_object(Scene *scene,
     if (!scene) return -1;
 
     Log::handle().post_message("Object: External loader [%s, %s]",filepath, prefix);
-
-    nmesh::object_t obj;
-
-    std::string base, filename, fsource = filepath;
-
-	ncf::util::path_comp(fsource, base, filename);
-    std::string import_path = resolve_obj_case_path(fsource);
-    if (import_path != fsource) {
-        Log::handle().post_warning("OBJ path case fallback: %s -> %s", fsource.c_str(), import_path.c_str());
-    }
     auto t_import_0 = std::chrono::steady_clock::now();
-    if (nmesh::io::import::obj(import_path.c_str(), obj, base.c_str()))	{
-   		Log::handle().post_warning("Failed to load mesh from %s", fsource.c_str());
+    xtcore::imported_asset_t imported;
+    std::string import_error;
+    if (!xtcore::import_asset_file(filepath, imported, import_error)) {
+   		Log::handle().post_warning("Failed to load asset from %s (%s)", filepath, import_error.c_str());
         return 1;
     }
     auto t_import_1 = std::chrono::steady_clock::now();
     const double import_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_import_1 - t_import_0).count();
-    Log::handle().post_message("External OBJ import done: %s (%zu shapes, %.0f ms)", fsource.c_str(), obj.shapes.size(), import_ms);
-
-    Log::handle().post_debug("Materials: %i", obj.materials.size());
-    Log::handle().post_debug("   Shapes: %i", obj.shapes.size());
-
-    std::vector<HASH_UINT64> matids;
-    for (size_t m = 0; m < obj.materials.size(); ++m) {
-        std::string name = prefix;
-        name.append(obj.materials[m].name);
-        HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
-
-        // Check if the id is already in there
-        bool loaded = false;
-        for (size_t i = 0; i < matids.size(); ++i) {
-            if (matids[i] == id) {
-                Log::handle().post_debug("Material [%s] already exists", name.c_str());
-                // Fix indices
-                for (nmesh::shape_t shape: obj.shapes) {
-                    if (shape.mesh.materials[0] == (int)m) shape.mesh.materials[0] = i;
-                }
-                loaded = true;
-                break;
-            }
-        }
-
-        if (!loaded) {
-            Log::handle().post_debug("creating material %s", name.c_str());
-            matids.push_back(id);
-
-            // Determine material type
-            xtcore::asset::IMaterial *mat = 0;
-
-            bool has_emissive_col = ((obj.materials[m].emission[0] > 0.f) || (obj.materials[m].emission[1] > 0.f) || (obj.materials[m].emission[2] > 0.f));
-            if (obj.materials[m].texture_emissive.length() != 0 || has_emissive_col)
-            {
-                mat = new (std::nothrow) xtcore::asset::material::Emissive();
-                xtcore::sampler::ISampler *s = create_sampler(base.c_str(), obj.materials[m].texture_emissive.c_str(), obj.materials[m].emission);
-                mat->add_sampler(MAT_SAMPLER_EMISSIVE, s);
-            }
-            else
-            {
-                mat = new (std::nothrow) xtcore::asset::material::Lambert();
-                xtcore::sampler::ISampler *kd = create_sampler(base.c_str(), obj.materials[m].texture_diffuse.c_str() , obj.materials[m].diffuse, true);
-                mat->add_sampler(MAT_SAMPLER_DIFFUSE , kd);
-
-                std::string normal_tex = obj.materials[m].texture_normal;
-                if (normal_tex.empty()) normal_tex = obj.materials[m].texture_bump;
-                if (!normal_tex.empty()) {
-                    float normal_default[3] = { 0.5f, 0.5f, 1.0f };
-                    xtcore::sampler::ISampler *kn = create_sampler(base.c_str(), normal_tex.c_str(), normal_default);
-                    mat->add_sampler(MAT_SAMPLER_NORMAL, kn);
-                }
-            }
-
-            scene->m_materials[id] = mat;
-        }
+    Log::handle().post_message("External asset import done: %s (%zu shapes, %.0f ms)",
+                               filepath, imported.shapes.size(), import_ms);
+    if (xtcore::create_objects_from_imported_asset(scene, imported, prefix, medium_proto, import_error) != 0) {
+        Log::handle().post_error("Failed to build imported objects for %s (%s)", filepath, import_error.c_str());
+        return 1;
     }
-
-    HASH_UINT64 fallback_mat_id = HASH_ID_INVALID;
-    int shape_count = 0;
-    double octree_total_ms = 0.0;
-    for (nmesh::shape_t shape : obj.shapes) {
-        ++shape_count;
-        std::string name = std::to_string(shape_count);
-        name.append(prefix);
-        name.append(shape.name);
-
-        HASH_UINT64 id = xtcore::pool::str::add(name.c_str());
-
-        Log::handle().post_debug("creating geometry %s", name.c_str());
-
-        // Create Geometry
-        xtcore::asset::ISurface *surf = new (std::nothrow) xtcore::surface::Mesh();
-        auto t_oct_0 = std::chrono::steady_clock::now();
-        ((xtcore::surface::Mesh*)surf)->build_octree(shape, obj.attributes);
-        auto t_oct_1 = std::chrono::steady_clock::now();
-        const double oct_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_oct_1 - t_oct_0).count();
-        octree_total_ms += oct_ms;
-        scene->m_surface[id] = surf;
-
-        // Create Object
-        xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
-        obj->surface  = id;
-        int material_index = -1;
-        if (!shape.mesh.materials.empty()) material_index = shape.mesh.materials[0];
-
-        if (material_index < 0 || (size_t)material_index >= matids.size()) {
-            if (fallback_mat_id == HASH_ID_INVALID) {
-                std::string fallback_name = std::string(prefix ? prefix : "") + "__fallback_material";
-                fallback_mat_id = xtcore::pool::str::add(fallback_name.c_str());
-                if (scene->m_materials.find(fallback_mat_id) == scene->m_materials.end()) {
-                    xtcore::asset::IMaterial *mat = new (std::nothrow) xtcore::asset::material::Lambert();
-                    float kd_val[3] = { 1.0f, 1.0f, 1.0f };
-                    mat->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler(base.c_str(), "", kd_val));
-                    scene->m_materials[fallback_mat_id] = mat;
-                }
-            }
-            Log::handle().post_warning("Shape %s has invalid material index (%d), using fallback material",
-                                       shape.name.c_str(), material_index);
-            obj->material = fallback_mat_id;
-        } else {
-            obj->material = matids[(size_t)material_index];
-        }
-        scene->m_objects[id] = obj;
-        if (medium_proto) {
-            scene->set_object_medium(id, medium_proto->clone());
-            if (!scene->has_object_medium(id)) {
-                Log::handle().post_error("Failed to bind medium to imported object %s", name.c_str());
-                return 1;
-            }
-        }
-        Log::handle().post_message("creating object %s : %s"
-                                 , name.c_str()
-                                 , xtcore::pool::str::get(obj->material));
-    }
-    Log::handle().post_message("External object build done: %s (%d objects, %.0f ms octree total)", filepath, shape_count, octree_total_ms);
-    scene->mark_spatial_index_dirty();
-
+    Log::handle().post_message("External object build done: %s (%zu objects)", filepath, imported.shapes.size());
     return 0;
 }
 
@@ -2261,7 +2127,8 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
                             medium_proto = mit->second;
                         }
 
-                        base.append(flpath);
+                        if (!path_is_absolute(flpath)) base.append(flpath);
+                        else base = flpath;
                         res = create_object(scene, base.c_str(), prefix.c_str(), medium_proto);
                     }
                     else res = create_object(scene, lnode, medium_defs);

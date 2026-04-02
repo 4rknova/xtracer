@@ -18,6 +18,7 @@ class Texture2D : public ISampler
 {
 	public:
     int load(const char *file);
+    int load_memory(const unsigned char *data, size_t size);
     int load(const Pixmap &map);
     const std::string &source_path() const;
     size_t width() const;

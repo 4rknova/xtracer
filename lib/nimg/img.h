@@ -10,6 +10,7 @@ namespace nimg {
         namespace load {
 
 int image(const char *filename, Pixmap &map);
+int image_memory(const unsigned char *data, size_t size, Pixmap &map);
 
         } /* namespace load */
 
