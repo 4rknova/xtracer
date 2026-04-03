@@ -1729,7 +1729,11 @@ function resumeWorkspaceJobPolling(jobId) {
       appendLog(`render error: ${err.message}`);
     })
     .finally(() => {
+      const superseded = token !== undefined && token !== activePollToken;
       if (workspacePollingJobId === id) workspacePollingJobId = "";
+      // A newer poll session owns the UI state now. Do not let an older
+      // workspace poll tear down the active render badge/button on exit.
+      if (superseded) return;
       if (activeJobId === id) {
         activeJobId = "";
         syncGlobalsToWorkspaceRuntime();
