@@ -80,10 +80,7 @@ function renderIntegratorControls() {
   const selected = el.integrator.value || "";
   const info = integratorById.get(selected) || null;
   const controls = info && Array.isArray(info.controls) ? info.controls : [];
-  const widgetDom = window.XTracerWidgets && window.XTracerWidgets.dom;
-  const widgetField = window.XTracerWidgets && typeof window.XTracerWidgets.createField === "function"
-    ? window.XTracerWidgets.createField
-    : null;
+  const dom = window.XTracerWidgets.dom;
 
   el.integratorControls.innerHTML = "";
   if (!controls.length) {
@@ -110,35 +107,36 @@ function renderIntegratorControls() {
 
     let input = null;
     if (ctrl.type === "enum") {
-      input = document.createElement("select");
-      input.className = "xui-select";
-      const options = Array.isArray(ctrl.options) ? ctrl.options : [];
-      options.forEach((opt) => {
-        const optEl = document.createElement("option");
-        optEl.value = String(opt.value ?? "");
-        optEl.textContent = opt.label || opt.value || "";
-        input.appendChild(optEl);
+      input = dom.el("select", {
+        className: "xui-select",
+        dataset: { ioptId: id, ioptType: "enum" },
+        children: (Array.isArray(ctrl.options) ? ctrl.options : []).map((opt) =>
+          dom.el("option", { attrs: { value: String(opt.value ?? "") }, text: opt.label || opt.value || "" })
+        ),
       });
     } else if (ctrl.type === "bool") {
-      input = document.createElement("select");
-      input.className = "xui-select";
-      addOption(input, "false", "False");
-      addOption(input, "true", "True");
+      input = dom.el("select", {
+        className: "xui-select",
+        dataset: { ioptId: id, ioptType: "bool" },
+        children: [
+          dom.el("option", { attrs: { value: "false" }, text: "False" }),
+          dom.el("option", { attrs: { value: "true" }, text: "True" }),
+        ],
+      });
     } else {
-      input = document.createElement("input");
-      input.className = "xui-input";
-      input.type = "number";
-      if (ctrl.type === "int") input.step = ctrl.step || "1";
-      else input.step = ctrl.step || "0.01";
-      if (ctrl.min !== undefined && ctrl.min !== null && ctrl.min !== "") input.min = String(ctrl.min);
-      if (ctrl.max !== undefined && ctrl.max !== null && ctrl.max !== "") input.max = String(ctrl.max);
+      input = dom.el("input", {
+        className: "xui-input",
+        attrs: {
+          type: "number",
+          step: ctrl.type === "int" ? (ctrl.step || "1") : (ctrl.step || "0.01"),
+          min: (ctrl.min !== undefined && ctrl.min !== null && ctrl.min !== "") ? String(ctrl.min) : undefined,
+          max: (ctrl.max !== undefined && ctrl.max !== null && ctrl.max !== "") ? String(ctrl.max) : undefined,
+        },
+        dataset: { ioptId: id, ioptType: ctrl.type || "string" },
+      });
     }
 
-    input.dataset.ioptId = id;
-    input.dataset.ioptType = ctrl.type || "string";
-    const value = getIntegratorControlValue(saved, ctrl);
-    input.value = String(value);
-
+    input.value = String(getIntegratorControlValue(saved, ctrl));
     input.addEventListener("change", () => {
       const curr = integratorControlState.get(selected) || {};
       curr[id] = input.value;
@@ -147,31 +145,12 @@ function renderIntegratorControls() {
       queueWorkspaceSettingsSave();
     });
 
-    if (widgetField && widgetDom) {
-      const field = widgetField({
-        label: ctrl.label || id,
-        help: ctrl.description || "",
-        control: input,
-        className: "integrator-control",
-      });
-      el.integratorControls.appendChild(field);
-      return;
-    }
-
-    const label = document.createElement("label");
-    label.className = "xui-field integrator-control";
-    const title = document.createElement("span");
-    title.className = "xui-field__label";
-    title.textContent = ctrl.label || id;
-    label.appendChild(title);
-    label.appendChild(input);
-    if (ctrl.description) {
-      const hint = document.createElement("small");
-      hint.className = "xui-field__help control-hint";
-      hint.textContent = ctrl.description;
-      label.appendChild(hint);
-    }
-    el.integratorControls.appendChild(label);
+    el.integratorControls.appendChild(window.XTracerWidgets.createField({
+      label: ctrl.label || id,
+      help: ctrl.description || "",
+      control: input,
+      className: "integrator-control",
+    }));
   });
 }
 

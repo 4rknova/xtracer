@@ -750,90 +750,18 @@ function renderSceneFileBrowser() {
     const isSelected = sceneBrowserSelectedFile === sceneFile;
     const isActive = activeScene === sceneFile;
 
-    const button = typeof widgets.createSceneCard === "function"
-      ? widgets.createSceneCard({
-        sceneFile,
-        title,
-        sourceOrigin: normalizeSceneSourceOrigin(sourceOrigin),
-        dependsExternal,
-        hasVariants,
-        variantCount,
-        cameraCount,
-        selected: isSelected,
-        active: isActive,
-        icon: createSceneFileIcon(),
-      })
-      : (() => {
-        const legacyButton = document.createElement("button");
-        legacyButton.type = "button";
-        legacyButton.className = "scene-file-item";
-        legacyButton.setAttribute("role", "option");
-        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
-        legacyButton.dataset.scene = sceneFile;
-        if (isSelected) legacyButton.classList.add("is-selected");
-        if (isActive) legacyButton.classList.add("is-active");
-        legacyButton.appendChild(createSceneFileIcon());
-
-        const body = document.createElement("span");
-        body.className = "scene-file-meta";
-
-        const nameNode = document.createElement("span");
-        nameNode.className = "scene-file-name";
-        nameNode.textContent = sceneFile;
-        body.appendChild(nameNode);
-
-        if (title && title !== sceneFile) {
-          const titleNode = document.createElement("span");
-          titleNode.className = "scene-file-title";
-          titleNode.textContent = title;
-          body.appendChild(titleNode);
-        }
-
-        if (dependsExternal || hasVariants || sourceOrigin) {
-          const badgesNode = document.createElement("span");
-          badgesNode.className = "scene-file-badges";
-
-          if (sourceOrigin) {
-            const sourceNode = document.createElement("span");
-            sourceNode.className = `scene-file-ext scene-file-source scene-file-source--${normalizeSceneSourceOrigin(sourceOrigin)}`;
-            sourceNode.textContent = normalizeSceneSourceOrigin(sourceOrigin) === "workspace" ? "DRAFT" : "DISK";
-            badgesNode.appendChild(sourceNode);
-          }
-
-          if (dependsExternal) {
-            const extNode = document.createElement("span");
-            extNode.className = "scene-file-ext";
-            extNode.textContent = "EXT";
-            badgesNode.appendChild(extNode);
-          }
-
-          if (hasVariants) {
-            const variantNode = document.createElement("span");
-            variantNode.className = "scene-file-ext scene-file-var";
-            variantNode.textContent = "VAR";
-            badgesNode.appendChild(variantNode);
-          }
-
-          body.appendChild(badgesNode);
-        }
-
-        const statsNode = document.createElement("span");
-        statsNode.className = "scene-file-stats";
-
-        const camerasNode = document.createElement("span");
-        camerasNode.className = "scene-file-stat";
-        camerasNode.textContent = `${cameraCount || 0} camera${cameraCount === 1 ? "" : "s"}`;
-        statsNode.appendChild(camerasNode);
-
-        const variantsNode = document.createElement("span");
-        variantsNode.className = "scene-file-stat";
-        variantsNode.textContent = variantCount > 0 ? `${variantCount} variant${variantCount === 1 ? "" : "s"}` : "base only";
-        statsNode.appendChild(variantsNode);
-
-        body.appendChild(statsNode);
-        legacyButton.appendChild(body);
-        return legacyButton;
-      })();
+    const button = widgets.createSceneCard({
+      sceneFile,
+      title,
+      sourceOrigin: normalizeSceneSourceOrigin(sourceOrigin),
+      dependsExternal,
+      hasVariants,
+      variantCount,
+      cameraCount,
+      selected: isSelected,
+      active: isActive,
+      icon: createSceneFileIcon(),
+    });
     button.addEventListener("click", () => {
       if (sceneBrowserSelectedFile === sceneFile) {
         activateSceneFile(sceneFile);
@@ -1160,40 +1088,14 @@ function renderCameraBrowser() {
     const isSelected = cameraBrowserSelectedName === value;
     const isActive = String(el.camera && el.camera.value ? el.camera.value : "") === value;
 
-    const button = typeof widgets.createCameraCard === "function"
-      ? widgets.createCameraCard({
-        value,
-        label: label || value || "-",
-        description: `${cameraTypeLabel(camType)} camera`,
-        selected: isSelected,
-        active: isActive,
-        icon: createCameraIcon(camType),
-      })
-      : (() => {
-        const legacyButton = document.createElement("button");
-        legacyButton.type = "button";
-        legacyButton.className = "scene-file-item camera-file-item";
-        legacyButton.setAttribute("role", "option");
-        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
-        legacyButton.dataset.camera = value;
-        if (isSelected) legacyButton.classList.add("is-selected");
-        if (isActive) legacyButton.classList.add("is-active");
-        const header = document.createElement("span");
-        header.className = "scene-file-header-row";
-        header.appendChild(createCameraIcon(camType));
-
-        const nameNode = document.createElement("span");
-        nameNode.className = "scene-file-name";
-        nameNode.textContent = label || value || "-";
-        header.appendChild(nameNode);
-        legacyButton.appendChild(header);
-
-        const descNode = document.createElement("span");
-        descNode.className = "scene-file-title camera-file-description";
-        descNode.textContent = `${cameraTypeLabel(camType)} camera`;
-        legacyButton.appendChild(descNode);
-        return legacyButton;
-      })();
+    const button = widgets.createCameraCard({
+      value,
+      label: label || value || "-",
+      description: `${cameraTypeLabel(camType)} camera`,
+      selected: isSelected,
+      active: isActive,
+      icon: createCameraIcon(camType),
+    });
     button.addEventListener("click", () => {
       cameraBrowserSelectedName = value;
       renderCameraBrowser();
@@ -1239,50 +1141,15 @@ function renderVariantBrowser() {
     const isSelected = normalizeVariantName(variantBrowserSelectedName) === value;
     const isActive = selectedSceneVariantValue() === value;
 
-    const button = typeof widgets.createVariantCard === "function"
-      ? widgets.createVariantCard({
-        value,
-        label,
-        description,
-        base: isBase,
-        selected: isSelected,
-        active: isActive,
-        icon: createVariantIcon(isBase),
-      })
-      : (() => {
-        const legacyButton = document.createElement("button");
-        legacyButton.type = "button";
-        legacyButton.className = "scene-file-item camera-file-item variant-file-item";
-        legacyButton.setAttribute("role", "option");
-        legacyButton.setAttribute("aria-selected", isSelected ? "true" : "false");
-        legacyButton.dataset.variant = value;
-        if (isSelected) legacyButton.classList.add("is-selected");
-        if (isActive) legacyButton.classList.add("is-active");
-        if (isBase) legacyButton.classList.add("is-base");
-        if (description) legacyButton.classList.add("has-description");
-        else legacyButton.classList.add("no-description");
-
-        const header = document.createElement("span");
-        header.className = "scene-file-header-row";
-
-        const nameNode = document.createElement("span");
-        nameNode.className = "scene-file-name";
-        nameNode.appendChild(createVariantIcon(isBase));
-        const nameTextNode = document.createElement("span");
-        nameTextNode.className = "scene-file-name-text";
-        nameTextNode.textContent = label;
-        nameNode.appendChild(nameTextNode);
-        header.appendChild(nameNode);
-        legacyButton.appendChild(header);
-
-        if (description) {
-          const descNode = document.createElement("span");
-          descNode.className = "scene-file-title variant-file-description";
-          descNode.textContent = description;
-          legacyButton.appendChild(descNode);
-        }
-        return legacyButton;
-      })();
+    const button = widgets.createVariantCard({
+      value,
+      label,
+      description,
+      base: isBase,
+      selected: isSelected,
+      active: isActive,
+      icon: createVariantIcon(isBase),
+    });
     button.addEventListener("click", () => {
       variantBrowserSelectedName = value;
       renderVariantBrowser();

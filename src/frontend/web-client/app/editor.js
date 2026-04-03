@@ -497,66 +497,35 @@ function renderPostFilterChain() {
   const board = document.createElement("div");
   board.className = "post-filter-chain-flow";
   const createStageEmptyPill = (label) => {
-    if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
-      return window.XTracerWidgets.createTag({
-        label,
-        tone: "neutral",
-        className: "post-filter-stage-empty-pill",
-      });
-    }
-    const pill = document.createElement("span");
-    pill.className = "post-filter-stage-empty-pill";
-    pill.textContent = label;
-    return pill;
+    return window.XTracerWidgets.createTag({
+      label,
+      tone: "neutral",
+      className: "post-filter-stage-empty-pill",
+    });
   };
   const createStageToggleButton = (stateKey, label, active, disabled, onClick) => {
-    if (window.XTracerWidgets && typeof window.XTracerWidgets.createPill === "function") {
-      const btn = window.XTracerWidgets.createPill({
-        label,
-        active,
-        pressable: true,
-        disabled,
-        className: `post-filter-stage-toggle${active ? " is-active" : ""}`,
-        onClick,
-      });
-      btn.setAttribute("data-stage", stateKey);
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
-      return btn;
-    }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "post-filter-stage-toggle";
+    const btn = window.XTracerWidgets.createPill({
+      label,
+      active,
+      pressable: true,
+      disabled,
+      className: `post-filter-stage-toggle${active ? " is-active" : ""}`,
+      onClick,
+    });
     btn.setAttribute("data-stage", stateKey);
-    btn.textContent = label;
-    btn.classList.toggle("is-active", active);
     btn.setAttribute("aria-pressed", active ? "true" : "false");
-    btn.disabled = disabled;
-    btn.addEventListener("click", onClick);
     return btn;
   };
   const createRemoveButton = (label, disabled, onClick) => {
-    if (window.XTracerWidgets && typeof window.XTracerWidgets.createIconButton === "function") {
-      return window.XTracerWidgets.createIconButton({
-        title: label,
-        label,
-        disabled,
-        variant: "ghost",
-        className: "post-filter-remove",
-        icon: window.XTracerWidgets.dom && typeof window.XTracerWidgets.dom.svgIcon === "function"
-          ? window.XTracerWidgets.dom.svgIcon("M5 5l6 6M11 5L5 11")
-          : null,
-        onClick,
-      });
-    }
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "post-filter-remove";
-    removeBtn.setAttribute("aria-label", label);
-    removeBtn.title = label;
-    removeBtn.textContent = "×";
-    removeBtn.disabled = disabled;
-    removeBtn.addEventListener("click", onClick);
-    return removeBtn;
+    return window.XTracerWidgets.createIconButton({
+      title: label,
+      label,
+      disabled,
+      variant: "ghost",
+      className: "post-filter-remove",
+      icon: window.XTracerWidgets.dom.svgIcon("M5 5l6 6M11 5L5 11"),
+      onClick,
+    });
   };
 
   const createStageHeader = (title, note, stageName, emptyLabel = "") => {
@@ -793,19 +762,20 @@ function renderPostFilterChain() {
       const paramsWrap = document.createElement("div");
       paramsWrap.className = "post-filter-params";
       paramSpecs.forEach((field) => {
-        const label = document.createElement("label");
-        label.className = "post-filter-param";
-        const text = document.createElement("span");
-        text.textContent = field.label;
-        const input = document.createElement("input");
-        input.className = "xui-input";
-        input.type = "number";
-        input.min = field.min;
-        input.max = field.max;
-        input.step = field.step;
-        input.value = String((params && params[field.key]) || "");
-        input.disabled = !stackEnabled;
-        input.setAttribute("aria-label", `${field.label} for ${filterInfo.label}`);
+        const input = window.XTracerWidgets.dom.el("input", {
+          className: "xui-input",
+          attrs: {
+            type: "number",
+            min: field.min,
+            max: field.max,
+            step: field.step,
+            "aria-label": `${field.label} for ${filterInfo.label}`,
+          },
+          props: {
+            value: String((params && params[field.key]) || ""),
+            disabled: !stackEnabled,
+          },
+        });
         input.addEventListener("change", () => {
           const idx = Number(row.dataset.index);
           if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
@@ -818,9 +788,11 @@ function renderPostFilterChain() {
           appendLog(`post_filter param idx=${idx} ${field.key}=${input.value}`);
           queueWorkspaceSettingsSave();
         });
-        label.appendChild(text);
-        label.appendChild(input);
-        paramsWrap.appendChild(label);
+        paramsWrap.appendChild(window.XTracerWidgets.createField({
+          label: field.label,
+          control: input,
+          className: "post-filter-param",
+        }));
       });
       body.appendChild(paramsWrap);
     }

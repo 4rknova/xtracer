@@ -254,23 +254,13 @@ function refreshMobileCardSwitcher() {
   switcher.hidden = false;
   switcher.innerHTML = "";
   cards.forEach((card) => {
-    const useWidgetPill = window.XTracerWidgets && typeof window.XTracerWidgets.createPill === "function";
     const isActive = card === selectedCard;
-    const chip = useWidgetPill
-      ? window.XTracerWidgets.createPill({
-        label: getSidebarCardTitle(card),
-        active: isActive,
-        pressable: true,
-        className: "mobile-card-chip",
-      })
-      : document.createElement("button");
-    if (!useWidgetPill) {
-      chip.type = "button";
-      chip.className = "mobile-card-chip";
-      chip.textContent = getSidebarCardTitle(card);
-      chip.classList.toggle("is-active", isActive);
-      chip.setAttribute("aria-pressed", isActive ? "true" : "false");
-    }
+    const chip = window.XTracerWidgets.createPill({
+      label: getSidebarCardTitle(card),
+      active: isActive,
+      pressable: true,
+      className: "mobile-card-chip",
+    });
     chip.addEventListener("click", () => {
       if (!isMobileTabMenuViewport()) return;
       container.dataset.mobileSelectedCardId = card.id;

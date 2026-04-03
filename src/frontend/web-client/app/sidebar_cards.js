@@ -6,36 +6,20 @@
   }
 
   function createSidebarCard(config) {
-    const card = document.createElement("details");
+    const card = window.XTracerWidgets.createCollapsibleCard({
+      className: "control-section control-card",
+      title: config.title || "",
+      note: config.note || "",
+      open: config.open !== false,
+      bodyClass: `control-section-body${config.bodyClass ? ` ${config.bodyClass}` : ""}`,
+      body: htmlToFragment(config.bodyHTML || ""),
+    });
     card.id = config.id;
-    card.className = "control-section control-card xui-card xui-card--accordion xui-card--collapsible";
-    card.open = config.open !== false;
     if (config.hidden) card.hidden = true;
-
-    const summary = document.createElement("summary");
-    const head = document.createElement("div");
-    head.className = "xui-card__head";
-
-    const title = document.createElement("h3");
-    title.className = "xui-card__title control-card-title";
-    title.textContent = config.title || "";
-    head.appendChild(title);
-
-    if (config.note) {
-      const note = document.createElement("span");
-      note.className = "xui-card__note control-card-note";
-      note.textContent = config.note;
-      head.appendChild(note);
-    }
-
-    summary.appendChild(head);
-
-    const body = document.createElement("div");
-    body.className = `xui-card__body control-section-body${config.bodyClass ? ` ${config.bodyClass}` : ""}`;
-    body.appendChild(htmlToFragment(config.bodyHTML || ""));
-
-    card.appendChild(summary);
-    card.appendChild(body);
+    const titleEl = card.querySelector(".xui-card__title");
+    if (titleEl) titleEl.classList.add("control-card-title");
+    const noteEl = card.querySelector(".xui-card__note");
+    if (noteEl) noteEl.classList.add("control-card-note");
     return card;
   }
 

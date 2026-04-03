@@ -1,45 +1,29 @@
 function updateWorkspaceActiveHint() {
   if (!el.workspaceActiveHint) return;
   const id = String(activeWorkspaceId || "").trim();
-  const label = "Active workspace";
-  const value = id || "-";
-  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
-    window.XTracerWidgets.renderStatHint(el.workspaceActiveHint, {
-      label,
-      value,
-      className: "workspace-active-hint",
-    });
-    return;
-  }
-  el.workspaceActiveHint.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+  window.XTracerWidgets.renderStatHint(el.workspaceActiveHint, {
+    label: "Active workspace",
+    value: id || "-",
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceCountHint(count) {
   if (!el.workspaceCountHint) return;
-  const n = Math.max(0, Number(count) || 0);
-  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
-    window.XTracerWidgets.renderStatHint(el.workspaceCountHint, {
-      label: "Workspaces",
-      value: n,
-      className: "workspace-active-hint",
-    });
-    return;
-  }
-  el.workspaceCountHint.innerHTML = `<span class="workspace-active-label">Workspaces</span><code class="workspace-active-value">${n}</code>`;
+  window.XTracerWidgets.renderStatHint(el.workspaceCountHint, {
+    label: "Workspaces",
+    value: Math.max(0, Number(count) || 0),
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceServerStatHint(node, label, value) {
   if (!node) return;
-  const rendered = (value === null || value === undefined || value === "") ? "-" : String(value);
-  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
-    window.XTracerWidgets.renderStatHint(node, {
-      label,
-      value: rendered,
-      className: "workspace-active-hint",
-    });
-    return;
-  }
-  node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${rendered}</code>`;
+  window.XTracerWidgets.renderStatHint(node, {
+    label,
+    value: (value === null || value === undefined || value === "") ? "-" : String(value),
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceServerStatsHints(data) {
@@ -590,65 +574,16 @@ function renderSettingsJobsList(activeJobs) {
     progressNode.className = "settings-job-meta-pill";
     progressNode.textContent = `${(progress * 100).toFixed(1)}%`;
     const progressBar = createSettingsJobProgress(progress);
-    const item = typeof widgets.createJobRow === "function"
-      ? widgets.createJobRow({
-        id,
-        state,
-        pills: [statePill],
-        workspaceLabel: `ws ${workspaceId}`,
-        metrics: [threadsNode, elapsedNode, progressNode],
-        progress: progressBar,
-        subtext: `${scene} · ${integrator}`,
-        controls: controlNodes,
-      })
-      : (() => {
-        const legacyItem = document.createElement("article");
-        legacyItem.className = `settings-job-item state-${state}`;
-
-        const head = document.createElement("div");
-        head.className = "settings-job-head";
-
-        const idNode = document.createElement("code");
-        idNode.className = "settings-job-id";
-        idNode.textContent = id;
-
-        const pills = document.createElement("div");
-        pills.className = "settings-job-pills";
-        pills.appendChild(statePill);
-        head.appendChild(idNode);
-        head.appendChild(pills);
-
-        const meta = document.createElement("div");
-        meta.className = "settings-job-meta";
-        const workspaceNode = document.createElement("span");
-        workspaceNode.textContent = `ws ${workspaceId}`;
-        const metrics = document.createElement("div");
-        metrics.className = "settings-job-metrics";
-        metrics.appendChild(threadsNode);
-        metrics.appendChild(elapsedNode);
-        metrics.appendChild(progressNode);
-        meta.appendChild(workspaceNode);
-        meta.appendChild(metrics);
-
-        const footer = document.createElement("div");
-        footer.className = "settings-job-footer";
-        const sub = document.createElement("div");
-        sub.className = "settings-job-sub";
-        sub.textContent = `${scene} · ${integrator}`;
-        footer.appendChild(sub);
-        if (controlNodes.length) {
-          const controls = document.createElement("div");
-          controls.className = "settings-job-controls";
-          controlNodes.forEach((node) => controls.appendChild(node));
-          footer.appendChild(controls);
-        }
-
-        legacyItem.appendChild(head);
-        legacyItem.appendChild(meta);
-        legacyItem.appendChild(progressBar);
-        legacyItem.appendChild(footer);
-        return legacyItem;
-      })();
+    const item = widgets.createJobRow({
+      id,
+      state,
+      pills: [statePill],
+      workspaceLabel: `ws ${workspaceId}`,
+      metrics: [threadsNode, elapsedNode, progressNode],
+      progress: progressBar,
+      subtext: `${scene} · ${integrator}`,
+      controls: controlNodes,
+    });
     el.settingsJobsList.appendChild(item);
   });
 }

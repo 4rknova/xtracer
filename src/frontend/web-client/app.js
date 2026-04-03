@@ -9,17 +9,7 @@ if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSideba
 }
 
 function createRenderToolbarSvgIcon(pathData, viewBox) {
-  const widgetDom = window.XTracerWidgets && window.XTracerWidgets.dom;
-  if (widgetDom && typeof widgetDom.svgIcon === "function") {
-    return widgetDom.svgIcon(pathData, viewBox || "0 0 24 24");
-  }
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", viewBox || "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", pathData);
-  svg.appendChild(path);
-  return svg;
+  return window.XTracerWidgets.dom.svgIcon(pathData, viewBox || "0 0 24 24");
 }
 
 function decorateRenderExportButton(button) {
