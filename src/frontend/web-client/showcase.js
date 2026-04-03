@@ -147,8 +147,7 @@
               className: "showcase-sidebar-logo",
               attrs: { src: "/logo.svg", alt: "XTRACER" },
             }),
-            dom.el("p", { className: "showcase-sidebar-kicker", text: "Widget Library" }),
-            dom.el("h1", { className: "showcase-sidebar-title", text: "UI Showcase" }),
+            dom.el("p", { className: "showcase-sidebar-kicker", text: "Widget Library Showcase" }),
             dom.el("p", {
               className: "showcase-copy showcase-sidebar-copy",
               text: "Reference surface for the shared web widget library and current visual language.",
@@ -324,7 +323,12 @@
             widgets.createTag({ label: "Queued", tone: "warning" }),
             widgets.createTag({ label: "Error", tone: "error" }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-wrap" }),
-          demoCard("Fields", "Form wrappers for numeric, select, and boolean inputs.", [
+          demoCard("Fields", "Form wrappers for numeric, select, boolean, and custom controls. createField is the base factory; createNumberField / createSelectField / createCheckboxField are typed wrappers built on top of it.", [
+            widgets.createField({
+              label: "Scene path",
+              control: dom.el("input", { className: "xui-input", attrs: { type: "text", placeholder: "scenes/my_scene.ncf" } }),
+              help: "Base factory — slot any control element.",
+            }),
             widgets.createNumberField({ label: "Width", value: 1280, min: 32, max: 8192 }),
             widgets.createSelectField({
               label: "Integrator",
@@ -348,19 +352,24 @@
               })
               : dom.el("div", { text: "Create field widget unavailable." }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
-          demoCard("Stats & Progress", "Display primitives reused by settings, jobs, and preview stats.", [
+          demoCard("Stats & Progress", "Display primitives reused by settings, jobs, and preview stats. createStatHint creates a new element; renderStatHint upgrades an existing one in place.", [
             widgets.createSurface({
               className: "showcase-compact-surface",
               body: widgets.createStack({
                 density: "compact",
                 children: [
                   widgets.createStatHint({ label: "Threads In Use", value: "8 / 12" }),
+                  (() => {
+                    const node = dom.el("p");
+                    widgets.renderStatHint(node, { label: "Active Workspace", value: "ws_main" });
+                    return node;
+                  })(),
                   widgets.createProgressBar({ label: "Render Progress", value: 0.64, valueText: "64%" }),
                 ],
               }),
             }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
-          demoCard("Cards & Empty State", "Containers and empty messaging.", [
+          demoCard("Cards & Empty State", "Containers and empty messaging. createAccordionCard is an alias of createCollapsibleCard.", [
             widgets.createStack({
               density: "compact",
               children: [
@@ -685,6 +694,24 @@
               ],
             }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
+          demoCard("Dropdown", "Enhanced select control wrapping native <select> with keyboard nav and custom styling. enhanceSelects(root) is the batch variant that enhances all eligible selects under a root element.", [
+            typeof widgets.enhanceSelect === "function"
+              ? (() => {
+                const container = dom.el("div", { className: "showcase-dropdown-host" });
+                const select = dom.el("select", {
+                  className: "xui-select",
+                  children: [
+                    dom.el("option", { attrs: { value: "pathtracer" }, text: "Pathtracer" }),
+                    dom.el("option", { attrs: { value: "ao" }, text: "Ambient Occlusion" }),
+                    dom.el("option", { attrs: { value: "direct" }, text: "Direct Light" }),
+                  ],
+                });
+                container.appendChild(select);
+                widgets.enhanceSelect(select);
+                return container;
+              })()
+              : dom.el("div", { text: "Dropdown widget unavailable." }),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
         ],
       })
     );
@@ -773,17 +800,20 @@
     return section(
       "adoption",
       "Adoption Status",
-      "The library now covers the main repeated primitives used by the app. The remaining work is mostly verification, smaller cleanup, and incremental adoption where repetition still exists.",
+      "All repeated primitives now route through the widget layer. Legacy fallback code has been removed from workspaces, scene browser, and editor surfaces.",
       dom.el("div", {
         className: "showcase-grid showcase-grid--wide",
         children: [
-          demoCard("In Use", "Current adoption points.", [
-            widgets.createStatHint({ label: "Static UI", value: "Sidebar cards, buttons, pills" }),
-            widgets.createStatHint({ label: "Dynamic UI", value: "Workspace, jobs, preview, filters, integrator controls" }),
+          demoCard("Fully Adopted", "Surfaces using only widget primitives.", [
+            widgets.createStatHint({ label: "Sidebar Cards", value: "createCollapsibleCard via widget" }),
+            widgets.createStatHint({ label: "Jobs Panel", value: "createJobRow, renderStatHint" }),
+            widgets.createStatHint({ label: "Scene Browser", value: "createSceneCard, createCameraCard, createVariantCard" }),
+            widgets.createStatHint({ label: "Post Filters", value: "createPill, createTag, createIconButton" }),
           ]),
-          demoCard("Next Steps", "Likely follow-up work.", [
-            widgets.createStatHint({ label: "Verification", value: "Browser review across main surfaces" }),
-            widgets.createStatHint({ label: "Cleanup", value: "Remove remaining redundant legacy styling where safe" }),
+          demoCard("Remaining Work", "Areas with inline DOM not yet converted.", [
+            widgets.createStatHint({ label: "editor.js params", value: "Post-filter number inputs — manual label+input" }),
+            widgets.createStatHint({ label: "sidebar_cards.js body", value: "Card bodies use static HTML strings" }),
+            widgets.createStatHint({ label: "Missing widgets", value: "Modal, alert/toast, generalized tab container" }),
           ]),
         ],
       })
