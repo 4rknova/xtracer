@@ -36,7 +36,7 @@
       children: createCardHead(opts),
     });
     const body = dom.el("div", {
-      className: "xui-card__body",
+      className: `xui-card__body${opts.bodyClass ? ` ${opts.bodyClass}` : ""}`,
       children: opts.body || opts.children || null,
     });
     details.appendChild(summary);
