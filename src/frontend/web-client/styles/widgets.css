@@ -1024,6 +1024,186 @@
   color: var(--ink);
 }
 
+/* ── Modal ──────────────────────────────────────────────────────────── */
+
+.xui-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.xui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.xui-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(480px, calc(100vw - 2rem));
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--xui-shadow-2);
+  animation: xui-modal-in 0.15s ease;
+}
+
+@keyframes xui-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.xui-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.xui-modal-body {
+  color: var(--muted);
+}
+
+.xui-modal-body p {
+  margin: 0;
+}
+
+.xui-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────── */
+
+.xui-toast-host {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 5000;
+  display: grid;
+  gap: 0.5rem;
+  pointer-events: none;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 2.5rem));
+}
+
+.xui-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.68rem 0.75rem 0.68rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--xui-shadow-2);
+  font-size: 0.88rem;
+  pointer-events: auto;
+  animation: xui-toast-in 0.18s ease;
+}
+
+.xui-toast--success { border-left: 3px solid var(--xui-success); }
+.xui-toast--error   { border-left: 3px solid var(--xui-danger); }
+.xui-toast--warning { border-left: 3px solid var(--xui-warning); }
+.xui-toast--info    { border-left: 3px solid var(--xui-info); }
+
+.xui-toast-message {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.xui-toast-close {
+  flex-shrink: 0;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  border-radius: 5px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.xui-toast-close:hover {
+  background: color-mix(in srgb, var(--line) 50%, transparent);
+  color: var(--ink);
+}
+
+.xui-toast.is-leaving {
+  animation: xui-toast-out 0.2s ease forwards;
+}
+
+@keyframes xui-toast-in {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes xui-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(1rem); }
+}
+
+/* ── Tab container ──────────────────────────────────────────────────── */
+
+.xui-tab-container {
+  display: grid;
+}
+
+.xui-tab-container-nav {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+}
+
+.xui-tab-btn {
+  flex: 1;
+  padding: 0.42rem 0.75rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--xui-font-sans);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.xui-tab-btn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 28%, transparent);
+  color: var(--ink);
+}
+
+.xui-tab-btn.is-active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.xui-tab-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Animations ─────────────────────────────────────────────────────── */
+
 @keyframes xui-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
