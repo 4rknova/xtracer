@@ -1851,19 +1851,19 @@ void gear(object_t *obj, size_t resolution, size_t tooth_count,
         const Vec3 boti(rad[i]*nmath_cos(ang[i]), -half_h, rad[i]*nmath_sin(ang[i]));
         const Vec3 botj(rad[j]*nmath_cos(ang[j]), -half_h, rad[j]*nmath_sin(ang[j]));
 
-        /* Top & bottom caps */
+        /* Top & bottom caps (+y / -y normals) */
         if (inner_radius <= 1e-4f) {
-            add_triangle_flat(obj, out, Vec3(0, half_h, 0), topi, topj);
-            add_triangle_flat(obj, out, Vec3(0,-half_h, 0), botj, boti);
+            add_triangle_flat(obj, out, Vec3(0, half_h, 0), topj, topi);
+            add_triangle_flat(obj, out, Vec3(0,-half_h, 0), boti, botj);
         } else {
             const Vec3 itopi(inner_radius*nmath_cos(ang[i]),  half_h, inner_radius*nmath_sin(ang[i]));
             const Vec3 itopj(inner_radius*nmath_cos(ang[j]),  half_h, inner_radius*nmath_sin(ang[j]));
             const Vec3 iboti(inner_radius*nmath_cos(ang[i]), -half_h, inner_radius*nmath_sin(ang[i]));
             const Vec3 ibotj(inner_radius*nmath_cos(ang[j]), -half_h, inner_radius*nmath_sin(ang[j]));
-            add_triangle_flat(obj, out, itopi, topi,  topj);
-            add_triangle_flat(obj, out, itopi, topj,  itopj);
-            add_triangle_flat(obj, out, ibotj, iboti, boti);
-            add_triangle_flat(obj, out, ibotj, boti,  botj);
+            add_triangle_flat(obj, out, itopi, topj,  topi);
+            add_triangle_flat(obj, out, itopi, itopj, topj);
+            add_triangle_flat(obj, out, iboti, boti,  botj);
+            add_triangle_flat(obj, out, iboti, botj,  ibotj);
         }
 
         /* Outer side face */
@@ -1908,7 +1908,7 @@ void spring(object_t *obj, size_t resolution, float coils, float wire_radius,
 
     for (size_t i = 0; i <= seg_u; ++i) {
         const float t   = (float)i / (float)seg_u;
-        const float ang = (float)(nmath::PI_DOUBLE * 2.0) * coils * t;
+        const float ang = (float)(nmath::PI_DOUBLE) * coils * t;
         centers[i] = Vec3(spring_radius * nmath_cos(ang),
                           height * (t - 0.5f),
                           spring_radius * nmath_sin(ang));
@@ -1971,9 +1971,10 @@ void hemisphere(object_t *obj, size_t resolution)
     obj->shapes.push_back(shape);
     shape_t &out = obj->shapes.back();
 
-    /* Dome: phi sweeps from 0 (top pole) to π/2 (equator) */
+    /* Dome: phi sweeps from 0 (top pole) to π/2 (equator).
+       PI_DOUBLE = 2π, so multiply by 0.25 to get π/2. */
     for (size_t iu = 0; iu <= seg_u; ++iu) {
-        const float phi = (float)(nmath::PI_DOUBLE) * 0.5f * (float)iu / (float)seg_u;
+        const float phi = (float)(nmath::PI_DOUBLE * 0.25) * (float)iu / (float)seg_u;
         const float sp = nmath_sin(phi);
         const float cp = nmath_cos(phi);
         for (size_t iv = 0; iv <= seg_v; ++iv) {
@@ -2076,8 +2077,8 @@ void star(object_t *obj, size_t resolution, size_t points, float inner_radius,
         const Vec3 boti(rad[i]*nmath_cos(ang[i]), -half_h, rad[i]*nmath_sin(ang[i]));
         const Vec3 botj(rad[j]*nmath_cos(ang[j]), -half_h, rad[j]*nmath_sin(ang[j]));
 
-        add_triangle_flat(obj, out, Vec3(0, half_h, 0),  topi, topj);
-        add_triangle_flat(obj, out, Vec3(0,-half_h, 0),  botj, boti);
+        add_triangle_flat(obj, out, Vec3(0, half_h, 0),  topj, topi);
+        add_triangle_flat(obj, out, Vec3(0,-half_h, 0),  boti, botj);
         add_triangle_flat(obj, out, boti, topi, topj);
         add_triangle_flat(obj, out, boti, topj, botj);
     }
@@ -2101,7 +2102,8 @@ void superellipsoid(object_t *obj, size_t resolution, float e1, float e2)
     std::vector<Vec3> pos((seg_u + 1) * stride);
     for (size_t iu = 0; iu <= seg_u; ++iu) {
         const float t = (float)iu / (float)seg_u;
-        const float u = (float)(nmath::PI_DOUBLE) * (t - 0.5f);  /* [-π/2, π/2] */
+        /* PI_DOUBLE = 2π; multiply by 0.25 to get π/2, then shift → [-π/2, π/2] */
+        const float u = (float)(nmath::PI_DOUBLE * 0.5) * (t - 0.5f);
         const float cu = nmath_cos(u), su = nmath_sin(u);
         const float acu = std::max(1e-9f, std::abs(cu));
         const float asu = std::max(1e-9f, std::abs(su));
@@ -2110,7 +2112,8 @@ void superellipsoid(object_t *obj, size_t resolution, float e1, float e2)
 
         for (size_t iv = 0; iv <= seg_v; ++iv) {
             const float s = (float)iv / (float)seg_v;
-            const float v = (float)(nmath::PI_DOUBLE * 2.0) * (s - 0.5f);  /* [-π, π] */
+            /* PI_DOUBLE = 2π; this gives [-π, π] for the longitude */
+            const float v = (float)(nmath::PI_DOUBLE) * (s - 0.5f);
             const float cv = nmath_cos(v), sv = nmath_sin(v);
             const float acv = std::max(1e-9f, std::abs(cv));
             const float asv = std::max(1e-9f, std::abs(sv));
@@ -2352,15 +2355,23 @@ static void gen_coral_branch(object_t *obj, shape_t &out,
         add_triangle_flat(obj, out, tip, tip_verts[j], tip_verts[i]);
     }
 
+    /* Coral branches spread radially into the upper hemisphere regardless of
+       parent direction — this creates the bushy, spherical coral silhouette. */
     for (int b = 0; b < p.branch_count; ++b) {
-        const float angle = p.branch_angle * (0.7f + 0.6f * rng_next_unit(*p.rng));
-        const float twist = (float)(nmath::PI_DOUBLE * 2.0) * (float)b / (float)p.branch_count
-                           + (rng_next_unit(*p.rng) - 0.5f) * 2.0f;
-        const Vec3 side = (perp * nmath_cos(twist) + binom * nmath_sin(twist)).normalized();
-        Vec3 child_dir = (dir * nmath_cos(angle) + side * nmath_sin(angle)).normalized();
-        /* Bias upward */
-        child_dir = (child_dir + Vec3(0, 0.3f * rng_next_unit(*p.rng), 0)).normalized();
-        const float frac = 0.6f + 0.35f * rng_next_unit(*p.rng);
+        /* Evenly divide azimuth around full circle, plus small random jitter */
+        const float azimuth = (float)(nmath::PI_DOUBLE * 2.0) * (float)b / (float)p.branch_count
+                             + (rng_next_unit(*p.rng) - 0.5f) * 1.8f;
+        /* Elevation in [20°, 70°] range — upward but spreading wide */
+        const float elev_min = (float)(nmath::PI_DOUBLE * 0.5) * 0.22f;
+        const float elev_max = (float)(nmath::PI_DOUBLE * 0.5) * 0.78f;
+        const float elev = elev_min + rng_next_unit(*p.rng) * (elev_max - elev_min)
+                          + p.branch_angle * (rng_next_unit(*p.rng) - 0.5f) * 0.4f;
+        /* Build child direction in world space from spherical coords — ignores parent dir */
+        Vec3 child_dir(nmath_cos(elev) * nmath_cos(azimuth),
+                       nmath_sin(elev),
+                       nmath_cos(elev) * nmath_sin(azimuth));
+        child_dir.normalize();
+        const float frac = 0.4f + 0.45f * rng_next_unit(*p.rng);
         gen_coral_branch(obj, out, base + dir * (length * frac), child_dir,
                          length * p.len_scale, radius * p.rad_scale, depth - 1, p);
     }
