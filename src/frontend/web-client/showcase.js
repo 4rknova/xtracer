@@ -22,13 +22,13 @@
     { value: "olive", label: "Olive", accent: "#5f712b", soft: "#dce5b8" },
   ];
   const SECTION_META = [
-    { id: "overview", label: "Overview" },
-    { id: "theme-coverage", label: "Theme Coverage" },
-    { id: "tokens", label: "Tokens" },
-    { id: "theme-colors", label: "Theme Colors" },
-    { id: "widgets", label: "Widgets" },
-    { id: "compositions", label: "Compositions" },
-    { id: "adoption", label: "Adoption Status" },
+    { id: "overview", label: "Overview", num: "01" },
+    { id: "theme-coverage", label: "Theme Coverage", num: "02" },
+    { id: "tokens", label: "Tokens", num: "03" },
+    { id: "theme-colors", label: "Theme Colors", num: "04" },
+    { id: "widgets", label: "Widgets", num: "05" },
+    { id: "compositions", label: "Compositions", num: "06" },
+    { id: "adoption", label: "Adoption Status", num: "07" },
   ];
   let activeSectionId = SECTION_META[0].id;
   let sectionObserver = null;
@@ -60,6 +60,7 @@
   }
 
   function section(id, title, intro, children) {
+    const meta = SECTION_META.find((s) => s.id === id);
     return dom.el("section", {
       className: "showcase-section",
       attrs: { id },
@@ -67,6 +68,7 @@
         dom.el("div", {
           className: "showcase-section-head",
           children: [
+            meta ? dom.el("p", { className: "showcase-section-num", text: meta.num }) : null,
             dom.el("h2", { text: title }),
             intro ? dom.el("p", { className: "showcase-copy", text: intro }) : null,
           ],
@@ -175,8 +177,19 @@
                   href: `#${item.id}`,
                   "aria-current": item.id === activeSectionId ? "location" : null,
                 },
-                text: item.label,
+                children: [
+                  dom.el("span", { className: "showcase-sidebar-link-num", text: item.num }),
+                  dom.el("span", { text: item.label }),
+                ],
               })),
+            }),
+            dom.el("button", {
+              className: "showcase-back-top",
+              attrs: { type: "button", "aria-label": "Scroll to top" },
+              children: [
+                dom.el("span", { attrs: { "aria-hidden": "true" }, text: "↑" }),
+                dom.el("span", { text: "Back to top" }),
+              ],
             }),
           ],
         }),
@@ -201,6 +214,11 @@
             widgets.createStatHint({ label: "Primitives", value: "Buttons, pills, tags, fields, cards, stats" }),
             widgets.createStatHint({ label: "Adoption", value: "Workspace, jobs, preview, filters, integrator UI" }),
           ]),
+          demoCard("At a Glance", "Library and theme coverage summary.", [
+            widgets.createStatHint({ label: "Sections", value: String(SECTION_META.length) }),
+            widgets.createStatHint({ label: "Palettes", value: String(DARK_PALETTES.length + LIGHT_PALETTES.length) + " (" + LIGHT_PALETTES.length + " light · " + DARK_PALETTES.length + " dark)" }),
+            widgets.createStatHint({ label: "Theme modes", value: "System · Light · Dark" }),
+          ]),
         ],
       })
     );
@@ -213,8 +231,9 @@
       "Switch the page between system, light, and dark modes and inspect the same root token model used by the main app.",
       [
         dom.el("div", {
-          className: "showcase-specimen",
+          className: "showcase-controls-bar",
           children: [
+            dom.el("span", { className: "showcase-controls-bar-label", text: "Theme mode" }),
             widgets.createToolbar({
               className: "showcase-theme-toolbar",
               children: [
@@ -223,46 +242,44 @@
                 widgets.createPill({ label: "Dark", selectable: true, active: state.theme === "dark", onClick: () => applyShowcaseTheme({ theme: "dark" }) }),
               ],
             }),
-            dom.el("div", {
-              className: "showcase-grid",
-              children: [
-                widgets.createSelectField({
-                  label: "Light Palette",
-                  value: state.lightPalette,
-                  options: LIGHT_PALETTES.map((item) => ({ value: item.value, label: item.label })),
-                  onChange: (event) => applyShowcaseTheme({ lightPalette: event.target.value }),
-                }),
-                widgets.createSelectField({
-                  label: "Dark Palette",
-                  value: state.darkPalette,
-                  options: DARK_PALETTES.map((item) => ({ value: item.value, label: item.label })),
-                  onChange: (event) => applyShowcaseTheme({ darkPalette: event.target.value }),
-                }),
-              ],
-            }),
           ],
         }),
-        dom.el("div", {
-          className: "showcase-grid",
-          children: [
-            demoCard("Current Theme", "Live page state.", [
-              widgets.createStatHint({ label: "Mode", value: state.theme }),
-              widgets.createStatHint({ label: "Light Palette", value: state.lightPalette }),
-              widgets.createStatHint({ label: "Dark Palette", value: state.darkPalette }),
-            ]),
-            demoCard("Surface Tokens", "Core tokens as currently applied.", [
-              dom.el("div", {
-                className: "showcase-token-grid showcase-token-grid--compact",
-                children: [
-                  tokenSwatch("Background", "var(--bg)"),
-                  tokenSwatch("Panel", "var(--panel)"),
-                  tokenSwatch("Accent", "var(--accent)"),
-                  tokenSwatch("Accent Soft", "var(--accent-soft)"),
-                ],
+        demoCard("Theme State", "Palette selection and live token state.", [
+          dom.el("div", {
+            className: "showcase-grid",
+            children: [
+              widgets.createSelectField({
+                label: "Light Palette",
+                value: state.lightPalette,
+                options: LIGHT_PALETTES.map((item) => ({ value: item.value, label: item.label })),
+                onChange: (event) => applyShowcaseTheme({ lightPalette: event.target.value }),
               }),
-            ]),
-          ],
-        }),
+              widgets.createSelectField({
+                label: "Dark Palette",
+                value: state.darkPalette,
+                options: DARK_PALETTES.map((item) => ({ value: item.value, label: item.label })),
+                onChange: (event) => applyShowcaseTheme({ darkPalette: event.target.value }),
+              }),
+            ],
+          }),
+          dom.el("div", {
+            className: "showcase-demo-row",
+            children: [
+              widgets.createStatHint({ label: "Mode", value: state.theme }),
+              widgets.createStatHint({ label: "Light", value: state.lightPalette }),
+              widgets.createStatHint({ label: "Dark", value: state.darkPalette }),
+            ],
+          }),
+          dom.el("div", {
+            className: "showcase-token-grid showcase-token-grid--compact",
+            children: [
+              tokenSwatch("Background", "var(--bg)"),
+              tokenSwatch("Panel", "var(--panel)"),
+              tokenSwatch("Accent", "var(--accent)"),
+              tokenSwatch("Accent Soft", "var(--accent-soft)"),
+            ],
+          }),
+        ], { bodyClassName: "showcase-demo-stack" }),
       ]
     );
   }
@@ -694,6 +711,84 @@
               ],
             }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
+          demoCard("Modal", "Confirmation dialog with backdrop, focus management, Escape key, and Promise-based API. Pass danger: true to invert default focus to the cancel button.", [
+            (() => {
+              const confirmBtn = widgets.createButton({ label: "Confirm Modal", variant: "secondary" });
+              confirmBtn.addEventListener("click", () => {
+                if (typeof widgets.showModal === "function") {
+                  widgets.showModal({
+                    title: "Confirm Action",
+                    body: "This will apply the selected settings. Continue?",
+                    confirmLabel: "Apply",
+                  });
+                }
+              });
+              const dangerBtn = widgets.createButton({ label: "Delete Modal", variant: "danger" });
+              dangerBtn.addEventListener("click", () => {
+                if (typeof widgets.showModal === "function") {
+                  widgets.showModal({
+                    title: "Delete Scene",
+                    body: "Delete \"atrium_pathtrace.ncf\"? This cannot be undone.",
+                    confirmLabel: "Delete",
+                    danger: true,
+                  });
+                }
+              });
+              const wrap = dom.el("div", { className: "showcase-demo-row", children: [confirmBtn, dangerBtn] });
+              return wrap;
+            })(),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
+          demoCard("Toast", "Ephemeral status notifications with tone variants and auto-dismiss. showToast({ message, tone, duration }) appends to a host container fixed to the bottom-right corner.", [
+            (() => {
+              const tones = ["success", "error", "warning", "info", "neutral"];
+              const wrap = dom.el("div", { className: "showcase-demo-wrap" });
+              tones.forEach((tone) => {
+                const btn = widgets.createButton({ label: tone, variant: "ghost" });
+                btn.addEventListener("click", () => {
+                  if (typeof widgets.showToast === "function") {
+                    widgets.showToast({ message: `This is a ${tone} toast message.`, tone });
+                  }
+                });
+                wrap.appendChild(btn);
+              });
+              return wrap;
+            })(),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
+          demoCard("Tab Container", "Generic tab UI with keyboard navigation (arrow keys), ARIA roles, and onChange callback. createTabContainer({ tabs: [{id, label, content}] }).", [
+            typeof widgets.createTabContainer === "function"
+              ? widgets.createTabContainer({
+                tabs: [
+                  {
+                    id: "info",
+                    label: "Info",
+                    content: widgets.createStack({
+                      density: "compact",
+                      children: [
+                        widgets.createStatHint({ label: "Integrator", value: "Pathtracer" }),
+                        widgets.createStatHint({ label: "Threads", value: "8 / 12" }),
+                      ],
+                    }),
+                  },
+                  {
+                    id: "actions",
+                    label: "Actions",
+                    content: dom.el("div", {
+                      className: "showcase-demo-wrap",
+                      children: [
+                        widgets.createButton({ label: "Apply", variant: "primary" }),
+                        widgets.createButton({ label: "Reset", variant: "ghost" }),
+                      ],
+                    }),
+                  },
+                  {
+                    id: "log",
+                    label: "Log",
+                    content: dom.el("p", { className: "showcase-copy", text: "No events yet." }),
+                  },
+                ],
+              })
+              : dom.el("div", { text: "Tab container widget unavailable." }),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
           demoCard("Dropdown", "Enhanced select control wrapping native <select> with keyboard nav and custom styling. enhanceSelects(root) is the batch variant that enhances all eligible selects under a root element.", [
             typeof widgets.enhanceSelect === "function"
               ? (() => {
@@ -800,20 +895,20 @@
     return section(
       "adoption",
       "Adoption Status",
-      "All repeated primitives now route through the widget layer. Legacy fallback code has been removed from workspaces, scene browser, and editor surfaces.",
+      "Most repeated primitives route through the widget layer. Sidebar card bodies remain static HTML strings; modal and toast are wired into delete flows; the tab container drives the About pane.",
       dom.el("div", {
         className: "showcase-grid showcase-grid--wide",
         children: [
           demoCard("Fully Adopted", "Surfaces using only widget primitives.", [
-            widgets.createStatHint({ label: "Sidebar Cards", value: "createCollapsibleCard via widget" }),
+            widgets.createStatHint({ label: "Sidebar Cards", value: "createCollapsibleCard" }),
             widgets.createStatHint({ label: "Jobs Panel", value: "createJobRow, renderStatHint" }),
             widgets.createStatHint({ label: "Scene Browser", value: "createSceneCard, createCameraCard, createVariantCard" }),
-            widgets.createStatHint({ label: "Post Filters", value: "createPill, createTag, createIconButton" }),
+            widgets.createStatHint({ label: "Post Filters", value: "createPill, createTag, createIconButton, createField" }),
+            widgets.createStatHint({ label: "Delete Flows", value: "showModal (scene + workspace), showToast (workspace)" }),
+            widgets.createStatHint({ label: "About Pane", value: "createTabContainer — Overview / License / Third-Party tabs" }),
           ]),
           demoCard("Remaining Work", "Areas with inline DOM not yet converted.", [
-            widgets.createStatHint({ label: "editor.js params", value: "Post-filter number inputs — manual label+input" }),
-            widgets.createStatHint({ label: "sidebar_cards.js body", value: "Card bodies use static HTML strings" }),
-            widgets.createStatHint({ label: "Missing widgets", value: "Modal, alert/toast, generalized tab container" }),
+            widgets.createStatHint({ label: "sidebar_cards.js bodies", value: "Card bodies built from static HTML strings via htmlToFragment" }),
           ]),
         ],
       })
@@ -846,6 +941,7 @@
       widgets.enhanceSelects(root);
     }
     bindSidebarNavigation();
+    bindSidebarKeyNav();
     attachSectionObserver();
   }
 
@@ -884,6 +980,28 @@
         }
         target.scrollIntoView({ behavior: "smooth", block: "start" });
       });
+    });
+    const backTop = document.querySelector(".showcase-back-top");
+    if (backTop) {
+      backTop.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+  }
+
+  function bindSidebarKeyNav() {
+    const nav = document.querySelector(".showcase-sidebar-nav");
+    if (!nav) return;
+    nav.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const links = [...nav.querySelectorAll(".showcase-sidebar-link")];
+      const idx = links.indexOf(document.activeElement);
+      if (idx === -1) return;
+      event.preventDefault();
+      const next = event.key === "ArrowDown"
+        ? links[(idx + 1) % links.length]
+        : links[(idx - 1 + links.length) % links.length];
+      next.focus();
     });
   }
 

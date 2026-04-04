@@ -109,7 +109,9 @@ html:has(.showcase-page) {
 }
 
 .showcase-sidebar-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   padding: 0.6rem 0.7rem;
   border-radius: 12px;
   color: color-mix(in srgb, var(--ink) 88%, var(--muted));
@@ -129,7 +131,8 @@ html:has(.showcase-page) {
 .showcase-sidebar-link[aria-current="location"] {
   background: color-mix(in srgb, var(--accent-soft) 42%, transparent);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .showcase-sidebar-stats {
@@ -186,6 +189,8 @@ html:has(.showcase-page) {
 .showcase-section-head {
   display: grid;
   gap: 0.45rem;
+  padding-left: 0.8rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 42%, var(--accent-soft));
 }
 
 .showcase-copy {
@@ -238,6 +243,8 @@ html:has(.showcase-page) {
 .showcase-specimen-head {
   display: grid;
   gap: 0.35rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
 }
 
 .showcase-specimen p,
@@ -470,4 +477,84 @@ html:has(.showcase-page) {
   .showcase-specimen {
     padding: 0.9rem;
   }
+}
+
+/* ── Section number prefix ──────────────────────────────────────── */
+.showcase-section-num {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 58%, var(--muted));
+}
+
+/* ── Sidebar link number ────────────────────────────────────────── */
+.showcase-sidebar-link-num {
+  flex-shrink: 0;
+  width: 1.7rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  opacity: 0.65;
+  transition: opacity 0.14s ease, color 0.14s ease;
+}
+
+.showcase-sidebar-link.is-active .showcase-sidebar-link-num,
+.showcase-sidebar-link[aria-current="location"] .showcase-sidebar-link-num {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* ── Controls bar (theme mode switcher) ─────────────────────────── */
+.showcase-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-soft) 15%, var(--field-bg));
+}
+
+.showcase-controls-bar-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.showcase-controls-bar .showcase-theme-toolbar {
+  margin-bottom: 0;
+}
+
+/* ── Back to top button ─────────────────────────────────────────── */
+.showcase-back-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  width: 100%;
+  padding: 0.52rem 0.7rem;
+  margin-top: 0.2rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.showcase-back-top:hover,
+.showcase-back-top:focus-visible {
+  background: color-mix(in srgb, var(--accent-soft) 28%, transparent);
+  color: var(--ink);
+  outline: none;
 }
