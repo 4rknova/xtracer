@@ -121,10 +121,14 @@ function updateRenderActionButton() {
   if (abortRequestInFlight) {
     el.renderBtn.disabled = true;
     el.renderBtn.textContent = "Aborting...";
+    el.renderBtn.classList.remove("xui-button--primary");
+    el.renderBtn.classList.add("xui-button--danger");
     return;
   }
   el.renderBtn.disabled = false;
   el.renderBtn.textContent = running ? "Abort" : "Render";
+  el.renderBtn.classList.toggle("xui-button--primary", !running);
+  el.renderBtn.classList.toggle("xui-button--danger", running);
 }
 
 let abortRequestedJobId = "";
