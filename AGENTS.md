@@ -189,6 +189,19 @@ type = mesh, source = ext(relative/path/to/file.obj)
 - `julia` — `julia_c` vec3, `power`, `bailout`, `resolution`
 - `pyramid` — `base_size`, `height`
 - `icosa_cage`
+- `superellipsoid` — `e1`, `e2` (Lamé exponents, 0.1–4.0; 1=diamond, 2=sphere, <1=pillow, >2=cube-like)
+
+*Mechanical/structural:*
+- `gear` — `tooth_count` (3–128), `tooth_depth`, `inner_radius`, `outer_radius`, `height`
+- `spring` — `coils`, `wire_radius`, `spring_radius`, `height`
+- `disc` — `inner_radius`, `outer_radius` (set inner > 0 for annular ring)
+- `star` — `points` (3–32), `inner_radius`, `outer_radius`, `height`
+- `hemisphere` — smooth dome with flat bottom cap
+
+*Organic/generative:*
+- `crystal` — `count` (1–32), `radius` (cluster spread), `height`, `tip_height`, `seed`
+- `tree` — `depth` (1–7), `branch_count` (1–6), `branch_angle` (radians), `trunk_height`, `trunk_radius`, `seed`
+- `coral` — `depth` (1–7), `branch_count` (1–8), `branch_angle`, `height`, `branch_radius`, `seed`
 
 All mesh generators accept:
 ```
@@ -396,6 +409,7 @@ A new widget is justified when the same structural pattern appears in three or m
 
 ## Working Conventions For Agents
 
+- When adding a new procedural geometry generator, add a corresponding variant to `scene/lab-procedural-geometry-showcase.scn`. The file covers all supported generators exhaustively — one variant per type, with a matching geometry block, a principled material, and an entry in the `variants` section. Follow the existing naming convention (`g_<name>` for geometry, `mat_<name>` for material).
 - Prefer minimal, surgical changes.
 - Do not revert unrelated working tree changes.
 - Keep tile-based architecture unless intentionally redesigning it.
