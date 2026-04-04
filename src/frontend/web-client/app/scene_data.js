@@ -731,10 +731,11 @@ function renderSceneFileBrowser() {
 
   const visibleSceneCatalog = getFilteredSceneCatalog();
   if (!visibleSceneCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = sceneSearchQuery ? "No scenes match the search." : "No scene files found.";
-    el.sceneFileList.appendChild(empty);
+    el.sceneFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: sceneSearchQuery ? "No matches" : "No scenes",
+      message: sceneSearchQuery ? "No scenes match the search." : "No scene files found.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
@@ -1074,10 +1075,11 @@ function renderCameraBrowser() {
   updateCameraActivePanel();
 
   if (!cameraCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = "No cameras found in this scene.";
-    el.cameraFileList.appendChild(empty);
+    el.cameraFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: "No cameras",
+      message: "No cameras found in this scene.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
@@ -1126,10 +1128,11 @@ function renderVariantBrowser() {
   updateVariantActivePanel();
 
   if (!variantCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = "No variants found in this scene.";
-    el.variantFileList.appendChild(empty);
+    el.variantFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: "No variants",
+      message: "No variants found in this scene.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
