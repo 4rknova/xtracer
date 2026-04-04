@@ -7,6 +7,60 @@ if (window.XTracerWidgets && typeof window.XTracerWidgets.upgradePanelHeaders ==
 if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSidebarCards === "function") {
   window.XTracerSidebarCards.renderSidebarCards(document.getElementById("sidebarCards"));
 }
+if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer === "function") {
+  const aboutPanel = document.querySelector("#paneAbout .about-panel");
+  const overviewGrid = aboutPanel && aboutPanel.querySelector(".about-grid");
+  const licenseCard = aboutPanel && aboutPanel.querySelector(".about-license-card");
+  const thirdPartyCard = aboutPanel && aboutPanel.querySelector(".about-third-party-card");
+  if (aboutPanel && overviewGrid && licenseCard && thirdPartyCard) {
+    const tabs = window.XTracerWidgets.createTabContainer({
+      className: "about-tabs",
+      tabs: [
+        { id: "overview", label: "Overview", content: overviewGrid },
+        { id: "license", label: "License", content: licenseCard },
+        { id: "third-party", label: "Third-Party", content: thirdPartyCard },
+      ],
+    });
+    aboutPanel.replaceChildren(tabs);
+  }
+}
+(function populateClientCard() {
+  const browserEl = document.getElementById("aboutClientBrowser");
+  const themeEl = document.getElementById("aboutClientTheme");
+  const clientIdEl = document.getElementById("aboutClientId");
+
+  if (browserEl) {
+    const ua = navigator.userAgent;
+    let browser = "Unknown";
+    if (ua.indexOf("Edg/") !== -1) browser = "Edge";
+    else if (ua.indexOf("OPR/") !== -1 || ua.indexOf("Opera") !== -1) browser = "Opera";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    const platform = (navigator.userAgentData && navigator.userAgentData.platform)
+      || navigator.platform || "";
+    browserEl.textContent = platform ? `${browser} · ${platform}` : browser;
+  }
+
+  if (themeEl) {
+    const root = document.documentElement;
+    const theme = root.getAttribute("data-theme") || "system";
+    const darkPalette = root.getAttribute("data-dark-palette") || "";
+    const lightPalette = root.getAttribute("data-light-palette") || "";
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const palette = isDark ? darkPalette : lightPalette;
+    themeEl.textContent = palette ? `${theme} · ${palette}` : theme;
+  }
+
+  if (clientIdEl) {
+    try {
+      const id = localStorage.getItem("xtracer-client-id") || "";
+      clientIdEl.textContent = id ? (id.length > 30 ? id.slice(0, 28) + "\u2026" : id) : "-";
+    } catch (_) {
+      clientIdEl.textContent = "-";
+    }
+  }
+})();
 
 function createRenderToolbarSvgIcon(pathData, viewBox) {
   return window.XTracerWidgets.dom.svgIcon(pathData, viewBox || "0 0 24 24");

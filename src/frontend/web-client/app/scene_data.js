@@ -639,7 +639,15 @@ async function deleteSceneFile(sceneFile) {
   if (!sceneName) return;
   if (!hasBackendMethod(api, "deleteScene")) throw new Error("scene delete endpoint unavailable");
 
-  const ok = window.confirm(`Delete scene ${sceneName}? This cannot be undone.`);
+  const widgets = window.XTracerWidgets;
+  const ok = await (widgets && typeof widgets.showModal === "function"
+    ? widgets.showModal({
+      title: "Delete Scene",
+      body: `Delete "${sceneName}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    })
+    : Promise.resolve(window.confirm(`Delete scene ${sceneName}? This cannot be undone.`)));
   if (!ok) return;
 
   const deletedWasActive = String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName;
@@ -764,14 +772,6 @@ function renderSceneFileBrowser() {
       icon: createSceneFileIcon(),
     });
     button.addEventListener("click", () => {
-      if (sceneBrowserSelectedFile === sceneFile) {
-        activateSceneFile(sceneFile);
-        return;
-      }
-      sceneBrowserSelectedFile = sceneFile;
-      syncSceneFileBrowserSelectionUi();
-    });
-    button.addEventListener("dblclick", () => {
       activateSceneFile(sceneFile);
     });
     button.addEventListener("contextmenu", (evt) => {
@@ -1099,10 +1099,6 @@ function renderCameraBrowser() {
       icon: createCameraIcon(camType),
     });
     button.addEventListener("click", () => {
-      cameraBrowserSelectedName = value;
-      renderCameraBrowser();
-    });
-    button.addEventListener("dblclick", () => {
       activateCamera(value);
     });
     button.addEventListener("keydown", (evt) => {
@@ -1154,10 +1150,6 @@ function renderVariantBrowser() {
       icon: createVariantIcon(isBase),
     });
     button.addEventListener("click", () => {
-      variantBrowserSelectedName = value;
-      renderVariantBrowser();
-    });
-    button.addEventListener("dblclick", () => {
       activateVariant(value);
     });
     button.addEventListener("keydown", (evt) => {

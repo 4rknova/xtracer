@@ -1191,13 +1191,35 @@ function renderWorkspaceList(items) {
       className: "workspace-item-action-btn",
       disabled: !id || !canDeleteAny,
       onClick: () => {
-      if (!id || !hasBackendMethod(api, "deleteWorkspace")) return;
-      const ok = window.confirm(`Delete workspace ${id}?`);
-      if (!ok) return;
-      api.deleteWorkspace(id)
-        .then(() => refreshWorkspaces())
-        .then(() => appendLog(`deleted workspace: ${id}`))
-        .catch((err) => appendLog(`workspace delete error: ${err.message}`));
+        if (!id || !hasBackendMethod(api, "deleteWorkspace")) return;
+        const widgets = window.XTracerWidgets;
+        const doDelete = () => {
+          api.deleteWorkspace(id)
+            .then(() => refreshWorkspaces())
+            .then(() => {
+              appendLog(`deleted workspace: ${id}`);
+              if (widgets && typeof widgets.showToast === "function") {
+                widgets.showToast({ message: `Workspace "${id}" deleted`, tone: "success" });
+              }
+            })
+            .catch((err) => {
+              appendLog(`workspace delete error: ${err.message}`);
+              if (widgets && typeof widgets.showToast === "function") {
+                widgets.showToast({ message: `Delete failed: ${err.message}`, tone: "error" });
+              }
+            });
+        };
+        if (widgets && typeof widgets.showModal === "function") {
+          widgets.showModal({
+            title: "Delete Workspace",
+            body: `Delete workspace "${id}"? This cannot be undone.`,
+            confirmLabel: "Delete",
+            danger: true,
+            onConfirm: doDelete,
+          });
+        } else {
+          if (window.confirm(`Delete workspace ${id}?`)) doDelete();
+        }
       },
     });
     actions.appendChild(deleteBtn);
