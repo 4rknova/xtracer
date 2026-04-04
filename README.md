@@ -1,4 +1,6 @@
-<img align="center" src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/logo.svg" alt="xtracer" width="200">
+</p>
 
 # XTRACER
 
@@ -6,12 +8,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 
 [![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
 
-## Current Status (`develop`)
-
-- Build system is CMake-driven (legacy `./configure && make` still exists, but CMake is the maintained path).
-- Core renderer and scene parsing are active under `src/xtcore/`.
-- HTTP web frontend is optional via `XTRACER_ENABLE_WEB`.
-- Standalone WASM renderer runtime is optional via `XTRACER_ENABLE_WASM`.
+<img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
 
 ## Quick Start (Install + Run)
 
@@ -63,14 +60,6 @@ With scene variant:
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies (registry: `docs/DEPENDENCIES.md`) |
-
-### Web UI Widget Library
-
-- Widget builders live under `src/frontend/web-client/app/widgets/`.
-- The web client uses plain JavaScript DOM-builder helpers rather than custom elements or a frontend framework.
-- Layered stylesheets live under `src/frontend/web-client/styles/`, with `src/frontend/web-client/styles.css` as the entrypoint.
-- The standalone widget showcase is served from `src/frontend/web-client/showcase.html`.
-- Add a reusable widget only when a pattern is stable and repeated; one-off feature markup should stay local.
 
 ## Feature Matrix
 
