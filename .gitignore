@@ -52,3 +52,5 @@ res/web/xtracer_wasm.wasm
 res/web/xtracer_wasm.js.map
 res/web/xtracer_wasm.wasm.map
 res/web/*.symbols
+.vscode/settings.json
+.claude/settings.json
