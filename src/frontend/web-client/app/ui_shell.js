@@ -309,8 +309,7 @@ function applySidebarCardLayout(mode) {
 }
 
 function isMobileTabMenuViewport() {
-  // Keep mobile interaction behavior narrower than layout breakpoint.
-  return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+  return !!(window.matchMedia && window.matchMedia("(max-width: 1450px)").matches);
 }
 
 function syncMobileLogsViewport() {
