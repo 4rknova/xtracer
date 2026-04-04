@@ -320,7 +320,10 @@ function syncMobileLogsViewport() {
 
   const isMobile = isMobileTabMenuViewport();
   const isActive = pane.classList.contains("active");
-  if (!isMobile || !isActive || !el.mainTabs) {
+  // On narrow mobile (<= 1024px) #mainTabs is collapsed in the topbar, not a visible sidebar nav.
+  // The height calculation below only makes sense for the 1025-1450px sidebar layout.
+  const isNarrowMobile = !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+  if (!isMobile || !isActive || !el.mainTabs || isNarrowMobile) {
     panel.style.height = "";
     panel.style.maxHeight = "";
     return;
