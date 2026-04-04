@@ -1225,9 +1225,9 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 
         else if (!token.compare(XTPROTO_LTRL_GEAR)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             int tc = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_COUNT) : 0, 12);
-            if (tc < 3) tc = 3; if (tc > 128) tc = 128;
+            tc = std::clamp(tc, 3, 128);
             float tooth_depth   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_DEPTH)   : 0, 0.1);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.2);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 0.5);
@@ -1236,7 +1236,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_SPRING)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             float coils         = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_COILS)         : 0, 6.0);
             float wire_radius   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WIRE_RADIUS)   : 0, 0.05);
             float spring_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_SPRING_RADIUS) : 0, 0.3);
@@ -1245,21 +1245,21 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_HEMISPHERE)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             nmesh::generator::hemisphere(&obj, (size_t)res);
         }
         else if (!token.compare(XTPROTO_LTRL_DISC)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.0);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
             nmesh::generator::disc(&obj, (size_t)res, inner_radius, outer_radius);
         }
         else if (!token.compare(XTPROTO_LTRL_STAR)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             int pts = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_POINTS) : 0, 5);
-            if (pts < 3) pts = 3; if (pts > 32) pts = 32;
+            pts = std::clamp(pts, 3, 32);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.4);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
             float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 0.2);
@@ -1267,16 +1267,16 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_SUPERELLIPSOID)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             float e1 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E1) : 0, 1.0);
             float e2 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E2) : 0, 1.0);
             nmesh::generator::superellipsoid(&obj, (size_t)res, e1, e2);
         }
         else if (!token.compare(XTPROTO_LTRL_CRYSTAL)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 512) res = 512;
+            res = std::clamp(res, 8, 512);
             int count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_COUNT) : 0, 5);
-            if (count < 1) count = 1; if (count > 32) count = 32;
+            count = std::clamp(count, 1, 32);
             float radius     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS)     : 0, 0.8);
             float height     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)     : 0, 1.5);
             float tip_height = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TIP_HEIGHT) : 0, 0.6);
@@ -1285,7 +1285,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_TREE)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 256) res = 256;
+            res = std::clamp(res, 8, 256);
             int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
             int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 3);
             float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.6);
@@ -1296,7 +1296,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_CORAL)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            if (res < 8) res = 8; if (res > 256) res = 256;
+            res = std::clamp(res, 8, 256);
             int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
             int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 4);
             float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.7);
