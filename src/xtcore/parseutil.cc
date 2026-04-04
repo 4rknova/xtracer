@@ -950,6 +950,37 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
                                    thickness,
                                    (size_t)hres);
         }
+        else if (!token.compare(XTPROTO_LTRL_TORUS)) {
+            int i = 0;
+            float radius = 1.0f;
+            float height = 0.64f;
+            float thickness = -1.0f;
+            int hres = 1;
+
+            if (p) {
+                i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION));
+                if (i < 16) i = 16;
+
+                radius = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), radius);
+                if (radius <= 0.0f) radius = 1.0f;
+
+                height = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_HEIGHT), height);
+                if (height <= 0.0f) height = 0.64f;
+
+                thickness = (float)deserialize_numf(p->get_property_by_name(XTPROTO_PROP_THICKNESS), thickness);
+                if (thickness <= 0.0f) thickness = -1.0f;
+
+                hres = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_HEIGHT_RESOLUTION), hres);
+                if (hres < 1) hres = 1;
+            }
+
+            nmesh::generator::ring(&obj,
+                                   (size_t)i,
+                                   radius,
+                                   height,
+                                   thickness,
+                                   (size_t)hres);
+        }
         else if (!token.compare(XTPROTO_LTRL_ROUNDED_RING)) {
             int i = 0;
             float radius = 1.0f;
@@ -1190,6 +1221,89 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             }
 
             nmesh::generator::snowflake(&obj, (size_t)i);
+        }
+
+        else if (!token.compare(XTPROTO_LTRL_GEAR)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            int tc = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_COUNT) : 0, 12);
+            if (tc < 3) tc = 3; if (tc > 128) tc = 128;
+            float tooth_depth   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_DEPTH)   : 0, 0.1);
+            float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.2);
+            float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 0.5);
+            float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 0.2);
+            nmesh::generator::gear(&obj, (size_t)res, (size_t)tc, tooth_depth, inner_radius, outer_radius, height);
+        }
+        else if (!token.compare(XTPROTO_LTRL_SPRING)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            float coils         = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_COILS)         : 0, 6.0);
+            float wire_radius   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WIRE_RADIUS)   : 0, 0.05);
+            float spring_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_SPRING_RADIUS) : 0, 0.3);
+            float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 1.2);
+            nmesh::generator::spring(&obj, (size_t)res, coils, wire_radius, spring_radius, height);
+        }
+        else if (!token.compare(XTPROTO_LTRL_HEMISPHERE)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            nmesh::generator::hemisphere(&obj, (size_t)res);
+        }
+        else if (!token.compare(XTPROTO_LTRL_DISC)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.0);
+            float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
+            nmesh::generator::disc(&obj, (size_t)res, inner_radius, outer_radius);
+        }
+        else if (!token.compare(XTPROTO_LTRL_STAR)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            int pts = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_POINTS) : 0, 5);
+            if (pts < 3) pts = 3; if (pts > 32) pts = 32;
+            float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.4);
+            float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
+            float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 0.2);
+            nmesh::generator::star(&obj, (size_t)res, (size_t)pts, inner_radius, outer_radius, height);
+        }
+        else if (!token.compare(XTPROTO_LTRL_SUPERELLIPSOID)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            float e1 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E1) : 0, 1.0);
+            float e2 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E2) : 0, 1.0);
+            nmesh::generator::superellipsoid(&obj, (size_t)res, e1, e2);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CRYSTAL)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 512) res = 512;
+            int count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_COUNT) : 0, 5);
+            if (count < 1) count = 1; if (count > 32) count = 32;
+            float radius     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS)     : 0, 0.8);
+            float height     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)     : 0, 1.5);
+            float tip_height = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TIP_HEIGHT) : 0, 0.6);
+            int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
+            nmesh::generator::crystal(&obj, (size_t)res, (size_t)count, radius, height, tip_height, seed);
+        }
+        else if (!token.compare(XTPROTO_LTRL_TREE)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 256) res = 256;
+            int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
+            int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 3);
+            float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.6);
+            float trunk_height  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TRUNK_HEIGHT)  : 0, 1.2);
+            float trunk_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TRUNK_RADIUS)  : 0, 0.08);
+            int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
+            nmesh::generator::tree(&obj, (size_t)res, depth, branch_count, branch_angle, trunk_height, trunk_radius, seed);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CORAL)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
+            if (res < 8) res = 8; if (res > 256) res = 256;
+            int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
+            int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 4);
+            float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.7);
+            float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 1.0);
+            float branch_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_RADIUS) : 0, 0.05);
+            int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
+            nmesh::generator::coral(&obj, (size_t)res, depth, branch_count, branch_angle, height, branch_radius, seed);
         }
 
         else Log::handle().post_message("Invalid mesh generator: %s (%s)", token.c_str(), f.c_str());

@@ -25,6 +25,7 @@
 #define XTPROTO_LTRL_DODECAHEDRON   "dodecahedron"      /* string     */ /* Dodecahedron */
 #define XTPROTO_LTRL_PYRAMID        "pyramid"           /* string     */ /* Pyramid */
 #define XTPROTO_LTRL_RING           "ring"              /* string     */ /* Ring (torus) */
+#define XTPROTO_LTRL_TORUS          "torus"             /* string     */ /* Torus (alias for ring) */
 #define XTPROTO_LTRL_ROUNDED_RING   "rounded_ring"      /* string     */ /* Rounded ring */
 #define XTPROTO_LTRL_SNOWFLAKE      "snowflake"         /* string     */ /* Koch snowflake */
 #define XTPROTO_LTRL_CAPSULE        "capsule"           /* string     */ /* Capsule */
@@ -229,5 +230,35 @@
 #define XTPROTO_EXTRUDE             "extrude"
 #define XTPROTO_MULTIPLIER          "multiplier"
 #define XTPROTO_PROP_HEIGHT_SAMPLER "height_sampler"
+
+/* New procedural mesh generator literals */
+#define XTPROTO_LTRL_GEAR            "gear"              /* string     */ /* Gear */
+#define XTPROTO_LTRL_SPRING          "spring"            /* string     */ /* Coil spring */
+#define XTPROTO_LTRL_TREE            "tree"              /* string     */ /* Recursive tree */
+#define XTPROTO_LTRL_CRYSTAL         "crystal"           /* string     */ /* Crystal cluster */
+#define XTPROTO_LTRL_DISC            "disc"              /* string     */ /* Flat disc / annulus */
+#define XTPROTO_LTRL_CORAL           "coral"             /* string     */ /* Coral colony */
+#define XTPROTO_LTRL_HEMISPHERE      "hemisphere"        /* string     */ /* Hemisphere dome */
+#define XTPROTO_LTRL_STAR            "star"              /* string     */ /* Extruded star */
+#define XTPROTO_LTRL_SUPERELLIPSOID  "superellipsoid"    /* string     */ /* Superellipsoid */
+
+/* New property tokens */
+#define XTPROTO_PROP_TOOTH_COUNT     "tooth_count"       /* integer    */ /* Number of gear teeth */
+#define XTPROTO_PROP_TOOTH_DEPTH     "tooth_depth"       /* scalar_t   */ /* Depth of gear tooth */
+#define XTPROTO_PROP_INNER_RADIUS    "inner_radius"      /* scalar_t   */ /* Inner radius */
+#define XTPROTO_PROP_OUTER_RADIUS    "outer_radius"      /* scalar_t   */ /* Outer radius */
+#define XTPROTO_PROP_COILS           "coils"             /* scalar_t   */ /* Number of coils */
+#define XTPROTO_PROP_WIRE_RADIUS     "wire_radius"       /* scalar_t   */ /* Wire / tube radius */
+#define XTPROTO_PROP_SPRING_RADIUS   "spring_radius"     /* scalar_t   */ /* Spring coil radius */
+#define XTPROTO_PROP_BRANCH_COUNT    "branch_count"      /* integer    */ /* Branches per node */
+#define XTPROTO_PROP_BRANCH_ANGLE    "branch_angle"      /* scalar_t   */ /* Branch angle (radians) */
+#define XTPROTO_PROP_DEPTH           "depth"             /* integer    */ /* Recursion depth */
+#define XTPROTO_PROP_TRUNK_HEIGHT    "trunk_height"      /* scalar_t   */ /* Trunk / main stem height */
+#define XTPROTO_PROP_TRUNK_RADIUS    "trunk_radius"      /* scalar_t   */ /* Trunk base radius */
+#define XTPROTO_PROP_BRANCH_RADIUS   "branch_radius"     /* scalar_t   */ /* Branch base radius */
+#define XTPROTO_PROP_TIP_HEIGHT      "tip_height"        /* scalar_t   */ /* Crystal tip height */
+#define XTPROTO_PROP_POINTS          "points"            /* integer    */ /* Star point count */
+#define XTPROTO_PROP_E1              "e1"                /* scalar_t   */ /* Superellipsoid N-S exponent */
+#define XTPROTO_PROP_E2              "e2"                /* scalar_t   */ /* Superellipsoid E-W exponent */
 
 #endif /* XTCORE_PROTO_H_INCLUDED */
