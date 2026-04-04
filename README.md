@@ -8,7 +8,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 
 [![CI](https://github.com/4rknova/xtracer/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/4rknova/xtracer/actions/workflows/ci.yml)
 
-<img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/preview.jpg">
+<img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/src/frontend/web-client/res/ftue.png">
 
 ## Quick Start (Install + Run)
 
