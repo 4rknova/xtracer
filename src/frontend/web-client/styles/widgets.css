@@ -239,7 +239,7 @@
 
 .xui-field__label-stack {
   display: grid;
-  gap: 0.18rem;
+  gap: 0.28rem;
   align-content: center;
 }
 
@@ -444,7 +444,7 @@
 
 .xui-field__check-label {
   color: color-mix(in srgb, var(--ink) 94%, var(--muted));
-  font-size: 0.96rem;
+  font-size: 0.84rem;
   line-height: 1.2;
   font-weight: 500;
   min-width: 0;
@@ -568,7 +568,8 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--field-bg) 84%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 68%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, transparent) 22%,
       color-mix(in srgb, var(--field-bg) 74%, transparent) 100%
     );
 }
