@@ -164,11 +164,13 @@ geometry = {
 | `plane` | `icosahedron` | `tetrahedron` | `cube` |
 | `hexahedron` | `octahedron` | `dodecahedron` | `capsule` |
 | `cylinder` | `capped_cylinder` | `cone` | `truncated_cone` |
-| `ring` | `torus_knot` | `icosphere` | `geodesic_dome` |
-| `icosa_cage` | `menger_sponge` | `sierpinski_tetrahedron` | `mobius_strip` |
-| `menger_sponge_implicit` | `sierpinski_tetrahedron_implicit` |  |  |
-| `klein_bottle` | `hairball` | `shell_spiral` | `rock` |
-| `chain_link` | `lathe` | `snowflake` | `pyramid` |
+| `ring` | `rounded_ring` | `torus_knot` | `icosphere` |
+| `geodesic_dome` | `icosa_cage` | `hemisphere` | `disc` |
+| `menger_sponge` | `sierpinski_tetrahedron` | `menger_sponge_implicit` | `sierpinski_tetrahedron_implicit` |
+| `mobius_strip` | `klein_bottle` | `superellipsoid` | `hairball` |
+| `shell_spiral` | `rock` | `chain_link` | `lathe` |
+| `snowflake` | `pyramid` | `gear` | `spring` |
+| `star` | `crystal` | `tree` | `coral` |
 | `terrain` | `draped_cloth_strip` |  |  |
 
 Note: `menger_sponge` and `sierpinski_tetrahedron` can be used either as:
@@ -680,6 +682,9 @@ Optional static packaging:
 | `xtcore::context` | `<build-dir>/test/test_xtcore_context` |
 | `xtcore::sphere` | `<build-dir>/test/test_xtcore_sphere` |
 | `xtcore::triangle` | `<build-dir>/test/test_xtcore_triangle` |
+| `xtcore::csg` | `<build-dir>/test/test_xtcore_csg` |
+| `xtcore::fbx_import` | `<build-dir>/test/test_xtcore_fbx_import` |
+| `xtcore::gltf_import` | `<build-dir>/test/test_xtcore_gltf_import` |
 | `xtcore::boundary_material` | `<build-dir>/test/test_xtcore_boundary_material` |
 | `xtcore::white_furnace` | `<build-dir>/test/test_xtcore_white_furnace` |
 | `xtcore::raytracer_emissive` | `<build-dir>/test/test_xtcore_raytracer_emissive` |
@@ -688,6 +693,8 @@ Optional static packaging:
 | `ncf::inline_and_utf8` | `<build-dir>/test/test_ncf_parser` |
 | `scene::validate_all` | `<build-dir>/test/test_xtcore_scene_validator` |
 | `nmath::sampling` | `<build-dir>/test/test_nmath_sampling` |
+| `nmath::simd` | `<build-dir>/test/test_nmath_simd` |
+| `nmath::simd_perf_compare` | `<build-dir>/test/test_nmath_simd_perf_compare` |
 | `cli::stencil_smoke` | `<build-dir>/xtracer_cli` smoke render |
 
 Run all tests:
@@ -710,11 +717,14 @@ make perf
 
 | Name | License | URL |
 |---|---|---|
-| TinyObjLoader | MIT | https://github.com/syoyo/tinyobjloader |
-| STB | Public Domain / MIT | https://github.com/nothings/stb |
-| TinyEXR | BSD-3-Clause | https://github.com/syoyo/tinyexr |
-| strpool | Public Domain | https://github.com/mattiasgustavsson/libs |
+| cgltf | MIT | https://github.com/jkuhlmann/cgltf |
 | cpp-httplib | MIT | https://github.com/yhirose/cpp-httplib |
+| STB | Public Domain / MIT | https://github.com/nothings/stb |
+| strpool | Public Domain / MIT | https://github.com/mattiasgustavsson/libs |
+| Three.js | MIT | https://github.com/mrdoob/three.js |
+| TinyEXR | BSD-3-Clause | https://github.com/syoyo/tinyexr |
+| TinyObjLoader | MIT | https://github.com/tinyobjloader/tinyobjloader |
+| ufbx | MIT | https://github.com/ufbx/ufbx |
 
 ## License
 
