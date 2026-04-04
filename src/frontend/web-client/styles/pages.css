@@ -8219,6 +8219,17 @@ button:disabled {
 
 }
 
+@media (max-width: 1024px) {
+  /* On narrow mobile the sidebar must be content-sized, not 100% of the app-shell.
+     The 1450px block sets height:100% so the sidebar can scroll with many cards, but
+     on narrow viewports the mobile-card-switcher shows 1 card at a time, so the
+     sidebar is short. Giving it height:auto lets the tab-stage claim the rest. */
+  .persistent-sidebar {
+    height: auto;
+    max-height: none;
+  }
+}
+
 @media (max-width: 1024px) and (max-height: 840px) {
   :root {
     --mobile-header-stack-h: 132px;
