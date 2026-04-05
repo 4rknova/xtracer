@@ -26,7 +26,17 @@ int decode_image_buffer(const unsigned char *data, int w, int h, int bpp, Pixmap
 
     int res = 0;
 
-    if (bpp == 3) {
+    if (bpp == 1) {
+        for (size_t x = 0; x < (size_t)w; ++x) {
+            for (size_t y = 0; y < (size_t)h; ++y) {
+                float v = srgb_to_linear(data[y * w + x] / 255.f);
+                ColorRGBAf pixel;
+                pixel.r(v); pixel.g(v); pixel.b(v); pixel.a(1.f);
+                map.pixel(x, y) = pixel;
+            }
+        }
+    }
+    else if (bpp == 3) {
         for (size_t x = 0; x < (size_t)w; ++x) {
             for (size_t y = 0; y < (size_t)h; ++y) {
                 size_t i = 3 * (y * w + x);
