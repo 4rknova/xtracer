@@ -1,0 +1,162 @@
+title       = "Alpine Valley"
+description = "Mountain landscape with a winding river and Rayleigh atmosphere"
+version     = "1.0"
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(0.42, 0.58, 0.70)
+        sun_intensity      = col3(18.0, 15.0, 11.0)
+        beta_rayleigh      = col3(0.16, 0.33, 0.78)
+        ground_color       = col3(0.06, 0.08, 0.05)
+        density            = 1.1
+        horizon_falloff    = 1.8
+        sun_disk_radius    = 1.0
+        sun_disk_intensity = 1.3
+        sun_glow_radius    = 10.0
+        sun_glow_intensity = 0.38
+        sun_glow_falloff   = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type     = thin-lens
+        fov      = 58
+        position = vec3(-8.0, 4.0, 0.0)
+        target   = vec3(0, 0, 4.0)
+        up       = vec3(0, 1, 0)
+        flength  = 20.0
+        aperture = 0.0
+    }
+}
+
+geometry = {
+    # Main terrain — near edge starts exactly at camera Z so foreground is fully covered
+    # Spans X: -20..20  Y: -2..3  Z: -8..32
+    terrain_main = {
+        type       = mesh
+        source     = gen(terrain)
+        resolution = 256
+        dimensions = vec3(40.0, 5.0, 40.0)
+        height_sampler = {
+            type              = scenery_heightfield
+            seed              = 4102
+            scale             = 0.26
+            octaves           = 6
+            lacunarity        = 2.15
+            gain              = 0.50
+            ridge_strength    = 0.88
+            mountain_strength = 0.92
+            valley_strength   = 0.62
+        }
+    }
+}
+
+material = {
+    mountain_rock = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.18, 0.30, 0.10)
+                    b              = col3(0.52, 0.44, 0.32)
+                    vein           = col3(0.72, 0.68, 0.62)
+                    scale          = 23.5
+                    turbulence     = 2.0
+                    vein_frequency = 5.0
+                    octaves        = 5
+                    lacunarity     = 2.1
+                    gain           = 0.50
+                    vein_strength  = 0.30
+                    vein_sharpness = 2.2
+                }
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 80
+                    max_deviation = 14
+                    seed          = 5511
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.90
+                ior       = 1.5
+            }
+        }
+    }
+
+    
+    water = {
+        type = dielectric
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.88, 0.96, 1.0) }
+            }
+            scalars = {
+                ior          = 1.33
+                transparency = 1.0
+                reflectance  = 0.04
+            }
+        }
+    }
+}
+
+object = {
+    terrain    = { geometry = terrain_main, material = mountain_rock    }
+}
+
+variants = {
+    base = {
+        name        = Dawn
+        description = Morning sun raking across ridges with clear atmosphere.
+    }
+
+    golden_hour = {
+        name        = Golden Hour
+        description = Lower sun, warmer richer light, stronger atmospheric glow.
+        set = {
+            environment = {
+                type = rayleigh_sky
+                config = {
+                    sun_direction      = vec3(0.72, 0.18, 0.68)
+                    sun_intensity      = col3(20.0, 12.0, 6.5)
+                    beta_rayleigh      = col3(0.20, 0.28, 0.56)
+                    ground_color       = col3(0.07, 0.06, 0.04)
+                    density            = 1.55
+                    horizon_falloff    = 2.8
+                    sun_disk_radius    = 1.2
+                    sun_disk_intensity = 1.1
+                    sun_glow_radius    = 16.0
+                    sun_glow_intensity = 0.68
+                    sun_glow_falloff   = 2.2
+                }
+            }
+        }
+    }
+
+    noon = {
+        name        = Clear Noon
+        description = High sun, maximum terrain illumination, minimal atmosphere.
+        set = {
+            environment = {
+                type = rayleigh_sky
+                config = {
+                    sun_direction      = vec3(0.20, 0.92, 0.34)
+                    sun_intensity      = col3(24.0, 22.0, 18.0)
+                    beta_rayleigh      = col3(0.14, 0.30, 0.74)
+                    ground_color       = col3(0.05, 0.07, 0.04)
+                    density            = 0.85
+                    horizon_falloff    = 1.3
+                    sun_disk_radius    = 0.75
+                    sun_disk_intensity = 1.5
+                    sun_glow_radius    = 5.0
+                    sun_glow_intensity = 0.16
+                    sun_glow_falloff   = 5.0
+                }
+            }
+        }
+    }
+}
