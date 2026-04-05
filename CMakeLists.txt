@@ -5,6 +5,7 @@ endif()
 project(xtracer)
 include(GNUInstallDirs)
 
+option(XTRACER_ENABLE_REMOTE_ASSETS "Enable remote URL asset fetching via curl subprocess" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
 option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into build/wasm-dist during native builds" OFF)
@@ -102,6 +103,14 @@ if (XTRACER_USING_EMSCRIPTEN)
 else()
     find_package(OpenMP REQUIRED)
 endif()
+
+if (XTRACER_ENABLE_REMOTE_ASSETS AND NOT XTRACER_USING_EMSCRIPTEN)
+    add_compile_definitions(XTCORE_ASSET_FETCHER_CURL)
+    message(STATUS "Remote asset fetching: enabled (curl)")
+else()
+    message(STATUS "Remote asset fetching: disabled")
+endif()
+
 SCAN_DIRS(ext_libs)
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)

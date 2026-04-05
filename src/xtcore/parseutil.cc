@@ -52,6 +52,7 @@
 #include "macro.h"
 
 #include "extrude.h"
+#include "asset_fetcher.h"
 
 #include "parseutil.h"
 
@@ -735,22 +736,26 @@ xtcore::sampler::Cubemap *deserialize_cubemap(const char *source, const ncf::NCF
     xtcore::sampler::Cubemap *data = new xtcore::sampler::Cubemap;
 
     if (data) {
-        std::string posx = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSX));
-        std::string posy = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSY));
-        std::string posz = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSZ));
-        std::string negx = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGX));
-        std::string negy = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGY));
-        std::string negz = deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGZ));
+        std::string posx = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSX)));
+        std::string posy = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSY)));
+        std::string posz = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_POSZ)));
+        std::string negx = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGX)));
+        std::string negy = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGY)));
+        std::string negz = asset_fetcher::resolve(deserialize_cstr(p->get_property_by_name(XTPROTO_LTRL_NEGZ)));
 
         std::string base, file, fsource = source;
     	ncf::util::path_comp(fsource, base, file);
 
-        data->load((base + posx).c_str(), xtcore::sampler::CUBEMAP_FACE_RIGHT);
-        data->load((base + posy).c_str(), xtcore::sampler::CUBEMAP_FACE_TOP);
-        data->load((base + posz).c_str(), xtcore::sampler::CUBEMAP_FACE_FRONT);
-        data->load((base + negx).c_str(), xtcore::sampler::CUBEMAP_FACE_LEFT);
-        data->load((base + negy).c_str(), xtcore::sampler::CUBEMAP_FACE_BOTTOM);
-        data->load((base + negz).c_str(), xtcore::sampler::CUBEMAP_FACE_BACK);
+        auto resolve_face = [&](const std::string &face) -> std::string {
+            if (face.empty() || path_is_absolute(face) || asset_fetcher::is_url(face)) return face;
+            return base + face;
+        };
+        data->load(resolve_face(posx).c_str(), xtcore::sampler::CUBEMAP_FACE_RIGHT);
+        data->load(resolve_face(posy).c_str(), xtcore::sampler::CUBEMAP_FACE_TOP);
+        data->load(resolve_face(posz).c_str(), xtcore::sampler::CUBEMAP_FACE_FRONT);
+        data->load(resolve_face(negx).c_str(), xtcore::sampler::CUBEMAP_FACE_LEFT);
+        data->load(resolve_face(negy).c_str(), xtcore::sampler::CUBEMAP_FACE_BOTTOM);
+        data->load(resolve_face(negz).c_str(), xtcore::sampler::CUBEMAP_FACE_BACK);
     }
     return data;
 }
@@ -762,12 +767,14 @@ xtcore::sampler::ERP *deserialize_erp(const char *source, const ncf::NCF *p)
     xtcore::sampler::ERP *data = new xtcore::sampler::ERP;
 
     if (data) {
-        std::string src = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+        std::string src = asset_fetcher::resolve(
+            deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE)));
 
         std::string base, file, fsource = source;
         ncf::util::path_comp(fsource, base, file);
 
-        data->load((base + src).c_str());
+        std::string erp_path = (src.empty() || path_is_absolute(src) || asset_fetcher::is_url(src)) ? src : base + src;
+        data->load(erp_path.c_str());
     }
     return data;
 }
@@ -1225,9 +1232,9 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 
         else if (!token.compare(XTPROTO_LTRL_GEAR)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             int tc = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_COUNT) : 0, 12);
-            tc = std::clamp(tc, 3, 128);
+            tc = nmath::clamp(tc, 3, 128);
             float tooth_depth   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TOOTH_DEPTH)   : 0, 0.1);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.2);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 0.5);
@@ -1236,7 +1243,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_SPRING)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             float coils         = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_COILS)         : 0, 6.0);
             float wire_radius   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WIRE_RADIUS)   : 0, 0.05);
             float spring_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_SPRING_RADIUS) : 0, 0.3);
@@ -1245,21 +1252,21 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_HEMISPHERE)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             nmesh::generator::hemisphere(&obj, (size_t)res);
         }
         else if (!token.compare(XTPROTO_LTRL_DISC)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.0);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
             nmesh::generator::disc(&obj, (size_t)res, inner_radius, outer_radius);
         }
         else if (!token.compare(XTPROTO_LTRL_STAR)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             int pts = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_POINTS) : 0, 5);
-            pts = std::clamp(pts, 3, 32);
+            pts = nmath::clamp(pts, 3, 32);
             float inner_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_INNER_RADIUS)  : 0, 0.4);
             float outer_radius  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_OUTER_RADIUS)  : 0, 1.0);
             float height        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)        : 0, 0.2);
@@ -1267,16 +1274,16 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_SUPERELLIPSOID)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             float e1 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E1) : 0, 1.0);
             float e2 = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_E2) : 0, 1.0);
             nmesh::generator::superellipsoid(&obj, (size_t)res, e1, e2);
         }
         else if (!token.compare(XTPROTO_LTRL_CRYSTAL)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 512);
+            res = nmath::clamp(res, 8, 512);
             int count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_COUNT) : 0, 5);
-            count = std::clamp(count, 1, 32);
+            count = nmath::clamp(count, 1, 32);
             float radius     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS)     : 0, 0.8);
             float height     = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT)     : 0, 1.5);
             float tip_height = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TIP_HEIGHT) : 0, 0.6);
@@ -1285,7 +1292,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_TREE)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 256);
+            res = nmath::clamp(res, 8, 256);
             int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
             int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 3);
             float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.6);
@@ -1296,7 +1303,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         }
         else if (!token.compare(XTPROTO_LTRL_CORAL)) {
             int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 32);
-            res = std::clamp(res, 8, 256);
+            res = nmath::clamp(res, 8, 256);
             int depth        = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DEPTH)        : 0, 4);
             int branch_count = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_COUNT) : 0, 4);
             float branch_angle  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_ANGLE)  : 0, 0.7);
@@ -1807,9 +1814,10 @@ xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::N
 	std::string script_base, script_filename, fsource = source;
 	ncf::util::path_comp(fsource, script_base, script_filename);
 
-    std::string fname  = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE));
+    std::string fname  = asset_fetcher::resolve(
+        deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_SOURCE)));
 	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
-	std::string path = script_base + fname;
+	std::string path = (fname.empty() || path_is_absolute(fname) || asset_fetcher::is_url(fname)) ? fname : script_base + fname;
 
 	Log::handle().post_message("Loading texture: %s", path.c_str());
 	if (data->load(path.c_str())) {
@@ -2241,8 +2249,9 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
                             medium_proto = mit->second;
                         }
 
-                        if (!path_is_absolute(flpath)) base.append(flpath);
-                        else base = flpath;
+                        flpath = asset_fetcher::resolve(flpath);
+                        if (flpath.empty() || path_is_absolute(flpath) || asset_fetcher::is_url(flpath)) base = flpath;
+                        else base.append(flpath);
                         res = create_object(scene, base.c_str(), prefix.c_str(), medium_proto);
                     }
                     else res = create_object(scene, lnode, medium_defs);
