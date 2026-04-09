@@ -14,6 +14,13 @@ enum operator_t
     , OP_REINHARD_LUMINANCE
     , OP_MANTIUK_2006
     , OP_ACES_FITTED
+    , OP_HABLE
+    , OP_EXPONENTIAL
+    , OP_LOTTES
+    , OP_CINEON
+    , OP_UCHIMURA
+    , OP_AGX
+    , OP_KHRONOS_PBR_NEUTRAL
 };
 
 struct settings_t
