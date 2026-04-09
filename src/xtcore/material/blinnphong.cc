@@ -99,9 +99,11 @@ bool BlinnPhong::shade(
 
     nmath::scalar_t rmv = nmath::max(dot(r, n), 0);
 
+    const nmath::scalar_t exp = get_scalar(MAT_SCALART_EXPONENT);
+    const nmath::scalar_t phong_norm = (exp + 2.0) / (2.0 * nmath::PI);
     intensity = emitter->intensity;
-    intensity *= (d * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord))
-            + (get_sample(MAT_SAMPLER_SPECULAR, hit_record.texcoord) * pow((long double)rmv, (long double)get_scalar(MAT_SCALART_EXPONENT)));
+    intensity *= (d / nmath::PI) * get_sample(MAT_SAMPLER_DIFFUSE, hit_record.texcoord)
+            + (phong_norm * pow((long double)rmv, (long double)exp)) * get_sample(MAT_SAMPLER_SPECULAR, hit_record.texcoord);
 
     return true;
 }
@@ -128,16 +130,12 @@ bool BlinnPhong::sample_path(
         hit_result.ray.direction = nmath::sample::diffuse(n);
     }
     else {
-        const scalar_t inv_p = (p_spec > EPSILON) ? (1.0f / p_spec) : 0.0f;
-        hit_result.intensity = get_sample("specular", hit_record.texcoord) * inv_p;
-        scalar_t exp = get_scalar("exponent");
+        const scalar_t exp = get_scalar("exponent");
         hit_result.ray.direction = nmath::sample::lobe(n, -hit_record.incident_direction, exp).normalized();
-/*
-        hit_result.ray.direction = (hit_result.ray.direction + 1.0) * 0.5;
-        nimg::ColorRGBf resc(hit_result.ray.direction.x, hit_result.ray.direction.y, hit_result.ray.direction.z);
-        hit_result.intensity = resc;
-        return false;
-*/
+        const scalar_t cos_theta = nmath::max((scalar_t)0, dot(n, hit_result.ray.direction));
+        const scalar_t brdf_pdf_ratio = (exp + 2.0f) / (exp + 1.0f);
+        const scalar_t inv_p = (p_spec > EPSILON) ? (1.0f / p_spec) : 0.0f;
+        hit_result.intensity = get_sample("specular", hit_record.texcoord) * (brdf_pdf_ratio * cos_theta * inv_p);
     }
 
     return true;

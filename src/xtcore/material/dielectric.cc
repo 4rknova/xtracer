@@ -1,5 +1,6 @@
 #include <nmath/sample.h>
 #include <nmath/prng.h>
+#include <xtcore/math/sampling_util.h>
 #include "macro.h"
 #include "lambert.h"
 
@@ -48,17 +49,17 @@ bool Dielectric::sample_path(
         ior_dst = 1.0f;
     }
 
-    const bool choose_reflection = (nmath::prng_c(0.0f, 1.0f) < reflectance);
+    const float cos_i = nmath::max(0.0f, (float)dot(-wi, n));
+    const float fresnel = (float)xtcore::math::sampling::fresnel_dielectric(cos_i, ior_src, ior_dst);
+    const bool choose_reflection = (nmath::prng_c(0.0f, 1.0f) < fresnel);
     if (choose_reflection) {
-        const float p = (reflectance > EPSILON) ? reflectance : 1.0f;
         hit_result.ray.direction = wi.reflected(n).normalized();
         hit_result.ior = ior_src;
-        hit_result.intensity = ColorRGBf(reflectance / p, reflectance / p, reflectance / p);
+        hit_result.intensity = ColorRGBf(1.0f, 1.0f, 1.0f);
     } else {
-        const float p = ((1.0f - reflectance) > EPSILON) ? (1.0f - reflectance) : 1.0f;
         hit_result.ray.direction = wi.refracted(n, ior_src, ior_dst).normalized();
         hit_result.ior = ior_dst;
-        hit_result.intensity = ColorRGBf(transparency / p, transparency / p, transparency / p);
+        hit_result.intensity = ColorRGBf(transparency, transparency, transparency);
     }
 
     hit_result.ray.origin = hit_record.point + hit_result.ray.direction * EPSILON;

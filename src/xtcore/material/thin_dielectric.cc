@@ -129,14 +129,16 @@ inline bool eval_thin_dielectric(const xtcore::asset::IMaterial *mat,
     const nmath::scalar_t pdf_reflect = xtcore::math::sampling::power_cosine_lobe_pdf(reflect_axis, wi_n, exponent);
     const nmath::scalar_t pdf_transmit = xtcore::math::sampling::power_cosine_lobe_pdf(transmit_axis, wi_n, exponent);
 
+    const nmath::scalar_t brdf_pdf_ratio = (exponent + (nmath::scalar_t)2.0) / (exponent + (nmath::scalar_t)1.0);
+
     if (same_hemi) {
         pdf = p_reflect * pdf_reflect;
         if (pdf <= (nmath::scalar_t)EPSILON) {
             f = nimg::ColorRGBf(0.0f, 0.0f, 0.0f);
             return false;
         }
-        const nimg::ColorRGBf value((float)F, (float)F, (float)F);
-        f = value * (pdf / std::max((nmath::scalar_t)EPSILON, cos_i));
+        const nmath::scalar_t brdf_val = F * brdf_pdf_ratio * pdf_reflect;
+        f = nimg::ColorRGBf((float)brdf_val, (float)brdf_val, (float)brdf_val);
         return safe_luma(f) > (nmath::scalar_t)EPSILON;
     }
 
@@ -145,7 +147,7 @@ inline bool eval_thin_dielectric(const xtcore::asset::IMaterial *mat,
         f = nimg::ColorRGBf(0.0f, 0.0f, 0.0f);
         return false;
     }
-    f = trans * (((nmath::scalar_t)1.0 - F) * (pdf / std::max((nmath::scalar_t)EPSILON, cos_i)));
+    f = trans * (((nmath::scalar_t)1.0 - F) * brdf_pdf_ratio * pdf_transmit);
     return safe_luma(f) > (nmath::scalar_t)EPSILON;
 }
 

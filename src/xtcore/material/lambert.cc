@@ -55,7 +55,7 @@ bool Lambert::shade(
 
     if (d > 0) {
         intensity += emitter->intensity *
-               d * get_sample(MAT_SAMPLER_DIFFUSE , hit_record.texcoord);
+               (d / nmath::PI) * get_sample(MAT_SAMPLER_DIFFUSE , hit_record.texcoord);
     }
 
     return true;
@@ -70,8 +70,7 @@ bool Lambert::sample_path(
     const Vector3f ng = hit_record.normal.normalized();
     hit_result.ray.origin    = hit_record.point + ng * EPSILON;
     hit_result.ray.direction = nmath::sample::diffuse(n).normalized();
-    hit_result.intensity     = get_sample("diffuse", hit_record.texcoord)
-                             * dot(n, hit_result.ray.direction);
+    hit_result.intensity     = get_sample("diffuse", hit_record.texcoord);
     return true;
 }
 

@@ -193,14 +193,17 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
         const nmath::scalar_t pdf_reflect = xtcore::math::sampling::power_cosine_lobe_pdf(reflect_axis, wi_n, exponent);
         const nmath::scalar_t pdf_transmit = xtcore::math::sampling::power_cosine_lobe_pdf(transmit_axis, wi_n, exponent);
 
+        const nmath::scalar_t brdf_pdf_ratio = (exponent + (nmath::scalar_t)2.0) / (exponent + (nmath::scalar_t)1.0);
+
         if (reflect) {
             pdf = p_reflect * pdf_reflect;
             if (pdf <= (nmath::scalar_t)EPSILON) {
                 f = nimg::ColorRGBf(0.0f, 0.0f, 0.0f);
                 return false;
             }
-            const nimg::ColorRGBf value((float)F_surface, (float)F_surface, (float)F_surface);
-            f = value * (pdf / std::max((nmath::scalar_t)EPSILON, cos_i));
+            // f = F * (exp+2)/(2π) * ca^exp  =  F * brdf_pdf_ratio * pdf_reflect
+            const nmath::scalar_t brdf_val = F_surface * brdf_pdf_ratio * pdf_reflect;
+            f = nimg::ColorRGBf((float)brdf_val, (float)brdf_val, (float)brdf_val);
             return safe_luma(f) > (nmath::scalar_t)EPSILON;
         }
 
@@ -209,7 +212,8 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
             f = nimg::ColorRGBf(0.0f, 0.0f, 0.0f);
             return false;
         }
-        f = trans * (((nmath::scalar_t)1.0 - F_surface) * (pdf / std::max((nmath::scalar_t)EPSILON, cos_i)));
+        // f = (1-F) * trans * (exp+2)/(2π) * ca^exp  =  (1-F) * trans * brdf_pdf_ratio * pdf_transmit
+        f = trans * (((nmath::scalar_t)1.0 - F_surface) * brdf_pdf_ratio * pdf_transmit);
         return safe_luma(f) > (nmath::scalar_t)EPSILON;
     }
 
@@ -232,7 +236,7 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
         return safe_luma(f) > (nmath::scalar_t)EPSILON;
     }
 
-    const nmath::scalar_t eta = eta_i / std::max((nmath::scalar_t)EPSILON, eta_t);
+    const nmath::scalar_t eta = eta_t / std::max((nmath::scalar_t)EPSILON, eta_i);
     nmath::Vector3f h = (wo_n + wi_n * eta).normalized();
     if (h.length() <= (nmath::scalar_t)EPSILON) {
         f = nimg::ColorRGBf(0.0f, 0.0f, 0.0f);
@@ -309,17 +313,20 @@ bool RoughDielectric::sample_path(
             eta_t);
         const nmath::scalar_t p_reflect = std::max((nmath::scalar_t)0.02, std::min((nmath::scalar_t)0.98, F));
 
+        const nmath::scalar_t brdf_pdf_ratio = (exponent + (nmath::scalar_t)2.0) / (exponent + (nmath::scalar_t)1.0);
+
         nmath::Vector3f wi;
         if (nmath::prng_c(0.0, 1.0) < p_reflect) {
             nmath::scalar_t tmp_pdf = 0.0;
             wi = xtcore::math::sampling::sample_power_cosine_lobe(wo.reflected(n).normalized(), exponent, tmp_pdf).normalized();
             if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
+            const nmath::scalar_t cos_i = std::max((nmath::scalar_t)EPSILON, nmath_abs(nmath::dot(n, wi)));
             hit_result.ray.origin = hit_record.point + wi * EPSILON;
             hit_result.ray.direction = wi;
             hit_result.ior = eta_i;
-            hit_result.intensity = nimg::ColorRGBf((float)(F / p_reflect),
-                                                   (float)(F / p_reflect),
-                                                   (float)(F / p_reflect));
+            hit_result.intensity = nimg::ColorRGBf((float)(F * brdf_pdf_ratio * cos_i / p_reflect),
+                                                   (float)(F * brdf_pdf_ratio * cos_i / p_reflect),
+                                                   (float)(F * brdf_pdf_ratio * cos_i / p_reflect));
             return true;
         }
 
@@ -330,11 +337,12 @@ bool RoughDielectric::sample_path(
         if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) > (nmath::scalar_t)0.0) return false;
 
         const nmath::scalar_t p_transmit = std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)1.0 - p_reflect);
+        const nmath::scalar_t cos_i = std::max((nmath::scalar_t)EPSILON, nmath_abs(nmath::dot(n, wi)));
         const nimg::ColorRGBf trans = apply_exit_absorption(this, hit_record, n, wi, base_trans);
         hit_result.ray.origin = hit_record.point + wi * EPSILON;
         hit_result.ray.direction = wi;
         hit_result.ior = eta_t;
-        hit_result.intensity = trans * (((nmath::scalar_t)1.0 - F) / p_transmit);
+        hit_result.intensity = trans * (((nmath::scalar_t)1.0 - F) * brdf_pdf_ratio * cos_i / p_transmit);
         return true;
     }
 
@@ -346,35 +354,35 @@ bool RoughDielectric::sample_path(
     const nmath::scalar_t p_reflect = std::max((nmath::scalar_t)0.02, std::min((nmath::scalar_t)0.98, F));
 
     nmath::Vector3f wi;
+    nmath::scalar_t sampled_ior;
     if (nmath::prng_c(0.0, 1.0) < p_reflect) {
         wi = wo.reflected(h).normalized();
         if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
-        hit_result.ray.origin = hit_record.point + wi * EPSILON;
-        hit_result.ray.direction = wi;
-        hit_result.ior = eta_i;
-        hit_result.intensity = nimg::ColorRGBf((float)(F / p_reflect),
-                                               (float)(F / p_reflect),
-                                               (float)(F / p_reflect));
-        return true;
+        sampled_ior = eta_i;
+    } else {
+        wi = (-wo).refracted(h, eta_i, eta_t).normalized();
+        if (wi.length() <= (nmath::scalar_t)EPSILON) {
+            // TIR fallback
+            wi = wo.reflected(h).normalized();
+            if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
+            sampled_ior = eta_i;
+        } else {
+            if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) > (nmath::scalar_t)0.0) return false;
+            sampled_ior = eta_t;
+        }
     }
 
-    wi = (-wo).refracted(h, eta_i, eta_t).normalized();
-    if (wi.length() <= (nmath::scalar_t)EPSILON) {
-        wi = wo.reflected(h).normalized();
-        hit_result.ray.origin = hit_record.point + wi * EPSILON;
-        hit_result.ray.direction = wi;
-        hit_result.ior = eta_i;
-        hit_result.intensity = nimg::ColorRGBf(1.0f, 1.0f, 1.0f);
-        return true;
-    }
-    if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) > (nmath::scalar_t)0.0) return false;
+    // Compute correct f*cos/pdf via eval — avoids manually re-deriving GGX geometry terms.
+    nimg::ColorRGBf f;
+    nmath::scalar_t pdf = 0.0;
+    if (!rough_dielectric_eval_impl(this, hit_record, wo, wi, f, pdf)) return false;
+    if (pdf <= (nmath::scalar_t)EPSILON) return false;
 
-    const nmath::scalar_t p_transmit = std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)1.0 - p_reflect);
-    const nimg::ColorRGBf trans = apply_exit_absorption(this, hit_record, n, wi, base_trans);
+    const nmath::scalar_t cos_i = nmath_abs(nmath::dot(n, wi));
     hit_result.ray.origin = hit_record.point + wi * EPSILON;
     hit_result.ray.direction = wi;
-    hit_result.ior = eta_t;
-    hit_result.intensity = trans * (((nmath::scalar_t)1.0 - F) / p_transmit);
+    hit_result.ior = sampled_ior;
+    hit_result.intensity = f * (cos_i / pdf);
     return true;
 }
 
