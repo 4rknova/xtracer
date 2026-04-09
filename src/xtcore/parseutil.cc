@@ -837,6 +837,28 @@ xtcore::asset::ICamera *deserialize_camera_erp(const ncf::NCF *p)
     return data;
 }
 
+xtcore::asset::ICamera *deserialize_camera_tls(const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::TiltShift();
+
+    xtcore::camera::TiltShift *cam = (xtcore::camera::TiltShift *)data;
+    cam->position         = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    cam->target           = deserialize_vec3(p, XTPROTO_PROP_TARGET);
+    cam->up               = deserialize_vec3(p, XTPROTO_PROP_UP);
+    cam->fov              = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOV));
+    cam->flength          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FLENGTH));
+    cam->aperture         = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE));
+    cam->aperture_blades  = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_APERTURE_BLADES), cam->aperture_blades);
+    cam->aperture_rotation = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_APERTURE_ROTATION), cam->aperture_rotation);
+    cam->tilt             = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_TILT),    cam->tilt);
+    cam->shift_x          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_SHIFT_X), cam->shift_x);
+    cam->shift_y          = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_SHIFT_Y), cam->shift_y);
+
+    return data;
+}
+
 xtcore::asset::ICamera *deserialize_camera(const ncf::NCF *p)
 {
     if (!p) return 0;
@@ -845,10 +867,11 @@ xtcore::asset::ICamera *deserialize_camera(const ncf::NCF *p)
 
     std::string type = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_TYPE));
 
-         if (!type.compare(XTPROTO_LTRL_CAM_THINLENS)) data = deserialize_camera_tlp(p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)     ) data = deserialize_camera_ods(p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)     ) data = deserialize_camera_erp(p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP) ) data = deserialize_camera_cbm(p);
+         if (!type.compare(XTPROTO_LTRL_CAM_THINLENS )) data = deserialize_camera_tlp(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ODS)      ) data = deserialize_camera_ods(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ERP)      ) data = deserialize_camera_erp(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP)  ) data = deserialize_camera_cbm(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_TILTSHIFT)) data = deserialize_camera_tls(p);
     else Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 
 	return data;
