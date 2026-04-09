@@ -1,5 +1,5 @@
-title       = "Alpine Valley"
-description = "Mountain landscape with a winding river and Rayleigh atmosphere"
+title       = "Ocean"
+description = "Ocean"
 version     = "1.0"
 default_camera = hero
 
@@ -31,6 +31,16 @@ camera = {
         aperture = 0.0
     }
 
+    grazing = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-28.0, 2.0, 10.0)
+        target   = vec3(0, 0, 4.0)
+        up       = vec3(0, 1, 0)
+        flength  = 20.0
+        aperture = 0.0
+    }
+
     tilt_shift = {
         type     = tilt-shift
         fov      = 58
@@ -46,75 +56,32 @@ camera = {
 }
 
 geometry = {
-    # Main terrain — near edge starts exactly at camera Z so foreground is fully covered
-    # Spans X: -20..20  Y: -2..3  Z: -8..32
-    terrain_main = {
-        type       = mesh
+    water_surface = {
+	type       = mesh
         source     = gen(terrain)
         resolution = 1024
         dimensions = vec3(200.0, 5.0, 200.0)
         height_sampler = {
             type              = scenery_heightfield
-            seed              = 4102
-            scale             = 0.26
+            seed              = 1024
+            scale             = 0.5
             octaves           = 6
-            lacunarity        = 2.15
+            lacunarity        = 0.15
             gain              = 0.50
             ridge_strength    = 0.88
-            mountain_strength = 0.92
-            valley_strength   = 0.62
-        }
-    }
-
-    water_surface = {
-	type       = mesh
-        source     = gen(terrain)
-        resolution = 256
-        dimensions = vec3(200.0, 5.0, 200.0)
-        height_sampler = {
-            type              = scenery_heightfield
-            seed              = 1024
-            scale             = 3.
-            octaves           = 3
-            lacunarity        = 5.00
-            gain              = 0.50
-            ridge_strength    = 1.0
-            mountain_strength = 0.1
-            valley_strength   = 0.0
+            mountain_strength = 0.3
+            valley_strength   = 0.2
         }
     }
 }
 
 material = {
-    mountain_rock = {
-        type = principled
-        properties = {
-            samplers = {
-                base_color = {
-                    type           = color
-                    value          = col3(1,1,1)
-                }
-            }
-            scalars = {
-                metallic  = 0.0
-                roughness = 0.90
-                ior       = 1.5
-            }
-        }
-    }
-    
     water = {
         type = rough_dielectric
         properties = {
             samplers = {
                 transmission    = { type = color, value = col3(0.78, 0.96, 0.90) }
                 absorption_color = { type = color, value = col3(0.08, 0.52, 0.62) }
-		gnormal = {
-                    type          = voronoi_normal
-                    cells         = 10
-                    max_deviation = 7.0
-                    seed          = 3141
-                }
             }
             scalars = {
                 ior                 = 1.33
@@ -127,13 +94,15 @@ material = {
 }
 
 object = {
-    terrain    = { geometry = terrain_main, material = mountain_rock    }
-    water      = { geometry = water_surface, material = water           }
+    water = {
+	geometry = water_surface
+	material = water
+    }
 }
 
 variants = {
     base = {
-        name        = Dawn
-        description = Morning sun raking across ridges with clear atmosphere.
+        name        = Ocean
+        description = Morning sun raking across ocean.
     }
 }
