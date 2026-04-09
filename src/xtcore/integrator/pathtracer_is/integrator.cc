@@ -90,22 +90,73 @@ inline void sample_barycentric(nmath::scalar_t &b0, nmath::scalar_t &b1, nmath::
     b2 = su * v;
 }
 
-inline bool sample_light_point(const area_light_t &light, nmath::Vector3f &point, nmath::Vector3f &normal, nmath::Vector3f &texcoord, nmath::scalar_t &pdf_area)
+inline bool sample_light_point(const area_light_t &light,
+                               const nmath::Vector3f &shading_point,
+                               nmath::Vector3f &point,
+                               nmath::Vector3f &normal,
+                               nmath::Vector3f &texcoord,
+                               nmath::scalar_t &pdf_area)
 {
     if (!light.surface || light.area <= (nmath::scalar_t)EPSILON) return false;
 
     const xtcore::surface::Sphere *sp = dynamic_cast<const xtcore::surface::Sphere *>(light.surface);
     if (sp) {
-        point = sp->point_sample();
+        const nmath::Vector3f to_center = sp->origin - shading_point;
+        const nmath::scalar_t dist2_center = to_center.length_squared();
+        const nmath::scalar_t r2 = sp->radius * sp->radius;
+
+        if (dist2_center <= r2 + (nmath::scalar_t)EPSILON) {
+            // Inside sphere: fall back to uniform surface sampling.
+            point = sp->point_sample();
+            normal = (point - sp->origin).normalized();
+            const nmath::scalar_t uvsx = (sp->uv_scale.x != 0.0f ? sp->uv_scale.x : 1.0f);
+            const nmath::scalar_t uvsy = (sp->uv_scale.y != 0.0f ? sp->uv_scale.y : 1.0f);
+            texcoord = nmath::Vector3f(
+                (nmath_asin(normal.x / uvsx) / nmath::PI + 0.5),
+                (nmath_asin(normal.y / uvsy) / nmath::PI + 0.5),
+                0.0);
+            pdf_area = 1.0 / light.area;
+            return true;
+        }
+
+        // Cone sampling: sample only the solid angle subtended by the sphere.
+        const nmath::scalar_t sin2_theta_max = r2 / dist2_center;
+        const nmath::scalar_t cos_theta_max = nmath_sqrt(std::max((nmath::scalar_t)0.0, (nmath::scalar_t)1.0 - sin2_theta_max));
+        const nmath::Vector3f axis = to_center / nmath_sqrt(dist2_center);
+        nmath::scalar_t pdf_omega = 0.0;
+        const nmath::Vector3f wi = xtcore::math::sampling::sample_uniform_cone(axis, cos_theta_max, pdf_omega);
+        if (pdf_omega <= (nmath::scalar_t)EPSILON) return false;
+
+        // Intersect wi with the sphere to find the hit point.
+        const nmath::Vector3f L = shading_point - sp->origin;
+        const nmath::scalar_t b_coef = (nmath::scalar_t)2.0 * nmath::dot(L, wi);
+        const nmath::scalar_t c_coef = nmath::dot(L, L) - r2;
+        const nmath::scalar_t discr = b_coef * b_coef - (nmath::scalar_t)4.0 * c_coef;
+
+        nmath::scalar_t t;
+        if (discr <= (nmath::scalar_t)0.0) {
+            t = -b_coef * (nmath::scalar_t)0.5;
+        } else {
+            const nmath::scalar_t sqrt_discr = nmath_sqrt(discr);
+            const nmath::scalar_t t1 = (-b_coef - sqrt_discr) * (nmath::scalar_t)0.5;
+            const nmath::scalar_t t2 = (-b_coef + sqrt_discr) * (nmath::scalar_t)0.5;
+            t = (t1 > (nmath::scalar_t)EPSILON) ? t1 : t2;
+        }
+        if (t <= (nmath::scalar_t)EPSILON) return false;
+
+        point  = shading_point + wi * t;
         normal = (point - sp->origin).normalized();
+
         const nmath::scalar_t uvsx = (sp->uv_scale.x != 0.0f ? sp->uv_scale.x : 1.0f);
         const nmath::scalar_t uvsy = (sp->uv_scale.y != 0.0f ? sp->uv_scale.y : 1.0f);
         texcoord = nmath::Vector3f(
             (nmath_asin(normal.x / uvsx) / nmath::PI + 0.5),
             (nmath_asin(normal.y / uvsy) / nmath::PI + 0.5),
-            0.0
-        );
-        pdf_area = 1.0 / light.area;
+            0.0);
+
+        // Convert solid-angle PDF to area PDF for the caller's convention.
+        const nmath::scalar_t cos_l = std::max((nmath::scalar_t)EPSILON, nmath_abs(nmath::dot(normal, -wi)));
+        pdf_area = pdf_omega * cos_l / (t * t);
         return true;
     }
 
@@ -273,7 +324,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                     const area_light_t &light = m_lights[light_idx];
                     nmath::Vector3f lp, ln, ltc;
                     nmath::scalar_t p_area = 0.0;
-                    if (sample_light_point(light, lp, ln, ltc, p_area)) {
+                    if (sample_light_point(light, event_pos, lp, ln, ltc, p_area)) {
                         const nmath::Vector3f scatter_pos = event_pos;
                         const nmath::Vector3f to_light = lp - scatter_pos;
                         const nmath::scalar_t dist2 = to_light.length_squared();
@@ -364,7 +415,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
                 nmath::Vector3f lp, ln, ltc;
                 nmath::scalar_t p_area = 0.0;
-                if (sample_light_point(light, lp, ln, ltc, p_area)) {
+                if (sample_light_point(light, hit_record.point, lp, ln, ltc, p_area)) {
                     const nmath::Vector3f to_light = lp - hit_record.point;
                     const nmath::scalar_t dist2 = to_light.length_squared();
                     if (dist2 > (nmath::scalar_t)EPSILON) {
