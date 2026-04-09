@@ -13,6 +13,10 @@ namespace sampling {
 nmath::Vector3f build_tangent(const nmath::Vector3f &n);
 nmath::Vector3f sample_uniform_sphere(nmath::scalar_t &out_pdf);
 nmath::scalar_t uniform_sphere_pdf();
+nmath::Vector3f sample_uniform_cone(const nmath::Vector3f &axis,
+                                    nmath::scalar_t cos_theta_max,
+                                    nmath::scalar_t &out_pdf);
+nmath::scalar_t uniform_cone_pdf(nmath::scalar_t cos_theta_max);
 nmath::Vector3f sample_cosine_hemisphere(const nmath::Vector3f &normal, nmath::scalar_t &out_pdf);
 nmath::Vector3f sample_power_cosine_lobe(const nmath::Vector3f &axis,
                                          nmath::scalar_t exponent,

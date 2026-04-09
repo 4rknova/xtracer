@@ -58,6 +58,36 @@ nmath::scalar_t uniform_sphere_pdf()
     return (nmath::scalar_t)1.0 / ((nmath::scalar_t)4.0 * nmath::PI);
 }
 
+nmath::scalar_t uniform_cone_pdf(nmath::scalar_t cos_theta_max)
+{
+    const nmath::scalar_t solid_angle = (nmath::scalar_t)2.0 * nmath::PI * ((nmath::scalar_t)1.0 - cos_theta_max);
+    return (solid_angle > (nmath::scalar_t)EPSILON) ? ((nmath::scalar_t)1.0 / solid_angle) : (nmath::scalar_t)0.0;
+}
+
+nmath::Vector3f sample_uniform_cone(const nmath::Vector3f &axis,
+                                    nmath::scalar_t cos_theta_max,
+                                    nmath::scalar_t &out_pdf)
+{
+    const nmath::scalar_t u1 = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t u2 = nmath::prng_c(0.0, 1.0);
+
+    const nmath::scalar_t cos_theta = (nmath::scalar_t)1.0 - u1 * ((nmath::scalar_t)1.0 - cos_theta_max);
+    const nmath::scalar_t sin_theta = nmath_sqrt(std::max((nmath::scalar_t)0.0, (nmath::scalar_t)1.0 - cos_theta * cos_theta));
+    const nmath::scalar_t phi = ((nmath::scalar_t)2.0 * nmath::PI) * u2;
+
+    const nmath::Vector3f n = axis.normalized();
+    const nmath::Vector3f t = build_tangent(n);
+    const nmath::Vector3f b = nmath::cross(n, t).normalized();
+
+    nmath::Vector3f dir = (t * (sin_theta * nmath_cos(phi)))
+                        + (n * cos_theta)
+                        + (b * (sin_theta * nmath_sin(phi)));
+    dir.normalize();
+
+    out_pdf = uniform_cone_pdf(cos_theta_max);
+    return dir;
+}
+
 nmath::Vector3f sample_cosine_hemisphere(const nmath::Vector3f &normal, nmath::scalar_t &out_pdf)
 {
     const nmath::scalar_t u1 = nmath::prng_c(0.0, 1.0);
