@@ -205,6 +205,7 @@ function normalizeCameraType(cameraType) {
   if (raw.indexOf("cube") >= 0) return "cubemap";
   if (raw.indexOf("omni") >= 0 || raw.indexOf("stereo") >= 0 || raw.indexOf("ods") >= 0) return "ods";
   if (raw.indexOf("equirect") >= 0 || raw.indexOf("erp") >= 0) return "erp";
+  if (raw.indexOf("tilt") >= 0 || raw.indexOf("shift") >= 0) return "tiltshift";
   if (raw.indexOf("perspective") >= 0 || raw.indexOf("thin") >= 0 || raw.indexOf("lens") >= 0) return "perspective";
   return "camera";
 }
@@ -215,6 +216,7 @@ function cameraTypeLabel(cameraType) {
   if (kind === "erp") return "Equirectangular";
   if (kind === "ods") return "Omni Stereo";
   if (kind === "cubemap") return "Cubemap";
+  if (kind === "tiltshift") return "Tilt-Shift";
   return String(cameraType || "Camera").trim() || "Camera";
 }
 
@@ -1504,13 +1506,15 @@ async function loadSceneSource(scene) {
     return;
   }
   const data = await api.getSceneSource(scene);
+  const newSource = String(data.source || "");
+  const sourceChanged = newSource !== String(el.sceneSource.value || "");
   currentSceneSourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
   el.sceneName.value = data.scene || scene;
-  el.sceneSource.value = data.source || "";
+  el.sceneSource.value = newSource;
   updateEditorMetrics();
   syncEditorScroll();
   renderSceneGraphView();
-  resetSceneHistoriesFromCurrentSource();
+  if (sourceChanged) resetSceneHistoriesFromCurrentSource();
   updateActiveSceneSidebarCard();
 }
 

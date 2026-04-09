@@ -1064,9 +1064,10 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         const char *name = xtcore::pool::str::get((*it).first);
         if (!name || !*name) continue;
         const xtcore::asset::ICamera *cam = (*it).second;
-        const xtcore::camera::Perspective *pcam = dynamic_cast<const xtcore::camera::Perspective *>(cam);
-        const xtcore::camera::ERP *ecam = dynamic_cast<const xtcore::camera::ERP *>(cam);
-        const xtcore::camera::ODS *ocam = dynamic_cast<const xtcore::camera::ODS *>(cam);
+        const xtcore::camera::Perspective *pcam  = dynamic_cast<const xtcore::camera::Perspective *>(cam);
+        const xtcore::camera::TiltShift   *tscam = dynamic_cast<const xtcore::camera::TiltShift *>(cam);
+        const xtcore::camera::ERP         *ecam  = dynamic_cast<const xtcore::camera::ERP *>(cam);
+        const xtcore::camera::ODS         *ocam  = dynamic_cast<const xtcore::camera::ODS *>(cam);
         if (!first) ss << ",";
         first = false;
         ss << "{"
@@ -1083,6 +1084,17 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
             ss << ",\"flength\":" << pcam->flength;
             ss << ",\"aperture_blades\":" << pcam->aperture_blades;
             ss << ",\"aperture_rotation\":" << pcam->aperture_rotation;
+        } else if (tscam) {
+            ss << ",\"target\":[" << tscam->target.x << "," << tscam->target.y << "," << tscam->target.z << "]";
+            ss << ",\"up\":[" << tscam->up.x << "," << tscam->up.y << "," << tscam->up.z << "]";
+            ss << ",\"fov\":" << tscam->fov;
+            ss << ",\"aperture\":" << tscam->aperture;
+            ss << ",\"flength\":" << tscam->flength;
+            ss << ",\"aperture_blades\":" << tscam->aperture_blades;
+            ss << ",\"aperture_rotation\":" << tscam->aperture_rotation;
+            ss << ",\"tilt\":" << tscam->tilt;
+            ss << ",\"shift_x\":" << tscam->shift_x;
+            ss << ",\"shift_y\":" << tscam->shift_y;
         } else if (ecam) {
             ss << ",\"orientation\":[" << ecam->orientation.x << "," << ecam->orientation.y << "," << ecam->orientation.z << "]";
         } else if (ocam) {

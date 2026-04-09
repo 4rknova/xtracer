@@ -23,6 +23,11 @@
     return t === "thin-lens" || t === "perspective";
   }
 
+  function isTiltShiftCameraType(type) {
+    var t = String(type || "").toLowerCase();
+    return t === "tilt-shift" || t === "tiltshift";
+  }
+
   function clamp01(v) {
     return clamp(Number(v) || 0, 0, 1);
   }
@@ -371,6 +376,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         aperture: Number.isFinite(Number(cam.aperture)) ? Number(cam.aperture) : 0,
         aperture_blades: Number.isFinite(Number(cam.aperture_blades)) ? Number(cam.aperture_blades) : 0,
         aperture_rotation: Number.isFinite(Number(cam.aperture_rotation)) ? Number(cam.aperture_rotation) : 0,
+        tilt: Number.isFinite(Number(cam.tilt)) ? Number(cam.tilt) : 0,
+        shift_x: Number.isFinite(Number(cam.shift_x)) ? Number(cam.shift_x) : 0,
+        shift_y: Number.isFinite(Number(cam.shift_y)) ? Number(cam.shift_y) : 0,
       });
     });
 
@@ -539,6 +547,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraApertureBlades = 0;
     this.selectedCameraApertureRotation = 0;
     this.selectedCameraType = "";
+    this.selectedCameraTilt = 0;
+    this.selectedCameraShiftX = 0;
+    this.selectedCameraShiftY = 0;
     this.onSelectionChanged = null;
     this.selectedMesh = null;
     this.parsedScene = null;
@@ -1834,6 +1845,69 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         var am = new THREE.LineBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.85 });
         this.cameraWidget.add(new THREE.LineSegments(ag, am));
       }
+    } else if (isTiltShiftCameraType(this.selectedCameraType)) {
+      var tsfl = Math.max(0, Number(this.selectedCameraFLength) || 0);
+      var tsap = Math.max(0, Number(this.selectedCameraAperture) || 0);
+      var tsBlades = Math.max(0, Math.floor(Number(this.selectedCameraApertureBlades) || 0));
+      var tsRotation = Number(this.selectedCameraApertureRotation) || 0;
+      var tsTilt = degToRad(Number(this.selectedCameraTilt) || 0);
+      var tsShiftX = Number(this.selectedCameraShiftX) || 0;
+      var tsShiftY = Number(this.selectedCameraShiftY) || 0;
+
+      // Aperture outline — same as thin-lens.
+      if (tsap > 0) {
+        var tsar = Math.max(tsap * 0.5, span * 0.04);
+        var tsApertureGeo = this.buildApertureOutlineGeometry(tsar, tsBlades, tsRotation);
+        var tsApertureMat = new THREE.LineBasicMaterial({
+          color: 0xffb347,
+          transparent: true,
+          opacity: 0.9,
+        });
+        if (tsApertureGeo) this.cameraWidget.add(new THREE.LineSegments(tsApertureGeo, tsApertureMat));
+      }
+
+      // Tilted focal plane.
+      // The focal plane is rotated around the camera's local X axis by `tsTilt` radians
+      // and shifted by (tsShiftX, tsShiftY) in normalised sensor units.
+      // A point (dx, dy) on the untilted plane at z=tsfl maps to:
+      //   (cx + dx, dy*cos(tsTilt), tsfl + dy*sin(tsTilt))
+      // where cx = tsShiftX * halfWf, cy = tsShiftY * halfHf (centre offset from shift).
+      if (tsfl > 0) {
+        var tsHalfW = Math.tan(degToRad(clamp(this.selectedCameraHFov, 1, 179)) * 0.5) * tsfl;
+        var tsHalfH = tsHalfW / Math.max(1e-6, aspect);
+        var tsCx = tsShiftX * tsHalfW;
+        var tsCosT = Math.cos(tsTilt);
+        var tsSinT = Math.sin(tsTilt);
+
+        // Tilted focal plane corners (rotate each corner's Y offset around X axis).
+        var tsp0 = vec3(tsCx - tsHalfW, -tsHalfH * tsCosT, tsfl - tsHalfH * tsSinT);
+        var tsp1 = vec3(tsCx + tsHalfW, -tsHalfH * tsCosT, tsfl - tsHalfH * tsSinT);
+        var tsp2 = vec3(tsCx + tsHalfW,  tsHalfH * tsCosT, tsfl + tsHalfH * tsSinT);
+        var tsp3 = vec3(tsCx - tsHalfW,  tsHalfH * tsCosT, tsfl + tsHalfH * tsSinT);
+        var tsSeg = [tsp0, tsp1, tsp1, tsp2, tsp2, tsp3, tsp3, tsp0];
+        var tsArr = new Float32Array(tsSeg.length * 3);
+        for (var tsi = 0; tsi < tsSeg.length; tsi += 1) {
+          tsArr[tsi * 3 + 0] = tsSeg[tsi].x;
+          tsArr[tsi * 3 + 1] = tsSeg[tsi].y;
+          tsArr[tsi * 3 + 2] = tsSeg[tsi].z;
+        }
+        var tsFg = new THREE.BufferGeometry();
+        tsFg.setAttribute("position", new THREE.BufferAttribute(tsArr, 3));
+        var tsFm = new THREE.LineBasicMaterial({
+          color: 0xff8f5e,
+          transparent: true,
+          opacity: 0.9,
+        });
+        this.cameraWidget.add(new THREE.LineSegments(tsFg, tsFm));
+
+        // Optical axis line from origin to focal plane centre.
+        var tsAxisEnd = vec3(tsCx, 0, tsfl);
+        var tsAg = new THREE.BufferGeometry();
+        tsAg.setAttribute("position", new THREE.BufferAttribute(
+          new Float32Array([0, 0, 0, tsAxisEnd.x, tsAxisEnd.y, tsAxisEnd.z]), 3));
+        var tsAm = new THREE.LineBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.85 });
+        this.cameraWidget.add(new THREE.LineSegments(tsAg, tsAm));
+      }
     }
 
     this.cameraWidgetRoot.add(this.cameraWidget);
@@ -2427,6 +2501,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.selectedCameraApertureBlades = 0;
       this.selectedCameraApertureRotation = 0;
       this.selectedCameraType = "";
+      this.selectedCameraTilt = 0;
+      this.selectedCameraShiftX = 0;
+      this.selectedCameraShiftY = 0;
       this.updateCameraWidget();
       return;
     }
@@ -2454,6 +2531,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraApertureBlades = Math.max(0, Math.floor(Number(c.aperture_blades) || 0));
     this.selectedCameraApertureRotation = Number(c.aperture_rotation) || 0;
     this.selectedCameraType = String(c.type || "").toLowerCase();
+    this.selectedCameraTilt = Number(c.tilt) || 0;
+    this.selectedCameraShiftX = Number(c.shift_x) || 0;
+    this.selectedCameraShiftY = Number(c.shift_y) || 0;
     this.selectedCameraPose = {
       position: pos.clone(),
       target: target.clone(),

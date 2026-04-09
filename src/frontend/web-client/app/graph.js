@@ -941,6 +941,9 @@ function renderSceneGraphView() {
     if (Number.isFinite(c.fov)) propertyRows.push({ key: "fov", value: formatGraphNumeric(c.fov) });
     if (Number.isFinite(c.aperture)) propertyRows.push({ key: "aperture", value: formatGraphNumeric(c.aperture) });
     if (Number.isFinite(c.flength)) propertyRows.push({ key: "flength", value: formatGraphNumeric(c.flength) });
+    if (Number.isFinite(c.tilt) && c.tilt !== 0) propertyRows.push({ key: "tilt", value: formatGraphNumeric(c.tilt) });
+    if (Number.isFinite(c.shift_x) && c.shift_x !== 0) propertyRows.push({ key: "shift_x", value: formatGraphNumeric(c.shift_x) });
+    if (Number.isFinite(c.shift_y) && c.shift_y !== 0) propertyRows.push({ key: "shift_y", value: formatGraphNumeric(c.shift_y) });
     if (Number.isFinite(c.ipd)) propertyRows.push({ key: "ipd", value: formatGraphNumeric(c.ipd) });
     pushNode("camera", c.id, c.type || "camera", {
       h: detailsNodeHeight(expanded, propertyRows.length, 0),
