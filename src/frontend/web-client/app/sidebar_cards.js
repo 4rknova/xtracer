@@ -253,8 +253,15 @@
           <span class="xui-field__label">Tone Mapping</span>
           <select id="toneMapping" class="xui-select">
             <option value="aces">ACES (Fitted)</option>
+            <option value="agx">AgX</option>
+            <option value="khronos_pbr">Khronos PBR Neutral</option>
+            <option value="hable">Hable (Uncharted 2)</option>
+            <option value="uchimura">Uchimura (Gran Turismo)</option>
+            <option value="lottes">Lottes</option>
             <option value="reinhard">Reinhard</option>
             <option value="reinhard_luma">Reinhard (Luma)</option>
+            <option value="cineon">Cineon</option>
+            <option value="exponential">Exponential</option>
             <option value="mantiuk_2006">Mantiuk 2006</option>
             <option value="none">None</option>
           </select>

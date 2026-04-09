@@ -317,26 +317,18 @@ bool parse_sample_distribution_param(const httplib::Request &req,
 
 bool parse_tonemapping_operator(const std::string &s, xtcore::tonemapping::operator_t &out)
 {
-    if (s == "aces") {
-        out = xtcore::tonemapping::OP_ACES_FITTED;
-        return true;
-    }
-    if (s == "reinhard") {
-        out = xtcore::tonemapping::OP_REINHARD;
-        return true;
-    }
-    if (s == "reinhard_luma") {
-        out = xtcore::tonemapping::OP_REINHARD_LUMINANCE;
-        return true;
-    }
-    if (s == "mantiuk_2006") {
-        out = xtcore::tonemapping::OP_MANTIUK_2006;
-        return true;
-    }
-    if (s == "none") {
-        out = xtcore::tonemapping::OP_NONE;
-        return true;
-    }
+    if (s == "aces")          { out = xtcore::tonemapping::OP_ACES_FITTED;         return true; }
+    if (s == "reinhard")      { out = xtcore::tonemapping::OP_REINHARD;            return true; }
+    if (s == "reinhard_luma") { out = xtcore::tonemapping::OP_REINHARD_LUMINANCE;  return true; }
+    if (s == "mantiuk_2006")  { out = xtcore::tonemapping::OP_MANTIUK_2006;        return true; }
+    if (s == "hable")         { out = xtcore::tonemapping::OP_HABLE;               return true; }
+    if (s == "exponential")   { out = xtcore::tonemapping::OP_EXPONENTIAL;         return true; }
+    if (s == "lottes")        { out = xtcore::tonemapping::OP_LOTTES;              return true; }
+    if (s == "cineon")        { out = xtcore::tonemapping::OP_CINEON;              return true; }
+    if (s == "uchimura")      { out = xtcore::tonemapping::OP_UCHIMURA;            return true; }
+    if (s == "agx")           { out = xtcore::tonemapping::OP_AGX;                 return true; }
+    if (s == "khronos_pbr")   { out = xtcore::tonemapping::OP_KHRONOS_PBR_NEUTRAL; return true; }
+    if (s == "none")          { out = xtcore::tonemapping::OP_NONE;                return true; }
     return false;
 }
 
