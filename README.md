@@ -2,6 +2,11 @@
   <img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/res/logo.svg" alt="xtracer" width="400">
 </p>
 
+<p align="center">
+  <a href="https://hub.docker.com/r/4rknova/xtracer"><img src="https://img.shields.io/docker/pulls/4rknova/xtracer?label=Docker%20pulls" alt="Docker Pulls"></a>
+  <a href="https://hub.docker.com/r/4rknova/xtracer"><img src="https://img.shields.io/docker/v/4rknova/xtracer?sort=semver&label=Docker%20Hub" alt="Docker Hub"></a>
+  <a href="https://github.com/4rknova/xtracer/pkgs/container/xtracer"><img src="https://img.shields.io/badge/ghcr.io-available-blue?logo=github" alt="GitHub Container Registry"></a>
+</p>
 
 Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, Web, WASM runtime).
 
