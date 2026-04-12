@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY --from=builder /src/build/release/xtracer_web /usr/local/bin/xtracer_web
+COPY --from=builder /src/build/intermediate/build/xtracer_web /usr/local/bin/xtracer_web
 COPY --from=builder /src/scene /app/scene
 COPY --from=builder /src/src/frontend/web-client /app/web-client
 
