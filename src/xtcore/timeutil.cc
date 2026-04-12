@@ -1,5 +1,21 @@
 #include <sstream>
+#include <chrono>
 #include "timeutil.h"
+
+void Timer::start()
+{
+    m_start = std::chrono::steady_clock::now();
+}
+
+void Timer::stop()
+{
+    m_end = std::chrono::steady_clock::now();
+}
+
+double Timer::get_time_in_mlsec() const
+{
+    return std::chrono::duration<double, std::milli>(m_end - m_start).count();
+}
 
 void convert_mlseconds(double mlsecs
                      , size_t &days

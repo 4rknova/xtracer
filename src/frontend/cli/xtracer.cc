@@ -7,7 +7,6 @@
 #include <nimg/pixmap.h>
 #include <nimg/img.h>
 #include <ncf/util.h>
-#include <nplatform/timer.h>
 #include <xtcore/log.h>
 #include <xtcore/timeutil.h>
 #include <xtcore/parseutil.h>
