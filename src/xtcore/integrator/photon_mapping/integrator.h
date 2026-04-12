@@ -24,6 +24,14 @@ class Integrator : public xtcore::render::IIntegrator
     public:
     Integrator();
 
+    virtual xtcore::render::integrator_metadata_t metadata() const {
+        xtcore::render::integrator_metadata_t meta;
+        meta.id = "photon_mapping";
+        meta.name = "Photon Mapping";
+        meta.status = xtcore::render::INTEGRATOR_STATUS_EXPERIMENTAL;
+        meta.description = "Photon mapping integrator for caustic and density-estimate experiments.";
+        return meta;
+    }
     virtual void configure(const std::map<std::string, std::string> &options);
     virtual void setup_auxiliary();
     virtual void clean_auxiliary();

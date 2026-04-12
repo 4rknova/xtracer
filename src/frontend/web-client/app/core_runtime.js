@@ -18,8 +18,17 @@ const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
 const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
 const FONT_SIZE_PRESET_DEFAULT = "default";
 const FONT_SIZE_PRESET_LARGE = "large";
-const POST_FILTER_CATALOG = [
+let POST_FILTER_CATALOG = [
   { id: "desaturate", label: "Desaturate" },
+  { id: "chromatic_aberration", label: "Chromatic Aberration" },
+  { id: "vignette", label: "Vignette" },
+  { id: "film_grain", label: "Film Grain" },
+  { id: "denoise", label: "Bilateral Denoise" },
+  { id: "fxaa", label: "FXAA" },
+  { id: "sharpen", label: "Sharpen" },
+  { id: "brightness", label: "Brightness" },
+  { id: "contrast", label: "Contrast" },
+  { id: "raindrops_lens", label: "Raindrops on Lens" },
 ];
 
 function normalizeFontSizePreset(value) {
@@ -150,10 +159,13 @@ function appendBackendLog(entry) {
 }
 
 function setStatus(text) {
-  const statusText = renderActive ? text : "Idle";
+  const controls = (typeof el !== "undefined" && el) ? el : null;
+  if (!controls || !controls.status) return;
+  const isRenderActive = (typeof renderActive !== "undefined") && !!renderActive;
+  const statusText = isRenderActive ? text : "Idle";
   const lower = String(statusText || "").toLowerCase();
   let state = "idle";
-  if (renderActive) {
+  if (isRenderActive) {
     if (lower.indexOf("error") >= 0) state = "error";
     else state = "running";
   }
@@ -162,16 +174,16 @@ function setStatus(text) {
   const statusPercent = match ? `${match[2]}%` : "";
   const statusTimer = match ? String(match[3] || "").trim() : "";
 
-  el.status.textContent = statusLabel || "Idle";
-  el.status.classList.remove("is-idle", "is-running", "is-error");
-  el.status.classList.add(`is-${state}`);
-  if (el.statusPercent) {
-    el.statusPercent.hidden = !statusPercent;
-    el.statusPercent.textContent = statusPercent || "0.0%";
+  controls.status.textContent = statusLabel || "Idle";
+  controls.status.classList.remove("is-idle", "is-running", "is-error");
+  controls.status.classList.add(`is-${state}`);
+  if (controls.statusPercent) {
+    controls.statusPercent.hidden = !statusPercent;
+    controls.statusPercent.textContent = statusPercent || "0.0%";
   }
-  if (el.renderTimer) {
-    el.renderTimer.hidden = !statusTimer;
-    el.renderTimer.textContent = statusTimer || "00:00";
+  if (controls.renderTimer) {
+    controls.renderTimer.hidden = !statusTimer;
+    controls.renderTimer.textContent = statusTimer || "00:00";
   }
 }
 
@@ -185,6 +197,23 @@ function setStatusThreads(threads) {
   } else {
     el.statusThreads.textContent = "threads 0";
   }
+}
+
+function setStatusPass(currentPass, totalPasses, mode) {
+  if (!el.statusPass) return;
+  const normalizedMode = String(mode || "").toLowerCase();
+  const isProgressive = normalizedMode === RENDER_MODE_PROGRESSIVE || normalizedMode === RENDER_MODE_INCREMENTAL;
+  const total = Math.max(0, Number(totalPasses) || 0);
+  let current = Math.max(0, Number(currentPass) || 0);
+  if (!isProgressive || total <= 0 || !renderActive) {
+    el.statusPass.hidden = true;
+    el.statusPass.textContent = "pass 1/1";
+    return;
+  }
+  if (current <= 0) current = 1;
+  if (current > total) current = total;
+  el.statusPass.hidden = false;
+  el.statusPass.textContent = `pass ${Math.floor(current)}/${Math.floor(total)}`;
 }
 
 function formatElapsedShort(ms) {
@@ -266,43 +295,39 @@ function formatBytesShort(bytes) {
 
 function renderPreviewTransferStats() {
   if (!el.previewTransferStats) return;
+  const renderStat = (node, label, value) => {
+    if (!node) return;
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
+      window.XTracerWidgets.renderStatHint(node, {
+        label,
+        value,
+        className: "workspace-active-hint",
+      });
+      return;
+    }
+    node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+  };
 
   if (el.statsFrameRender) {
     const frameMs = Math.max(0, Number(previewTransferStatsState.fullFrameRenderMs) || 0);
     const frameText = frameMs > 0
       ? `${formatElapsed(frameMs)} (${Math.round(frameMs)} ms)`
       : "-";
-    el.statsFrameRender.innerHTML = `<span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">${frameText}</code>`;
+    renderStat(el.statsFrameRender, "Full Frame Render", frameText);
   }
 
   const hasData = (previewTransferStatsState.deltaReqs + previewTransferStatsState.fullReqs) > 0;
   if (!hasData) {
-    if (el.statsDeltaBytes) {
-      el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsDeltaReqs) {
-      el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsFullBytes) {
-      el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code>`;
-    }
-    if (el.statsFullReqs) {
-      el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code>`;
-    }
+    renderStat(el.statsDeltaBytes, "Delta Bytes", "-");
+    renderStat(el.statsDeltaReqs, "Delta Requests", "-");
+    renderStat(el.statsFullBytes, "Full Bytes", "-");
+    renderStat(el.statsFullReqs, "Full Requests", "-");
     return;
   }
-  if (el.statsDeltaBytes) {
-    el.statsDeltaBytes.innerHTML = `<span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.deltaBytes)}</code>`;
-  }
-  if (el.statsDeltaReqs) {
-    el.statsDeltaReqs.innerHTML = `<span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">${previewTransferStatsState.deltaReqs}</code>`;
-  }
-  if (el.statsFullBytes) {
-    el.statsFullBytes.innerHTML = `<span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">${formatBytesShort(previewTransferStatsState.fullBytes)}</code>`;
-  }
-  if (el.statsFullReqs) {
-    el.statsFullReqs.innerHTML = `<span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">${previewTransferStatsState.fullReqs}</code>`;
-  }
+  renderStat(el.statsDeltaBytes, "Delta Bytes", formatBytesShort(previewTransferStatsState.deltaBytes));
+  renderStat(el.statsDeltaReqs, "Delta Requests", previewTransferStatsState.deltaReqs);
+  renderStat(el.statsFullBytes, "Full Bytes", formatBytesShort(previewTransferStatsState.fullBytes));
+  renderStat(el.statsFullReqs, "Full Requests", previewTransferStatsState.fullReqs);
 }
 
 function resetPreviewTransferStats() {
@@ -362,6 +387,7 @@ function setRenderActive(active) {
   if (!renderActive) {
     el.progress.style.width = "0%";
     setStatusThreads(0);
+    setStatusPass(0, 0, "");
     setStatus("Idle");
   }
   if (typeof updateRenderActionButton === "function") {
@@ -550,22 +576,60 @@ function dismissStartupScreen(immediate) {
   }, 460);
 }
 
+let startupProgressPhases = [];
+let startupLabelMotionTimer = null;
+
+function startupPhaseText(done, total) {
+  if (!Array.isArray(startupProgressPhases) || !startupProgressPhases.length) {
+    return done >= total ? "Ready" : "Preparing runtime";
+  }
+  if (done >= total) return "Ready";
+  return startupProgressPhases[Math.max(0, Math.min(done, startupProgressPhases.length - 1))] || "Preparing runtime";
+}
+
+function setStartupLabel(text) {
+  if (!el.startupLabel) return;
+  const nextText = String(text || "");
+  if (el.startupLabel.textContent === nextText) return;
+  el.startupLabel.textContent = nextText;
+  el.startupLabel.classList.remove("is-entering");
+  void el.startupLabel.offsetWidth;
+  el.startupLabel.classList.add("is-entering");
+  if (startupLabelMotionTimer) clearTimeout(startupLabelMotionTimer);
+  startupLabelMotionTimer = setTimeout(() => {
+    if (el.startupLabel) el.startupLabel.classList.remove("is-entering");
+    startupLabelMotionTimer = null;
+  }, 320);
+}
+
 function renderStartupProgress() {
   const total = Math.max(1, Number(startupProgressTotal) || 1);
   const done = Math.max(0, Math.min(total, Number(startupProgressDone) || 0));
   const ratio = done / total;
   const pct = Math.round(ratio * 100);
+  const stageText = startupPhaseText(done, total);
   if (el.startupProgressFill) {
+    if (pct >= 100) {
+      el.startupProgressFill.style.transition = "none";
+    } else {
+      el.startupProgressFill.style.transition = "";
+    }
     el.startupProgressFill.style.width = `${pct}%`;
+    if (pct >= 100) {
+      void el.startupProgressFill.offsetWidth;
+      el.startupProgressFill.style.transition = "";
+    }
   }
-  if (el.startupLabel) {
-    el.startupLabel.textContent = `Loading app... ${pct}%`;
+  if (el.startupPercent) {
+    el.startupPercent.textContent = `${pct}%`;
   }
+  setStartupLabel(stageText);
 }
 
-function resetStartupProgress(total) {
+function resetStartupProgress(total, phases) {
   startupProgressTotal = Math.max(1, Number(total) || 1);
   startupProgressDone = 0;
+  startupProgressPhases = Array.isArray(phases) ? phases.slice() : [];
   renderStartupProgress();
 }
 
@@ -594,7 +658,8 @@ function resetProgressiveDeltaState(jobId) {
 
 function appendToneMappingQuery(parts, opts) {
   const tm = String((opts && opts.toneMapping) || (el.toneMapping && el.toneMapping.value) || "aces").toLowerCase();
-  if (tm === "aces" || tm === "reinhard" || tm === "reinhard_luma" || tm === "mantiuk_2006" || tm === "none") {
+  const knownTmOps = ["aces", "reinhard", "reinhard_luma", "mantiuk_2006", "hable", "exponential", "lottes", "cineon", "uchimura", "agx", "khronos_pbr", "none"];
+  if (knownTmOps.indexOf(tm) !== -1) {
     parts.push(`tm=${encodeURIComponent(tm)}`);
   } else {
     parts.push("tm=aces");
@@ -642,11 +707,21 @@ function appendToneMappingQuery(parts, opts) {
   parts.push(`tm_mantiuk_detail=${encodeURIComponent(effectiveMantiukDetail)}`);
 }
 
+function appendPostFiltersQuery(parts, opts) {
+  const enabled = !!(opts && opts.postFiltersEnabled);
+  if (!enabled) return;
+  const raw = String((opts && opts.postFilters) || "").trim();
+  if (!raw) return;
+  parts.push("post_filters_enabled=1");
+  parts.push(`post_filters=${encodeURIComponent(raw)}`);
+}
+
 function blobUrlForJobImage(jobId, opts) {
   const parts = [];
   if (opts && opts.partial) parts.push("partial=1");
   if (opts && opts.final) parts.push("final=1");
   appendToneMappingQuery(parts, opts);
+  appendPostFiltersQuery(parts, opts);
   if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
   const qs = parts.length ? `?${parts.join("&")}` : "";
   return `/api/jobs/${jobId}/image${qs}`;
@@ -659,6 +734,7 @@ function urlForJobImageDelta(jobId, opts) {
   parts.push(`since=${encodeURIComponent(Number.isFinite(since) && since >= 0 ? Math.floor(since) : 0)}`);
   parts.push(`limit=${encodeURIComponent(Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 16)}`);
   appendToneMappingQuery(parts, opts);
+  appendPostFiltersQuery(parts, opts);
   if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
   const qs = parts.length ? `?${parts.join("&")}` : "";
   return `/api/jobs/${encodeURIComponent(jobId)}/image_delta${qs}`;
@@ -714,6 +790,10 @@ function createServerApi() {
       const data = await getJSON("/api/integrators");
       return data.integrators || [];
     },
+    async getPostFilters() {
+      const data = await getJSON("/api/post_filters");
+      return data.post_filters || [];
+    },
     async getResolutionPresets() {
       const data = await getJSON("/api/resolutions");
       return data.presets || [];
@@ -727,17 +807,29 @@ function createServerApi() {
     async getSceneGeometry(scene, variant) {
       if (!scene) return { meshes: {} };
       const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/geometry`, variant));
-      return { meshes: (data && data.meshes) || {} };
+      return {
+        meshes: (data && data.meshes) || {},
+        debug: (data && data.debug) || null,
+      };
     },
     async getSceneRuntimeGraph(scene, variant) {
-      if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [] };
+      if (!scene) return { cameras: [], objects: [], surfaces: [], materials: [], media: [] };
       const data = await getSceneJSONWithAsyncLoad(withVariantQuery(`/api/scenes/${encodeURIComponent(scene)}/runtime_graph`, variant));
       return {
         cameras: Array.isArray(data && data.cameras) ? data.cameras : [],
         objects: Array.isArray(data && data.objects) ? data.objects : [],
         surfaces: Array.isArray(data && data.surfaces) ? data.surfaces : [],
         materials: Array.isArray(data && data.materials) ? data.materials : [],
+        media: Array.isArray(data && data.media) ? data.media : [],
       };
+    },
+    async getSceneResolvedCamera(scene, variant, camera) {
+      if (!scene) return null;
+      const cam = String(camera || "").trim();
+      const base = `/api/scenes/${encodeURIComponent(scene)}/camera_resolve`
+        + (cam ? `?camera=${encodeURIComponent(cam)}` : "");
+      const data = await getSceneJSONWithAsyncLoad(withVariantQuery(base, variant));
+      return data && typeof data === "object" ? data : null;
     },
     async getSceneAssetText(scene, relpath) {
       if (!scene || !relpath) return "";
@@ -789,6 +881,7 @@ function createServerApi() {
       const encoded = encodeURIComponent(jobId);
       const body = new URLSearchParams();
       body.set("client_id", clientId || ensureClientId());
+      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
       const res = await fetch(`/api/jobs/abort/${encoded}`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -843,9 +936,11 @@ function createServerApi() {
       if (!res.ok) return null;
       return res.arrayBuffer();
     },
-    async getJobExport(jobId, format) {
+    async getJobExport(jobId, format, opts) {
       const fmt = encodeURIComponent(String(format || "png").toLowerCase());
-      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/export?format=${fmt}`);
+      const parts = [`format=${fmt}`];
+      appendPostFiltersQuery(parts, opts || {});
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/export?${parts.join("&")}`);
       if (!res.ok) {
         let message = `HTTP ${res.status}`;
         try {

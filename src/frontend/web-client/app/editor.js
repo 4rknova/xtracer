@@ -3,6 +3,38 @@ function postFilterCatalogById(id) {
   return POST_FILTER_CATALOG.find((it) => it.id === key) || null;
 }
 
+function postFilterDefaultsFromCatalog(filterId) {
+  const item = postFilterCatalogById(filterId);
+  const params = item && Array.isArray(item.params) ? item.params : null;
+  if (!params || params.length === 0) return null;
+  const out = {};
+  params.forEach((param) => {
+    const key = String((param && param.id) || "").trim();
+    if (!key) return;
+    out[key] = String(param && param.default !== undefined ? param.default : "");
+  });
+  return out;
+}
+
+function postFilterParamSpecsFromCatalog(filterId) {
+  const item = postFilterCatalogById(filterId);
+  const params = item && Array.isArray(item.params) ? item.params : null;
+  if (!params || params.length === 0) return null;
+  return params
+    .map((param) => ({
+      key: String((param && param.id) || "").trim(),
+      label: String((param && param.label) || (param && param.id) || "").trim(),
+      min: String((param && param.min) || ""),
+      max: String((param && param.max) || ""),
+      step: String((param && param.step) || ""),
+    }))
+    .filter((param) => !!param.key);
+}
+
+function isPostFilterStackEnabled() {
+  return !!postFilterStackEnabled;
+}
+
 function normalizePostFilterStage(stage) {
   return String(stage || "").toLowerCase() === "before" ? "before" : "after";
 }
@@ -12,76 +44,808 @@ function normalizePostFilterId(id) {
   return item ? item.id : "";
 }
 
+function defaultPostFilterParams(filterId) {
+  const catalogDefaults = postFilterDefaultsFromCatalog(filterId);
+  if (catalogDefaults) return catalogDefaults;
+  if (filterId === "chromatic_aberration") {
+    return {
+      amount: "1.5",
+      center_x: "0.5",
+      center_y: "0.5",
+      falloff: "1.0",
+    };
+  }
+  if (filterId === "vignette") {
+    return {
+      strength: "0.35",
+      radius: "0.5",
+      softness: "0.35",
+      center_x: "0.5",
+      center_y: "0.5",
+    };
+  }
+  if (filterId === "film_grain") {
+    return {
+      amount: "0.06",
+      size: "1.0",
+      seed: "1",
+      luma_weighted: "1",
+    };
+  }
+  if (filterId === "denoise") {
+    return {
+      strength: "0.65",
+      radius: "2.0",
+      sigma: "0.12",
+    };
+  }
+  if (filterId === "fxaa") {
+    return {
+      subpix: "0.75",
+      edge_threshold: "0.125",
+      edge_threshold_min: "0.031",
+    };
+  }
+  if (filterId === "sharpen") {
+    return {
+      amount: "0.8",
+      radius: "1.0",
+      threshold: "0.02",
+    };
+  }
+  if (filterId === "brightness") {
+    return {
+      amount: "0.0",
+    };
+  }
+  if (filterId === "contrast") {
+    return {
+      amount: "1.0",
+      pivot: "0.5",
+    };
+  }
+  if (filterId === "raindrops_lens") {
+    return {
+      density: "0.35",
+      size: "0.45",
+      distortion: "12.0",
+      seed: "1",
+    };
+  }
+  return {};
+}
+
+function normalizeChromaticAberrationParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const centerXNum = Number(src.center_x);
+  const centerYNum = Number(src.center_y);
+  const falloffNum = Number(src.falloff);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(64, amountNum)) : 1.5;
+  const centerX = Number.isFinite(centerXNum) ? Math.max(0, Math.min(1, centerXNum)) : 0.5;
+  const centerY = Number.isFinite(centerYNum) ? Math.max(0, Math.min(1, centerYNum)) : 0.5;
+  const falloff = Number.isFinite(falloffNum) ? Math.max(0, Math.min(8, falloffNum)) : 1.0;
+  return {
+    amount: amount.toFixed(3),
+    center_x: centerX.toFixed(3),
+    center_y: centerY.toFixed(3),
+    falloff: falloff.toFixed(3),
+  };
+}
+
+function normalizeVignetteParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const strengthNum = Number(src.strength);
+  const radiusNum = Number(src.radius);
+  const softnessNum = Number(src.softness);
+  const centerXNum = Number(src.center_x);
+  const centerYNum = Number(src.center_y);
+  const strength = Number.isFinite(strengthNum) ? Math.max(0, Math.min(1, strengthNum)) : 0.35;
+  const radius = Number.isFinite(radiusNum) ? Math.max(0, Math.min(1, radiusNum)) : 0.5;
+  const softness = Number.isFinite(softnessNum) ? Math.max(0.001, Math.min(1, softnessNum)) : 0.35;
+  const centerX = Number.isFinite(centerXNum) ? Math.max(0, Math.min(1, centerXNum)) : 0.5;
+  const centerY = Number.isFinite(centerYNum) ? Math.max(0, Math.min(1, centerYNum)) : 0.5;
+  return {
+    strength: strength.toFixed(3),
+    radius: radius.toFixed(3),
+    softness: softness.toFixed(3),
+    center_x: centerX.toFixed(3),
+    center_y: centerY.toFixed(3),
+  };
+}
+
+function normalizeFilmGrainParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const sizeNum = Number(src.size);
+  const seedNum = Number(src.seed);
+  const lumaRaw = String(src.luma_weighted === undefined ? "1" : src.luma_weighted).toLowerCase();
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(1, amountNum)) : 0.06;
+  const size = Number.isFinite(sizeNum) ? Math.max(1, Math.min(16, sizeNum)) : 1.0;
+  const seed = Number.isFinite(seedNum) ? Math.max(0, Math.min(1000000, Math.floor(seedNum))) : 1;
+  const lumaWeighted = (lumaRaw === "0" || lumaRaw === "false" || lumaRaw === "off") ? "0" : "1";
+  return {
+    amount: amount.toFixed(3),
+    size: size.toFixed(3),
+    seed: String(seed),
+    luma_weighted: lumaWeighted,
+  };
+}
+
+function normalizeSharpenParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const radiusNum = Number(src.radius);
+  const thresholdNum = Number(src.threshold);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(4, amountNum)) : 0.8;
+  const radius = Number.isFinite(radiusNum) ? Math.max(1, Math.min(4, radiusNum)) : 1.0;
+  const threshold = Number.isFinite(thresholdNum) ? Math.max(0, Math.min(1, thresholdNum)) : 0.02;
+  return {
+    amount: amount.toFixed(3),
+    radius: radius.toFixed(3),
+    threshold: threshold.toFixed(3),
+  };
+}
+
+function normalizeDenoiseParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const strengthNum = Number(src.strength);
+  const radiusNum = Number(src.radius);
+  const sigmaNum = Number(src.sigma);
+  const strength = Number.isFinite(strengthNum) ? Math.max(0, Math.min(1, strengthNum)) : 0.65;
+  const radius = Number.isFinite(radiusNum) ? Math.max(1, Math.min(6, radiusNum)) : 2.0;
+  const sigma = Number.isFinite(sigmaNum) ? Math.max(0.001, Math.min(2, sigmaNum)) : 0.12;
+  return {
+    strength: strength.toFixed(3),
+    radius: radius.toFixed(3),
+    sigma: sigma.toFixed(3),
+  };
+}
+
+function normalizeFXAAParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const subpixNum = Number(src.subpix);
+  const edgeThresholdNum = Number(src.edge_threshold);
+  const edgeThresholdMinNum = Number(src.edge_threshold_min);
+  const subpix = Number.isFinite(subpixNum) ? Math.max(0, Math.min(1, subpixNum)) : 0.75;
+  const edgeThreshold = Number.isFinite(edgeThresholdNum) ? Math.max(0.001, Math.min(1, edgeThresholdNum)) : 0.125;
+  const edgeThresholdMin = Number.isFinite(edgeThresholdMinNum) ? Math.max(0.0001, Math.min(1, edgeThresholdMinNum)) : 0.0312;
+  return {
+    subpix: subpix.toFixed(3),
+    edge_threshold: edgeThreshold.toFixed(3),
+    edge_threshold_min: edgeThresholdMin.toFixed(3),
+  };
+}
+
+function normalizeBrightnessParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const amount = Number.isFinite(amountNum) ? Math.max(-4, Math.min(4, amountNum)) : 0.0;
+  return {
+    amount: amount.toFixed(3),
+  };
+}
+
+function normalizeContrastParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const amountNum = Number(src.amount);
+  const pivotNum = Number(src.pivot);
+  const amount = Number.isFinite(amountNum) ? Math.max(0, Math.min(4, amountNum)) : 1.0;
+  const pivot = Number.isFinite(pivotNum) ? Math.max(0, Math.min(4, pivotNum)) : 0.5;
+  return {
+    amount: amount.toFixed(3),
+    pivot: pivot.toFixed(3),
+  };
+}
+
+function normalizeRaindropsLensParams(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const densityNum = Number(src.density);
+  const sizeNum = Number(src.size);
+  const distortionNum = Number(src.distortion);
+  const seedNum = Number(src.seed);
+  const density = Number.isFinite(densityNum) ? Math.max(0, Math.min(1, densityNum)) : 0.35;
+  const size = Number.isFinite(sizeNum) ? Math.max(0, Math.min(1, sizeNum)) : 0.45;
+  const distortion = Number.isFinite(distortionNum) ? Math.max(0, Math.min(64, distortionNum)) : 12.0;
+  const seed = Number.isFinite(seedNum) ? Math.max(0, Math.min(1000000, Math.floor(seedNum))) : 1;
+  return {
+    density: density.toFixed(3),
+    size: size.toFixed(3),
+    distortion: distortion.toFixed(3),
+    seed: String(seed),
+  };
+}
+
+function normalizePostFilterParams(filterId, raw) {
+  if (filterId === "chromatic_aberration") return normalizeChromaticAberrationParams(raw);
+  if (filterId === "vignette") return normalizeVignetteParams(raw);
+  if (filterId === "film_grain") return normalizeFilmGrainParams(raw);
+  if (filterId === "denoise") return normalizeDenoiseParams(raw);
+  if (filterId === "fxaa") return normalizeFXAAParams(raw);
+  if (filterId === "sharpen") return normalizeSharpenParams(raw);
+  if (filterId === "brightness") return normalizeBrightnessParams(raw);
+  if (filterId === "contrast") return normalizeContrastParams(raw);
+  if (filterId === "raindrops_lens") return normalizeRaindropsLensParams(raw);
+  return {};
+}
+
+function normalizePostFilterEntry(entry) {
+  const filterId = normalizePostFilterId(entry && entry.filter);
+  if (!filterId) return null;
+  return {
+    filter: filterId,
+    stage: normalizePostFilterStage(entry && entry.stage),
+    enabled: entry && entry.enabled !== undefined ? !!entry.enabled : true,
+    params: normalizePostFilterParams(filterId, entry && entry.params),
+  };
+}
+
+function postFilterParamSpecs(filterId) {
+  const catalogSpecs = postFilterParamSpecsFromCatalog(filterId);
+  if (catalogSpecs) return catalogSpecs;
+  if (filterId === "chromatic_aberration") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "64", step: "0.1" },
+      { key: "center_x", label: "Center X", min: "0", max: "1", step: "0.01" },
+      { key: "center_y", label: "Center Y", min: "0", max: "1", step: "0.01" },
+      { key: "falloff", label: "Falloff", min: "0", max: "8", step: "0.1" },
+    ];
+  }
+  if (filterId === "vignette") {
+    return [
+      { key: "strength", label: "Strength", min: "0", max: "1", step: "0.01" },
+      { key: "radius", label: "Radius", min: "0", max: "1", step: "0.01" },
+      { key: "softness", label: "Softness", min: "0.001", max: "1", step: "0.01" },
+      { key: "center_x", label: "Center X", min: "0", max: "1", step: "0.01" },
+      { key: "center_y", label: "Center Y", min: "0", max: "1", step: "0.01" },
+    ];
+  }
+  if (filterId === "film_grain") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "1", step: "0.01" },
+      { key: "size", label: "Size", min: "1", max: "16", step: "0.5" },
+      { key: "seed", label: "Seed", min: "0", max: "1000000", step: "1" },
+      { key: "luma_weighted", label: "Luma Weighted (1/0)", min: "0", max: "1", step: "1" },
+    ];
+  }
+  if (filterId === "denoise") {
+    return [
+      { key: "strength", label: "Strength", min: "0", max: "1", step: "0.01" },
+      { key: "radius", label: "Radius", min: "1", max: "6", step: "1" },
+      { key: "sigma", label: "Sigma", min: "0.001", max: "2", step: "0.01" },
+    ];
+  }
+  if (filterId === "fxaa") {
+    return [
+      { key: "subpix", label: "Subpix", min: "0", max: "1", step: "0.01" },
+      { key: "edge_threshold", label: "Edge Threshold", min: "0.001", max: "1", step: "0.01" },
+      { key: "edge_threshold_min", label: "Edge Threshold Min", min: "0.0001", max: "1", step: "0.01" },
+    ];
+  }
+  if (filterId === "sharpen") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "4", step: "0.1" },
+      { key: "radius", label: "Radius", min: "1", max: "4", step: "1" },
+      { key: "threshold", label: "Threshold", min: "0", max: "1", step: "0.01" },
+    ];
+  }
+  if (filterId === "brightness") {
+    return [
+      { key: "amount", label: "Amount", min: "-4", max: "4", step: "0.05" },
+    ];
+  }
+  if (filterId === "contrast") {
+    return [
+      { key: "amount", label: "Amount", min: "0", max: "4", step: "0.05" },
+      { key: "pivot", label: "Pivot", min: "0", max: "4", step: "0.05" },
+    ];
+  }
+  if (filterId === "raindrops_lens") {
+    return [
+      { key: "density", label: "Density", min: "0", max: "1", step: "0.01" },
+      { key: "size", label: "Size", min: "0", max: "1", step: "0.01" },
+      { key: "distortion", label: "Distortion", min: "0", max: "64", step: "0.1" },
+      { key: "seed", label: "Seed", min: "0", max: "1000000", step: "1" },
+    ];
+  }
+  return [];
+}
+
+async function loadPostFilters() {
+  if (!api || typeof api.getPostFilters !== "function") return;
+  const filters = await api.getPostFilters();
+  if (!Array.isArray(filters) || filters.length === 0) return;
+  POST_FILTER_CATALOG = filters.slice();
+  populatePostFilterTypeOptions();
+  renderPostFilterChain();
+}
+
+function currentToneMappingLabel() {
+  if (!el.toneMapping) return "ACES (Fitted)";
+  const selected = el.toneMapping.options && el.toneMapping.selectedIndex >= 0
+    ? el.toneMapping.options[el.toneMapping.selectedIndex]
+    : null;
+  return String((selected && selected.textContent) || el.toneMapping.value || "ACES (Fitted)");
+}
+
+let postFilterDragState = null;
+let postFilterOpenState = Object.create(null);
+
+function clearPostFilterDragMarkers() {
+  document.querySelectorAll(".post-filter-entry.is-dragging, .post-filter-entry.is-drop-before, .post-filter-entry.is-drop-after, .post-filters-empty.is-drop-before, .post-filters-empty.is-drop-after, .post-filter-stage-banner.is-drop-before, .post-filter-stage-banner.is-drop-after")
+    .forEach((node) => {
+      node.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
+    });
+}
+
+function getPostFilterStageIndices(stageName) {
+  const indices = [];
+  if (!Array.isArray(postFilterChain)) return indices;
+  postFilterChain.forEach((entry, index) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    if (normalized.stage === stageName) indices.push(index);
+  });
+  return indices;
+}
+
+function movePostFilterToStage(sourceIndex, targetStage, targetPos) {
+  if (!Array.isArray(postFilterChain)) return false;
+  if (!Number.isFinite(sourceIndex) || sourceIndex < 0 || sourceIndex >= postFilterChain.length) return false;
+
+  const source = normalizePostFilterEntry(postFilterChain[sourceIndex]);
+  if (!source) return false;
+
+  const targetEntries = [];
+  const otherEntries = [];
+  postFilterChain.forEach((entry, index) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    if (index === sourceIndex) return;
+    if (normalized.stage === targetStage) targetEntries.push(normalized);
+    else otherEntries.push(normalized);
+  });
+
+  const sourceWasTargetStage = source.stage === targetStage;
+  const originalTargetCount = targetEntries.length + (sourceWasTargetStage ? 1 : 0);
+  if (!Number.isFinite(targetPos)) targetPos = targetEntries.length;
+  if (targetPos < 0) targetPos = 0;
+  if (targetPos > targetEntries.length) targetPos = targetEntries.length;
+
+  if (sourceWasTargetStage) {
+    const sourceStageIndices = getPostFilterStageIndices(targetStage);
+    const sourceStagePos = sourceStageIndices.indexOf(sourceIndex);
+    if (sourceStagePos === targetPos || (sourceStagePos === originalTargetCount - 1 && targetPos === targetEntries.length)) {
+      return false;
+    }
+  }
+
+  source.stage = targetStage;
+  targetEntries.splice(targetPos, 0, source);
+
+  const nextChain = [];
+  if (targetStage === "before") {
+    targetEntries.forEach((entry) => nextChain.push(entry));
+    otherEntries.forEach((entry) => nextChain.push(entry));
+  } else {
+    otherEntries.forEach((entry) => nextChain.push(entry));
+    targetEntries.forEach((entry) => nextChain.push(entry));
+  }
+
+  postFilterChain.length = 0;
+  nextChain.forEach((entry) => postFilterChain.push(entry));
+  return true;
+}
+
+function findPostFilterDragInsertion(clientY) {
+  if (!el.postFiltersChain) return null;
+  const pivot = el.postFiltersChain.querySelector(".post-filter-stage-pivot");
+  const pivotRect = pivot ? pivot.getBoundingClientRect() : null;
+  const targetStage = pivotRect && clientY >= (pivotRect.top + pivotRect.height / 2) ? "after" : "before";
+  const rows = Array.from(el.postFiltersChain.querySelectorAll(`.post-filter-entry[data-stage="${targetStage}"]`));
+
+  if (rows.length === 0) {
+    const anchor = el.postFiltersChain.querySelector(`.post-filters-empty.is-${targetStage}`) || el.postFiltersChain.querySelector(`.post-filter-stage-banner.is-${targetStage}`);
+    return { stageName: targetStage, position: 0, row: anchor, side: "after" };
+  }
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const rect = rows[i].getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+    if (clientY < midpoint) {
+      return { stageName: targetStage, position: i, row: rows[i], side: "before" };
+    }
+  }
+
+  return { stageName: targetStage, position: rows.length, row: rows[rows.length - 1], side: "after" };
+}
+
+function finishPostFilterDrag(cancelled) {
+  const state = postFilterDragState;
+  if (!state) return;
+  document.removeEventListener("pointermove", state.onPointerMove);
+  document.removeEventListener("pointerup", state.onPointerUp);
+  document.removeEventListener("pointercancel", state.onPointerUp);
+  if (state.handle && state.pointerId !== null && state.pointerId !== undefined) {
+    try {
+      state.handle.releasePointerCapture(state.pointerId);
+    } catch (_) {
+      // ignore release errors from non-captured pointers
+    }
+  }
+  clearPostFilterDragMarkers();
+
+  if (!cancelled && state.dragging) {
+    let targetPos = Number.isFinite(state.insertionPosition) ? state.insertionPosition : state.stageOrder;
+    const targetStage = state.targetStageName || state.stageName;
+    if (targetStage === state.stageName && targetPos > state.stageOrder) targetPos -= 1;
+    if (movePostFilterToStage(state.sourceIndex, targetStage, targetPos)) {
+      appendLog(`post_filter reorder from_stage=${state.stageName} to_stage=${targetStage} to=${targetPos}`);
+      renderPostFilterChain();
+      queueWorkspaceSettingsSave();
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+    }
+  }
+
+  postFilterDragState = null;
+}
+
 function renderPostFilterChain() {
   if (!el.postFiltersChain) return;
   el.postFiltersChain.innerHTML = "";
-  if (!Array.isArray(postFilterChain) || postFilterChain.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "post-filters-empty";
-    empty.textContent = "No filters in chain.";
-    el.postFiltersChain.appendChild(empty);
-    return;
-  }
+  const stackEnabled = isPostFilterStackEnabled();
+  const board = document.createElement("div");
+  board.className = "post-filter-chain-flow";
+  const createStageEmptyPill = (label) => {
+    return window.XTracerWidgets.createTag({
+      label,
+      tone: "neutral",
+      className: "post-filter-stage-empty-pill",
+    });
+  };
+  const createStageToggleButton = (stateKey, label, active, disabled, onClick) => {
+    const btn = window.XTracerWidgets.createPill({
+      label,
+      active,
+      pressable: true,
+      disabled,
+      className: `post-filter-stage-toggle${active ? " is-active" : ""}`,
+      onClick,
+    });
+    btn.setAttribute("data-stage", stateKey);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    return btn;
+  };
+  const createRemoveButton = (label, disabled, onClick) => {
+    return window.XTracerWidgets.createIconButton({
+      title: label,
+      label,
+      disabled,
+      variant: "ghost",
+      className: "post-filter-remove",
+      icon: window.XTracerWidgets.dom.svgIcon("M5 5l6 6M11 5L5 11"),
+      onClick,
+    });
+  };
 
-  postFilterChain.forEach((entry, index) => {
-    const filterId = normalizePostFilterId(entry && entry.filter);
+  const createStageHeader = (title, note, stageName, emptyLabel = "") => {
+    const head = document.createElement("section");
+    head.className = `post-filter-stage-banner is-${stageName}`;
+    const meta = document.createElement("div");
+    meta.className = "post-filter-stage-banner-meta";
+    const titleEl = document.createElement("h4");
+    titleEl.className = "post-filter-stage-title";
+    titleEl.textContent = title;
+    const noteEl = document.createElement("p");
+    noteEl.className = "post-filter-stage-note";
+    noteEl.textContent = note;
+    meta.appendChild(titleEl);
+    meta.appendChild(noteEl);
+    head.appendChild(meta);
+    if (emptyLabel) {
+      head.appendChild(createStageEmptyPill(emptyLabel));
+    }
+    return head;
+  };
+
+  const createPivot = () => {
+    const pivotStage = document.createElement("section");
+    pivotStage.className = "post-filter-stage-pivot";
+    const pivotCore = document.createElement("div");
+    pivotCore.className = "post-filter-pivot-core";
+    const pivotLabel = document.createElement("span");
+    pivotLabel.className = "post-filter-pivot-label";
+    pivotLabel.textContent = "Tone Mapping";
+    const pivotName = document.createElement("strong");
+    pivotName.className = "post-filter-pivot-name";
+    pivotName.textContent = currentToneMappingLabel();
+    pivotCore.appendChild(pivotLabel);
+    pivotCore.appendChild(pivotName);
+    pivotStage.appendChild(pivotCore);
+    return pivotStage;
+  };
+
+  const appendFilterCard = (target, entry, index, stageOrder) => {
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    postFilterChain[index] = normalized;
+    const filterId = normalized.filter;
     const filterInfo = postFilterCatalogById(filterId);
     if (!filterInfo) return;
 
-    const row = document.createElement("div");
+    const row = document.createElement("section");
     row.className = "post-filter-entry";
     row.dataset.index = String(index);
+    row.dataset.stage = normalized.stage;
+    row.dataset.stageOrder = String(stageOrder);
+    row.classList.toggle("is-disabled", !normalized.enabled);
+    const isOpen = Object.prototype.hasOwnProperty.call(postFilterOpenState, String(index))
+      ? !!postFilterOpenState[String(index)]
+      : index === 0;
+    row.classList.toggle("is-open", isOpen);
+
+    const summary = document.createElement("div");
+    summary.className = "post-filter-summary";
+    summary.setAttribute("role", "button");
+    summary.setAttribute("tabindex", stackEnabled ? "0" : "-1");
+    summary.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+    const icon = document.createElement("button");
+    icon.type = "button";
+    icon.className = "post-filter-summary-icon";
+    icon.setAttribute("aria-label", `Drag ${filterInfo.label} to reorder within ${normalized.stage === "before" ? "Before TM" : "After TM"}`);
+    icon.textContent = "ƒ";
+    icon.disabled = !stackEnabled;
+    icon.title = "Drag to reorder within this stage";
+    icon.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+    });
+    icon.addEventListener("pointerdown", (evt) => {
+      if (!stackEnabled) return;
+      if (evt.button !== undefined && evt.button !== 0) return;
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      if (postFilterDragState) finishPostFilterDrag(true);
+
+      const stageName = row.dataset.stage || "after";
+      const stageOrder = Number(row.dataset.stageOrder);
+      const startX = evt.clientX;
+      const startY = evt.clientY;
+      icon.setPointerCapture(evt.pointerId);
+
+      const state = {
+        pointerId: evt.pointerId,
+        handle: icon,
+        sourceIndex: index,
+        stageName,
+        stageOrder: Number.isFinite(stageOrder) ? stageOrder : 0,
+        startX,
+        startY,
+        targetStageName: stageName,
+        dragging: false,
+        insertionPosition: Number.isFinite(stageOrder) ? stageOrder : 0,
+        onPointerMove: null,
+        onPointerUp: null,
+      };
+
+      state.onPointerMove = (moveEvt) => {
+        if (moveEvt.pointerId !== state.pointerId) return;
+        const dx = moveEvt.clientX - state.startX;
+        const dy = moveEvt.clientY - state.startY;
+        if (!state.dragging) {
+          if ((dx * dx + dy * dy) < 36) return;
+          state.dragging = true;
+          row.classList.add("is-dragging");
+        }
+        moveEvt.preventDefault();
+        clearPostFilterDragMarkers();
+        row.classList.add("is-dragging");
+        const insertion = findPostFilterDragInsertion(moveEvt.clientY);
+        if (!insertion) return;
+        state.targetStageName = insertion.stageName;
+        state.insertionPosition = insertion.position;
+        if (insertion.row && insertion.row !== row) {
+          insertion.row.classList.add(insertion.side === "before" ? "is-drop-before" : "is-drop-after");
+        }
+      };
+
+      state.onPointerUp = (upEvt) => {
+        if (upEvt.pointerId !== state.pointerId) return;
+        finishPostFilterDrag(false);
+      };
+
+      postFilterDragState = state;
+      document.addEventListener("pointermove", state.onPointerMove, { passive: false });
+      document.addEventListener("pointerup", state.onPointerUp);
+      document.addEventListener("pointercancel", state.onPointerUp);
+    });
+
+    const summaryMeta = document.createElement("div");
+    summaryMeta.className = "post-filter-summary-meta";
 
     const name = document.createElement("span");
     name.className = "post-filter-name";
     name.textContent = filterInfo.label;
 
-    const stage = document.createElement("select");
-    stage.className = "post-filter-stage";
-    stage.setAttribute("aria-label", `Filter stage for ${filterInfo.label}`);
-    const beforeOpt = document.createElement("option");
-    beforeOpt.value = "before";
-    beforeOpt.textContent = "Before TM";
-    const afterOpt = document.createElement("option");
-    afterOpt.value = "after";
-    afterOpt.textContent = "After TM";
-    stage.appendChild(beforeOpt);
-    stage.appendChild(afterOpt);
-    stage.value = normalizePostFilterStage(entry && entry.stage);
-    stage.addEventListener("change", () => {
-      const idx = Number(row.dataset.index);
-      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
-      postFilterChain[idx].stage = normalizePostFilterStage(stage.value);
-      appendLog(`post_filter stage idx=${idx} stage=${postFilterChain[idx].stage}`);
-      queueWorkspaceSettingsSave();
-    });
+    const description = String(filterInfo.description || "").trim();
+    summaryMeta.appendChild(name);
 
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "post-filter-remove";
-    removeBtn.textContent = "Remove";
-    removeBtn.addEventListener("click", () => {
+    const removeBtn = createRemoveButton(`Remove ${filterInfo.label}`, !stackEnabled, (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
       const idx = Number(row.dataset.index);
       if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
       postFilterChain.splice(idx, 1);
       renderPostFilterChain();
       appendLog(`post_filter removed idx=${idx}`);
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
       queueWorkspaceSettingsSave();
     });
 
-    row.appendChild(name);
-    row.appendChild(stage);
-    row.appendChild(removeBtn);
-    el.postFiltersChain.appendChild(row);
-  });
+    const expandIcon = document.createElement("span");
+    expandIcon.className = "post-filter-summary-chevron";
+    expandIcon.setAttribute("aria-hidden", "true");
+
+    summary.appendChild(icon);
+    summary.appendChild(summaryMeta);
+    summary.appendChild(expandIcon);
+    summary.addEventListener("click", () => {
+      const nextOpen = !row.classList.contains("is-open");
+      row.classList.toggle("is-open", nextOpen);
+      postFilterOpenState[String(index)] = nextOpen;
+      summary.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+    });
+    summary.addEventListener("keydown", (evt) => {
+      if (evt.key !== "Enter" && evt.key !== " ") return;
+      evt.preventDefault();
+      summary.click();
+    });
+    row.appendChild(summary);
+
+    const body = document.createElement("div");
+    body.className = "post-filter-body";
+
+    const controls = document.createElement("div");
+    controls.className = "post-filter-controls";
+
+    const stage = document.createElement("div");
+    stage.className = "post-filter-stage-switch";
+    stage.setAttribute("role", "group");
+    stage.setAttribute("aria-label", `FX enabled state for ${filterInfo.label}`);
+    stage.dataset.state = normalized.enabled ? "enabled" : "disabled";
+
+    const applyEnabledChange = (nextEnabled) => {
+      const idx = Number(row.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+      postFilterChain[idx].enabled = !!nextEnabled;
+      stage.dataset.state = postFilterChain[idx].enabled ? "enabled" : "disabled";
+      const buttons = stage.querySelectorAll("button[data-stage]");
+      buttons.forEach((btn) => {
+        const active = (btn.getAttribute("data-stage") === "enabled") === postFilterChain[idx].enabled;
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      row.classList.toggle("is-disabled", !postFilterChain[idx].enabled);
+      appendLog(`post_filter enabled idx=${idx} value=${postFilterChain[idx].enabled ? "1" : "0"}`);
+      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
+    };
+
+    [{ key: "enabled", label: "FX On", value: true }, { key: "disabled", label: "FX Off", value: false }].forEach((stateDef) => {
+      const active = normalized.enabled === stateDef.value;
+      const btn = createStageToggleButton(
+        stateDef.key,
+        stateDef.label,
+        active,
+        !stackEnabled,
+        () => applyEnabledChange(stateDef.value)
+      );
+      stage.appendChild(btn);
+    });
+
+    controls.appendChild(stage);
+    controls.appendChild(removeBtn);
+    body.appendChild(controls);
+
+    if (description) {
+      const desc = document.createElement("div");
+      desc.className = "post-filter-description";
+      desc.textContent = description;
+      body.appendChild(desc);
+    }
+
+    const paramSpecs = postFilterParamSpecs(filterId);
+    if (paramSpecs.length > 0) {
+      const params = normalized.params || defaultPostFilterParams(filterId);
+      const paramsWrap = document.createElement("div");
+      paramsWrap.className = "post-filter-params";
+      paramSpecs.forEach((field) => {
+        const input = window.XTracerWidgets.dom.el("input", {
+          className: "xui-input",
+          attrs: {
+            type: "number",
+            min: field.min,
+            max: field.max,
+            step: field.step,
+            "aria-label": `${field.label} for ${filterInfo.label}`,
+          },
+          props: {
+            value: String((params && params[field.key]) || ""),
+            disabled: !stackEnabled,
+          },
+        });
+        input.addEventListener("change", () => {
+          const idx = Number(row.dataset.index);
+          if (!Number.isFinite(idx) || idx < 0 || idx >= postFilterChain.length) return;
+          const current = normalizePostFilterEntry(postFilterChain[idx]);
+          if (!current) return;
+          const nextParams = { ...(current.params || {}), [field.key]: String(input.value || "") };
+          current.params = normalizePostFilterParams(current.filter, nextParams);
+          postFilterChain[idx] = current;
+          input.value = current.params[field.key];
+          appendLog(`post_filter param idx=${idx} ${field.key}=${input.value}`);
+          queueWorkspaceSettingsSave();
+        });
+        paramsWrap.appendChild(window.XTracerWidgets.createField({
+          label: field.label,
+          control: input,
+          className: "post-filter-param",
+        }));
+      });
+      body.appendChild(paramsWrap);
+    }
+    row.appendChild(body);
+    board.appendChild(row);
+  };
+
+  const before = [];
+  const after = [];
+  if (Array.isArray(postFilterChain) && postFilterChain.length > 0) {
+    postFilterChain.forEach((entry, index) => {
+      const normalized = normalizePostFilterEntry(entry);
+      if (!normalized) return;
+      if (normalized.stage === "before") before.push({ entry: normalized, index });
+      else after.push({ entry: normalized, index });
+    });
+  }
+
+  board.appendChild(createStageHeader("Before TM", "Linear-space effects", "before", before.length === 0 ? "No filters" : ""));
+  if (before.length !== 0) {
+    before.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
+  }
+
+  board.appendChild(createPivot());
+
+  board.appendChild(createStageHeader("After TM", "Display-space finishing", "after", after.length === 0 ? "No filters" : ""));
+  if (after.length !== 0) {
+    after.forEach(({ entry, index }, stageOrder) => appendFilterCard(null, entry, index, stageOrder));
+  }
+
+  el.postFiltersChain.appendChild(board);
+}
+
+function updatePostFilterUiState() {
+  const stackEnabled = isPostFilterStackEnabled();
+  if (el.postFilterType) el.postFilterType.disabled = !stackEnabled;
+  if (el.postFilterAddBtn) el.postFilterAddBtn.disabled = !stackEnabled;
+  if (el.postFiltersRecalcBtn) el.postFiltersRecalcBtn.disabled = !stackEnabled;
+  renderPostFilterChain();
 }
 
 function addPostFilterToChain() {
   const filterId = normalizePostFilterId(el.postFilterType && el.postFilterType.value);
   if (!filterId) return;
-  postFilterChain.push({ filter: filterId, stage: "after" });
+  postFilterChain.push({
+    filter: filterId,
+    stage: "after",
+    enabled: true,
+    params: defaultPostFilterParams(filterId),
+  });
   renderPostFilterChain();
   appendLog(`post_filter add filter=${filterId} stage=after`);
+  if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
   queueWorkspaceSettingsSave();
 }
 
@@ -100,12 +864,26 @@ function populatePostFilterTypeOptions() {
 }
 
 function gatherPostFilterParams() {
+  if (!isPostFilterStackEnabled()) return "";
   const parts = [];
   (postFilterChain || []).forEach((entry) => {
-    const filterId = normalizePostFilterId(entry && entry.filter);
-    if (!filterId) return;
-    const stage = normalizePostFilterStage(entry && entry.stage);
-    parts.push(`${stage}:${filterId}`);
+    const normalized = normalizePostFilterEntry(entry);
+    if (!normalized) return;
+    if (!normalized.enabled) return;
+    const stage = normalized.stage;
+    const filterId = normalized.filter;
+    const paramPairs = [];
+    const params = normalized.params || {};
+    const specs = postFilterParamSpecs(filterId);
+    specs.forEach((spec) => {
+      if (params[spec.key] === undefined) return;
+      paramPairs.push(`${spec.key}=${params[spec.key]}`);
+    });
+    if (paramPairs.length > 0) {
+      parts.push(`${stage}:${filterId}:${paramPairs.join(":")}`);
+    } else {
+      parts.push(`${stage}:${filterId}`);
+    }
   });
   return parts.join(",");
 }
@@ -279,7 +1057,6 @@ function applyHistoryStep(type, direction) {
   try {
     el.sceneSource.value = String(snap.source || "");
     updateEditorMetrics();
-    refreshSceneEditControls();
     syncEditorScroll();
     renderSceneGraphView();
     if (type === "text" && el.sceneSource && editorViewMode === "text") {
@@ -295,12 +1072,7 @@ function applyHistoryStep(type, direction) {
 
   queueWorkspaceDraftSave();
   if (type === "visual" && visualEditor) {
-    rebuildVisualFromEditorSource()
-      .then(() => {
-        const selected = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
-        if (selected && visualEditor.selectObjectById) visualEditor.selectObjectById(selected, false);
-      })
-      .catch((err) => appendLog(`visual refresh error: ${err.message}`));
+    rebuildVisualFromEditorSource().catch((err) => appendLog(`visual refresh error: ${err.message}`));
   }
   return true;
 }
@@ -332,7 +1104,6 @@ function updateSceneSourceText(nextSource, options) {
   el.sceneSource.value = next;
   updateEditorMetrics();
   syncEditorScroll();
-  refreshSceneEditControls();
   renderSceneGraphView();
   if (!suppressHistoryTracking) {
     if (historyType === "visual") {
@@ -342,78 +1113,6 @@ function updateSceneSourceText(nextSource, options) {
     }
   }
   queueWorkspaceDraftSave();
-}
-
-function refreshSceneEditControls() {
-  if (!el.editObjectSelect || !el.createMaterialSelect) return;
-  const source = el.sceneSource ? (el.sceneSource.value || "") : "";
-  const model = parseSceneEditModel(source);
-  const prevObject = String(el.editObjectSelect.value || "");
-  const prevMaterial = String(el.createMaterialSelect.value || "");
-
-  el.editObjectSelect.innerHTML = "";
-  addOption(el.editObjectSelect, "", "Select object...");
-  Array.from(model.objects.values())
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .forEach((obj) => {
-      const g = model.geometries.get(obj.geometry);
-      const type = g ? (g.type || "?") : "?";
-      addOption(el.editObjectSelect, obj.id, `${obj.id} (${type})`);
-    });
-  if (prevObject && model.objects.has(prevObject)) el.editObjectSelect.value = prevObject;
-  else el.editObjectSelect.value = "";
-
-  el.createMaterialSelect.innerHTML = "";
-  const materialIds = Array.from((model.materials || new Map()).keys());
-  if (!materialIds.length) {
-    addOption(el.createMaterialSelect, "", "No material");
-  } else {
-    materialIds.forEach((id) => addOption(el.createMaterialSelect, id, id));
-    if (prevMaterial && materialIds.includes(prevMaterial)) el.createMaterialSelect.value = prevMaterial;
-    else el.createMaterialSelect.value = materialIds[0];
-  }
-  syncTransformInputsFromObject(el.editObjectSelect.value || "");
-}
-
-function setTransformInputs(values) {
-  const t = values && values.translation ? values.translation : [0, 0, 0];
-  const r = values && values.rotation ? values.rotation : [0, 0, 0];
-  const s = values && values.scale ? values.scale : [1, 1, 1];
-  if (el.editTranslateX) el.editTranslateX.value = formatSceneNumber(t[0], 0);
-  if (el.editTranslateY) el.editTranslateY.value = formatSceneNumber(t[1], 0);
-  if (el.editTranslateZ) el.editTranslateZ.value = formatSceneNumber(t[2], 0);
-  if (el.editRotateX) el.editRotateX.value = formatSceneNumber(r[0], 0);
-  if (el.editRotateY) el.editRotateY.value = formatSceneNumber(r[1], 0);
-  if (el.editRotateZ) el.editRotateZ.value = formatSceneNumber(r[2], 0);
-  if (el.editScaleX) el.editScaleX.value = formatSceneNumber(s[0], 1);
-  if (el.editScaleY) el.editScaleY.value = formatSceneNumber(s[1], 1);
-  if (el.editScaleZ) el.editScaleZ.value = formatSceneNumber(s[2], 1);
-}
-
-function currentTransformInputs() {
-  return {
-    translation: [
-      readSceneNumber(el.editTranslateX ? el.editTranslateX.value : 0, 0),
-      readSceneNumber(el.editTranslateY ? el.editTranslateY.value : 0, 0),
-      readSceneNumber(el.editTranslateZ ? el.editTranslateZ.value : 0, 0),
-    ],
-    rotation: [
-      readSceneNumber(el.editRotateX ? el.editRotateX.value : 0, 0),
-      readSceneNumber(el.editRotateY ? el.editRotateY.value : 0, 0),
-      readSceneNumber(el.editRotateZ ? el.editRotateZ.value : 0, 0),
-    ],
-    scale: [
-      Math.max(0.0001, readSceneNumber(el.editScaleX ? el.editScaleX.value : 1, 1)),
-      Math.max(0.0001, readSceneNumber(el.editScaleY ? el.editScaleY.value : 1, 1)),
-      Math.max(0.0001, readSceneNumber(el.editScaleZ ? el.editScaleZ.value : 1, 1)),
-    ],
-  };
-}
-
-function syncTransformInputsFromObject(objectId) {
-  const info = objectId ? getObjectTransformFromSource(el.sceneSource.value || "", objectId) : null;
-  if (el.editGeometryType) el.editGeometryType.value = info ? (info.geometryType || "") : "";
-  setTransformInputs(info || null);
 }
 
 async function rebuildVisualFromEditorSource() {

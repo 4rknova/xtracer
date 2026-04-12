@@ -1030,7 +1030,7 @@ object = {
 	}
 
 	short_block_2_1 = {
-		geometry = short_block_2_2
+		geometry = short_block_2_1
 		material = white
 	}
 

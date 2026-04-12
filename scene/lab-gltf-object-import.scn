@@ -1,0 +1,34 @@
+title = glTF Object Import
+description = Minimal scene showing automatic object and material creation from an external GLB file
+version = 1.0
+default_camera = cam
+
+environment = {
+  type = color
+  config = {
+    value = col3(0.08,0.08,0.09)
+  }
+}
+
+camera = {
+  cam = {
+    type = thin-lens
+    fov = 45
+    position = vec3(0,0.8,-4.0)
+    target = vec3(0,0,0)
+    up = vec3(0,1,0)
+  }
+}
+
+geometry = {
+}
+
+material = {
+}
+
+object = {
+  box = {
+    source = assets/gltf/BoxTextured.glb
+    prefix = box_
+  }
+}

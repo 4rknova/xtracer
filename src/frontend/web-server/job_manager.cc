@@ -1,5 +1,7 @@
 #include "job_manager.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <iomanip>
 #include <fstream>
@@ -10,9 +12,12 @@
 #include <unistd.h>
 
 #include <nimg/img.h>
+#include <xtcore/filter/postfx.h>
+#include <xtcore/filter/desaturate.h>
 #include <xtcore/tonemapping/tonemapping.h>
 
 #include "backend_log.h"
+#include "post_filters.h"
 
 namespace xtracer {
 namespace frontend {
@@ -38,40 +43,402 @@ bool write_file_bytes(const char *path, const std::vector<unsigned char> &bytes)
     return out.good();
 }
 
-typedef int (*save_fn_t)(const char *, nimg::Pixmap &);
-
-bool encode_memory(nimg::Pixmap &pixmap, save_fn_t save_fn, std::vector<unsigned char> &out)
+struct post_filter_entry_t
 {
-    char tmp_path[] = "/tmp/xtracer_web_job_img_XXXXXX";
-    int fd = mkstemp(tmp_path);
-    if (fd < 0) return false;
-    close(fd);
+    bool before_tm;
+    std::string id;
+    float ca_amount;
+    float ca_center_x;
+    float ca_center_y;
+    float ca_falloff;
+    float vignette_strength;
+    float vignette_radius;
+    float vignette_softness;
+    float vignette_center_x;
+    float vignette_center_y;
+    float grain_amount;
+    float grain_size;
+    float grain_seed;
+    float grain_luma_weighted;
+    float denoise_strength;
+    float denoise_radius;
+    float denoise_sigma;
+    float fxaa_subpix;
+    float fxaa_edge_threshold;
+    float fxaa_edge_threshold_min;
+    float sharpen_amount;
+    float sharpen_radius;
+    float sharpen_threshold;
+    float brightness_amount;
+    float contrast_amount;
+    float contrast_pivot;
+    float raindrops_density;
+    float raindrops_size;
+    float raindrops_distortion;
+    float raindrops_seed;
+};
 
-    int save_err = save_fn(tmp_path, pixmap);
-    if (save_err != 0) {
-        unlink(tmp_path);
-        return false;
+typedef std::vector<post_filter_entry_t> post_filter_chain_t;
+
+std::string lower_ascii_copy(std::string s)
+{
+    for (size_t i = 0; i < s.size(); ++i) {
+        s[i] = (char)std::tolower((unsigned char)s[i]);
+    }
+    return s;
+}
+
+std::string trim_ascii_copy(const std::string &s)
+{
+    size_t b = 0;
+    size_t e = s.size();
+    while (b < e && std::isspace((unsigned char)s[b])) ++b;
+    while (e > b && std::isspace((unsigned char)s[e - 1])) --e;
+    return s.substr(b, e - b);
+}
+
+bool parse_post_filter_chain(bool enabled,
+                             const std::string &raw,
+                             post_filter_chain_t &out_chain,
+                             std::string &out_normalized_key)
+{
+    out_chain.clear();
+    out_normalized_key.clear();
+    if (!enabled) return true;
+
+    const std::string trimmed_all = trim_ascii_copy(raw);
+    if (trimmed_all.empty()) return true;
+
+    size_t start = 0;
+    while (start <= trimmed_all.size()) {
+        size_t comma = trimmed_all.find(',', start);
+        const std::string part = (comma == std::string::npos)
+            ? trimmed_all.substr(start)
+            : trimmed_all.substr(start, comma - start);
+        const std::string token = lower_ascii_copy(trim_ascii_copy(part));
+        if (!token.empty()) {
+            std::vector<std::string> tokens;
+            size_t tstart = 0;
+            while (tstart <= token.size()) {
+                size_t tsep = token.find(':', tstart);
+                if (tsep == std::string::npos) {
+                    tokens.push_back(token.substr(tstart));
+                    break;
+                }
+                tokens.push_back(token.substr(tstart, tsep - tstart));
+                tstart = tsep + 1;
+            }
+            if (tokens.empty()) return false;
+
+            size_t idx = 0;
+            bool before_tm = false;
+            if (tokens[0] == "before" || tokens[0] == "after") {
+                before_tm = (tokens[0] == "before");
+                idx = 1;
+            }
+            if (idx >= tokens.size()) return false;
+            const std::string filter_id = trim_ascii_copy(tokens[idx]);
+            idx += 1;
+            const post_filter_info_t *filter_info = find_post_filter_info(filter_id);
+            if (!filter_info) return false;
+            if ((before_tm && !filter_info->allow_before_tm) || (!before_tm && !filter_info->allow_after_tm)) {
+                return false;
+            }
+
+            post_filter_entry_t e;
+            e.before_tm = before_tm;
+            e.id = filter_id;
+            e.ca_amount = 1.5f;
+            e.ca_center_x = 0.5f;
+            e.ca_center_y = 0.5f;
+            e.ca_falloff = 1.0f;
+            e.vignette_strength = 0.35f;
+            e.vignette_radius = 0.5f;
+            e.vignette_softness = 0.35f;
+            e.vignette_center_x = 0.5f;
+            e.vignette_center_y = 0.5f;
+            e.grain_amount = 0.06f;
+            e.grain_size = 1.0f;
+            e.grain_seed = 1.0f;
+            e.grain_luma_weighted = 1.0f;
+            e.denoise_strength = 0.65f;
+            e.denoise_radius = 2.0f;
+            e.denoise_sigma = 0.12f;
+            e.fxaa_subpix = 0.75f;
+            e.fxaa_edge_threshold = 0.125f;
+            e.fxaa_edge_threshold_min = 0.0312f;
+            e.sharpen_amount = 0.8f;
+            e.sharpen_radius = 1.0f;
+            e.sharpen_threshold = 0.02f;
+            e.brightness_amount = 0.0f;
+            e.contrast_amount = 1.0f;
+            e.contrast_pivot = 0.5f;
+            e.raindrops_density = 0.35f;
+            e.raindrops_size = 0.45f;
+            e.raindrops_distortion = 12.0f;
+            e.raindrops_seed = 1.0f;
+
+            for (; idx < tokens.size(); ++idx) {
+                const std::string kv = trim_ascii_copy(tokens[idx]);
+                if (kv.empty()) continue;
+                const size_t eq = kv.find('=');
+                if (eq == std::string::npos) return false;
+                const std::string key = trim_ascii_copy(kv.substr(0, eq));
+                const std::string val = trim_ascii_copy(kv.substr(eq + 1));
+                if (key.empty() || val.empty()) return false;
+
+                std::istringstream vs(val);
+                float f = 0.0f;
+                vs >> f;
+                if (vs.fail()) return false;
+
+                if (filter_id == "chromatic_aberration") {
+                    if (key == "amount") e.ca_amount = std::max(0.0f, std::min(64.0f, f));
+                    else if (key == "center_x") e.ca_center_x = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "center_y") e.ca_center_y = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "falloff") e.ca_falloff = std::max(0.0f, std::min(8.0f, f));
+                    else return false;
+                } else if (filter_id == "vignette") {
+                    if (key == "strength") e.vignette_strength = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "radius") e.vignette_radius = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "softness") e.vignette_softness = std::max(0.001f, std::min(1.0f, f));
+                    else if (key == "center_x") e.vignette_center_x = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "center_y") e.vignette_center_y = std::max(0.0f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "film_grain") {
+                    if (key == "amount") e.grain_amount = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "size") e.grain_size = std::max(1.0f, std::min(16.0f, f));
+                    else if (key == "seed") e.grain_seed = std::max(0.0f, std::min(1000000.0f, std::floor(f)));
+                    else if (key == "luma_weighted") e.grain_luma_weighted = (f >= 0.5f) ? 1.0f : 0.0f;
+                    else return false;
+                } else if (filter_id == "denoise") {
+                    if (key == "strength") e.denoise_strength = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "radius") e.denoise_radius = std::max(1.0f, std::min(6.0f, std::round(f)));
+                    else if (key == "sigma") e.denoise_sigma = std::max(0.001f, std::min(2.0f, f));
+                    else return false;
+                } else if (filter_id == "fxaa") {
+                    if (key == "subpix") e.fxaa_subpix = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "edge_threshold") e.fxaa_edge_threshold = std::max(0.001f, std::min(1.0f, f));
+                    else if (key == "edge_threshold_min") e.fxaa_edge_threshold_min = std::max(0.0001f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "sharpen") {
+                    if (key == "amount") e.sharpen_amount = std::max(0.0f, std::min(4.0f, f));
+                    else if (key == "radius") e.sharpen_radius = std::max(1.0f, std::min(4.0f, std::round(f)));
+                    else if (key == "threshold") e.sharpen_threshold = std::max(0.0f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "brightness") {
+                    if (key == "amount") e.brightness_amount = std::max(-4.0f, std::min(4.0f, f));
+                    else return false;
+                } else if (filter_id == "contrast") {
+                    if (key == "amount") e.contrast_amount = std::max(0.0f, std::min(4.0f, f));
+                    else if (key == "pivot") e.contrast_pivot = std::max(0.0f, std::min(4.0f, f));
+                    else return false;
+                } else if (filter_id == "raindrops_lens") {
+                    if (key == "density") e.raindrops_density = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "size") e.raindrops_size = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "distortion") e.raindrops_distortion = std::max(0.0f, std::min(64.0f, f));
+                    else if (key == "seed") e.raindrops_seed = std::max(0.0f, std::min(1000000.0f, std::floor(f)));
+                    else return false;
+                } else if (filter_id == "desaturate") {
+                    return false;
+                } else {
+                    return false;
+                }
+            }
+
+            if (filter_id != "desaturate"
+                && filter_id != "chromatic_aberration"
+                && filter_id != "vignette"
+                && filter_id != "film_grain"
+                && filter_id != "denoise"
+                && filter_id != "fxaa"
+                && filter_id != "sharpen"
+                && filter_id != "brightness"
+                && filter_id != "contrast"
+                && filter_id != "raindrops_lens") {
+                return false;
+            }
+
+            out_chain.push_back(e);
+
+            if (!out_normalized_key.empty()) out_normalized_key += ",";
+            out_normalized_key += (before_tm ? "before:" : "after:");
+            out_normalized_key += filter_id;
+            if (filter_id == "chromatic_aberration") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":amount=" << e.ca_amount
+                   << ":center_x=" << e.ca_center_x
+                   << ":center_y=" << e.ca_center_y
+                   << ":falloff=" << e.ca_falloff;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "vignette") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":strength=" << e.vignette_strength
+                   << ":radius=" << e.vignette_radius
+                   << ":softness=" << e.vignette_softness
+                   << ":center_x=" << e.vignette_center_x
+                   << ":center_y=" << e.vignette_center_y;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "film_grain") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":amount=" << e.grain_amount
+                   << ":size=" << e.grain_size
+                   << ":seed=" << e.grain_seed
+                   << ":luma_weighted=" << e.grain_luma_weighted;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "denoise") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":strength=" << e.denoise_strength
+                   << ":radius=" << e.denoise_radius
+                   << ":sigma=" << e.denoise_sigma;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "fxaa") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":subpix=" << e.fxaa_subpix
+                   << ":edge_threshold=" << e.fxaa_edge_threshold
+                   << ":edge_threshold_min=" << e.fxaa_edge_threshold_min;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "sharpen") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":amount=" << e.sharpen_amount
+                   << ":radius=" << e.sharpen_radius
+                   << ":threshold=" << e.sharpen_threshold;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "brightness") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":amount=" << e.brightness_amount;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "contrast") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":amount=" << e.contrast_amount
+                   << ":pivot=" << e.contrast_pivot;
+                out_normalized_key += ps.str();
+            } else if (filter_id == "raindrops_lens") {
+                std::ostringstream ps;
+                ps << std::fixed << std::setprecision(3)
+                   << ":density=" << e.raindrops_density
+                   << ":size=" << e.raindrops_size
+                   << ":distortion=" << e.raindrops_distortion
+                   << ":seed=" << e.raindrops_seed;
+                out_normalized_key += ps.str();
+            }
+        }
+
+        if (comma == std::string::npos) break;
+        start = comma + 1;
     }
 
-    bool ok = read_file_bytes(tmp_path, out);
-    unlink(tmp_path);
-    return ok;
+    return true;
+}
+
+void apply_post_filters_for_stage(nimg::Pixmap &pixmap,
+                                  const post_filter_chain_t &chain,
+                                  bool before_tm)
+{
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const post_filter_entry_t &e = chain[i];
+        if (e.before_tm != before_tm) continue;
+        if (e.id == "desaturate") {
+            xtcore::filter::Desaturate op;
+            op.render(&pixmap);
+        } else if (e.id == "chromatic_aberration") {
+            xtcore::filter::ChromaticAberration op;
+            op.amount = e.ca_amount;
+            op.center_x = e.ca_center_x;
+            op.center_y = e.ca_center_y;
+            op.falloff = e.ca_falloff;
+            op.render(&pixmap);
+        } else if (e.id == "vignette") {
+            xtcore::filter::Vignette op;
+            op.strength = e.vignette_strength;
+            op.radius = e.vignette_radius;
+            op.softness = e.vignette_softness;
+            op.center_x = e.vignette_center_x;
+            op.center_y = e.vignette_center_y;
+            op.render(&pixmap);
+        } else if (e.id == "film_grain") {
+            xtcore::filter::FilmGrain op;
+            op.amount = e.grain_amount;
+            op.size = e.grain_size;
+            op.seed = e.grain_seed;
+            op.luma_weighted = e.grain_luma_weighted;
+            op.render(&pixmap);
+        } else if (e.id == "denoise") {
+            xtcore::filter::Denoise op;
+            op.strength = e.denoise_strength;
+            op.radius = e.denoise_radius;
+            op.sigma = e.denoise_sigma;
+            op.render(&pixmap);
+        } else if (e.id == "fxaa") {
+            xtcore::filter::FXAA op;
+            op.subpix = e.fxaa_subpix;
+            op.edge_threshold = e.fxaa_edge_threshold;
+            op.edge_threshold_min = e.fxaa_edge_threshold_min;
+            op.render(&pixmap);
+        } else if (e.id == "sharpen") {
+            xtcore::filter::Sharpen op;
+            op.amount = e.sharpen_amount;
+            op.radius = e.sharpen_radius;
+            op.threshold = e.sharpen_threshold;
+            op.render(&pixmap);
+        } else if (e.id == "brightness") {
+            xtcore::filter::Brightness op;
+            op.amount = e.brightness_amount;
+            op.render(&pixmap);
+        } else if (e.id == "contrast") {
+            xtcore::filter::Contrast op;
+            op.amount = e.contrast_amount;
+            op.pivot = e.contrast_pivot;
+            op.render(&pixmap);
+        } else if (e.id == "raindrops_lens") {
+            xtcore::filter::RaindropsLens op;
+            op.density = e.raindrops_density;
+            op.size = e.raindrops_size;
+            op.distortion = e.raindrops_distortion;
+            op.seed = e.raindrops_seed;
+            op.render(&pixmap);
+        }
+    }
 }
 
 bool encode_png_memory(nimg::Pixmap &pixmap,
                        const xtcore::tonemapping::settings_t &tm_settings,
+                       const post_filter_chain_t &post_filters,
                        std::vector<unsigned char> &out)
 {
-    nimg::Pixmap ldr = pixmap;
-    xtcore::tonemapping::apply(ldr, tm_settings);
-    return encode_memory(ldr, nimg::io::save::png, out);
+    nimg::Pixmap work = pixmap;
+    apply_post_filters_for_stage(work, post_filters, true);
+    xtcore::tonemapping::apply(work, tm_settings);
+    apply_post_filters_for_stage(work, post_filters, false);
+    return nimg::io::save::png_memory(work, out) == 0;
 }
 
-bool encode_jpg_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out)
+bool encode_jpg_memory(nimg::Pixmap &pixmap,
+                       const post_filter_chain_t &post_filters,
+                       std::vector<unsigned char> &out)
 {
-    nimg::Pixmap ldr = pixmap;
-    xtcore::tonemapping::apply(ldr);
-    return encode_memory(ldr, nimg::io::save::jpg, out);
+    nimg::Pixmap work = pixmap;
+    apply_post_filters_for_stage(work, post_filters, true);
+    xtcore::tonemapping::apply(work);
+    apply_post_filters_for_stage(work, post_filters, false);
+    return nimg::io::save::jpg_memory(work, out) == 0;
+}
+
+void build_preview_pixmap(nimg::Pixmap &pixmap,
+                          const xtcore::tonemapping::settings_t &tm_settings,
+                          const post_filter_chain_t &post_filters)
+{
+    apply_post_filters_for_stage(pixmap, post_filters, true);
+    xtcore::tonemapping::apply(pixmap, tm_settings);
+    apply_post_filters_for_stage(pixmap, post_filters, false);
 }
 
 void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &fb)
@@ -86,13 +453,76 @@ void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &
     }
 }
 
-bool same_tile_rect(const job_snapshot_t::tile_rect_t &a, const xtcore::render::tile_t *tile)
+void copy_rect_from_framebuffer(nimg::Pixmap &src,
+                                size_t x0, size_t y0, size_t x1, size_t y1,
+                                nimg::Pixmap &dst)
 {
-    if (!tile) return false;
-    return a.x0 == tile->x0()
-        && a.y0 == tile->y0()
-        && a.x1 == tile->x1()
-        && a.y1 == tile->y1();
+    if (x1 <= x0 || y1 <= y0) return;
+    const size_t max_w = std::min(src.width(), dst.width());
+    const size_t max_h = std::min(src.height(), dst.height());
+    if (x0 >= max_w || y0 >= max_h) return;
+    const size_t cx1 = std::min(x1, max_w);
+    const size_t cy1 = std::min(y1, max_h);
+    for (size_t y = y0; y < cy1; ++y) {
+        for (size_t x = x0; x < cx1; ++x) {
+            dst.pixel(x, y) = src.pixel(x, y);
+        }
+    }
+}
+
+bool extract_rect_from_framebuffer(const nimg::Pixmap &src,
+                                   size_t x0, size_t y0, size_t x1, size_t y1,
+                                   nimg::Pixmap &dst)
+{
+    if (x1 <= x0 || y1 <= y0) return false;
+    if (x0 >= src.width() || y0 >= src.height()) return false;
+
+    const size_t cx1 = std::min(x1, src.width());
+    const size_t cy1 = std::min(y1, src.height());
+    if (cx1 <= x0 || cy1 <= y0) return false;
+
+    dst.init(cx1 - x0, cy1 - y0);
+    for (size_t y = y0; y < cy1; ++y) {
+        for (size_t x = x0; x < cx1; ++x) {
+            dst.pixel(x - x0, y - y0) = src.pixel_ro(x, y);
+        }
+    }
+    return true;
+}
+
+size_t post_filter_padding_pixels(const post_filter_chain_t &chain)
+{
+    float max_radius = 0.0f;
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const post_filter_entry_t &e = chain[i];
+        if (e.id == "chromatic_aberration") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.ca_amount));
+        } else if (e.id == "denoise") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.denoise_radius));
+        } else if (e.id == "fxaa") {
+            max_radius = std::max(max_radius, 1.0f);
+        } else if (e.id == "raindrops_lens") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.raindrops_distortion));
+        } else if (e.id == "sharpen") {
+            max_radius = std::max(max_radius, std::max(0.0f, e.sharpen_radius));
+        }
+    }
+    return (size_t)std::ceil(max_radius);
+}
+
+void expand_rect_with_padding(size_t width,
+                              size_t height,
+                              size_t padding,
+                              size_t &x0,
+                              size_t &y0,
+                              size_t &x1,
+                              size_t &y1)
+{
+    if (width == 0 || height == 0 || padding == 0) return;
+    x0 = (x0 > padding) ? (x0 - padding) : 0;
+    y0 = (y0 > padding) ? (y0 - padding) : 0;
+    x1 = std::min(width, x1 + padding);
+    y1 = std::min(height, y1 + padding);
 }
 
 unsigned long long parse_job_sequence(const std::string &id)
@@ -107,12 +537,95 @@ unsigned long long parse_job_sequence(const std::string &id)
     return v;
 }
 
+const char *render_mode_label(common::render_request_t::render_mode_t mode)
+{
+    switch (mode) {
+        case common::render_request_t::RENDER_MODE_PROGRESSIVE: return "progressive";
+        case common::render_request_t::RENDER_MODE_INCREMENTAL: return "incremental";
+        case common::render_request_t::RENDER_MODE_INTERACTIVE: return "interactive";
+        case common::render_request_t::RENDER_MODE_DIRECT:
+        default: return "direct";
+    }
+}
+
+size_t progressive_pass_sample_step(size_t total_samples)
+{
+    if (total_samples <= 4) return 1;
+    if (total_samples <= 16) return 2;
+    if (total_samples <= 64) return 4;
+    return 8;
+}
+
+size_t progressive_pass_count(size_t total_samples)
+{
+    const size_t samples = (total_samples > 0) ? total_samples : 1;
+    const size_t step = progressive_pass_sample_step(samples);
+    if (samples <= 1) return 1;
+    const size_t rem = samples - 1;
+    return 1 + ((rem + step - 1) / step);
+}
+
+size_t incremental_pass_count(size_t total_samples)
+{
+    return (total_samples > 0) ? total_samples : 1;
+}
+
 } // namespace
+
+job_manager_t::job_t::active_tile_key_t job_manager_t::make_active_tile_key(size_t x0, size_t y0, size_t x1, size_t y1)
+{
+    job_t::active_tile_key_t key;
+    key.x0 = x0;
+    key.y0 = y0;
+    key.x1 = x1;
+    key.y1 = y1;
+    return key;
+}
+
+job_manager_t::job_t::active_tile_key_t job_manager_t::make_active_tile_key(const xtcore::render::tile_t *tile,
+                                                                             const common::progress_tile_update_t *upd)
+{
+    const bool has_upd_rect = upd && upd->has_rect;
+    return make_active_tile_key(has_upd_rect ? upd->x0 : tile->x0(),
+                                has_upd_rect ? upd->y0 : tile->y0(),
+                                has_upd_rect ? upd->x1 : tile->x1(),
+                                has_upd_rect ? upd->y1 : tile->y1());
+}
+
+void job_manager_t::add_active_tile(job_t &job, const job_t::active_tile_key_t &key)
+{
+    if (job.active_tile_index.find(key) != job.active_tile_index.end()) return;
+
+    job_snapshot_t::tile_rect_t rect;
+    rect.x0 = key.x0;
+    rect.y0 = key.y0;
+    rect.x1 = key.x1;
+    rect.y1 = key.y1;
+    job.active_tiles.push_back(rect);
+    job.active_tile_index[key] = job.active_tiles.size() - 1;
+}
+
+void job_manager_t::remove_active_tile(job_t &job, const job_t::active_tile_key_t &key)
+{
+    std::map<job_t::active_tile_key_t, size_t>::iterator it = job.active_tile_index.find(key);
+    if (it == job.active_tile_index.end()) return;
+
+    const size_t idx = it->second;
+    const size_t last_idx = job.active_tiles.size() - 1;
+    if (idx != last_idx) {
+        job.active_tiles[idx] = job.active_tiles[last_idx];
+        const job_snapshot_t::tile_rect_t &moved = job.active_tiles[idx];
+        job.active_tile_index[make_active_tile_key(moved.x0, moved.y0, moved.x1, moved.y1)] = idx;
+    }
+    job.active_tiles.pop_back();
+    job.active_tile_index.erase(it);
+}
 
 job_manager_t::job_t::job_t()
     : mut()
     , id()
     , workspace_id()
+    , owner_client_id()
     , scene()
     , integrator()
     , state(JOB_QUEUED)
@@ -130,7 +643,6 @@ job_manager_t::job_t::job_t()
     , image_jpg()
     , image_bmp()
     , image_tga()
-    , image_raygraph_ply()
     , progressive_fb()
     , finished_tiles()
     , photon_diffuse_points()
@@ -145,6 +657,8 @@ job_manager_t::job_t::job_t()
     , preview_last_tm_mantiuk_contrast(0.1f)
     , preview_last_tm_mantiuk_saturation(0.8f)
     , preview_last_tm_mantiuk_detail(1.0f)
+    , preview_last_post_filters_enabled(false)
+    , preview_last_post_filters()
     , preview_png_cache()
     , effective_threads(0)
     , request()
@@ -152,13 +666,15 @@ job_manager_t::job_t::job_t()
 {}
 
 job_manager_t::job_manager_t()
-    : jobs_mut()
+    : gallery_manager_(nullptr)
+    , jobs_mut()
     , jobs()
     , completed_job_order()
     , max_completed_jobs(8)
     , evicted_jobs()
     , evicted_job_order()
     , max_evicted_jobs(64)
+    , max_queued_jobs(32)
     , next_id(0)
     , render_slots_mut()
     , render_slots_cv()
@@ -169,20 +685,31 @@ job_manager_t::job_manager_t()
     , queued_job_order()
 {}
 
+void job_manager_t::set_gallery_manager(gallery_manager_t *gm)
+{
+    gallery_manager_ = gm;
+}
+
 void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
 {
     if (max_concurrent == 0) max_concurrent = 1;
-    std::lock_guard<std::mutex> lock(render_slots_mut);
-    max_concurrent_renders = max_concurrent;
-    render_slots_cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        max_concurrent_renders = max_concurrent;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
 }
 
 void job_manager_t::set_render_thread_budget(size_t max_threads)
 {
     if (max_threads == 0) max_threads = 1;
-    std::lock_guard<std::mutex> lock(render_slots_mut);
-    render_thread_budget = max_threads;
-    render_slots_cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        render_thread_budget = max_threads;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
 }
 
 size_t job_manager_t::get_max_concurrent_renders() const
@@ -200,6 +727,7 @@ size_t job_manager_t::get_active_render_count() const
 std::string job_manager_t::create(const common::render_request_t &request,
                                   const std::string &scene_name,
                                   const std::string &workspace_id,
+                                  const std::string &owner_client_id,
                                   const std::string &cleanup_scene_path)
 {
     std::shared_ptr<job_t> job(new job_t());
@@ -209,177 +737,265 @@ std::string job_manager_t::create(const common::render_request_t &request,
     ss << "job_" << id;
     job->id = ss.str();
     job->workspace_id = workspace_id;
+    job->owner_client_id = owner_client_id;
     job->scene = scene_name;
     job->integrator = request.integrator;
     job->request = request;
     job->cleanup_scene_path = cleanup_scene_path;
-    job->progressive_fb.init(request.width, request.height);
-    for (size_t y = 0; y < request.height; ++y) {
-        for (size_t x = 0; x < request.width; ++x) {
-            // Start unfinished pixels as fully transparent in progressive previews.
-            job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 0);
-        }
-    }
 
     {
         std::lock_guard<std::mutex> lock(jobs_mut);
         jobs[job->id] = job;
     }
+    bool queue_full = false;
     {
         std::lock_guard<std::mutex> lock(render_slots_mut);
-        queued_job_order.push_back(job->id);
-        render_slots_cv.notify_all();
+        if (queued_job_order.size() >= max_queued_jobs) {
+            queue_full = true;
+        } else {
+            queued_job_order.push_back(job->id);
+            render_slots_cv.notify_all();
+        }
     }
-
-    std::thread t(&job_manager_t::run, this, job);
-    t.detach();
+    if (queue_full) {
+        std::lock_guard<std::mutex> lock(jobs_mut);
+        jobs.erase(job->id);
+        return "";
+    }
+    dispatch_queued_jobs();
 
     std::ostringstream log;
     log << "job accepted id=" << job->id
         << " workspace=" << workspace_id
+        << " client=" << owner_client_id
         << " scene=" << scene_name
-        << " integrator=" << request.integrator;
+        << " integrator=" << request.integrator
+        << " mode=" << render_mode_label(request.render_mode);
     backend_log_t::handle().add("info", log.str());
 
     return job->id;
 }
 
-void job_manager_t::run(const std::shared_ptr<job_t> &job)
+void job_manager_t::dispatch_queued_jobs()
 {
-    if (!job) return;
-    const size_t requested_threads = job->request.threads;
-    size_t granted_threads = 1;
+    std::vector<scheduled_job_t> to_start;
+    while (true) {
+        std::string next_id;
+        {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (active_renders >= max_concurrent_renders) break;
+            if (queued_job_order.empty()) break;
+            next_id = queued_job_order.front();
+        }
+
+        std::shared_ptr<job_t> job = get_job(next_id);
+        if (!job) {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (!queued_job_order.empty() && queued_job_order.front() == next_id) {
+                queued_job_order.pop_front();
+            }
+            continue;
+        }
+
+        if (job->cancel_requested.load()) {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (!queued_job_order.empty() && queued_job_order.front() == next_id) {
+                queued_job_order.pop_front();
+            }
+            continue;
+        }
+
+        size_t granted_threads = 1;
+        {
+            std::lock_guard<std::mutex> lock(render_slots_mut);
+            if (active_renders >= max_concurrent_renders) break;
+            if (queued_job_order.empty() || queued_job_order.front() != next_id) continue;
+
+            const size_t requested_threads = job->request.threads;
+            if (requested_threads > 0) {
+                if (active_render_threads + requested_threads > render_thread_budget) break;
+                granted_threads = requested_threads;
+            } else {
+                if (active_render_threads >= render_thread_budget) break;
+                const size_t free_threads = (render_thread_budget > active_render_threads)
+                    ? (render_thread_budget - active_render_threads)
+                    : 0;
+                granted_threads = (free_threads > 0) ? free_threads : 1;
+            }
+            queued_job_order.pop_front();
+            ++active_renders;
+            active_render_threads += granted_threads;
+            render_slots_cv.notify_all();
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(job->mut);
+            job->state = JOB_RUNNING;
+            job->effective_threads = granted_threads;
+        }
+
+        scheduled_job_t entry;
+        entry.job = job;
+        entry.granted_threads = granted_threads;
+        to_start.push_back(entry);
+    }
+
+    for (size_t i = 0; i < to_start.size(); ++i) {
+        std::thread t(&job_manager_t::run, this, to_start[i].job, to_start[i].granted_threads);
+        t.detach();
+    }
+}
+
+void job_manager_t::release_render_slots(size_t released_threads)
+{
+    {
+        std::lock_guard<std::mutex> lock(render_slots_mut);
+        if (active_renders > 0) --active_renders;
+        if (active_render_threads >= released_threads) active_render_threads -= released_threads;
+        else active_render_threads = 0;
+        render_slots_cv.notify_all();
+    }
+    dispatch_queued_jobs();
+}
+
+void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_threads)
+{
+    if (!job) {
+        release_render_slots(granted_threads);
+        return;
+    }
+
+    struct render_slot_guard_t {
+        job_manager_t *owner;
+        size_t release_threads;
+
+        render_slot_guard_t(job_manager_t *o, size_t rt)
+            : owner(o)
+            , release_threads(rt)
+        {}
+
+        ~render_slot_guard_t()
+        {
+            if (owner) owner->release_render_slots(release_threads);
+        }
+    } render_slot_guard(this, granted_threads);
 
     if (job->cancel_requested.load()) {
-        job->state = JOB_ABORTED;
+        std::lock_guard<std::mutex> lock(job->mut);
         job->error = "render aborted";
+        job->state = JOB_ABORTED;
+        backend_log_t::handle().add("info", "job aborted id=" + job->id + " state=queued");
         on_job_finished(job->id);
         return;
     }
 
     {
-        std::unique_lock<std::mutex> lock(render_slots_mut);
-        render_slots_cv.wait(lock, [this, job, requested_threads]() {
-            if (job->cancel_requested.load()) return true;
-            if (active_renders >= max_concurrent_renders) return false;
-            if (queued_job_order.empty()) return false;
-            if (requested_threads > 0) {
-                if (active_render_threads + requested_threads > render_thread_budget) return false;
-            } else {
-                // Auto mode: allow start as soon as at least one render thread is free.
-                if (active_render_threads >= render_thread_budget) return false;
-            }
-            return queued_job_order.front() == job->id;
-        });
-        if (job->cancel_requested.load()) {
-            for (auto it = queued_job_order.begin(); it != queued_job_order.end(); ++it) {
-                if (*it == job->id) {
-                    queued_job_order.erase(it);
-                    break;
+        std::lock_guard<std::mutex> lock(job->mut);
+        if (job->progressive_fb.init(job->request.width, job->request.height) != 0) {
+            job->error = "failed to allocate progressive framebuffer";
+            job->state = JOB_ERROR;
+        } else {
+            for (size_t y = 0; y < job->request.height; ++y) {
+                for (size_t x = 0; x < job->request.width; ++x) {
+                    // Start unfinished pixels as fully transparent in progressive previews.
+                    job->progressive_fb.pixel(x, y) = nimg::ColorRGBAf(0, 0, 0, 0);
                 }
             }
-            lock.unlock();
-            std::lock_guard<std::mutex> job_lock(job->mut);
-            const job_state_t st = job->state.load();
-            if (st == JOB_QUEUED || st == JOB_RUNNING) {
-                job->error = "render aborted";
-                job->state = JOB_ABORTED;
-                backend_log_t::handle().add("info", "job aborted id=" + job->id + " state=queued");
-                on_job_finished(job->id);
-            }
-            return;
+            job->started_at = std::chrono::steady_clock::now();
+            job->has_started = true;
+            job->effective_threads = granted_threads;
+            job->state = JOB_RUNNING;
         }
-        if (!queued_job_order.empty() && queued_job_order.front() == job->id) {
-            queued_job_order.pop_front();
-        }
-        if (requested_threads > 0) {
-            granted_threads = requested_threads;
-        } else {
-            const size_t free_threads = (render_thread_budget > active_render_threads)
-                ? (render_thread_budget - active_render_threads)
-                : 0;
-            granted_threads = (free_threads > 0) ? free_threads : 1;
-        }
-        ++active_renders;
-        active_render_threads += granted_threads;
-        render_slots_cv.notify_all();
     }
-
-    job->state = JOB_RUNNING;
-    {
-        std::lock_guard<std::mutex> lock(job->mut);
-        job->started_at = std::chrono::steady_clock::now();
-        job->has_started = true;
-        job->effective_threads = granted_threads;
+    if (job->state.load() != JOB_RUNNING) {
+        backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + job->error);
+        on_job_finished(job->id);
+        return;
     }
     backend_log_t::handle().add("info", "job started id=" + job->id);
 
-    struct render_slot_guard_t {
-        std::mutex &mut;
-        std::condition_variable &cv;
-        size_t &active;
-        size_t &active_threads;
-        const size_t release_threads;
-        render_slot_guard_t(std::mutex &m, std::condition_variable &c, size_t &a, size_t &at, size_t rt)
-            : mut(m), cv(c), active(a), active_threads(at), release_threads(rt) {}
-        ~render_slot_guard_t() {
-            {
-                std::lock_guard<std::mutex> lock(mut);
-                if (active > 0) --active;
-                if (active_threads >= release_threads) active_threads -= release_threads;
-                else active_threads = 0;
-            }
-            cv.notify_one();
-        }
-    } render_slot_guard(render_slots_mut, render_slots_cv, active_renders, active_render_threads, granted_threads);
-
     common::render_request_t request = job->request;
     request.threads = granted_threads;
+
+    gallery_manager_t *gm = gallery_manager_;
+    const std::string gallery_job_id = job->id;
+    const std::string gallery_workspace_id = job->workspace_id;
+    const std::string gallery_integrator = job->integrator;
+    const long long gallery_created_at_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    bool gallery_entry_created = false;
+
     common::render_result_t rr = common::render_scene_to_png(request,
-        [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile) {
+        [job, gm, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
+         gallery_created_at_ms, &gallery_entry_created]
+        (common::progress_event_t event, size_t done, size_t total,
+         const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
             {
                 std::lock_guard<std::mutex> lock(job->mut);
                 if (event == common::PROGRESS_EVENT_TILE_STARTED) {
-                    if (tile) {
-                        bool exists = false;
-                        for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                            if (same_tile_rect(job->active_tiles[i], tile)) {
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if (!exists) {
-                            job_snapshot_t::tile_rect_t rect;
-                            rect.x0 = tile->x0();
-                            rect.y0 = tile->y0();
-                            rect.x1 = tile->x1();
-                            rect.y1 = tile->y1();
-                            job->active_tiles.push_back(rect);
-                        }
-                    }
+                    const bool has_upd_rect = upd && upd->has_rect;
+                    if (tile || has_upd_rect) add_active_tile(*job, make_active_tile_key(tile, upd));
                 } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
-                    copy_tile_to_framebuffer(tile, job->progressive_fb);
-                    job->progressive_ready = true;
-                    if (tile) {
+                    const bool has_upd_rect = upd && upd->has_rect;
+                    if (has_upd_rect && upd->source_fb) {
+                        copy_rect_from_framebuffer(*upd->source_fb, upd->x0, upd->y0, upd->x1, upd->y1, job->progressive_fb);
+                        job->progressive_ready = true;
+                    } else {
+                        copy_tile_to_framebuffer(tile, job->progressive_fb);
+                        if (tile) job->progressive_ready = true;
+                    }
+                    if (tile || has_upd_rect) {
                         job_t::finished_tile_t finished;
-                        finished.rect.x0 = tile->x0();
-                        finished.rect.y0 = tile->y0();
-                        finished.rect.x1 = tile->x1();
-                        finished.rect.y1 = tile->y1();
+                        finished.rect.x0 = has_upd_rect ? upd->x0 : tile->x0();
+                        finished.rect.y0 = has_upd_rect ? upd->y0 : tile->y0();
+                        finished.rect.x1 = has_upd_rect ? upd->x1 : tile->x1();
+                        finished.rect.y1 = has_upd_rect ? upd->y1 : tile->y1();
                         finished.done_index = done;
                         job->finished_tiles.push_back(finished);
                     }
-                    for (size_t i = 0; i < job->active_tiles.size(); ++i) {
-                        if (same_tile_rect(job->active_tiles[i], tile)) {
-                            job->active_tiles.erase(job->active_tiles.begin() + i);
-                            break;
-                        }
-                    }
+                    if (tile || has_upd_rect) remove_active_tile(*job, make_active_tile_key(tile, upd));
                 }
             }
-            job->tiles_total = total;
-            if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
-                job->tiles_done = done;
+            if (event == common::PROGRESS_EVENT_TILE_STARTED ||
+                event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                job->tiles_total = total;
+                if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                    job->tiles_done = done;
+                }
+            }
+            if (event == common::PROGRESS_EVENT_PASS_FINISHED
+                && gm && gm->is_initialized()
+                && upd && upd->source_fb) {
+                const size_t pass_index = done - 1;
+                const auto now = std::chrono::steady_clock::now();
+                const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                    now - job->started_at).count();
+
+                nimg::Pixmap ldr = *upd->source_fb;
+                xtcore::tonemapping::apply(ldr);
+                std::vector<unsigned char> png;
+                nimg::io::save::png_memory(ldr, png);
+
+                if (!gallery_entry_created) {
+                    gallery_entry_meta_t meta;
+                    meta.id           = gallery_job_id;
+                    meta.scene        = job->request.scene_path;
+                    meta.workspace_id = gallery_workspace_id;
+                    meta.integrator   = gallery_integrator;
+                    meta.render_mode  = render_mode_label(job->request.render_mode);
+                    meta.width        = job->request.width;
+                    meta.height       = job->request.height;
+                    meta.samples      = job->request.samples;
+                    meta.aa           = job->request.aa;
+                    meta.rdepth       = job->request.rdepth;
+                    meta.threads      = job->effective_threads;
+                    meta.tile_size    = job->request.tile_size;
+                    meta.elapsed_ms   = elapsed_ms;
+                    meta.created_at_ms = gallery_created_at_ms;
+                    gm->create_entry(meta, png);
+                    gallery_entry_created = true;
+                }
+                gm->save_pass(gallery_job_id, pass_index, png, elapsed_ms);
             }
         },
         &job->cancel_requested
@@ -395,7 +1011,6 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
             backend_log_t::handle().add("info", "job aborted id=" + job->id);
         } else if (rr.ok) {
             job->image_png.swap(rr.image_png);
-            job->image_raygraph_ply.swap(rr.raygraph_ply);
             job->final_fb = rr.framebuffer;
             job->image_exr.clear();
             job->image_hdr.clear();
@@ -415,15 +1030,47 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job)
             job->preview_last_tm_mantiuk_contrast = 0.1f;
             job->preview_last_tm_mantiuk_saturation = 0.8f;
             job->preview_last_tm_mantiuk_detail = 1.0f;
+            job->preview_last_post_filters_enabled = false;
+            job->preview_last_post_filters.clear();
+            job->progressive_fb.init(0, 0);
             job->active_tiles.clear();
+            job->active_tile_index.clear();
             job->state = JOB_DONE;
             std::ostringstream log;
             log << "job completed id=" << job->id
                 << " elapsed_ms=" << std::fixed << std::setprecision(0) << rr.elapsed_ms;
             backend_log_t::handle().add("info", log.str());
+
+            // Save to gallery for direct/interactive mode (no pass events fired)
+            if (gm && gm->is_initialized() && !gallery_entry_created) {
+                nimg::Pixmap ldr = rr.framebuffer;
+                xtcore::tonemapping::apply(ldr);
+                std::vector<unsigned char> png;
+                nimg::io::save::png_memory(ldr, png);
+                gallery_entry_meta_t meta;
+                meta.id           = gallery_job_id;
+                meta.scene        = job->request.scene_path;
+                meta.workspace_id = gallery_workspace_id;
+                meta.integrator   = gallery_integrator;
+                meta.render_mode  = render_mode_label(job->request.render_mode);
+                meta.width        = job->request.width;
+                meta.height       = job->request.height;
+                meta.samples      = job->request.samples;
+                meta.aa           = job->request.aa;
+                meta.rdepth       = job->request.rdepth;
+                meta.threads      = job->effective_threads;
+                meta.tile_size    = job->request.tile_size;
+                meta.elapsed_ms   = rr.elapsed_ms;
+                meta.created_at_ms = gallery_created_at_ms;
+                gm->create_entry(meta, png);
+            } else if (gm && gm->is_initialized() && gallery_entry_created) {
+                // Progressive/incremental: update final elapsed time
+                gm->update_render(gallery_job_id, job->image_png, rr.elapsed_ms);
+            }
         } else {
             job->error = rr.error;
             job->active_tiles.clear();
+            job->active_tile_index.clear();
             job->state = JOB_ERROR;
             backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + rr.error);
         }
@@ -529,6 +1176,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.workspace_id = e.workspace_id;
         out.scene = e.scene;
         out.integrator = e.integrator;
+        out.render_mode = "direct";
         out.state = e.state;
         out.error = e.error;
         out.elapsed_ms = e.elapsed_ms;
@@ -536,6 +1184,10 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.width = e.width;
         out.height = e.height;
         out.threads = e.threads;
+        out.tiles_done = 0;
+        out.tiles_total = 0;
+        out.pass_current = 0;
+        out.pass_total = 0;
         out.queue_index = -1;
         out.active_tiles.clear();
         out.progress = (e.state == JOB_DONE) ? 1.0f : 0.0f;
@@ -548,6 +1200,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.workspace_id = job->workspace_id;
     out.scene = job->scene;
     out.integrator = job->integrator;
+    out.render_mode = render_mode_label(job->request.render_mode);
     out.state = job->state.load();
     out.error = job->error;
     out.elapsed_ms = job->elapsed_ms;
@@ -559,11 +1212,40 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.width = job->request.width;
     out.height = job->request.height;
     out.threads = (job->effective_threads > 0) ? job->effective_threads : job->request.threads;
+    out.tiles_done = job->tiles_done.load();
+    out.tiles_total = job->tiles_total.load();
+    out.pass_current = 0;
+    out.pass_total = 0;
     out.queue_index = -1;
     out.active_tiles = job->active_tiles;
 
-    size_t total = job->tiles_total.load();
-    size_t done = job->tiles_done.load();
+    if (job->request.render_mode == common::render_request_t::RENDER_MODE_PROGRESSIVE ||
+        job->request.render_mode == common::render_request_t::RENDER_MODE_INCREMENTAL) {
+        const size_t ptotal = (job->request.render_mode == common::render_request_t::RENDER_MODE_INCREMENTAL)
+            ? incremental_pass_count(job->request.samples)
+            : progressive_pass_count(job->request.samples);
+        out.pass_total = ptotal;
+        size_t tiles_per_pass = (ptotal > 0) ? (out.tiles_total / ptotal) : 0;
+        if (tiles_per_pass == 0) {
+            const size_t tile_size = (job->request.tile_size > 0) ? job->request.tile_size : 1;
+            const size_t nx = (job->request.width + tile_size - 1) / tile_size;
+            const size_t ny = (job->request.height + tile_size - 1) / tile_size;
+            tiles_per_pass = nx * ny;
+        }
+        if (out.state == JOB_DONE) {
+            out.pass_current = out.pass_total;
+        } else if (out.pass_total > 0) {
+            const size_t completed_passes = (tiles_per_pass > 0) ? (out.tiles_done / tiles_per_pass) : 0;
+            const bool in_pass = (tiles_per_pass > 0) ? ((out.tiles_done % tiles_per_pass) != 0) : false;
+            size_t curr = completed_passes + (in_pass ? 1 : 0);
+            if ((out.state == JOB_QUEUED || out.state == JOB_RUNNING) && curr == 0) curr = 1;
+            if (curr > out.pass_total) curr = out.pass_total;
+            out.pass_current = curr;
+        }
+    }
+
+    size_t total = out.tiles_total;
+    size_t done = out.tiles_done;
     if (total == 0) {
         out.progress = (out.state == JOB_DONE) ? 1.0f : 0.0f;
     } else {
@@ -577,7 +1259,9 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
 bool job_manager_t::image(const std::string &id,
                           std::vector<unsigned char> &out,
                           bool allow_partial,
-                          const xtcore::tonemapping::settings_t &tm_settings)
+                          const xtcore::tonemapping::settings_t &tm_settings,
+                          bool post_filters_enabled,
+                          const std::string &post_filters)
 {
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) {
@@ -592,39 +1276,71 @@ bool job_manager_t::image(const std::string &id,
         return read_file_bytes(png_path.c_str(), out);
     }
 
-    std::lock_guard<std::mutex> lock(job->mut);
+    post_filter_chain_t post_chain;
+    std::string post_key;
+    if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key)) return false;
 
-    const bool use_final = (job->state == JOB_DONE
-                            && job->final_fb.width() > 0
-                            && job->final_fb.height() > 0);
-    if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
+    bool use_final = false;
+    size_t done = 0;
+    bool cache_invalid = false;
+    nimg::Pixmap work;
 
-    const nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
-    const size_t done = use_final ? job->tiles_total.load() : job->tiles_done.load();
-    const bool cache_invalid = job->preview_png_cache.empty()
-                            || job->preview_last_encoded_done != done
-                            || job->preview_last_from_final != use_final
-                            || job->preview_last_tm_op != tm_settings.op
-                            || std::fabs(job->preview_last_tm_exposure - tm_settings.exposure) > 1e-6f
-                            || std::fabs(job->preview_last_tm_white_point - tm_settings.white_point) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_contrast - tm_settings.mantiuk_contrast) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_saturation - tm_settings.mantiuk_saturation) > 1e-6f
-                            || std::fabs(job->preview_last_tm_mantiuk_detail - tm_settings.mantiuk_detail) > 1e-6f;
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
 
-    if (cache_invalid) {
-        nimg::Pixmap work = src;
-        if (!encode_png_memory(work, tm_settings, job->preview_png_cache)) return false;
-        job->preview_last_encoded_done = done;
-        job->preview_last_from_final = use_final;
-        job->preview_last_tm_op = tm_settings.op;
-        job->preview_last_tm_exposure = tm_settings.exposure;
-        job->preview_last_tm_white_point = tm_settings.white_point;
-        job->preview_last_tm_mantiuk_contrast = tm_settings.mantiuk_contrast;
-        job->preview_last_tm_mantiuk_saturation = tm_settings.mantiuk_saturation;
-        job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
+        use_final = (job->state == JOB_DONE
+                     && job->final_fb.width() > 0
+                     && job->final_fb.height() > 0);
+        if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
+
+        done = use_final ? job->tiles_total.load() : job->tiles_done.load();
+        cache_invalid = job->preview_png_cache.empty()
+                     || job->preview_last_encoded_done != done
+                     || job->preview_last_from_final != use_final
+                     || job->preview_last_tm_op != tm_settings.op
+                     || std::fabs(job->preview_last_tm_exposure - tm_settings.exposure) > 1e-6f
+                     || std::fabs(job->preview_last_tm_white_point - tm_settings.white_point) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_contrast - tm_settings.mantiuk_contrast) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_saturation - tm_settings.mantiuk_saturation) > 1e-6f
+                     || std::fabs(job->preview_last_tm_mantiuk_detail - tm_settings.mantiuk_detail) > 1e-6f
+                     || job->preview_last_post_filters_enabled != post_filters_enabled
+                     || job->preview_last_post_filters != post_key;
+
+        if (!cache_invalid) {
+            out = job->preview_png_cache;
+            return true;
+        }
+
+        work = use_final ? job->final_fb : job->progressive_fb;
     }
 
-    out = job->preview_png_cache;
+    std::vector<unsigned char> encoded;
+    if (!encode_png_memory(work, tm_settings, post_chain, encoded)) return false;
+
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        const bool still_use_final = (job->state == JOB_DONE
+                                      && job->final_fb.width() > 0
+                                      && job->final_fb.height() > 0);
+        const size_t still_done = still_use_final ? job->tiles_total.load() : job->tiles_done.load();
+        if (still_use_final == use_final && still_done == done) {
+            job->preview_png_cache = encoded;
+            job->preview_last_encoded_done = done;
+            job->preview_last_from_final = use_final;
+            job->preview_last_tm_op = tm_settings.op;
+            job->preview_last_tm_exposure = tm_settings.exposure;
+            job->preview_last_tm_white_point = tm_settings.white_point;
+            job->preview_last_tm_mantiuk_contrast = tm_settings.mantiuk_contrast;
+            job->preview_last_tm_mantiuk_saturation = tm_settings.mantiuk_saturation;
+            job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
+            job->preview_last_post_filters_enabled = post_filters_enabled;
+            job->preview_last_post_filters = post_key;
+            out = job->preview_png_cache;
+            return true;
+        }
+    }
+
+    out.swap(encoded);
     return true;
 }
 
@@ -632,10 +1348,16 @@ bool job_manager_t::image_delta(const std::string &id,
                                 size_t since_done,
                                 size_t max_tiles,
                                 const xtcore::tonemapping::settings_t &tm_settings,
+                                bool post_filters_enabled,
+                                const std::string &post_filters,
                                 job_image_delta_t &out)
 {
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) return false;
+
+    post_filter_chain_t post_chain;
+    std::string post_key_dummy;
+    if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key_dummy)) return false;
 
     struct pending_tile_t {
         size_t x0;
@@ -643,11 +1365,15 @@ bool job_manager_t::image_delta(const std::string &id,
         size_t x1;
         size_t y1;
         size_t done_index;
-        nimg::Pixmap tile_fb;
+        nimg::Pixmap fb;
     };
 
     std::vector<pending_tile_t> pending;
     pending.reserve(max_tiles);
+    nimg::Pixmap preview_fb;
+    const size_t filter_padding = post_filter_padding_pixels(post_chain);
+    const bool can_process_tiles_individually =
+        post_chain.empty() && tm_settings.op != xtcore::tonemapping::OP_MANTIUK_2006;
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
@@ -663,9 +1389,21 @@ bool job_manager_t::image_delta(const std::string &id,
                                 && job->final_fb.height() > 0);
         if (!use_final && !job->progressive_ready) return true;
 
-        nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
-        for (size_t i = 0; i < job->finished_tiles.size(); ++i) {
-            const job_t::finished_tile_t &t = job->finished_tiles[i];
+        const nimg::Pixmap &src = use_final ? job->final_fb : job->progressive_fb;
+        if (!can_process_tiles_individually) {
+            preview_fb = src;
+        }
+        const size_t target_done = since_done + 1;
+        std::vector<job_t::finished_tile_t>::const_iterator begin_it = std::lower_bound(
+            job->finished_tiles.begin(),
+            job->finished_tiles.end(),
+            target_done,
+            [](const job_t::finished_tile_t &tile, size_t target) {
+                return tile.done_index < target;
+            });
+        for (std::vector<job_t::finished_tile_t>::const_iterator it = begin_it;
+             it != job->finished_tiles.end(); ++it) {
+            const job_t::finished_tile_t &t = *it;
             if (t.done_index <= since_done) continue;
             if (max_tiles > 0 && pending.size() >= max_tiles) break;
 
@@ -678,21 +1416,51 @@ bool job_manager_t::image_delta(const std::string &id,
             entry.y0 = t.rect.y0;
             entry.x1 = t.rect.x1;
             entry.y1 = t.rect.y1;
+            expand_rect_with_padding(src.width(),
+                                     src.height(),
+                                     filter_padding,
+                                     entry.x0,
+                                     entry.y0,
+                                     entry.x1,
+                                     entry.y1);
             entry.done_index = t.done_index;
-            entry.tile_fb.init(tw, th);
-            for (size_t y = 0; y < th; ++y) {
-                for (size_t x = 0; x < tw; ++x) {
-                    entry.tile_fb.pixel(x, y) = src.pixel(t.rect.x0 + x, t.rect.y0 + y);
-                }
+            if (can_process_tiles_individually
+                && !extract_rect_from_framebuffer(src,
+                                                  entry.x0,
+                                                  entry.y0,
+                                                  entry.x1,
+                                                  entry.y1,
+                                                  entry.fb)) {
+                continue;
             }
             pending.push_back(entry);
         }
     }
 
+    if (pending.empty()) return true;
+
+    if (!can_process_tiles_individually) {
+        build_preview_pixmap(preview_fb, tm_settings, post_chain);
+    }
+
     out.tiles.reserve(pending.size());
     for (size_t i = 0; i < pending.size(); ++i) {
+        nimg::Pixmap tile_fb;
+        if (can_process_tiles_individually) {
+            tile_fb = std::move(pending[i].fb);
+            xtcore::tonemapping::apply(tile_fb, tm_settings);
+        } else {
+            if (!extract_rect_from_framebuffer(preview_fb,
+                                               pending[i].x0,
+                                               pending[i].y0,
+                                               pending[i].x1,
+                                               pending[i].y1,
+                                               tile_fb)) {
+                continue;
+            }
+        }
         std::vector<unsigned char> encoded;
-        if (!encode_png_memory(pending[i].tile_fb, tm_settings, encoded)) continue;
+        if (nimg::io::save::png_memory(tile_fb, encoded) != 0) continue;
 
         job_image_delta_t::tile_t tile;
         tile.x0 = pending[i].x0;
@@ -711,7 +1479,9 @@ bool job_manager_t::image_export(const std::string &id,
                                  const std::string &format,
                                  std::vector<unsigned char> &out,
                                  std::string &mime_type,
-                                 std::string &extension)
+                                 std::string &extension,
+                                 bool post_filters_enabled,
+                                 const std::string &post_filters)
 {
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) {
@@ -732,9 +1502,15 @@ bool job_manager_t::image_export(const std::string &id,
     std::lock_guard<std::mutex> lock(job->mut);
     if (job->state != JOB_DONE) return false;
 
+    post_filter_chain_t post_chain;
+    std::string post_key_dummy;
+    if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key_dummy)) return false;
+
     if (format == "png") {
-        if (job->image_png.empty()) return false;
-        out = job->image_png;
+        if (job->final_fb.width() == 0 || job->final_fb.height() == 0) return false;
+        nimg::Pixmap work = job->final_fb;
+        xtcore::tonemapping::settings_t tm_settings;
+        if (!encode_png_memory(work, tm_settings, post_chain, out)) return false;
         mime_type = "image/png";
         extension = "png";
         return true;
@@ -743,60 +1519,50 @@ bool job_manager_t::image_export(const std::string &id,
     if (job->final_fb.width() == 0 || job->final_fb.height() == 0) return false;
 
     if (format == "exr") {
-        if (job->image_exr.empty()) {
-            if (!encode_memory(job->final_fb, nimg::io::save::exr, job->image_exr)) return false;
-        }
-        out = job->image_exr;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        if (nimg::io::save::exr_memory(work, out) != 0) return false;
         mime_type = "image/x-exr";
         extension = "exr";
         return true;
     }
 
     if (format == "hdr") {
-        if (job->image_hdr.empty()) {
-            if (!encode_memory(job->final_fb, nimg::io::save::hdr, job->image_hdr)) return false;
-        }
-        out = job->image_hdr;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        if (nimg::io::save::hdr_memory(work, out) != 0) return false;
         mime_type = "image/vnd.radiance";
         extension = "hdr";
         return true;
     }
 
     if (format == "jpg") {
-        if (job->image_jpg.empty()) {
-            if (!encode_jpg_memory(job->final_fb, job->image_jpg)) return false;
-        }
-        out = job->image_jpg;
+        nimg::Pixmap work = job->final_fb;
+        if (!encode_jpg_memory(work, post_chain, out)) return false;
         mime_type = "image/jpeg";
         extension = "jpg";
         return true;
     }
 
     if (format == "bmp") {
-        if (job->image_bmp.empty()) {
-            if (!encode_memory(job->final_fb, nimg::io::save::bmp, job->image_bmp)) return false;
-        }
-        out = job->image_bmp;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        xtcore::tonemapping::apply(work);
+        apply_post_filters_for_stage(work, post_chain, false);
+        if (nimg::io::save::bmp_memory(work, out) != 0) return false;
         mime_type = "image/bmp";
         extension = "bmp";
         return true;
     }
 
     if (format == "tga") {
-        if (job->image_tga.empty()) {
-            if (!encode_memory(job->final_fb, nimg::io::save::tga, job->image_tga)) return false;
-        }
-        out = job->image_tga;
+        nimg::Pixmap work = job->final_fb;
+        apply_post_filters_for_stage(work, post_chain, true);
+        xtcore::tonemapping::apply(work);
+        apply_post_filters_for_stage(work, post_chain, false);
+        if (nimg::io::save::tga_memory(work, out) != 0) return false;
         mime_type = "image/x-tga";
         extension = "tga";
-        return true;
-    }
-
-    if (format == "ply") {
-        if (job->image_raygraph_ply.empty()) return false;
-        out = job->image_raygraph_ply;
-        mime_type = "application/octet-stream";
-        extension = "ply";
         return true;
     }
 
@@ -868,7 +1634,17 @@ bool job_manager_t::abort(const std::string &id)
             on_job_finished(job->id);
         }
     }
+    dispatch_queued_jobs();
     return true;
+}
+
+bool job_manager_t::belongs_to_client(const std::string &id, const std::string &client_id)
+{
+    if (client_id.empty()) return false;
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+    std::lock_guard<std::mutex> lock(job->mut);
+    return job->owner_client_id == client_id;
 }
 
 bool job_manager_t::move_queue_up(const std::string &id)

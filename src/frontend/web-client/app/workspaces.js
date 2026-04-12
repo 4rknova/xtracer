@@ -1,21 +1,29 @@
 function updateWorkspaceActiveHint() {
   if (!el.workspaceActiveHint) return;
   const id = String(activeWorkspaceId || "").trim();
-  const label = "Active workspace";
-  const value = id || "-";
-  el.workspaceActiveHint.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
+  window.XTracerWidgets.renderStatHint(el.workspaceActiveHint, {
+    label: "Active workspace",
+    value: id || "-",
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceCountHint(count) {
   if (!el.workspaceCountHint) return;
-  const n = Math.max(0, Number(count) || 0);
-  el.workspaceCountHint.innerHTML = `<span class="workspace-active-label">Workspaces</span><code class="workspace-active-value">${n}</code>`;
+  window.XTracerWidgets.renderStatHint(el.workspaceCountHint, {
+    label: "Workspaces",
+    value: Math.max(0, Number(count) || 0),
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceServerStatHint(node, label, value) {
   if (!node) return;
-  const rendered = (value === null || value === undefined || value === "") ? "-" : String(value);
-  node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${rendered}</code>`;
+  window.XTracerWidgets.renderStatHint(node, {
+    label,
+    value: (value === null || value === undefined || value === "") ? "-" : String(value),
+    className: "workspace-active-hint",
+  });
 }
 
 function updateWorkspaceServerStatsHints(data) {
@@ -52,15 +60,26 @@ function updateWorkspaceServerStatsHints(data) {
   settingsJobsTotalRenderThreads = Number.isFinite(renderAutoThreads) && renderAutoThreads > 0
     ? Math.floor(renderAutoThreads)
     : 0;
-  if (el.threadsPolicyHint) {
-    const reserveText = Number.isFinite(renderReserveThreads) && renderReserveThreads >= 0
-      ? String(Math.floor(renderReserveThreads))
-      : "?";
-    const autoText = Number.isFinite(renderAutoThreads) && renderAutoThreads > 0
-      ? String(Math.floor(renderAutoThreads))
-      : "?";
-    el.threadsPolicyHint.textContent = `Threads 0 uses auto mode (${autoText}), reserving ${reserveText} for server responsiveness.`;
+  const computedThreadLimit = Number.isFinite(renderAutoThreads) && renderAutoThreads > 0
+    ? Math.floor(renderAutoThreads)
+    : (Number.isFinite(openmpThreads) && openmpThreads > 0
+      ? Math.max(1, Math.floor(openmpThreads) - Math.max(0, Math.floor(renderReserveThreads) || 0))
+      : 256);
+  if (el.threads) {
+    el.threads.max = String(computedThreadLimit);
+    el.threads.dataset.autoThreadCount = String(computedThreadLimit);
+    el.threads.title = `0 uses auto mode. Maximum manual value: ${computedThreadLimit}.`;
+    const current = Math.max(0, Number.parseInt(String(el.threads.value || "0"), 10) || 0);
+    if (current > computedThreadLimit) el.threads.value = String(computedThreadLimit);
   }
+  if (el.threadsLabelText) {
+    el.threadsLabelText.textContent = "Threads";
+  }
+  if (el.threadsLabelSubtext) {
+    el.threadsLabelSubtext.textContent = `${computedThreadLimit} max`;
+  }
+  if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
+  renderSettingsJobsThreadGraph();
 }
 
 let settingsJobsRefreshInFlight = false;
@@ -68,6 +87,244 @@ let settingsJobsLastError = "";
 let settingsJobsTotalRenderThreads = 0;
 const settingsJobsAbortInFlight = new Set();
 const settingsJobsMoveInFlight = new Set();
+const SETTINGS_JOBS_GRAPH_WINDOW_MS = 60 * 1000;
+let settingsJobsThreadSamples = [];
+
+function resetSettingsJobsThreadGraph() {
+  settingsJobsThreadSamples = [];
+  renderSettingsJobsThreadGraph();
+}
+
+function pruneSettingsJobsThreadSamples(nowMs) {
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const minTs = now - SETTINGS_JOBS_GRAPH_WINDOW_MS;
+  settingsJobsThreadSamples = settingsJobsThreadSamples.filter((sample) => sample && Number.isFinite(sample.ts) && sample.ts >= minTs);
+}
+
+function getSettingsJobsOccupiedThreads(activeJobs) {
+  const jobs = Array.isArray(activeJobs) ? activeJobs : [];
+  return jobs.reduce((sum, job) => {
+    const state = String((job && job.state) || "").toLowerCase();
+    if (state !== "running") return sum;
+    const threads = Math.max(0, Number((job && job.threads) || 0));
+    return sum + (Number.isFinite(threads) ? Math.floor(threads) : 0);
+  }, 0);
+}
+
+function recordSettingsJobsThreadUsage(occupied, nowMs) {
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const value = Math.max(0, Math.floor(Number(occupied) || 0));
+  pruneSettingsJobsThreadSamples(now);
+  const last = settingsJobsThreadSamples.length ? settingsJobsThreadSamples[settingsJobsThreadSamples.length - 1] : null;
+  if (last && (now - last.ts) < 250) {
+    last.ts = now;
+    last.value = value;
+    return;
+  }
+  settingsJobsThreadSamples.push({ ts: now, value });
+  pruneSettingsJobsThreadSamples(now);
+}
+
+function createSettingsJobsGraphSvgNode(tag, attrs) {
+  const ns = "http://www.w3.org/2000/svg";
+  const node = document.createElementNS(ns, tag);
+  const attributes = attrs || {};
+  Object.keys(attributes).forEach((key) => {
+    const value = attributes[key];
+    if (value === undefined || value === null) return;
+    node.setAttribute(key, String(value));
+  });
+  return node;
+}
+
+function buildSettingsJobsGraphPaths(samples, nowMs, maxScale, width, height) {
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const list = Array.isArray(samples) && samples.length ? samples : [{ ts: now, value: 0 }];
+  const startTs = now - SETTINGS_JOBS_GRAPH_WINDOW_MS;
+  const safeScale = Math.max(1, Number(maxScale) || 1);
+  const xForTs = (ts) => {
+    if (!Number.isFinite(ts) || ts <= startTs) return 0;
+    if (ts >= now) return width;
+    return ((ts - startTs) / SETTINGS_JOBS_GRAPH_WINDOW_MS) * width;
+  };
+  const yForValue = (value) => {
+    const clamped = Math.max(0, Math.min(safeScale, Number(value) || 0));
+    return height - ((clamped / safeScale) * height);
+  };
+
+  let prevX = 0;
+  let prevY = yForValue(list[0].value);
+  let line = `M 0 ${prevY.toFixed(2)}`;
+  let area = `M 0 ${height.toFixed(2)} L 0 ${prevY.toFixed(2)}`;
+
+  list.forEach((sample, index) => {
+    let x = xForTs(sample.ts);
+    const y = yForValue(sample.value);
+    if (index === 0) {
+      if (x > 0) {
+        line += ` L ${x.toFixed(2)} ${prevY.toFixed(2)}`;
+        area += ` L ${x.toFixed(2)} ${prevY.toFixed(2)}`;
+      }
+      prevX = x;
+      prevY = y;
+      return;
+    }
+    if (x < prevX) x = prevX;
+    if (x > prevX) {
+      line += ` L ${x.toFixed(2)} ${prevY.toFixed(2)}`;
+      area += ` L ${x.toFixed(2)} ${prevY.toFixed(2)}`;
+    }
+    if (Math.abs(y - prevY) > 0.001) {
+      line += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+      area += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }
+    prevX = x;
+    prevY = y;
+  });
+
+  if (prevX < width) {
+    line += ` L ${width.toFixed(2)} ${prevY.toFixed(2)}`;
+    area += ` L ${width.toFixed(2)} ${prevY.toFixed(2)}`;
+  }
+
+  area += ` L ${width.toFixed(2)} ${height.toFixed(2)} Z`;
+  return {
+    area,
+    line,
+    lastX: width,
+    lastY: prevY,
+  };
+}
+
+function renderSettingsJobsThreadGraph() {
+  if (!el.settingsJobsThreadGraph) return;
+
+  const now = Date.now();
+  pruneSettingsJobsThreadSamples(now);
+  const samples = settingsJobsThreadSamples.slice();
+  const latest = samples.length ? Math.max(0, Math.floor(Number(samples[samples.length - 1].value) || 0)) : 0;
+  const peak = samples.reduce((max, sample) => Math.max(max, Math.max(0, Math.floor(Number(sample && sample.value) || 0))), 0);
+  const total = Math.max(0, Number(settingsJobsTotalRenderThreads) || 0);
+  const scaleMax = Math.max(1, total, peak);
+  const currentLabel = total > 0 ? `${latest} / ${total}` : `${latest} / -`;
+  const widgets = window.XTracerWidgets || {};
+  if (widgets.dom && typeof widgets.dom.clear === "function") widgets.dom.clear(el.settingsJobsThreadGraph);
+  else el.settingsJobsThreadGraph.innerHTML = "";
+  el.settingsJobsThreadGraph.setAttribute("aria-label", `Threads in use over the last minute. Current usage ${currentLabel}. Peak ${peak}.`);
+
+  const header = document.createElement("div");
+  header.className = "settings-jobs-graph-header";
+
+  const titleGroup = document.createElement("div");
+  titleGroup.className = "settings-jobs-graph-title-group";
+
+  const title = document.createElement("p");
+  title.className = "settings-jobs-graph-title";
+  title.textContent = "Threads In Use";
+
+  const subtitle = document.createElement("p");
+  subtitle.className = "settings-jobs-graph-subtitle";
+  subtitle.textContent = "Rolling 1 minute window";
+
+  titleGroup.appendChild(title);
+  titleGroup.appendChild(subtitle);
+
+  const statGroup = document.createElement("div");
+  statGroup.className = "settings-jobs-graph-stats";
+
+  const peakNode = document.createElement("span");
+  peakNode.className = "settings-jobs-graph-stat";
+  peakNode.textContent = `peak ${peak}`;
+
+  const currentNode = document.createElement("span");
+  currentNode.className = "settings-jobs-graph-stat";
+  currentNode.textContent = `now ${currentLabel}`;
+
+  statGroup.appendChild(peakNode);
+  statGroup.appendChild(currentNode);
+  header.appendChild(titleGroup);
+  header.appendChild(statGroup);
+  el.settingsJobsThreadGraph.appendChild(header);
+
+  const chart = document.createElement("div");
+  chart.className = "settings-jobs-graph-chart";
+
+  if (!samples.length) {
+    const empty = document.createElement("p");
+    empty.className = "settings-jobs-graph-empty";
+    empty.textContent = "Waiting for the first jobs sample.";
+    chart.appendChild(empty);
+  } else {
+    const width = 240;
+    const height = 72;
+    const svg = createSettingsJobsGraphSvgNode("svg", {
+      class: "settings-jobs-graph-svg",
+      viewBox: `0 0 ${width} ${height}`,
+      preserveAspectRatio: "none",
+      "aria-hidden": "true",
+    });
+
+    [0, height * 0.5, height].forEach((y) => {
+      svg.appendChild(createSettingsJobsGraphSvgNode("line", {
+        class: "settings-jobs-graph-grid-line",
+        x1: 0,
+        y1: y.toFixed(2),
+        x2: width,
+        y2: y.toFixed(2),
+      }));
+    });
+
+    const paths = buildSettingsJobsGraphPaths(samples, now, scaleMax, width, height);
+    svg.appendChild(createSettingsJobsGraphSvgNode("path", {
+      class: "settings-jobs-graph-area",
+      d: paths.area,
+    }));
+    svg.appendChild(createSettingsJobsGraphSvgNode("path", {
+      class: "settings-jobs-graph-line",
+      d: paths.line,
+    }));
+    svg.appendChild(createSettingsJobsGraphSvgNode("circle", {
+      class: "settings-jobs-graph-dot",
+      cx: paths.lastX.toFixed(2),
+      cy: paths.lastY.toFixed(2),
+      r: "3",
+    }));
+
+    chart.appendChild(svg);
+  }
+
+  el.settingsJobsThreadGraph.appendChild(chart);
+
+  const footer = document.createElement("div");
+  footer.className = "settings-jobs-graph-footer";
+
+  const agoNode = document.createElement("span");
+  agoNode.className = "settings-jobs-graph-footnote";
+  agoNode.textContent = "60s ago";
+
+  const scaleNode = document.createElement("span");
+  scaleNode.className = "settings-jobs-graph-footnote";
+  scaleNode.textContent = `scale 0-${scaleMax}`;
+
+  const nowNode = document.createElement("span");
+  nowNode.className = "settings-jobs-graph-footnote";
+  nowNode.textContent = "now";
+
+  footer.appendChild(agoNode);
+  footer.appendChild(scaleNode);
+  footer.appendChild(nowNode);
+  el.settingsJobsThreadGraph.appendChild(footer);
+}
+
+function bindSettingsJobsCardLifecycle() {
+  const card = document.getElementById("JobsControlsCard");
+  if (!card || card._settingsJobsLifecycleBound) return;
+  card._settingsJobsLifecycleBound = true;
+  card.addEventListener("toggle", () => {
+    if (card.open) return;
+    resetSettingsJobsThreadGraph();
+  });
+}
 
 function parseJobSequence(jobId) {
   const id = String(jobId || "");
@@ -100,6 +357,11 @@ function formatJobElapsedMs(ms) {
 }
 
 function createSettingsJobActionIcon(kind) {
+  if (window.XTracerWidgets && window.XTracerWidgets.dom && typeof window.XTracerWidgets.dom.svgIcon === "function") {
+    if (kind === "up") return window.XTracerWidgets.dom.svgIcon("M8 12V4M8 4L5.4 6.6M8 4l2.6 2.6");
+    if (kind === "down") return window.XTracerWidgets.dom.svgIcon("M8 4v8M8 12l-2.6-2.6M8 12l2.6-2.6");
+    return window.XTracerWidgets.dom.svgIcon("M5 5l6 6M11 5L5 11");
+  }
   const ns = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(ns, "svg");
   svg.setAttribute("viewBox", "0 0 16 16");
@@ -121,15 +383,121 @@ function createSettingsJobActionIcon(kind) {
   return svg;
 }
 
+function createSettingsJobStateTag(state) {
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
+    const tone = state === "running" ? "success" : (state === "queued" ? "warning" : "neutral");
+    return window.XTracerWidgets.createTag({
+      label: state,
+      tone,
+      className: `settings-job-state-pill state-${state}`,
+    });
+  }
+  const node = document.createElement("span");
+  node.className = `settings-job-state-pill state-${state}`;
+  node.textContent = state;
+  return node;
+}
+
+function createSettingsJobActionButton(kind, opts) {
+  const options = opts || {};
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createIconButton === "function") {
+    return window.XTracerWidgets.createIconButton({
+      title: options.title || "",
+      label: options.ariaLabel || options.title || "",
+      disabled: !!options.disabled,
+      variant: "ghost",
+      className: options.className || "",
+      icon: createSettingsJobActionIcon(kind),
+      onClick: options.onClick,
+    });
+  }
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = options.className || "";
+  btn.setAttribute("aria-label", options.ariaLabel || options.title || "");
+  if (options.title) btn.title = options.title;
+  btn.disabled = !!options.disabled;
+  btn.appendChild(createSettingsJobActionIcon(kind));
+  if (typeof options.onClick === "function") btn.addEventListener("click", options.onClick);
+  return btn;
+}
+
+function createSettingsJobProgress(progress) {
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createProgressBar === "function") {
+    return window.XTracerWidgets.createProgressBar({
+      value: progress,
+      className: "settings-job-progress",
+    });
+  }
+  const progressBar = document.createElement("div");
+  progressBar.className = "settings-job-progress";
+  const progressFill = document.createElement("span");
+  progressFill.style.width = `${(progress * 100).toFixed(1)}%`;
+  progressBar.appendChild(progressFill);
+  return progressBar;
+}
+
+function createWorkspaceStateBadge(label, className) {
+  const text = String(label || "").trim() || "Unknown";
+  const normalized = text.toLowerCase();
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
+    let tone = "neutral";
+    if (normalized === "active" || normalized === "rendering") tone = "success";
+    return window.XTracerWidgets.createTag({
+      label: text,
+      tone,
+      className: className || "",
+    });
+  }
+  const node = document.createElement("span");
+  node.className = className || "";
+  node.textContent = text;
+  return node;
+}
+
+function createWorkspaceActionButton(label, opts) {
+  const options = opts || {};
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createButton === "function") {
+    return window.XTracerWidgets.createButton({
+      label,
+      variant: options.variant || "secondary",
+      disabled: !!options.disabled,
+      className: options.className || "",
+      onClick: options.onClick,
+    });
+  }
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = options.className || "";
+  btn.textContent = label;
+  btn.disabled = !!options.disabled;
+  btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
+  if (typeof options.onClick === "function") btn.addEventListener("click", options.onClick);
+  return btn;
+}
+
+function createWorkspaceEmptyState(title, message, className) {
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.createEmptyState === "function") {
+    return window.XTracerWidgets.createEmptyState({
+      title,
+      message,
+      className: className || "",
+    });
+  }
+  const node = document.createElement("p");
+  node.className = className || "";
+  node.textContent = message || title || "";
+  return node;
+}
+
 function renderSettingsJobsList(activeJobs) {
   if (!el.settingsJobsList) return;
+  const widgets = window.XTracerWidgets || {};
   const jobs = Array.isArray(activeJobs) ? [...activeJobs] : [];
   el.settingsJobsList.innerHTML = "";
+  el.settingsJobsList.hidden = false;
   if (!jobs.length) {
-    const empty = document.createElement("div");
-    empty.className = "settings-jobs-empty";
-    empty.textContent = "No active or queued jobs.";
-    el.settingsJobsList.appendChild(empty);
+    el.settingsJobsList.hidden = true;
     return;
   }
 
@@ -152,80 +520,50 @@ function renderSettingsJobsList(activeJobs) {
     const scene = String((job && job.scene) || "").trim() || "-";
     const integrator = String((job && job.integrator) || "").trim() || "-";
 
-    const item = document.createElement("article");
-    item.className = `settings-job-item state-${state}`;
-
-    const head = document.createElement("div");
-    head.className = "settings-job-head";
-
-    const idNode = document.createElement("code");
-    idNode.className = "settings-job-id";
-    idNode.textContent = id;
-
-    const statePill = document.createElement("span");
-    statePill.className = `settings-job-state-pill state-${state}`;
-    statePill.textContent = state;
-
-    const controls = document.createElement("div");
-    controls.className = "settings-job-controls";
+    const statePill = createSettingsJobStateTag(state);
+    const controlNodes = [];
     const queueIdx = queuedIndexById.has(id) ? queuedIndexById.get(id) : -1;
     const isMoving = settingsJobsMoveInFlight.has(id);
     if (state === "queued" && queueIdx >= 0) {
       const queueControls = document.createElement("div");
       queueControls.className = "settings-job-queue-controls";
 
-      const upBtn = document.createElement("button");
-      upBtn.type = "button";
-      upBtn.className = "settings-job-queue-btn";
-      upBtn.setAttribute("aria-label", "Move job up");
-      upBtn.title = "Move up";
-      upBtn.appendChild(createSettingsJobActionIcon("up"));
-      upBtn.disabled = isMoving || queueIdx <= 0;
-      upBtn.addEventListener("click", () => {
-        moveSettingsJobQueue(id, "up").catch((err) => appendLog(`settings queue move up error: ${err.message}`));
+      const upBtn = createSettingsJobActionButton("up", {
+        className: "settings-job-queue-btn",
+        ariaLabel: "Move job up",
+        title: "Move up",
+        disabled: isMoving || queueIdx <= 0,
+        onClick: () => {
+          moveSettingsJobQueue(id, "up").catch((err) => appendLog(`settings queue move up error: ${err.message}`));
+        },
       });
 
-      const downBtn = document.createElement("button");
-      downBtn.type = "button";
-      downBtn.className = "settings-job-queue-btn";
-      downBtn.setAttribute("aria-label", "Move job down");
-      downBtn.title = "Move down";
-      downBtn.appendChild(createSettingsJobActionIcon("down"));
-      downBtn.disabled = isMoving || queueIdx >= (queuedCount - 1);
-      downBtn.addEventListener("click", () => {
-        moveSettingsJobQueue(id, "down").catch((err) => appendLog(`settings queue move down error: ${err.message}`));
+      const downBtn = createSettingsJobActionButton("down", {
+        className: "settings-job-queue-btn",
+        ariaLabel: "Move job down",
+        title: "Move down",
+        disabled: isMoving || queueIdx >= (queuedCount - 1),
+        onClick: () => {
+          moveSettingsJobQueue(id, "down").catch((err) => appendLog(`settings queue move down error: ${err.message}`));
+        },
       });
 
       queueControls.appendChild(upBtn);
       queueControls.appendChild(downBtn);
-      controls.appendChild(queueControls);
+      controlNodes.push(queueControls);
     }
     if (state === "running" || state === "queued") {
-      const abortBtn = document.createElement("button");
-      abortBtn.type = "button";
-      abortBtn.className = "settings-job-abort-btn";
-      abortBtn.setAttribute("aria-label", settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort job");
-      abortBtn.title = settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort";
-      abortBtn.appendChild(createSettingsJobActionIcon("abort"));
-      abortBtn.disabled = settingsJobsAbortInFlight.has(id);
-      abortBtn.addEventListener("click", () => {
-        abortSettingsJob(id).catch((err) => appendLog(`settings abort error: ${err.message}`));
+      const abortBtn = createSettingsJobActionButton("abort", {
+        className: "settings-job-abort-btn",
+        ariaLabel: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort job",
+        title: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort",
+        disabled: settingsJobsAbortInFlight.has(id),
+        onClick: () => {
+          abortSettingsJob(id).catch((err) => appendLog(`settings abort error: ${err.message}`));
+        },
       });
-      controls.appendChild(abortBtn);
+      controlNodes.push(abortBtn);
     }
-    const pills = document.createElement("div");
-    pills.className = "settings-job-pills";
-    pills.appendChild(statePill);
-
-    head.appendChild(idNode);
-    head.appendChild(pills);
-
-    const meta = document.createElement("div");
-    meta.className = "settings-job-meta";
-    const workspaceNode = document.createElement("span");
-    workspaceNode.textContent = `ws ${workspaceId}`;
-    const metrics = document.createElement("div");
-    metrics.className = "settings-job-metrics";
     const threadsNode = document.createElement("span");
     threadsNode.className = "settings-job-meta-pill";
     threadsNode.textContent = threads === 1 ? "1 thread" : `${threads} threads`;
@@ -235,31 +573,17 @@ function renderSettingsJobsList(activeJobs) {
     const progressNode = document.createElement("span");
     progressNode.className = "settings-job-meta-pill";
     progressNode.textContent = `${(progress * 100).toFixed(1)}%`;
-    metrics.appendChild(threadsNode);
-    metrics.appendChild(elapsedNode);
-    metrics.appendChild(progressNode);
-    meta.appendChild(workspaceNode);
-    meta.appendChild(metrics);
-
-    const progressBar = document.createElement("div");
-    progressBar.className = "settings-job-progress";
-    const progressFill = document.createElement("span");
-    progressFill.style.width = `${(progress * 100).toFixed(1)}%`;
-    progressBar.appendChild(progressFill);
-
-    const sub = document.createElement("div");
-    sub.className = "settings-job-sub";
-    sub.textContent = `${scene} · ${integrator}`;
-
-    const footer = document.createElement("div");
-    footer.className = "settings-job-footer";
-    footer.appendChild(sub);
-    if (controls.childElementCount > 0) footer.appendChild(controls);
-
-    item.appendChild(head);
-    item.appendChild(meta);
-    item.appendChild(progressBar);
-    item.appendChild(footer);
+    const progressBar = createSettingsJobProgress(progress);
+    const item = widgets.createJobRow({
+      id,
+      state,
+      pills: [statePill],
+      workspaceLabel: `ws ${workspaceId}`,
+      metrics: [threadsNode, elapsedNode, progressNode],
+      progress: progressBar,
+      subtext: `${scene} · ${integrator}`,
+      controls: controlNodes,
+    });
     el.settingsJobsList.appendChild(item);
   });
 }
@@ -270,25 +594,22 @@ async function refreshSettingsJobsCard() {
   settingsJobsRefreshInFlight = true;
   try {
     const activeJobs = await api.getActiveJobs();
+    const occupied = getSettingsJobsOccupiedThreads(activeJobs);
+    recordSettingsJobsThreadUsage(occupied);
     renderSettingsJobsList(activeJobs);
+    renderSettingsJobsThreadGraph();
     settingsJobsLastError = "";
     if (el.settingsJobsUpdated) {
       const ts = new Date();
       const hh = String(ts.getHours()).padStart(2, "0");
       const mm = String(ts.getMinutes()).padStart(2, "0");
       const ss = String(ts.getSeconds()).padStart(2, "0");
-      el.settingsJobsUpdated.innerHTML = `<span class="workspace-active-label">Updated</span><code class="workspace-active-value">${hh}:${mm}:${ss}</code>`;
+      updateWorkspaceServerStatHint(el.settingsJobsUpdated, "Updated", `${hh}:${mm}:${ss}`);
     }
     if (el.settingsJobsThreadsUsage) {
-      const occupied = activeJobs.reduce((sum, job) => {
-        const state = String((job && job.state) || "").toLowerCase();
-        if (state !== "running") return sum;
-        const threads = Math.max(0, Number((job && job.threads) || 0));
-        return sum + (Number.isFinite(threads) ? Math.floor(threads) : 0);
-      }, 0);
       const total = Math.max(0, Number(settingsJobsTotalRenderThreads) || 0);
       const value = total > 0 ? `${occupied} / ${total}` : `${occupied} / -`;
-      el.settingsJobsThreadsUsage.innerHTML = `<span class="workspace-active-label">Threads In Use</span><code class="workspace-active-value">${value}</code>`;
+      updateWorkspaceServerStatHint(el.settingsJobsThreadsUsage, "Threads In Use", value);
     }
   } catch (err) {
     const message = String((err && err.message) || "jobs unavailable");
@@ -297,10 +618,11 @@ async function refreshSettingsJobsCard() {
       settingsJobsLastError = message;
     }
     if (el.settingsJobsList) {
+      el.settingsJobsList.hidden = false;
       el.settingsJobsList.innerHTML = `<p class="workspace-active-hint settings-jobs-empty">Failed to load active jobs.</p>`;
     }
     if (el.settingsJobsThreadsUsage) {
-      el.settingsJobsThreadsUsage.innerHTML = `<span class="workspace-active-label">Threads In Use</span><code class="workspace-active-value">-</code>`;
+      updateWorkspaceServerStatHint(el.settingsJobsThreadsUsage, "Threads In Use", "-");
     }
   } finally {
     settingsJobsRefreshInFlight = false;
@@ -470,7 +792,11 @@ function workspaceStateLabel(workspace) {
   const id = String((workspace && workspace.id) || "");
   const activeJob = String((workspace && workspace.active_job_id) || "");
   if (activeJob) return "Rendering";
-  if (id && id === activeWorkspaceId) return "Active";
+  const hasOwned = !!(workspace && Object.prototype.hasOwnProperty.call(workspace, "is_owned_by_client"));
+  const isMine = hasOwned
+    ? !!workspace.is_owned_by_client
+    : !!(workspace && workspace.is_active_for_client);
+  if (isMine || (id && id === activeWorkspaceId)) return "Active";
   return "Idle";
 }
 
@@ -489,7 +815,7 @@ function workspaceSettingsPayload() {
       samples: String(el.samples && el.samples.value ? el.samples.value : "1"),
       aa: String(el.aa && el.aa.value ? el.aa.value : "1"),
       sample_distribution: String(el.sampleDistribution && el.sampleDistribution.value ? el.sampleDistribution.value : "grid"),
-      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "10"),
+      rdepth: String(el.rdepth && el.rdepth.value ? el.rdepth.value : "15"),
     },
     frame: {
       width: String(el.width && el.width.value ? el.width.value : "500"),
@@ -510,12 +836,17 @@ function workspaceSettingsPayload() {
       mantiuk_saturation: String(el.toneMappingMantiukSaturation && el.toneMappingMantiukSaturation.value ? el.toneMappingMantiukSaturation.value : "0.8"),
       mantiuk_detail: String(el.toneMappingMantiukDetail && el.toneMappingMantiukDetail.value ? el.toneMappingMantiukDetail.value : "1.0"),
     },
+    preview: {
+      render_mode: normalizeRenderMode(renderMode),
+      interactive_speed: String((Number(interactivePreviewFlySpeedScale) || 1.0).toFixed(1)),
+      interactive_moving_width: String(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth)),
+    },
     post_filters: Array.isArray(postFilterChain)
-      ? postFilterChain.map((entry) => ({
-        filter: normalizePostFilterId(entry && entry.filter),
-        stage: normalizePostFilterStage(entry && entry.stage),
-      })).filter((entry) => !!entry.filter)
+      ? postFilterChain
+        .map((entry) => normalizePostFilterEntry(entry))
+        .filter((entry) => !!entry && !!entry.filter)
       : [],
+    post_filters_enabled: !!postFilterStackEnabled,
   };
 }
 
@@ -580,10 +911,14 @@ function applyWorkspaceSettings(settings) {
       if (el.integrator && integrator.id && integratorById.has(String(integrator.id))) {
         el.integrator.value = String(integrator.id);
       }
-      if (el.tileSize && integrator.tile_size !== undefined) el.tileSize.value = String(integrator.tile_size);
+      if (el.tileSize && integrator.tile_size !== undefined) {
+        if (typeof setTileSizeControlValue === "function") setTileSizeControlValue(integrator.tile_size);
+        else el.tileSize.value = String(integrator.tile_size);
+      }
       if (el.tileOrder && integrator.tile_order !== undefined) el.tileOrder.value = String(integrator.tile_order);
       if (el.threads && integrator.threads !== undefined) el.threads.value = String(integrator.threads);
       renderIntegratorControls();
+      if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
     }
 
     const tm = cfg.tone_mapping && typeof cfg.tone_mapping === "object" ? cfg.tone_mapping : null;
@@ -597,13 +932,35 @@ function applyWorkspaceSettings(settings) {
       updateToneMappingControlState();
     }
 
-    if (Array.isArray(cfg.post_filters)) {
-      postFilterChain = cfg.post_filters.map((entry) => ({
-        filter: normalizePostFilterId(entry && entry.filter),
-        stage: normalizePostFilterStage(entry && entry.stage),
-      })).filter((entry) => !!entry.filter);
-      renderPostFilterChain();
+    const preview = cfg.preview && typeof cfg.preview === "object" ? cfg.preview : null;
+    if (preview && typeof setRenderMode === "function") {
+      let nextMode = normalizeRenderMode(preview.render_mode);
+      if (preview.render_mode === undefined && preview.interactive !== undefined) {
+        nextMode = preview.interactive ? RENDER_MODE_INTERACTIVE : RENDER_MODE_PROGRESSIVE;
+      }
+      setRenderMode(nextMode, { log: false }).catch(() => {});
     }
+    if (preview && preview.interactive_speed !== undefined) {
+      const speed = Math.max(0.2, Math.min(5.0, Number(preview.interactive_speed) || 1.0));
+      interactivePreviewFlySpeedScale = speed;
+      if (el.interactivePreviewSpeed) el.interactivePreviewSpeed.value = String(speed.toFixed(1));
+      if (el.interactivePreviewSpeedValue) el.interactivePreviewSpeedValue.textContent = `${speed.toFixed(1)}x`;
+      if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+    }
+    if (preview && preview.interactive_moving_width !== undefined) {
+      interactivePreviewAdaptiveMovingWidth = nearestInteractiveMovingWidth(preview.interactive_moving_width);
+    }
+
+    if (Array.isArray(cfg.post_filters)) {
+      postFilterChain = cfg.post_filters
+        .map((entry) => normalizePostFilterEntry(entry))
+        .filter((entry) => !!entry && !!entry.filter);
+    }
+    if (cfg.post_filters_enabled !== undefined) {
+      postFilterStackEnabled = !!cfg.post_filters_enabled;
+    }
+    if (el.postFiltersEnabled) el.postFiltersEnabled.checked = !!postFilterStackEnabled;
+    updatePostFilterUiState();
   } finally {
     suppressWorkspaceSettingsSave = false;
   }
@@ -692,7 +1049,8 @@ function overlayWorkspaceActiveJobs(workspaces, activeJobs) {
   });
 }
 
-async function applyActiveWorkspaceState(snapshot) {
+async function applyActiveWorkspaceState(snapshot, options) {
+  const opts = options || {};
   cancelActivePollingUi();
 
   const ws = snapshot || workspaceSnapshotById.get(activeWorkspaceId) || null;
@@ -707,6 +1065,8 @@ async function applyActiveWorkspaceState(snapshot) {
   const wsScene = String((ws && ws.active_scene) || "").trim();
   if (wsScene && hasSceneOption(wsScene)) {
     const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    const skipSceneReload = currentScene === wsScene
+      && String(opts.skipSceneReloadIfCurrent || "").trim() === wsScene;
     const sceneChanged = currentScene !== wsScene;
     const previousScene = currentScene;
     const previousVariant = selectedSceneVariantValue();
@@ -718,17 +1078,19 @@ async function applyActiveWorkspaceState(snapshot) {
         localStorage.setItem(LAST_SCENE_KEY, wsScene);
         updateSceneDependencyPill(wsScene);
       }
-      await loadVariants(wsScene);
-      const variantName = selectedSceneVariantValue();
-      await Promise.all([
-        loadCameras(wsScene, variantName),
-        loadSceneSource(wsScene),
-      ]);
-      if (visualEditor && editorViewMode === "visual" && sceneChanged) {
-        try {
-          await loadVisualSceneFromSelected();
-        } catch (err) {
-          appendLog(`visual load error: ${err.message}`);
+      if (!skipSceneReload) {
+        await loadVariants(wsScene);
+        const variantName = selectedSceneVariantValue();
+        await Promise.all([
+          loadCameras(wsScene, variantName),
+          loadSceneSource(wsScene),
+        ]);
+        if (visualEditor && editorViewMode === "visual" && sceneChanged) {
+          try {
+            await loadVisualSceneFromSelected();
+          } catch (err) {
+            appendLog(`visual load error: ${err.message}`);
+          }
         }
       }
       if (editorViewMode === "graph") renderSceneGraphView();
@@ -760,19 +1122,20 @@ async function applyActiveWorkspaceState(snapshot) {
 
 function renderWorkspaceList(items) {
   if (!el.workspaceList) return;
+  const widgets = window.XTracerWidgets || {};
   el.workspaceList.innerHTML = "";
   const list = Array.isArray(items) ? items : [];
   const canDeleteAny = list.length > 1;
   if (list.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "workspace-empty";
-    empty.textContent = "No workspaces available.";
+    const empty = createWorkspaceEmptyState("No workspaces", "No workspaces available.", "workspace-empty");
     el.workspaceList.appendChild(empty);
     return;
   }
 
   list.forEach((ws) => {
     const id = String((ws && ws.id) || "");
+    const hasOwned = !!(ws && Object.prototype.hasOwnProperty.call(ws, "is_owned_by_client"));
+    const isMine = hasOwned ? !!ws.is_owned_by_client : !!(ws && ws.is_active_for_client);
     const scene = String((ws && ws.active_scene) || "").trim();
     const activeJob = String((ws && ws.active_job_id) || "").trim();
     const lastJob = String((ws && ws.last_job_id) || "").trim();
@@ -794,50 +1157,70 @@ function renderWorkspaceList(items) {
       ? `${Math.max(0, Number(spatial.build_ms)).toFixed(0)} ms`
       : "-";
 
-    const card = document.createElement("article");
-    card.className = "workspace-item";
-    if (id && id === activeWorkspaceId) card.classList.add("is-active");
     const isRendering = !!activeJob;
-    if (isRendering) card.classList.add("is-rendering");
 
     const head = document.createElement("header");
     head.className = "workspace-item-head";
     const title = document.createElement("h3");
     title.className = "workspace-item-title";
     title.textContent = String((ws && ws.name) || id || "Workspace");
-    const state = document.createElement("span");
-    state.className = "workspace-item-state";
-    state.textContent = workspaceStateLabel(ws);
+    const state = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-state");
     head.appendChild(title);
+    if (isMine) {
+      const mineBadge = createWorkspaceStateBadge("This Client", "workspace-item-state");
+      head.appendChild(mineBadge);
+    }
     head.appendChild(state);
 
     const actions = document.createElement("div");
     actions.className = "workspace-item-actions";
-    const useBtn = document.createElement("button");
-    useBtn.type = "button";
-    useBtn.textContent = id === activeWorkspaceId ? "Active" : "Use";
-    useBtn.disabled = !id || id === activeWorkspaceId;
-    useBtn.setAttribute("aria-disabled", useBtn.disabled ? "true" : "false");
-    useBtn.addEventListener("click", () => {
+    const useBtn = createWorkspaceActionButton(id === activeWorkspaceId ? "Active" : "Use", {
+      variant: id === activeWorkspaceId ? "secondary" : "primary",
+      className: "workspace-item-action-btn",
+      disabled: !id || id === activeWorkspaceId,
+      onClick: () => {
       switchActiveWorkspace(id).catch((err) => {
         appendLog(`workspace switch error: ${err.message}`);
       });
+      },
     });
     actions.appendChild(useBtn);
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.disabled = !id || !canDeleteAny;
-    deleteBtn.setAttribute("aria-disabled", deleteBtn.disabled ? "true" : "false");
-    deleteBtn.addEventListener("click", () => {
-      if (!id || !hasBackendMethod(api, "deleteWorkspace")) return;
-      const ok = window.confirm(`Delete workspace ${id}?`);
-      if (!ok) return;
-      api.deleteWorkspace(id)
-        .then(() => refreshWorkspaces())
-        .then(() => appendLog(`deleted workspace: ${id}`))
-        .catch((err) => appendLog(`workspace delete error: ${err.message}`));
+    const deleteBtn = createWorkspaceActionButton("Delete", {
+      variant: "ghost",
+      className: "workspace-item-action-btn",
+      disabled: !id || !canDeleteAny,
+      onClick: () => {
+        if (!id || !hasBackendMethod(api, "deleteWorkspace")) return;
+        const widgets = window.XTracerWidgets;
+        const doDelete = () => {
+          api.deleteWorkspace(id)
+            .then(() => refreshWorkspaces())
+            .then(() => {
+              appendLog(`deleted workspace: ${id}`);
+              if (widgets && typeof widgets.showToast === "function") {
+                widgets.showToast({ message: `Workspace "${id}" deleted`, tone: "success" });
+              }
+            })
+            .catch((err) => {
+              appendLog(`workspace delete error: ${err.message}`);
+              if (widgets && typeof widgets.showToast === "function") {
+                widgets.showToast({ message: `Delete failed: ${err.message}`, tone: "error" });
+              }
+            });
+        };
+        if (widgets && typeof widgets.showModal === "function") {
+          widgets.showModal({
+            title: "Delete Workspace",
+            body: `Delete workspace "${id}"? This cannot be undone.`,
+            confirmLabel: "Delete",
+            danger: true,
+            onConfirm: doDelete,
+          });
+        } else {
+          if (window.confirm(`Delete workspace ${id}?`)) doDelete();
+        }
+      },
     });
     actions.appendChild(deleteBtn);
 
@@ -855,18 +1238,14 @@ function renderWorkspaceList(items) {
       img.onerror = () => {
         img.remove();
         if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
-          const emptyPreview = document.createElement("div");
-          emptyPreview.className = "workspace-item-preview-empty";
-          emptyPreview.textContent = "No render yet";
+          const emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
           previewWrap.appendChild(emptyPreview);
         }
       };
       img.src = previewUrl;
       previewWrap.appendChild(img);
     } else if (!isRendering) {
-      const emptyPreview = document.createElement("div");
-      emptyPreview.className = "workspace-item-preview-empty";
-      emptyPreview.textContent = "No render yet";
+      const emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
       previewWrap.appendChild(emptyPreview);
     }
     if (isRendering) {
@@ -892,6 +1271,7 @@ function renderWorkspaceList(items) {
       meta.appendChild(row);
     };
     addMeta("ID", id || "-");
+    addMeta("This Client", isMine ? "Yes" : "No");
     addMeta("Scene", scene || "-");
     addMeta("Clients", String(clients));
     addMeta("Drafts", String(drafts));
@@ -902,13 +1282,9 @@ function renderWorkspaceList(items) {
     addMeta("Updated", formatWorkspaceUpdated(ws && ws.updated_ms));
 
     if (workspaceViewMode === "list") {
-      card.classList.add("workspace-item-list-compact");
-
       const previewCol = document.createElement("div");
       previewCol.className = "workspace-item-preview-col";
-      const listState = document.createElement("span");
-      listState.className = "workspace-item-list-state";
-      listState.textContent = workspaceStateLabel(ws);
+      const listState = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-list-state");
       previewCol.appendChild(previewWrap);
       previewCol.appendChild(listState);
 
@@ -935,6 +1311,7 @@ function renderWorkspaceList(items) {
         metaStrip.appendChild(chip);
       };
       addChip("ID", id || "-");
+      addChip("This Client", isMine ? "Yes" : "No");
       addChip("Users", String(clients));
       addChip("Drafts", String(drafts));
       addChip("Job", activeJob || lastJob || "-");
@@ -946,18 +1323,49 @@ function renderWorkspaceList(items) {
       main.appendChild(head);
       main.appendChild(sceneLine);
       main.appendChild(metaStrip);
-
-      card.appendChild(previewCol);
-      card.appendChild(main);
-      card.appendChild(actions);
+      const card = typeof widgets.createWorkspaceCard === "function"
+        ? widgets.createWorkspaceCard({
+          active: !!(id && id === activeWorkspaceId),
+          rendering: isRendering,
+          listMode: true,
+          previewColumn: previewCol,
+          main,
+          actions,
+        })
+        : (() => {
+          const legacyCard = document.createElement("article");
+          legacyCard.className = "workspace-item workspace-item-list-compact";
+          if (id && id === activeWorkspaceId) legacyCard.classList.add("is-active");
+          if (isRendering) legacyCard.classList.add("is-rendering");
+          legacyCard.appendChild(previewCol);
+          legacyCard.appendChild(main);
+          legacyCard.appendChild(actions);
+          return legacyCard;
+        })();
       el.workspaceList.appendChild(card);
       return;
     }
 
-    card.appendChild(head);
-    card.appendChild(previewWrap);
-    card.appendChild(meta);
-    card.appendChild(actions);
+    const card = typeof widgets.createWorkspaceCard === "function"
+      ? widgets.createWorkspaceCard({
+        active: !!(id && id === activeWorkspaceId),
+        rendering: isRendering,
+        head,
+        preview: previewWrap,
+        meta,
+        actions,
+      })
+      : (() => {
+        const legacyCard = document.createElement("article");
+        legacyCard.className = "workspace-item";
+        if (id && id === activeWorkspaceId) legacyCard.classList.add("is-active");
+        if (isRendering) legacyCard.classList.add("is-rendering");
+        legacyCard.appendChild(head);
+        legacyCard.appendChild(previewWrap);
+        legacyCard.appendChild(meta);
+        legacyCard.appendChild(actions);
+        return legacyCard;
+      })();
     el.workspaceList.appendChild(card);
   });
 }

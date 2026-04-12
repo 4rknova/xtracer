@@ -1,22 +1,287 @@
+if (window.XTracerWidgets && typeof window.XTracerWidgets.renderMainTabs === "function") {
+  window.XTracerWidgets.renderMainTabs(document.getElementById("mainTabs"));
+}
+if (window.XTracerWidgets && typeof window.XTracerWidgets.upgradePanelHeaders === "function") {
+  window.XTracerWidgets.upgradePanelHeaders(document);
+}
+if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSidebarCards === "function") {
+  window.XTracerSidebarCards.renderSidebarCards(document.getElementById("sidebarCards"));
+}
+if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer === "function") {
+  const aboutPanel = document.querySelector("#paneAbout .about-panel");
+  const overviewGrid = aboutPanel && aboutPanel.querySelector(".about-grid");
+  const licenseCard = aboutPanel && aboutPanel.querySelector(".about-license-card");
+  const thirdPartyCard = aboutPanel && aboutPanel.querySelector(".about-third-party-card");
+  if (aboutPanel && overviewGrid && licenseCard && thirdPartyCard) {
+    const tabs = window.XTracerWidgets.createTabContainer({
+      className: "about-tabs",
+      tabs: [
+        { id: "overview", label: "Overview", content: overviewGrid },
+        { id: "license", label: "License", content: licenseCard },
+        { id: "third-party", label: "Third-Party", content: thirdPartyCard },
+      ],
+    });
+    aboutPanel.replaceChildren(tabs);
+  }
+}
+(function populateClientCard() {
+  const browserEl = document.getElementById("aboutClientBrowser");
+  const themeEl = document.getElementById("aboutClientTheme");
+  const clientIdEl = document.getElementById("aboutClientId");
+
+  if (browserEl) {
+    const ua = navigator.userAgent;
+    let browser = "Unknown";
+    if (ua.indexOf("Edg/") !== -1) browser = "Edge";
+    else if (ua.indexOf("OPR/") !== -1 || ua.indexOf("Opera") !== -1) browser = "Opera";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    const platform = (navigator.userAgentData && navigator.userAgentData.platform)
+      || navigator.platform || "";
+    browserEl.textContent = platform ? `${browser} · ${platform}` : browser;
+  }
+
+  if (themeEl) {
+    const root = document.documentElement;
+    const theme = root.getAttribute("data-theme") || "system";
+    const darkPalette = root.getAttribute("data-dark-palette") || "";
+    const lightPalette = root.getAttribute("data-light-palette") || "";
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const palette = isDark ? darkPalette : lightPalette;
+    themeEl.textContent = palette ? `${theme} · ${palette}` : theme;
+  }
+
+  if (clientIdEl) {
+    try {
+      const id = localStorage.getItem("xtracer-client-id") || "";
+      clientIdEl.textContent = id ? (id.length > 30 ? id.slice(0, 28) + "\u2026" : id) : "-";
+    } catch (_) {
+      clientIdEl.textContent = "-";
+    }
+  }
+})();
+
+function createRenderToolbarSvgIcon(pathData, viewBox) {
+  return window.XTracerWidgets.dom.svgIcon(pathData, viewBox || "0 0 24 24");
+}
+
+function decorateRenderExportButton(button) {
+  if (!button) return;
+  button.classList.remove("reset-view-btn", "xui-icon-button", "xui-icon-button--ghost", "xui-button", "xui-button--secondary");
+  button.classList.add("render-toolbar-save-btn");
+  if (!button.title || /^export\b/i.test(button.title)) button.title = "Save render";
+  const ariaLabel = String(button.getAttribute("aria-label") || "");
+  if (!ariaLabel || /^export\b/i.test(ariaLabel)) button.setAttribute("aria-label", "Save render");
+  if (button.dataset.renderToolbarDecorated === "1") return;
+  button.dataset.renderToolbarDecorated = "1";
+  button.textContent = "";
+  const label = document.createElement("span");
+  label.className = "render-toolbar-save-btn__label";
+  label.setAttribute("aria-hidden", "true");
+  label.textContent = "save";
+  button.appendChild(label);
+  const sr = document.createElement("span");
+  sr.className = "sr-only";
+  sr.textContent = "Save render";
+  button.appendChild(sr);
+}
+
+function syncRenderExportButtonDecor(button, format, actionLabel) {
+  if (!button) return;
+  const shell = button.closest(".render-toolbar-save-shell");
+  if (shell && format) shell.dataset.exportFormat = String(format || "").toUpperCase();
+  else if (shell) delete shell.dataset.exportFormat;
+}
+
+function syncRenderPreviewAuxPanel() {
+  const panel = document.getElementById("renderPreviewAuxPanel");
+  const controls = document.getElementById("interactivePreviewControls");
+  if (!panel || !controls) return;
+  panel.hidden = !!controls.hidden;
+  if (typeof updatePreviewSizing === "function") updatePreviewSizing();
+}
+
+function setRenderPreviewSamplingValue(mode) {
+  const select = document.getElementById("previewSampling");
+  const next = String(mode || "").toLowerCase() === "nearest" ? "nearest" : "smooth";
+  if (!select) return;
+  const prev = String(select.value || "").toLowerCase();
+  if (prev !== next) {
+    select.value = next;
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  } else {
+    syncRenderPreviewSamplingSwitch();
+  }
+}
+
+function syncRenderPreviewSamplingSwitch() {
+  const select = document.getElementById("previewSampling");
+  const switchNode = document.getElementById("renderPreviewSamplingSwitch");
+  if (!select || !switchNode) return;
+  const value = String(select.value || "").toLowerCase() === "nearest" ? "nearest" : "smooth";
+  switchNode.dataset.value = value;
+  switchNode.querySelectorAll(".render-preview-sampling-btn").forEach((button) => {
+    const active = button.dataset.previewSampling === value;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function createRenderPreviewSamplingSwitch(field) {
+  const select = field ? field.querySelector("#previewSampling") : null;
+  if (!select) return null;
+  const label = field.querySelector(".xui-field__label");
+  if (label) label.classList.add("sr-only");
+  field.classList.add("render-preview-sampling-native");
+  field.setAttribute("aria-hidden", "true");
+  select.setAttribute("aria-hidden", "true");
+  select.tabIndex = -1;
+
+  const switchNode = document.createElement("div");
+  switchNode.id = "renderPreviewSamplingSwitch";
+  switchNode.className = "render-preview-sampling-switch";
+  switchNode.setAttribute("role", "group");
+  switchNode.setAttribute("aria-label", "Preview sampling");
+  switchNode.appendChild(field);
+
+  [
+    {
+      mode: "smooth",
+      title: "Smooth preview sampling",
+      path: "M12 4a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm0 4a4 4 0 1 1-4 4 4 4 0 0 1 4-4z",
+    },
+    {
+      mode: "nearest",
+      title: "Nearest preview sampling",
+      path: "M5 5h5v5H5zm0 9h5v5H5zm9-9h5v5h-5zm0 9h5v5h-5z",
+    },
+  ].forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "render-preview-sampling-btn";
+    button.dataset.previewSampling = item.mode;
+    button.setAttribute("aria-pressed", "false");
+    button.setAttribute("aria-label", item.title);
+    button.setAttribute("title", item.title);
+    button.appendChild(createRenderToolbarSvgIcon(item.path));
+    button.addEventListener("click", () => {
+      setRenderPreviewSamplingValue(item.mode);
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      setRenderPreviewSamplingValue(event.key === "ArrowLeft" ? "smooth" : "nearest");
+    });
+    switchNode.appendChild(button);
+  });
+
+  if (select.dataset.renderPreviewSamplingBound !== "1") {
+    select.dataset.renderPreviewSamplingBound = "1";
+    select.addEventListener("change", syncRenderPreviewSamplingSwitch);
+  }
+
+  syncRenderPreviewSamplingSwitch();
+  return switchNode;
+}
+
+function relocateRenderExportControls() {
+  const toolbarDock = document.getElementById("renderPreviewToolbarControls");
+  const auxDock = document.getElementById("renderPreviewAuxDock");
+  const card = document.getElementById("exportControlsCard");
+  const body = card ? card.querySelector(".control-section-body") : null;
+  if (!toolbarDock || !auxDock || !body) return;
+
+  const exportField = body.querySelector('label[for="exportFormat"]');
+  const previewSamplingField = body.querySelector('label[for="previewSampling"]');
+  const downloadBtn = body.querySelector("#download");
+  const interactiveControls = body.querySelector("#interactivePreviewControls");
+
+  if (exportField && downloadBtn) {
+    const exportGroup = document.createElement("div");
+    exportGroup.className = "render-toolbar-export-group";
+    const exportShell = document.createElement("div");
+    exportShell.className = "render-toolbar-save-shell";
+    exportField.classList.add("render-toolbar-save-format");
+    const exportLabel = exportField.querySelector(".xui-field__label");
+    if (exportLabel) exportLabel.classList.add("sr-only");
+    const exportSelect = exportField.querySelector("select");
+    if (exportSelect) {
+      exportSelect.classList.add("render-toolbar-save-select");
+      exportSelect.setAttribute("aria-label", "Export format");
+    }
+    decorateRenderExportButton(downloadBtn);
+    exportShell.appendChild(downloadBtn);
+    exportShell.appendChild(exportField);
+    exportGroup.appendChild(exportShell);
+    toolbarDock.appendChild(exportGroup);
+  }
+
+  if (previewSamplingField) {
+    const samplingSwitch = createRenderPreviewSamplingSwitch(previewSamplingField);
+    if (samplingSwitch) {
+      toolbarDock.appendChild(samplingSwitch);
+      syncRenderPreviewSamplingSwitch();
+    }
+  }
+
+  if (interactiveControls) auxDock.appendChild(interactiveControls);
+  if (card) card.hidden = true;
+  syncRenderPreviewAuxPanel();
+}
+
+if (window.XTracerWidgets && typeof window.XTracerWidgets.renderCreateField === "function") {
+  window.XTracerWidgets.renderCreateField(document.getElementById("workspaceCreateField"), {
+    inputId: "workspaceCreateName",
+    buttonId: "workspaceCreateBtn",
+    placeholder: "Workspace name",
+    inputLabel: "Workspace name for new workspace",
+    buttonTitle: "Create workspace",
+    buttonLabel: "Create workspace",
+  });
+}
+if (window.XTracerWidgets && typeof window.XTracerWidgets.createIconButton === "function") {
+  const refreshMount = document.getElementById("workspaceRefreshBtnMount");
+  if (refreshMount && refreshMount.parentNode) {
+    const refreshBtn = window.XTracerWidgets.createIconButton({
+      className: "workspace-refresh-btn",
+      variant: "ghost",
+      title: "Refresh workspace list",
+      label: "Refresh workspace list",
+      icon: window.XTracerWidgets.dom.svgIcon("M12 5a7 7 0 0 1 5.43 2.58M17.43 5v6h-6M12 19a7 7 0 1 1 5-12", "0 0 24 24"),
+    });
+    refreshBtn.id = "workspaceRefreshBtn";
+    refreshMount.parentNode.replaceChild(refreshBtn, refreshMount);
+  }
+}
+
 const $ = (id) => document.getElementById(id);
 
 const el = {
   startupScreen: $("startupScreen"),
   startupLabel: $("startupLabel"),
+  startupPercent: $("startupPercent"),
   startupProgressFill: $("startupProgressFill"),
   mainMenuToggle: $("mainMenuToggle"),
   mainTabs: $("mainTabs"),
+  sidebarCards: $("sidebarCards"),
+  themeToggle: $("themeToggle"),
   tabScene: $("tabScene"),
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
   tabWorkspaces: $("tabWorkspaces"),
+  tabGallery: $("tabGallery"),
   tabSettings: $("tabSettings"),
+  tabAbout: $("tabAbout"),
   tabLogs: $("tabLogs"),
   paneScene: $("paneScene"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
   paneWorkspaces: $("paneWorkspaces"),
+  paneGallery: $("paneGallery"),
   paneSettings: $("paneSettings"),
+  paneAbout: $("paneAbout"),
   paneLogs: $("paneLogs"),
   qualityControlsCard: $("qualityControlsCard"),
   exportControlsCard: $("exportControlsCard"),
@@ -67,11 +332,13 @@ const el = {
   workspaceOpenmpHint: $("workspaceOpenmpHint"),
   workspaceRenderReserveHint: $("workspaceRenderReserveHint"),
   workspaceRenderAutoHint: $("workspaceRenderAutoHint"),
+  settingsJobsThreadGraph: $("settingsJobsThreadGraph"),
   settingsJobsUpdated: $("settingsJobsUpdated"),
   settingsJobsThreadsUsage: $("settingsJobsThreadsUsage"),
   settingsJobsList: $("settingsJobsList"),
   activeSceneCardScene: $("activeSceneCardScene"),
   activeSceneCardDescription: $("activeSceneCardDescription"),
+  activeSceneCardSource: $("activeSceneCardSource"),
   activeSceneCardCamera: $("activeSceneCardCamera"),
   activeSceneCardVariant: $("activeSceneCardVariant"),
   workspaceList: $("workspaceList"),
@@ -111,7 +378,9 @@ const el = {
   tileSize: $("tile_size"),
   tileOrder: $("tile_order"),
   threads: $("threads"),
-  threadsPolicyHint: $("threadsPolicyHint"),
+  threadsLabelText: $("threadsLabelText"),
+  threadsLabelSubtext: $("threadsLabelSubtext"),
+  renderMode: $("renderMode"),
   toneMapping: $("toneMapping"),
   toneMappingParamsRow: $("toneMappingParamsRow"),
   toneMappingExposureControl: $("toneMappingExposureControl"),
@@ -126,12 +395,15 @@ const el = {
   toneMappingMantiukDetail: $("toneMappingMantiukDetail"),
   postFilterType: $("postFilterType"),
   postFilterAddBtn: $("postFilterAddBtn"),
+  postFiltersRecalcBtn: $("postFiltersRecalcBtn"),
+  postFiltersEnabled: $("postFiltersEnabled"),
   postFiltersChain: $("postFiltersChain"),
   clearPreviewOnRender: $("clearPreviewOnRender"),
   renderBtn: $("renderBtn"),
   previewHeadline: $("previewHeadline"),
   status: $("status"),
   statusThreads: $("statusThreads"),
+  statusPass: $("statusPass"),
   statusPercent: $("statusPercent"),
   sceneLoadState: $("sceneLoadState"),
   sceneLoadMessage: $("sceneLoadMessage"),
@@ -154,32 +426,22 @@ const el = {
   progress: $("progress"),
   previewFrame: $("previewFrame"),
   previewEmpty: $("previewEmpty"),
+  interactivePreviewHud: $("interactivePreviewHud"),
+  interactivePreviewHudMode: $("interactivePreviewHudMode"),
+  interactivePreviewHudSpeed: $("interactivePreviewHudSpeed"),
+  interactivePreviewHudQuality: $("interactivePreviewHudQuality"),
   previewCanvas: $("previewCanvas"),
   preview: $("preview"),
   resetViewBtn: $("resetViewBtn"),
+  interactivePreviewControls: $("interactivePreviewControls"),
+  interactivePreviewSpeed: $("interactivePreviewSpeed"),
+  interactivePreviewSpeedValue: $("interactivePreviewSpeedValue"),
+  interactivePreviewSaveCameraBtn: $("interactivePreviewSaveCameraBtn"),
   previewSampling: $("previewSampling"),
   exportFormat: $("exportFormat"),
   download: $("download"),
   sceneName: $("sceneName"),
   editorOpStatus: $("editorOpStatus"),
-  editObjectSelect: $("editObjectSelect"),
-  editGeometryType: $("editGeometryType"),
-  editTranslateX: $("editTranslateX"),
-  editTranslateY: $("editTranslateY"),
-  editTranslateZ: $("editTranslateZ"),
-  editRotateX: $("editRotateX"),
-  editRotateY: $("editRotateY"),
-  editRotateZ: $("editRotateZ"),
-  editScaleX: $("editScaleX"),
-  editScaleY: $("editScaleY"),
-  editScaleZ: $("editScaleZ"),
-  editApplyTransformBtn: $("editApplyTransformBtn"),
-  editSyncFromVisualBtn: $("editSyncFromVisualBtn"),
-  createGeometryType: $("createGeometryType"),
-  createMaterialSelect: $("createMaterialSelect"),
-  createGeometryId: $("createGeometryId"),
-  createObjectId: $("createObjectId"),
-  createGeometryBtn: $("createGeometryBtn"),
   lineNumbers: $("lineNumbers"),
   lineCount: $("lineCount"),
   charCount: $("charCount"),
@@ -190,8 +452,11 @@ const el = {
   visualLoadBtn: $("visualLoadBtn"),
   visualCamera: $("visualCamera"),
   visualProjection: $("visualProjection"),
+  visualSceneScale: $("visualSceneScale"),
   visualSelectionTag: $("visualSelectionTag"),
   visualShowGrid: $("visualShowGrid"),
+  visualShowGlobalBvh: $("visualShowGlobalBvh"),
+  visualShowMeshBvh: $("visualShowMeshBvh"),
   visualViewport: $("visualViewport"),
   visualPanel: $("visualPanel"),
   graphPanel: $("graphPanel"),
@@ -215,13 +480,14 @@ const el = {
 };
 
 const DEFAULT_THIRD_PARTY_LICENSES = [
-  { name: "TinyObjLoader", license: "MIT", url: "https://github.com/syoyo/tinyobjloader" },
-  { name: "STB", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
-  { name: "TinyEXR", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
-  { name: "strpool", license: "Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
-  { name: "cpp-httplib", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
-  { name: "RtMidi", license: "MIT-style", url: "https://github.com/thestk/rtmidi" },
-  { name: "Three.js", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+  { name: "cgltf", description: "Single-file glTF 2.0 loader used for importing compact scene assets into the renderer.", used_in: "xtcore", license: "MIT", url: "https://github.com/jkuhlmann/cgltf" },
+  { name: "TinyObjLoader", description: "Wavefront OBJ and MTL loader used by the mesh pipeline and scene import path.", used_in: "lib/nmesh, xtcore", license: "MIT", url: "https://github.com/tinyobjloader/tinyobjloader" },
+  { name: "STB", description: "Collection of single-header image and utility libraries used for texture IO and image helpers.", used_in: "lib/nimg, xtcore, xtracer-web", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
+  { name: "TinyEXR", description: "OpenEXR reader and writer used for high-dynamic-range image support.", used_in: "lib/nimg", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
+  { name: "strpool", description: "String interning helper used to keep repeated identifiers compact in runtime data structures.", used_in: "xtcore, frontend/common, xtracer-web, xtracer-wasm", license: "MIT / Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
+  { name: "cpp-httplib", description: "HTTP server and client header library used by the web backend API layer.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
+  { name: "Three.js", description: "3D scene graph and rendering toolkit used by the web visualizer and interactive previews.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/mrdoob/three.js" },
+  { name: "ufbx", description: "FBX parser and evaluator used to read production-style geometry, transforms, and animation data.", used_in: "xtcore", license: "MIT", url: "https://github.com/ufbx/ufbx" },
 ];
 
 const uiOptions = {
@@ -230,6 +496,7 @@ const uiOptions = {
   logPollBackgroundMs: 20000,
   textHistoryLimit: 200,
   visualHistoryLimit: 200,
+  visualSceneScale: 1.0,
   autoLoadEditor: true,
   autoScrollLogs: true,
   clearPreviewOnRender: false,
@@ -249,6 +516,8 @@ let cameraCatalog = [];
 let cameraBrowserSelectedName = "";
 let variantCatalog = [];
 let variantBrowserSelectedName = "";
+let cameraLoadToken = 0;
+let runtimeGraphLoadToken = 0;
 let lastBackendLogId = 0;
 let backendLogWaitAbortController = null;
 let previewObjectUrl = "";
@@ -277,6 +546,7 @@ const logFilters = {
 let renderActive = false;
 let renderStartMs = 0;
 let renderTimerInterval = null;
+let exportRequestInFlight = false;
 let activeJobId = "";
 let lastCompletedJobId = "";
 let lastCompletedJobScene = "";
@@ -316,6 +586,7 @@ const historyStores = {
 let textHistoryCommitTimer = null;
 let suppressHistoryTracking = false;
 let postFilterChain = [];
+let postFilterStackEnabled = true;
 let integratorCatalog = [];
 let integratorById = new Map();
 const integratorControlState = new Map();
@@ -332,7 +603,7 @@ const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
 const FTUE_VERSION = 1;
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
 const APP_CONFIG_URL = "/app/data/config.json";
-const TAB_MODES = ["scene", "render", "visual", "workspaces", "logs", "settings"];
+const TAB_MODES = ["scene", "render", "visual", "workspaces", "gallery", "logs", "settings", "about"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
 let api = null;
@@ -394,9 +665,58 @@ const previewView = {
   minScale: 1,
   maxScale: 12,
   panning: false,
+  panMode: "",
   pointerId: null,
   lastX: 0,
   lastY: 0,
+};
+const RENDER_MODE_DIRECT = "direct";
+const RENDER_MODE_PROGRESSIVE = "progressive";
+const RENDER_MODE_INCREMENTAL = "incremental";
+const RENDER_MODE_INTERACTIVE = "interactive";
+let renderMode = RENDER_MODE_PROGRESSIVE;
+let interactivePreviewEnabled = false;
+let interactivePreviewLoopToken = 0;
+let interactivePreviewLoopActive = false;
+let interactivePreviewJobId = "";
+let interactivePreviewDirty = false;
+let interactivePreviewCameraSeq = 0;
+let interactivePreviewLastInputMs = 0;
+const INTERACTIVE_PREVIEW_SETTLE_MS = 420;
+const INTERACTIVE_PREVIEW_ACTIVE_POLL_MS = 90;
+const INTERACTIVE_PREVIEW_FLY_SPEED = 2.5;
+const INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER = 3.0;
+const INTERACTIVE_PREVIEW_TARGET_FRAME_MS = 110;
+let interactivePreviewAdaptiveMovingWidth = 64;
+let interactivePreviewFlySpeedScale = 1.0;
+let interactivePreviewHudMode = "LOOK";
+let interactivePreviewHudQuality = "idle";
+let interactivePreviewActiveMovingJob = false;
+let interactivePreviewFlyTimer = 0;
+let interactivePreviewFlyLastTickMs = 0;
+const interactivePreviewKeyState = {
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  q: false,
+  e: false,
+  shift: false,
+};
+const interactivePreviewCamera = {
+  ready: false,
+  type: "",
+  sourceScene: "",
+  sourceVariant: "",
+  sourceCamera: "",
+  position: [0, 0, 0],
+  target: [0, 0, -1],
+  up: [0, 1, 0],
+  hfov: 60,
+  pivot: [0, 0, 0],
+  orbitYaw: 0,
+  orbitPitch: 0,
+  orbitDistance: 1,
 };
 
 function isSafeClientId(value) {
@@ -476,3 +796,5 @@ if (window && typeof window.fetch === "function") {
     return originalFetch(input, init);
   };
 }
+
+relocateRenderExportControls();

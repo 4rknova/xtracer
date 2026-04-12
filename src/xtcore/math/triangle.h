@@ -28,6 +28,9 @@ class Triangle: public xtcore::asset::ISurface
     Vector3f  v[3]; // position
     Vector3f  n[3]; // normal
     Vector2f tc[3]; // texcoords
+    Vector3f edge1;
+    Vector3f edge2;
+    Vector3f face_normal;
 };
 
     } /* namespace surface */

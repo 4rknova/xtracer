@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <list>
 #include <ctime>
 #include <vector>
 #include <thread>
@@ -30,6 +31,7 @@
 #include <xtcore/math/fractal.h>
 #include <xtcore/math/csg.h>
 #include <xtcore/material.h>
+#include <xtcore/medium/homogeneous.h>
 #include <xtcore/mesh.h>
 #include <xtcore/parseutil.h>
 #include <xtcore/resolution_preset.h>
@@ -39,6 +41,7 @@
 #include <xtcore/sampler/sampler_erp.h>
 #include <xtcore/sampler/sampler_fbm_marble.h>
 #include <xtcore/sampler/sampler_gradient.h>
+#include <xtcore/sampler/sampler_rayleigh_sky.h>
 #include <xtcore/sampler/sampler_graphpaper.h>
 #include <xtcore/sampler/sampler_tex.h>
 #include <xtcore/sampler/sampler_weave.h>
@@ -46,9 +49,12 @@
 #include <xtcore/strpool.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
+#include <nimg/img.h>
 
 #include "backend_log.h"
+#include "gallery_manager.h"
 #include "job_manager.h"
+#include "post_filters.h"
 #include "workspace_manager.h"
 
 namespace xtracer {
@@ -80,6 +86,26 @@ size_t compute_auto_render_threads(size_t reserve_threads)
     const size_t capacity = (openmp_max_threads > 0) ? openmp_max_threads : logical_cores;
     return (capacity > reserve_threads) ? (capacity - reserve_threads) : 1;
 }
+
+struct pooled_hash_guard_t
+{
+    HASH_ID value;
+
+    pooled_hash_guard_t()
+        : value(HASH_ID_INVALID)
+    {}
+
+    ~pooled_hash_guard_t()
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+    }
+
+    void reset(HASH_ID next)
+    {
+        if (value != HASH_ID_INVALID) xtcore::pool::str::del(value);
+        value = next;
+    }
+};
 
 std::string json_escape(const std::string &s)
 {
@@ -155,6 +181,29 @@ bool file_exists(const std::string &path)
     return in.good();
 }
 
+const char *integrator_status_name(xtcore::render::integrator_status_t status)
+{
+    switch (status) {
+        case xtcore::render::INTEGRATOR_STATUS_RECOMMENDED: return "recommended";
+        case xtcore::render::INTEGRATOR_STATUS_STABLE: return "stable";
+        case xtcore::render::INTEGRATOR_STATUS_EXPERIMENTAL: return "experimental";
+        case xtcore::render::INTEGRATOR_STATUS_LEGACY: return "legacy";
+        case xtcore::render::INTEGRATOR_STATUS_HIDDEN: return "hidden";
+        default: return "stable";
+    }
+}
+
+const char *filter_status_name(xtcore::filter::filter_status_t status)
+{
+    switch (status) {
+        case xtcore::filter::FILTER_STATUS_STABLE: return "stable";
+        case xtcore::filter::FILTER_STATUS_EXPERIMENTAL: return "experimental";
+        case xtcore::filter::FILTER_STATUS_LEGACY: return "legacy";
+        case xtcore::filter::FILTER_STATUS_HIDDEN: return "hidden";
+        default: return "stable";
+    }
+}
+
 bool finite_aabb3(const xtcore::AABB3 &box)
 {
     return std::isfinite((double)box.min.x) && std::isfinite((double)box.min.y) && std::isfinite((double)box.min.z)
@@ -177,6 +226,20 @@ bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v,
     if (ss.fail()) return false;
     if (v < min_v || v > max_v) return false;
     out = (size_t)v;
+    return true;
+}
+
+bool parse_f64_param(const httplib::Request &req, const char *key, double min_v, double max_v, double &out)
+{
+    if (!req.has_param(key)) return false;
+    const std::string s = req.get_param_value(key);
+    if (s.empty()) return false;
+    std::istringstream ss(s);
+    double v = 0.0;
+    ss >> v;
+    if (ss.fail() || !std::isfinite(v)) return false;
+    if (v < min_v || v > max_v) return false;
+    out = v;
     return true;
 }
 
@@ -211,6 +274,33 @@ bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore
     return false;
 }
 
+bool parse_render_mode_param(const httplib::Request &req,
+                             const char *key,
+                             common::render_request_t::render_mode_t &out)
+{
+    if (!req.has_param(key)) return false;
+    std::string s = req.get_param_value(key);
+    std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char c) { return (char)std::tolower(c); });
+    if (s == "direct" || s == "normal") {
+        out = common::render_request_t::RENDER_MODE_DIRECT;
+        return true;
+    }
+    if (s == "progressive") {
+        out = common::render_request_t::RENDER_MODE_PROGRESSIVE;
+        return true;
+    }
+    if (s == "incremental") {
+        out = common::render_request_t::RENDER_MODE_INCREMENTAL;
+        return true;
+    }
+    if (s == "interactive") {
+        out = common::render_request_t::RENDER_MODE_INTERACTIVE;
+        return true;
+    }
+    return false;
+}
+
 bool parse_sample_distribution_param(const httplib::Request &req,
                                      const char *key,
                                      xtcore::antialiasing::SAMPLE_DISTRIBUTION &out)
@@ -223,7 +313,7 @@ bool parse_sample_distribution_param(const httplib::Request &req,
         out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID;
         return true;
     }
-    if (s == "random" || s == "monte_carlo") {
+    if (s == "random" || s == "jittered") {
         out = xtcore::antialiasing::SAMPLE_DISTRIBUTION_RANDOM;
         return true;
     }
@@ -232,26 +322,18 @@ bool parse_sample_distribution_param(const httplib::Request &req,
 
 bool parse_tonemapping_operator(const std::string &s, xtcore::tonemapping::operator_t &out)
 {
-    if (s == "aces") {
-        out = xtcore::tonemapping::OP_ACES_FITTED;
-        return true;
-    }
-    if (s == "reinhard") {
-        out = xtcore::tonemapping::OP_REINHARD;
-        return true;
-    }
-    if (s == "reinhard_luma") {
-        out = xtcore::tonemapping::OP_REINHARD_LUMINANCE;
-        return true;
-    }
-    if (s == "mantiuk_2006") {
-        out = xtcore::tonemapping::OP_MANTIUK_2006;
-        return true;
-    }
-    if (s == "none") {
-        out = xtcore::tonemapping::OP_NONE;
-        return true;
-    }
+    if (s == "aces")          { out = xtcore::tonemapping::OP_ACES_FITTED;         return true; }
+    if (s == "reinhard")      { out = xtcore::tonemapping::OP_REINHARD;            return true; }
+    if (s == "reinhard_luma") { out = xtcore::tonemapping::OP_REINHARD_LUMINANCE;  return true; }
+    if (s == "mantiuk_2006")  { out = xtcore::tonemapping::OP_MANTIUK_2006;        return true; }
+    if (s == "hable")         { out = xtcore::tonemapping::OP_HABLE;               return true; }
+    if (s == "exponential")   { out = xtcore::tonemapping::OP_EXPONENTIAL;         return true; }
+    if (s == "lottes")        { out = xtcore::tonemapping::OP_LOTTES;              return true; }
+    if (s == "cineon")        { out = xtcore::tonemapping::OP_CINEON;              return true; }
+    if (s == "uchimura")      { out = xtcore::tonemapping::OP_UCHIMURA;            return true; }
+    if (s == "agx")           { out = xtcore::tonemapping::OP_AGX;                 return true; }
+    if (s == "khronos_pbr")   { out = xtcore::tonemapping::OP_KHRONOS_PBR_NEUTRAL; return true; }
+    if (s == "none")          { out = xtcore::tonemapping::OP_NONE;                return true; }
     return false;
 }
 
@@ -319,6 +401,44 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
     return true;
 }
 
+bool parse_post_filter_settings(const httplib::Request &req,
+                                bool &enabled,
+                                std::string &post_filters,
+                                std::string &error_json)
+{
+    enabled = false;
+    post_filters.clear();
+    error_json.clear();
+
+    if (req.has_param("post_filters_enabled")) {
+        const std::string raw = req.get_param_value("post_filters_enabled");
+        if (raw == "1" || raw == "true") enabled = true;
+        else if (raw == "0" || raw == "false" || raw.empty()) enabled = false;
+        else {
+            error_json = "{\"error\":\"invalid post_filters_enabled\"}";
+            return false;
+        }
+    }
+
+    if (req.has_param("post_filters")) {
+        post_filters = req.get_param_value("post_filters");
+    }
+
+    if (!enabled) {
+        post_filters.clear();
+        return true;
+    }
+
+    for (size_t i = 0; i < post_filters.size(); ++i) {
+        const unsigned char c = (unsigned char)post_filters[i];
+        if (std::isalnum(c) || c == '_' || c == ':' || c == ',' || c == '-' || c == '.' || c == '=') continue;
+        if (std::isspace(c)) continue;
+        error_json = "{\"error\":\"invalid post_filters\"}";
+        return false;
+    }
+    return true;
+}
+
 void append_u32le(std::vector<unsigned char> &out, uint32_t v)
 {
     out.push_back((unsigned char)(v & 0xFFu));
@@ -340,34 +460,52 @@ bool has_prefix(const std::string &s, const char *prefix)
     return s.size() >= n && s.compare(0, n, prefix) == 0;
 }
 
-struct third_party_dep_t {
-    const char *name;
-    const char *license;
-    const char *url;
-};
-
-void append_third_party_licenses_json(std::ostringstream &ss)
+std::string trim_ascii(const std::string &s)
 {
-    static const third_party_dep_t deps[] = {
-        { "TinyObjLoader", "MIT", "https://github.com/syoyo/tinyobjloader" },
-        { "STB", "Public Domain / MIT", "https://github.com/nothings/stb" },
-        { "TinyEXR", "BSD-3-Clause", "https://github.com/syoyo/tinyexr" },
-        { "strpool", "Public Domain", "https://github.com/mattiasgustavsson/libs" },
-        { "cpp-httplib", "MIT", "https://github.com/yhirose/cpp-httplib" },
-        { "RtMidi", "MIT-style", "https://github.com/thestk/rtmidi" },
-        { "Three.js", "MIT", "https://github.com/mrdoob/three.js" },
-    };
+    size_t start = 0;
+    while (start < s.size() && std::isspace((unsigned char)s[start])) ++start;
 
-    ss << '[';
-    for (size_t i = 0; i < (sizeof(deps) / sizeof(deps[0])); ++i) {
-        if (i) ss << ',';
-        ss << "{"
-           << "\"name\":\"" << json_escape(deps[i].name ? deps[i].name : "") << "\","
-           << "\"license\":\"" << json_escape(deps[i].license ? deps[i].license : "") << "\","
-           << "\"url\":\"" << json_escape(deps[i].url ? deps[i].url : "") << "\""
-           << "}";
+    size_t end = s.size();
+    while (end > start && std::isspace((unsigned char)s[end - 1])) --end;
+
+    return s.substr(start, end - start);
+}
+
+std::string third_party_licenses_data_path(const std::string &web_root)
+{
+    if (web_root.empty()) {
+        return "src/frontend/web-server/app/data/third_party_licenses.json";
     }
-    ss << ']';
+
+    std::string path = web_root;
+    while (!path.empty() && (path[path.size() - 1] == '/' || path[path.size() - 1] == '\\')) {
+        path.erase(path.size() - 1, 1);
+    }
+
+    const std::string suffix = "/web-client";
+    if (path.size() >= suffix.size() && path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        return path.substr(0, path.size() - suffix.size()) + "/web-server/app/data/third_party_licenses.json";
+    }
+
+    return path + "/../web-server/app/data/third_party_licenses.json";
+}
+
+void append_third_party_licenses_json(std::ostringstream &ss, const std::string &web_root)
+{
+    std::string json;
+    if (!read_text_file(third_party_licenses_data_path(web_root), json)) {
+        backend_log_t::handle().add("warning", "failed to read third-party dependency registry json");
+        ss << "[]";
+        return;
+    }
+
+    json = trim_ascii(json);
+    if (json.empty()) {
+        ss << "[]";
+        return;
+    }
+
+    ss << json;
 }
 
 std::string utc_timestamp_for_filename()
@@ -384,6 +522,31 @@ std::string utc_timestamp_for_filename()
         return "unknown_time";
     }
     return std::string(buf);
+}
+
+std::string sanitize_filename_token(const std::string &value, const char *fallback)
+{
+    std::string out;
+    out.reserve(value.size());
+    for (size_t i = 0; i < value.size(); ++i) {
+        const unsigned char c = (unsigned char)value[i];
+        if (std::isalnum(c) || c == '_' || c == '-' || c == '.') out.push_back((char)c);
+        else out.push_back('_');
+    }
+
+    while (!out.empty() && out[0] == '_') out.erase(out.begin());
+    while (!out.empty() && out[out.size() - 1] == '_') out.erase(out.size() - 1, 1);
+
+    if (out.empty()) return std::string(fallback ? fallback : "value");
+    return out;
+}
+
+std::string scene_basename_for_filename(const std::string &scene)
+{
+    if (scene.size() >= 4 && scene.compare(scene.size() - 4, 4, ".scn") == 0) {
+        return scene.substr(0, scene.size() - 4);
+    }
+    return scene;
 }
 
 std::string lower_ascii(std::string s)
@@ -431,6 +594,46 @@ void append_integrator_controls_json(std::ostringstream &ss, const common::integ
             for (size_t k = 0; k < ctrl.options_count; ++k) {
                 if (k) ss << ',';
                 const common::integrator_control_option_t &opt = ctrl.options[k];
+                ss << "{\"value\":\"" << json_escape(opt.value ? opt.value : "")
+                   << "\",\"label\":\"" << json_escape(opt.label ? opt.label : "") << "\"}";
+            }
+            ss << "]";
+        }
+        ss << "}";
+    }
+    ss << "]";
+}
+
+void append_post_filter_params_json(std::ostringstream &ss, const post_filter_info_t &filter)
+{
+    ss << "\"params\":[";
+    for (size_t j = 0; j < filter.params_count; ++j) {
+        const post_filter_param_info_t &param = filter.params[j];
+        if (j) ss << ',';
+        ss << "{"
+           << "\"id\":\"" << json_escape(param.id ? param.id : "") << "\","
+           << "\"label\":\"" << json_escape(param.label ? param.label : "") << "\","
+           << "\"type\":\"" << json_escape(param.type ? param.type : "") << "\"";
+        if (param.description && *(param.description)) {
+            ss << ",\"description\":\"" << json_escape(param.description) << "\"";
+        }
+        if (param.default_value && *(param.default_value)) {
+            ss << ",\"default\":\"" << json_escape(param.default_value) << "\"";
+        }
+        if (param.min_value && *(param.min_value)) {
+            ss << ",\"min\":\"" << json_escape(param.min_value) << "\"";
+        }
+        if (param.max_value && *(param.max_value)) {
+            ss << ",\"max\":\"" << json_escape(param.max_value) << "\"";
+        }
+        if (param.step_value && *(param.step_value)) {
+            ss << ",\"step\":\"" << json_escape(param.step_value) << "\"";
+        }
+        if (param.options_count > 0 && param.options) {
+            ss << ",\"options\":[";
+            for (size_t k = 0; k < param.options_count; ++k) {
+                if (k) ss << ',';
+                const post_filter_param_option_t &opt = param.options[k];
                 ss << "{\"value\":\"" << json_escape(opt.value ? opt.value : "")
                    << "\",\"label\":\"" << json_escape(opt.label ? opt.label : "") << "\"}";
             }
@@ -677,7 +880,7 @@ camera_list_info_t list_cameras_from_scene(const xtcore::Scene &scene)
     return out;
 }
 
-std::string scene_geometry_json_from_scene(const xtcore::Scene &scene)
+std::string scene_geometry_json_from_scene(xtcore::Scene &scene)
 {
     std::ostringstream ss;
     ss << "{\"meshes\":{";
@@ -732,7 +935,45 @@ std::string scene_geometry_json_from_scene(const xtcore::Scene &scene)
         ss << "]}";
     }
 
-    ss << "}}";
+    ss << "},\"debug\":{";
+
+    std::vector<xtcore::AABB3> global_bvh;
+    scene.collect_tlas_aabbs(global_bvh);
+    ss << "\"global_bvh\":[";
+    for (size_t i = 0; i < global_bvh.size(); ++i) {
+        if (i > 0) ss << ",";
+        const xtcore::AABB3 &box = global_bvh[i];
+        ss << "{\"min\":["
+           << box.min.x << "," << box.min.y << "," << box.min.z
+           << "],\"max\":["
+           << box.max.x << "," << box.max.y << "," << box.max.z
+           << "]}";
+    }
+    ss << "],\"mesh_bvh\":{";
+
+    first_mesh = true;
+    for (auto it = scene.m_surface.begin(); it != scene.m_surface.end(); ++it) {
+        const xtcore::surface::Mesh *mesh = dynamic_cast<const xtcore::surface::Mesh *>((*it).second);
+        if (!mesh) continue;
+        const char *name = xtcore::pool::str::get((*it).first);
+        if (!name || !*name) continue;
+        if (!first_mesh) ss << ",";
+        first_mesh = false;
+        ss << "\"" << json_escape(name) << "\":[";
+        std::vector<xtcore::AABB3> mesh_boxes;
+        mesh->collect_bvh_aabbs(mesh_boxes);
+        for (size_t i = 0; i < mesh_boxes.size(); ++i) {
+            if (i > 0) ss << ",";
+            const xtcore::AABB3 &box = mesh_boxes[i];
+            ss << "{\"min\":["
+               << box.min.x << "," << box.min.y << "," << box.min.z
+               << "],\"max\":["
+               << box.max.x << "," << box.max.y << "," << box.max.z
+               << "]}";
+        }
+        ss << "]";
+    }
+    ss << "}}}";
     return ss.str();
 }
 
@@ -775,6 +1016,13 @@ const char *material_type_name(const xtcore::asset::IMaterial *mat)
     if (dynamic_cast<const xtcore::asset::material::BlinnPhong *>(mat)) return "blinn_phong";
     if (dynamic_cast<const xtcore::asset::material::Emissive *>(mat)) return "emissive";
     if (dynamic_cast<const xtcore::asset::material::Dielectric *>(mat)) return "dielectric";
+    if (dynamic_cast<const xtcore::asset::material::Principled *>(mat)) return "principled";
+    if (dynamic_cast<const xtcore::asset::material::RoughDielectric *>(mat)) return "rough_dielectric";
+    if (dynamic_cast<const xtcore::asset::material::ThinDielectric *>(mat)) return "thin_dielectric";
+    if (dynamic_cast<const xtcore::asset::material::Subsurface *>(mat)) return "subsurface";
+    if (dynamic_cast<const xtcore::asset::material::Sheen *>(mat)) return "sheen";
+    if (dynamic_cast<const xtcore::asset::material::ThinTranslucent *>(mat)) return "thin_translucent";
+    if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat)) return "boundary";
     return "material";
 }
 
@@ -785,12 +1033,21 @@ const char *sampler_type_name(const xtcore::sampler::ISampler *sampler)
     if (dynamic_cast<const xtcore::sampler::Cubemap *>(sampler)) return "cubemap";
     if (dynamic_cast<const xtcore::sampler::ERP *>(sampler)) return "erp";
     if (dynamic_cast<const xtcore::sampler::Gradient *>(sampler)) return "gradient";
+    if (dynamic_cast<const xtcore::sampler::RayleighSky *>(sampler)) return "rayleigh_sky";
     if (dynamic_cast<const xtcore::sampler::Checker *>(sampler)) return "checker";
     if (dynamic_cast<const xtcore::sampler::GraphPaper *>(sampler)) return "graphpaper";
     if (dynamic_cast<const xtcore::sampler::Weave *>(sampler)) return "weave";
     if (dynamic_cast<const xtcore::sampler::FBMMarble *>(sampler)) return "fbm_marble";
     if (dynamic_cast<const xtcore::sampler::SolidColor *>(sampler)) return "color";
     return "sampler";
+}
+
+const char *medium_type_name(const xtcore::asset::medium::IMedium *medium)
+{
+    if (!medium) return "medium";
+    if (dynamic_cast<const xtcore::asset::medium::Homogeneous *>(medium)) return "homogeneous";
+    if (dynamic_cast<const xtcore::asset::medium::HeterogeneousNoise *>(medium)) return "heterogeneous_noise";
+    return "medium";
 }
 
 std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, const xtcore::Scene &scene)
@@ -804,9 +1061,10 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         const char *name = xtcore::pool::str::get((*it).first);
         if (!name || !*name) continue;
         const xtcore::asset::ICamera *cam = (*it).second;
-        const xtcore::camera::Perspective *pcam = dynamic_cast<const xtcore::camera::Perspective *>(cam);
-        const xtcore::camera::ERP *ecam = dynamic_cast<const xtcore::camera::ERP *>(cam);
-        const xtcore::camera::ODS *ocam = dynamic_cast<const xtcore::camera::ODS *>(cam);
+        const xtcore::camera::Perspective *pcam  = dynamic_cast<const xtcore::camera::Perspective *>(cam);
+        const xtcore::camera::TiltShift   *tscam = dynamic_cast<const xtcore::camera::TiltShift *>(cam);
+        const xtcore::camera::ERP         *ecam  = dynamic_cast<const xtcore::camera::ERP *>(cam);
+        const xtcore::camera::ODS         *ocam  = dynamic_cast<const xtcore::camera::ODS *>(cam);
         if (!first) ss << ",";
         first = false;
         ss << "{"
@@ -823,6 +1081,17 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
             ss << ",\"flength\":" << pcam->flength;
             ss << ",\"aperture_blades\":" << pcam->aperture_blades;
             ss << ",\"aperture_rotation\":" << pcam->aperture_rotation;
+        } else if (tscam) {
+            ss << ",\"target\":[" << tscam->target.x << "," << tscam->target.y << "," << tscam->target.z << "]";
+            ss << ",\"up\":[" << tscam->up.x << "," << tscam->up.y << "," << tscam->up.z << "]";
+            ss << ",\"fov\":" << tscam->fov;
+            ss << ",\"aperture\":" << tscam->aperture;
+            ss << ",\"flength\":" << tscam->flength;
+            ss << ",\"aperture_blades\":" << tscam->aperture_blades;
+            ss << ",\"aperture_rotation\":" << tscam->aperture_rotation;
+            ss << ",\"tilt\":" << tscam->tilt;
+            ss << ",\"shift_x\":" << tscam->shift_x;
+            ss << ",\"shift_y\":" << tscam->shift_y;
         } else if (ecam) {
             ss << ",\"orientation\":[" << ecam->orientation.x << "," << ecam->orientation.y << "," << ecam->orientation.z << "]";
         } else if (ocam) {
@@ -951,12 +1220,41 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         const std::string surface_name = surface_name_c ? std::string(surface_name_c) : std::string();
         const char *material_name_c = xtcore::pool::str::get(obj->material);
         const std::string material_name = material_name_c ? std::string(material_name_c) : std::string();
+        const xtcore::asset::medium::IMedium *medium = scene.get_object_medium((*it).first);
+        const std::string medium_name = medium ? obj_name : std::string();
         if (!first) ss << ",";
         first = false;
         ss << "{"
            << "\"id\":\"" << json_escape(obj_name) << "\","
            << "\"surface\":\"" << json_escape(surface_name) << "\","
-           << "\"material\":\"" << json_escape(material_name) << "\""
+           << "\"material\":\"" << json_escape(material_name) << "\","
+           << "\"medium\":\"" << json_escape(medium_name) << "\""
+           << "}";
+    }
+    ss << "],";
+
+    ss << "\"media\":[";
+    first = true;
+    for (auto it = scene.m_objects.begin(); it != scene.m_objects.end(); ++it) {
+        const xtcore::asset::Object *obj = (*it).second;
+        if (!obj) continue;
+        const char *obj_name_c = xtcore::pool::str::get((*it).first);
+        const std::string obj_name = obj_name_c ? std::string(obj_name_c) : std::string();
+        if (obj_name.empty()) continue;
+        const xtcore::asset::medium::IMedium *medium = scene.get_object_medium((*it).first);
+        if (!medium) continue;
+        if (!first) ss << ",";
+        first = false;
+        const nimg::ColorRGBf sigma_a = medium->sigma_a();
+        const nimg::ColorRGBf sigma_s = medium->sigma_s();
+        const nimg::ColorRGBf emission = medium->emission();
+        ss << "{"
+           << "\"id\":\"" << json_escape(obj_name) << "\","
+           << "\"type\":\"" << medium_type_name(medium) << "\","
+           << "\"sigma_a\":[" << sigma_a.r() << "," << sigma_a.g() << "," << sigma_a.b() << "],"
+           << "\"sigma_s\":[" << sigma_s.r() << "," << sigma_s.g() << "," << sigma_s.b() << "],"
+           << "\"emission\":[" << emission.r() << "," << emission.g() << "," << emission.b() << "],"
+           << "\"g\":" << medium->asymmetry()
            << "}";
     }
     ss << "]";
@@ -1009,6 +1307,13 @@ struct scene_pending_load_t
 {
     std::uint64_t mtime;
     unsigned long long job_id;
+    long long completed_ms;
+
+    scene_pending_load_t()
+        : mtime(0ULL)
+        , job_id(0ULL)
+        , completed_ms(0LL)
+    {}
 };
 
 class scene_cache_t
@@ -1024,6 +1329,7 @@ class scene_cache_t
     {
         scene_cache_lookup_t out;
         const std::string key = scene_cache_key(scene_path, variant);
+        const long long now = now_ms();
 
         std::uint64_t mtime = 0ULL;
         if (!file_mtime(scene_path, mtime)) {
@@ -1032,27 +1338,31 @@ class scene_cache_t
         }
 
         unsigned long long pending_job_id = 0ULL;
+        std::vector<unsigned long long> expired_jobs;
         {
             std::lock_guard<std::mutex> lock(mut);
+            prune_completed_pending_locked(now, expired_jobs);
             auto it = entries.find(key);
             if (it != entries.end() && it->second && it->second->mtime == mtime) {
                 out.cache_hit = true;
+                touch_entry_locked(key);
                 backend_log_t::handle().add("debug",
                                             "scene cache hit path=" + scene_path + " variant=" + variant);
                 out.entry = it->second;
-                return out;
-            }
-
-            auto pit = pending.find(key);
-            if (pit != pending.end()) {
-                if (pit->second.mtime == mtime) {
-                    pending_job_id = pit->second.job_id;
-                } else {
-                    xtcore::io::scn::load_async_discard(pit->second.job_id);
-                    pending.erase(pit);
+            } else {
+                auto pit = pending.find(key);
+                if (pit != pending.end()) {
+                    if (pit->second.mtime == mtime) {
+                        pending_job_id = pit->second.job_id;
+                    } else {
+                        xtcore::io::scn::load_async_discard(pit->second.job_id);
+                        pending.erase(pit);
+                    }
                 }
             }
         }
+        discard_pending_jobs(expired_jobs);
+        if (out.entry) return out;
 
         if (!pending_job_id) {
             const char *variant_name = variant.empty() ? nullptr : variant.c_str();
@@ -1066,6 +1376,7 @@ class scene_cache_t
                 scene_pending_load_t p;
                 p.mtime = mtime;
                 p.job_id = pending_job_id;
+                p.completed_ms = 0LL;
                 pending[key] = p;
             }
             std::ostringstream log;
@@ -1103,6 +1414,10 @@ class scene_cache_t
             return out;
         }
 
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            mark_pending_completed_locked(key, pending_job_id, now);
+        }
         std::shared_ptr<xtcore::Scene> loaded_scene = xtcore::io::scn::load_async_take_scene(pending_job_id);
         if (!loaded_scene) {
             out.loading = true;
@@ -1127,6 +1442,8 @@ class scene_cache_t
         {
             std::lock_guard<std::mutex> lock(mut);
             entries[key] = entry;
+            touch_entry_locked(key);
+            prune_entries_locked();
             auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
         }
@@ -1154,28 +1471,159 @@ class scene_cache_t
                 ++pit;
             }
         }
-        for (auto eit = entries.begin(); eit != entries.end(); ) {
+        std::vector<std::string> keys_to_erase;
+        for (auto eit = entries.begin(); eit != entries.end(); ++eit) {
             if (scene_cache_key_matches_path(eit->first, scene_path)) {
-                eit = entries.erase(eit);
-            } else {
-                ++eit;
+                keys_to_erase.push_back(eit->first);
             }
+        }
+        for (size_t i = 0; i < keys_to_erase.size(); ++i) {
+            erase_entry_locked(keys_to_erase[i]);
         }
     }
 
     bool load_job_snapshot(unsigned long long id, xtcore::io::scn::async_load_snapshot_t &snapshot)
     {
-        return xtcore::io::scn::load_async_snapshot(id, &snapshot);
+        const long long now = now_ms();
+        std::vector<unsigned long long> expired_jobs;
+        {
+            std::lock_guard<std::mutex> lock(mut);
+            prune_completed_pending_locked(now, expired_jobs);
+        }
+        discard_pending_jobs(expired_jobs);
+
+        if (!xtcore::io::scn::load_async_snapshot(id, &snapshot)) {
+            std::lock_guard<std::mutex> lock(mut);
+            erase_pending_by_job_locked(id);
+            return false;
+        }
+
+        if (snapshot.state == xtcore::io::scn::ASYNC_LOAD_DONE
+            || snapshot.state == xtcore::io::scn::ASYNC_LOAD_ERROR) {
+            std::vector<unsigned long long> completed_expired_jobs;
+            {
+                std::lock_guard<std::mutex> lock(mut);
+                mark_pending_completed_by_job_locked(id, now);
+                prune_completed_pending_locked(now, completed_expired_jobs);
+            }
+            discard_pending_jobs(completed_expired_jobs);
+        }
+        return true;
     }
 
     private:
-    scene_cache_t() = default;
+    scene_cache_t()
+        : mut()
+        , entries()
+        , pending()
+        , lru_order()
+        , lru_index()
+        , max_entries(8)
+    {}
     scene_cache_t(const scene_cache_t &) = delete;
     scene_cache_t &operator=(const scene_cache_t &) = delete;
+
+    long long now_ms() const
+    {
+        const auto now = std::chrono::system_clock::now();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+        return (long long)ms.count();
+    }
+
+    void touch_entry_locked(const std::string &key)
+    {
+        auto it = lru_index.find(key);
+        if (it != lru_index.end()) {
+            lru_order.erase(it->second);
+        }
+        lru_order.push_back(key);
+        std::list<std::string>::iterator last = lru_order.end();
+        --last;
+        lru_index[key] = last;
+    }
+
+    void erase_entry_locked(const std::string &key)
+    {
+        auto it = lru_index.find(key);
+        if (it != lru_index.end()) {
+            lru_order.erase(it->second);
+            lru_index.erase(it);
+        }
+        entries.erase(key);
+    }
+
+    void erase_pending_by_job_locked(unsigned long long job_id)
+    {
+        if (!job_id) return;
+        for (auto pit = pending.begin(); pit != pending.end(); ++pit) {
+            if (pit->second.job_id == job_id) {
+                pending.erase(pit);
+                return;
+            }
+        }
+    }
+
+    void mark_pending_completed_locked(const std::string &key,
+                                       unsigned long long job_id,
+                                       long long completed_ms)
+    {
+        if (!job_id) return;
+        auto pit = pending.find(key);
+        if (pit == pending.end()) return;
+        if (pit->second.job_id != job_id) return;
+        if (pit->second.completed_ms == 0LL) pit->second.completed_ms = completed_ms;
+    }
+
+    void mark_pending_completed_by_job_locked(unsigned long long job_id, long long completed_ms)
+    {
+        if (!job_id) return;
+        for (auto pit = pending.begin(); pit != pending.end(); ++pit) {
+            if (pit->second.job_id != job_id) continue;
+            if (pit->second.completed_ms == 0LL) pit->second.completed_ms = completed_ms;
+            return;
+        }
+    }
+
+    void prune_completed_pending_locked(long long now, std::vector<unsigned long long> &jobs_to_discard)
+    {
+        static const long long k_completed_pending_ttl_ms = 30LL * 1000LL;
+        for (auto pit = pending.begin(); pit != pending.end();) {
+            if (pit->second.completed_ms > 0LL
+                && (now - pit->second.completed_ms) > k_completed_pending_ttl_ms) {
+                if (pit->second.job_id) jobs_to_discard.push_back(pit->second.job_id);
+                pit = pending.erase(pit);
+                continue;
+            }
+            ++pit;
+        }
+    }
+
+    void discard_pending_jobs(const std::vector<unsigned long long> &jobs)
+    {
+        if (jobs.empty()) return;
+        for (size_t i = 0; i < jobs.size(); ++i) {
+            if (!jobs[i]) continue;
+            xtcore::io::scn::load_async_discard(jobs[i]);
+        }
+        xtcore::io::scn::load_async_gc_done(128);
+    }
+
+    void prune_entries_locked()
+    {
+        while (max_entries > 0 && entries.size() > max_entries && !lru_order.empty()) {
+            const std::string victim = lru_order.front();
+            lru_order.pop_front();
+            lru_index.erase(victim);
+            entries.erase(victim);
+        }
+    }
 
     std::mutex mut;
     std::unordered_map<std::string, std::shared_ptr<scene_cache_entry_t> > entries;
     std::unordered_map<std::string, scene_pending_load_t> pending;
+    std::list<std::string> lru_order;
+    std::unordered_map<std::string, std::list<std::string>::iterator> lru_index;
+    size_t max_entries;
 };
 
 camera_list_info_t list_cameras(const std::string &scene_path,
@@ -1286,6 +1734,76 @@ std::string scene_runtime_graph_json(const std::string &scene_path,
     return entry->runtime_graph_json;
 }
 
+bool encode_texture_sampler_png(const xtcore::sampler::Texture2D *tex, std::vector<unsigned char> &out)
+{
+    if (!tex) return false;
+    if (tex->width() == 0 || tex->height() == 0) return false;
+
+    nimg::Pixmap pixmap;
+    if (pixmap.init(tex->width(), tex->height()) != 0) return false;
+
+    for (size_t y = 0; y < tex->height(); ++y) {
+        for (size_t x = 0; x < tex->width(); ++x) {
+            pixmap.pixel(x, y) = tex->pixel_ro(x, y);
+        }
+    }
+
+    return nimg::io::save::png_memory(pixmap, out) == 0;
+}
+
+bool scene_runtime_texture_png(const std::string &scene_path,
+                               const std::string &variant,
+                               const std::string &material_name,
+                               const std::string &sampler_name,
+                               std::vector<unsigned char> &png,
+                               std::string &error,
+                               bool &loading,
+                               unsigned long long &job_id)
+{
+    scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
+    error = lookup.error;
+    loading = lookup.loading;
+    job_id = lookup.load_job_id;
+    std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
+    if (!entry || !entry->scene) {
+        if (error.empty() && !loading) error = "scene not loaded";
+        return false;
+    }
+
+    pooled_hash_guard_t material_id_guard;
+    material_id_guard.reset(xtcore::pool::str::add(material_name.c_str()));
+    const HASH_UINT64 material_id = material_id_guard.value;
+    auto it = entry->scene->m_materials.find(material_id);
+    if (it == entry->scene->m_materials.end() || !it->second) {
+        error = "material not found";
+        return false;
+    }
+
+    xtcore::asset::IMaterial *mat = it->second;
+    xtcore::sampler::ISampler *sampler = 0;
+    for (size_t i = 0; i < mat->get_sampler_count(); ++i) {
+        std::string name;
+        xtcore::sampler::ISampler *candidate = mat->get_sampler_by_index(i, &name);
+        if (name == sampler_name) {
+            sampler = candidate;
+            break;
+        }
+    }
+
+    xtcore::sampler::Texture2D *tex = dynamic_cast<xtcore::sampler::Texture2D *>(sampler);
+    if (!tex) {
+        error = "texture sampler not found";
+        return false;
+    }
+
+    if (!encode_texture_sampler_png(tex, png)) {
+        error = "failed to encode texture preview";
+        return false;
+    }
+
+    return true;
+}
+
 void send_scene_loading(httplib::Response &res, unsigned long long load_job_id)
 {
     std::ostringstream ss;
@@ -1323,6 +1841,7 @@ void serve_static_file(const std::string &path, const char *mime, httplib::Respo
 void setup_routes(httplib::Server &server,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
+                  gallery_manager_t *gallery,
                   const std::string &scene_dir,
                   const std::string &web_root,
                   const render_thread_policy_t &thread_policy)
@@ -1333,7 +1852,7 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/about", [&jobs, thread_policy](const httplib::Request &, httplib::Response &res) {
+    server.Get("/api/about", [&jobs, &web_root, thread_policy](const httplib::Request &, httplib::Response &res) {
         std::time_t now = std::time(nullptr);
         std::tm *utc = std::gmtime(&now);
         int year = utc ? (utc->tm_year + 1900) : 2010;
@@ -1364,7 +1883,7 @@ void setup_routes(httplib::Server &server,
            << "\"render_reserve_threads\":" << reserve_threads << ","
            << "\"render_auto_threads\":" << auto_render_threads << ","
            << "\"third_party_licenses\":";
-        append_third_party_licenses_json(ss);
+        append_third_party_licenses_json(ss, web_root);
         ss
            << "}";
         send_json(res, ss.str());
@@ -1392,10 +1911,13 @@ void setup_routes(httplib::Server &server,
            << "\"workspaces\":[";
         for (size_t i = 0; i < list.size(); ++i) {
             const workspace_snapshot_t &w = list[i];
+            const bool is_active_for_client = !active_workspace.empty() && (w.id == active_workspace);
             if (i) ss << ",";
             ss << "{"
                << "\"id\":\"" << json_escape(w.id) << "\","
                << "\"name\":\"" << json_escape(w.name) << "\","
+               << "\"is_owned_by_client\":" << (w.is_owned_by_client ? "true" : "false") << ","
+               << "\"is_active_for_client\":" << (is_active_for_client ? "true" : "false") << ","
                << "\"active_scene\":\"" << json_escape(w.active_scene) << "\","
                << "\"active_job_id\":\"" << json_escape(w.active_job_id) << "\","
                << "\"last_job_id\":\"" << json_escape(w.last_job_id) << "\","
@@ -1416,7 +1938,12 @@ void setup_routes(httplib::Server &server,
     server.Post("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
         const std::string client_id = read_client_id(req);
         const std::string name = req.has_param("name") ? req.get_param_value("name") : "";
-        const std::string workspace_id = workspaces.create(name);
+        const std::string workspace_id = workspaces.create(name, client_id);
+        if (workspace_id.empty()) {
+            backend_log_t::handle().add("warn", "workspace create rejected: retained workspace limit reached");
+            send_json(res, "{\"error\":\"workspace limit reached\"}", 409);
+            return;
+        }
         if (!client_id.empty()) {
             workspaces.set_active(client_id, workspace_id);
         }
@@ -1502,7 +2029,13 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-        if (!workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"))) {
+        const workspace_manager_t::store_result_t rc =
+            workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"));
+        if (rc == workspace_manager_t::STORE_TOO_LARGE) {
+            send_json(res, "{\"error\":\"scene draft too large\"}", 413);
+            return;
+        }
+        if (rc != workspace_manager_t::STORE_OK) {
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
@@ -1523,11 +2056,13 @@ void setup_routes(httplib::Server &server,
         std::string workspace_id;
         workspaces.get_active(client_id, workspace_id);
         const std::string settings_json = req.get_param_value("settings_json");
-        if (settings_json.size() > 65536) {
-            send_json(res, "{\"error\":\"settings_json too large\"}", 400);
+        const workspace_manager_t::store_result_t rc =
+            workspaces.set_settings_json(workspace_id, settings_json);
+        if (rc == workspace_manager_t::STORE_TOO_LARGE) {
+            send_json(res, "{\"error\":\"settings_json too large\"}", 413);
             return;
         }
-        if (!workspaces.set_settings_json(workspace_id, settings_json)) {
+        if (rc != workspace_manager_t::STORE_OK) {
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
@@ -1760,6 +2295,44 @@ void setup_routes(httplib::Server &server,
         send_json(res, payload);
     });
 
+    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/runtime_texture)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
+        std::string scene = req.matches[1];
+        if (!is_scene_name_safe(scene)) {
+            backend_log_t::handle().add("warn", "runtime_texture rejected: invalid scene name");
+            send_json(res, "{\"error\":\"invalid scene\"}", 400);
+            return;
+        }
+        if (!req.has_param("material") || !req.has_param("sampler")) {
+            send_json(res, "{\"error\":\"material and sampler are required\"}", 400);
+            return;
+        }
+
+        std::string variant;
+        std::string variant_error;
+        if (!read_variant_name(req, variant, variant_error)) {
+            send_json(res, "{\"error\":\"invalid variant\"}", 400);
+            return;
+        }
+
+        const std::string material = req.get_param_value("material");
+        const std::string sampler = req.get_param_value("sampler");
+        std::vector<unsigned char> png;
+        std::string error;
+        bool loading = false;
+        unsigned long long load_job_id = 0ULL;
+        if (!scene_runtime_texture_png(join_path(scene_dir, scene), variant, material, sampler, png, error, loading, load_job_id)) {
+            if (loading) {
+                send_scene_loading(res, load_job_id);
+                return;
+            }
+            send_json(res, "{\"error\":\"texture preview unavailable\"}", 404);
+            return;
+        }
+
+        res.set_header("Cache-Control", "no-store");
+        res.set_content((const char *)png.data(), png.size(), "image/png");
+    });
+
     server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/camera_resolve)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
         std::string scene = req.matches[1];
         if (!is_scene_name_safe(scene)) {
@@ -1882,7 +2455,11 @@ void setup_routes(httplib::Server &server,
         if (!client_id.empty()) {
             std::string workspace_id;
             workspaces.get_active(client_id, workspace_id);
-            workspaces.set_scene_draft(workspace_id, scene_name, source);
+            const workspace_manager_t::store_result_t draft_rc =
+                workspaces.set_scene_draft(workspace_id, scene_name, source);
+            if (draft_rc == workspace_manager_t::STORE_TOO_LARGE) {
+                backend_log_t::handle().add("warn", "scene draft cache skipped: source too large scene=" + scene_name);
+            }
             workspaces.set_active_scene(workspace_id, scene_name);
         }
         backend_log_t::handle().add("info", "scene saved scene=" + scene_name);
@@ -1933,9 +2510,36 @@ void setup_routes(httplib::Server &server,
         ss << "{\"integrators\":[";
         for (size_t i = 0; i < list.size(); ++i) {
             if (i) ss << ',';
-            ss << "{\"id\":\"" << json_escape(list[i].id)
-               << "\",\"label\":\"" << json_escape(list[i].label) << "\",";
+            ss << "{\"id\":\"" << json_escape(list[i].metadata.id)
+               << "\",\"label\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"name\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"status\":\"" << json_escape(integrator_status_name(list[i].metadata.status))
+               << "\",\"description\":\"" << json_escape(list[i].metadata.description)
+               << "\",\"replacement_id\":\"" << json_escape(list[i].metadata.replacement_id)
+               << "\",";
             append_integrator_controls_json(ss, list[i]);
+            ss << "}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Get("/api/post_filters", [](const httplib::Request &, httplib::Response &res) {
+        std::vector<post_filter_info_t> list = list_post_filters();
+        std::ostringstream ss;
+        ss << "{\"post_filters\":[";
+        for (size_t i = 0; i < list.size(); ++i) {
+            if (i) ss << ',';
+            ss << "{\"id\":\"" << json_escape(list[i].metadata.id)
+               << "\",\"label\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"name\":\"" << json_escape(list[i].metadata.name)
+               << "\",\"status\":\"" << json_escape(filter_status_name(list[i].metadata.status))
+               << "\",\"description\":\"" << json_escape(list[i].metadata.description)
+               << "\",\"replacement_id\":\"" << json_escape(list[i].metadata.replacement_id)
+               << "\",\"allow_before_tm\":" << (list[i].allow_before_tm ? "true" : "false")
+               << ",\"allow_after_tm\":" << (list[i].allow_after_tm ? "true" : "false")
+               << ",";
+            append_post_filter_params_json(ss, list[i]);
             ss << "}";
         }
         ss << "]}";
@@ -1981,14 +2585,15 @@ void setup_routes(httplib::Server &server,
             return;
         }
 
+        const std::string requester_client_id = read_client_id(req);
+
         std::string workspace_id;
         if (req.has_param("workspace_id")) {
             workspace_id = req.get_param_value("workspace_id");
         }
         if (workspace_id.empty()) {
-            const std::string client_id = read_client_id(req);
-            if (!client_id.empty()) {
-                workspaces.get_active(client_id, workspace_id);
+            if (!requester_client_id.empty()) {
+                workspaces.get_active(requester_client_id, workspace_id);
             }
         }
         if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
@@ -2010,6 +2615,11 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"integrator not supported\"}", 400);
             return;
         }
+        if (!parse_render_mode_param(req, "render_mode", rr.render_mode) && req.has_param("render_mode")) {
+            backend_log_t::handle().add("warn", "render rejected: invalid render_mode");
+            send_json(res, "{\"error\":\"invalid render_mode\"}", 400);
+            return;
+        }
         for (auto it = req.params.begin(); it != req.params.end(); ++it) {
             if (!has_prefix((*it).first, "iopt.")) continue;
             const std::string key = (*it).first.substr(5);
@@ -2025,14 +2635,53 @@ void setup_routes(httplib::Server &server,
 
         if (req.has_param("camera")) rr.camera = req.get_param_value("camera");
 
+        const bool has_cam_override =
+            req.has_param("cam_px") || req.has_param("cam_py") || req.has_param("cam_pz")
+            || req.has_param("cam_tx") || req.has_param("cam_ty") || req.has_param("cam_tz")
+            || req.has_param("cam_upx") || req.has_param("cam_upy") || req.has_param("cam_upz")
+            || req.has_param("cam_hfov");
+        if (has_cam_override) {
+            double cam_px = 0.0, cam_py = 0.0, cam_pz = 0.0;
+            double cam_tx = 0.0, cam_ty = 0.0, cam_tz = 0.0;
+            double cam_upx = 0.0, cam_upy = 1.0, cam_upz = 0.0;
+            double cam_hfov = 60.0;
+            const bool ok =
+                parse_f64_param(req, "cam_px", -1e9, 1e9, cam_px)
+                && parse_f64_param(req, "cam_py", -1e9, 1e9, cam_py)
+                && parse_f64_param(req, "cam_pz", -1e9, 1e9, cam_pz)
+                && parse_f64_param(req, "cam_tx", -1e9, 1e9, cam_tx)
+                && parse_f64_param(req, "cam_ty", -1e9, 1e9, cam_ty)
+                && parse_f64_param(req, "cam_tz", -1e9, 1e9, cam_tz)
+                && parse_f64_param(req, "cam_upx", -1e6, 1e6, cam_upx)
+                && parse_f64_param(req, "cam_upy", -1e6, 1e6, cam_upy)
+                && parse_f64_param(req, "cam_upz", -1e6, 1e6, cam_upz)
+                && parse_f64_param(req, "cam_hfov", 1.0, 179.0, cam_hfov);
+            if (!ok) {
+                backend_log_t::handle().add("warn", "render rejected: invalid camera override");
+                send_json(res, "{\"error\":\"invalid camera override\"}", 400);
+                return;
+            }
+            rr.camera_override.enabled = true;
+            rr.camera_override.px = cam_px;
+            rr.camera_override.py = cam_py;
+            rr.camera_override.pz = cam_pz;
+            rr.camera_override.tx = cam_tx;
+            rr.camera_override.ty = cam_ty;
+            rr.camera_override.tz = cam_tz;
+            rr.camera_override.upx = cam_upx;
+            rr.camera_override.upy = cam_upy;
+            rr.camera_override.upz = cam_upz;
+            rr.camera_override.hfov = cam_hfov;
+        }
+
         size_t v = 0;
-        if (parse_u64_param(req, "width", 32, 8192, v)) rr.width = v;
+        if (parse_u64_param(req, "width", 8, 8192, v)) rr.width = v;
         else if (req.has_param("width")) {
             backend_log_t::handle().add("warn", "render rejected: invalid width");
             send_json(res, "{\"error\":\"invalid width\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "height", 32, 8192, v)) rr.height = v;
+        if (parse_u64_param(req, "height", 8, 8192, v)) rr.height = v;
         else if (req.has_param("height")) {
             backend_log_t::handle().add("warn", "render rejected: invalid height");
             send_json(res, "{\"error\":\"invalid height\"}", 400);
@@ -2098,7 +2747,13 @@ void setup_routes(httplib::Server &server,
             backend_log_t::handle().add("debug", policy_log.str());
         }
 
-        std::string job_id = jobs.create(rr, scene, workspace_id, cleanup_scene_path);
+        std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path);
+        if (job_id.empty()) {
+            if (!cleanup_scene_path.empty()) unlink(cleanup_scene_path.c_str());
+            backend_log_t::handle().add("warn", "render rejected: queue full workspace=" + workspace_id);
+            send_json(res, "{\"error\":\"render queue is full\"}", 503);
+            return;
+        }
         workspaces.mark_job_started(workspace_id, job_id);
         std::ostringstream ss;
         ss << "{"
@@ -2117,8 +2772,15 @@ void setup_routes(httplib::Server &server,
             send_json(res, tm_error_json, 400);
             return;
         }
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
         std::vector<unsigned char> image;
-        if (!jobs.image(id, image, !final_only, tm_settings)) {
+        if (!jobs.image(id, image, !final_only, tm_settings, post_filters_enabled, post_filters)) {
             backend_log_t::handle().add("warn", "job image missing id=" + id);
             send_json(res, "{\"error\":\"image not available\"}", 404);
             return;
@@ -2151,9 +2813,16 @@ void setup_routes(httplib::Server &server,
             send_json(res, tm_error_json, 400);
             return;
         }
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
 
         job_image_delta_t delta;
-        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, delta)) {
+        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, post_filters_enabled, post_filters, delta)) {
             send_json(res, "{\"error\":\"image delta not available\"}", 404);
             return;
         }
@@ -2189,8 +2858,7 @@ void setup_routes(httplib::Server &server,
         std::string format = "png";
         if (req.has_param("format")) format = lower_ascii(req.get_param_value("format"));
         if (format != "png" && format != "exr" && format != "hdr"
-            && format != "jpg" && format != "bmp" && format != "tga"
-            && format != "ply") {
+            && format != "jpg" && format != "bmp" && format != "tga") {
             send_json(res, "{\"error\":\"unsupported format\"}", 400);
             return;
         }
@@ -2198,13 +2866,31 @@ void setup_routes(httplib::Server &server,
         std::vector<unsigned char> image;
         std::string mime_type;
         std::string extension;
-        if (!jobs.image_export(id, format, image, mime_type, extension)) {
+        bool post_filters_enabled = false;
+        std::string post_filters;
+        std::string post_filter_error_json;
+        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
+        if (!jobs.image_export(id, format, image, mime_type, extension, post_filters_enabled, post_filters)) {
             backend_log_t::handle().add("warn", "job export unavailable id=" + id + " format=" + format);
             send_json(res, "{\"error\":\"export not available\"}", 404);
             return;
         }
 
-        const std::string filename = "xtracer_" + id + "_" + utc_timestamp_for_filename() + "." + extension;
+        job_snapshot_t snap;
+        std::string scene_token = "scene";
+        if (jobs.snapshot(id, snap)) {
+            scene_token = sanitize_filename_token(scene_basename_for_filename(snap.scene), "scene");
+        }
+        const std::string requester_client_id = read_client_id(req);
+        const std::string client_token = sanitize_filename_token(requester_client_id, "client");
+        const std::string filename = "xtracer_"
+            + scene_token + "_"
+            + client_token + "_"
+            + utc_timestamp_for_filename()
+            + "." + extension;
         const std::string content_disposition = "attachment; filename=\"" + filename + "\"";
         res.set_header("Cache-Control", "no-store");
         res.set_header("Content-Disposition", content_disposition.c_str());
@@ -2256,9 +2942,14 @@ void setup_routes(httplib::Server &server,
                << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
                << "\"scene\":\"" << json_escape(snap.scene) << "\","
                << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+               << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
                << "\"state\":\"" << job_state_name(snap.state) << "\","
                << "\"threads\":" << snap.threads << ","
                << "\"progress\":" << snap.progress << ","
+               << "\"tiles_done\":" << snap.tiles_done << ","
+               << "\"tiles_total\":" << snap.tiles_total << ","
+               << "\"pass_current\":" << snap.pass_current << ","
+               << "\"pass_total\":" << snap.pass_total << ","
                << "\"elapsed_ms\":" << snap.elapsed_ms << ","
                << "\"queue_index\":" << snap.queue_index
                << "}";
@@ -2269,11 +2960,60 @@ void setup_routes(httplib::Server &server,
 
     server.Post(R"(/api/jobs/abort/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
         std::string id = req.matches[1];
+        job_snapshot_t snap;
+        if (!jobs.snapshot(id, snap)) {
+            send_json(res, "{\"error\":\"job not found\"}", 404);
+            return;
+        }
+
+        const std::string requester_client_id = read_client_id(req);
+        if (requester_client_id.empty()) {
+            send_json(res, "{\"error\":\"client_id is required\"}", 400);
+            return;
+        }
+        if (!jobs.belongs_to_client(id, requester_client_id)) {
+            backend_log_t::handle().add(
+                "warn",
+                "job abort rejected id=" + id
+                + " requester_client=" + requester_client_id
+            );
+            send_json(res, "{\"error\":\"job does not belong to requesting client\"}", 403);
+            return;
+        }
+
+        std::string requester_workspace_id;
+        if (req.has_param("workspace_id")) {
+            requester_workspace_id = req.get_param_value("workspace_id");
+        }
+        if (requester_workspace_id.empty()) {
+            const std::string client_id = read_client_id(req);
+            if (!client_id.empty()) {
+                workspaces.get_active(client_id, requester_workspace_id);
+            }
+        }
+        if (requester_workspace_id.empty()) {
+            send_json(res, "{\"error\":\"workspace context required\"}", 400);
+            return;
+        }
+        if (snap.workspace_id != requester_workspace_id) {
+            backend_log_t::handle().add(
+                "warn",
+                "job abort rejected id=" + id
+                + " requester_workspace=" + requester_workspace_id
+                + " job_workspace=" + snap.workspace_id
+            );
+            send_json(res, "{\"error\":\"job does not belong to active workspace\"}", 403);
+            return;
+        }
+
         if (!jobs.abort(id)) {
             send_json(res, "{\"error\":\"job not found\"}", 404);
             return;
         }
-        backend_log_t::handle().add("info", "job abort requested id=" + id);
+        backend_log_t::handle().add(
+            "info",
+            "job abort requested id=" + id + " workspace=" + requester_workspace_id
+        );
         send_json(res, "{\"ok\":true}");
     });
 
@@ -2315,9 +3055,14 @@ void setup_routes(httplib::Server &server,
            << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
            << "\"scene\":\"" << json_escape(snap.scene) << "\","
            << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+           << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
            << "\"state\":\"" << job_state_name(snap.state) << "\","
            << "\"threads\":" << snap.threads << ","
            << "\"progress\":" << snap.progress << ","
+           << "\"tiles_done\":" << snap.tiles_done << ","
+           << "\"tiles_total\":" << snap.tiles_total << ","
+           << "\"pass_current\":" << snap.pass_current << ","
+           << "\"pass_total\":" << snap.pass_total << ","
            << "\"elapsed_ms\":" << snap.elapsed_ms << ","
            << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","
            << "\"width\":" << snap.width << ","
@@ -2334,17 +3079,93 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
+    // Gallery API
+    server.Get("/api/gallery", [gallery](const httplib::Request &, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            send_json(res, "{\"entries\":[]}");
+            return;
+        }
+        const std::vector<std::string> ids = gallery->list_entry_ids();
+        std::ostringstream ss;
+        ss << "{\"entries\":[";
+        bool first = true;
+        for (const auto &id : ids) {
+            std::string meta_json;
+            if (!gallery->get_meta_json(id, meta_json)) continue;
+            if (!first) ss << ",";
+            ss << meta_json;
+            first = false;
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.status = 404;
+            return;
+        }
+        const std::string id = req.matches[1];
+        std::vector<unsigned char> png;
+        if (!gallery->get_image(id, png) || png.empty()) {
+            res.status = 404;
+            return;
+        }
+        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+    });
+
+    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/pass/(\d+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.status = 404;
+            return;
+        }
+        const std::string id = req.matches[1];
+        const size_t pass_index = static_cast<size_t>(std::stoul(std::string(req.matches[2])));
+        std::vector<unsigned char> png;
+        if (!gallery->get_pass_image(id, pass_index, png) || png.empty()) {
+            res.status = 404;
+            return;
+        }
+        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+    });
+
+    server.Delete(R"(/api/gallery/([A-Za-z0-9_.-]+))", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            send_json(res, "{\"ok\":false}", 503);
+            return;
+        }
+        const std::string id = req.matches[1];
+        if (gallery->delete_entry(id)) {
+            send_json(res, "{\"ok\":true}");
+        } else {
+            send_json(res, "{\"ok\":false}", 404);
+        }
+    });
+
     server.Get("/", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "index.html"), "text/html", res);
+    });
+
+    server.Get("/showcase.html", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "showcase.html"), "text/html", res);
     });
 
     server.Get("/app.js", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
     });
 
+    server.Get("/showcase.js", [web_root](const httplib::Request &, httplib::Response &res) {
+        serve_static_file(join_path(web_root, "showcase.js"), "application/javascript", res);
+    });
+
     server.Get(R"(/app/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
         const std::string name = req.matches[1];
         serve_static_file(join_path(web_root, "app/" + name), "application/javascript", res);
+    });
+
+    server.Get(R"(/app/widgets/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "app/widgets/" + name), "application/javascript", res);
     });
 
     server.Get("/visual_editor.js", [web_root](const httplib::Request &, httplib::Response &res) {
@@ -2383,6 +3204,11 @@ void setup_routes(httplib::Server &server,
 
     server.Get("/styles.css", [web_root](const httplib::Request &, httplib::Response &res) {
         serve_static_file(join_path(web_root, "styles.css"), "text/css", res);
+    });
+
+    server.Get(R"(/styles/([A-Za-z0-9_.-]+\.css))", [web_root](const httplib::Request &req, httplib::Response &res) {
+        const std::string name = req.matches[1];
+        serve_static_file(join_path(web_root, "styles/" + name), "text/css", res);
     });
 
     server.Get("/preview.jpg", [web_root](const httplib::Request &, httplib::Response &res) {

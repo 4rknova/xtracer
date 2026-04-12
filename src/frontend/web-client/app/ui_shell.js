@@ -3,9 +3,7 @@ function normalizeTabMode(mode) {
   if (raw === "editor") return "visual";
   if (raw === "workspace") return "workspaces";
   if (raw === "scene_setup" || raw === "scenesetup") return "scene";
-  // Backward compatibility for previously stored "about" tab.
-  if (raw === "about") return "settings";
-  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs") {
+  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "logs" || raw === "about") {
     return raw;
   }
   return "scene";
@@ -41,7 +39,7 @@ function normalizeSidebarCardVisibilityConfig(rawConfig) {
       source = rawConfig[mode];
     } else if (rawConfig && mode === "visual" && Array.isArray(rawConfig.editor)) {
       source = rawConfig.editor;
-    } else if (rawConfig && mode === "settings" && Array.isArray(rawConfig.about)) {
+    } else if (rawConfig && mode === "about" && Array.isArray(rawConfig.about)) {
       source = rawConfig.about;
     }
     normalized[mode] = normalizeIds(source);
@@ -239,29 +237,35 @@ function refreshMobileCardSwitcher() {
     switcher.hidden = true;
     switcher.innerHTML = "";
     allCards.forEach((card) => card.classList.remove("mobile-card-hidden"));
+    delete container.dataset.mobileSelectedCardId;
     scheduleMobileLogsViewportSync();
     return;
   }
 
-  const openCard = cards.find((card) => card.open) || cards[0];
+  const preferredId = container.dataset.mobileSelectedCardId || "";
+  const selectedCard = cards.find((card) => card.id === preferredId)
+    || cards.find((card) => card.open)
+    || cards[0];
+  container.dataset.mobileSelectedCardId = selectedCard ? selectedCard.id : "";
+
   cards.forEach((card) => {
-    card.classList.toggle("mobile-card-hidden", card !== openCard);
+    card.classList.toggle("mobile-card-hidden", card !== selectedCard);
   });
   switcher.hidden = false;
   switcher.innerHTML = "";
   cards.forEach((card) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "mobile-card-chip";
-    chip.textContent = getSidebarCardTitle(card);
-    chip.classList.toggle("is-active", card === openCard);
-    chip.setAttribute("aria-pressed", card === openCard ? "true" : "false");
+    const isActive = card === selectedCard;
+    const chip = window.XTracerWidgets.createPill({
+      label: getSidebarCardTitle(card),
+      active: isActive,
+      pressable: true,
+      className: "mobile-card-chip",
+    });
     chip.addEventListener("click", () => {
       if (!isMobileTabMenuViewport()) return;
-      if (card.open) return;
-      const summary = card.querySelector("summary");
-      if (summary) summary.click();
-      else card.open = true;
+      container.dataset.mobileSelectedCardId = card.id;
+      if (!card.open) card.open = true;
+      refreshMobileCardSwitcher();
       requestAnimationFrame(() => {
         card.scrollIntoView({ block: "start", inline: "nearest", behavior: "smooth" });
       });
@@ -301,19 +305,11 @@ function applySidebarCardLayout(mode) {
     setSidebarCardVisibility(card, visibleSet.has(card.id));
   });
 
-  // On tab switch, keep at least one visible card expanded.
-  const visibleCards = visibleIds
-    .map((id) => cardById.get(id))
-    .filter((card) => !!card);
-  if (visibleCards.length > 0 && !visibleCards.some((card) => card.open)) {
-    visibleCards[0].open = true;
-  }
   requestAnimationFrame(refreshMobileCardSwitcher);
 }
 
 function isMobileTabMenuViewport() {
-  // Keep mobile interaction behavior narrower than layout breakpoint.
-  return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+  return !!(window.matchMedia && window.matchMedia("(max-width: 1450px)").matches);
 }
 
 function syncMobileLogsViewport() {
@@ -324,7 +320,10 @@ function syncMobileLogsViewport() {
 
   const isMobile = isMobileTabMenuViewport();
   const isActive = pane.classList.contains("active");
-  if (!isMobile || !isActive || !el.mainTabs) {
+  // On narrow mobile (<= 1024px) #mainTabs is collapsed in the topbar, not a visible sidebar nav.
+  // The height calculation below only makes sense for the 1025-1450px sidebar layout.
+  const isNarrowMobile = !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+  if (!isMobile || !isActive || !el.mainTabs || isNarrowMobile) {
     panel.style.height = "";
     panel.style.maxHeight = "";
     return;
@@ -355,20 +354,26 @@ function setActiveTab(mode) {
   const isRender = nextMode === "render";
   const isVisual = nextMode === "visual";
   const isWorkspaces = nextMode === "workspaces";
+  const isGallery = nextMode === "gallery";
   const isSettings = nextMode === "settings";
   const isLogs = nextMode === "logs";
+  const isAbout = nextMode === "about";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
   setActive(el.tabScene, isScene);
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabWorkspaces, isWorkspaces);
+  setActive(el.tabGallery, isGallery);
   setActive(el.tabSettings, isSettings);
+  setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
   setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneWorkspaces, isWorkspaces);
+  setActive(el.paneGallery, isGallery);
   setActive(el.paneSettings, isSettings);
+  setActive(el.paneAbout, isAbout);
   setActive(el.paneLogs, isLogs);
   applySidebarCardLayout(nextMode);
   void refreshSidebarCardVisibilityConfig(nextMode);
@@ -380,6 +385,9 @@ function setActiveTab(mode) {
   }
   if (isWorkspaces && hasBackendMethod(api, "getWorkspaces")) {
     refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+  }
+  if (isGallery && typeof refreshGallery === "function") {
+    refreshGallery().catch((err) => appendLog(`gallery refresh error: ${err.message}`));
   }
   if (typeof refreshSettingsJobsCard === "function"
     && typeof isJobsControlsCardVisible === "function"
@@ -393,6 +401,13 @@ function setActiveTab(mode) {
     restorePreviewForActiveWorkspace().catch((err) => {
       appendLog(`preview restore error: ${err.message}`);
     });
+    if (interactivePreviewEnabled && typeof requestInteractivePreviewRender === "function") {
+      requestInteractivePreviewRender();
+    }
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+  } else if (interactivePreviewEnabled && typeof stopInteractivePreviewLoop === "function") {
+    stopInteractivePreviewLoop(true).catch(() => {});
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
   }
   if (isMobileTabMenuViewport()) setMainMenuOpen(false);
   requestAnimationFrame(() => {
@@ -465,29 +480,12 @@ function initSidebarAccordion() {
     }, 220);
   };
 
-  const enforceSingleOpen = () => {
-    const firstOpen = cards.find((card) => card.open) || cards[0];
-    cards.forEach((card) => {
-      card.open = card === firstOpen;
-    });
-    refreshMobileCardSwitcher();
-    scheduleMobileLogsViewportSync();
-  };
-
-  enforceSingleOpen();
   window.addEventListener("resize", () => {
-    enforceSingleOpen();
+    refreshMobileCardSwitcher();
     scheduleMobileLogsViewportSync();
   });
   cards.forEach((card) => {
     card.addEventListener("toggle", () => {
-      if (card.open) {
-        cards.forEach((other) => {
-          if (other !== card) other.open = false;
-        });
-      } else if (!cards.some((other) => other.open) && cards[0]) {
-        cards[0].open = true;
-      }
       requestAnimationFrame(() => {
         refreshMobileCardSwitcher();
         scheduleMobileLogsViewportSync();
@@ -504,10 +502,6 @@ function initSidebarAccordion() {
         animateClose(card);
         return;
       }
-      cards.forEach((other) => {
-        if (other === card) return;
-        animateClose(other);
-      });
       animateOpen(card);
       requestAnimationFrame(() => {
         refreshMobileCardSwitcher();
@@ -520,29 +514,27 @@ function initSidebarAccordion() {
 async function loadVisualSceneFromSelected() {
   if (!visualEditor) return;
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const variantName = selectedSceneVariantValue();
   if (!sceneName) {
     visualEditor.setStatus("No scene selected.");
     return;
   }
 
-  visualEditor.setStatus("Loading " + sceneName + " ...");
+  visualEditor.setStatus("Loading " + sceneName + (variantName ? " (" + variantName + ")" : "") + " ...");
   const pair = await Promise.all([
-    api.getSceneGeometry(sceneName),
+    api.getSceneGeometry(sceneName, variantName),
     hasBackendMethod(api, "getSceneRuntimeGraph")
-      ? loadSceneRuntimeGraph(sceneName).catch(() => null)
+      ? loadSceneRuntimeGraph(sceneName, variantName).catch(() => null)
       : Promise.resolve(null),
   ]);
   const geometryData = pair[0] || { meshes: {} };
   const runtimeData = pair[1] || null;
   await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
   visualLoadedSceneName = sceneName;
-  if (el.editObjectSelect && el.editObjectSelect.value && visualEditor.selectObjectById) {
-    visualEditor.selectObjectById(el.editObjectSelect.value, false);
-  }
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
   refreshVisualPhotonOverlay().catch(() => {});
-  appendLog("visual loaded: " + sceneName);
+  appendLog("visual loaded: " + sceneName + (variantName ? " (" + variantName + ")" : ""));
 }
 
 function refreshVisualCameraOptions() {
@@ -601,6 +593,17 @@ function applyTheme(mode) {
   if (mode === "light" || mode === "dark") root.setAttribute("data-theme", mode);
   else root.setAttribute("data-theme", "system");
   localStorage.setItem("xtracer-theme", mode);
+  refreshThemeToggleButton();
+}
+
+function refreshThemeToggleButton() {
+  if (!el.themeToggle) return;
+  const selected = String(el.theme && el.theme.value ? el.theme.value : localStorage.getItem("xtracer-theme") || "system").toLowerCase();
+  const effective = effectiveThemeMode(selected);
+  const label = selected === "system" ? `Theme: system (${effective})` : `Theme: ${selected}`;
+  el.themeToggle.setAttribute("aria-label", label);
+  el.themeToggle.setAttribute("title", label);
+  el.themeToggle.dataset.themeMode = selected;
 }
 
 function effectiveThemeMode(mode) {
@@ -652,6 +655,12 @@ function clampHistoryLimit(v) {
   return Math.max(10, Math.min(2000, Math.floor(n)));
 }
 
+function clampVisualSceneScale(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 1.0;
+  return Math.max(0.01, Math.min(100, n));
+}
+
 function clampLogPollMs(v, fallback, min, max) {
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback;
@@ -686,6 +695,7 @@ function loadUIOptions() {
   );
   uiOptions.textHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-text-history-limit") || "200");
   uiOptions.visualHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-visual-history-limit") || "200");
+  uiOptions.visualSceneScale = clampVisualSceneScale(localStorage.getItem("xtracer-visual-scene-scale") || "1");
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
@@ -713,11 +723,13 @@ function loadUIOptions() {
   if (el.logPollBackgroundInterval) el.logPollBackgroundInterval.value = String(uiOptions.logPollBackgroundMs);
   if (el.textHistorySize) el.textHistorySize.value = String(uiOptions.textHistoryLimit);
   if (el.visualHistorySize) el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
+  if (el.visualSceneScale) el.visualSceneScale.value = String(uiOptions.visualSceneScale);
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
   if (el.tileHeatmapEnabled) el.tileHeatmapEnabled.checked = !!uiOptions.tileHeatmapEnabled;
   if (el.previewSampling) el.previewSampling.value = uiOptions.previewSampling;
+  if (typeof syncRenderPreviewSamplingSwitch === "function") syncRenderPreviewSamplingSwitch();
   applyDarkPalette(uiOptions.darkPalette);
   applyLightPalette(uiOptions.lightPalette);
   refreshPaletteOptions();
@@ -746,6 +758,7 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-log-poll-background-ms", String(uiOptions.logPollBackgroundMs));
   localStorage.setItem("xtracer-text-history-limit", String(uiOptions.textHistoryLimit));
   localStorage.setItem("xtracer-visual-history-limit", String(uiOptions.visualHistoryLimit));
+  localStorage.setItem("xtracer-visual-scene-scale", String(uiOptions.visualSceneScale));
   localStorage.setItem("xtracer-auto-load-editor", uiOptions.autoLoadEditor ? "1" : "0");
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");

@@ -33,17 +33,36 @@ void gen_samples_grid(sample_set_t &samples, nmath::Vector2f pixel, size_t level
 
 void gen_samples_random(sample_set_t &samples, nmath::Vector2f pixel, size_t level)
 {
-    if (level < 1) return;
+    if (level == 0) return;
+
+    if (level == 1) {
+        sample_rgba_t s;
+        s.weight = 1.f;
+        s.pixel  = pixel;
+        s.coords = pixel + nmath::Vector2f(
+            nmath::prng_c(0.0, 1.0),
+            nmath::prng_c(0.0, 1.0)
+        );
+        samples.push(s);
+        return;
+    }
 
     sample_rgba_t s;
-    s.weight = 1.f / level;
     s.pixel  = pixel;
+    s.weight = 1.f / (level * level);
 
-    for (size_t i = 0; i < level; ++i) {
-        float x = nmath::prng_c(0.0, 1.0);
-        float y = nmath::prng_c(0.0, 1.0);
-        s.coords = pixel + nmath::Vector2f(x, y);
-        samples.push(s);
+    const float sub_pixel = 1.f / level;
+
+    for (size_t y = 0; y < level; ++y) {
+        for (size_t x = 0; x < level; ++x) {
+            const float jitter_x = nmath::prng_c(0.0, 1.0);
+            const float jitter_y = nmath::prng_c(0.0, 1.0);
+            s.coords = pixel + nmath::Vector2f(
+                (x + jitter_x) * sub_pixel,
+                (y + jitter_y) * sub_pixel
+            );
+            samples.push(s);
+        }
     }
 }
 

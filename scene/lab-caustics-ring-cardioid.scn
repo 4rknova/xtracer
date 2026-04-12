@@ -1,6 +1,7 @@
 title = Ring Cardioid Caustics
-description = Cardioid caustic study with a specular ring, single key light, and diffuse ground plane.
-version     = 1.4
+description = Cardioid caustic study with metallic, coated polymer, frosted glass, and sparse volume-filled ring variants.
+version     = 1.5
+default_camera = default
 
 environment = {
     type = gradient
@@ -57,6 +58,10 @@ geometry = {
 }
 
 material = {
+    ring_volume_boundary = {
+        type = boundary
+    }
+
     ground_plane = {
         type = blinn_phong
         properties = {
@@ -83,22 +88,95 @@ material = {
         }
     }
 
-    ring_mirror = {
-        type = blinn_phong
+    ring_gold = {
+        type = principled
         properties = {
             samplers = {
-                diffuse = {
-                    type  = color
-                    value = col3(0.0,0.0,0.0)
-                }
-                specular = {
-                    type  = color
-                    value = col3(1.0, 0.84, 0.0)
-                }
+                base_color = { type = color, value = col3(1.0,0.80,0.24) }
+                metallic = { type = color, value = col3(1.0,1.0,1.0) }
+                roughness = { type = color, value = col3(0.08,0.08,0.08) }
             }
             scalars = {
-                exponent    = 900
-                reflectance = 1.0
+                metallic = 1.0
+                roughness = 0.08
+                ior = 1.45
+                anisotropy = 0.22
+                anisotropy_rotation = 18
+                clearcoat = 0.04
+                clearcoat_roughness = 0.10
+            }
+        }
+    }
+
+    ring_silver = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.94,0.95,0.98) }
+                metallic = { type = color, value = col3(1.0,1.0,1.0) }
+                roughness = { type = color, value = col3(0.06,0.06,0.06) }
+            }
+            scalars = {
+                metallic = 1.0
+                roughness = 0.06
+                ior = 1.45
+                anisotropy = 0.18
+                anisotropy_rotation = 8
+                clearcoat = 0.02
+                clearcoat_roughness = 0.08
+            }
+        }
+    }
+
+    ring_bronze = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.82,0.50,0.24) }
+                metallic = { type = color, value = col3(1.0,1.0,1.0) }
+                roughness = { type = color, value = col3(0.14,0.14,0.14) }
+            }
+            scalars = {
+                metallic = 1.0
+                roughness = 0.14
+                ior = 1.45
+                anisotropy = 0.28
+                anisotropy_rotation = 22
+                clearcoat = 0.03
+                clearcoat_roughness = 0.12
+            }
+        }
+    }
+
+    ring_polymer_clearcoat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.08,0.12,0.16) }
+            }
+            scalars = {
+                metallic = 0.0
+                roughness = 0.42
+                ior = 1.52
+                clearcoat = 0.95
+                clearcoat_roughness = 0.045
+            }
+        }
+    }
+
+    ring_frosted = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.98,1.0,1.0) }
+                roughness = { type = color, value = col3(0.18,0.18,0.18) }
+                absorption_color = { type = color, value = col3(0.90,0.96,1.0) }
+            }
+            scalars = {
+                ior = 1.48
+                transparency = 0.99
+                roughness = 0.18
+                absorption_distance = 3.0
             }
         }
     }
@@ -124,11 +202,72 @@ object = {
 
     ring_mirror = {
         geometry = ring_mirror
-        material = ring_mirror
+        material = ring_gold
     }
 
     key_light = {
         geometry = key_light
         material = key_light
+    }
+}
+
+variants = {
+    hide_base = true
+    
+    gold = {
+        name = Gold
+        description = Warm metallic principled ring with a polished gold read.
+    }
+
+    silver = {
+        name = Silver
+        description = Cooler polished silver ring while keeping the same caustic study setup.
+        set = {
+            object = {
+                ring_mirror = {
+                    geometry = ring_mirror
+                    material = ring_silver
+                }
+            }
+        }
+    }
+
+    bronze = {
+        name = Bronze
+        description = Richer copper-bronze metal with slightly broader highlights and a warmer reflected caustic.
+        set = {
+            object = {
+                ring_mirror = {
+                    geometry = ring_mirror
+                    material = ring_bronze
+                }
+            }
+        }
+    }
+
+    clearcoat_plastic = {
+        name = Clear-Coat Plastic
+        description = Dark dielectric polymer body with a glossy coated shell for a painted-resin read instead of metal.
+        set = {
+            object = {
+                ring_mirror = {
+                    geometry = ring_mirror
+                    material = ring_polymer_clearcoat
+                }
+            }
+        }
+    }
+
+    frosted_glass = {
+        name = Frosted Glass
+        description = Rough dielectric ring for a softer transmissive caustic and blurrier highlight response.
+        set = {
+            object = {
+                ring_mirror = {
+                    geometry = ring_mirror
+                    material = ring_frosted
+                }
+            }
+        }
     }
 }

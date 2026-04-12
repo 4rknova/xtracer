@@ -48,6 +48,18 @@ bool finite_color(const nimg::ColorRGBf &c)
 
 } // namespace
 
+void Integrator::setup_auxiliary()
+{
+    m_lights.clear();
+    if (!ctx) return;
+    ctx->scene.get_light_sources(m_lights);
+}
+
+void Integrator::clean_auxiliary()
+{
+    m_lights.clear();
+}
+
 nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 {
     if (depth == 0) return nimg::ColorRGBf(0, 0, 0);
@@ -73,13 +85,10 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     nimg::ColorRGBf color(0, 0, 0);
 
     // Classic Whitted-style direct lighting from visible emissive geometry samples.
-    std::vector<xtcore::light_t> lights;
-    ctx->scene.get_light_sources(lights);
-
     xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
     if (cam) {
-        for (size_t i = 0; i < lights.size(); ++i) {
-            const xtcore::light_t &light = lights[i];
+        for (size_t i = 0; i < m_lights.size(); ++i) {
+            const xtcore::light_t &light = m_lights[i];
             if (!light.light || !light.material) continue;
 
             xtcore::asset::emitter_t emitter;

@@ -1,0 +1,143 @@
+title       = "Ocean"
+description = "Ocean"
+version     = "1.0"
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(0.42, 0.18, 0.70)
+        sun_intensity      = col3(100.0, 100.0, 100.0)
+        beta_rayleigh      = col3(0.16, 0.33, 0.78)
+        ground_color       = col3(0.06, 0.08, 0.05)
+        density            = 0.1
+        horizon_falloff    = 1.8
+        sun_disk_radius    = 1.0
+        sun_disk_intensity = 1.3
+        sun_glow_radius    = 10.0
+        sun_glow_intensity = 0.38
+        sun_glow_falloff   = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-28.0, 20.0, 10.0)
+        target   = vec3(0, 0, 4.0)
+        up       = vec3(0, 1, 0)
+        flength  = 20.0
+        aperture = 0.0
+    }
+
+    grazing = {
+        type     = thin-lens
+        fov      = 45
+        position = vec3(-40.0, 2.0, 10.0)
+        target   = vec3(0, 0, 4.0)
+        up       = vec3(0, 1, 0)
+        flength  = 20.0
+        aperture = 0.0
+    }
+
+    tilt_shift = {
+        type     = tilt-shift
+        fov      = 58
+        position = vec3(-28.0, 12.0, 10.0)
+        target   = vec3(0, 0, 4.0)
+        up       = vec3(0, 1, 0)
+        flength  = 22.0
+        aperture = 1.8
+        tilt     = 12.0
+        shift_x  = 0.0
+        shift_y  = 0.0
+    }
+}
+
+geometry = {
+    water_surface = {
+	type       = mesh
+        source     = gen(terrain)
+        resolution = 1024
+        dimensions = vec3(200.0, 5.0, 200.0)
+        height_sampler = {
+            type              = scenery_heightfield
+            seed              = 1024
+            scale             = 0.5
+            octaves           = 6
+            lacunarity        = 0.15
+            gain              = 0.50
+            ridge_strength    = 0.88
+            mountain_strength = 0.3
+            valley_strength   = 0.2
+        }
+    }
+
+    seafloor = {
+        type       = mesh
+        source     = gen(terrain)
+        resolution = 256
+        dimensions = vec3(200.0, 2.0, 200.0)
+        height_sampler = {
+            type              = scenery_heightfield
+            seed              = 512
+            scale             = 0.08
+            octaves           = 4
+            lacunarity        = 2.1
+            gain              = 0.50
+            ridge_strength    = 0.2
+            mountain_strength = 0.1
+            valley_strength   = 0.6
+        }
+        modifiers = {
+            translation = vec3(0, -8.0, 0)
+        }
+    }
+}
+
+material = {
+    sand = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.72, 0.62, 0.45) }
+            }
+        }
+    }
+
+    water = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission    = { type = color, value = col3(0.78, 0.96, 0.90) }
+                absorption_color = { type = color, value = col3(0.08, 0.52, 0.62) }
+            }
+            scalars = {
+                ior                 = 1.33
+                roughness           = 0.04
+                transparency        = 1.0
+                absorption_distance = 4.5
+            }
+        }
+    }
+}
+
+object = {
+    water = {
+	geometry = water_surface
+	material = water
+    }
+
+    floor = {
+        geometry = seafloor
+        material = sand
+    }
+}
+
+variants = {
+    base = {
+        name        = Ocean
+        description = Morning sun raking across ocean.
+    }
+}

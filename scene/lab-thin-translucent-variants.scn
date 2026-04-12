@@ -1,0 +1,220 @@
+title = Thin Translucent Variants Lab
+description = Variant-driven showcase for leaf, paper, and shade-like diffuse transmission on thin draped strips.
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction = vec3(-0.42,0.74,-0.52)
+        sun_intensity = col3(10,9,8)
+        beta_rayleigh = col3(0.17,0.31,0.72)
+        ground_color = col3(0.06,0.07,0.08)
+        density = 1.0
+        horizon_falloff = 1.6
+        sun_disk_radius = 1.0
+        sun_disk_intensity = 1.0
+        sun_glow_radius = 7.0
+        sun_glow_intensity = 0.14
+        sun_glow_falloff = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type = thin-lens
+        fov = 30
+        position = vec3(0.0,1.0,-5.7)
+        target = vec3(0.0,0.42,2.9)
+        up = vec3(0,1,0)
+        flength = 68
+        aperture = 0
+    }
+
+    backlit = {
+        type = thin-lens
+        fov = 24
+        position = vec3(0.0,0.72,-4.8)
+        target = vec3(0.0,0.30,2.9)
+        up = vec3(0,1,0)
+        flength = 78
+        aperture = 0
+    }
+}
+
+geometry = {
+    floor = { type = plane, normal = vec3(0,1,0), distance = -1.0 }
+    back_wall = { type = plane, normal = vec3(0,0,-1), distance = -6.4 }
+
+    left_strip = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 68
+        dimensions = vec3(1.8,0.70,2.8)
+        folds = 2.0
+        edge_lift = 0.18
+        curl = 0.10
+        taper = 0.18
+        sway = -0.14
+        asymmetry = -0.16
+        pinned = 0.58
+        modifiers = {
+            translation = vec3(-2.6,-0.12,2.7)
+            rotation = vec3(0,-26,0)
+        }
+    }
+
+    center_strip = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 80
+        dimensions = vec3(1.9,0.86,3.0)
+        folds = 2.8
+        edge_lift = 0.12
+        curl = 0.22
+        taper = 0.10
+        sway = 0.08
+        asymmetry = 0.10
+        pinned = 0.68
+        modifiers = {
+            translation = vec3(0.0,-0.08,2.95)
+            rotation = vec3(0,4,0)
+        }
+    }
+
+    right_strip = {
+        type = mesh
+        source = gen(draped_cloth_strip)
+        resolution = 68
+        dimensions = vec3(1.8,0.74,2.8)
+        folds = 2.1
+        edge_lift = 0.16
+        curl = -0.08
+        taper = 0.24
+        sway = 0.22
+        asymmetry = 0.24
+        pinned = 0.46
+        modifiers = {
+            translation = vec3(2.65,-0.10,2.75)
+            rotation = vec3(0,28,0)
+        }
+    }
+
+    key_light = { type = sphere, position = vec3(0.0,2.6,5.2), radius = 0.55 }
+}
+
+material = {
+    floor_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = checker
+                    a = col3(0.80,0.81,0.82)
+                    b = col3(0.68,0.69,0.70)
+                    scale_u = 9
+                    scale_v = 9
+                }
+            }
+        }
+    }
+
+    wall_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.86,0.89,0.92) }
+            }
+        }
+    }
+
+    leaf = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.20,0.30,0.12) }
+                translucency_color = { type = color, value = col3(0.66,0.96,0.34) }
+                normal = { type = voronoi_normal, cells = 26, max_deviation = 4, seed = 41 }
+            }
+            scalars = {
+                translucency = 0.78
+                thickness = 0.18
+            }
+        }
+    }
+
+    parchment = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.58,0.48,0.34) }
+                translucency_color = { type = color, value = col3(0.98,0.82,0.52) }
+                normal = { type = voronoi_normal, cells = 22, max_deviation = 3, seed = 43 }
+            }
+            scalars = {
+                translucency = 0.64
+                thickness = 0.34
+            }
+        }
+    }
+
+    shade = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.34,0.18,0.12) }
+                translucency_color = { type = color, value = col3(0.98,0.44,0.24) }
+                normal = { type = voronoi_normal, cells = 24, max_deviation = 4, seed = 45 }
+            }
+            scalars = {
+                translucency = 0.82
+                thickness = 0.62
+            }
+        }
+    }
+
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(24,20,16) }
+            }
+        }
+    }
+}
+
+object = {
+    floor = { geometry = floor, material = floor_mat }
+    wall = { geometry = back_wall, material = wall_mat }
+    left = { geometry = left_strip, material = leaf }
+    center = { geometry = center_strip, material = parchment }
+    right = { geometry = right_strip, material = shade }
+    key_light = { geometry = key_light, material = key_light_mat }
+}
+
+variants = {
+    base = {
+        name = Base
+        description = Leaf, parchment, and lamp-shade style thin transmission across lifted draped strips.
+    }
+
+    all_leaf = {
+        name = All Leaf
+        description = Uses leaf-like transmission across the set to compare fold orientation rather than material family.
+        set = {
+            object = {
+                left = { geometry = left_strip, material = leaf }
+                center = { geometry = center_strip, material = leaf }
+                right = { geometry = right_strip, material = leaf }
+            }
+        }
+    }
+
+    backlit = {
+        name = Backlit
+        description = Uses a lower camera to stress edge glow and the thickness falloff through the strips.
+        set = {
+            default_camera = backlit
+        }
+    }
+}

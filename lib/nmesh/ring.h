@@ -13,6 +13,13 @@ void ring(object_t *obj,
           float thickness = -1.0f,
           size_t height_resolution = 1);
 
+void rounded_ring(object_t *obj,
+                  size_t resolution = 48,
+                  float radius = 1.0f,
+                  float height = 0.64f,
+                  float thickness = -1.0f,
+                  size_t profile_resolution = 18);
+
     } /* namespace generator */
 } /* namespace nmesh */
 

@@ -80,5 +80,12 @@ class IMaterial
 #include "material/blinnphong.h"
 #include "material/emissive.h"
 #include "material/dielectric.h"
+#include "material/principled.h"
+#include "material/rough_dielectric.h"
+#include "material/thin_dielectric.h"
+#include "material/subsurface.h"
+#include "material/sheen.h"
+#include "material/thin_translucent.h"
+#include "material/boundary.h"
 
 #endif /* XTCORE_MATERIAL_H_INCLUDED */

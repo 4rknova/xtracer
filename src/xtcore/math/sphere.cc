@@ -50,8 +50,13 @@ bool Sphere::intersection(const Ray &ray, hit_record_t* i_hit_record) const
 			i_hit_record->t = t;
 			i_hit_record->point = ray.origin + ray.direction * t;
 			i_hit_record->normal = (i_hit_record->point - origin) / radius * (t1*t2 > 0. ? 1. : -1);
-			i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / nmath::PI + 0.5),
-								(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / nmath::PI + 0.5));
+            {
+                const nmath::scalar_t sx = (uv_scale.x != 0.0f) ? uv_scale.x : (nmath::scalar_t)1.0;
+                const nmath::scalar_t sy = (uv_scale.y != 0.0f) ? uv_scale.y : (nmath::scalar_t)1.0;
+                const nmath::scalar_t u = (std::atan2(i_hit_record->normal.z, i_hit_record->normal.x) / (nmath::scalar_t)(2.0 * nmath::PI) + (nmath::scalar_t)0.5) * sx;
+                const nmath::scalar_t v = (std::asin(nmath::clamp(i_hit_record->normal.y, (nmath::scalar_t)-1.0, (nmath::scalar_t)1.0)) / nmath::PI + (nmath::scalar_t)0.5) * sy;
+                i_hit_record->texcoord = Vector2f(u, v);
+            }
 
             i_hit_record->incident_direction = ray.direction;
 
@@ -80,8 +85,13 @@ bool Sphere::intersection(const Ray &ray, hit_record_t* i_hit_record) const
     i_hit_record->t = t0;
 	i_hit_record->point = ray.origin + ray.direction * t0;
 	i_hit_record->normal = (i_hit_record->point - origin) / radius;
-	i_hit_record->texcoord = Vector2f((asin(i_hit_record->normal.x / (uv_scale.x != 0.0f ? uv_scale.x : 1.0f)) / nmath::PI + 0.5),
-	    						(asin(i_hit_record->normal.y / (uv_scale.y != 0.0f ? uv_scale.y : 1.0f)) / nmath::PI + 0.5));
+    {
+        const nmath::scalar_t sx = (uv_scale.x != 0.0f) ? uv_scale.x : (nmath::scalar_t)1.0;
+        const nmath::scalar_t sy = (uv_scale.y != 0.0f) ? uv_scale.y : (nmath::scalar_t)1.0;
+        const nmath::scalar_t u = (std::atan2(i_hit_record->normal.z, i_hit_record->normal.x) / (nmath::scalar_t)(2.0 * nmath::PI) + (nmath::scalar_t)0.5) * sx;
+        const nmath::scalar_t v = (std::asin(nmath::clamp(i_hit_record->normal.y, (nmath::scalar_t)-1.0, (nmath::scalar_t)1.0)) / nmath::PI + (nmath::scalar_t)0.5) * sy;
+        i_hit_record->texcoord = Vector2f(u, v);
+    }
 	i_hit_record->geometry = this;
 
     return true;

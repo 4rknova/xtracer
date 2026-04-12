@@ -18,6 +18,16 @@ camera = {
         target   = vec3(0,0,0)
         up       = vec3(0,1,0)
     }
+
+    sideview = {
+        type     = thin-lens
+	position = vec3(-4.105354, 0.004931, 3.000794)
+	target   = vec3(0, 0, 0)
+	up       = vec3(0.000783, 1, -0.000572)
+	fov      = 42
+	flength  = 1.0
+	aperture = 0.0
+    }
 }
 
 geometry = {
@@ -25,7 +35,7 @@ geometry = {
         type       = mesh
         source     = gen(plane)
         resolution = 1
-        modifiers = {
+        modifiers  = {
             scale       = vec3(50,1,50)
             translation = vec3(0,-1,0)
         }
@@ -52,6 +62,18 @@ geometry = {
         position = vec3(3.2,5.4,-2.3)
         radius   = 0.85
     }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-4.0,2.5,1.5)
+        radius   = 1.2
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.5,3.8,4.2)
+        radius   = 0.5
+    }
 }
 
 material = {
@@ -73,20 +95,108 @@ material = {
         }
     }
 
+    bronze = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.72,0.45,0.20) }
+            }
+            scalars = { metallic = 1, roughness = 0.35 }
+        }
+    }
+
+    ice = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.82,0.92,0.98) }
+            }
+            scalars = { metallic = 0, roughness = 0.07, clearcoat = 1.0, clearcoat_roughness = 0.04 }
+        }
+    }
+
+    aniso_metal = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.64,0.67,0.73) }
+            }
+            scalars = { metallic = 1, roughness = 0.18, anisotropy = 0.85 }
+        }
+    }
+
+    verdigris = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.22,0.52,0.38)
+                    b              = col3(0.14,0.42,0.28)
+                    vein           = col3(0.62,0.82,0.56)
+                    scale          = 3
+                    turbulence     = 0.65
+                    vein_frequency = 3
+                }
+            }
+            scalars = { metallic = 0.25, roughness = 0.58 }
+        }
+    }
+
+    gold = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.0,0.78,0.34) }
+            }
+            scalars = { metallic = 1, roughness = 0.10 }
+        }
+    }
+
+    obsidian = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.05,0.04,0.06) }
+            }
+            scalars = { metallic = 0, roughness = 0.05, clearcoat = 1.0, clearcoat_roughness = 0.04 }
+        }
+    }
+
     emissive_key = {
         type = emissive
         properties = {
             samplers = {
-                emissive = { type = color, value = col3(4.0,3.7,3.2) }
+                emissive = { type = color, value = col3(6.5,5.8,4.8) }
+            }
+        }
+    }
+
+    emissive_fill = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(1.8,2.2,3.5) }
+            }
+        }
+    }
+
+    emissive_rim = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(5.0,4.6,4.0) }
             }
         }
     }
 }
 
 object = {
-    floor = { geometry = floor, material = floor_matte }
-    bulb = { geometry = bulb_mandel, material = bulb_surface }
-    key_light = { geometry = key_light, material = emissive_key }
+    floor     = { geometry = floor,      material = floor_matte  }
+    bulb      = { geometry = bulb_mandel, material = bulb_surface }
+    key_light = { geometry = key_light,  material = emissive_key  }
+    fill_light = { geometry = fill_light, material = emissive_fill }
+    rim_light  = { geometry = rim_light,  material = emissive_rim  }
 }
 
 variants = {
@@ -108,6 +218,126 @@ variants = {
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = bulb_surface }
+            }
+        }
+    }
+
+    mandelbulb_bronze = {
+        name        = Mandelbulb — Bronze
+        description = Mandelbulb with warm patinated bronze.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = bronze }
+            }
+        }
+    }
+
+    julia_bronze = {
+        name        = Julia — Bronze
+        description = Julia fractal with warm patinated bronze.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = bronze }
+            }
+        }
+    }
+
+    mandelbulb_ice = {
+        name        = Mandelbulb — Ice
+        description = Mandelbulb with glacial ice — high clearcoat, near-zero roughness.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = ice }
+            }
+        }
+    }
+
+    julia_ice = {
+        name        = Julia — Ice
+        description = Julia fractal with glacial ice — high clearcoat, near-zero roughness.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = ice }
+            }
+        }
+    }
+
+    mandelbulb_aniso = {
+        name        = Mandelbulb — Anisotropic Metal
+        description = Mandelbulb with brushed titanium-like anisotropic metal.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = aniso_metal }
+            }
+        }
+    }
+
+    julia_aniso = {
+        name        = Julia — Anisotropic Metal
+        description = Julia fractal with brushed titanium-like anisotropic metal.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = aniso_metal }
+            }
+        }
+    }
+
+    mandelbulb_verdigris = {
+        name        = Mandelbulb — Verdigris Copper
+        description = Mandelbulb with oxidized copper using procedural marble veining.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = verdigris }
+            }
+        }
+    }
+
+    julia_verdigris = {
+        name        = Julia — Verdigris Copper
+        description = Julia fractal with oxidized copper using procedural marble veining.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = verdigris }
+            }
+        }
+    }
+
+    mandelbulb_gold = {
+        name        = Mandelbulb — Gold
+        description = Mandelbulb with polished gold.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = gold }
+            }
+        }
+    }
+
+    julia_gold = {
+        name        = Julia — Gold
+        description = Julia fractal with polished gold.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = gold }
+            }
+        }
+    }
+
+    mandelbulb_obsidian = {
+        name        = Mandelbulb — Obsidian
+        description = Mandelbulb with dark volcanic glass — deep black with sharp highlights.
+        set = {
+            object = {
+                bulb = { geometry = bulb_mandel, material = obsidian }
+            }
+        }
+    }
+
+    julia_obsidian = {
+        name        = Julia — Obsidian
+        description = Julia fractal with dark volcanic glass — deep black with sharp highlights.
+        set = {
+            object = {
+                bulb = { geometry = bulb_julia, material = obsidian }
             }
         }
     }

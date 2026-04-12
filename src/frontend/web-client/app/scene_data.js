@@ -1,5 +1,16 @@
 let appConfigLoadPromise = null;
 let sceneSearchQuery = "";
+let currentSceneSourceOrigin = "";
+
+function normalizeSceneSourceOrigin(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "workspace") return "workspace";
+  return "disk";
+}
+
+function sceneSourceOriginLabel(value) {
+  return normalizeSceneSourceOrigin(value) === "workspace" ? "Workspace Draft" : "Disk";
+}
 
 function normalizeSceneSearchQuery(value) {
   return String(value || "").trim().toLowerCase();
@@ -82,22 +93,36 @@ function sceneDependsOnExternalFiles(source) {
   return false;
 }
 
+function countTopLevelSceneEntries(source, groupName) {
+  const text = String(source || "");
+  if (!text) return 0;
+  const groupRange = findSceneGroupRange(text, groupName);
+  if (!groupRange) return 0;
+  return splitTopLevelSceneEntries(text, groupRange).length;
+}
+
 async function buildSceneLabels(sceneFiles) {
   const items = await Promise.all((sceneFiles || []).map(async (sceneFile) => {
     try {
       const data = await api.getSceneSource(sceneFile);
       const source = (data && data.source) || "";
+      const sourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
       const title = extractSceneTitle(source);
       const description = extractSceneDescription(source);
       const dependsExternal = sceneDependsOnExternalFiles(source);
       const variantMeta = extractSceneVariantNames(source);
-      const hasVariants = Array.isArray(variantMeta && variantMeta.variants) && variantMeta.variants.length > 0;
+      const variantCount = Array.isArray(variantMeta && variantMeta.variants) ? variantMeta.variants.length : 0;
+      const cameraCount = countTopLevelSceneEntries(source, "camera");
+      const hasVariants = variantCount > 0;
       return {
         sceneFile,
         label: title || sceneFile,
         title,
         description,
+        sourceOrigin,
         dependsExternal,
+        variantCount,
+        cameraCount,
         hasVariants,
       };
     } catch (_) {
@@ -106,7 +131,10 @@ async function buildSceneLabels(sceneFiles) {
         label: sceneFile,
         title: "",
         description: "",
+        sourceOrigin: "disk",
         dependsExternal: false,
+        variantCount: 0,
+        cameraCount: 0,
         hasVariants: false,
       };
     }
@@ -177,6 +205,7 @@ function normalizeCameraType(cameraType) {
   if (raw.indexOf("cube") >= 0) return "cubemap";
   if (raw.indexOf("omni") >= 0 || raw.indexOf("stereo") >= 0 || raw.indexOf("ods") >= 0) return "ods";
   if (raw.indexOf("equirect") >= 0 || raw.indexOf("erp") >= 0) return "erp";
+  if (raw.indexOf("tilt") >= 0 || raw.indexOf("shift") >= 0) return "tiltshift";
   if (raw.indexOf("perspective") >= 0 || raw.indexOf("thin") >= 0 || raw.indexOf("lens") >= 0) return "perspective";
   return "camera";
 }
@@ -187,6 +216,7 @@ function cameraTypeLabel(cameraType) {
   if (kind === "erp") return "Equirectangular";
   if (kind === "ods") return "Omni Stereo";
   if (kind === "cubemap") return "Cubemap";
+  if (kind === "tiltshift") return "Tilt-Shift";
   return String(cameraType || "Camera").trim() || "Camera";
 }
 
@@ -480,14 +510,31 @@ async function reloadSceneFile(sceneFile) {
 
 function ensureSceneContextMenu() {
   if (document.getElementById("sceneFileContextMenu")) return;
-  const menu = document.createElement("div");
+  const widgets = window.XTracerWidgets || {};
+  const menu = (typeof widgets.createMenu === "function" && typeof widgets.createMenuItem === "function")
+    ? widgets.createMenu({
+        id: "sceneFileContextMenu",
+        className: "scene-file-context-menu",
+        label: "Scene actions",
+        children: [
+          widgets.createMenuItem({ id: "sceneCtxSetActive", label: "Set Active" }),
+          widgets.createMenuItem({ id: "sceneCtxRefetch", label: "Refetch" }),
+          widgets.createMenuItem({ id: "sceneCtxReload", label: "Reload" }),
+          widgets.createMenuDivider ? widgets.createMenuDivider() : null,
+          widgets.createMenuItem({ id: "sceneCtxDelete", label: "Delete", danger: true }),
+        ],
+      })
+    : document.createElement("div");
   menu.id = "sceneFileContextMenu";
-  menu.className = "scene-file-context-menu";
+  if (!menu.classList.contains("scene-file-context-menu")) menu.className = "scene-file-context-menu";
   menu.hidden = true;
-  menu.innerHTML = ""
-    + "<button id=\"sceneCtxSetActive\" type=\"button\">Set Active</button>"
-    + "<button id=\"sceneCtxReload\" type=\"button\">Reload</button>"
-    + "<button id=\"sceneCtxDelete\" type=\"button\" class=\"danger\">Delete</button>";
+  if (!menu.children.length) {
+    menu.innerHTML = ""
+      + "<button id=\"sceneCtxSetActive\" type=\"button\">Set Active</button>"
+      + "<button id=\"sceneCtxRefetch\" type=\"button\">Refetch</button>"
+      + "<button id=\"sceneCtxReload\" type=\"button\">Reload</button>"
+      + "<button id=\"sceneCtxDelete\" type=\"button\" class=\"danger\">Delete</button>";
+  }
   document.body.appendChild(menu);
 
   const close = () => {
@@ -496,6 +543,7 @@ function ensureSceneContextMenu() {
   };
 
   const setActiveBtn = menu.querySelector("#sceneCtxSetActive");
+  const refetchBtn = menu.querySelector("#sceneCtxRefetch");
   const reloadBtn = menu.querySelector("#sceneCtxReload");
   const deleteBtn = menu.querySelector("#sceneCtxDelete");
   if (setActiveBtn) {
@@ -504,6 +552,18 @@ function ensureSceneContextMenu() {
       close();
       if (!sceneFile) return;
       activateSceneFile(sceneFile);
+    });
+  }
+  if (refetchBtn) {
+    refetchBtn.addEventListener("click", () => {
+      const sceneFile = String(menu.dataset.scene || "").trim();
+      close();
+      if (!sceneFile) return;
+      refetchSceneFile(sceneFile).catch((err) => {
+        setStatus(`error: ${err.message}`);
+        setSceneLoadStatus("error", err.message || "Scene refetch failed.", "");
+        appendLog(`scene refetch error: ${err.message}`);
+      });
     });
   }
   if (reloadBtn) {
@@ -555,6 +615,8 @@ function openSceneContextMenu(sceneFile, x, y) {
   const isActive = String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName;
   const setActiveBtn = menu.querySelector("#sceneCtxSetActive");
   if (setActiveBtn) setActiveBtn.disabled = isActive;
+  const refetchBtn = menu.querySelector("#sceneCtxRefetch");
+  if (refetchBtn) refetchBtn.disabled = false;
   const reloadBtn = menu.querySelector("#sceneCtxReload");
   if (reloadBtn) {
     reloadBtn.hidden = !isActive;
@@ -579,7 +641,15 @@ async function deleteSceneFile(sceneFile) {
   if (!sceneName) return;
   if (!hasBackendMethod(api, "deleteScene")) throw new Error("scene delete endpoint unavailable");
 
-  const ok = window.confirm(`Delete scene ${sceneName}? This cannot be undone.`);
+  const widgets = window.XTracerWidgets;
+  const ok = await (widgets && typeof widgets.showModal === "function"
+    ? widgets.showModal({
+      title: "Delete Scene",
+      body: `Delete "${sceneName}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    })
+    : Promise.resolve(window.confirm(`Delete scene ${sceneName}? This cannot be undone.`)));
   if (!ok) return;
 
   const deletedWasActive = String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName;
@@ -605,8 +675,61 @@ async function deleteSceneFile(sceneFile) {
   appendLog(`scene deleted: ${sceneName}`);
 }
 
+async function refetchSceneFile(sceneFile) {
+  const sceneName = String(sceneFile || "").trim();
+  if (!sceneName) return;
+
+  setSceneLoadStatus("loading", `Refetching ${sceneName}...`, "");
+  const data = await api.getSceneSource(sceneName);
+  const source = String(data && data.source ? data.source : "");
+  const sourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
+  const title = extractSceneTitle(source);
+  const description = extractSceneDescription(source);
+  const dependsExternal = sceneDependsOnExternalFiles(source);
+  const variantMeta = extractSceneVariantNames(source);
+  const variantCount = Array.isArray(variantMeta && variantMeta.variants) ? variantMeta.variants.length : 0;
+  const cameraCount = countTopLevelSceneEntries(source, "camera");
+  const hasVariants = variantCount > 0;
+
+  for (let i = 0; i < sceneCatalog.length; i += 1) {
+    const item = sceneCatalog[i];
+    if (String(item && item.sceneFile ? item.sceneFile : "").trim() !== sceneName) continue;
+    sceneCatalog[i] = {
+      ...item,
+      label: title || sceneName,
+      title,
+      description,
+      sourceOrigin,
+      dependsExternal,
+      variantCount,
+      cameraCount,
+      hasVariants,
+    };
+    break;
+  }
+  renderSceneFileBrowser();
+
+  const isActive = String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName;
+  if (isActive) {
+    currentSceneSourceOrigin = sourceOrigin;
+    el.sceneName.value = data.scene || sceneName;
+    el.sceneSource.value = source;
+    updateEditorMetrics();
+    syncEditorScroll();
+    renderSceneGraphView();
+    resetSceneHistoriesFromCurrentSource();
+    await loadVariants(sceneName, selectedSceneVariantValue());
+    updateActiveSceneSidebarCard();
+  }
+
+  setStatus(`refetched ${sceneName} (${sceneSourceOriginLabel(sourceOrigin)})`);
+  setSceneLoadStatus("idle", `Refetched ${sceneName} from ${sceneSourceOriginLabel(sourceOrigin)}.`, "");
+  appendLog(`scene refetched: ${sceneName} origin=${sourceOrigin}`);
+}
+
 function renderSceneFileBrowser() {
   if (!el.sceneFileList) return;
+  const widgets = window.XTracerWidgets || {};
   const preservedScrollTop = el.sceneFileList.scrollTop;
   const activeScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
   if (!sceneBrowserSelectedFile || !sceneCatalogHasFile(sceneBrowserSelectedFile)) {
@@ -618,10 +741,11 @@ function renderSceneFileBrowser() {
 
   const visibleSceneCatalog = getFilteredSceneCatalog();
   if (!visibleSceneCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = sceneSearchQuery ? "No scenes match the search." : "No scene files found.";
-    el.sceneFileList.appendChild(empty);
+    el.sceneFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: sceneSearchQuery ? "No matches" : "No scenes",
+      message: sceneSearchQuery ? "No scenes match the search." : "No scene files found.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
@@ -629,68 +753,27 @@ function renderSceneFileBrowser() {
     const sceneFile = String(item && item.sceneFile ? item.sceneFile : "").trim();
     if (!sceneFile) return;
     const title = String(item && item.title ? item.title : "").trim();
+    const sourceOrigin = String(item && item.sourceOrigin ? item.sourceOrigin : "disk").trim();
     const dependsExternal = !!(item && item.dependsExternal);
     const hasVariants = !!(item && item.hasVariants);
+    const variantCount = Number((item && item.variantCount) || 0);
+    const cameraCount = Number((item && item.cameraCount) || 0);
     const isSelected = sceneBrowserSelectedFile === sceneFile;
     const isActive = activeScene === sceneFile;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.scene = sceneFile;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
-
-    button.appendChild(createSceneFileIcon());
-
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    nameNode.textContent = sceneFile;
-    body.appendChild(nameNode);
-
-    if (title && title !== sceneFile) {
-      const titleNode = document.createElement("span");
-      titleNode.className = "scene-file-title";
-      titleNode.textContent = title;
-      body.appendChild(titleNode);
-    }
-
-    if (dependsExternal || hasVariants) {
-      const badgesNode = document.createElement("span");
-      badgesNode.className = "scene-file-badges";
-
-      if (dependsExternal) {
-        const extNode = document.createElement("span");
-        extNode.className = "scene-file-ext";
-        extNode.textContent = "EXT";
-        badgesNode.appendChild(extNode);
-      }
-
-      if (hasVariants) {
-        const variantNode = document.createElement("span");
-        variantNode.className = "scene-file-ext scene-file-var";
-        variantNode.textContent = "VAR";
-        badgesNode.appendChild(variantNode);
-      }
-
-      body.appendChild(badgesNode);
-    }
-
-    button.appendChild(body);
-    button.addEventListener("click", () => {
-      if (sceneBrowserSelectedFile === sceneFile) {
-        activateSceneFile(sceneFile);
-        return;
-      }
-      sceneBrowserSelectedFile = sceneFile;
-      syncSceneFileBrowserSelectionUi();
+    const button = widgets.createSceneCard({
+      sceneFile,
+      title,
+      sourceOrigin: normalizeSceneSourceOrigin(sourceOrigin),
+      dependsExternal,
+      hasVariants,
+      variantCount,
+      cameraCount,
+      selected: isSelected,
+      active: isActive,
+      icon: createSceneFileIcon(),
     });
-    button.addEventListener("dblclick", () => {
+    button.addEventListener("click", () => {
       activateSceneFile(sceneFile);
     });
     button.addEventListener("contextmenu", (evt) => {
@@ -804,6 +887,7 @@ function updateActiveSceneSidebarCard() {
     || String(sceneMeta && sceneMeta.sceneFile ? sceneMeta.sceneFile : "").trim()
     || (sceneName || "-");
   const sceneDescription = String(sceneMeta && sceneMeta.description ? sceneMeta.description : "").trim() || "-";
+  const sourceOrigin = sceneSourceOriginLabel(currentSceneSourceOrigin);
 
   if (el.activeSceneCardScene) {
     el.activeSceneCardScene.replaceChildren();
@@ -815,6 +899,19 @@ function updateActiveSceneSidebarCard() {
 
   if (el.activeSceneCardDescription) {
     el.activeSceneCardDescription.textContent = sceneDescription;
+  }
+
+  if (el.activeSceneCardSource) {
+    el.activeSceneCardSource.replaceChildren();
+    const key = document.createElement("span");
+    key.className = "active-scene-row-label";
+    key.textContent = "Source";
+    el.activeSceneCardSource.appendChild(key);
+
+    const value = document.createElement("code");
+    value.className = "active-scene-row-value";
+    value.textContent = sourceOrigin;
+    el.activeSceneCardSource.appendChild(value);
   }
 
   if (el.activeSceneCardVariant) {
@@ -870,18 +967,39 @@ function applyCameraTypesFromRuntimeGraph(sceneName, graphData, variantName) {
   const targetVariant = variantName !== undefined ? normalizeVariantName(variantName) : activeVariant;
   if (!currentScene || !activeScene || currentScene !== activeScene) return;
   if (normalizeVariantName(activeVariant) !== targetVariant) return;
-  if (!Array.isArray(cameraCatalog) || cameraCatalog.length === 0) return;
 
   const graphCameras = Array.isArray(graphData && graphData.cameras) ? graphData.cameras : [];
   if (!graphCameras.length) return;
   const typeById = new Map();
+  const graphOrder = [];
   graphCameras.forEach((cam) => {
     const id = String(cam && cam.id ? cam.id : "").trim();
     const type = String(cam && cam.type ? cam.type : "").trim();
-    if (id) typeById.set(id, type);
+    if (!id) return;
+    typeById.set(id, type);
+    graphOrder.push(id);
   });
 
   let changed = false;
+  if (!Array.isArray(cameraCatalog)) cameraCatalog = [];
+  const catalogById = new Map();
+  cameraCatalog.forEach((item) => {
+    const value = String(item && item.value ? item.value : "").trim();
+    if (value) catalogById.set(value, item);
+  });
+
+  graphOrder.forEach((id) => {
+    if (catalogById.has(id)) return;
+    const next = {
+      value: id,
+      label: id,
+      type: String(typeById.get(id) || "").trim(),
+    };
+    cameraCatalog.push(next);
+    catalogById.set(id, next);
+    changed = true;
+  });
+
   cameraCatalog = cameraCatalog.map((item) => {
     const value = String(item && item.value ? item.value : "").trim();
     const prevType = String(item && item.type ? item.type : "").trim();
@@ -892,7 +1010,29 @@ function applyCameraTypesFromRuntimeGraph(sceneName, graphData, variantName) {
     return { ...item, type: nextType };
   });
 
-  if (changed) renderCameraBrowser();
+  cameraCatalog.sort((a, b) => String(a && a.value ? a.value : "").localeCompare(String(b && b.value ? b.value : "")));
+
+  if (el.camera) {
+    const previous = String(el.camera.value || "").trim();
+    el.camera.innerHTML = "";
+    cameraCatalog.forEach((item) => addOption(el.camera, item.value, item.label || item.value));
+    if (cameraCatalogHasName(previous)) el.camera.value = previous;
+    else if (el.camera.options.length > 0) el.camera.selectedIndex = 0;
+  }
+
+  if (changed) {
+    renderCameraBrowser();
+    updateCameraActivePanel();
+  }
+}
+
+function reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName) {
+  const currentScene = String(sceneName || "").trim();
+  if (!currentScene) return;
+  const targetVariant = normalizeVariantName(variantName !== undefined ? variantName : selectedSceneVariantValue());
+  const cachedGraph = getRuntimeGraphForScene(currentScene, targetVariant);
+  if (!cachedGraph) return;
+  applyCameraTypesFromRuntimeGraph(currentScene, cachedGraph, targetVariant);
 }
 
 function updateCameraFileCount() {
@@ -927,6 +1067,7 @@ function updateVariantActivePanel() {
 
 function renderCameraBrowser() {
   if (!el.cameraFileList) return;
+  const widgets = window.XTracerWidgets || {};
   if (!cameraBrowserSelectedName || !cameraCatalogHasName(cameraBrowserSelectedName)) {
     cameraBrowserSelectedName = String(el.camera && el.camera.value ? el.camera.value : "");
   }
@@ -936,10 +1077,11 @@ function renderCameraBrowser() {
   updateCameraActivePanel();
 
   if (!cameraCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = "No cameras found in this scene.";
-    el.cameraFileList.appendChild(empty);
+    el.cameraFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: "No cameras",
+      message: "No cameras found in this scene.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
@@ -950,36 +1092,15 @@ function renderCameraBrowser() {
     const isSelected = cameraBrowserSelectedName === value;
     const isActive = String(el.camera && el.camera.value ? el.camera.value : "") === value;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item camera-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.camera = value;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
-
-    button.appendChild(createCameraIcon(camType));
-
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    nameNode.textContent = label || value || "-";
-    body.appendChild(nameNode);
-
-    const descNode = document.createElement("span");
-    descNode.className = "scene-file-title camera-file-description";
-    descNode.textContent = `${cameraTypeLabel(camType)} camera`;
-    body.appendChild(descNode);
-
-    button.appendChild(body);
-    button.addEventListener("click", () => {
-      cameraBrowserSelectedName = value;
-      renderCameraBrowser();
+    const button = widgets.createCameraCard({
+      value,
+      label: label || value || "-",
+      description: `${cameraTypeLabel(camType)} camera`,
+      selected: isSelected,
+      active: isActive,
+      icon: createCameraIcon(camType),
     });
-    button.addEventListener("dblclick", () => {
+    button.addEventListener("click", () => {
       activateCamera(value);
     });
     button.addEventListener("keydown", (evt) => {
@@ -995,6 +1116,7 @@ function renderCameraBrowser() {
 
 function renderVariantBrowser() {
   if (!el.variantFileList) return;
+  const widgets = window.XTracerWidgets || {};
   if (!variantBrowserSelectedName || !variantCatalogHasName(variantBrowserSelectedName)) {
     variantBrowserSelectedName = selectedSceneVariantValue();
   }
@@ -1004,10 +1126,11 @@ function renderVariantBrowser() {
   updateVariantActivePanel();
 
   if (!variantCatalog.length) {
-    const empty = document.createElement("p");
-    empty.className = "scene-file-empty";
-    empty.textContent = "No variants found in this scene.";
-    el.variantFileList.appendChild(empty);
+    el.variantFileList.appendChild(window.XTracerWidgets.createEmptyState({
+      title: "No variants",
+      message: "No variants found in this scene.",
+      className: "scene-file-empty",
+    }));
     return;
   }
 
@@ -1019,44 +1142,16 @@ function renderVariantBrowser() {
     const isSelected = normalizeVariantName(variantBrowserSelectedName) === value;
     const isActive = selectedSceneVariantValue() === value;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-file-item camera-file-item variant-file-item";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", isSelected ? "true" : "false");
-    button.dataset.variant = value;
-    if (isSelected) button.classList.add("is-selected");
-    if (isActive) button.classList.add("is-active");
-    if (isBase) button.classList.add("is-base");
-    if (description) button.classList.add("has-description");
-    else button.classList.add("no-description");
-
-    button.appendChild(createVariantIcon(isBase));
-
-    const body = document.createElement("span");
-    body.className = "scene-file-meta";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "scene-file-name";
-    const nameTextNode = document.createElement("span");
-    nameTextNode.className = "scene-file-name-text";
-    nameTextNode.textContent = label;
-    nameNode.appendChild(nameTextNode);
-    body.appendChild(nameNode);
-
-    if (description) {
-      const descNode = document.createElement("span");
-      descNode.className = "scene-file-title variant-file-description";
-      descNode.textContent = description;
-      body.appendChild(descNode);
-    }
-
-    button.appendChild(body);
-    button.addEventListener("click", () => {
-      variantBrowserSelectedName = value;
-      renderVariantBrowser();
+    const button = widgets.createVariantCard({
+      value,
+      label,
+      description,
+      base: isBase,
+      selected: isSelected,
+      active: isActive,
+      icon: createVariantIcon(isBase),
     });
-    button.addEventListener("dblclick", () => {
+    button.addEventListener("click", () => {
       activateVariant(value);
     });
     button.addEventListener("keydown", (evt) => {
@@ -1283,6 +1378,7 @@ async function loadScenes() {
 
 async function loadCameras(scene, variant) {
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const requestToken = ++cameraLoadToken;
   if (!scene) {
     el.camera.innerHTML = "";
     cameraCatalog = [];
@@ -1292,6 +1388,7 @@ async function loadCameras(scene, variant) {
   }
 
   const info = await api.getCameras(scene, variantName);
+  if (requestToken !== cameraLoadToken) return info;
   el.camera.innerHTML = "";
   const sceneName = String(scene || "").trim();
   const infoObj = Array.isArray(info) ? { cameras: info } : (info || {});
@@ -1311,9 +1408,6 @@ async function loadCameras(scene, variant) {
     cameraCatalog = cameras.map((name) => ({ value: name, label: name, type: "" }));
   }
 
-  const cachedGraph = getRuntimeGraphForScene(sceneName, variantName);
-  if (cachedGraph) applyCameraTypesFromRuntimeGraph(sceneName, cachedGraph, variantName);
-
   if (defaultCamera && cameras.includes(defaultCamera)) {
     el.camera.value = defaultCamera;
   } else if (cameras.length > 0) {
@@ -1324,6 +1418,7 @@ async function loadCameras(scene, variant) {
   if (!cameraCatalogHasName(cameraBrowserSelectedName)) {
     cameraBrowserSelectedName = String(el.camera.value || "");
   }
+  reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName);
   renderCameraBrowser();
 
   syncVisualCameraFromRenderSelection();
@@ -1402,30 +1497,36 @@ async function loadIntegrators() {
 
 async function loadSceneSource(scene) {
   if (!scene) {
+    currentSceneSourceOrigin = "";
     el.sceneSource.value = "";
     updateEditorMetrics();
-    refreshSceneEditControls();
     renderSceneGraphView();
     resetSceneHistoriesFromCurrentSource();
+    updateActiveSceneSidebarCard();
     return;
   }
   const data = await api.getSceneSource(scene);
+  const newSource = String(data.source || "");
+  const sourceChanged = newSource !== String(el.sceneSource.value || "");
+  currentSceneSourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
   el.sceneName.value = data.scene || scene;
-  el.sceneSource.value = data.source || "";
+  el.sceneSource.value = newSource;
   updateEditorMetrics();
-  refreshSceneEditControls();
   syncEditorScroll();
   renderSceneGraphView();
-  resetSceneHistoriesFromCurrentSource();
+  if (sourceChanged) resetSceneHistoriesFromCurrentSource();
+  updateActiveSceneSidebarCard();
 }
 
 async function loadSceneRuntimeGraph(scene, variant) {
   const sceneName = String(scene || "").trim();
   if (!sceneName || !hasBackendMethod(api, "getSceneRuntimeGraph")) return null;
   const variantName = normalizeVariantName(variant !== undefined ? variant : selectedSceneVariantValue());
+  const requestToken = ++runtimeGraphLoadToken;
   const data = await api.getSceneRuntimeGraph(sceneName, variantName);
+  if (requestToken !== runtimeGraphLoadToken) return data || null;
   const key = runtimeGraphCacheKey(sceneName, variantName);
-  runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [] });
+  runtimeGraphByScene.set(key, data || { cameras: [], objects: [], surfaces: [], materials: [], media: [] });
   applyCameraTypesFromRuntimeGraph(sceneName, runtimeGraphByScene.get(key), variantName);
   if (String(el.scene && el.scene.value ? el.scene.value : "").trim() === sceneName) {
     renderSceneGraphView();
@@ -1438,38 +1539,32 @@ function renderThirdPartyLicenses(rawItems) {
     ? rawItems
     : DEFAULT_THIRD_PARTY_LICENSES;
   if (!el.aboutThirdPartyList) return;
-  el.aboutThirdPartyList.replaceChildren();
-
-  items.forEach((item) => {
-    const name = item && item.name ? String(item.name) : "Unknown";
-    const license = item && item.license ? String(item.license) : "Unknown";
-    const url = item && item.url ? String(item.url) : "";
-
-    const row = document.createElement("div");
-    row.className = "about-third-party-row";
-
-    const nameNode = document.createElement("span");
-    nameNode.className = "about-third-party-name";
-    nameNode.textContent = name;
-    row.appendChild(nameNode);
-
-    const licenseNode = document.createElement("code");
-    licenseNode.className = "about-third-party-license";
-    licenseNode.textContent = license;
-    row.appendChild(licenseNode);
-
-    if (url) {
-      const link = document.createElement("a");
-      link.className = "about-third-party-link";
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = url;
-      row.appendChild(link);
-    }
-
-    el.aboutThirdPartyList.appendChild(row);
-  });
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderDependencyList === "function") {
+    window.XTracerWidgets.renderDependencyList(el.aboutThirdPartyList, items);
+    return;
+  }
+  el.aboutThirdPartyList.replaceChildren(...items.map((item) => {
+    const entry = document.createElement("article");
+    entry.className = "xui-dependency";
+    entry.innerHTML = `
+      <div class="xui-dependency__main">
+        <h4 class="xui-dependency__name">${escapeHtml(item && item.name ? String(item.name) : "Unknown")}</h4>
+        ${item && item.description ? `<p class="xui-dependency__description">${escapeHtml(String(item.description))}</p>` : ""}
+        <div class="xui-dependency__facts">
+          <div class="xui-dependency__fact">
+            <span class="xui-dependency__fact-label">Used in</span>
+            <span class="xui-dependency__fact-value xui-dependency__usage">${escapeHtml(item && item.used_in ? String(item.used_in) : "Unknown")}</span>
+          </div>
+          <div class="xui-dependency__fact">
+            <span class="xui-dependency__fact-label">License</span>
+            <span class="xui-dependency__fact-value xui-dependency__license">${escapeHtml(item && item.license ? String(item.license) : "Unknown")}</span>
+          </div>
+        </div>
+      </div>
+      ${item && item.url ? `<a class="xui-dependency__link" href="${escapeAttr(String(item.url))}" target="_blank" rel="noopener noreferrer"><span class="xui-dependency__link-label">Repository</span><span class="xui-dependency__link-value">${escapeHtml(String(item.url))}</span></a>` : ""}
+    `;
+    return entry;
+  }));
 }
 
 function fitAboutLicenseText() {

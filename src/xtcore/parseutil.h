@@ -13,6 +13,7 @@
 #include "sampler/sampler_col.h"
 #include "sampler/sampler_cubemap.h"
 #include "sampler/sampler_gradient.h"
+#include "sampler/sampler_rayleigh_sky.h"
 #include "object.h"
 #include "cubemap.h"
 #include "scene.h"
@@ -44,8 +45,9 @@ xtcore::asset::ISurface     *deserialize_geometry (const char *source, const ncf
 xtcore::asset::Object       *deserialize_object   (const char *source, const ncf::NCF *p);
 xtcore::sampler::Texture2D  *deserialize_texture  (const char *source, const ncf::NCF *p);
 xtcore::sampler::Cubemap    *deserialize_cubemap  (const char *source, const ncf::NCF *p);
-xtcore::sampler::Gradient   *deserialize_gradient (const char *source, const ncf::NCF *p);
-xtcore::sampler::ISampler   *deserialize_rgba     (const char *source, const ncf::NCF *p);
+xtcore::sampler::Gradient   *deserialize_gradient (const ncf::NCF *p);
+xtcore::sampler::RayleighSky *deserialize_rayleigh_sky(const ncf::NCF *p);
+xtcore::sampler::ISampler   *deserialize_rgba     (const ncf::NCF *p);
 
 int create_cubemap  (Scene *scene, ncf::NCF *p);
 int create_camera   (Scene *scene, ncf::NCF *p);

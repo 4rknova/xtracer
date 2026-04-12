@@ -1,10 +1,52 @@
+function upgradeLegacyStatMarkup() {
+  const widgets = window.XTracerWidgets || {};
+  if (typeof widgets.renderStatHint !== "function") return;
+  document.querySelectorAll(".workspace-active-hint").forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const labelNode = node.querySelector(".workspace-active-label, .xui-stat__label");
+    const valueNode = node.querySelector(".workspace-active-value, .xui-stat__value");
+    let label = labelNode ? String(labelNode.textContent || "").trim() : "";
+    let value = valueNode ? String(valueNode.textContent || "").trim() : "";
+    if (!label) {
+      const raw = String(node.textContent || "").trim();
+      const split = raw.indexOf(":");
+      if (split >= 0) {
+        label = raw.slice(0, split).trim();
+        value = raw.slice(split + 1).trim();
+      } else {
+        label = raw;
+      }
+    }
+    widgets.renderStatHint(node, { label, value: value || "-" });
+  });
+}
+
+function adoptStaticWidgetMarkup() {
+  upgradeLegacyStatMarkup();
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelects === "function") {
+    window.XTracerWidgets.enhanceSelects(document);
+  }
+}
+
 async function boot() {
   ensureClientId();
   api = initializeBackendApi();
+  adoptStaticWidgetMarkup();
+  if (typeof bindSettingsJobsCardLifecycle === "function") bindSettingsJobsCardLifecycle();
   renderSceneLoadStatus();
   const hasWorkspaceApi = hasBackendMethod(api, "getWorkspaces");
-  const startupRequestTotal = 8 + (hasWorkspaceApi ? 1 : 0);
-  resetStartupProgress(startupRequestTotal);
+  const startupPhases = [
+    "Preparing layout",
+    "Restoring appearance",
+    ...(hasWorkspaceApi ? ["Syncing workspaces"] : []),
+    "Loading scenes",
+    "Loading integrators",
+    "Loading post filters",
+    "Loading presets",
+    "Resolving startup scene",
+    "Loading runtime details",
+  ];
+  resetStartupProgress(startupPhases.length, startupPhases);
   const trackStartupRequest = (promise) => Promise.resolve(promise).finally(() => advanceStartupProgress(1));
 
   if (!hasBackendMethod(api, "getWorkspaces")) {
@@ -26,6 +68,7 @@ async function boot() {
   setWorkspaceViewMode(localStorage.getItem(WORKSPACE_VIEW_MODE_KEY) || "cards", false);
   setWorkspaceSortMode(localStorage.getItem(WORKSPACE_SORT_MODE_KEY) || "name", false);
   pollBackendLogs();
+  advanceStartupProgress(1);
 
   setStatus("loading...");
   setSceneLoadStatus("loading", "Bootstrapping scene metadata...", "");
@@ -37,6 +80,7 @@ async function boot() {
   await Promise.all([
     trackStartupRequest(loadScenes()),
     trackStartupRequest(loadIntegrators()),
+    trackStartupRequest(loadPostFilters()),
     trackStartupRequest(loadResolutionPresets()),
   ]);
   const tryLoadSceneBundle = async (sceneName) => {
@@ -53,6 +97,11 @@ async function boot() {
     return true;
   };
 
+  const activeWorkspaceScene = () => {
+    const snapshot = activeWorkspaceId ? workspaceSnapshotById.get(activeWorkspaceId) : null;
+    return String((snapshot && snapshot.active_scene) || "").trim();
+  };
+
   const chooseStartupSceneCandidates = () => {
     const seen = new Set();
     const out = [];
@@ -62,11 +111,13 @@ async function boot() {
       seen.add(name);
       out.push(name);
     };
+    push(activeWorkspaceScene());
     push(el.scene && el.scene.value ? el.scene.value : "");
     sceneCatalog.forEach((item) => push(item && item.sceneFile ? item.sceneFile : ""));
     return out;
   };
 
+  let loadedStartupScene = "";
   await trackStartupRequest((async () => {
     const candidates = chooseStartupSceneCandidates();
     let loaded = false;
@@ -81,6 +132,7 @@ async function boot() {
           updateSceneDependencyPill(candidate);
         }
         await tryLoadSceneBundle(candidate);
+        loadedStartupScene = candidate;
         loaded = true;
         break;
       } catch (err) {
@@ -94,7 +146,9 @@ async function boot() {
     }
   })());
   if (hasWorkspaceApi && activeWorkspaceId) {
-    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null)
+    await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null, {
+      skipSceneReloadIfCurrent: loadedStartupScene,
+    })
       .catch((err) => appendLog(`workspace restore error: ${err.message}`));
   }
   if (!activeJobId && typeof restorePreviewForActiveWorkspace === "function") {
@@ -131,11 +185,11 @@ async function boot() {
       el.visualSelectionTag || null,
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneGeometry")) throw new Error("geometry endpoint unavailable");
-        return api.getSceneGeometry(sceneName);
+        return api.getSceneGeometry(sceneName, selectedSceneVariantValue());
       },
       async (sceneName) => {
         if (!hasBackendMethod(api, "getSceneRuntimeGraph")) throw new Error("runtime graph endpoint unavailable");
-        return api.getSceneRuntimeGraph(sceneName);
+        return api.getSceneRuntimeGraph(sceneName, selectedSceneVariantValue());
       },
       async (sceneName, relpath) => {
         if (!hasBackendMethod(api, "getSceneAssetText")) throw new Error("asset endpoint unavailable");
@@ -143,42 +197,18 @@ async function boot() {
       }
     );
     if (visualEditor.init()) {
-      if (visualEditor.setSelectionChangeHandler) {
-        visualEditor.setSelectionChangeHandler((meta) => {
-          const id = meta && meta.objectId ? String(meta.objectId) : "";
-          if (el.editObjectSelect) {
-            el.editObjectSelect.value = id;
-            syncTransformInputsFromObject(id);
-          }
-        });
-      }
-      if (visualEditor.setObjectTransformChangeHandler) {
-        visualEditor.setObjectTransformChangeHandler((evt) => {
-          const objectId = evt && evt.objectId ? String(evt.objectId) : "";
-          const transform = evt && evt.transform ? evt.transform : null;
-          if (!objectId || !transform) return;
-          try {
-            const deltaTranslation = Array.isArray(evt && evt.deltaTranslation)
-              ? evt.deltaTranslation
-              : [0, 0, 0];
-            const nextSource = updateObjectTransformInSource(
-              el.sceneSource.value || "",
-              objectId,
-              transform,
-              { useDelta: true, deltaTranslation }
-            );
-            updateSceneSourceText(nextSource);
-            if (el.editObjectSelect) el.editObjectSelect.value = objectId;
-            syncTransformInputsFromObject(objectId);
-            appendLog(`scene edit moved: ${objectId}`);
-          } catch (err) {
-            appendLog(`scene edit move error: ${err.message}`);
-          }
-        });
-      }
       syncVisualFrameAspect();
       if (el.visualProjection && visualEditor.setProjectionMode) {
         visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
+      }
+      if (el.visualSceneScale && visualEditor.setSceneScaleMultiplier) {
+        visualEditor.setSceneScaleMultiplier(uiOptions.visualSceneScale, false);
+      }
+      if (el.visualShowGlobalBvh && visualEditor.setGlobalBvhVisible) {
+        visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+      }
+      if (el.visualShowMeshBvh && visualEditor.setMeshBvhVisible) {
+        visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
       }
       try {
         await loadVisualSceneFromSelected();
@@ -213,6 +243,18 @@ async function boot() {
       appendLog(`visual projection=${mode}`);
     });
   }
+  if (el.visualSceneScale) {
+    el.visualSceneScale.addEventListener("change", () => {
+      const next = clampVisualSceneScale(el.visualSceneScale.value || "1");
+      uiOptions.visualSceneScale = next;
+      el.visualSceneScale.value = String(next);
+      persistUIOptions();
+      if (visualEditor && visualEditor.setSceneScaleMultiplier) {
+        visualEditor.setSceneScaleMultiplier(next, true);
+      }
+      appendLog(`visual scene scale=${next}`);
+    });
+  }
   if (el.visualShowGrid) {
     el.visualShowGrid.addEventListener("change", () => {
       if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(!!el.visualShowGrid.checked);
@@ -220,10 +262,34 @@ async function boot() {
     });
     if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(!!el.visualShowGrid.checked);
   }
+  if (el.visualShowGlobalBvh) {
+    el.visualShowGlobalBvh.addEventListener("change", () => {
+      if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+      appendLog(`visual global bvh=${el.visualShowGlobalBvh.checked ? "on" : "off"}`);
+    });
+    if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+  }
+  if (el.visualShowMeshBvh) {
+    el.visualShowMeshBvh.addEventListener("change", () => {
+      if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
+      appendLog(`visual mesh bvh=${el.visualShowMeshBvh.checked ? "on" : "off"}`);
+    });
+    if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
+  }
   if (el.resetViewBtn) {
     el.resetViewBtn.addEventListener("click", () => {
       resetPreviewView();
       appendLog("preview view reset");
+    });
+  }
+  if (el.interactivePreviewSaveCameraBtn) {
+    el.interactivePreviewSaveCameraBtn.addEventListener("click", () => {
+      saveInteractiveCameraToScene()
+        .catch((err) => {
+          setStatus(`error: ${err.message}`);
+          setEditorOpStatus("error", `Save camera failed: ${err.message}`);
+          appendLog(`interactive camera save error: ${err.message}`);
+        });
     });
   }
   el.download.addEventListener("click", handleExportClick);
@@ -280,6 +346,53 @@ async function boot() {
     }
   };
 
+  const saveInteractiveCameraToScene = async () => {
+    const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    if (!sceneName) throw new Error("no active scene");
+    if (!interactivePreviewCamera || !interactivePreviewCamera.ready) {
+      throw new Error("interactive camera is not ready");
+    }
+    const sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+    if (!sourceText.trim()) throw new Error("scene source is empty");
+
+    const baseLabel = String(interactivePreviewCamera.sourceCamera || "").trim() || "interactive_camera";
+    const next = addInteractiveCameraToSceneSource(sourceText, {
+      baseName: `interactive_${sanitizeSceneId(baseLabel, "camera")}`,
+      position: interactivePreviewCamera.position,
+      target: interactivePreviewCamera.target,
+      up: interactivePreviewCamera.up,
+      hfov: interactivePreviewCamera.hfov,
+    });
+    updateSceneSourceText(next.source, { history: "visual" });
+
+    await api.saveScene(sceneName, next.source, true);
+    await loadScenes();
+    el.scene.value = sceneName;
+    setSceneBrowserSelectedFile(sceneName);
+    localStorage.setItem(LAST_SCENE_KEY, sceneName);
+    updateSceneDependencyPill(sceneName);
+
+    const variantName = selectedSceneVariantValue();
+    await loadCameras(sceneName, variantName);
+    if (cameraCatalogHasName(next.cameraId)) {
+      el.camera.value = next.cameraId;
+      setCameraBrowserSelectedCamera(next.cameraId);
+      syncVisualCameraFromRenderSelection();
+      lastStableSelection.camera = next.cameraId;
+    }
+    if (hasBackendMethod(api, "getSceneRuntimeGraph")) {
+      await loadSceneRuntimeGraph(sceneName, variantName).catch(() => null);
+    }
+    if (visualEditor) await loadVisualSceneFromSelected().catch(() => null);
+    if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+      const ok = await refreshInteractivePreviewCameraFromSelection().catch(() => false);
+      if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+    }
+    setStatus(`saved ${sceneName} (+camera ${next.cameraId})`);
+    setEditorOpStatus("success", `Saved camera: ${next.cameraId}`);
+    appendLog(`interactive camera saved: ${next.cameraId}`);
+  };
+
   el.scene.addEventListener("change", () => {
     setSceneBrowserSelectedFile(el.scene.value);
     localStorage.setItem(LAST_SCENE_KEY, el.scene.value || "");
@@ -304,6 +417,13 @@ async function boot() {
         lastStableSelection.variant = selectedSceneVariantValue();
         lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
         setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, "");
+        if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+          refreshInteractivePreviewCameraFromSelection()
+            .then((ok) => {
+              if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+            })
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         setSceneLoadStatus("error", err.message || "Scene change failed.", "");
@@ -325,6 +445,7 @@ async function boot() {
       if (hasBackendMethod(api, "getSceneRuntimeGraph")) tasks.push(loadSceneRuntimeGraph(sceneName, variantName));
       Promise.all(tasks)
         .then(() => {
+          reconcileCameraCatalogFromRuntimeGraph(sceneName, variantName);
           if (visualEditor) return loadVisualSceneFromSelected();
           return null;
         })
@@ -334,6 +455,13 @@ async function boot() {
           lastStableSelection.scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
           lastStableSelection.variant = selectedSceneVariantValue();
           lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+          if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+            refreshInteractivePreviewCameraFromSelection()
+              .then((ok) => {
+                if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+              })
+              .catch(() => {});
+          }
         })
         .catch((err) => {
           setSceneLoadStatus("error", err.message || "Variant change failed.", "");
@@ -350,6 +478,13 @@ async function boot() {
     setCameraBrowserSelectedCamera(el.camera.value);
     syncVisualCameraFromRenderSelection();
     lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+    if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
+      refreshInteractivePreviewCameraFromSelection()
+        .then((ok) => {
+          if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+        })
+        .catch(() => {});
+    }
   });
 
   el.theme.addEventListener("change", () => {
@@ -358,6 +493,19 @@ async function boot() {
     persistUIOptions();
     appendLog(`theme=${el.theme.value}`);
   });
+
+  if (el.themeToggle) {
+    el.themeToggle.addEventListener("click", () => {
+      const order = ["system", "light", "dark"];
+      const current = String(el.theme && el.theme.value ? el.theme.value : localStorage.getItem("xtracer-theme") || "system").toLowerCase();
+      const next = order[(Math.max(order.indexOf(current), 0) + 1) % order.length];
+      if (el.theme) el.theme.value = next;
+      applyTheme(next);
+      refreshPaletteOptions();
+      persistUIOptions();
+      appendLog(`theme=${next}`);
+    });
+  }
 
   if (el.darkPalette) {
     el.darkPalette.addEventListener("change", () => {
@@ -375,6 +523,7 @@ async function boot() {
     const onSchemeChange = () => {
       if (el.theme && el.theme.value === "system") {
         refreshPaletteOptions();
+        refreshThemeToggleButton();
       }
     };
     if (typeof mq.addEventListener === "function") mq.addEventListener("change", onSchemeChange);
@@ -394,12 +543,15 @@ async function boot() {
   });
   if (el.tileSize) {
     el.tileSize.addEventListener("change", () => {
+      if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
       appendLog(`tile_size=${el.tileSize.value}`);
       queueWorkspaceSettingsSave();
     });
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
   }
   if (el.threads) {
     el.threads.addEventListener("change", () => {
+      if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
       appendLog(`threads=${el.threads.value}`);
       queueWorkspaceSettingsSave();
     });
@@ -523,10 +675,27 @@ async function boot() {
   }
   updateToneMappingControlState();
   populatePostFilterTypeOptions();
-  renderPostFilterChain();
+  updatePostFilterUiState();
+  if (typeof renderPostPipelineGraph === "function") renderPostPipelineGraph();
+  if (el.postFiltersEnabled) {
+    el.postFiltersEnabled.checked = !!postFilterStackEnabled;
+    el.postFiltersEnabled.addEventListener("change", () => {
+      postFilterStackEnabled = !!el.postFiltersEnabled.checked;
+      updatePostFilterUiState();
+      appendLog(`post_filter stack=${postFilterStackEnabled ? "on" : "off"}`);
+      refreshPreviewForToneMapping();
+      queueWorkspaceSettingsSave();
+    });
+  }
   if (el.postFilterAddBtn) {
     el.postFilterAddBtn.addEventListener("click", () => {
       addPostFilterToChain();
+    });
+  }
+  if (el.postFiltersRecalcBtn) {
+    el.postFiltersRecalcBtn.addEventListener("click", () => {
+      appendLog("post_filter recalculate");
+      refreshPreviewForToneMapping();
     });
   }
 
@@ -534,6 +703,7 @@ async function boot() {
     syncResolutionPresetFromInputs();
     updatePreviewSizing();
     syncVisualFrameAspect();
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
     queueWorkspaceSettingsSave();
   };
   [
@@ -562,6 +732,7 @@ async function boot() {
     el.height.value = String(preset.height);
     updatePreviewSizing();
     syncVisualFrameAspect();
+    if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
     queueWorkspaceSettingsSave();
   });
   el.width.addEventListener("input", onSizeChanged);
@@ -646,6 +817,41 @@ async function boot() {
     persistUIOptions();
     appendLog(`clear preview before render=${uiOptions.clearPreviewOnRender ? "on" : "off"}`);
   });
+  if (el.renderMode) {
+    el.renderMode.value = normalizeRenderMode(renderMode);
+    el.renderMode.addEventListener("change", () => {
+      const next = normalizeRenderMode(el.renderMode.value);
+      if (typeof setRenderMode === "function") {
+        setRenderMode(next, { log: true })
+          .then(() => queueWorkspaceSettingsSave())
+          .catch(() => {
+            if (el.renderMode) el.renderMode.value = normalizeRenderMode(renderMode);
+          });
+      }
+    });
+  }
+  if (el.interactivePreviewSpeed) {
+    const clampInteractiveSpeed = (v) => Math.max(0.2, Math.min(5.0, Number(v) || 1.0));
+    const applyInteractiveSpeed = (raw, logIt) => {
+      const speed = clampInteractiveSpeed(raw);
+      interactivePreviewFlySpeedScale = speed;
+      el.interactivePreviewSpeed.value = String(speed.toFixed(1));
+      if (el.interactivePreviewSpeedValue) el.interactivePreviewSpeedValue.textContent = `${speed.toFixed(1)}x`;
+      if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+      if (logIt) appendLog(`interactive speed=${speed.toFixed(1)}x`);
+    };
+    applyInteractiveSpeed(interactivePreviewFlySpeedScale, false);
+    el.interactivePreviewSpeed.addEventListener("input", () => {
+      applyInteractiveSpeed(el.interactivePreviewSpeed.value, false);
+    });
+    el.interactivePreviewSpeed.addEventListener("change", () => {
+      applyInteractiveSpeed(el.interactivePreviewSpeed.value, true);
+      queueWorkspaceSettingsSave();
+    });
+  }
+  if (typeof setRenderMode === "function") {
+    setRenderMode(renderMode, { log: false }).catch(() => {});
+  }
   if (el.tileHeatmapEnabled) {
     el.tileHeatmapEnabled.addEventListener("change", () => {
       uiOptions.tileHeatmapEnabled = !!el.tileHeatmapEnabled.checked;
@@ -669,7 +875,9 @@ async function boot() {
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
+  if (el.tabGallery) el.tabGallery.addEventListener("click", () => setActiveTab("gallery"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
+  if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
   if (el.mainMenuToggle) {
     el.mainMenuToggle.addEventListener("click", () => {
@@ -776,6 +984,13 @@ async function boot() {
         .catch((err) => appendLog(`workspace create error: ${err.message}`));
     });
   }
+  if (el.workspaceCreateName) {
+    el.workspaceCreateName.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      if (el.workspaceCreateBtn) el.workspaceCreateBtn.click();
+    });
+  }
   if (el.sceneRefreshBtn) {
     el.sceneRefreshBtn.addEventListener("click", () => {
       const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
@@ -811,7 +1026,7 @@ async function boot() {
     if (typeof refreshSettingsJobsCard !== "function") return;
     if (typeof isJobsControlsCardVisible === "function" && !isJobsControlsCardVisible()) return;
     refreshSettingsJobsCard().catch((err) => appendLog(`settings jobs refresh error: ${err.message}`));
-  }, 2000);
+  }, 1000);
 
   el.loadSceneBtn.addEventListener("click", () => {
     setSceneLoadStatus("loading", `Loading source for ${el.scene.value || "scene"}...`, "");
@@ -838,7 +1053,6 @@ async function boot() {
         el.sceneName.value = "new_scene.scn";
         el.sceneSource.value = source || "";
         updateEditorMetrics();
-        refreshSceneEditControls();
         syncEditorScroll();
         renderSceneGraphView();
         resetSceneHistoriesFromCurrentSource();
@@ -854,81 +1068,6 @@ async function boot() {
   });
 
   el.saveSceneBtn.addEventListener("click", triggerSceneSave);
-
-  if (el.editObjectSelect) {
-    el.editObjectSelect.addEventListener("change", () => {
-      const objectId = String(el.editObjectSelect.value || "").trim();
-      syncTransformInputsFromObject(objectId);
-      if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
-    });
-  }
-
-  if (el.editSyncFromVisualBtn) {
-    el.editSyncFromVisualBtn.addEventListener("click", () => {
-      if (!visualEditor || !visualEditor.getSelectedObjectId) return;
-      const objectId = String(visualEditor.getSelectedObjectId() || "").trim();
-      if (!objectId) {
-        setStatus("error: no visual selection");
-        appendLog("scene edit: no visual selection");
-        return;
-      }
-      if (el.editObjectSelect) el.editObjectSelect.value = objectId;
-      syncTransformInputsFromObject(objectId);
-      appendLog(`scene edit selection=${objectId}`);
-    });
-  }
-
-  if (el.editApplyTransformBtn) {
-    el.editApplyTransformBtn.addEventListener("click", () => {
-      const objectId = String(el.editObjectSelect && el.editObjectSelect.value ? el.editObjectSelect.value : "").trim();
-      if (!objectId) {
-        setStatus("error: select an object first");
-        appendLog("scene edit: apply transform failed (no object)");
-        return;
-      }
-      try {
-        const nextSource = updateObjectTransformInSource(el.sceneSource.value || "", objectId, currentTransformInputs());
-        updateSceneSourceText(nextSource);
-        rebuildVisualFromEditorSource()
-          .then(() => {
-            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(objectId, false);
-          })
-          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
-        setStatus(`updated ${objectId}`);
-        appendLog(`scene edit transform updated: ${objectId}`);
-      } catch (err) {
-        setStatus(`error: ${err.message}`);
-        appendLog(`scene edit transform error: ${err.message}`);
-      }
-    });
-  }
-
-  if (el.createGeometryBtn) {
-    el.createGeometryBtn.addEventListener("click", () => {
-      try {
-        const added = addMeshObjectToSceneSource(el.sceneSource.value || "", {
-          generator: String(el.createGeometryType && el.createGeometryType.value ? el.createGeometryType.value : "cube").toLowerCase(),
-          material: String(el.createMaterialSelect && el.createMaterialSelect.value ? el.createMaterialSelect.value : "").trim(),
-          geometryId: String(el.createGeometryId && el.createGeometryId.value ? el.createGeometryId.value : "").trim(),
-          objectId: String(el.createObjectId && el.createObjectId.value ? el.createObjectId.value : "").trim(),
-          ...currentTransformInputs(),
-        });
-        updateSceneSourceText(added.source);
-        if (el.editObjectSelect) el.editObjectSelect.value = added.objectId;
-        syncTransformInputsFromObject(added.objectId);
-        rebuildVisualFromEditorSource()
-          .then(() => {
-            if (visualEditor && visualEditor.selectObjectById) visualEditor.selectObjectById(added.objectId, true);
-          })
-          .catch((err) => appendLog(`visual refresh error: ${err.message}`));
-        setStatus(`created ${added.objectId}`);
-        appendLog(`scene edit created: object=${added.objectId} geometry=${added.geometryId}`);
-      } catch (err) {
-        setStatus(`error: ${err.message}`);
-        appendLog(`scene edit create error: ${err.message}`);
-      }
-    });
-  }
 
   el.clearLogsBtn.addEventListener("click", () => {
     logEntries.length = 0;
@@ -952,7 +1091,6 @@ async function boot() {
 
   el.sceneSource.addEventListener("input", () => {
     updateEditorMetrics();
-    refreshSceneEditControls();
     renderSceneGraphView();
     if (!suppressHistoryTracking) {
       scheduleTextHistoryCommit();
@@ -964,7 +1102,6 @@ async function boot() {
   el.sceneSource.addEventListener("keyup", syncEditorScroll);
   el.sceneSource.addEventListener("click", syncEditorScroll);
   updateEditorMetrics();
-  refreshSceneEditControls();
   syncEditorScroll();
   initializeFtueTutorial();
 }

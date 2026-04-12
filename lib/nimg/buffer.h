@@ -2,6 +2,7 @@
 #define BUFFER_H_INCLUDED
 
 #include <cstddef>
+#include <utility>
 
 namespace nimg {
     namespace util {
@@ -12,7 +13,9 @@ class Buffer
 	public:
 		Buffer();
 		Buffer(const Buffer &rhs);
+		Buffer(Buffer &&rhs) noexcept;
 		Buffer &operator =(const Buffer &rhs);
+		Buffer &operator =(Buffer &&rhs) noexcept;
 		virtual ~Buffer();
 
 		int init(size_t count);

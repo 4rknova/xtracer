@@ -1,7 +1,6 @@
 #include "xtcore.h"
 #include "config.h"
 #include "strpool.h"
-#include "midi.h"
 #include "res/license.h"
 
 namespace xtcore {
@@ -48,14 +47,12 @@ const char *get_empty_scene_template()
 int init()
 {
     xtcore::pool::str::init();
-//xtcore::midi::init();
     return 0;
 }
 
 int deinit()
 {
     xtcore::pool::str::release();
-    xtcore::midi::deinit();
     return 0;
 }
 

@@ -1,29 +1,51 @@
 function selectedExportFormat() {
-  const raw = String(el.exportFormat && el.exportFormat.value ? el.exportFormat.value : "png").toLowerCase();
-  if (raw === "png" || raw === "jpg" || raw === "bmp" || raw === "tga" || raw === "exr" || raw === "hdr" || raw === "ply") return raw;
+  const controls = (typeof el !== "undefined" && el) ? el : null;
+  const raw = String(controls && controls.exportFormat && controls.exportFormat.value ? controls.exportFormat.value : "png").toLowerCase();
+  if (raw === "png" || raw === "jpg" || raw === "bmp" || raw === "tga" || raw === "exr" || raw === "hdr") return raw;
   return "png";
 }
 
 function updateDownloadUi() {
   const hasExportApi = hasBackendMethod(api, "getJobExport");
-  const enabled = hasExportApi && !!lastCompletedJobId && !renderActive;
+  const hasCompletedJob = !!lastCompletedJobId;
   const fmt = selectedExportFormat().toUpperCase();
+  const busy = !!exportRequestInFlight;
+  const enabled = hasExportApi && hasCompletedJob && !renderActive && !busy;
+  const shell = el.download ? el.download.closest(".render-toolbar-save-shell") : null;
+  syncRenderExportButtonDecor(el.download, fmt, busy ? "Saving" : "Save");
+  if (shell) {
+    shell.classList.toggle("is-ready", enabled);
+    shell.classList.toggle("is-busy", busy);
+    shell.classList.toggle("is-disabled", !enabled);
+    shell.dataset.exportFormat = fmt;
+  }
+  el.download.classList.toggle("is-ready", enabled);
+  el.download.classList.toggle("is-busy", busy);
   if (enabled) {
     el.download.disabled = false;
     el.download.setAttribute("aria-disabled", "false");
     el.download.classList.remove("is-disabled");
-    el.download.setAttribute("title", `Export ${fmt}`);
-    el.download.setAttribute("aria-label", `Export ${fmt}`);
+    el.download.setAttribute("title", `Save ${fmt} export`);
+    el.download.setAttribute("aria-label", `Save ${fmt} export`);
   } else {
     el.download.disabled = true;
     el.download.setAttribute("aria-disabled", "true");
     el.download.classList.add("is-disabled");
-    if (!hasExportApi) {
-      el.download.setAttribute("title", "Export unavailable on this backend");
-      el.download.setAttribute("aria-label", "Export unavailable on this backend");
+    if (busy) {
+      el.download.setAttribute("title", `Saving ${fmt} export`);
+      el.download.setAttribute("aria-label", `Saving ${fmt} export`);
+    } else if (!hasExportApi) {
+      el.download.setAttribute("title", "Save unavailable on this backend");
+      el.download.setAttribute("aria-label", "Save unavailable on this backend");
+    } else if (renderActive) {
+      el.download.setAttribute("title", `Wait for the current render to finish before saving ${fmt}`);
+      el.download.setAttribute("aria-label", `Wait for the current render to finish before saving ${fmt}`);
+    } else if (!hasCompletedJob) {
+      el.download.setAttribute("title", `Complete a render to save ${fmt}`);
+      el.download.setAttribute("aria-label", `Complete a render to save ${fmt}`);
     } else {
-      el.download.setAttribute("title", `Export ${fmt}`);
-      el.download.setAttribute("aria-label", `Export ${fmt}`);
+      el.download.setAttribute("title", `Save ${fmt} export`);
+      el.download.setAttribute("aria-label", `Save ${fmt} export`);
     }
   }
 }
@@ -58,6 +80,7 @@ function renderIntegratorControls() {
   const selected = el.integrator.value || "";
   const info = integratorById.get(selected) || null;
   const controls = info && Array.isArray(info.controls) ? info.controls : [];
+  const dom = window.XTracerWidgets.dom;
 
   el.integratorControls.innerHTML = "";
   if (!controls.length) {
@@ -82,38 +105,38 @@ function renderIntegratorControls() {
     if (!id) return;
     if (!isIntegratorControlVisible(ctrl, saved)) return;
 
-    const label = document.createElement("label");
-    label.className = "integrator-control";
-    label.textContent = ctrl.label || id;
-
     let input = null;
     if (ctrl.type === "enum") {
-      input = document.createElement("select");
-      const options = Array.isArray(ctrl.options) ? ctrl.options : [];
-      options.forEach((opt) => {
-        const optEl = document.createElement("option");
-        optEl.value = String(opt.value ?? "");
-        optEl.textContent = opt.label || opt.value || "";
-        input.appendChild(optEl);
+      input = dom.el("select", {
+        className: "xui-select",
+        dataset: { ioptId: id, ioptType: "enum" },
+        children: (Array.isArray(ctrl.options) ? ctrl.options : []).map((opt) =>
+          dom.el("option", { attrs: { value: String(opt.value ?? "") }, text: opt.label || opt.value || "" })
+        ),
       });
     } else if (ctrl.type === "bool") {
-      input = document.createElement("select");
-      addOption(input, "false", "False");
-      addOption(input, "true", "True");
+      input = dom.el("select", {
+        className: "xui-select",
+        dataset: { ioptId: id, ioptType: "bool" },
+        children: [
+          dom.el("option", { attrs: { value: "false" }, text: "False" }),
+          dom.el("option", { attrs: { value: "true" }, text: "True" }),
+        ],
+      });
     } else {
-      input = document.createElement("input");
-      input.type = "number";
-      if (ctrl.type === "int") input.step = ctrl.step || "1";
-      else input.step = ctrl.step || "0.01";
-      if (ctrl.min !== undefined && ctrl.min !== null && ctrl.min !== "") input.min = String(ctrl.min);
-      if (ctrl.max !== undefined && ctrl.max !== null && ctrl.max !== "") input.max = String(ctrl.max);
+      input = dom.el("input", {
+        className: "xui-input",
+        attrs: {
+          type: "number",
+          step: ctrl.type === "int" ? (ctrl.step || "1") : (ctrl.step || "0.01"),
+          min: (ctrl.min !== undefined && ctrl.min !== null && ctrl.min !== "") ? String(ctrl.min) : undefined,
+          max: (ctrl.max !== undefined && ctrl.max !== null && ctrl.max !== "") ? String(ctrl.max) : undefined,
+        },
+        dataset: { ioptId: id, ioptType: ctrl.type || "string" },
+      });
     }
 
-    input.dataset.ioptId = id;
-    input.dataset.ioptType = ctrl.type || "string";
-    const value = getIntegratorControlValue(saved, ctrl);
-    input.value = String(value);
-
+    input.value = String(getIntegratorControlValue(saved, ctrl));
     input.addEventListener("change", () => {
       const curr = integratorControlState.get(selected) || {};
       curr[id] = input.value;
@@ -122,14 +145,12 @@ function renderIntegratorControls() {
       queueWorkspaceSettingsSave();
     });
 
-    label.appendChild(input);
-    if (ctrl.description) {
-      const hint = document.createElement("small");
-      hint.className = "control-hint";
-      hint.textContent = ctrl.description;
-      label.appendChild(hint);
-    }
-    el.integratorControls.appendChild(label);
+    el.integratorControls.appendChild(window.XTracerWidgets.createField({
+      label: ctrl.label || id,
+      help: ctrl.description || "",
+      control: input,
+      className: "integrator-control",
+    }));
   });
 }
 

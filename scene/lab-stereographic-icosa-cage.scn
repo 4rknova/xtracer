@@ -73,7 +73,7 @@ material = {
             samplers = {
                 emissive = {
                     type  = color
-                    value = col3(100,100,100)
+                    value = col3(1000,1000,1000)
                 }
             }
         }

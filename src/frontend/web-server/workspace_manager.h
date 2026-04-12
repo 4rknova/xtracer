@@ -5,6 +5,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace xtracer {
 namespace frontend {
@@ -24,6 +25,7 @@ struct workspace_snapshot_t
     std::string quality_sample_distribution;
     size_t quality_rdepth;
     std::string settings_json;
+    bool is_owned_by_client;
     long long updated_ms;
 };
 
@@ -36,18 +38,24 @@ class workspace_manager_t
         REMOVE_LAST_WORKSPACE
     };
 
+    enum store_result_t {
+        STORE_OK = 0,
+        STORE_NOT_FOUND,
+        STORE_TOO_LARGE
+    };
+
     workspace_manager_t();
 
     std::string ensure_client(const std::string &client_id);
-    std::string create(const std::string &name);
+    std::string create(const std::string &name, const std::string &owner_client_id = "");
     remove_result_t remove(const std::string &workspace_id, std::string &replacement_workspace_id_out);
     bool set_active(const std::string &client_id, const std::string &workspace_id);
     bool get_active(const std::string &client_id, std::string &workspace_id_out);
     bool list(const std::string &client_id, std::vector<workspace_snapshot_t> &out, std::string &active_workspace_out);
 
-    bool set_scene_draft(const std::string &workspace_id,
-                         const std::string &scene_name,
-                         const std::string &source);
+    store_result_t set_scene_draft(const std::string &workspace_id,
+                                   const std::string &scene_name,
+                                   const std::string &source);
     bool get_scene_draft(const std::string &workspace_id,
                          const std::string &scene_name,
                          std::string &source_out);
@@ -61,7 +69,7 @@ class workspace_manager_t
                               size_t &aa_out,
                               std::string &sample_distribution_out,
                               size_t &rdepth_out);
-    bool set_settings_json(const std::string &workspace_id, const std::string &settings_json);
+    store_result_t set_settings_json(const std::string &workspace_id, const std::string &settings_json);
     bool get_settings_json(const std::string &workspace_id, std::string &settings_json_out);
 
     void set_active_scene(const std::string &workspace_id, const std::string &scene_name);
@@ -76,11 +84,13 @@ class workspace_manager_t
         std::string active_job_id;
         std::string last_job_id;
         std::map<std::string, std::string> scene_drafts;
+        std::deque<std::string> scene_draft_order;
         size_t quality_samples;
         size_t quality_aa;
         std::string quality_sample_distribution;
         size_t quality_rdepth;
         std::string settings_json;
+        std::string owner_client_id;
         long long updated_ms;
     };
 
@@ -89,10 +99,12 @@ class workspace_manager_t
         long long last_seen_ms;
     };
 
-    std::string create_locked(const std::string &name);
+    std::string create_locked(const std::string &name, const std::string &owner_client_id = "");
     bool exists_locked(const std::string &workspace_id) const;
     void touch_client_locked(const std::string &client_id);
     void prune_clients_locked(long long now_ms);
+    void clear_stale_workspace_owners_locked();
+    void prune_workspaces_locked(long long now_ms);
     long long now_ms() const;
 
     mutable std::mutex mut_;

@@ -324,7 +324,7 @@ async function runWasmRender(job, params) {
     Number(params.aa) || 1,
     Number(params.tile_size) || 32,
     Number(params.threads) || 0,
-    Number(params.rdepth) || 10,
+    Number(params.rdepth) || 15,
   );
   if (!ok) {
     throw new Error(fns.getLastError() || "wasm render init failed");
@@ -452,6 +452,12 @@ async function handleGetJobImage(payload) {
     parts.push(`tm_mantiuk_contrast=${encodeURIComponent(effectiveMantiukContrast)}`);
     parts.push(`tm_mantiuk_saturation=${encodeURIComponent(effectiveMantiukSaturation)}`);
     parts.push(`tm_mantiuk_detail=${encodeURIComponent(effectiveMantiukDetail)}`);
+    const postFiltersEnabled = !!opts.postFiltersEnabled;
+    const postFilters = String(opts.postFilters || "").trim();
+    if (postFiltersEnabled && postFilters) {
+      parts.push("post_filters_enabled=1");
+      parts.push(`post_filters=${encodeURIComponent(postFilters)}`);
+    }
     parts.push(`t=${Date.now()}`);
     const qs = parts.length ? `?${parts.join("&")}` : "";
     const res = await fetch(`/api/jobs/${encodeURIComponent(job.remote_job_id)}/image${qs}`);
@@ -480,6 +486,7 @@ async function handleGetJobExport(payload) {
   const id = payload && payload.job_id ? String(payload.job_id) : "";
   const rawFormat = payload && payload.format ? String(payload.format) : "png";
   const format = rawFormat.toLowerCase();
+  const opts = (payload && payload.opts) ? payload.opts : {};
   if (format !== "png" && format !== "exr" && format !== "hdr") {
     throw new Error("unsupported format");
   }
@@ -495,7 +502,15 @@ async function handleGetJobExport(payload) {
 
   if (backendEngine === "proxy-http") {
     if (!job.remote_job_id) throw new Error("remote job id missing");
-    const res = await fetch(`/api/jobs/${encodeURIComponent(job.remote_job_id)}/export?format=${encodeURIComponent(format)}&t=${Date.now()}`);
+    const qs = [`format=${encodeURIComponent(format)}`];
+    const postFiltersEnabled = !!opts.postFiltersEnabled;
+    const postFilters = String(opts.postFilters || "").trim();
+    if (postFiltersEnabled && postFilters) {
+      qs.push("post_filters_enabled=1");
+      qs.push(`post_filters=${encodeURIComponent(postFilters)}`);
+    }
+    qs.push(`t=${Date.now()}`);
+    const res = await fetch(`/api/jobs/${encodeURIComponent(job.remote_job_id)}/export?${qs.join("&")}`);
     if (!res.ok) throw new Error(`export failed: HTTP ${res.status}`);
     const bytes = await res.arrayBuffer();
     if (!bytes || bytes.byteLength <= 0) throw new Error("empty export payload");

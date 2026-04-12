@@ -31,6 +31,7 @@ class Integrator : public xtcore::render::IIntegrator
 
     explicit Integrator(view_mode_t mode = VIEW_NORMAL);
 
+    virtual xtcore::render::integrator_metadata_t metadata() const;
     virtual void configure(const std::map<std::string, std::string> &options);
     virtual void render_tile(xtcore::render::tile_t *tile);
 

@@ -23,6 +23,14 @@ class Integrator : public xtcore::render::IIntegrator
 {
 	public:
     Integrator();
+    virtual xtcore::render::integrator_metadata_t metadata() const {
+        xtcore::render::integrator_metadata_t meta;
+        meta.id = "ao";
+        meta.name = "Ambient Occlusion";
+        meta.status = xtcore::render::INTEGRATOR_STATUS_STABLE;
+        meta.description = "Ambient occlusion preview integrator.";
+        return meta;
+    }
     virtual void configure(const std::map<std::string, std::string> &options);
     virtual void render_tile(xtcore::render::tile_t *tile);
 

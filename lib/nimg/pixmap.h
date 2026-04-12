@@ -19,7 +19,9 @@ class Pixmap
 	public:
 		Pixmap();
 		Pixmap(const Pixmap &img);
+		Pixmap(Pixmap &&img) noexcept;
 		Pixmap &operator =(const Pixmap &img);
+		Pixmap &operator =(Pixmap &&img) noexcept;
 		~Pixmap();
 
 		// NOTES:

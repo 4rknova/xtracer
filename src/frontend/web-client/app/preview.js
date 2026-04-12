@@ -1,11 +1,387 @@
 function updatePreviewSizing() {
+  syncPreviewFrameSquareSize();
   applyPreviewTransform();
 }
 
 let workspacePollingJobId = "";
+let previewMinimapLayout = null;
+let previewLayoutObserver = null;
+
+function normalizeRenderMode(value) {
+  const mode = String(value || "").trim().toLowerCase();
+  if (mode === "normal") return RENDER_MODE_DIRECT;
+  if (mode === RENDER_MODE_PROGRESSIVE) return RENDER_MODE_PROGRESSIVE;
+  if (mode === RENDER_MODE_INCREMENTAL) return RENDER_MODE_INCREMENTAL;
+  if (mode === RENDER_MODE_INTERACTIVE) return RENDER_MODE_INTERACTIVE;
+  return RENDER_MODE_DIRECT;
+}
+
+function isInteractiveRenderMode() {
+  return normalizeRenderMode(renderMode) === RENDER_MODE_INTERACTIVE;
+}
+
+function isProgressiveRenderMode() {
+  const mode = normalizeRenderMode(renderMode);
+  return mode === RENDER_MODE_PROGRESSIVE || mode === RENDER_MODE_INCREMENTAL;
+}
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
+}
+
+function v3(x, y, z) {
+  return [Number(x) || 0, Number(y) || 0, Number(z) || 0];
+}
+
+function v3add(a, b) {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+}
+
+function v3sub(a, b) {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+
+function v3scale(a, s) {
+  return [a[0] * s, a[1] * s, a[2] * s];
+}
+
+function v3dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function v3cross(a, b) {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+}
+
+function v3len(a) {
+  return Math.sqrt(v3dot(a, a));
+}
+
+function v3norm(a, fallback) {
+  const l = v3len(a);
+  if (!Number.isFinite(l) || l < 1e-8) return fallback ? [...fallback] : [0, 0, 1];
+  return [a[0] / l, a[1] / l, a[2] / l];
+}
+
+function rotateAroundAxis(v, axisUnit, radians) {
+  const c = Math.cos(radians);
+  const s = Math.sin(radians);
+  const term1 = v3scale(v, c);
+  const term2 = v3scale(v3cross(axisUnit, v), s);
+  const term3 = v3scale(axisUnit, v3dot(axisUnit, v) * (1 - c));
+  return v3add(v3add(term1, term2), term3);
+}
+
+function interactivePreviewAvailable() {
+  return !!interactivePreviewEnabled
+    && activeTabMode === "render"
+    && interactivePreviewCamera.ready;
+}
+
+function markInteractiveInputActivity() {
+  interactivePreviewLastInputMs = Date.now();
+}
+
+function renderInteractivePreviewHud() {
+  if (!el.interactivePreviewHud) return;
+  if (el.interactivePreviewControls) {
+    el.interactivePreviewControls.hidden = !isInteractiveRenderMode();
+  }
+  if (typeof syncRenderPreviewAuxPanel === "function") syncRenderPreviewAuxPanel();
+  if (el.renderMode) {
+    el.renderMode.value = normalizeRenderMode(renderMode);
+  }
+  const show = !!interactivePreviewEnabled && activeTabMode === "render";
+  el.interactivePreviewHud.hidden = !show;
+  if (el.interactivePreviewSaveCameraBtn) {
+    const canSave = !!interactivePreviewEnabled && !!interactivePreviewCamera.ready;
+    el.interactivePreviewSaveCameraBtn.disabled = !canSave;
+    el.interactivePreviewSaveCameraBtn.classList.toggle("is-disabled", !canSave);
+    el.interactivePreviewSaveCameraBtn.setAttribute("aria-disabled", canSave ? "false" : "true");
+  }
+  if (!show) return;
+  if (el.interactivePreviewHudMode) {
+    el.interactivePreviewHudMode.textContent = `Mode: ${String(interactivePreviewHudMode || "LOOK").toUpperCase()}`;
+  }
+  if (el.interactivePreviewHudSpeed) {
+    const sp = Number(interactivePreviewFlySpeedScale) || 1;
+    el.interactivePreviewHudSpeed.textContent = `Speed: ${sp.toFixed(1)}x`;
+  }
+  if (el.interactivePreviewHudQuality) {
+    el.interactivePreviewHudQuality.textContent = `Quality: ${interactivePreviewHudQuality || "idle"}`;
+  }
+}
+
+function interactivePreviewCameraRequestParams() {
+  if (!interactivePreviewCamera.ready) return null;
+  const p = interactivePreviewCamera.position;
+  const t = interactivePreviewCamera.target;
+  const u = interactivePreviewCamera.up;
+  const nums = [p[0], p[1], p[2], t[0], t[1], t[2], u[0], u[1], u[2], interactivePreviewCamera.hfov];
+  for (let i = 0; i < nums.length; i += 1) {
+    if (!Number.isFinite(nums[i])) return null;
+  }
+  return {
+    camera: interactivePreviewCamera.sourceCamera || (el.camera ? (el.camera.value || "") : ""),
+    cam_px: String(p[0]),
+    cam_py: String(p[1]),
+    cam_pz: String(p[2]),
+    cam_tx: String(t[0]),
+    cam_ty: String(t[1]),
+    cam_tz: String(t[2]),
+    cam_upx: String(u[0]),
+    cam_upy: String(u[1]),
+    cam_upz: String(u[2]),
+    cam_hfov: String(interactivePreviewCamera.hfov || 60),
+  };
+}
+
+async function refreshInteractivePreviewCameraFromSelection() {
+  interactivePreviewCamera.ready = false;
+  if (!interactivePreviewEnabled) return false;
+  if (!hasBackendMethod(api, "getSceneResolvedCamera")) return false;
+  const scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!scene) return false;
+  const variant = selectedSceneVariantValue();
+  const cameraName = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+  try {
+    const resolved = await api.getSceneResolvedCamera(scene, variant, cameraName);
+    const pos = Array.isArray(resolved && resolved.position) ? resolved.position : null;
+    const target = Array.isArray(resolved && resolved.target) ? resolved.target : null;
+    const up = Array.isArray(resolved && resolved.up) ? resolved.up : null;
+    const hfov = Number(resolved && resolved.hfov);
+    if (!pos || !target || !up) {
+      appendLog("interactive preview unavailable for current camera");
+      return false;
+    }
+    const vals = [pos[0], pos[1], pos[2], target[0], target[1], target[2], up[0], up[1], up[2]];
+    if (vals.some((v) => !Number.isFinite(Number(v)))) {
+      appendLog("interactive preview unavailable: camera metadata is non-finite");
+      return false;
+    }
+    interactivePreviewCamera.ready = true;
+    interactivePreviewCamera.type = String((resolved && resolved.type) || "");
+    interactivePreviewCamera.sourceScene = scene;
+    interactivePreviewCamera.sourceVariant = variant;
+    interactivePreviewCamera.sourceCamera = String((resolved && resolved.resolved) || cameraName);
+    interactivePreviewCamera.position = v3(pos[0], pos[1], pos[2]);
+    interactivePreviewCamera.target = v3(target[0], target[1], target[2]);
+    interactivePreviewCamera.up = v3norm(v3(up[0], up[1], up[2]), [0, 1, 0]);
+    interactivePreviewCamera.hfov = Number.isFinite(hfov) ? clamp(hfov, 1, 179) : 60;
+    resetInteractiveOrbitFromCamera(true);
+    interactivePreviewCameraSeq += 1;
+    return true;
+  } catch (err) {
+    appendLog(`interactive camera resolve failed: ${err.message}`);
+    return false;
+  }
+}
+
+function interactiveCameraBasis() {
+  const yaw = Number(interactivePreviewCamera.orbitYaw) || 0;
+  const pitch = Number(interactivePreviewCamera.orbitPitch) || 0;
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
+  const sy = Math.sin(yaw);
+  const cy = Math.cos(yaw);
+  let forward = v3norm([sy * cp, sp, -cy * cp], [0, 0, -1]);
+  let right = v3cross(forward, [0, 1, 0]);
+  if (v3len(right) < 1e-6) right = v3cross(forward, [1, 0, 0]);
+  right = v3norm(right, [1, 0, 0]);
+  let up = v3cross(right, forward);
+  up = v3norm(up, [0, 1, 0]);
+  forward = v3norm(forward, [0, 0, -1]);
+  return { forward, right, up };
+}
+
+function applyInteractiveOrbitCameraState() {
+  const pivot = Array.isArray(interactivePreviewCamera.pivot)
+    ? v3(interactivePreviewCamera.pivot[0], interactivePreviewCamera.pivot[1], interactivePreviewCamera.pivot[2])
+    : [0, 0, 0];
+  const basis = interactiveCameraBasis();
+  const dist = clamp(Number(interactivePreviewCamera.orbitDistance) || 1, 0.02, 1e6);
+  interactivePreviewCamera.pivot = pivot;
+  interactivePreviewCamera.orbitDistance = dist;
+  interactivePreviewCamera.target = pivot;
+  interactivePreviewCamera.position = v3sub(pivot, v3scale(basis.forward, dist));
+  interactivePreviewCamera.up = basis.up;
+}
+
+function resetInteractiveOrbitFromCamera(anchorToOrigin) {
+  const pos = v3(
+    interactivePreviewCamera.position[0],
+    interactivePreviewCamera.position[1],
+    interactivePreviewCamera.position[2],
+  );
+  const target = v3(
+    interactivePreviewCamera.target[0],
+    interactivePreviewCamera.target[1],
+    interactivePreviewCamera.target[2],
+  );
+  const pivot = anchorToOrigin ? [0, 0, 0] : target;
+  let toPivot = v3sub(pivot, pos);
+  let distance = v3len(toPivot);
+  if (!Number.isFinite(distance) || distance < 1e-6) {
+    toPivot = v3sub(target, pos);
+    distance = v3len(toPivot);
+  }
+  if (!Number.isFinite(distance) || distance < 0.02) distance = 1.0;
+  const forward = v3norm(toPivot, [0, 0, -1]);
+  interactivePreviewCamera.pivot = pivot;
+  interactivePreviewCamera.orbitDistance = distance;
+  interactivePreviewCamera.orbitPitch = Math.asin(clamp(forward[1], -0.995, 0.995));
+  interactivePreviewCamera.orbitYaw = Math.atan2(forward[0], -forward[2]);
+  applyInteractiveOrbitCameraState();
+}
+
+function markInteractiveCameraDirty() {
+  interactivePreviewCameraSeq += 1;
+  interactivePreviewDirty = true;
+  markInteractiveInputActivity();
+  interactivePreviewHudQuality = "active";
+  renderInteractivePreviewHud();
+  if (typeof requestInteractivePreviewRender === "function") {
+    requestInteractivePreviewRender();
+  }
+}
+
+function interactiveLookCamera(dx, dy) {
+  if (!interactivePreviewCamera.ready) return;
+  interactivePreviewCamera.orbitYaw = (Number(interactivePreviewCamera.orbitYaw) || 0) - (dx * 0.005);
+  interactivePreviewCamera.orbitPitch = clamp(
+    (Number(interactivePreviewCamera.orbitPitch) || 0) - (dy * 0.005),
+    -1.45,
+    1.45,
+  );
+  applyInteractiveOrbitCameraState();
+  markInteractiveCameraDirty();
+}
+
+function hasInteractiveFlyInput() {
+  return !!(interactivePreviewKeyState.w
+    || interactivePreviewKeyState.a
+    || interactivePreviewKeyState.s
+    || interactivePreviewKeyState.d
+    || interactivePreviewKeyState.q
+    || interactivePreviewKeyState.e);
+}
+
+function tickInteractiveFly() {
+  if (!interactivePreviewAvailable()) return;
+  const now = Date.now();
+  if (!interactivePreviewFlyLastTickMs) interactivePreviewFlyLastTickMs = now;
+  const dt = Math.max(0.001, Math.min(0.05, (now - interactivePreviewFlyLastTickMs) / 1000));
+  interactivePreviewFlyLastTickMs = now;
+  if (!hasInteractiveFlyInput()) return;
+  const basis = interactiveCameraBasis();
+  const speed = INTERACTIVE_PREVIEW_FLY_SPEED
+    * Math.max(0.2, Math.min(5.0, Number(interactivePreviewFlySpeedScale) || 1.0))
+    * (interactivePreviewKeyState.shift ? INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER : 1.0);
+  let move = [0, 0, 0];
+  if (interactivePreviewKeyState.w) move = v3add(move, basis.forward);
+  if (interactivePreviewKeyState.s) move = v3sub(move, basis.forward);
+  if (interactivePreviewKeyState.d) move = v3add(move, basis.right);
+  if (interactivePreviewKeyState.a) move = v3sub(move, basis.right);
+  if (interactivePreviewKeyState.e) move = v3add(move, basis.up);
+  if (interactivePreviewKeyState.q) move = v3sub(move, basis.up);
+  const moveNorm = v3norm(move, [0, 0, 0]);
+  if (v3len(moveNorm) < 1e-6) return;
+  const delta = v3scale(moveNorm, speed * dt);
+  interactivePreviewCamera.pivot = v3add(
+    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
+    delta,
+  );
+  applyInteractiveOrbitCameraState();
+  markInteractiveCameraDirty();
+}
+
+function stopInteractiveFlyTicker() {
+  if (interactivePreviewFlyTimer) {
+    clearInterval(interactivePreviewFlyTimer);
+    interactivePreviewFlyTimer = 0;
+  }
+  interactivePreviewFlyLastTickMs = 0;
+}
+
+function ensureInteractiveFlyTicker() {
+  if (interactivePreviewFlyTimer) return;
+  interactivePreviewFlyLastTickMs = Date.now();
+  interactivePreviewFlyTimer = setInterval(() => {
+    tickInteractiveFly();
+  }, 16);
+}
+
+function bindInteractivePreviewKeyboard() {
+  const isTypingTarget = (node) => {
+    if (!node || !(node instanceof HTMLElement)) return false;
+    const tag = String(node.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || node.isContentEditable;
+  };
+  const applyKey = (evt, down) => {
+    if (!interactivePreviewEnabled) return;
+    if (activeTabMode !== "render") return;
+    if (isTypingTarget(evt.target)) return;
+    const k = String(evt.key || "").toLowerCase();
+    let handled = true;
+    if (k === "w") interactivePreviewKeyState.w = down;
+    else if (k === "a") interactivePreviewKeyState.a = down;
+    else if (k === "s") interactivePreviewKeyState.s = down;
+    else if (k === "d") interactivePreviewKeyState.d = down;
+    else if (k === "q") interactivePreviewKeyState.q = down;
+    else if (k === "e") interactivePreviewKeyState.e = down;
+    else if (k === "shift") interactivePreviewKeyState.shift = down;
+    else handled = false;
+    if (!handled) return;
+    evt.preventDefault();
+    interactivePreviewHudMode = "FLY";
+    renderInteractivePreviewHud();
+    markInteractiveInputActivity();
+  };
+  window.addEventListener("keydown", (evt) => applyKey(evt, true));
+  window.addEventListener("keyup", (evt) => applyKey(evt, false));
+  window.addEventListener("blur", () => {
+    interactivePreviewKeyState.w = false;
+    interactivePreviewKeyState.a = false;
+    interactivePreviewKeyState.s = false;
+    interactivePreviewKeyState.d = false;
+    interactivePreviewKeyState.q = false;
+    interactivePreviewKeyState.e = false;
+    interactivePreviewKeyState.shift = false;
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
+  });
+}
+
+function interactiveOrbitCamera(dx, dy) {
+  interactiveLookCamera(dx, dy);
+}
+
+function interactivePanCamera(dx, dy) {
+  if (!interactivePreviewCamera.ready) return;
+  const basis = interactiveCameraBasis();
+  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
+  const k = dist * 0.0018;
+  const move = v3add(v3scale(basis.right, -dx * k), v3scale(basis.up, dy * k));
+  interactivePreviewCamera.pivot = v3add(
+    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
+    move,
+  );
+  applyInteractiveOrbitCameraState();
+  markInteractiveCameraDirty();
+}
+
+function interactiveZoomCamera(deltaY) {
+  if (!interactivePreviewCamera.ready) return;
+  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
+  const amount = clamp(Math.exp(deltaY * 0.0015), 0.8, 1.25);
+  const nextDist = clamp(dist * amount, 0.02, 1e6);
+  interactivePreviewCamera.orbitDistance = nextDist;
+  applyInteractiveOrbitCameraState();
+  markInteractiveCameraDirty();
 }
 
 function isTileHeatmapEnabled() {
@@ -131,6 +507,14 @@ function refreshThroughputEta(progress, activeCount) {
 
 function setTileHeatmapRow(node, label, value) {
   if (!node) return;
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.renderStatHint === "function") {
+    window.XTracerWidgets.renderStatHint(node, {
+      label,
+      value,
+      className: "workspace-active-hint",
+    });
+    return;
+  }
   node.innerHTML = `<span class="workspace-active-label">${label}</span><code class="workspace-active-value">${value}</code>`;
 }
 
@@ -190,8 +574,62 @@ function getPreviewFittedSize() {
   };
 }
 
+function syncPreviewFrameSquareSize() {
+  if (!el.previewFrame) return;
+  const panel = el.previewFrame.closest(".panel-preview");
+  if (!panel) return;
+  const toolbar = panel.querySelector(".preview-toolbar");
+  const aux = document.getElementById("renderPreviewAuxPanel");
+  const panelWidth = Math.max(0, Math.floor(panel.clientWidth || 0));
+  const panelHeight = Math.max(0, Math.floor(panel.clientHeight || 0));
+  if (panelWidth <= 0) {
+    el.previewFrame.style.removeProperty("--preview-frame-size");
+    return;
+  }
+
+  let size = panelWidth;
+  if (panelHeight > 0) {
+    const styles = window.getComputedStyle(panel);
+    const gap = parseFloat(styles.rowGap || styles.gap || "0");
+    const toolbarHeight = toolbar ? Math.max(0, Math.ceil(toolbar.getBoundingClientRect().height || 0)) : 0;
+    const auxVisible = !!(aux && !aux.hidden);
+    const auxHeight = auxVisible ? Math.max(0, Math.ceil(aux.getBoundingClientRect().height || 0)) : 0;
+    const gapCount = 1 + (auxVisible ? 1 : 0);
+    const availableHeight = panelHeight - toolbarHeight - auxHeight - (Number.isFinite(gap) ? gap * gapCount : 0);
+    if (Number.isFinite(availableHeight) && availableHeight > 0) {
+      size = Math.min(size, Math.floor(availableHeight));
+    }
+  }
+
+  if (!Number.isFinite(size) || size <= 0) {
+    el.previewFrame.style.removeProperty("--preview-frame-size");
+    return;
+  }
+  el.previewFrame.style.setProperty("--preview-frame-size", `${size}px`);
+}
+
+function bindPreviewLayoutObserver() {
+  if (!el.previewFrame || previewLayoutObserver) return;
+  const panel = el.previewFrame.closest(".panel-preview");
+  const toolbar = panel ? panel.querySelector(".preview-toolbar") : null;
+  const aux = document.getElementById("renderPreviewAuxPanel");
+  if (typeof ResizeObserver !== "function" || !panel) {
+    syncPreviewFrameSquareSize();
+    return;
+  }
+  previewLayoutObserver = new ResizeObserver(() => {
+    syncPreviewFrameSquareSize();
+    applyPreviewTransform();
+  });
+  previewLayoutObserver.observe(panel);
+  if (toolbar) previewLayoutObserver.observe(toolbar);
+  if (aux) previewLayoutObserver.observe(aux);
+  syncPreviewFrameSquareSize();
+}
+
 function clearPreviewCanvas() {
   if (!el.previewCanvas) return;
+  previewMinimapLayout = null;
   const ctx = el.previewCanvas.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -210,6 +648,158 @@ function ensurePreviewCanvasSize() {
     el.previewCanvas.height = pxH;
   }
   return { cssW, cssH, dpr };
+}
+
+function computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, imageH) {
+  if (!dims || !fitted) return null;
+  if (!hasPreviewImage()) return null;
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) {
+    return null;
+  }
+
+  const miniMargin = 14;
+  const miniSize = clamp(Math.round(Math.min(dims.cssW, dims.cssH) * 0.22), 96, 180);
+  const miniX = dims.cssW - miniSize - miniMargin;
+  const miniY = dims.cssH - miniSize - miniMargin;
+  const aspect = Math.max(1e-6, el.preview.naturalWidth / Math.max(1, el.preview.naturalHeight));
+  let mapW = miniSize;
+  let mapH = Math.round(mapW / aspect);
+  if (mapH > miniSize) {
+    mapH = miniSize;
+    mapW = Math.round(mapH * aspect);
+  }
+  const mapX = miniX + Math.round((miniSize - mapW) * 0.5);
+  const mapY = miniY + Math.round((miniSize - mapH) * 0.5);
+
+  return {
+    miniX,
+    miniY,
+    miniSize,
+    mapX,
+    mapY,
+    mapW,
+    mapH,
+    imageW,
+    imageH,
+  };
+}
+
+function getPreviewMinimapHit(clientX, clientY, clampToBounds) {
+  if (!previewMinimapLayout || !el.previewFrame) return null;
+  const rect = el.previewFrame.getBoundingClientRect();
+  const localX = clientX - rect.left;
+  const localY = clientY - rect.top;
+  const layout = previewMinimapLayout;
+  const minX = layout.mapX;
+  const maxX = layout.mapX + layout.mapW;
+  const minY = layout.mapY;
+  const maxY = layout.mapY + layout.mapH;
+  if (!clampToBounds) {
+    if (localX < minX || localX > maxX) return null;
+    if (localY < minY || localY > maxY) return null;
+  }
+  const hitX = clampToBounds ? clamp(localX, minX, maxX) : localX;
+  const hitY = clampToBounds ? clamp(localY, minY, maxY) : localY;
+  return {
+    u: clamp((hitX - layout.mapX) / Math.max(1e-6, layout.mapW), 0, 1),
+    v: clamp((hitY - layout.mapY) / Math.max(1e-6, layout.mapH), 0, 1),
+    layout,
+  };
+}
+
+function recenterPreviewFromMinimap(clientX, clientY, clampToBounds) {
+  const hit = getPreviewMinimapHit(clientX, clientY, !!clampToBounds);
+  if (!hit) return false;
+  previewView.tx = (0.5 - hit.u) * hit.layout.imageW;
+  previewView.ty = (0.5 - hit.v) * hit.layout.imageH;
+  applyPreviewTransform();
+  return true;
+}
+
+function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
+  previewMinimapLayout = null;
+  if (!ctx || !dims || !fitted) {
+    positionResetViewButton(null);
+    return;
+  }
+  if (!hasPreviewImage()) {
+    positionResetViewButton(null);
+    return;
+  }
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) {
+    positionResetViewButton(null);
+    return;
+  }
+
+  const layout = computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, imageH);
+  if (!layout) {
+    positionResetViewButton(null);
+    return;
+  }
+  previewMinimapLayout = layout;
+  const miniX = layout.miniX;
+  const miniY = layout.miniY;
+  const miniSize = layout.miniSize;
+  const mapX = layout.mapX;
+  const mapY = layout.mapY;
+  const mapW = layout.mapW;
+  const mapH = layout.mapH;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(9, 16, 24, 0.62)";
+  ctx.strokeStyle = "rgba(173, 214, 255, 0.72)";
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  ctx.roundRect(miniX - 6, miniY - 6, miniSize + 12, miniSize + 12, 10);
+  ctx.fill();
+  ctx.stroke();
+  positionResetViewButton({
+    x: miniX + miniSize - 38,
+    y: Math.max(12, miniY - 44),
+  });
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(mapX, mapY, mapW, mapH);
+  ctx.clip();
+  ctx.imageSmoothingEnabled = !isNearestPreviewSampling();
+  ctx.drawImage(el.preview, mapX, mapY, mapW, mapH);
+  ctx.restore();
+
+  const imgToMapX = mapW / Math.max(1e-6, imageW);
+  const imgToMapY = mapH / Math.max(1e-6, imageH);
+  const viewLeft = Math.max(0, -imageX);
+  const viewTop = Math.max(0, -imageY);
+  const viewRight = Math.min(imageW, fitted.frameW - imageX);
+  const viewBottom = Math.min(imageH, fitted.frameH - imageY);
+
+  if (viewRight > viewLeft && viewBottom > viewTop) {
+    const rectX = mapX + viewLeft * imgToMapX;
+    const rectY = mapY + viewTop * imgToMapY;
+    const rectW = Math.max(6, (viewRight - viewLeft) * imgToMapX);
+    const rectH = Math.max(6, (viewBottom - viewTop) * imgToMapY);
+    ctx.fillStyle = "rgba(255, 214, 92, 0.14)";
+    ctx.strokeStyle = "rgba(255, 196, 64, 0.95)";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(rectX, rectY, rectW, rectH);
+    ctx.strokeRect(rectX, rectY, rectW, rectH);
+  }
+
+  ctx.strokeStyle = "rgba(232, 240, 248, 0.78)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mapX, mapY, mapW, mapH);
+  ctx.restore();
+}
+
+function positionResetViewButton(layout) {
+  if (!el.resetViewBtn) return;
+  if (!layout) {
+    el.resetViewBtn.style.left = "";
+    el.resetViewBtn.style.top = "";
+    return;
+  }
+  el.resetViewBtn.style.left = `${Math.round(layout.x)}px`;
+  el.resetViewBtn.style.top = `${Math.round(layout.y)}px`;
 }
 
 function drawPreviewCanvas() {
@@ -239,6 +829,7 @@ function drawPreviewCanvas() {
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(el.preview, x, y, drawW, drawH);
   drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
+  drawPreviewMinimap(ctx, dims, fitted, x, y, drawW, drawH);
 }
 
 function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
@@ -384,20 +975,20 @@ function clampPreviewPan() {
 
 function applyPreviewTransform() {
   if (!el.preview || !el.previewCanvas) return;
+  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
+  updateResetViewUi(isZoomed);
   if (!hasPreviewImage()) {
     if (el.preview.getAttribute("src")) {
       // Keep the last drawn frame visible while the next blob is decoding.
-      updateResetViewUi(false);
       return;
     }
     el.previewFrame.classList.remove("is-zoomed");
     el.previewFrame.classList.remove("is-panning");
     clearPreviewCanvas();
-    updateResetViewUi(false);
+    if (!isZoomed) updateResetViewUi(false);
     return;
   }
   clampPreviewPan();
-  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
   el.previewFrame.classList.toggle("is-zoomed", isZoomed);
   el.previewFrame.classList.toggle("is-panning", !!previewView.panning);
   drawPreviewCanvas();
@@ -411,14 +1002,64 @@ function resetPreviewView() {
   previewView.panning = false;
   previewView.pointerId = null;
   applyPreviewTransform();
+  updateResetViewUi(false);
 }
 
 function updateResetViewUi(enabled) {
   if (!el.resetViewBtn) return;
   const active = !!enabled;
+  el.resetViewBtn.hidden = !active;
   el.resetViewBtn.classList.toggle("is-disabled", !active);
   el.resetViewBtn.disabled = !active;
   el.resetViewBtn.setAttribute("aria-disabled", active ? "false" : "true");
+  if (!active) positionResetViewButton(null);
+}
+
+async function setInteractivePreviewEnabled(enabled) {
+  return setRenderMode(enabled ? RENDER_MODE_INTERACTIVE : RENDER_MODE_DIRECT, { log: true });
+}
+
+async function setRenderMode(nextModeRaw, options) {
+  const opts = options && typeof options === "object" ? options : {};
+  const nextMode = normalizeRenderMode(nextModeRaw);
+  const prevInteractive = !!interactivePreviewEnabled;
+  const changed = normalizeRenderMode(renderMode) !== nextMode;
+  renderMode = nextMode;
+  interactivePreviewEnabled = isInteractiveRenderMode();
+  if (el.renderMode) {
+    el.renderMode.value = renderMode;
+  }
+  if (interactivePreviewEnabled) {
+    ensureInteractiveFlyTicker();
+    markInteractiveInputActivity();
+    const interactiveTargetWidth = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+    interactivePreviewAdaptiveMovingWidth = nearestInteractiveMovingWidth(Math.round(interactiveTargetWidth * 0.1), interactiveTargetWidth);
+    interactivePreviewHudMode = "LOOK";
+    interactivePreviewHudQuality = "active";
+    renderInteractivePreviewHud();
+    const ok = await refreshInteractivePreviewCameraFromSelection();
+    if (ok) {
+      if (opts.log !== false) appendLog("interactive preview on");
+      if (typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+    } else {
+      if (opts.log !== false) appendLog("interactive preview unavailable for selected camera");
+    }
+  } else {
+    stopInteractiveFlyTicker();
+    interactivePreviewHudQuality = "idle";
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
+    appendLog("interactive preview off");
+    if ((prevInteractive || interactivePreviewLoopActive || interactivePreviewJobId)
+      && typeof stopInteractivePreviewLoop === "function") {
+      stopInteractivePreviewLoop(true).catch(() => {});
+    }
+    if (prevInteractive && opts.log !== false) appendLog("interactive preview off");
+  }
+  if (changed && (opts.log || opts.log === undefined)) {
+    appendLog(`render mode=${renderMode}`);
+  }
+  renderInteractivePreviewHud();
 }
 
 function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
@@ -445,6 +1086,20 @@ function zoomPreviewAt(clientX, clientY, wheelDeltaY) {
 function bindPreviewInteraction() {
   if (!el.previewFrame || !el.preview) return;
   el.preview.draggable = false;
+  bindPreviewLayoutObserver();
+  const touchPoints = {};
+  let pinchDistance = 0;
+  let pinchCenterX = 0;
+  let pinchCenterY = 0;
+
+  if (el.resetViewBtn) {
+    const swallowPreviewButtonEvent = (evt) => {
+      evt.stopPropagation();
+    };
+    el.resetViewBtn.addEventListener("pointerdown", swallowPreviewButtonEvent);
+    el.resetViewBtn.addEventListener("click", swallowPreviewButtonEvent);
+    el.resetViewBtn.addEventListener("dblclick", swallowPreviewButtonEvent);
+  }
 
   el.preview.addEventListener("load", () => {
     if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
@@ -454,23 +1109,75 @@ function bindPreviewInteraction() {
     applyPreviewTransform();
   });
 
+  el.previewFrame.addEventListener("contextmenu", (evt) => {
+    if (interactivePreviewAvailable()) evt.preventDefault();
+  });
+
   el.previewFrame.addEventListener("wheel", (evt) => {
-    if (!hasPreviewImage()) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
     evt.preventDefault();
+    if (interactive) {
+      interactiveZoomCamera(evt.deltaY);
+      return;
+    }
     zoomPreviewAt(evt.clientX, evt.clientY, evt.deltaY);
   }, { passive: false });
 
   el.previewFrame.addEventListener("dblclick", (evt) => {
-    if (!hasPreviewImage()) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
     evt.preventDefault();
+    if (interactive) {
+      refreshInteractivePreviewCameraFromSelection()
+        .then((ok) => {
+          if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+        })
+        .catch(() => {});
+      return;
+    }
     resetPreviewView();
   });
 
   el.previewFrame.addEventListener("pointerdown", (evt) => {
-    if (!hasPreviewImage()) return;
-    if (evt.button !== 0 && evt.button !== 1) return;
+    if (evt.target instanceof Element && evt.target.closest("#resetViewBtn")) return;
+    const interactive = interactivePreviewAvailable();
+    if (!interactive && !hasPreviewImage()) return;
+    if (evt.button !== 0 && evt.button !== 1 && evt.button !== 2) return;
     evt.preventDefault();
+    if (interactive) {
+      if (evt.pointerType === "touch") {
+        touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+        if (Object.keys(touchPoints).length >= 2) {
+          const ids = Object.keys(touchPoints).slice(0, 2);
+          const a = touchPoints[ids[0]];
+          const b = touchPoints[ids[1]];
+          pinchCenterX = (a.x + b.x) * 0.5;
+          pinchCenterY = (a.y + b.y) * 0.5;
+          pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+        }
+      }
+      previewView.panning = true;
+      previewView.pointerId = evt.pointerId;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      previewView.panMode = (evt.button === 1 || evt.button === 2 || evt.shiftKey) ? "pan" : "orbit";
+      interactivePreviewHudMode = previewView.panMode === "pan" ? "PAN" : "LOOK";
+      renderInteractivePreviewHud();
+      el.previewFrame.setPointerCapture(evt.pointerId);
+      return;
+    }
+    if (evt.button === 0 && recenterPreviewFromMinimap(evt.clientX, evt.clientY)) {
+      previewView.panning = true;
+      previewView.panMode = "minimap";
+      previewView.pointerId = evt.pointerId;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      el.previewFrame.setPointerCapture(evt.pointerId);
+      return;
+    }
     previewView.panning = true;
+    previewView.panMode = "image";
     previewView.pointerId = evt.pointerId;
     previewView.lastX = evt.clientX;
     previewView.lastY = evt.clientY;
@@ -479,7 +1186,45 @@ function bindPreviewInteraction() {
   });
 
   el.previewFrame.addEventListener("pointermove", (evt) => {
+    if (interactivePreviewAvailable()) {
+      if (evt.pointerType === "touch" && Object.prototype.hasOwnProperty.call(touchPoints, String(evt.pointerId))) {
+        touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+        const ids = Object.keys(touchPoints);
+        if (ids.length >= 2) {
+          const a = touchPoints[ids[0]];
+          const b = touchPoints[ids[1]];
+          const centerX = (a.x + b.x) * 0.5;
+          const centerY = (a.y + b.y) * 0.5;
+          const dist = Math.max(1e-6, Math.hypot(a.x - b.x, a.y - b.y));
+          if (pinchDistance > 1e-6) {
+            const zoomDelta = Math.log(dist / pinchDistance) * 1000;
+            interactiveZoomCamera(zoomDelta);
+          }
+          if (Number.isFinite(pinchCenterX) && Number.isFinite(pinchCenterY)) {
+            interactivePanCamera(centerX - pinchCenterX, centerY - pinchCenterY);
+          }
+          pinchDistance = dist;
+          pinchCenterX = centerX;
+          pinchCenterY = centerY;
+          return;
+        }
+      }
+      if (!(previewView.panning && previewView.pointerId === evt.pointerId)) return;
+      const dx = evt.clientX - previewView.lastX;
+      const dy = evt.clientY - previewView.lastY;
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      if (previewView.panMode === "pan") interactivePanCamera(-dx, -dy);
+      else interactiveLookCamera(dx, dy);
+      return;
+    }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
+    if (previewView.panMode === "minimap") {
+      previewView.lastX = evt.clientX;
+      previewView.lastY = evt.clientY;
+      recenterPreviewFromMinimap(evt.clientX, evt.clientY, true);
+      return;
+    }
     const dx = evt.clientX - previewView.lastX;
     const dy = evt.clientY - previewView.lastY;
     previewView.lastX = evt.clientX;
@@ -490,14 +1235,27 @@ function bindPreviewInteraction() {
   });
 
   const endPan = (evt) => {
+    if (evt.pointerType === "touch") {
+      delete touchPoints[String(evt.pointerId)];
+      const ids = Object.keys(touchPoints);
+      if (ids.length < 2) {
+        pinchDistance = 0;
+        pinchCenterX = 0;
+        pinchCenterY = 0;
+      }
+    }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     previewView.panning = false;
     previewView.pointerId = null;
+    previewView.panMode = "";
+    interactivePreviewHudMode = "LOOK";
+    renderInteractivePreviewHud();
     try {
       el.previewFrame.releasePointerCapture(evt.pointerId);
     } catch (_) {
       // Ignore release errors from non-captured pointers.
     }
+    if (interactivePreviewAvailable()) return;
     applyPreviewTransform();
   };
 
@@ -507,6 +1265,9 @@ function bindPreviewInteraction() {
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     endPan(evt);
   });
+
+  bindInteractivePreviewKeyboard();
+  renderInteractivePreviewHud();
 }
 
 function setPreviewEmptyState(isEmpty) {
@@ -725,6 +1486,8 @@ async function refreshProgressivePreviewDelta(jobId) {
   const id = String(jobId || "").trim();
   if (!id) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
+  const postFilters = gatherPostFilterParams();
+  const postFiltersEnabled = !!postFilterStackEnabled;
   const tmKey = [
     el.toneMapping ? el.toneMapping.value : "aces",
     el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
@@ -732,6 +1495,8 @@ async function refreshProgressivePreviewDelta(jobId) {
     el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled ? "post:on" : "post:off",
+    postFilters,
   ].join("|");
   if (tmKey !== progressiveDeltaTmKey) {
     progressiveDeltaTmKey = tmKey;
@@ -748,6 +1513,8 @@ async function refreshProgressivePreviewDelta(jobId) {
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled,
+    postFilters,
   });
   if (!packet) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
   if (renderActive && activeJobId && id === String(activeJobId)) {
@@ -773,17 +1540,50 @@ async function refreshProgressivePreviewDelta(jobId) {
   };
 }
 
-async function refreshProgressivePreview(jobId) {
+function previewToneMappingParamsForJob(jobId) {
   const id = String(jobId || "").trim();
-  const blob = await api.getJobImage(jobId, {
-    partial: true,
-    cacheBust: true,
+  const isInteractiveMoving = interactivePreviewEnabled
+    && !!interactivePreviewActiveMovingJob
+    && id
+    && id === String(interactivePreviewJobId || "").trim();
+  if (isInteractiveMoving) {
+    return {
+      toneMapping: "none",
+      toneMappingExposure: "1.0",
+      toneMappingWhitePoint: "1.0",
+      toneMappingMantiukContrast: "0.1",
+      toneMappingMantiukSaturation: "0.8",
+      toneMappingMantiukDetail: "1.0",
+      postFiltersEnabled: false,
+      postFilters: "",
+    };
+  }
+  return {
     toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
     toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
     toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+    postFiltersEnabled: !!postFilterStackEnabled,
+    postFilters: gatherPostFilterParams(),
+  };
+}
+
+async function refreshProgressivePreview(jobId) {
+  const id = String(jobId || "").trim();
+  const tm = previewToneMappingParamsForJob(id);
+  const blob = await api.getJobImage(jobId, {
+    partial: true,
+    cacheBust: true,
+    toneMapping: tm.toneMapping,
+    toneMappingExposure: tm.toneMappingExposure,
+    toneMappingWhitePoint: tm.toneMappingWhitePoint,
+    toneMappingMantiukContrast: tm.toneMappingMantiukContrast,
+    toneMappingMantiukSaturation: tm.toneMappingMantiukSaturation,
+    toneMappingMantiukDetail: tm.toneMappingMantiukDetail,
+    postFiltersEnabled: tm.postFiltersEnabled,
+    postFilters: tm.postFilters,
   });
   if (!blob || blob.size === 0) return false;
   if (renderActive && activeJobId && id === String(activeJobId)) {
@@ -798,6 +1598,7 @@ async function refreshProgressivePreview(jobId) {
 }
 
 async function refreshPreviewForToneMapping() {
+  if (typeof renderPostPipelineGraph === "function") renderPostPipelineGraph();
   try {
     if (renderActive && activeJobId) {
       await refreshProgressivePreview(activeJobId);
@@ -813,6 +1614,8 @@ async function refreshPreviewForToneMapping() {
         toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+        postFiltersEnabled: !!postFilterStackEnabled,
+        postFilters: gatherPostFilterParams(),
       });
       if (finalBlob && finalBlob.size > 0) await setPreviewFromBlob(finalBlob);
     }
@@ -896,6 +1699,8 @@ async function restorePreviewForActiveWorkspace() {
       toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
       toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
       toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+      postFiltersEnabled: !!postFilterStackEnabled,
+      postFilters: gatherPostFilterParams(),
     });
     if (finalBlob && finalBlob.size > 0) {
       await setPreviewFromBlob(finalBlob);
@@ -926,7 +1731,11 @@ function resumeWorkspaceJobPolling(jobId) {
       appendLog(`render error: ${err.message}`);
     })
     .finally(() => {
+      const superseded = token !== undefined && token !== activePollToken;
       if (workspacePollingJobId === id) workspacePollingJobId = "";
+      // A newer poll session owns the UI state now. Do not let an older
+      // workspace poll tear down the active render badge/button on exit.
+      if (superseded) return;
       if (activeJobId === id) {
         activeJobId = "";
         syncGlobalsToWorkspaceRuntime();

@@ -421,3 +421,31 @@ function addMeshObjectToSceneSource(source, options) {
   next = appendEntryToSceneGroup(next, "object", objectEntry);
   return { source: next, objectId, geometryId };
 }
+
+function addInteractiveCameraToSceneSource(source, options) {
+  const model = parseSceneEditModel(source);
+  const cameraIds = new Set((model.cameras || []).map((cam) => String(cam && cam.id ? cam.id : "").trim()).filter(Boolean));
+  const baseName = sanitizeSceneId(options && options.baseName, "interactive_camera");
+  const cameraId = uniqueSceneId(cameraIds, baseName);
+
+  const pos = Array.isArray(options && options.position) ? options.position : [0, 0, 0];
+  const target = Array.isArray(options && options.target) ? options.target : [0, 0, -1];
+  const up = Array.isArray(options && options.up) ? options.up : [0, 1, 0];
+  const hfov = Number(options && options.hfov);
+  const fov = Number.isFinite(hfov) ? Math.max(1, Math.min(179, hfov)) : 60;
+
+  const cameraEntry = `\t${cameraId} = {\n`
+    + `\t\ttype = thin-lens\n`
+    + `\t\tposition = vec3(${formatSceneNumber(pos[0], 0)}, ${formatSceneNumber(pos[1], 0)}, ${formatSceneNumber(pos[2], 0)})\n`
+    + `\t\ttarget = vec3(${formatSceneNumber(target[0], 0)}, ${formatSceneNumber(target[1], 0)}, ${formatSceneNumber(target[2], 0)})\n`
+    + `\t\tup = vec3(${formatSceneNumber(up[0], 0)}, ${formatSceneNumber(up[1], 1)}, ${formatSceneNumber(up[2], 0)})\n`
+    + `\t\tfov = ${formatSceneNumber(fov, 60)}\n`
+    + `\t\tflength = 1.0\n`
+    + `\t\taperture = 0.0\n`
+    + `\t}`;
+
+  return {
+    source: appendEntryToSceneGroup(source, "camera", cameraEntry),
+    cameraId,
+  };
+}

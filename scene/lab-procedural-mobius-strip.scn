@@ -1,0 +1,215 @@
+title = Procedural Mobius Strip Showcase
+description = Demonstrates gen(mobius_strip) with adjustable strip radius, width, and tessellation.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.91,0.95,1.00)
+        b = col3(0.10,0.12,0.17)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 42
+        position = vec3(0.0,2.1,-7.8)
+        target   = vec3(0.0,0.9,0.8)
+        up       = vec3(0,1,0)
+    }
+
+    close = {
+        type     = thin-lens
+        fov      = 34
+        position = vec3(-1.3,1.7,-5.1)
+        target   = vec3(0.0,0.85,0.8)
+        up       = vec3(0,1,0)
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0,1,0)
+        distance = 0
+    }
+
+    mobius_balanced = {
+        type       = mesh
+        source     = gen(mobius_strip)
+        resolution = 96
+        radius     = 1.20
+        width      = 0.70
+        modifiers = {
+            translation = vec3(0,1.0,1.1)
+            rotation    = vec3(18,30,0)
+        }
+    }
+
+    mobius_narrow = {
+        type       = mesh
+        source     = gen(mobius_strip)
+        resolution = 96
+        radius     = 1.20
+        width      = 0.34
+        modifiers = {
+            translation = vec3(0,1.0,1.1)
+            rotation    = vec3(18,30,0)
+        }
+    }
+
+    mobius_wide = {
+        type       = mesh
+        source     = gen(mobius_strip)
+        resolution = 96
+        radius     = 1.20
+        width      = 1.10
+        modifiers = {
+            translation = vec3(0,1.0,1.1)
+            rotation    = vec3(18,30,0)
+        }
+    }
+
+    mobius_large_radius = {
+        type       = mesh
+        source     = gen(mobius_strip)
+        resolution = 96
+        radius     = 1.70
+        width      = 0.62
+        modifiers = {
+            translation = vec3(0,1.0,1.1)
+            rotation    = vec3(18,30,0)
+        }
+    }
+
+    mobius_dense = {
+        type       = mesh
+        source     = gen(mobius_strip)
+        resolution = 160
+        radius     = 1.20
+        width      = 0.70
+        modifiers = {
+            translation = vec3(0,1.0,1.1)
+            rotation    = vec3(18,30,0)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(3.6,4.6,-2.4)
+        radius   = 0.70
+    }
+}
+
+material = {
+    floor_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.58,0.60,0.63)
+                }
+            }
+        }
+    }
+
+    mobius_surface = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.74,0.48,0.24)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.97,0.94,0.90)
+                }
+            }
+            scalars = {
+                exponent    = 110
+                reflectance = 0.18
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(5.4,4.8,4.0)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor_matte
+    }
+
+    key_light = {
+        geometry = key_light
+        material = emissive_key
+    }
+}
+
+variants = {
+    hide_base = true
+
+    balanced = {
+        name        = Balanced Width
+        description = Baseline Mobius strip with moderate radius and band width.
+        set = {
+            object = {
+                mobius = { geometry = mobius_balanced, material = mobius_surface }
+            }
+        }
+    }
+
+    narrow = {
+        name        = Narrow Strip
+        description = Uses a slim band width to make the half-twist easy to read.
+        set = {
+            object = {
+                mobius = { geometry = mobius_narrow, material = mobius_surface }
+            }
+        }
+    }
+
+    wide = {
+        name        = Wide Strip
+        description = Uses a broader band width to stress the generator and reveal self-occlusion.
+        set = {
+            object = {
+                mobius = { geometry = mobius_wide, material = mobius_surface }
+            }
+        }
+    }
+
+    large_radius = {
+        name        = Large Radius
+        description = Expands the major loop radius while keeping the band relatively controlled.
+        set = {
+            object = {
+                mobius = { geometry = mobius_large_radius, material = mobius_surface }
+            }
+        }
+    }
+
+    dense = {
+        name        = Dense Tessellation
+        description = Increases resolution to check the generator under heavier tessellation.
+        set = {
+            object = {
+                mobius = { geometry = mobius_dense, material = mobius_surface }
+            }
+        }
+    }
+}

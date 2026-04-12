@@ -11,6 +11,11 @@ namespace web {
 namespace {
 
 const long long k_client_ttl_ms = 5LL * 60LL * 1000LL;
+const long long k_workspace_idle_ttl_ms = 60LL * 60LL * 1000LL;
+const size_t k_max_workspaces = 32;
+const size_t k_max_scene_drafts_per_workspace = 16;
+const size_t k_max_scene_draft_bytes = 1024 * 1024;
+const size_t k_max_settings_json_bytes = 64 * 1024;
 
 std::string trimmed_or_default_name(const std::string &name, const std::string &fallback)
 {
@@ -36,10 +41,11 @@ workspace_manager_t::workspace_manager_t()
     , clients_()
     , next_id_(0)
 {
-    create_locked("Workspace 1");
+    create_locked("Workspace 1", "");
 }
 
-std::string workspace_manager_t::create_locked(const std::string &name)
+std::string workspace_manager_t::create_locked(const std::string &name,
+                                               const std::string &owner_client_id)
 {
     const unsigned long long id = ++next_id_;
     std::ostringstream ss;
@@ -52,11 +58,13 @@ std::string workspace_manager_t::create_locked(const std::string &name)
     ws.active_job_id.clear();
     ws.last_job_id.clear();
     ws.scene_drafts.clear();
+    ws.scene_draft_order.clear();
     ws.quality_samples = 1;
     ws.quality_aa = 1;
     ws.quality_sample_distribution = "grid";
-    ws.quality_rdepth = 10;
+    ws.quality_rdepth = 15;
     ws.settings_json = "{}";
+    ws.owner_client_id = owner_client_id;
     ws.updated_ms = now_ms();
 
     workspaces_[ws.id] = ws;
@@ -82,13 +90,23 @@ void workspace_manager_t::touch_client_locked(const std::string &client_id)
     if (it == clients_.end()) {
         client_t c;
         c.last_seen_ms = now_ms();
-        c.workspace_id = workspaces_.empty() ? create_locked("Workspace 1") : workspaces_.begin()->first;
+        c.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+        auto wit = workspaces_.find(c.workspace_id);
+        if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+            wit->second.owner_client_id = client_id;
+            wit->second.updated_ms = now_ms();
+        }
         clients_[client_id] = c;
         return;
     }
     it->second.last_seen_ms = now_ms();
     if (!exists_locked(it->second.workspace_id)) {
-        it->second.workspace_id = workspaces_.empty() ? create_locked("Workspace 1") : workspaces_.begin()->first;
+        it->second.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+    }
+    auto wit = workspaces_.find(it->second.workspace_id);
+    if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+        wit->second.owner_client_id = client_id;
+        wit->second.updated_ms = now_ms();
     }
 }
 
@@ -103,25 +121,84 @@ void workspace_manager_t::prune_clients_locked(long long now)
     }
 }
 
+void workspace_manager_t::clear_stale_workspace_owners_locked()
+{
+    for (auto it = workspaces_.begin(); it != workspaces_.end(); ++it) {
+        if (!it->second.owner_client_id.empty()
+            && clients_.find(it->second.owner_client_id) == clients_.end()) {
+            it->second.owner_client_id.clear();
+        }
+    }
+}
+
+void workspace_manager_t::prune_workspaces_locked(long long now)
+{
+    clear_stale_workspace_owners_locked();
+    if (workspaces_.size() <= 1) return;
+
+    std::map<std::string, size_t> client_counts;
+    for (auto it = clients_.begin(); it != clients_.end(); ++it) {
+        if (!it->second.workspace_id.empty()) client_counts[it->second.workspace_id] += 1;
+    }
+
+    std::vector<std::pair<long long, std::string> > ttl_candidates;
+    std::vector<std::pair<long long, std::string> > overflow_candidates;
+    for (auto it = workspaces_.begin(); it != workspaces_.end(); ++it) {
+        const workspace_t &ws = it->second;
+        if (client_counts[ws.id] > 0) continue;
+        if (!ws.active_job_id.empty()) continue;
+        overflow_candidates.push_back(std::make_pair(ws.updated_ms, ws.id));
+        if (now - ws.updated_ms > k_workspace_idle_ttl_ms) {
+            ttl_candidates.push_back(std::make_pair(ws.updated_ms, ws.id));
+        }
+    }
+
+    const auto cmp = [](const std::pair<long long, std::string> &a,
+                        const std::pair<long long, std::string> &b) {
+        if (a.first == b.first) return a.second < b.second;
+        return a.first < b.first;
+    };
+    std::sort(ttl_candidates.begin(), ttl_candidates.end(), cmp);
+    std::sort(overflow_candidates.begin(), overflow_candidates.end(), cmp);
+
+    for (size_t i = 0; i < ttl_candidates.size() && workspaces_.size() > 1; ++i) {
+        workspaces_.erase(ttl_candidates[i].second);
+    }
+
+    for (size_t i = 0; i < overflow_candidates.size() && workspaces_.size() > k_max_workspaces; ++i) {
+        workspaces_.erase(overflow_candidates[i].second);
+    }
+}
+
 std::string workspace_manager_t::ensure_client(const std::string &client_id)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
     touch_client_locked(client_id);
     if (client_id.empty()) return workspaces_.begin()->first;
     return clients_[client_id].workspace_id;
 }
 
-std::string workspace_manager_t::create(const std::string &name)
+std::string workspace_manager_t::create(const std::string &name, const std::string &owner_client_id)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    return create_locked(name);
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
+    if (workspaces_.size() >= k_max_workspaces) return "";
+    return create_locked(name, owner_client_id);
 }
 
 workspace_manager_t::remove_result_t workspace_manager_t::remove(const std::string &workspace_id,
                                                                  std::string &replacement_workspace_id_out)
 {
     std::lock_guard<std::mutex> lock(mut_);
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
     auto it = workspaces_.find(workspace_id);
     if (it == workspaces_.end()) return REMOVE_NOT_FOUND;
     if (workspaces_.size() <= 1) return REMOVE_LAST_WORKSPACE;
@@ -143,19 +220,32 @@ bool workspace_manager_t::set_active(const std::string &client_id, const std::st
     std::lock_guard<std::mutex> lock(mut_);
     if (workspace_id.empty() || !exists_locked(workspace_id)) return false;
     if (client_id.empty()) return false;
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
+    if (!exists_locked(workspace_id)) return false;
     touch_client_locked(client_id);
     clients_[client_id].workspace_id = workspace_id;
+    auto wit = workspaces_.find(workspace_id);
+    if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
+        wit->second.owner_client_id = client_id;
+        wit->second.updated_ms = now_ms();
+    }
     return true;
 }
 
 bool workspace_manager_t::get_active(const std::string &client_id, std::string &workspace_id_out)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
     if (client_id.empty()) {
+        if (workspaces_.empty()) create_locked("Workspace 1", "");
         workspace_id_out = workspaces_.begin()->first;
         return true;
     }
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
     touch_client_locked(client_id);
     workspace_id_out = clients_[client_id].workspace_id;
     return true;
@@ -166,10 +256,11 @@ bool workspace_manager_t::list(const std::string &client_id,
                                std::string &active_workspace_out)
 {
     std::lock_guard<std::mutex> lock(mut_);
-    if (workspaces_.empty()) create_locked("Workspace 1");
-
+    const long long now = now_ms();
+    prune_clients_locked(now);
+    prune_workspaces_locked(now);
+    if (workspaces_.empty()) create_locked("Workspace 1", "");
     if (!client_id.empty()) touch_client_locked(client_id);
-    prune_clients_locked(now_ms());
 
     if (!client_id.empty()) active_workspace_out = clients_[client_id].workspace_id;
     else active_workspace_out = workspaces_.begin()->first;
@@ -195,6 +286,7 @@ bool workspace_manager_t::list(const std::string &client_id,
         snap.quality_sample_distribution = ws.quality_sample_distribution;
         snap.quality_rdepth = ws.quality_rdepth;
         snap.settings_json = ws.settings_json;
+        snap.is_owned_by_client = !client_id.empty() && (ws.owner_client_id == client_id);
         snap.updated_ms = ws.updated_ms;
         out.push_back(snap);
     }
@@ -207,18 +299,34 @@ bool workspace_manager_t::list(const std::string &client_id,
     return true;
 }
 
-bool workspace_manager_t::set_scene_draft(const std::string &workspace_id,
-                                          const std::string &scene_name,
-                                          const std::string &source)
+workspace_manager_t::store_result_t workspace_manager_t::set_scene_draft(const std::string &workspace_id,
+                                                                         const std::string &scene_name,
+                                                                         const std::string &source)
 {
     std::lock_guard<std::mutex> lock(mut_);
     auto it = workspaces_.find(workspace_id);
-    if (it == workspaces_.end()) return false;
-    if (scene_name.empty()) return false;
-    it->second.scene_drafts[scene_name] = source;
-    it->second.active_scene = scene_name;
-    it->second.updated_ms = now_ms();
-    return true;
+    if (it == workspaces_.end()) return STORE_NOT_FOUND;
+    if (scene_name.empty()) return STORE_NOT_FOUND;
+    if (source.size() > k_max_scene_draft_bytes) return STORE_TOO_LARGE;
+
+    workspace_t &ws = it->second;
+    ws.scene_drafts[scene_name] = source;
+    for (std::deque<std::string>::iterator dit = ws.scene_draft_order.begin();
+         dit != ws.scene_draft_order.end(); ++dit) {
+        if (*dit == scene_name) {
+            ws.scene_draft_order.erase(dit);
+            break;
+        }
+    }
+    ws.scene_draft_order.push_back(scene_name);
+    while (ws.scene_draft_order.size() > k_max_scene_drafts_per_workspace) {
+        const std::string evict_scene = ws.scene_draft_order.front();
+        ws.scene_draft_order.pop_front();
+        ws.scene_drafts.erase(evict_scene);
+    }
+    ws.active_scene = scene_name;
+    ws.updated_ms = now_ms();
+    return STORE_OK;
 }
 
 bool workspace_manager_t::get_scene_draft(const std::string &workspace_id,
@@ -267,14 +375,16 @@ bool workspace_manager_t::get_quality_settings(const std::string &workspace_id,
     return true;
 }
 
-bool workspace_manager_t::set_settings_json(const std::string &workspace_id, const std::string &settings_json)
+workspace_manager_t::store_result_t workspace_manager_t::set_settings_json(const std::string &workspace_id,
+                                                                           const std::string &settings_json)
 {
     std::lock_guard<std::mutex> lock(mut_);
     auto it = workspaces_.find(workspace_id);
-    if (it == workspaces_.end()) return false;
+    if (it == workspaces_.end()) return STORE_NOT_FOUND;
+    if (settings_json.size() > k_max_settings_json_bytes) return STORE_TOO_LARGE;
     it->second.settings_json = settings_json.empty() ? "{}" : settings_json;
     it->second.updated_ms = now_ms();
-    return true;
+    return STORE_OK;
 }
 
 bool workspace_manager_t::get_settings_json(const std::string &workspace_id, std::string &settings_json_out)

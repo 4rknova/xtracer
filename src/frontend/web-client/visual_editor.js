@@ -23,6 +23,64 @@
     return t === "thin-lens" || t === "perspective";
   }
 
+  function isTiltShiftCameraType(type) {
+    var t = String(type || "").toLowerCase();
+    return t === "tilt-shift" || t === "tiltshift";
+  }
+
+  function clamp01(v) {
+    return clamp(Number(v) || 0, 0, 1);
+  }
+
+  function colorFromArray3(arr) {
+    if (!Array.isArray(arr) || arr.length < 3) return new THREE.Color(0, 0, 0);
+    return new THREE.Color(clamp01(arr[0]), clamp01(arr[1]), clamp01(arr[2]));
+  }
+
+  function buildMediumVisualParams(mediumDef) {
+    var sigmaA = colorFromArray3(mediumDef && mediumDef.sigmaA);
+    var sigmaS = colorFromArray3(mediumDef && mediumDef.sigmaS);
+    var emission = colorFromArray3(mediumDef && mediumDef.emission);
+    var sigmaT = sigmaA.clone().add(sigmaS);
+    var color = sigmaS.clone().multiplyScalar(1.35).add(emission.clone().multiplyScalar(1.65)).add(sigmaA.clone().multiplyScalar(0.35));
+    color.r = clamp01(color.r);
+    color.g = clamp01(color.g);
+    color.b = clamp01(color.b);
+
+    var density = (sigmaT.r + sigmaT.g + sigmaT.b) / 3.0;
+    var emissionBoost = (emission.r + emission.g + emission.b) / 3.0;
+    var opacity = clamp(0.08 + density * 0.65 + emissionBoost * 0.25, 0.1, 0.5);
+    var edgeOpacity = clamp(opacity * 1.35, 0.2, 0.85);
+    return {
+      color: color,
+      opacity: opacity,
+      edgeOpacity: edgeOpacity,
+    };
+  }
+
+  function disposeObjectHierarchy(root) {
+    if (!root || typeof root.traverse !== "function") return;
+    var seenGeometries = [];
+    var seenMaterials = [];
+    root.traverse(function (node) {
+      if (!node) return;
+      var g = node.geometry || null;
+      if (g && seenGeometries.indexOf(g) < 0) {
+        seenGeometries.push(g);
+        g.dispose();
+      }
+      var mats = [];
+      if (Array.isArray(node.material)) mats = node.material;
+      else if (node.material) mats = [node.material];
+      for (var mi = 0; mi < mats.length; mi += 1) {
+        var m = mats[mi];
+        if (!m || seenMaterials.indexOf(m) >= 0) continue;
+        seenMaterials.push(m);
+        m.dispose();
+      }
+    });
+  }
+
   function generatedMeshGeometry(token, resolution) {
     var t = String(token || "").trim().toLowerCase();
     var seg = Math.max(8, Math.floor(Number(resolution) || 24));
@@ -86,6 +144,43 @@
     return new THREE.BoxGeometry(0.5, 0.5, 0.5);
   }
 
+  function buildIndexedEdgeSourceGeometry(geometry) {
+    if (!geometry || typeof geometry.getAttribute !== "function") return geometry;
+    var position = geometry.getAttribute("position");
+    if (!position || position.itemSize !== 3 || position.count < 3) return geometry;
+
+    // Scene mesh payloads arrive as raw triangle soup. Build a temporary indexed
+    // copy keyed by identical positions so EdgesGeometry can identify shared
+    // edges instead of drawing every triangle diagonal.
+    var precision = 1e6;
+    var dedup = new Map();
+    var uniquePositions = [];
+    var indices = new Array(position.count);
+
+    for (var i = 0; i < position.count; i += 1) {
+      var x = position.getX(i);
+      var y = position.getY(i);
+      var z = position.getZ(i);
+      var key = [
+        Math.round(x * precision),
+        Math.round(y * precision),
+        Math.round(z * precision),
+      ].join(",");
+      var index = dedup.get(key);
+      if (index === undefined) {
+        index = uniquePositions.length / 3;
+        uniquePositions.push(x, y, z);
+        dedup.set(key, index);
+      }
+      indices[i] = index;
+    }
+
+    var indexed = new THREE.BufferGeometry();
+    indexed.setAttribute("position", new THREE.Float32BufferAttribute(uniquePositions, 3));
+    indexed.setIndex(indices);
+    return indexed;
+  }
+
 async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
   var scene = String(sceneName || "").trim();
   var relpath = String(sourcePath || "").trim();
@@ -120,14 +215,22 @@ async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
   return tex;
 }
 
+function applySurfaceDepthBias(mat) {
+  if (!mat) return mat;
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = 1;
+  mat.polygonOffsetUnits = 1;
+  return mat;
+}
+
 async function materialForDefAsync(ctx, sceneName, matDef) {
   if (!matDef) {
-    return new THREE.MeshPhongMaterial({
+    return applySurfaceDepthBias(new THREE.MeshPhongMaterial({
       color: 0x95a4b5,
       specular: 0x111111,
       shininess: 50,
       side: THREE.DoubleSide,
-    });
+    }));
   }
 
   var diffuseMap = await loadTextureForScene(ctx, sceneName, matDef.diffuseTextureSource, true);
@@ -138,25 +241,25 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
   if (matDef.type === "emissive") {
     var e = matDef.emissive || new THREE.Color(1, 0.95, 0.8);
-    var emissiveMat = new THREE.MeshPhongMaterial({
+    var emissiveMat = applySurfaceDepthBias(new THREE.MeshPhongMaterial({
       color: diffuseMap ? new THREE.Color(1, 1, 1) : (matDef.diffuse || new THREE.Color(0.08, 0.08, 0.08)),
       emissive: e,
       emissiveIntensity: 2.0,
       specular: matDef.specular || new THREE.Color(0.0, 0.0, 0.0),
       shininess: 20,
       side: THREE.DoubleSide,
-    });
+    }));
     if (diffuseMap) emissiveMat.map = diffuseMap;
     if (normalMap) emissiveMat.normalMap = normalMap;
     return emissiveMat;
   }
 
-  var mat = new THREE.MeshPhongMaterial({
+  var mat = applySurfaceDepthBias(new THREE.MeshPhongMaterial({
     color: diffuseMap ? new THREE.Color(1, 1, 1) : baseDiffuse,
     specular: baseSpecular,
     shininess: 90,
     side: THREE.DoubleSide,
-  });
+  }));
   if (diffuseMap) mat.map = diffuseMap;
   if (specularMap) mat.specularMap = specularMap;
   if (normalMap) mat.normalMap = normalMap;
@@ -254,6 +357,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       cameras: [],
       geometries: {},
       materials: {},
+      media: {},
       objects: [],
     };
 
@@ -272,6 +376,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         aperture: Number.isFinite(Number(cam.aperture)) ? Number(cam.aperture) : 0,
         aperture_blades: Number.isFinite(Number(cam.aperture_blades)) ? Number(cam.aperture_blades) : 0,
         aperture_rotation: Number.isFinite(Number(cam.aperture_rotation)) ? Number(cam.aperture_rotation) : 0,
+        tilt: Number.isFinite(Number(cam.tilt)) ? Number(cam.tilt) : 0,
+        shift_x: Number.isFinite(Number(cam.shift_x)) ? Number(cam.shift_x) : 0,
+        shift_y: Number.isFinite(Number(cam.shift_y)) ? Number(cam.shift_y) : 0,
       });
     });
 
@@ -341,6 +448,26 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       parsed.materials[mid] = outMat;
     });
 
+    var media = Array.isArray(runtime.media) ? runtime.media : [];
+    media.forEach(function (medium) {
+      if (!medium || !medium.id) return;
+      var medId = String(medium.id || "");
+      parsed.media[medId] = {
+        id: medId,
+        type: String(medium.type || "").toLowerCase(),
+        sigmaA: (Array.isArray(medium.sigma_a) && medium.sigma_a.length >= 3)
+          ? [Number(medium.sigma_a[0]) || 0, Number(medium.sigma_a[1]) || 0, Number(medium.sigma_a[2]) || 0]
+          : [0, 0, 0],
+        sigmaS: (Array.isArray(medium.sigma_s) && medium.sigma_s.length >= 3)
+          ? [Number(medium.sigma_s[0]) || 0, Number(medium.sigma_s[1]) || 0, Number(medium.sigma_s[2]) || 0]
+          : [0, 0, 0],
+        emission: (Array.isArray(medium.emission) && medium.emission.length >= 3)
+          ? [Number(medium.emission[0]) || 0, Number(medium.emission[1]) || 0, Number(medium.emission[2]) || 0]
+          : [0, 0, 0],
+        g: Number.isFinite(Number(medium.g)) ? Number(medium.g) : 0,
+      };
+    });
+
     var objects = Array.isArray(runtime.objects) ? runtime.objects : [];
     objects.forEach(function (obj) {
       if (!obj || !obj.id || !obj.surface) return;
@@ -348,10 +475,46 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         id: String(obj.id || ""),
         geometry: String(obj.surface || ""),
         material: String(obj.material || ""),
+        medium: String(obj.medium || ""),
       });
     });
 
     return parsed;
+  }
+
+  function buildAabbBoxLines(boxes, color, opacity) {
+    var list = Array.isArray(boxes) ? boxes : [];
+    if (list.length === 0) return null;
+    var positions = [];
+    var edges = [
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [4, 5], [5, 6], [6, 7], [7, 4],
+      [0, 4], [1, 5], [2, 6], [3, 7],
+    ];
+    for (var i = 0; i < list.length; i += 1) {
+      var box = list[i];
+      if (!box || !Array.isArray(box.min) || !Array.isArray(box.max) || box.min.length < 3 || box.max.length < 3) continue;
+      var minX = Number(box.min[0]); var minY = Number(box.min[1]); var minZ = Number(box.min[2]);
+      var maxX = Number(box.max[0]); var maxY = Number(box.max[1]); var maxZ = Number(box.max[2]);
+      if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(minZ) ||
+          !Number.isFinite(maxX) || !Number.isFinite(maxY) || !Number.isFinite(maxZ)) continue;
+      var corners = [
+        [minX, minY, minZ], [maxX, minY, minZ], [maxX, maxY, minZ], [minX, maxY, minZ],
+        [minX, minY, maxZ], [maxX, minY, maxZ], [maxX, maxY, maxZ], [minX, maxY, maxZ],
+      ];
+      for (var e = 0; e < edges.length; e += 1) {
+        var a = corners[edges[e][0]];
+        var b = corners[edges[e][1]];
+        positions.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      }
+    }
+    if (positions.length === 0) return null;
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    return new THREE.LineSegments(
+      geometry,
+      new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity, depthWrite: false, toneMapped: false })
+    );
   }
 
   function SceneVisualEditor(viewportEl, statusEl, fetchSceneGeometry, fetchSceneRuntimeGraph, fetchSceneAssetText) {
@@ -384,6 +547,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraApertureBlades = 0;
     this.selectedCameraApertureRotation = 0;
     this.selectedCameraType = "";
+    this.selectedCameraTilt = 0;
+    this.selectedCameraShiftX = 0;
+    this.selectedCameraShiftY = 0;
     this.onSelectionChanged = null;
     this.selectedMesh = null;
     this.parsedScene = null;
@@ -395,6 +561,8 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.textureLoader = null;
     this.cameraWidgetRoot = null;
     this.cameraWidget = null;
+    this.interactiveCameraWidget = null;
+    this.interactiveCameraWidgetSig = "";
     this.axisWidgetScene = null;
     this.axisWidgetCamera = null;
     this.axisWidgetRoot = null;
@@ -405,6 +573,13 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.photonRoot = null;
     this.photonDiffuse = null;
     this.photonCaustic = null;
+    this.bvhOverlayRoot = null;
+    this.globalBvhOverlay = null;
+    this.meshBvhOverlay = null;
+    this.showGlobalBvh = false;
+    this.showMeshBvh = false;
+    this.sceneScaleMultiplier = 1.0;
+    this.sceneBaseRadius = 2.0;
     this.sceneRadius = 2.0;
     this.infinitePlanes = [];
     this.viewUp = vec3(0, 1, 0);
@@ -433,6 +608,12 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this._animateBound = this.animate.bind(this);
   }
 
+  function normalizeSceneScaleMultiplier(value) {
+    var n = Number(value);
+    if (!Number.isFinite(n)) return 1.0;
+    return clamp(n, 0.01, 100.0);
+  }
+
   SceneVisualEditor.prototype.setStatus = function (msg) {
     if (!this.statusEl) return;
     var text = String(msg || "");
@@ -455,6 +636,46 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
 
   SceneVisualEditor.prototype.setObjectTransformChangeHandler = function (handler) {
     this.onObjectTransformChanged = (typeof handler === "function") ? handler : null;
+  };
+
+  SceneVisualEditor.prototype.clearBvhOverlays = function () {
+    if (this.globalBvhOverlay && this.bvhOverlayRoot) {
+      this.bvhOverlayRoot.remove(this.globalBvhOverlay);
+      disposeObjectHierarchy(this.globalBvhOverlay);
+      this.globalBvhOverlay = null;
+    }
+    if (this.meshBvhOverlay && this.bvhOverlayRoot) {
+      this.bvhOverlayRoot.remove(this.meshBvhOverlay);
+      disposeObjectHierarchy(this.meshBvhOverlay);
+      this.meshBvhOverlay = null;
+    }
+  };
+
+  SceneVisualEditor.prototype.rebuildBvhOverlays = function () {
+    if (!this.bvhOverlayRoot) return;
+    this.clearBvhOverlays();
+    var debug = (this.sceneGeometry && this.sceneGeometry.debug) ? this.sceneGeometry.debug : null;
+    if (!debug) return;
+
+    this.globalBvhOverlay = buildAabbBoxLines(debug.global_bvh || [], 0x56b7ff, 0.34);
+    if (this.globalBvhOverlay) {
+      this.globalBvhOverlay.visible = !!this.showGlobalBvh;
+      this.bvhOverlayRoot.add(this.globalBvhOverlay);
+    }
+
+    var meshMap = debug.mesh_bvh || {};
+    var meshIds = Object.keys(meshMap);
+    var merged = [];
+    for (var i = 0; i < meshIds.length; i += 1) {
+      var boxes = meshMap[meshIds[i]];
+      if (!Array.isArray(boxes)) continue;
+      for (var j = 0; j < boxes.length; j += 1) merged.push(boxes[j]);
+    }
+    this.meshBvhOverlay = buildAabbBoxLines(merged, 0xffb24c, 0.28);
+    if (this.meshBvhOverlay) {
+      this.meshBvhOverlay.visible = !!this.showMeshBvh;
+      this.bvhOverlayRoot.add(this.meshBvhOverlay);
+    }
   };
 
   SceneVisualEditor.prototype.notifySelectionChanged = function () {
@@ -480,6 +701,103 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       transform: transform || null,
       deltaTranslation: Array.isArray(deltaTranslation) ? deltaTranslation.slice(0, 3) : [0, 0, 0],
     });
+  };
+
+  SceneVisualEditor.prototype.applySceneScaleToRoots = function () {
+    var scale = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    if (this.modelRoot) this.modelRoot.scale.setScalar(scale);
+    if (this.cameraWidgetRoot) this.cameraWidgetRoot.scale.setScalar(scale);
+    if (this.photonRoot) this.photonRoot.scale.setScalar(scale);
+    if (this.bvhOverlayRoot) this.bvhOverlayRoot.scale.setScalar(scale);
+  };
+
+  SceneVisualEditor.prototype.collectAreaLightCenters = function () {
+    var centers = [];
+    if (!this.modelRoot) return centers;
+    for (var i = 0; i < this.modelRoot.children.length; i += 1) {
+      var mesh = this.modelRoot.children[i];
+      if (!mesh || !mesh.userData || !mesh.userData.isEmissiveAreaLight) continue;
+      var center = new THREE.Vector3();
+      new THREE.Box3().setFromObject(mesh).getCenter(center);
+      if (Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z)) {
+        centers.push(center);
+      }
+    }
+    return centers;
+  };
+
+  SceneVisualEditor.prototype.refreshSceneBoundsAndLighting = function (options) {
+    var opts = options || {};
+    var updateTarget = opts.updateTarget !== false;
+    var preserveDistance = !!opts.preserveDistance;
+    if (!this.modelRoot || this.modelRoot.children.length === 0) {
+      this.sceneBaseRadius = 2.0;
+      this.sceneRadius = this.sceneBaseRadius * this.sceneScaleMultiplier;
+      this.updateCameraWidget();
+      return;
+    }
+
+    this.modelRoot.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(this.modelRoot);
+    var size = new THREE.Vector3();
+    var center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    var radius = Math.max(size.x, Math.max(size.y, size.z)) * 0.5;
+    this.sceneRadius = Math.max(0.25, radius);
+    this.sceneBaseRadius = this.sceneRadius / Math.max(1e-6, this.sceneScaleMultiplier);
+    if (updateTarget) this.target.copy(center);
+    if (!preserveDistance) {
+      this.distance = clamp(this.fitDistanceForRadius(this.sceneRadius), 1.5, 120);
+    }
+
+    var areaLightCenters = this.collectAreaLightCenters();
+    if (this.keyLight) {
+      var lr = Math.max(1.5, this.sceneRadius * 2.0);
+      if (areaLightCenters.length > 0) {
+        var la = new THREE.Vector3();
+        for (var ai = 0; ai < areaLightCenters.length; ai += 1) la.add(areaLightCenters[ai]);
+        la.multiplyScalar(1.0 / areaLightCenters.length);
+        this.keyLight.position.copy(la);
+      } else {
+        this.keyLight.position.set(center.x + lr, center.y + lr * 1.4, center.z + lr * 0.8);
+      }
+      this.keyLight.target.position.copy(center);
+      this.keyLight.target.updateMatrixWorld();
+      this.fitDirectionalShadowToBox(this.keyLight, box);
+    }
+
+    if (this.rimLight) {
+      if (areaLightCenters.length > 1) this.rimLight.position.copy(areaLightCenters[1]);
+      else this.rimLight.position.set(center.x - this.sceneRadius * 1.5, center.y + this.sceneRadius, center.z - this.sceneRadius * 1.2);
+    }
+    this.updateCameraWidget();
+  };
+
+  SceneVisualEditor.prototype.setSceneScaleMultiplier = function (value, preserveView) {
+    var prev = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    var next = normalizeSceneScaleMultiplier(value);
+    this.sceneScaleMultiplier = next;
+    this.applySceneScaleToRoots();
+    this.sceneRadius = this.sceneBaseRadius * next;
+    if (preserveView !== false) {
+      var ratio = next / Math.max(1e-6, prev);
+      this.target.multiplyScalar(ratio);
+      this.refreshSceneBoundsAndLighting({ updateTarget: false, preserveDistance: true });
+    } else {
+      this.refreshSceneBoundsAndLighting({ updateTarget: true, preserveDistance: false });
+    }
+    return Math.abs(next - prev) > 1e-6;
+  };
+
+  SceneVisualEditor.prototype.getScaledSelectedCameraPose = function () {
+    if (!this.selectedCameraPose) return null;
+    var scale = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    return {
+      position: this.selectedCameraPose.position.clone().multiplyScalar(scale),
+      target: this.selectedCameraPose.target.clone().multiplyScalar(scale),
+      up: this.selectedCameraPose.up ? this.selectedCameraPose.up.clone() : vec3(0, 1, 0),
+    };
   };
 
   SceneVisualEditor.prototype.init = function () {
@@ -508,6 +826,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.initAxisWidget();
     this.photonRoot = new THREE.Group();
     this.scene.add(this.photonRoot);
+    this.bvhOverlayRoot = new THREE.Group();
+    this.scene.add(this.bvhOverlayRoot);
+    this.applySceneScaleToRoots();
 
     this.grid = new THREE.GridHelper(24, 24, 0x5f7a8e, 0x2b3642);
     this.grid.position.y = -0.003;
@@ -944,13 +1265,14 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
   };
 
   SceneVisualEditor.prototype.jumpToSelectedCameraView = function () {
-    if (!this.selectedCameraPose) {
+    var pose = this.getScaledSelectedCameraPose();
+    if (!pose) {
       this.setStatus("View: no selected camera");
       return false;
     }
 
-    var pos = this.selectedCameraPose.position.clone();
-    var tgt = this.selectedCameraPose.target.clone();
+    var pos = pose.position.clone();
+    var tgt = pose.target.clone();
     var toCam = pos.clone().sub(tgt);
     var dist = clamp(toCam.length(), 0.3, 120);
     if (toCam.lengthSq() < 1e-8) toCam.set(0, 0, 1);
@@ -1145,6 +1467,72 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.cameraWidgetRoot.remove(this.cameraWidget);
       this.cameraWidget = null;
     }
+  };
+
+  SceneVisualEditor.prototype.clearInteractiveCameraWidget = function () {
+    if (this.interactiveCameraWidget) {
+      this.interactiveCameraWidget.traverse(function (node) {
+        if (node && node.geometry) node.geometry.dispose();
+        if (node && node.material) {
+          if (Array.isArray(node.material)) node.material.forEach(function (m) { if (m) m.dispose(); });
+          else node.material.dispose();
+        }
+      });
+      this.cameraWidgetRoot.remove(this.interactiveCameraWidget);
+      this.interactiveCameraWidget = null;
+      this.interactiveCameraWidgetSig = "";
+    }
+  };
+
+  SceneVisualEditor.prototype.resolveInteractivePreviewPose = function () {
+    var icam = null;
+    var mode = "";
+    try { if (typeof interactivePreviewCamera !== "undefined") icam = interactivePreviewCamera; } catch (_) { icam = null; }
+    try { if (typeof renderMode !== "undefined") mode = String(renderMode || "").toLowerCase(); } catch (_) { mode = ""; }
+    if (!icam || !icam.ready) return null;
+    if (mode && mode !== "interactive") return null;
+    if (this.currentSceneName && icam.sourceScene && String(icam.sourceScene) !== String(this.currentSceneName)) return null;
+
+    var pos = icam.position || [];
+    var target = icam.target || [];
+    var up = icam.up || [];
+    var nums = [
+      Number(pos[0]), Number(pos[1]), Number(pos[2]),
+      Number(target[0]), Number(target[1]), Number(target[2]),
+      Number(up[0]), Number(up[1]), Number(up[2]),
+    ];
+    for (var i = 0; i < nums.length; i += 1) {
+      if (!Number.isFinite(nums[i])) return null;
+    }
+    return {
+      position: vec3(nums[0], nums[1], nums[2]),
+      target: vec3(nums[3], nums[4], nums[5]),
+      up: vec3(nums[6], nums[7], nums[8]).normalize(),
+      hfov: clamp(Number(icam.hfov) || 45, 1, 179),
+    };
+  };
+
+  SceneVisualEditor.prototype.applyWidgetPose = function (widget, pose) {
+    if (!widget || !pose) return;
+    var position = pose.position.clone();
+    var target = pose.target.clone();
+    var upHint = (pose.up && pose.up.lengthSq() > 1e-10) ? pose.up.clone().normalize() : vec3(0, 1, 0);
+    var forward = target.sub(position);
+    if (forward.lengthSq() < 1e-10) forward.set(0, 0, 1);
+    forward.normalize();
+    var right = new THREE.Vector3().crossVectors(upHint, forward);
+    if (right.lengthSq() < 1e-10) {
+      upHint = Math.abs(forward.y) > 0.98 ? vec3(0, 0, 1) : vec3(0, 1, 0);
+      right.crossVectors(upHint, forward);
+    }
+    right.normalize();
+    var up = new THREE.Vector3().crossVectors(forward, right).normalize();
+    var basis = new THREE.Matrix4();
+    // Camera widget geometry is authored looking down +Z.
+    basis.makeBasis(right, up, forward);
+    var q = new THREE.Quaternion().setFromRotationMatrix(basis);
+    widget.position.copy(pose.position);
+    widget.quaternion.copy(q);
   };
 
   SceneVisualEditor.prototype.clearPhotonPoints = function () {
@@ -1383,7 +1771,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
       ? this.frameAspect
       : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
-    var span = clamp((this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
+    var span = clamp((this.sceneBaseRadius || this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
     var g = this.buildCameraWidgetGeometry(this.selectedCameraHFov, aspect, span);
     var m = new THREE.LineBasicMaterial({ color: 0x55d3ff });
     this.cameraWidget = new THREE.Group();
@@ -1457,9 +1845,113 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         var am = new THREE.LineBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.85 });
         this.cameraWidget.add(new THREE.LineSegments(ag, am));
       }
+    } else if (isTiltShiftCameraType(this.selectedCameraType)) {
+      var tsfl = Math.max(0, Number(this.selectedCameraFLength) || 0);
+      var tsap = Math.max(0, Number(this.selectedCameraAperture) || 0);
+      var tsBlades = Math.max(0, Math.floor(Number(this.selectedCameraApertureBlades) || 0));
+      var tsRotation = Number(this.selectedCameraApertureRotation) || 0;
+      var tsTilt = degToRad(Number(this.selectedCameraTilt) || 0);
+      var tsShiftX = Number(this.selectedCameraShiftX) || 0;
+      var tsShiftY = Number(this.selectedCameraShiftY) || 0;
+
+      // Aperture outline — same as thin-lens.
+      if (tsap > 0) {
+        var tsar = Math.max(tsap * 0.5, span * 0.04);
+        var tsApertureGeo = this.buildApertureOutlineGeometry(tsar, tsBlades, tsRotation);
+        var tsApertureMat = new THREE.LineBasicMaterial({
+          color: 0xffb347,
+          transparent: true,
+          opacity: 0.9,
+        });
+        if (tsApertureGeo) this.cameraWidget.add(new THREE.LineSegments(tsApertureGeo, tsApertureMat));
+      }
+
+      // Tilted focal plane.
+      // The focal plane is rotated around the camera's local X axis by `tsTilt` radians
+      // and shifted by (tsShiftX, tsShiftY) in normalised sensor units.
+      // A point (dx, dy) on the untilted plane at z=tsfl maps to:
+      //   (cx + dx, dy*cos(tsTilt), tsfl + dy*sin(tsTilt))
+      // where cx = tsShiftX * halfWf, cy = tsShiftY * halfHf (centre offset from shift).
+      if (tsfl > 0) {
+        var tsHalfW = Math.tan(degToRad(clamp(this.selectedCameraHFov, 1, 179)) * 0.5) * tsfl;
+        var tsHalfH = tsHalfW / Math.max(1e-6, aspect);
+        var tsCx = tsShiftX * tsHalfW;
+        var tsCosT = Math.cos(tsTilt);
+        var tsSinT = Math.sin(tsTilt);
+
+        // Tilted focal plane corners (rotate each corner's Y offset around X axis).
+        var tsp0 = vec3(tsCx - tsHalfW, -tsHalfH * tsCosT, tsfl - tsHalfH * tsSinT);
+        var tsp1 = vec3(tsCx + tsHalfW, -tsHalfH * tsCosT, tsfl - tsHalfH * tsSinT);
+        var tsp2 = vec3(tsCx + tsHalfW,  tsHalfH * tsCosT, tsfl + tsHalfH * tsSinT);
+        var tsp3 = vec3(tsCx - tsHalfW,  tsHalfH * tsCosT, tsfl + tsHalfH * tsSinT);
+        var tsSeg = [tsp0, tsp1, tsp1, tsp2, tsp2, tsp3, tsp3, tsp0];
+        var tsArr = new Float32Array(tsSeg.length * 3);
+        for (var tsi = 0; tsi < tsSeg.length; tsi += 1) {
+          tsArr[tsi * 3 + 0] = tsSeg[tsi].x;
+          tsArr[tsi * 3 + 1] = tsSeg[tsi].y;
+          tsArr[tsi * 3 + 2] = tsSeg[tsi].z;
+        }
+        var tsFg = new THREE.BufferGeometry();
+        tsFg.setAttribute("position", new THREE.BufferAttribute(tsArr, 3));
+        var tsFm = new THREE.LineBasicMaterial({
+          color: 0xff8f5e,
+          transparent: true,
+          opacity: 0.9,
+        });
+        this.cameraWidget.add(new THREE.LineSegments(tsFg, tsFm));
+
+        // Optical axis line from origin to focal plane centre.
+        var tsAxisEnd = vec3(tsCx, 0, tsfl);
+        var tsAg = new THREE.BufferGeometry();
+        tsAg.setAttribute("position", new THREE.BufferAttribute(
+          new Float32Array([0, 0, 0, tsAxisEnd.x, tsAxisEnd.y, tsAxisEnd.z]), 3));
+        var tsAm = new THREE.LineBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.85 });
+        this.cameraWidget.add(new THREE.LineSegments(tsAg, tsAm));
+      }
     }
 
     this.cameraWidgetRoot.add(this.cameraWidget);
+  };
+
+  SceneVisualEditor.prototype.updateInteractiveCameraWidget = function () {
+    if (!this.cameraWidgetRoot) return;
+    var pose = this.resolveInteractivePreviewPose();
+    if (!pose) {
+      this.clearInteractiveCameraWidget();
+      return;
+    }
+
+    var aspect = (Number.isFinite(this.frameAspect) && this.frameAspect > 0)
+      ? this.frameAspect
+      : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
+    var span = clamp((this.sceneBaseRadius || this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
+    var sig = [
+      Math.round(pose.hfov * 1000),
+      Math.round(aspect * 1000),
+      Math.round(span * 1000),
+    ].join(":");
+
+    if (!this.interactiveCameraWidget || this.interactiveCameraWidgetSig !== sig) {
+      this.clearInteractiveCameraWidget();
+      var g = this.buildCameraWidgetGeometry(pose.hfov, aspect, span);
+      var m = new THREE.LineDashedMaterial({
+        color: 0xffe34d,
+        dashSize: span * 0.08,
+        gapSize: span * 0.05,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: true,
+        depthWrite: false,
+      });
+      var lines = new THREE.LineSegments(g, m);
+      lines.computeLineDistances();
+      this.interactiveCameraWidget = new THREE.Group();
+      this.interactiveCameraWidget.add(lines);
+      this.interactiveCameraWidgetSig = sig;
+      this.cameraWidgetRoot.add(this.interactiveCameraWidget);
+    }
+
+    this.applyWidgetPose(this.interactiveCameraWidget, pose);
   };
 
   SceneVisualEditor.prototype.fitDistanceForRadius = function (radius) {
@@ -1545,6 +2037,21 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return g;
   };
 
+  SceneVisualEditor.prototype.resolveSceneMeshId = function (def, objectId) {
+    if (!def || !this.sceneGeometry || !this.sceneGeometry.meshes) return "";
+    var meshes = this.sceneGeometry.meshes;
+    var candidates = [];
+    if (def.id) candidates.push(String(def.id));
+    if (objectId) candidates.push(String(objectId));
+    for (var i = 0; i < candidates.length; i += 1) {
+      var candidate = candidates[i];
+      if (candidate && Object.prototype.hasOwnProperty.call(meshes, candidate)) {
+        return candidate;
+      }
+    }
+    return "";
+  };
+
   SceneVisualEditor.prototype.decorateCsgPlaceholder = function (mesh) {
     if (!mesh || !mesh.isMesh) return;
 
@@ -1611,9 +2118,10 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }
   };
 
-  SceneVisualEditor.prototype.geometryForDefAsync = async function (sceneName, def) {
+  SceneVisualEditor.prototype.geometryForDefAsync = async function (sceneName, def, objectId) {
     if (String(def.type || "").toLowerCase() !== "mesh") return geometryForDef(def);
-    var meshFromScene = this.geometryFromSceneData(def);
+    var meshSceneId = this.resolveSceneMeshId(def, objectId);
+    var meshFromScene = meshSceneId ? this.geometryFromSceneData({ id: meshSceneId }) : null;
     if (meshFromScene) return meshFromScene;
     var srcResolved = String(def.sourceResolved || def.source || "").trim();
     if (this.fetchSceneAssetText && sceneName && srcResolved && /\.obj$/i.test(srcResolved)) {
@@ -1629,6 +2137,49 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       } catch (_) {}
     }
     return geometryForDef(def);
+  };
+
+  SceneVisualEditor.prototype.addMediumOverlay = function (mesh, mediumDef) {
+    if (!mesh || !mesh.geometry || !mediumDef) return;
+    var geoType = String((mesh.userData && mesh.userData.geometryType) || "").toLowerCase();
+    if (geoType === "plane") return;
+
+    var vis = buildMediumVisualParams(mediumDef);
+    var shell = new THREE.Mesh(
+      mesh.geometry,
+      new THREE.MeshPhongMaterial({
+        color: vis.color,
+        emissive: vis.color.clone().multiplyScalar(0.35),
+        emissiveIntensity: 0.6,
+        transparent: true,
+        opacity: vis.opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    shell.name = String(mesh.name || "object") + "__medium";
+    shell.scale.set(1.012, 1.012, 1.012);
+    shell.renderOrder = 2;
+    shell.userData = shell.userData || {};
+    shell.userData.mediumOverlay = true;
+    shell.userData.mediumId = String(mediumDef.id || "");
+
+    var edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry, 32),
+      new THREE.LineBasicMaterial({
+        color: vis.color,
+        transparent: true,
+        opacity: vis.edgeOpacity,
+        depthWrite: false,
+      })
+    );
+    edges.renderOrder = 3;
+    edges.userData = edges.userData || {};
+    edges.userData.mediumOverlay = true;
+
+    shell.add(edges);
+    mesh.add(shell);
   };
 
   SceneVisualEditor.prototype.fitDirectionalShadowToBox = function (light, box) {
@@ -1687,11 +2238,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.clearPhotonPoints();
     while (this.modelRoot.children.length > 0) {
       var c = this.modelRoot.children.pop();
-      if (c.geometry) c.geometry.dispose();
-      if (c.material) {
-        if (Array.isArray(c.material)) c.material.forEach(function (m) { if (m) m.dispose(); });
-        else c.material.dispose();
-      }
+      disposeObjectHierarchy(c);
     }
     this.infinitePlanes = [];
 
@@ -1703,6 +2250,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         this.sceneGeometry = { meshes: {} };
       }
     }
+    this.rebuildBvhOverlays();
 
     var parsed = null;
     var runtimeGraph = runtimeGraphData || null;
@@ -1721,6 +2269,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         cameras: [],
         geometries: {},
         materials: {},
+        media: {},
         objects: [],
       };
     }
@@ -1733,18 +2282,21 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.sceneCameraOrder.push(cam.id);
     }
     var count = 0;
-    var areaLightCenters = [];
     var referencedMeshIds = {};
 
     for (var i = 0; i < parsed.objects.length; i += 1) {
       var obj = parsed.objects[i];
       var geoDef = parsed.geometries[obj.geometry];
       if (!geoDef) continue;
-      if (String(geoDef.type || "").toLowerCase() === "mesh" && geoDef.id) {
-        referencedMeshIds[geoDef.id] = true;
+      var resolvedMeshId = "";
+      if (String(geoDef.type || "").toLowerCase() === "mesh") {
+        resolvedMeshId = this.resolveSceneMeshId(geoDef, obj.id);
       }
 
-      var geo = await this.geometryForDefAsync(sceneName, geoDef);
+      var geo = await this.geometryForDefAsync(sceneName, geoDef, obj.id);
+      if (resolvedMeshId) {
+        referencedMeshIds[resolvedMeshId] = true;
+      }
       var matDef = parsed.materials[obj.material];
       var mat = await materialForDefAsync(this, sceneName, matDef);
       var mesh = new THREE.Mesh(geo, mat);
@@ -1753,31 +2305,31 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       mesh.userData.objectId = obj.id;
       mesh.userData.geometryId = obj.geometry;
       mesh.userData.materialId = obj.material || "";
+      mesh.userData.mediumId = obj.medium || "";
       mesh.userData.geometryType = String(geoDef.type || "").toLowerCase();
       mesh.userData.infinitePlane = mesh.userData.geometryType === "plane";
       this.objectMeshById[obj.id] = mesh;
+      var mediumDef = parsed.media[obj.medium] || null;
       this.objectMetaById[obj.id] = {
         objectId: obj.id,
         geometryId: obj.geometry,
         materialId: obj.material || "",
+        mediumId: obj.medium || "",
+        mediumType: mediumDef ? (mediumDef.type || "") : "",
         geometryType: mesh.userData.geometryType,
       };
       var isEmissive = !!(matDef && String(matDef.type || "").toLowerCase() === "emissive");
+      mesh.userData.isEmissiveAreaLight = isEmissive;
       mesh.castShadow = !isEmissive;
       mesh.receiveShadow = !isEmissive;
       this.applyDefTransform(mesh, geoDef);
       if (mesh.userData.geometryType === "csg") {
         this.decorateCsgPlaceholder(mesh);
       }
-      this.modelRoot.add(mesh);
-
-      if (isEmissive) {
-        var lc = new THREE.Vector3();
-        new THREE.Box3().setFromObject(mesh).getCenter(lc);
-        if (Number.isFinite(lc.x) && Number.isFinite(lc.y) && Number.isFinite(lc.z)) {
-          areaLightCenters.push(lc);
-        }
+      if (mediumDef) {
+        this.addMediumOverlay(mesh, mediumDef);
       }
+      this.modelRoot.add(mesh);
 
       if (String(geoDef.type || "").toLowerCase() === "plane") {
         var n = (geoDef.normal || vec3(0, 1, 0)).clone();
@@ -1807,105 +2359,88 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
           count += 1;
           continue;
         }
+        var edgeSourceGeo = buildIndexedEdgeSourceGeometry(geo);
         var edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(geo, 35),
+          new THREE.EdgesGeometry(edgeSourceGeo, 35),
           new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
         );
+        if (edgeSourceGeo !== geo) edgeSourceGeo.dispose();
         mesh.add(edges);
       }
 
       count += 1;
     }
 
-    // Backend geometry export includes mesh surfaces after scene load (including OBJ-import object forms).
-    // If a mesh surface has no parsed object binding in the source parser, still visualize it here.
-    var backendMeshes = (this.sceneGeometry && this.sceneGeometry.meshes) ? this.sceneGeometry.meshes : {};
-    var backendMeshIds = Object.keys(backendMeshes);
-    for (var bi = 0; bi < backendMeshIds.length; bi += 1) {
-      var backendMeshId = backendMeshIds[bi];
-      if (!backendMeshId || referencedMeshIds[backendMeshId] || this.objectMeshById[backendMeshId]) continue;
+    // Backend-only synthetic meshes are a fallback for scenes where runtime graph parsing produced no objects.
+    // When parsed objects exist, adding every unreferenced backend mesh also shows unused geometry definitions.
+    if (!parsed.objects || parsed.objects.length === 0) {
+      var backendMeshes = (this.sceneGeometry && this.sceneGeometry.meshes) ? this.sceneGeometry.meshes : {};
+      var backendMeshIds = Object.keys(backendMeshes);
+      for (var bi = 0; bi < backendMeshIds.length; bi += 1) {
+        var backendMeshId = backendMeshIds[bi];
+        if (!backendMeshId || referencedMeshIds[backendMeshId] || this.objectMeshById[backendMeshId]) continue;
 
-      var backendGeoDef = { id: backendMeshId, type: "mesh", modifiers: null };
-      var backendGeo = this.geometryFromSceneData(backendGeoDef);
-      if (!backendGeo) continue;
+        var backendGeoDef = { id: backendMeshId, type: "mesh", modifiers: null };
+        var backendGeo = this.geometryFromSceneData(backendGeoDef);
+        if (!backendGeo) continue;
 
-      var backendMat = await materialForDefAsync(this, sceneName, null);
-      var backendMesh = new THREE.Mesh(backendGeo, backendMat);
-      backendMesh.name = backendMeshId;
-      backendMesh.userData = backendMesh.userData || {};
-      backendMesh.userData.objectId = backendMeshId;
-      backendMesh.userData.geometryId = backendMeshId;
-      backendMesh.userData.materialId = "";
-      backendMesh.userData.geometryType = "mesh";
-      backendMesh.userData.infinitePlane = false;
-      backendMesh.userData.syntheticFromBackend = true;
-      this.objectMeshById[backendMeshId] = backendMesh;
-      this.objectMetaById[backendMeshId] = {
-        objectId: backendMeshId,
-        geometryId: backendMeshId,
-        materialId: "",
-        geometryType: "mesh",
-      };
-      backendMesh.castShadow = true;
-      backendMesh.receiveShadow = true;
-      this.modelRoot.add(backendMesh);
+        var backendMat = await materialForDefAsync(this, sceneName, null);
+        var backendMesh = new THREE.Mesh(backendGeo, backendMat);
+        backendMesh.name = backendMeshId;
+        backendMesh.userData = backendMesh.userData || {};
+        backendMesh.userData.objectId = backendMeshId;
+        backendMesh.userData.geometryId = backendMeshId;
+        backendMesh.userData.materialId = "";
+        backendMesh.userData.mediumId = "";
+        backendMesh.userData.geometryType = "mesh";
+        backendMesh.userData.infinitePlane = false;
+        backendMesh.userData.syntheticFromBackend = true;
+        backendMesh.userData.isEmissiveAreaLight = false;
+        this.objectMeshById[backendMeshId] = backendMesh;
+        this.objectMetaById[backendMeshId] = {
+          objectId: backendMeshId,
+          geometryId: backendMeshId,
+          materialId: "",
+          mediumId: "",
+          mediumType: "",
+          geometryType: "mesh",
+        };
+        backendMesh.castShadow = true;
+        backendMesh.receiveShadow = true;
+        this.modelRoot.add(backendMesh);
 
-      var addBackendEdges = true;
-      if (backendGeo && backendGeo.boundingBox === null && typeof backendGeo.computeBoundingBox === "function") {
-        backendGeo.computeBoundingBox();
-      }
-      if (backendGeo && backendGeo.boundingBox) {
-        var backendEdgeSize = new THREE.Vector3();
-        backendGeo.boundingBox.getSize(backendEdgeSize);
-        var backendEdgeMax = Math.max(backendEdgeSize.x, Math.max(backendEdgeSize.y, backendEdgeSize.z));
-        var backendEdgeMin = Math.min(backendEdgeSize.x, Math.min(backendEdgeSize.y, backendEdgeSize.z));
-        if (backendEdgeMax > 1e-6 && (backendEdgeMin / backendEdgeMax) < 0.02) {
-          addBackendEdges = false;
+        var addBackendEdges = true;
+        if (backendGeo && backendGeo.boundingBox === null && typeof backendGeo.computeBoundingBox === "function") {
+          backendGeo.computeBoundingBox();
         }
-      }
-      if (addBackendEdges) {
-        var backendEdges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(backendGeo, 35),
-          new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
-        );
-        backendMesh.add(backendEdges);
-      }
+        if (backendGeo && backendGeo.boundingBox) {
+          var backendEdgeSize = new THREE.Vector3();
+          backendGeo.boundingBox.getSize(backendEdgeSize);
+          var backendEdgeMax = Math.max(backendEdgeSize.x, Math.max(backendEdgeSize.y, backendEdgeSize.z));
+          var backendEdgeMin = Math.min(backendEdgeSize.x, Math.min(backendEdgeSize.y, backendEdgeSize.z));
+          if (backendEdgeMax > 1e-6 && (backendEdgeMin / backendEdgeMax) < 0.02) {
+            addBackendEdges = false;
+          }
+        }
+        if (addBackendEdges) {
+          var backendEdgeSourceGeo = buildIndexedEdgeSourceGeometry(backendGeo);
+          var backendEdges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(backendEdgeSourceGeo, 35),
+            new THREE.LineBasicMaterial({ color: 0x10161d, transparent: true, opacity: 0.35 })
+          );
+          if (backendEdgeSourceGeo !== backendGeo) backendEdgeSourceGeo.dispose();
+          backendMesh.add(backendEdges);
+        }
 
-      count += 1;
+        count += 1;
+      }
     }
 
-    if (count > 0) {
-      var box = new THREE.Box3().setFromObject(this.modelRoot);
-      var size = new THREE.Vector3();
-      var center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
-      var radius = Math.max(size.x, Math.max(size.y, size.z)) * 0.5;
-      this.sceneRadius = Math.max(0.25, radius);
-      this.target.copy(center);
-      this.distance = clamp(this.fitDistanceForRadius(this.sceneRadius), 1.5, 120);
-
-      if (this.keyLight) {
-        var lr = Math.max(1.5, this.sceneRadius * 2.0);
-        if (areaLightCenters.length > 0) {
-          var la = new THREE.Vector3();
-          for (var ai = 0; ai < areaLightCenters.length; ai += 1) la.add(areaLightCenters[ai]);
-          la.multiplyScalar(1.0 / areaLightCenters.length);
-          this.keyLight.position.copy(la);
-        } else {
-          this.keyLight.position.set(center.x + lr, center.y + lr * 1.4, center.z + lr * 0.8);
-        }
-        this.keyLight.target.position.copy(center);
-        this.keyLight.target.updateMatrixWorld();
-        this.fitDirectionalShadowToBox(this.keyLight, box);
-      }
-
-      if (this.rimLight) {
-        if (areaLightCenters.length > 1) this.rimLight.position.copy(areaLightCenters[1]);
-        else this.rimLight.position.set(center.x - this.sceneRadius * 1.5, center.y + this.sceneRadius, center.z - this.sceneRadius * 1.2);
-      }
-    } else {
-      this.sceneRadius = 2.0;
+    if (count > 0) this.refreshSceneBoundsAndLighting({ updateTarget: true, preserveDistance: false });
+    else {
+      this.sceneBaseRadius = 2.0;
+      this.sceneRadius = this.sceneBaseRadius * this.sceneScaleMultiplier;
+      this.updateCameraWidget();
     }
 
     if (this.sceneCameraMap.default) this.setActiveCamera("default");
@@ -1966,6 +2501,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.selectedCameraApertureBlades = 0;
       this.selectedCameraApertureRotation = 0;
       this.selectedCameraType = "";
+      this.selectedCameraTilt = 0;
+      this.selectedCameraShiftX = 0;
+      this.selectedCameraShiftY = 0;
       this.updateCameraWidget();
       return;
     }
@@ -1993,6 +2531,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraApertureBlades = Math.max(0, Math.floor(Number(c.aperture_blades) || 0));
     this.selectedCameraApertureRotation = Number(c.aperture_rotation) || 0;
     this.selectedCameraType = String(c.type || "").toLowerCase();
+    this.selectedCameraTilt = Number(c.tilt) || 0;
+    this.selectedCameraShiftX = Number(c.shift_x) || 0;
+    this.selectedCameraShiftY = Number(c.shift_y) || 0;
     this.selectedCameraPose = {
       position: pos.clone(),
       target: target.clone(),
@@ -2036,6 +2577,16 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
   SceneVisualEditor.prototype.setGridVisible = function (visible) {
     if (!this.grid) return;
     this.grid.visible = !!visible;
+  };
+
+  SceneVisualEditor.prototype.setGlobalBvhVisible = function (visible) {
+    this.showGlobalBvh = !!visible;
+    if (this.globalBvhOverlay) this.globalBvhOverlay.visible = this.showGlobalBvh;
+  };
+
+  SceneVisualEditor.prototype.setMeshBvhVisible = function (visible) {
+    this.showMeshBvh = !!visible;
+    if (this.meshBvhOverlay) this.meshBvhOverlay.visible = this.showMeshBvh;
   };
 
   SceneVisualEditor.prototype.computeXtcoreBasis = function (position, target, upHint) {
@@ -2107,6 +2658,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.updateProjectionForDistance();
     this.applyXtcoreCameraBasis(cp, this.target, this.viewUp);
     this.updateInfinitePlanes();
+    this.updateInteractiveCameraWidget();
 
     var vp = this.renderViewport || { x: 0, y: 0, w: 1, h: 1 };
     var canvas = this.renderer.domElement;

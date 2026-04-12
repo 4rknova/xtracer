@@ -1,33 +1,61 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "In-source builds are disabled. Use: cmake -S . -B build/intermediate/build")
 endif()
 project(xtracer)
 include(GNUInstallDirs)
 
-option(XTRACER_ENABLE_RTMIDI "Build with RtMidi/ALSA support" ON)
+option(XTRACER_ENABLE_REMOTE_ASSETS "Enable remote URL asset fetching via curl subprocess" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
 option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into build/wasm-dist during native builds" OFF)
 option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
+option(XTRACER_ENABLE_NMATH_SIMD "Enable SIMD paths in nmath (x86 SSE2, double precision)" ON)
+option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" ON)
+set(XTRACER_NMATH_PERF_REPEATS "21" CACHE STRING "Repeat count for nmath_perf_check benchmark comparisons")
 
 set(XTRACER_USING_EMSCRIPTEN OFF)
 if (EMSCRIPTEN OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
     set(XTRACER_USING_EMSCRIPTEN ON)
 endif()
 
+if (XTRACER_ENABLE_NMATH_SIMD)
+    if (XTRACER_USING_EMSCRIPTEN)
+        message(WARNING "XTRACER_ENABLE_NMATH_SIMD is ignored for Emscripten builds")
+    elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|i[3-6]86|x86)$")
+        add_compile_definitions(NMATH_ENABLE_SIMD=1)
+        if (MSVC)
+            if (XTRACER_ENABLE_NMATH_SIMD_AVX)
+                add_compile_definitions(NMATH_ENABLE_SIMD_AVX=1)
+                add_compile_options(/arch:AVX)
+            else()
+                add_compile_options(/arch:SSE2)
+            endif()
+        elseif (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            if (XTRACER_ENABLE_NMATH_SIMD_AVX)
+                add_compile_definitions(NMATH_ENABLE_SIMD_AVX=1)
+                add_compile_options(-mavx)
+            else()
+                add_compile_options(-msse2)
+            endif()
+        endif()
+        if (XTRACER_ENABLE_NMATH_SIMD_AVX)
+            message(STATUS "nmath SIMD enabled: x86 AVX double-precision paths")
+        else()
+            message(STATUS "nmath SIMD enabled: x86 SSE2 double-precision paths")
+        endif()
+    else()
+        message(WARNING "XTRACER_ENABLE_NMATH_SIMD requested, but unsupported architecture '${CMAKE_SYSTEM_PROCESSOR}'; scalar nmath remains active")
+    endif()
+elseif (XTRACER_ENABLE_NMATH_SIMD_AVX)
+    message(WARNING "XTRACER_ENABLE_NMATH_SIMD_AVX requires XTRACER_ENABLE_NMATH_SIMD=ON")
+endif()
+
 # PATHS
 set(PATH_ROOT ${CMAKE_SOURCE_DIR})
 set(PATH_SRC  ${PATH_ROOT}/src)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(PATH_BIN ${PATH_ROOT}/build/debug)
-else()
-    set(PATH_BIN ${PATH_ROOT}/build/release)
-endif()
+set(PATH_BIN ${CMAKE_BINARY_DIR})
 set(PATH_WEB  ${PATH_SRC}/frontend/web-client)
-if (XTRACER_USING_EMSCRIPTEN)
-    set(PATH_BIN ${PATH_ROOT}/build/release)
-endif()
 set(PATH_LIB  ${PATH_ROOT}/lib)
 set(PATH_EXT  ${PATH_ROOT}/ext)
 set(PATH_TEST ${PATH_BIN}/test)
@@ -75,21 +103,22 @@ if (XTRACER_USING_EMSCRIPTEN)
 else()
     find_package(OpenMP REQUIRED)
 endif()
-SCAN_DIRS(ext_libs)
 
-if (XTRACER_ENABLE_RTMIDI)
-    find_package(ALSA)
-    if (NOT ALSA_FOUND)
-        message(WARNING "ALSA development files not found; disabling XTRACER_ENABLE_RTMIDI")
-        set(XTRACER_ENABLE_RTMIDI OFF)
-    endif()
+if (XTRACER_ENABLE_REMOTE_ASSETS AND NOT XTRACER_USING_EMSCRIPTEN)
+    add_compile_definitions(XTCORE_ASSET_FETCHER_CURL)
+    message(STATUS "Remote asset fetching: enabled (curl)")
+else()
+    message(STATUS "Remote asset fetching: disabled")
 endif()
+
+SCAN_DIRS(ext_libs)
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
 set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
+set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
 set(PATH_SRC_UTIL_VIZ     ${PATH_SRC}/util/viz)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
@@ -107,13 +136,23 @@ set(OUT_EXE_CONTEXT_TEST test_xtcore_context)
 set(OUT_EXE_SPHERE_TEST test_xtcore_sphere)
 set(OUT_EXE_TRIANGLE_TEST test_xtcore_triangle)
 set(OUT_EXE_CSG_TEST test_xtcore_csg)
+set(OUT_EXE_BOUNDARY_TEST test_xtcore_boundary_material)
 set(OUT_EXE_WHITE_FURNACE_TEST test_xtcore_white_furnace)
 set(OUT_EXE_RAYTRACER_EMISSIVE_TEST test_xtcore_raytracer_emissive)
+set(OUT_EXE_OBJECT_MEDIUM_PARSE_TEST test_xtcore_object_medium_parse)
+set(OUT_EXE_FBX_IMPORT_TEST test_xtcore_fbx_import)
+set(OUT_EXE_GLTF_IMPORT_TEST test_xtcore_gltf_import)
 set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
 set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
 set(OUT_EXE_SCENE_VALIDATOR_TEST test_xtcore_scene_validator)
 set(OUT_EXE_SAMPLING_TEST test_nmath_sampling)
+set(OUT_EXE_NMATH_SIMD_TEST test_nmath_simd)
 set(OUT_EXE_NMATH_BENCH bench_nmath)
+set(OUT_EXE_MESH_BENCH bench_mesh_intersection)
+set(OUT_EXE_NMATH_BENCH_SIMD bench_nmath_simd)
+set(OUT_EXE_NMATH_BENCH_AVX bench_nmath_avx)
+set(OUT_EXE_NMATH_BENCH_SCALAR bench_nmath_scalar)
+set(OUT_EXE_NMATH_SIMD_PERF_COMPARE test_nmath_simd_perf_compare)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -121,16 +160,21 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_FILES_DIRECTORY          ${PATH_BIN})
 set(CMAKE_CACHEFILE_DIR            ${PATH_BIN})
 
-if (XTRACER_ENABLE_RTMIDI)
-    file(GLOB SRC_RTMIDI
-        ${PATH_EXT}/rtmidi/*.cpp
-    )
-endif()
-
 file(GLOB SRC_LIBS
     ${PATH_LIB}/*/*.c
     ${PATH_LIB}/*/*.cc
     ${PATH_LIB}/*/*.cpp
+)
+set(SRC_EXT_UFBX
+    ${PATH_EXT}/ufbx/ufbx.c
+)
+set(SRC_EXT_CGLTF
+    ${PATH_EXT}/cgltf.c
+)
+set(SRC_NMATH_BENCH
+    ${PATH_LIB}/nmath/vector.cc
+    ${PATH_LIB}/nmath/matrix.cc
+    ${PATH_LIB}/nmath/quadratic.cc
 )
 
 file(GLOB SRC_XTCORE
@@ -175,10 +219,10 @@ add_custom_target(manpages_cli
     VERBATIM
 )
 
-add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS})
+add_library(xtcore_static  STATIC ${SRC_XTCORE} ${SRC_LIBS} ${SRC_EXT_UFBX} ${SRC_EXT_CGLTF})
 set_target_properties(xtcore_static  PROPERTIES OUTPUT_NAME xtcore)
 
-add_library(xtcore_dynamic SHARED ${SRC_XTCORE} ${SRC_LIBS})
+add_library(xtcore_dynamic SHARED ${SRC_XTCORE} ${SRC_LIBS} ${SRC_EXT_UFBX} ${SRC_EXT_CGLTF})
 set_target_properties(xtcore_dynamic PROPERTIES OUTPUT_NAME xtcore)
 
 target_include_directories(xtcore_static PUBLIC
@@ -197,18 +241,6 @@ target_include_directories(xtcore_dynamic SYSTEM PUBLIC
     ${ext_libs}
 )
 
-if (XTRACER_ENABLE_RTMIDI)
-    add_library(rtmidi STATIC ${SRC_RTMIDI})
-    set_target_properties(rtmidi PROPERTIES OUTPUT_NAME rtmidi)
-    target_compile_definitions(rtmidi PRIVATE __LINUX_ALSA__)
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(rtmidi PRIVATE -Wno-implicit-fallthrough)
-    endif()
-    if (ALSA_FOUND)
-        target_include_directories(rtmidi PRIVATE ${ALSA_INCLUDE_DIRS})
-    endif()
-endif()
-
 add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
 add_executable(${OUT_EXE_COLORSPACE_TEST} ${PATH_SRC_TESTS}/colorspace_test.cc)
 add_executable(${OUT_EXE_COLORSPACE_VECTORS_TEST} ${PATH_SRC_TESTS}/colorspace_vectors_test.cc)
@@ -217,13 +249,23 @@ add_executable(${OUT_EXE_CONTEXT_TEST} ${PATH_SRC_TESTS}/context_test.cc)
 add_executable(${OUT_EXE_SPHERE_TEST} ${PATH_SRC_TESTS}/sphere_test.cc)
 add_executable(${OUT_EXE_TRIANGLE_TEST} ${PATH_SRC_TESTS}/triangle_test.cc)
 add_executable(${OUT_EXE_CSG_TEST} ${PATH_SRC_TESTS}/csg_test.cc)
+add_executable(${OUT_EXE_BOUNDARY_TEST} ${PATH_SRC_TESTS}/boundary_material_test.cc)
 add_executable(${OUT_EXE_WHITE_FURNACE_TEST} ${PATH_SRC_TESTS}/white_furnace_test.cc)
 add_executable(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} ${PATH_SRC_TESTS}/raytracer_emissive_test.cc)
+add_executable(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} ${PATH_SRC_TESTS}/object_medium_parse_test.cc)
+add_executable(${OUT_EXE_FBX_IMPORT_TEST} ${PATH_SRC_TESTS}/fbx_import_test.cc)
+add_executable(${OUT_EXE_GLTF_IMPORT_TEST} ${PATH_SRC_TESTS}/gltf_import_test.cc)
 add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
 add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
 add_executable(${OUT_EXE_SCENE_VALIDATOR_TEST} ${PATH_SRC_TESTS}/scene_validator_test.cc)
 add_executable(${OUT_EXE_SAMPLING_TEST} ${PATH_SRC_TESTS}/sampling_test.cc)
+add_executable(${OUT_EXE_NMATH_SIMD_TEST} ${PATH_SRC_TESTS}/nmath_simd_test.cc)
 add_executable(${OUT_EXE_NMATH_BENCH} ${PATH_SRC_TESTS}/nmath_bench.cc)
+add_executable(${OUT_EXE_MESH_BENCH} ${PATH_SRC_BENCH}/mesh_intersection_bench.cc)
+add_executable(${OUT_EXE_NMATH_BENCH_SIMD} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
+add_executable(${OUT_EXE_NMATH_BENCH_AVX} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
+add_executable(${OUT_EXE_NMATH_BENCH_SCALAR} ${PATH_SRC_TESTS}/nmath_bench.cc ${SRC_NMATH_BENCH})
+add_executable(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} ${PATH_SRC_TESTS}/nmath_simd_perf_compare_test.cc)
 set_target_properties(${OUT_EXE_COLORSPACE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
@@ -245,10 +287,22 @@ set_target_properties(${OUT_EXE_TRIANGLE_TEST} PROPERTIES
 set_target_properties(${OUT_EXE_CSG_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
+set_target_properties(${OUT_EXE_BOUNDARY_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
 set_target_properties(${OUT_EXE_WHITE_FURNACE_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_FBX_IMPORT_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
+set_target_properties(${OUT_EXE_GLTF_IMPORT_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
@@ -263,8 +317,26 @@ set_target_properties(${OUT_EXE_SCENE_VALIDATOR_TEST} PROPERTIES
 set_target_properties(${OUT_EXE_SAMPLING_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
+set_target_properties(${OUT_EXE_NMATH_SIMD_TEST} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
+)
 set_target_properties(${OUT_EXE_NMATH_BENCH} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_MESH_BENCH} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_NMATH_BENCH_SIMD} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_NMATH_BENCH_AVX} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_NMATH_BENCH_SCALAR} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
+)
+set_target_properties(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 
 target_include_directories(${OUT_EXE_CLI} PUBLIC
@@ -323,6 +395,13 @@ target_include_directories(${OUT_EXE_CSG_TEST} PUBLIC
 target_include_directories(${OUT_EXE_CSG_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_BOUNDARY_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_BOUNDARY_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_WHITE_FURNACE_TEST} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -335,6 +414,27 @@ target_include_directories(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PUBLIC
     ${PATH_SRC}
 )
 target_include_directories(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_FBX_IMPORT_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_FBX_IMPORT_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_GLTF_IMPORT_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_GLTF_IMPORT_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
 target_include_directories(${OUT_EXE_CLI_SETUP_TEST} PUBLIC
@@ -365,6 +465,13 @@ target_include_directories(${OUT_EXE_SAMPLING_TEST} PUBLIC
 target_include_directories(${OUT_EXE_SAMPLING_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_NMATH_SIMD_TEST} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_SIMD_TEST} SYSTEM PUBLIC
+    ${ext_libs}
+)
 target_include_directories(${OUT_EXE_NMATH_BENCH} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -372,12 +479,43 @@ target_include_directories(${OUT_EXE_NMATH_BENCH} PUBLIC
 target_include_directories(${OUT_EXE_NMATH_BENCH} SYSTEM PUBLIC
     ${ext_libs}
 )
+target_include_directories(${OUT_EXE_MESH_BENCH} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_MESH_BENCH} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_SIMD} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_SIMD} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_AVX} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_AVX} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_SCALAR} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_BENCH_SCALAR} SYSTEM PUBLIC
+    ${ext_libs}
+)
+target_include_directories(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} SYSTEM PUBLIC
+    ${ext_libs}
+)
 
-if (XTRACER_ENABLE_RTMIDI)
-    target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
-else()
-    target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static pthread)
-endif()
+target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_COLORSPACE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_COLORSPACE_VECTORS_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_TILE_TEST} PRIVATE xtcore_static pthread)
@@ -385,13 +523,37 @@ target_link_libraries(${OUT_EXE_CONTEXT_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SPHERE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_TRIANGLE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CSG_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_BOUNDARY_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_FBX_IMPORT_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_GLTF_IMPORT_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SAMPLING_TEST} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_NMATH_SIMD_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NMATH_BENCH} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_MESH_BENCH} PRIVATE xtcore_static pthread)
+target_link_libraries(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE pthread)
+target_link_libraries(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE pthread)
+target_link_libraries(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE pthread)
+target_link_libraries(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PRIVATE pthread)
+
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE NMATH_ENABLE_SIMD=1)
+if (MSVC)
+    target_compile_options(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE /UNMATH_ENABLE_SIMD_AVX)
+else()
+    target_compile_options(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE -UNMATH_ENABLE_SIMD_AVX -mno-avx)
+endif()
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE NMATH_ENABLE_SIMD=1 NMATH_ENABLE_SIMD_AVX=1)
+if (MSVC)
+    target_compile_options(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE /arch:AVX)
+else()
+    target_compile_options(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE -mavx)
+endif()
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE NMATH_BENCH_FORCE_SCALAR=1)
 
 if (XTRACER_ENABLE_VIZ)
     find_package(OpenGL REQUIRED)
@@ -423,11 +585,7 @@ if (XTRACER_ENABLE_WEB)
     target_include_directories(${OUT_EXE_WEB} SYSTEM PUBLIC
         ${ext_libs}
     )
-    if (XTRACER_ENABLE_RTMIDI)
-        target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static rtmidi ${ALSA_LIBRARIES} pthread)
-    else()
-        target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
-    endif()
+    target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
     if (TARGET web_license_asset)
         add_dependencies(${OUT_EXE_WEB} web_license_asset)
     endif()
@@ -495,7 +653,6 @@ if (XTRACER_ENABLE_WASM_DIST)
             COMMAND ${CMAKE_COMMAND} -E rm -rf ${WASM_DIST_BUILD_DIR}/CMakeFiles
             COMMAND ${EMCMAKE_PROGRAM} cmake -S ${PATH_ROOT} -B ${WASM_DIST_BUILD_DIR}
                     -DXTRACER_ENABLE_WEB=OFF
-                    -DXTRACER_ENABLE_RTMIDI=OFF
                     -DXTRACER_ENABLE_WASM=ON
                     -DXTRACER_ENABLE_WASM_DIST=OFF
             COMMAND ${CMAKE_COMMAND} --build ${WASM_DIST_BUILD_DIR} -j --target xtracer_wasm
@@ -525,13 +682,21 @@ target_compile_definitions(${OUT_EXE_CONTEXT_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SPHERE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_TRIANGLE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CSG_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_BOUNDARY_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SAMPLING_TEST} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_SIMD_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_MESH_BENCH} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE ${DEFS})
+target_compile_definitions(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PRIVATE ${DEFS})
 add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_COLORSPACE_VECTORS_TEST} xtcore_static)
@@ -540,13 +705,57 @@ add_dependencies (${OUT_EXE_CONTEXT_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SPHERE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_TRIANGLE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CSG_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_BOUNDARY_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_WHITE_FURNACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_RAYTRACER_EMISSIVE_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_FBX_IMPORT_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_GLTF_IMPORT_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SCENE_VALIDATOR_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SAMPLING_TEST} xtcore_static)
+add_dependencies (${OUT_EXE_NMATH_SIMD_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NMATH_BENCH} xtcore_static)
+add_dependencies (${OUT_EXE_MESH_BENCH} xtcore_static)
+add_dependencies (${OUT_EXE_NMATH_SIMD_PERF_COMPARE} ${OUT_EXE_NMATH_BENCH_SIMD} ${OUT_EXE_NMATH_BENCH_AVX} ${OUT_EXE_NMATH_BENCH_SCALAR})
+
+add_custom_target(check
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS
+        ${OUT_EXE_COLORSPACE_TEST}
+        ${OUT_EXE_COLORSPACE_VECTORS_TEST}
+        ${OUT_EXE_TILE_TEST}
+        ${OUT_EXE_CONTEXT_TEST}
+        ${OUT_EXE_SPHERE_TEST}
+        ${OUT_EXE_TRIANGLE_TEST}
+        ${OUT_EXE_CSG_TEST}
+        ${OUT_EXE_BOUNDARY_TEST}
+        ${OUT_EXE_WHITE_FURNACE_TEST}
+        ${OUT_EXE_RAYTRACER_EMISSIVE_TEST}
+        ${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST}
+        ${OUT_EXE_FBX_IMPORT_TEST}
+        ${OUT_EXE_GLTF_IMPORT_TEST}
+        ${OUT_EXE_CLI_SETUP_TEST}
+        ${OUT_EXE_NCF_PARSER_TEST}
+        ${OUT_EXE_SCENE_VALIDATOR_TEST}
+        ${OUT_EXE_SAMPLING_TEST}
+        ${OUT_EXE_NMATH_SIMD_TEST}
+        ${OUT_EXE_NMATH_SIMD_PERF_COMPARE}
+        ${OUT_EXE_CLI}
+)
+
+add_custom_target(nmath_perf_check
+    COMMAND ${CMAKE_CTEST_COMMAND} -V --output-on-failure -R nmath::simd_perf_compare
+    COMMAND ${CMAKE_COMMAND} -E echo "nmath_perf_check uses repeats=${XTRACER_NMATH_PERF_REPEATS}"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS
+        ${OUT_EXE_NMATH_SIMD_PERF_COMPARE}
+        ${OUT_EXE_NMATH_BENCH_SIMD}
+        ${OUT_EXE_NMATH_BENCH_AVX}
+        ${OUT_EXE_NMATH_BENCH_SCALAR}
+)
 
 enable_testing()
 
@@ -579,12 +788,28 @@ add_test(
     COMMAND ${PATH_TEST}/${OUT_EXE_CSG_TEST}
 )
 add_test(
+    NAME xtcore::boundary_material
+    COMMAND ${PATH_TEST}/${OUT_EXE_BOUNDARY_TEST}
+)
+add_test(
     NAME xtcore::white_furnace
     COMMAND ${PATH_TEST}/${OUT_EXE_WHITE_FURNACE_TEST}
 )
 add_test(
     NAME xtcore::raytracer_emissive
     COMMAND ${PATH_TEST}/${OUT_EXE_RAYTRACER_EMISSIVE_TEST}
+)
+add_test(
+    NAME xtcore::object_medium_parse
+    COMMAND ${PATH_TEST}/${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST}
+)
+add_test(
+    NAME xtcore::fbx_import
+    COMMAND ${PATH_TEST}/${OUT_EXE_FBX_IMPORT_TEST}
+)
+add_test(
+    NAME xtcore::gltf_import
+    COMMAND ${PATH_TEST}/${OUT_EXE_GLTF_IMPORT_TEST}
 )
 add_test(
     NAME cli::setup_parse
@@ -601,6 +826,14 @@ add_test(
 add_test(
     NAME nmath::sampling
     COMMAND ${PATH_TEST}/${OUT_EXE_SAMPLING_TEST}
+)
+add_test(
+    NAME nmath::simd
+    COMMAND ${PATH_TEST}/${OUT_EXE_NMATH_SIMD_TEST}
+)
+add_test(
+    NAME nmath::simd_perf_compare
+    COMMAND ${PATH_TEST}/${OUT_EXE_NMATH_SIMD_PERF_COMPARE} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_SIMD} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_AVX} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_SCALAR} --iters 1200000 --repeats ${XTRACER_NMATH_PERF_REPEATS}
 )
 add_test(
     NAME cli::stencil_smoke

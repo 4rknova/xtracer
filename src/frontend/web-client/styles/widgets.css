@@ -1,0 +1,1210 @@
+.xui-button,
+.xui-icon-button,
+.xui-pill,
+.xui-tag,
+.xui-field,
+.xui-card,
+.xui-stat,
+.xui-progress,
+.xui-empty-state,
+.xui-toolbar,
+.xui-key-hint,
+.xui-stack,
+.xui-surface,
+.xui-menu {
+  font-family: var(--xui-font-sans);
+}
+
+.xui-button,
+.xui-icon-button,
+.xui-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  width: auto;
+  margin: 0;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
+}
+
+.xui-button,
+.xui-icon-button {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 75%, var(--line));
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.xui-button {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+.xui-icon-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+}
+
+.xui-pill {
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.xui-button:focus-visible,
+.xui-pill:focus-visible,
+.xui-icon-button:focus-visible,
+.xui-field input:focus-visible,
+.xui-field select:focus-visible,
+.xui-card summary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 2px;
+}
+
+.xui-button:active,
+.xui-pill:active,
+.xui-icon-button:active {
+  transform: translateY(1px);
+}
+
+.xui-button[disabled],
+.xui-button.is-disabled,
+.xui-icon-button[disabled],
+.xui-icon-button.is-disabled,
+.xui-pill[disabled],
+.xui-pill.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.xui-button--primary {
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  background: var(--accent);
+  color: white;
+}
+
+.xui-button--secondary {
+  border-color: color-mix(in srgb, var(--line) 78%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+  color: var(--ink);
+}
+
+.xui-button--ghost,
+.xui-icon-button--ghost {
+  border-color: color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.xui-button--danger {
+  border-color: color-mix(in srgb, var(--xui-danger) 75%, var(--line));
+  background: var(--xui-danger);
+  color: #fff;
+}
+
+.xui-button:hover,
+.xui-icon-button:hover {
+  background: color-mix(in srgb, var(--accent) 92%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 86%, #ffffff);
+}
+
+.xui-button--secondary:hover,
+.xui-button--ghost:hover,
+.xui-icon-button--ghost:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--field-bg));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  color: color-mix(in srgb, var(--accent) 88%, var(--ink));
+}
+
+.xui-button--danger:hover {
+  background: color-mix(in srgb, var(--xui-danger) 90%, #ffffff);
+  border-color: color-mix(in srgb, var(--xui-danger) 86%, #ffffff);
+}
+
+.xui-button:active,
+.xui-icon-button:active {
+  background: color-mix(in srgb, var(--accent) 78%, #0a0d12);
+  border-color: color-mix(in srgb, var(--accent) 94%, #ffffff);
+  color: color-mix(in srgb, #ffffff 96%, var(--accent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000000 24%, transparent);
+}
+
+.xui-button.is-busy::after {
+  content: "";
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-left: 0.55rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: text-bottom;
+  animation: xui-spin 900ms linear infinite;
+}
+
+.xui-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  padding: 0;
+  box-shadow: var(--xui-shadow-1);
+}
+
+.xui-icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.xui-pill {
+  gap: 0.35rem;
+}
+
+.xui-pill:hover {
+  transform: translateY(-1px);
+}
+
+.xui-pill.is-active,
+.xui-pill[aria-pressed="true"],
+.xui-pill[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: color-mix(in srgb, var(--accent) 90%, #ffffff);
+}
+
+.xui-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 1.85rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg-2));
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.xui-tag--success {
+  border-color: color-mix(in srgb, var(--xui-success) 60%, var(--line));
+  color: var(--xui-success);
+}
+
+.xui-tag--warning {
+  border-color: color-mix(in srgb, var(--xui-warning) 60%, var(--line));
+  color: var(--xui-warning);
+}
+
+.xui-tag--error {
+  color: var(--xui-danger);
+}
+
+.xui-tag--info {
+  border-color: color-mix(in srgb, var(--xui-info) 60%, var(--line));
+  color: var(--xui-info);
+}
+
+.xui-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.xui-field__label {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
+.xui-field__label-stack {
+  display: grid;
+  gap: 0.28rem;
+  align-content: center;
+}
+
+.xui-field__sub {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--muted) 92%, var(--ink));
+}
+
+.xui-field__help,
+.xui-field__error {
+  font-size: 0.74rem;
+}
+
+.xui-field__error {
+  color: var(--xui-danger);
+}
+
+.xui-input,
+.xui-select,
+.xui-textarea,
+.xui-field input:not([type="checkbox"]),
+.xui-field select,
+.xui-field textarea {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--xui-radius-md);
+  background: var(--field-bg);
+  color: var(--ink);
+}
+
+.xui-select,
+.xui-field select {
+  appearance: none;
+  padding-right: 2.35rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3.25 5.5L7 9.25L10.75 5.5' stroke='%23cfd9e4' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 0.9rem;
+}
+
+.xui-select-native {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.xui-dropdown {
+  position: relative;
+  display: grid;
+}
+
+.xui-dropdown__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--xui-radius-md);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 96%, white) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, transparent) 100%
+    );
+  color: var(--ink);
+  text-align: left;
+  position: relative;
+  z-index: 1;
+}
+
+.xui-dropdown__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xui-dropdown__chevron {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-right: 2px solid color-mix(in srgb, var(--muted) 88%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--muted) 88%, transparent);
+  transform: rotate(45deg);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+  margin-right: 2px;
+}
+
+.xui-dropdown__panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2600;
+  min-width: 180px;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  overflow-y: auto;
+  border-radius: 0 0 var(--xui-radius-md) var(--xui-radius-md);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: 0;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 96%, white) 0%,
+      color-mix(in srgb, var(--panel) 92%, transparent) 100%
+    );
+  box-shadow:
+    0 14px 34px color-mix(in srgb, #000000 24%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.xui-dropdown.is-open .xui-dropdown__trigger {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  border-bottom-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent-soft) 12%, transparent);
+}
+
+.xui-dropdown.is-open .xui-dropdown__panel {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+}
+
+.xui-dropdown.is-open .xui-dropdown__chevron {
+  transform: translateY(2px) rotate(225deg);
+  border-color: color-mix(in srgb, var(--accent) 82%, transparent);
+}
+
+.xui-dropdown__option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 92%, var(--muted));
+  box-shadow: none;
+}
+
+.xui-dropdown__option + .xui-dropdown__option {
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.xui-dropdown__option:hover:not(:disabled),
+.xui-dropdown__option:focus-visible {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+  outline: none;
+}
+
+.xui-dropdown__option:last-child {
+  border-bottom: 0;
+}
+
+.xui-dropdown__option.is-selected {
+  background: transparent;
+  color: color-mix(in srgb, var(--accent) 82%, white);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.xui-field--checkbox {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  gap: 0.4rem;
+  padding: 0.15rem 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.xui-field__check-row {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.7rem;
+  min-height: 1.5rem;
+}
+
+.xui-field__check-label {
+  color: color-mix(in srgb, var(--ink) 94%, var(--muted));
+  font-size: 0.84rem;
+  line-height: 1.2;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.xui-field--checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 18px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 58%, transparent);
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--field-bg) 96%, white) 0%,
+    color-mix(in srgb, var(--field-bg) 82%, transparent) 100%
+  );
+  display: inline-grid;
+  place-items: center;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.16);
+  transition: background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.xui-field--checkbox input[type="checkbox"]::before {
+  content: "";
+  box-sizing: border-box;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: translateY(-1px) rotate(45deg) scale(0);
+  transform-origin: center;
+  transition: transform 0.12s ease;
+}
+
+.xui-field--checkbox:hover input[type="checkbox"] {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line-strong));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent-soft) 20%, transparent);
+}
+
+.xui-field--checkbox input[type="checkbox"]:checked {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 92%, white) 0%,
+    color-mix(in srgb, var(--accent) 78%, #000000) 100%
+  );
+  border-color: color-mix(in srgb, var(--accent) 76%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent-soft) 22%, transparent);
+}
+
+.xui-field--checkbox input[type="checkbox"]:checked::before {
+  transform: translateY(-1px) rotate(45deg) scale(1);
+}
+
+.xui-field--checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 2px;
+}
+
+.xui-card {
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 12px;
+  overflow: clip;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 82%, transparent) 100%
+    );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 5%, transparent);
+}
+
+.xui-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+}
+
+.xui-card__head--panel {
+  padding: 11px 12px 10px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 96%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 90%, transparent) 100%
+    );
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+}
+
+.xui-card__title {
+  margin: 0;
+  grid-column: 1;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
+.xui-card__note {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.xui-card__body {
+  padding: 10px 12px 12px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 68%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, transparent) 22%,
+      color-mix(in srgb, var(--field-bg) 74%, transparent) 100%
+    );
+}
+
+.xui-card summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border-bottom: 1px solid transparent;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 96%, transparent) 0%,
+      color-mix(in srgb, var(--field-bg) 90%, transparent) 100%
+    );
+}
+
+.xui-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.xui-card--accordion summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+}
+
+.xui-card--accordion summary::after {
+  content: "";
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid color-mix(in srgb, var(--muted) 88%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--muted) 88%, transparent);
+  transform: rotate(45deg);
+  transition: transform 0.16s ease, border-color 0.16s ease;
+  margin-right: 9px;
+}
+
+.xui-card--accordion[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+  border-color: color-mix(in srgb, var(--accent) 78%, transparent);
+}
+
+.xui-card--accordion[open] summary {
+  border-bottom-color: color-mix(in srgb, var(--line) 76%, transparent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.xui-stat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1;
+}
+
+.xui-stat__label {
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.xui-stat__value {
+  margin-left: auto;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.xui-progress {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.xui-progress__track {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-2) 82%, var(--panel));
+}
+
+.xui-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 82%, white), var(--accent));
+}
+
+.xui-empty-state {
+  display: grid;
+  gap: 0.55rem;
+  padding: var(--xui-space-5);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--xui-radius-lg);
+  background: color-mix(in srgb, var(--panel) 85%, var(--bg-2));
+}
+
+.xui-empty-state__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.xui-empty-state__message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.xui-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--xui-space-2);
+  flex-wrap: wrap;
+}
+
+.xui-stack {
+  display: grid;
+}
+
+.xui-stack--compact {
+  gap: var(--xui-space-1);
+}
+
+.xui-stack--default {
+  gap: var(--xui-space-2);
+}
+
+.xui-stack--spacious {
+  gap: var(--xui-space-3);
+}
+
+.xui-surface {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--field-bg) 94%, transparent) 0%,
+      color-mix(in srgb, var(--panel) 88%, transparent) 100%
+    );
+  box-shadow: var(--xui-shadow-1);
+}
+
+.xui-surface__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.xui-surface__meta,
+.xui-surface__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.xui-surface__title,
+.xui-surface__note {
+  margin: 0;
+}
+
+.xui-surface__title {
+  font-size: 0.98rem;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.xui-surface__note {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.xui-scene-card {
+  position: relative;
+  min-height: 112px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 68%, var(--field-bg) 32%) 0%,
+      color-mix(in srgb, var(--field-bg) 84%, var(--accent-soft) 16%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 8px 20px color-mix(in srgb, #000000 15%, transparent);
+  padding: 13px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  overflow: hidden;
+  isolation: isolate;
+  backdrop-filter: blur(4px);
+  transition:
+    border-color 170ms ease,
+    background 190ms ease,
+    box-shadow 190ms ease,
+    transform 170ms ease;
+}
+
+.xui-scene-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+  transition: background 170ms ease;
+}
+
+.xui-scene-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(420px 140px at -12% -30%, color-mix(in srgb, var(--accent-soft) 26%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, #ffffff 3%, transparent), transparent 34%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.xui-scene-card > :not(.scene-file-icon) {
+  position: relative;
+  z-index: 1;
+}
+
+.xui-scene-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--panel) 60%, var(--accent-soft) 40%) 0%,
+      color-mix(in srgb, var(--field-bg) 78%, var(--accent-soft) 22%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 20%, transparent);
+}
+
+.xui-scene-card:hover .scene-file-icon {
+  opacity: 0.14;
+}
+
+.xui-scene-card.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background:
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--accent-soft) 44%, var(--field-bg)) 0%,
+      color-mix(in srgb, var(--accent-soft) 28%, var(--panel)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 10px 24px color-mix(in srgb, #000000 18%, transparent);
+}
+
+.xui-scene-card.is-selected .scene-file-icon {
+  opacity: 0.16;
+}
+
+.xui-scene-card.is-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 66%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 14px 28px color-mix(in srgb, #000000 22%, transparent);
+}
+
+.xui-scene-card.is-active::before {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.xui-scene-card .scene-file-icon {
+  position: absolute;
+  right: -6px;
+  bottom: -22px;
+  width: 92px;
+  height: 92px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--accent-soft) 62%, var(--muted));
+  opacity: 0.11;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.xui-scene-card .scene-file-meta {
+  gap: 5px;
+  align-content: start;
+}
+
+.xui-scene-card .scene-file-name {
+  padding-right: 60px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.84rem;
+  font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+  color: color-mix(in srgb, var(--ink) 96%, transparent);
+}
+
+.xui-scene-card .scene-file-title {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--muted) 84%, var(--ink));
+  letter-spacing: 0.01em;
+}
+
+.xui-scene-card .scene-file-badges {
+  margin-top: 2px;
+  gap: 6px;
+}
+
+.xui-scene-card .scene-file-stats {
+  margin-top: 8px;
+}
+
+.xui-scene-card.is-active .scene-file-icon {
+  color: color-mix(in srgb, var(--accent) 70%, var(--accent-soft));
+  opacity: 0.18;
+}
+
+.xui-scene-card .scene-file-ext {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.xui-scene-card .scene-file-var {
+  color: #dff8ea;
+  background: color-mix(in srgb, #2f8b63 42%, transparent);
+  border-color: color-mix(in srgb, #5ad392 62%, transparent);
+}
+
+.xui-scene-card .scene-file-source--workspace {
+  color: #f8e3ff;
+  background: color-mix(in srgb, #7f4ac8 36%, transparent);
+  border-color: color-mix(in srgb, #b88cf2 54%, transparent);
+}
+
+.xui-scene-card .scene-file-source--disk {
+  color: #dcecff;
+  background: color-mix(in srgb, #2d5f9a 34%, transparent);
+  border-color: color-mix(in srgb, #6ea7ec 52%, transparent);
+}
+
+.xui-menu {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  padding: 0px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  background: color-mix(in srgb, var(--panel) 94%, var(--field-bg));
+  box-shadow: 0 12px 34px color-mix(in srgb, #000000 26%, transparent);
+}
+
+.xui-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 09;
+  background: color-mix(in srgb, var(--field-bg) 92%, var(--panel));
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.xui-menu__item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft) 34%, var(--field-bg));
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+}
+
+.xui-menu__item.is-danger {
+  color: color-mix(in srgb, #d75b5b 88%, var(--ink));
+}
+
+.xui-menu__item:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.xui-menu__item-label {
+  flex: 1 1 auto;
+}
+
+.xui-menu__divider {
+  height: 1px;
+  margin: 2px 2px;
+  background: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.xui-key-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.xui-key-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  padding: 0.18rem 0.4rem;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--panel) 90%, white);
+  color: var(--ink);
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────── */
+
+.xui-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.xui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.xui-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(480px, calc(100vw - 2rem));
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--xui-shadow-2);
+  animation: xui-modal-in 0.15s ease;
+}
+
+@keyframes xui-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.xui-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.xui-modal-body {
+  color: var(--muted);
+}
+
+.xui-modal-body p {
+  margin: 0;
+}
+
+.xui-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────── */
+
+.xui-toast-host {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 5000;
+  display: grid;
+  gap: 0.5rem;
+  pointer-events: none;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 2.5rem));
+}
+
+.xui-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.68rem 0.75rem 0.68rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--xui-shadow-2);
+  font-size: 0.88rem;
+  pointer-events: auto;
+  animation: xui-toast-in 0.18s ease;
+}
+
+.xui-toast--success { border-left: 3px solid var(--xui-success); }
+.xui-toast--error   { border-left: 3px solid var(--xui-danger); }
+.xui-toast--warning { border-left: 3px solid var(--xui-warning); }
+.xui-toast--info    { border-left: 3px solid var(--xui-info); }
+
+.xui-toast-message {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.xui-toast-close {
+  flex-shrink: 0;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  border-radius: 5px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.xui-toast-close:hover {
+  background: color-mix(in srgb, var(--line) 50%, transparent);
+  color: var(--ink);
+}
+
+.xui-toast.is-leaving {
+  animation: xui-toast-out 0.2s ease forwards;
+}
+
+@keyframes xui-toast-in {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes xui-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(1rem); }
+}
+
+/* ── Tab container ──────────────────────────────────────────────────── */
+
+.xui-tab-container {
+  display: grid;
+}
+
+.xui-tab-container-nav {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+}
+
+.xui-tab-btn {
+  flex: 1;
+  padding: 0.42rem 0.75rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--xui-font-sans);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.xui-tab-btn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 28%, transparent);
+  color: var(--ink);
+}
+
+.xui-tab-btn.is-active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.xui-tab-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Animations ─────────────────────────────────────────────────────── */
+
+@keyframes xui-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

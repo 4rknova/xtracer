@@ -60,6 +60,45 @@ Integrator::Integrator(view_mode_t mode)
     , m_max_distance(1000.0)
 {}
 
+xtcore::render::integrator_metadata_t Integrator::metadata() const
+{
+    xtcore::render::integrator_metadata_t meta;
+    switch (m_mode) {
+        case VIEW_DEPTH:
+            meta.id = "depth";
+            meta.name = "Depth";
+            meta.description = "Depth debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
+        case VIEW_STENCIL:
+            meta.id = "stencil";
+            meta.name = "Stencil";
+            meta.description = "Stencil debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
+        case VIEW_UV:
+            meta.id = "uv";
+            meta.name = "UV";
+            meta.description = "UV debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
+        case VIEW_EMISSION:
+            meta.id = "emission";
+            meta.name = "Emission";
+            meta.description = "Emission debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
+        case VIEW_NORMAL:
+        default:
+            meta.id = "debug_views";
+            meta.name = "Debug Views";
+            meta.description = "Multi-mode debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_STABLE;
+            break;
+    }
+    return meta;
+}
+
 void Integrator::configure(const std::map<std::string, std::string> &options)
 {
     auto mode_it = options.find("mode");

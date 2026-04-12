@@ -1,0 +1,113 @@
+title       = "Procedural City"
+description = "Seeded procedural city with detailed building facades (windows, doors), raised pavements and road surface."
+version     = "1.0"
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(0.35,0.80,0.48)
+        sun_intensity      = col3(10,9,7)
+        beta_rayleigh      = col3(0.014,0.035,0.085)
+        ground_color       = col3(0.08,0.08,0.09)
+        density            = 1.0
+        horizon_falloff    = 2.0
+        sun_disk_radius    = 0.5
+        sun_disk_intensity = 1.0
+        sun_glow_radius    = 6.0
+        sun_glow_intensity = 0.18
+        sun_glow_falloff   = 3.0
+    }
+}
+
+camera = {
+    hero = {
+        type     = thin-lens
+        fov      = 50
+        position = vec3(5.5,4.2,-8.5)
+        target   = vec3(0.0,0.4,0.0)
+        up       = vec3(0,1,0)
+        flength  = 10
+        aperture = 0
+    }
+
+    miniature = {
+        type              = tilt-shift
+        fov               = 35
+        position          = vec3(0.0,9.0,-8.0)
+        target            = vec3(0.0,0.0,0.5)
+        up                = vec3(0,1,0)
+        flength           = 10
+        aperture          = 0.07
+        aperture_blades   = 6
+        aperture_rotation = 15
+        tilt              = 14
+        shift_y           = 0.08
+    }
+}
+
+geometry = {
+    city = {
+        type                  = mesh
+        source                = gen(city)
+        seed                  = 42
+        blocks_x              = 16
+        blocks_z              = 16
+        block_size            = 1.0
+        road_width            = 0.18
+        building_height_min   = 0.22
+        building_height_max   = 1.5
+        lot_padding           = 0.03
+        buildings_per_block_x = 3
+        buildings_per_block_z = 3
+        floor_height          = 0.22
+        bay_width             = 0.20
+        window_width_ratio    = 0.55
+        window_height_ratio   = 0.55
+        window_inset          = 0.035
+        pavement_height       = 0.014
+        pavement_width        = 0.045
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-8.0,6.0,-2.0)
+        radius   = 1.2
+    }
+}
+
+material = {
+    city_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type   = color
+                    value  = col3(1,1,1)
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.75
+                ior       = 1.45
+            }
+        }
+    }
+
+    fill_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(4,5,7)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    city       = { geometry = city,       material = city_mat       }
+    fill_light = { geometry = fill_light, material = fill_light_mat }
+}

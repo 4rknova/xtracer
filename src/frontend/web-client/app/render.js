@@ -9,29 +9,145 @@ function sanitizeIntField(input, fallback, min, max) {
   return String(value);
 }
 
+function sanitizeThreadField(input) {
+  const maxAttr = Number.parseInt(String(input && input.max ? input.max : ""), 10);
+  const max = Number.isFinite(maxAttr) && maxAttr > 0 ? maxAttr : 256;
+  return sanitizeIntField(input, 0, 0, max);
+}
+
+const TILE_SIZE_MIN = 8;
+const TILE_SIZE_MAX = 1024;
+const TILE_SIZE_AUTO = "auto";
+
+function isBuiltinTileSizePreset(value) {
+  return value === TILE_SIZE_AUTO || value === "8" || value === "32" || value === "64";
+}
+
+function normalizeTileSizeControlValue(raw, fallback) {
+  const fallbackValue = String(fallback || "32").trim().toLowerCase() === TILE_SIZE_AUTO
+    ? TILE_SIZE_AUTO
+    : "32";
+  const value = String(raw || "").trim().toLowerCase();
+  if (value === TILE_SIZE_AUTO) return TILE_SIZE_AUTO;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallbackValue;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(TILE_SIZE_MAX, parsed)));
+}
+
+function ensureTileSizeSelectOption(rawValue) {
+  const normalized = normalizeTileSizeControlValue(rawValue, "32");
+  const select = el.tileSize;
+  if (!select || !select.options) return normalized;
+  Array.from(select.options).forEach((option) => {
+    if (option.dataset.customTileSize === "true" && option.value !== normalized) option.remove();
+  });
+  const existing = Array.from(select.options).some((option) => option.value === normalized);
+  if (!existing && normalized !== TILE_SIZE_AUTO && !isBuiltinTileSizePreset(normalized)) {
+    const option = document.createElement("option");
+    option.value = normalized;
+    option.textContent = `${normalized} (Custom)`;
+    option.dataset.customTileSize = "true";
+    select.appendChild(option);
+  }
+  return normalized;
+}
+
+function currentAutoRenderThreadCount() {
+  const datasetValue = Number.parseInt(String(el.threads && el.threads.dataset ? el.threads.dataset.autoThreadCount || "" : ""), 10);
+  if (Number.isFinite(datasetValue) && datasetValue > 0) return Math.max(1, datasetValue);
+  const hardware = Number(globalThis.navigator && navigator.hardwareConcurrency);
+  if (Number.isFinite(hardware) && hardware > 0) return Math.max(1, Math.floor(hardware));
+  const maxAttr = Number.parseInt(String(el.threads && el.threads.max ? el.threads.max : ""), 10);
+  if (Number.isFinite(maxAttr) && maxAttr > 0) return Math.max(1, maxAttr);
+  return 8;
+}
+
+function effectiveRequestedRenderThreads() {
+  const manual = Number.parseInt(String(el.threads && el.threads.value ? el.threads.value : "0"), 10);
+  if (Number.isFinite(manual) && manual > 0) {
+    return Math.max(1, Math.min(Math.floor(manual), currentAutoRenderThreadCount()));
+  }
+  return currentAutoRenderThreadCount();
+}
+
+function computeAutoTileSize(width, height, threads, maxClamp) {
+  const w = Math.max(32, Number.parseInt(String(width || "500"), 10) || 500);
+  const h = Math.max(32, Number.parseInt(String(height || "500"), 10) || 500);
+  const t = Math.max(1, Number.parseInt(String(threads || "1"), 10) || 1);
+  const derived = Math.sqrt((w * h) / t);
+  const rounded = Math.max(TILE_SIZE_MIN, Math.round(derived / TILE_SIZE_MIN) * TILE_SIZE_MIN || TILE_SIZE_MIN);
+  const limit = Number.isFinite(maxClamp) && maxClamp > 0 ? Math.floor(maxClamp) : TILE_SIZE_MAX;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(limit, rounded)));
+}
+
+function resolveTileSizeForDimensions(width, height, maxClamp) {
+  const raw = ensureTileSizeSelectOption(el.tileSize && el.tileSize.value !== undefined ? el.tileSize.value : "32");
+  if (raw === TILE_SIZE_AUTO) {
+    return computeAutoTileSize(width, height, effectiveRequestedRenderThreads(), maxClamp);
+  }
+  const parsed = Number.parseInt(raw, 10);
+  const limit = Number.isFinite(maxClamp) && maxClamp > 0 ? Math.floor(maxClamp) : TILE_SIZE_MAX;
+  return String(Math.max(TILE_SIZE_MIN, Math.min(limit, Number.isFinite(parsed) ? parsed : 32)));
+}
+
+function syncTileSizeControlUi() {
+  if (!el.tileSize) return;
+  const normalized = ensureTileSizeSelectOption(el.tileSize.value);
+  if (String(el.tileSize.value || "") !== normalized) el.tileSize.value = normalized;
+  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  const threads = effectiveRequestedRenderThreads();
+  const resolved = resolveTileSizeForDimensions(width, height, TILE_SIZE_MAX);
+  if (normalized === TILE_SIZE_AUTO) {
+    el.tileSize.title = `Auto derives tile size from ${width}x${height} using ${threads} thread${threads === 1 ? "" : "s"}; current tile size ${resolved}.`;
+  } else if (isBuiltinTileSizePreset(normalized)) {
+    el.tileSize.title = `Tile size ${resolved}.`;
+  } else {
+    el.tileSize.title = `Custom tile size ${resolved}.`;
+  }
+}
+
+function setTileSizeControlValue(value) {
+  if (!el.tileSize) return "";
+  const normalized = ensureTileSizeSelectOption(value);
+  el.tileSize.value = normalized;
+  syncTileSizeControlUi();
+  return normalized;
+}
+
 function updateRenderActionButton() {
   if (!el.renderBtn) return;
   const running = !!renderActive;
   if (abortRequestInFlight) {
     el.renderBtn.disabled = true;
     el.renderBtn.textContent = "Aborting...";
+    el.renderBtn.classList.remove("xui-button--primary");
+    el.renderBtn.classList.add("xui-button--danger");
     return;
   }
   el.renderBtn.disabled = false;
   el.renderBtn.textContent = running ? "Abort" : "Render";
+  el.renderBtn.classList.toggle("xui-button--primary", !running);
+  el.renderBtn.classList.toggle("xui-button--danger", running);
 }
 
 let abortRequestedJobId = "";
 let abortRequestInFlight = false;
 
-async function startRender() {
+async function startRender(extraParams) {
   const width = sanitizeIntField(el.width, 500, 32, 8192);
   const height = sanitizeIntField(el.height, 500, 32, 8192);
   const samples = sanitizeIntField(el.samples, 1, 1, 1024);
   const aa = sanitizeIntField(el.aa, 1, 1, 16);
-  const rdepth = sanitizeIntField(el.rdepth, 10, 1, 4096);
-  const tileSize = sanitizeIntField(el.tileSize, 32, 8, 1024);
-  const threads = sanitizeIntField(el.threads, 0, 0, 256);
+  const rdepth = sanitizeIntField(el.rdepth, 15, 1, 4096);
+  const tileSize = resolveTileSizeForDimensions(width, height, TILE_SIZE_MAX);
+  const threads = sanitizeThreadField(el.threads);
+
+  const extra = (extraParams && typeof extraParams === "object") ? { ...extraParams } : {};
+  const skipIntegratorOptions = !!extra.__skipIntegratorOptions;
+  const skipPostFilters = !!extra.__skipPostFilters;
+  delete extra.__skipIntegratorOptions;
+  delete extra.__skipPostFilters;
 
   return api.startRender({
     scene: el.scene.value,
@@ -47,8 +163,10 @@ async function startRender() {
     tile_size: tileSize,
     tile_order: el.tileOrder.value,
     threads,
-    post_filters: gatherPostFilterParams(),
-    ...gatherIntegratorOptionParams(),
+    render_mode: normalizeRenderMode(renderMode),
+    ...(skipPostFilters ? {} : { post_filters: gatherPostFilterParams() }),
+    ...(skipIntegratorOptions ? {} : gatherIntegratorOptionParams()),
+    ...extra,
   });
 }
 
@@ -131,8 +249,28 @@ function triggerSceneSave() {
     });
 }
 
+function sanitizeExportNameToken(value, fallback) {
+  const raw = String(value || "").trim();
+  const cleaned = raw.replace(/[^A-Za-z0-9_.-]+/g, "_").replace(/^_+|_+$/g, "");
+  return cleaned || String(fallback || "");
+}
+
+function sceneBaseNameForExport(sceneName) {
+  const raw = String(sceneName || "").trim();
+  if (!raw) return "scene";
+  return raw.replace(/\.scn$/i, "") || "scene";
+}
+
+function exportTimestampUtc() {
+  const now = new Date();
+  const pad2 = (n) => String(n).padStart(2, "0");
+  return `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}_${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}`;
+}
+
 async function pollJob(jobId, token) {
   let lastState = "";
+  let doneButDeltaIncompleteCount = 0;
+  const MAX_DONE_DELTA_RETRIES = 20;
   resetProgressiveDeltaState(jobId);
   progressiveDeltaEnabled = true;
   while (true) {
@@ -143,9 +281,13 @@ async function pollJob(jobId, token) {
     const progress = data.progress || 0;
     const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
     const threads = Math.max(0, Number(data.threads) || 0);
+    const jobRenderMode = String(data.render_mode || "").toLowerCase();
+    const passCurrent = Number(data.pass_current) || 0;
+    const passTotal = Number(data.pass_total) || 0;
     updateActivePreviewTilesFromJob(data);
     setProgress(progress);
     setStatusThreads(threads);
+    setStatusPass(passCurrent, passTotal, jobRenderMode);
     const stateLabel = state === "running" ? "rendering" : state;
     if ((state === "queued" || state === "running") && elapsedMs > 0 && typeof formatElapsed === "function") {
       setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
@@ -160,11 +302,14 @@ async function pollJob(jobId, token) {
     }
 
     const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
+    const isInteractiveMovingJob = interactivePreviewEnabled
+      && !!interactivePreviewActiveMovingJob
+      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
     let updatedByDelta = false;
     let deltaTilesDone = 0;
     let deltaTilesTotal = 0;
     if (!abortPending) {
-      if (state === "queued" || state === "running" || state === "done") {
+      if (!isInteractiveMovingJob && (state === "queued" || state === "running" || state === "done")) {
         try {
           const info = await refreshProgressivePreviewDelta(jobId);
           if (info && typeof info === "object") {
@@ -188,9 +333,13 @@ async function pollJob(jobId, token) {
       || deltaTilesTotal <= 0
       || deltaTilesDone >= deltaTilesTotal;
     if (state === "done" && !abortPending && !deltaComplete) {
-      await new Promise((r) => setTimeout(r, uiOptions.pollMs));
-      continue;
+      doneButDeltaIncompleteCount++;
+      if (doneButDeltaIncompleteCount < MAX_DONE_DELTA_RETRIES) {
+        await new Promise((r) => setTimeout(r, uiOptions.pollMs));
+        continue;
+      }
     }
+    doneButDeltaIncompleteCount = 0;
 
     if (state === "done") {
       if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
@@ -208,6 +357,8 @@ async function pollJob(jobId, token) {
         toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+        postFiltersEnabled: !!postFilterStackEnabled,
+        postFilters: gatherPostFilterParams(),
       });
       if (finalBlob && finalBlob.size > 0) {
         recordPreviewTransfer("full", finalBlob.size || 0);
@@ -221,7 +372,7 @@ async function pollJob(jobId, token) {
       refreshVisualPhotonOverlay().catch(() => {});
       setStatus(`done in ${Math.round(elapsedMs)} ms`);
       appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
-      return;
+      return { state: "done", elapsedMs };
     }
 
     if (state === "aborted") {
@@ -232,7 +383,7 @@ async function pollJob(jobId, token) {
       applyPreviewTransform();
       setStatus("aborted");
       appendLog(`job ${jobId} aborted`);
-      return;
+      return { state: "aborted", elapsedMs };
     }
 
     if (state === "error") {
@@ -244,20 +395,319 @@ async function pollJob(jobId, token) {
       throw new Error(data.error || "render failed");
     }
 
-    await new Promise((r) => setTimeout(r, uiOptions.pollMs));
+    const isInteractiveJob = interactivePreviewEnabled
+      && String(interactivePreviewJobId || "").trim()
+      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
+    const delayMs = isInteractiveJob
+      ? INTERACTIVE_PREVIEW_ACTIVE_POLL_MS
+      : uiOptions.pollMs;
+    await new Promise((r) => setTimeout(r, delayMs));
   }
+}
+
+function interactiveTargetDimensions() {
+  const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
+  const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
+  return { width, height };
+}
+
+function interactiveMovingWidthLevels(targetWidth) {
+  const fallbackWidth = interactiveTargetDimensions().width;
+  const width = Math.max(32, Number(targetWidth) || fallbackWidth);
+  const ratios = [0.1, 0.125, 0.16, 0.2, 0.28, 0.4, 0.56, 0.75, 1.0];
+  const levels = [];
+  for (let i = 0; i < ratios.length; i += 1) {
+    const scaled = Math.round(width * ratios[i]);
+    const clamped = Math.max(32, Math.min(width, scaled));
+    if (!levels.length || levels[levels.length - 1] !== clamped) levels.push(clamped);
+  }
+  if (!levels.length) levels.push(width);
+  if (levels[levels.length - 1] !== width) levels.push(width);
+  return levels;
+}
+
+function nearestInteractiveMovingWidth(v, targetWidth) {
+  const levels = interactiveMovingWidthLevels(targetWidth);
+  const value = Math.max(levels[0], Math.min(levels[levels.length - 1], Number(v) || levels[0]));
+  let best = levels[0];
+  let bestErr = Math.abs(best - value);
+  for (let i = 1; i < levels.length; i += 1) {
+    const err = Math.abs(levels[i] - value);
+    if (err < bestErr) {
+      best = levels[i];
+      bestErr = err;
+    }
+  }
+  return best;
+}
+
+function interactiveAdaptiveAdjustAfterFrame(stageWidth, elapsedMs) {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 1) return;
+  const target = interactiveTargetDimensions();
+  const levels = interactiveMovingWidthLevels(target.width);
+  let idx = levels.indexOf(nearestInteractiveMovingWidth(stageWidth, target.width));
+  if (idx < 0) idx = levels.indexOf(nearestInteractiveMovingWidth(interactivePreviewAdaptiveMovingWidth, target.width));
+  if (idx < 0) idx = 0;
+  const targetMs = Math.max(40, Number(INTERACTIVE_PREVIEW_TARGET_FRAME_MS) || 110);
+  if (elapsedMs > targetMs * 1.5 && idx > 0) {
+    idx -= 1;
+  } else if (elapsedMs < targetMs * 0.65 && idx + 1 < levels.length) {
+    idx += 1;
+  }
+  interactivePreviewAdaptiveMovingWidth = levels[idx];
+}
+
+function interactivePreviewIsMoving() {
+  const sinceInput = Date.now() - (Number(interactivePreviewLastInputMs) || 0);
+  if (sinceInput < INTERACTIVE_PREVIEW_SETTLE_MS) return true;
+  if (!interactivePreviewKeyState) return false;
+  return !!(interactivePreviewKeyState.w
+    || interactivePreviewKeyState.a
+    || interactivePreviewKeyState.s
+    || interactivePreviewKeyState.d
+    || interactivePreviewKeyState.q
+    || interactivePreviewKeyState.e);
+}
+
+function interactiveResolutionStages(settleMode) {
+  const target = interactiveTargetDimensions();
+  const width = target.width;
+  const height = target.height;
+  const samples = Math.max(1, Number.parseInt(String(el.samples && el.samples.value ? el.samples.value : "1"), 10) || 1);
+  const aa = Math.max(1, Number.parseInt(String(el.aa && el.aa.value ? el.aa.value : "1"), 10) || 1);
+  const rdepth = Math.max(1, Number.parseInt(String(el.rdepth && el.rdepth.value ? el.rdepth.value : "15"), 10) || 15);
+  const pick = (targetW) => {
+    const w = Math.max(32, Math.min(width, targetW));
+    const h = Math.max(32, Math.round((height * w) / Math.max(1, width)));
+    return { width: w, height: h };
+  };
+  if (!settleMode) {
+    const navDims = pick(Math.round(width * 0.01));
+    return [{
+      width: navDims.width,
+      height: navDims.height,
+      samples: "1",
+      aa: "1",
+      rdepth: String(Math.min(rdepth, 3)),
+      tile_size: "8",
+      tile_order: "random",
+      integrator: "raytracer",
+      moving: true,
+    }];
+  }
+  const halfDims = pick(Math.round(width * 0.5));
+  const fullDims = pick(width);
+  const halfTileSize = resolveTileSizeForDimensions(halfDims.width, halfDims.height, 32);
+  const fullTileSize = resolveTileSizeForDimensions(fullDims.width, fullDims.height, 32);
+  const out = [{
+    width: halfDims.width,
+    height: halfDims.height,
+    samples: "1",
+    aa: "1",
+    rdepth: String(Math.min(rdepth, 3)),
+    tile_size: halfTileSize,
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }, {
+    width: fullDims.width,
+    height: fullDims.height,
+    samples: "1",
+    aa: "1",
+    rdepth: String(Math.min(rdepth, 3)),
+    tile_size: fullTileSize,
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }, {
+    width: fullDims.width,
+    height: fullDims.height,
+    samples: String(samples),
+    aa: String(aa),
+    rdepth: String(rdepth),
+    tile_size: fullTileSize,
+    tile_order: "random",
+    integrator: String(el.integrator && el.integrator.value ? el.integrator.value : "pathtracer_mis"),
+    moving: false,
+  }];
+  return out;
+}
+
+async function abortInteractivePreviewJob() {
+  // Only abort jobs explicitly owned by the interactive preview loop.
+  // Falling back to the workspace active job can cancel a normal render
+  // during boot, refresh, or workspace state restore.
+  const jobId = String(interactivePreviewJobId || "").trim();
+  if (!jobId || !hasBackendMethod(api, "abortJob")) return;
+  try {
+    await abortRenderJob(jobId);
+  } catch (_) {
+    // Best effort cancellation only.
+  }
+}
+
+async function runInteractiveStage(stage, seq, loopToken, settleMode) {
+  if (!interactivePreviewEnabled) return false;
+  if (loopToken !== interactivePreviewLoopToken) return false;
+  if (seq !== interactivePreviewCameraSeq) return false;
+  if (activeTabMode !== "render") return false;
+
+  const cameraParams = (typeof interactivePreviewCameraRequestParams === "function")
+    ? interactivePreviewCameraRequestParams()
+    : null;
+  if (!cameraParams) return false;
+
+  const pollToken = beginPollSession();
+  setRenderActive(true);
+  setProgress(0);
+  setStatusThreads(0);
+  setStatus(`interactive ${stage.width}x${stage.height}${stage.moving ? " nav" : ""}`);
+  interactivePreviewHudQuality = `${stage.width}x${stage.height} ${stage.moving ? "nav(raytracer)" : (Number(stage.samples) > 1 || Number(stage.aa) > 1 ? "refine" : "fast")}`;
+  interactivePreviewActiveMovingJob = !!stage.moving;
+  if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+  clearActivePreviewTiles();
+  applyPreviewTransform();
+
+  let jobId = "";
+  try {
+    jobId = await startRender({
+      width: String(stage.width),
+      height: String(stage.height),
+      samples: stage.samples,
+      aa: stage.aa,
+      rdepth: stage.rdepth,
+      tile_size: stage.tile_size,
+      tile_order: stage.tile_order,
+      integrator: stage.integrator,
+      render_mode: RENDER_MODE_DIRECT,
+      __skipIntegratorOptions: !!stage.moving,
+      __skipPostFilters: !!stage.moving,
+      ...cameraParams,
+    });
+  } catch (err) {
+    setRenderActive(false);
+    updateRenderActionButton();
+    setStatus(`interactive render error: ${err.message}`);
+    appendLog(`interactive render rejected: ${err.message}`);
+    return false;
+  }
+  if (loopToken !== interactivePreviewLoopToken || seq !== interactivePreviewCameraSeq) {
+    interactivePreviewJobId = String(jobId || "").trim();
+    await abortInteractivePreviewJob();
+    return false;
+  }
+
+  interactivePreviewJobId = String(jobId || "").trim();
+  activeJobId = interactivePreviewJobId;
+  syncGlobalsToWorkspaceRuntime();
+  updateRenderActionButton();
+  await pollJob(jobId, pollToken);
+  if (activeJobId === interactivePreviewJobId) {
+    activeJobId = "";
+    syncGlobalsToWorkspaceRuntime();
+  }
+  interactivePreviewJobId = "";
+  interactivePreviewActiveMovingJob = false;
+  return true;
+}
+
+async function runInteractivePreviewLoop(loopToken) {
+  while (interactivePreviewEnabled && loopToken === interactivePreviewLoopToken) {
+    if (activeTabMode !== "render") break;
+    if (!interactivePreviewDirty) {
+      await new Promise((r) => setTimeout(r, 50));
+      continue;
+    }
+    interactivePreviewDirty = false;
+    const seq = interactivePreviewCameraSeq;
+    const settleMode = !interactivePreviewIsMoving();
+    interactivePreviewHudQuality = settleMode ? "settling" : "moving";
+    if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+    const stages = interactiveResolutionStages(settleMode);
+    for (let i = 0; i < stages.length; i += 1) {
+      if (!interactivePreviewEnabled || loopToken !== interactivePreviewLoopToken) return;
+      if (seq !== interactivePreviewCameraSeq) break;
+      const ok = await runInteractiveStage(stages[i], seq, loopToken, settleMode);
+      if (!ok) break;
+      if (seq !== interactivePreviewCameraSeq) break;
+      if (!settleMode && interactivePreviewIsMoving()) {
+        // Keep latency tight while user is actively moving.
+        break;
+      }
+    }
+    if (!settleMode && seq === interactivePreviewCameraSeq && interactivePreviewEnabled) {
+      interactivePreviewDirty = true;
+    }
+  }
+}
+
+function startInteractivePreviewLoop() {
+  if (interactivePreviewLoopActive) return;
+  if (!interactivePreviewEnabled) return;
+  if (activeTabMode !== "render") return;
+  interactivePreviewLoopActive = true;
+  const token = ++interactivePreviewLoopToken;
+  runInteractivePreviewLoop(token)
+    .catch((err) => appendLog(`interactive loop error: ${err.message}`))
+    .finally(() => {
+      if (token !== interactivePreviewLoopToken) return;
+      interactivePreviewLoopActive = false;
+      interactivePreviewJobId = "";
+      interactivePreviewActiveMovingJob = false;
+      activeJobId = "";
+      syncGlobalsToWorkspaceRuntime();
+      setRenderActive(false);
+      updateRenderActionButton();
+      if (interactivePreviewEnabled && interactivePreviewDirty && activeTabMode === "render") {
+        startInteractivePreviewLoop();
+      }
+    });
+}
+
+async function stopInteractivePreviewLoop(abortJob) {
+  interactivePreviewLoopToken += 1;
+  interactivePreviewDirty = false;
+  interactivePreviewLoopActive = false;
+  interactivePreviewActiveMovingJob = false;
+  if (abortJob) await abortInteractivePreviewJob();
+  interactivePreviewJobId = "";
+  if (!activeJobId || String(activeJobId).trim() === "") {
+    setRenderActive(false);
+    updateRenderActionButton();
+  }
+  interactivePreviewHudQuality = "idle";
+  if (typeof renderInteractivePreviewHud === "function") renderInteractivePreviewHud();
+}
+
+function requestInteractivePreviewRender() {
+  if (!interactivePreviewEnabled) return;
+  if (activeTabMode !== "render") return;
+  if (typeof interactivePreviewCameraRequestParams === "function" && !interactivePreviewCameraRequestParams()) return;
+  interactivePreviewDirty = true;
+  const movingNow = interactivePreviewIsMoving();
+  if (interactivePreviewJobId && !movingNow) {
+    abortInteractivePreviewJob().catch(() => {});
+  }
+  startInteractivePreviewLoop();
 }
 
 async function handleExportClick(event) {
   if (event) event.preventDefault();
-  if (el.download.classList.contains("is-disabled")) return;
+  if (el.download.classList.contains("is-disabled") || exportRequestInFlight) return;
   if (!lastCompletedJobId) return;
   if (!hasBackendMethod(api, "getJobExport")) return;
 
   const format = selectedExportFormat();
-  const filename = `xtracer_${lastCompletedJobId}.${format}`;
+  const sceneToken = sanitizeExportNameToken(sceneBaseNameForExport(lastCompletedJobScene), "scene");
+  const clientToken = sanitizeExportNameToken(clientId, "client");
+  const filename = `xtracer_${sceneToken}_${clientToken}_${exportTimestampUtc()}.${format}`;
+  exportRequestInFlight = true;
+  updateDownloadUi();
   try {
-    const blob = await api.getJobExport(lastCompletedJobId, format);
+    const blob = await api.getJobExport(lastCompletedJobId, format, {
+      postFiltersEnabled: !!postFilterStackEnabled,
+      postFilters: gatherPostFilterParams(),
+    });
     if (!blob || blob.size <= 0) {
       throw new Error("empty export payload");
     }
@@ -274,11 +724,17 @@ async function handleExportClick(event) {
   } catch (err) {
     appendLog(`export failed: ${err.message}`);
     setStatus(`error: ${err.message}`);
+  } finally {
+    exportRequestInFlight = false;
+    updateDownloadUi();
   }
 }
 
 async function handleRender() {
   if (renderActive) {
+    if (interactivePreviewEnabled) {
+      await stopInteractivePreviewLoop(false);
+    }
     if (abortRequestInFlight) return;
     abortRequestInFlight = true;
     updateRenderActionButton();
@@ -319,6 +775,17 @@ async function handleRender() {
   }
 
   if (activeTabMode !== "render") setActiveTab("render");
+  if (isInteractiveRenderMode()) {
+    if (typeof requestInteractivePreviewRender === "function") {
+      requestInteractivePreviewRender();
+      setStatus("interactive mode active");
+      appendLog("interactive render loop requested");
+    }
+    return;
+  }
+  if (interactivePreviewEnabled) {
+    await stopInteractivePreviewLoop(true);
+  }
   const pollToken = beginPollSession();
   abortRequestedJobId = "";
   abortRequestInFlight = false;
@@ -343,7 +810,7 @@ async function handleRender() {
   setProgress(0);
   setStatusThreads(0);
   setStatus("submitting job...");
-  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} tile_order=${el.tileOrder.value}`);
+  appendLog(`submit render scene=${el.scene.value} integrator=${el.integrator.value} mode=${normalizeRenderMode(renderMode)} tile_order=${el.tileOrder.value}`);
   let submittedJobId = "";
   let pollReachedTerminalState = false;
   try {
