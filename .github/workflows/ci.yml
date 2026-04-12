@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,19 +142,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Log in to GitHub Container Registry
+        if: steps.policy.outputs.publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Compute Docker tags
         if: steps.policy.outputs.publish == 'true'
         id: docker_tags
         env:
-          IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/xtracer
+          DH_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/xtracer
+          GHCR_REPO: ghcr.io/${{ github.repository_owner }}/xtracer
           RELEASE_TAG: ${{ steps.policy.outputs.tag }}
           IS_LATEST: ${{ steps.policy.outputs.is_latest }}
         shell: bash
         run: |
           set -euo pipefail
-          TAGS="${IMAGE_REPO}:${RELEASE_TAG}"
+          TAGS="${DH_REPO}:${RELEASE_TAG}"$'\n'"${GHCR_REPO}:${RELEASE_TAG}"
           if [[ "${IS_LATEST}" == "true" ]]; then
-            TAGS="${TAGS}"$'\n'"${IMAGE_REPO}:latest"
+            TAGS="${TAGS}"$'\n'"${DH_REPO}:latest"$'\n'"${GHCR_REPO}:latest"
           fi
 
           {
