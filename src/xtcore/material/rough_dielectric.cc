@@ -100,8 +100,10 @@ inline nimg::ColorRGBf apply_exit_absorption(const xtcore::asset::IMaterial *mat
 
     const nimg::ColorRGBf tint = absorption_color(mat, hit_record);
     const nmath::scalar_t cos_exit = std::max((nmath::scalar_t)0.05, nmath_abs(nmath::dot(shading_n.normalized(), wi.normalized())));
-    const nmath::scalar_t path_length = slab_thickness / cos_exit;
-    const nmath::scalar_t distance_scale = path_length / std::max((nmath::scalar_t)EPSILON, slab_thickness);
+    // Beer-Lambert: T = tint^distance_scale, where distance_scale = 1/cos_exit.
+    // absorption_distance scales the exponent so a larger value means stronger absorption.
+    // At normal incidence (cos_exit=1): T = tint^absorption_distance.
+    const nmath::scalar_t distance_scale = slab_thickness / cos_exit;
 
     const nmath::scalar_t r = std::pow(clamp_scalar((nmath::scalar_t)tint.r(), (nmath::scalar_t)0.0001, (nmath::scalar_t)1.0), distance_scale);
     const nmath::scalar_t g = std::pow(clamp_scalar((nmath::scalar_t)tint.g(), (nmath::scalar_t)0.0001, (nmath::scalar_t)1.0), distance_scale);
@@ -142,8 +144,19 @@ inline void dielectric_media(const hit_record_t &hit_record,
     const nmath::scalar_t mat_ior = material_ior(mat);
     const nmath::scalar_t cos_g = nmath::dot(hit_record.normal.normalized(), wo.normalized());
 
-    eta_i = current_ior;
-    eta_t = (cos_g >= (nmath::scalar_t)0.0) ? mat_ior : (nmath::scalar_t)1.0;
+    // cos_g >= 0: wo comes from outside the surface → entering the material.
+    // cos_g <  0: wo comes from inside → exiting.  The integrator only updates its
+    //             tracked IOR variable via sample_path (delta materials); for non-delta
+    //             materials that use bsdf_sample, hit_record.ior may still read 1.0 even
+    //             when the ray is already inside this material.  We recover the correct
+    //             incident IOR by using mat_ior directly when wo comes from the inside.
+    if (cos_g >= (nmath::scalar_t)0.0) {
+        eta_i = current_ior;
+        eta_t = mat_ior;
+    } else {
+        eta_i = mat_ior;
+        eta_t = current_ior;
+    }
 }
 
 inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
