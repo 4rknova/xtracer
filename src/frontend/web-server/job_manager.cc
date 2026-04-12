@@ -541,6 +541,7 @@ const char *render_mode_label(common::render_request_t::render_mode_t mode)
 {
     switch (mode) {
         case common::render_request_t::RENDER_MODE_PROGRESSIVE: return "progressive";
+        case common::render_request_t::RENDER_MODE_INCREMENTAL: return "incremental";
         case common::render_request_t::RENDER_MODE_INTERACTIVE: return "interactive";
         case common::render_request_t::RENDER_MODE_DIRECT:
         default: return "direct";
@@ -562,6 +563,11 @@ size_t progressive_pass_count(size_t total_samples)
     if (samples <= 1) return 1;
     const size_t rem = samples - 1;
     return 1 + ((rem + step - 1) / step);
+}
+
+size_t incremental_pass_count(size_t total_samples)
+{
+    return (total_samples > 0) ? total_samples : 1;
 }
 
 } // namespace
@@ -660,7 +666,8 @@ job_manager_t::job_t::job_t()
 {}
 
 job_manager_t::job_manager_t()
-    : jobs_mut()
+    : gallery_manager_(nullptr)
+    , jobs_mut()
     , jobs()
     , completed_job_order()
     , max_completed_jobs(8)
@@ -677,6 +684,11 @@ job_manager_t::job_manager_t()
     , active_render_threads(0)
     , queued_job_order()
 {}
+
+void job_manager_t::set_gallery_manager(gallery_manager_t *gm)
+{
+    gallery_manager_ = gm;
+}
 
 void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
 {
@@ -904,8 +916,20 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
 
     common::render_request_t request = job->request;
     request.threads = granted_threads;
+
+    gallery_manager_t *gm = gallery_manager_;
+    const std::string gallery_job_id = job->id;
+    const std::string gallery_workspace_id = job->workspace_id;
+    const std::string gallery_integrator = job->integrator;
+    const long long gallery_created_at_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    bool gallery_entry_created = false;
+
     common::render_result_t rr = common::render_scene_to_png(request,
-        [job](common::progress_event_t event, size_t done, size_t total, const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
+        [job, gm, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
+         gallery_created_at_ms, &gallery_entry_created]
+        (common::progress_event_t event, size_t done, size_t total,
+         const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
             {
                 std::lock_guard<std::mutex> lock(job->mut);
                 if (event == common::PROGRESS_EVENT_TILE_STARTED) {
@@ -932,9 +956,46 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                     if (tile || has_upd_rect) remove_active_tile(*job, make_active_tile_key(tile, upd));
                 }
             }
-            job->tiles_total = total;
-            if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
-                job->tiles_done = done;
+            if (event == common::PROGRESS_EVENT_TILE_STARTED ||
+                event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                job->tiles_total = total;
+                if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
+                    job->tiles_done = done;
+                }
+            }
+            if (event == common::PROGRESS_EVENT_PASS_FINISHED
+                && gm && gm->is_initialized()
+                && upd && upd->source_fb) {
+                const size_t pass_index = done - 1;
+                const auto now = std::chrono::steady_clock::now();
+                const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                    now - job->started_at).count();
+
+                nimg::Pixmap ldr = *upd->source_fb;
+                xtcore::tonemapping::apply(ldr);
+                std::vector<unsigned char> png;
+                nimg::io::save::png_memory(ldr, png);
+
+                if (!gallery_entry_created) {
+                    gallery_entry_meta_t meta;
+                    meta.id           = gallery_job_id;
+                    meta.scene        = job->request.scene_path;
+                    meta.workspace_id = gallery_workspace_id;
+                    meta.integrator   = gallery_integrator;
+                    meta.render_mode  = render_mode_label(job->request.render_mode);
+                    meta.width        = job->request.width;
+                    meta.height       = job->request.height;
+                    meta.samples      = job->request.samples;
+                    meta.aa           = job->request.aa;
+                    meta.rdepth       = job->request.rdepth;
+                    meta.threads      = job->effective_threads;
+                    meta.tile_size    = job->request.tile_size;
+                    meta.elapsed_ms   = elapsed_ms;
+                    meta.created_at_ms = gallery_created_at_ms;
+                    gm->create_entry(meta, png);
+                    gallery_entry_created = true;
+                }
+                gm->save_pass(gallery_job_id, pass_index, png, elapsed_ms);
             }
         },
         &job->cancel_requested
@@ -979,6 +1040,33 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             log << "job completed id=" << job->id
                 << " elapsed_ms=" << std::fixed << std::setprecision(0) << rr.elapsed_ms;
             backend_log_t::handle().add("info", log.str());
+
+            // Save to gallery for direct/interactive mode (no pass events fired)
+            if (gm && gm->is_initialized() && !gallery_entry_created) {
+                nimg::Pixmap ldr = rr.framebuffer;
+                xtcore::tonemapping::apply(ldr);
+                std::vector<unsigned char> png;
+                nimg::io::save::png_memory(ldr, png);
+                gallery_entry_meta_t meta;
+                meta.id           = gallery_job_id;
+                meta.scene        = job->request.scene_path;
+                meta.workspace_id = gallery_workspace_id;
+                meta.integrator   = gallery_integrator;
+                meta.render_mode  = render_mode_label(job->request.render_mode);
+                meta.width        = job->request.width;
+                meta.height       = job->request.height;
+                meta.samples      = job->request.samples;
+                meta.aa           = job->request.aa;
+                meta.rdepth       = job->request.rdepth;
+                meta.threads      = job->effective_threads;
+                meta.tile_size    = job->request.tile_size;
+                meta.elapsed_ms   = rr.elapsed_ms;
+                meta.created_at_ms = gallery_created_at_ms;
+                gm->create_entry(meta, png);
+            } else if (gm && gm->is_initialized() && gallery_entry_created) {
+                // Progressive/incremental: update final elapsed time
+                gm->update_render(gallery_job_id, job->image_png, rr.elapsed_ms);
+            }
         } else {
             job->error = rr.error;
             job->active_tiles.clear();
@@ -1131,8 +1219,11 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.queue_index = -1;
     out.active_tiles = job->active_tiles;
 
-    if (job->request.render_mode == common::render_request_t::RENDER_MODE_PROGRESSIVE) {
-        const size_t ptotal = progressive_pass_count(job->request.samples);
+    if (job->request.render_mode == common::render_request_t::RENDER_MODE_PROGRESSIVE ||
+        job->request.render_mode == common::render_request_t::RENDER_MODE_INCREMENTAL) {
+        const size_t ptotal = (job->request.render_mode == common::render_request_t::RENDER_MODE_INCREMENTAL)
+            ? incremental_pass_count(job->request.samples)
+            : progressive_pass_count(job->request.samples);
         out.pass_total = ptotal;
         size_t tiles_per_pass = (ptotal > 0) ? (out.tiles_total / ptotal) : 0;
         if (tiles_per_pass == 0) {

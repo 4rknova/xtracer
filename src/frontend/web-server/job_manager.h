@@ -14,6 +14,7 @@
 #include <frontend/common/render_service.h>
 #include <nimg/pixmap.h>
 #include <xtcore/tonemapping/tonemapping.h>
+#include "gallery_manager.h"
 
 namespace xtracer {
 namespace frontend {
@@ -81,6 +82,7 @@ class job_manager_t
 {
     public:
     job_manager_t();
+    void set_gallery_manager(gallery_manager_t *gm);
     void set_max_concurrent_renders(size_t max_concurrent);
     void set_render_thread_budget(size_t max_threads);
     size_t get_max_concurrent_renders() const;
@@ -224,6 +226,7 @@ class job_manager_t
     static void add_active_tile(job_t &job, const job_t::active_tile_key_t &key);
     static void remove_active_tile(job_t &job, const job_t::active_tile_key_t &key);
 
+    gallery_manager_t *gallery_manager_;
     mutable std::mutex jobs_mut;
     std::map<std::string, std::shared_ptr<job_t> > jobs;
     std::deque<std::string> completed_job_order;

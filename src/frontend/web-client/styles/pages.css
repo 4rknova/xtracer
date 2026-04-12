@@ -8348,3 +8348,332 @@ button:disabled {
     padding-bottom: 44px;
   }
 }
+
+/* ─── Gallery ─────────────────────────────────────────────────────────────── */
+
+#paneGallery.active {
+  padding-inline-end: 10px;
+}
+
+#paneGallery.active::-webkit-scrollbar-track {
+  border-left: 8px solid transparent;
+}
+
+/* ── Toolbar ── */
+
+.gallery-panel {
+  margin-bottom: 0;
+}
+
+.gallery-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.gallery-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
+}
+
+.gallery-refresh-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 74%, var(--line-strong));
+  background: color-mix(in srgb, var(--field-bg) 78%, var(--panel));
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 90ms ease;
+}
+
+.gallery-refresh-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  display: block;
+}
+
+.gallery-refresh-btn:hover {
+  color: color-mix(in srgb, var(--ink) 92%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 56%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 68%, var(--accent) 32%);
+}
+
+.gallery-refresh-btn:active {
+  transform: translateY(1px);
+}
+
+/* ── Empty state ── */
+
+.gallery-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ── Grid ── */
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+/* ── Cards ── */
+
+.gallery-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--field-bg) 94%, transparent) 0%,
+    color-mix(in srgb, var(--field-bg) 78%, transparent) 100%
+  );
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  appearance: none;
+  font-family: var(--xui-font-sans);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+}
+
+.gallery-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--line));
+  box-shadow: var(--xui-shadow-1);
+  transform: translateY(-1px);
+}
+
+.gallery-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.gallery-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 2px;
+}
+
+.gallery-card-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--preview-bg) 80%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.gallery-card-info {
+  padding: 9px 11px 11px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gallery-card-scene {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-card-meta {
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-card-mode {
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--accent) 78%, var(--muted));
+}
+
+/* ── Detail panel ── */
+
+.gallery-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gallery-detail-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-detail-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.94rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.gallery-back-btn {
+  flex: 0 0 auto;
+}
+
+.gallery-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  align-items: start;
+}
+
+.gallery-detail-image-wrap {
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--preview-bg);
+}
+
+.gallery-detail-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ── Detail metadata ── */
+
+.gallery-detail-meta {
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--field-bg) 92%, transparent) 0%,
+    color-mix(in srgb, var(--field-bg) 76%, transparent) 100%
+  );
+  display: grid;
+  gap: 7px;
+}
+
+.gallery-meta-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+
+.gallery-meta-key {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.gallery-meta-val {
+  font-size: 0.82rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── Pass strip ── */
+
+.gallery-pass-strip {
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  padding-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.gallery-pass-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gallery-pass-thumbs {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.gallery-pass-thumb-btn {
+  flex: 0 0 auto;
+  width: 80px;
+  height: 60px;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 7px;
+  overflow: hidden;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--preview-bg) 80%, transparent);
+  transition: border-color 120ms ease, transform 90ms ease;
+}
+
+.gallery-pass-thumb-btn:hover {
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+.gallery-pass-thumb-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 2px;
+}
+
+.gallery-pass-thumb-btn:active {
+  transform: scale(1.02);
+}
+
+.gallery-pass-thumb {
+  display: block;
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 960px) {
+  .gallery-detail-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+.gallery-pass-thumb-btn.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}

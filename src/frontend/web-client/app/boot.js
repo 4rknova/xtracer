@@ -875,6 +875,7 @@ async function boot() {
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
+  if (el.tabGallery) el.tabGallery.addEventListener("click", () => setActiveTab("gallery"));
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));

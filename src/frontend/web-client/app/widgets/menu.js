@@ -60,6 +60,7 @@
         ],
       },
       { id: "tabVisual", label: "Editor", mode: "visual" },
+      { id: "tabGallery", label: "Gallery", mode: "gallery" },
     ];
     return createMenu({
       tagName: "nav",

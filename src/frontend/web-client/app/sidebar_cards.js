@@ -83,6 +83,7 @@
           <select id="renderMode" class="xui-select">
             <option value="direct">Direct</option>
             <option value="progressive" selected>Progressive</option>
+            <option value="incremental">Incremental</option>
             <option value="interactive">Interactive</option>
           </select>
         </label>

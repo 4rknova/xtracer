@@ -22,6 +22,7 @@
 #include <xtcore/xtcore.h>
 #include <xtcore/log.h>
 
+#include "gallery_manager.h"
 #include "job_manager.h"
 #include "routes.h"
 #include "backend_log.h"
@@ -264,6 +265,7 @@ int main(int argc, char **argv)
     std::string host = "127.0.0.1";
     int port = 8080;
     std::string scene_dir = "scene";
+    std::string gallery_dir = "gallery";
     std::string web_root = "src/frontend/web-client";
     size_t max_concurrent_renders = 999;
     size_t render_reserve_threads = 1;
@@ -297,6 +299,13 @@ int main(int argc, char **argv)
                 return 1;
             }
             web_root = argv[i];
+        }
+        else if (arg_eq(argv[i], "--gallery-dir")) {
+            if (++i >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            gallery_dir = argv[i];
         }
         else if (arg_eq(argv[i], "--max-concurrent-renders")) {
             if (++i >= argc) {
@@ -406,7 +415,15 @@ int main(int argc, char **argv)
             std::fflush(stdout);
         });
     }
+    xtracer::frontend::web::gallery_manager_t gallery;
+    if (!gallery.init(gallery_dir)) {
+        std::printf("[warn] gallery directory could not be initialized: %s\n", gallery_dir.c_str());
+    } else {
+        std::printf("  gallery-dir:            %s\n", gallery_dir.c_str());
+    }
+
     xtracer::frontend::web::job_manager_t jobs;
+    jobs.set_gallery_manager(&gallery);
     jobs.set_max_concurrent_renders(max_concurrent_renders);
     const size_t render_thread_budget = compute_auto_render_threads(render_reserve_threads);
     jobs.set_render_thread_budget(render_thread_budget);
@@ -414,7 +431,7 @@ int main(int argc, char **argv)
     xtracer::frontend::web::render_thread_policy_t thread_policy;
     thread_policy.reserve_threads = render_reserve_threads;
     thread_policy.max_render_threads = render_thread_budget;
-    xtracer::frontend::web::setup_routes(server, jobs, workspaces, scene_dir, web_root, thread_policy);
+    xtracer::frontend::web::setup_routes(server, jobs, workspaces, &gallery, scene_dir, web_root, thread_policy);
 
     print_startup_banner(host, port, scene_dir, web_root, max_concurrent_renders, render_reserve_threads, verbose);
 

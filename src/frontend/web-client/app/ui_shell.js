@@ -3,7 +3,7 @@ function normalizeTabMode(mode) {
   if (raw === "editor") return "visual";
   if (raw === "workspace") return "workspaces";
   if (raw === "scene_setup" || raw === "scenesetup") return "scene";
-  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "settings" || raw === "logs" || raw === "about") {
+  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "logs" || raw === "about") {
     return raw;
   }
   return "scene";
@@ -354,6 +354,7 @@ function setActiveTab(mode) {
   const isRender = nextMode === "render";
   const isVisual = nextMode === "visual";
   const isWorkspaces = nextMode === "workspaces";
+  const isGallery = nextMode === "gallery";
   const isSettings = nextMode === "settings";
   const isLogs = nextMode === "logs";
   const isAbout = nextMode === "about";
@@ -362,6 +363,7 @@ function setActiveTab(mode) {
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabWorkspaces, isWorkspaces);
+  setActive(el.tabGallery, isGallery);
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
@@ -369,6 +371,7 @@ function setActiveTab(mode) {
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneWorkspaces, isWorkspaces);
+  setActive(el.paneGallery, isGallery);
   setActive(el.paneSettings, isSettings);
   setActive(el.paneAbout, isAbout);
   setActive(el.paneLogs, isLogs);
@@ -382,6 +385,9 @@ function setActiveTab(mode) {
   }
   if (isWorkspaces && hasBackendMethod(api, "getWorkspaces")) {
     refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+  }
+  if (isGallery && typeof refreshGallery === "function") {
+    refreshGallery().catch((err) => appendLog(`gallery refresh error: ${err.message}`));
   }
   if (typeof refreshSettingsJobsCard === "function"
     && typeof isJobsControlsCardVisible === "function"

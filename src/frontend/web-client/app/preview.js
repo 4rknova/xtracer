@@ -11,6 +11,7 @@ function normalizeRenderMode(value) {
   const mode = String(value || "").trim().toLowerCase();
   if (mode === "normal") return RENDER_MODE_DIRECT;
   if (mode === RENDER_MODE_PROGRESSIVE) return RENDER_MODE_PROGRESSIVE;
+  if (mode === RENDER_MODE_INCREMENTAL) return RENDER_MODE_INCREMENTAL;
   if (mode === RENDER_MODE_INTERACTIVE) return RENDER_MODE_INTERACTIVE;
   return RENDER_MODE_DIRECT;
 }
@@ -20,7 +21,8 @@ function isInteractiveRenderMode() {
 }
 
 function isProgressiveRenderMode() {
-  return normalizeRenderMode(renderMode) === RENDER_MODE_PROGRESSIVE;
+  const mode = normalizeRenderMode(renderMode);
+  return mode === RENDER_MODE_PROGRESSIVE || mode === RENDER_MODE_INCREMENTAL;
 }
 
 function clamp(value, lo, hi) {

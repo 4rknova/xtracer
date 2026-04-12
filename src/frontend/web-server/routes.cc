@@ -52,6 +52,7 @@
 #include <nimg/img.h>
 
 #include "backend_log.h"
+#include "gallery_manager.h"
 #include "job_manager.h"
 #include "post_filters.h"
 #include "workspace_manager.h"
@@ -287,6 +288,10 @@ bool parse_render_mode_param(const httplib::Request &req,
     }
     if (s == "progressive") {
         out = common::render_request_t::RENDER_MODE_PROGRESSIVE;
+        return true;
+    }
+    if (s == "incremental") {
+        out = common::render_request_t::RENDER_MODE_INCREMENTAL;
         return true;
     }
     if (s == "interactive") {
@@ -1836,6 +1841,7 @@ void serve_static_file(const std::string &path, const char *mime, httplib::Respo
 void setup_routes(httplib::Server &server,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
+                  gallery_manager_t *gallery,
                   const std::string &scene_dir,
                   const std::string &web_root,
                   const render_thread_policy_t &thread_policy)
@@ -3071,6 +3077,69 @@ void setup_routes(httplib::Server &server,
            << "\"error\":\"" << json_escape(snap.error) << "\""
            << "}";
         send_json(res, ss.str());
+    });
+
+    // Gallery API
+    server.Get("/api/gallery", [gallery](const httplib::Request &, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            send_json(res, "{\"entries\":[]}");
+            return;
+        }
+        const std::vector<std::string> ids = gallery->list_entry_ids();
+        std::ostringstream ss;
+        ss << "{\"entries\":[";
+        bool first = true;
+        for (const auto &id : ids) {
+            std::string meta_json;
+            if (!gallery->get_meta_json(id, meta_json)) continue;
+            if (!first) ss << ",";
+            ss << meta_json;
+            first = false;
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.status = 404;
+            return;
+        }
+        const std::string id = req.matches[1];
+        std::vector<unsigned char> png;
+        if (!gallery->get_image(id, png) || png.empty()) {
+            res.status = 404;
+            return;
+        }
+        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+    });
+
+    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/pass/(\d+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.status = 404;
+            return;
+        }
+        const std::string id = req.matches[1];
+        const size_t pass_index = static_cast<size_t>(std::stoul(std::string(req.matches[2])));
+        std::vector<unsigned char> png;
+        if (!gallery->get_pass_image(id, pass_index, png) || png.empty()) {
+            res.status = 404;
+            return;
+        }
+        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+    });
+
+    server.Delete(R"(/api/gallery/([A-Za-z0-9_.-]+))", [gallery](const httplib::Request &req, httplib::Response &res) {
+        if (!gallery || !gallery->is_initialized()) {
+            send_json(res, "{\"ok\":false}", 503);
+            return;
+        }
+        const std::string id = req.matches[1];
+        if (gallery->delete_entry(id)) {
+            send_json(res, "{\"ok\":true}");
+        } else {
+            send_json(res, "{\"ok\":false}", 404);
+        }
     });
 
     server.Get("/", [web_root](const httplib::Request &, httplib::Response &res) {

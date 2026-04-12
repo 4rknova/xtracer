@@ -269,6 +269,8 @@ function exportTimestampUtc() {
 
 async function pollJob(jobId, token) {
   let lastState = "";
+  let doneButDeltaIncompleteCount = 0;
+  const MAX_DONE_DELTA_RETRIES = 20;
   resetProgressiveDeltaState(jobId);
   progressiveDeltaEnabled = true;
   while (true) {
@@ -331,9 +333,13 @@ async function pollJob(jobId, token) {
       || deltaTilesTotal <= 0
       || deltaTilesDone >= deltaTilesTotal;
     if (state === "done" && !abortPending && !deltaComplete) {
-      await new Promise((r) => setTimeout(r, uiOptions.pollMs));
-      continue;
+      doneButDeltaIncompleteCount++;
+      if (doneButDeltaIncompleteCount < MAX_DONE_DELTA_RETRIES) {
+        await new Promise((r) => setTimeout(r, uiOptions.pollMs));
+        continue;
+      }
     }
+    doneButDeltaIncompleteCount = 0;
 
     if (state === "done") {
       if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";

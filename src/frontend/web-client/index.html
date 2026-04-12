@@ -322,6 +322,38 @@
         <div id="workspaceList" class="workspace-list workspace-list-cards" aria-live="polite"></div>
       </section>
 
+      <section class="tab-pane" id="paneGallery">
+        <section class="panel gallery-panel">
+          <div class="gallery-toolbar">
+            <h2 class="gallery-title">Gallery</h2>
+            <button id="galleryRefreshBtn" class="gallery-refresh-btn" type="button" title="Refresh gallery" aria-label="Refresh gallery">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="galleryEmpty" class="gallery-empty" hidden>No renders cached yet. Complete a render to see it here.</div>
+          <div id="galleryGrid" class="gallery-grid" aria-live="polite"></div>
+        </section>
+        <section class="panel gallery-detail-panel" id="galleryDetail" hidden>
+          <div class="gallery-detail-toolbar">
+            <button id="galleryDetailBackBtn" class="gallery-back-btn xui-button xui-button--secondary" type="button">Back</button>
+            <h3 id="galleryDetailTitle" class="gallery-detail-title"></h3>
+            <button id="galleryDetailDeleteBtn" class="xui-button xui-button--secondary" type="button">Delete</button>
+          </div>
+          <div class="gallery-detail-body">
+            <div class="gallery-detail-image-wrap">
+              <img id="galleryDetailImage" class="gallery-detail-image" alt="Render preview">
+            </div>
+            <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
+          </div>
+          <div class="gallery-pass-strip" id="galleryPassStrip" hidden>
+            <div class="gallery-pass-label">Passes</div>
+            <div class="gallery-pass-thumbs" id="galleryPassThumbs"></div>
+          </div>
+        </section>
+      </section>
+
       <section class="tab-pane" id="paneLogs">
         <section class="panel log-panel">
           <div class="log-head">
@@ -582,6 +614,7 @@
   <script src="/app/editor.js"></script>
   <script src="/app/integrator_ui.js"></script>
   <script src="/app/scene_data.js"></script>
+  <script src="/app/gallery.js"></script>
   <script src="/app/sidebar_cards.js"></script>
   <script src="/app/ui_shell.js"></script>
   <script src="/app.js"></script>

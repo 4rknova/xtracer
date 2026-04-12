@@ -13,6 +13,7 @@ namespace web {
 
 class job_manager_t;
 class workspace_manager_t;
+class gallery_manager_t;
 
 struct render_thread_policy_t
 {
@@ -28,6 +29,7 @@ struct render_thread_policy_t
 void setup_routes(httplib::Server &server,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
+                  gallery_manager_t *gallery,
                   const std::string &scene_dir,
                   const std::string &web_root,
                   const render_thread_policy_t &thread_policy);

@@ -52,6 +52,8 @@ res/web/xtracer_wasm.wasm
 res/web/xtracer_wasm.js.map
 res/web/xtracer_wasm.wasm.map
 res/web/*.symbols
+gallery/
 .vscode/settings.json
 .claude/settings.json
 src/frontend/web-client/dist/showcase.dev.js
+src/frontend/web-client/dist/visual_editor.dev.js

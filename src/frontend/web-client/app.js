@@ -271,6 +271,7 @@ const el = {
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
   tabWorkspaces: $("tabWorkspaces"),
+  tabGallery: $("tabGallery"),
   tabSettings: $("tabSettings"),
   tabAbout: $("tabAbout"),
   tabLogs: $("tabLogs"),
@@ -278,6 +279,7 @@ const el = {
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
   paneWorkspaces: $("paneWorkspaces"),
+  paneGallery: $("paneGallery"),
   paneSettings: $("paneSettings"),
   paneAbout: $("paneAbout"),
   paneLogs: $("paneLogs"),
@@ -601,7 +603,7 @@ const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
 const FTUE_VERSION = 1;
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
 const APP_CONFIG_URL = "/app/data/config.json";
-const TAB_MODES = ["scene", "render", "visual", "workspaces", "logs", "settings", "about"];
+const TAB_MODES = ["scene", "render", "visual", "workspaces", "gallery", "logs", "settings", "about"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
 let api = null;
@@ -670,6 +672,7 @@ const previewView = {
 };
 const RENDER_MODE_DIRECT = "direct";
 const RENDER_MODE_PROGRESSIVE = "progressive";
+const RENDER_MODE_INCREMENTAL = "incremental";
 const RENDER_MODE_INTERACTIVE = "interactive";
 let renderMode = RENDER_MODE_PROGRESSIVE;
 let interactivePreviewEnabled = false;

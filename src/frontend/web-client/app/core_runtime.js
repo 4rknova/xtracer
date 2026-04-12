@@ -201,7 +201,8 @@ function setStatusThreads(threads) {
 
 function setStatusPass(currentPass, totalPasses, mode) {
   if (!el.statusPass) return;
-  const isProgressive = String(mode || "").toLowerCase() === RENDER_MODE_PROGRESSIVE;
+  const normalizedMode = String(mode || "").toLowerCase();
+  const isProgressive = normalizedMode === RENDER_MODE_PROGRESSIVE || normalizedMode === RENDER_MODE_INCREMENTAL;
   const total = Math.max(0, Number(totalPasses) || 0);
   let current = Math.max(0, Number(currentPass) || 0);
   if (!isProgressive || total <= 0 || !renderActive) {
@@ -657,7 +658,8 @@ function resetProgressiveDeltaState(jobId) {
 
 function appendToneMappingQuery(parts, opts) {
   const tm = String((opts && opts.toneMapping) || (el.toneMapping && el.toneMapping.value) || "aces").toLowerCase();
-  if (tm === "aces" || tm === "reinhard" || tm === "reinhard_luma" || tm === "mantiuk_2006" || tm === "none") {
+  const knownTmOps = ["aces", "reinhard", "reinhard_luma", "mantiuk_2006", "hable", "exponential", "lottes", "cineon", "uchimura", "agx", "khronos_pbr", "none"];
+  if (knownTmOps.indexOf(tm) !== -1) {
     parts.push(`tm=${encodeURIComponent(tm)}`);
   } else {
     parts.push("tm=aces");
