@@ -68,5 +68,6 @@ class IIntegrator
 #include "integrator/pathtracer_mis_full/integrator.h"
 #include "integrator/photon_mapping/integrator.h"
 #include "integrator/ao/integrator.h"
+#include "integrator/pathtracer_bdpt/integrator.h"
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */

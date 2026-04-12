@@ -49,6 +49,7 @@ struct render_request_t
     enum render_mode_t {
         RENDER_MODE_DIRECT = 0,
         RENDER_MODE_PROGRESSIVE,
+        RENDER_MODE_INCREMENTAL,
         RENDER_MODE_INTERACTIVE
     };
 
@@ -113,7 +114,10 @@ struct render_result_t
 enum progress_event_t
 {
     PROGRESS_EVENT_TILE_STARTED = 0,
-    PROGRESS_EVENT_TILE_FINISHED
+    PROGRESS_EVENT_TILE_FINISHED,
+    PROGRESS_EVENT_PASS_FINISHED  // emitted after each complete pass (progressive/incremental)
+                                  // done=pass index (1-based), total=total passes
+                                  // upd->source_fb points to the accumulated framebuffer
 };
 
 struct progress_tile_update_t

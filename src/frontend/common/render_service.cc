@@ -172,6 +172,7 @@ static const integrator_info_t k_integrators[] = {
     , { xtcore::render::integrator_metadata_t(), k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
+    , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
 };
 
 static const char *k_integrator_ids[] = {
@@ -182,6 +183,7 @@ static const char *k_integrator_ids[] = {
     , "photon_mapping"
     , "debug_views"
     , "ao"
+    , "pathtracer_bdpt"
 };
 
 std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name);
@@ -215,6 +217,7 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     else if (name == "uv")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
     else if (name == "emission")   return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (name == "ao")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::ao::Integrator());
+    else if (name == "pathtracer_bdpt") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_bdpt::Integrator());
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }
 
@@ -416,9 +419,12 @@ render_result_t render_scene_to_png(const render_request_t &request,
                                     const std::atomic<bool> *abort_flag)
 {
     render_result_t result;
-    if (request.render_mode == render_request_t::RENDER_MODE_PROGRESSIVE) {
+    if (request.render_mode == render_request_t::RENDER_MODE_PROGRESSIVE ||
+        request.render_mode == render_request_t::RENDER_MODE_INCREMENTAL) {
         const size_t total_samples = (request.samples > 0) ? request.samples : 1;
-        const size_t step = progressive_pass_sample_step(total_samples);
+        const size_t step = (request.render_mode == render_request_t::RENDER_MODE_INCREMENTAL)
+            ? 1
+            : progressive_pass_sample_step(total_samples);
         std::vector<size_t> pass_samples;
         pass_samples.push_back(1);
         for (size_t rem = (total_samples > 1 ? (total_samples - 1) : 0); rem > 0;) {
@@ -532,6 +538,16 @@ render_result_t render_scene_to_png(const render_request_t &request,
                 result.tiles_total = global_tiles_total;
                 result.tiles_done = global_tiles_done;
                 return result;
+            }
+
+            if (on_progress) {
+                progress_tile_update_t pass_upd;
+                pass_upd.has_rect = false;
+                pass_upd.source_fb = &accum_fb;
+                on_progress(PROGRESS_EVENT_PASS_FINISHED,
+                            pass_index + 1,
+                            pass_samples.size(),
+                            nullptr, &pass_upd);
             }
 
             if (pass_index + 1 == pass_samples.size()) {

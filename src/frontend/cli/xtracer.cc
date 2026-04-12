@@ -127,6 +127,7 @@ int main(int argc, char **argv)
             else if (RENDERER("pathtracer_mis_full")) integrator.reset(new xtcore::integrator::pathtracer_mis_full::Integrator());
             else if (RENDERER("photon_mapping")) integrator.reset(new xtcore::integrator::photon_mapping::Integrator());
             else if (RENDERER("raytracer"     )) integrator.reset(new xtcore::integrator::raytracer::Integrator());
+            else if (RENDERER("pathtracer_bdpt")) integrator.reset(new xtcore::integrator::pathtracer_bdpt::Integrator());
             else {
                 xtcore::Log::handle().post_error("unsupported renderer: %s", integrator_name.c_str());
                 exit_code = 2;

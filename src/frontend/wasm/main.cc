@@ -75,6 +75,7 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     else if (name == "uv")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
     else if (name == "emission")   return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (name == "ao")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::ao::Integrator());
+    else if (name == "pathtracer_bdpt") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_bdpt::Integrator());
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }
 

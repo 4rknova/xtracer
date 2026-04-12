@@ -115,6 +115,7 @@
         }
       ]
     },
+    { "id": "pathtracer_bdpt", "label": "Pathtracer (BDPT)" },
     {
       "id": "ao",
       "label": "Ambient Occlusion",
