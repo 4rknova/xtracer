@@ -11,7 +11,7 @@ option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
 option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into build/wasm-dist during native builds" OFF)
 option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
 option(XTRACER_ENABLE_NMATH_SIMD "Enable SIMD paths in nmath (x86 SSE2, double precision)" ON)
-option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" ON)
+option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" OFF)
 set(XTRACER_NMATH_PERF_REPEATS "21" CACHE STRING "Repeat count for nmath_perf_check benchmark comparisons")
 
 set(XTRACER_USING_EMSCRIPTEN OFF)
