@@ -19,6 +19,7 @@
 #include <nmesh/invnormals.h>
 #include <nmesh/icosahedron.h>
 #include <nmesh/plane.h>
+#include <nmesh/city.h>
 #include <nmesh/extras.h>
 #include <nmesh/polyhedra.h>
 #include <nmesh/ring.h>
@@ -1334,6 +1335,26 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             float branch_radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BRANCH_RADIUS) : 0, 0.05);
             int seed = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED) : 0, 1337);
             nmesh::generator::coral(&obj, (size_t)res, depth, branch_count, branch_angle, height, branch_radius, seed);
+        }
+        else if (!token.compare(XTPROTO_LTRL_CITY)) {
+            int seed           = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_SEED)                   : 0, 1337);
+            int blocks_x       = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BLOCKS_X)               : 0, 4);
+            int blocks_z       = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BLOCKS_Z)               : 0, 4);
+            float block_size   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BLOCK_SIZE)      : 0, 1.0);
+            float road_width   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_ROAD_WIDTH)      : 0, 0.15);
+            float height_min   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BUILDING_HEIGHT_MIN) : 0, 0.1);
+            float height_max   = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BUILDING_HEIGHT_MAX) : 0, 0.8);
+            float lot_padding  = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_LOT_PADDING)    : 0, 0.04);
+            int bpb_x          = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BUILDINGS_PER_BLOCK_X) : 0, 2);
+            int bpb_z          = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_BUILDINGS_PER_BLOCK_Z) : 0, 2);
+            float floor_h      = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_FLOOR_HEIGHT)         : 0, 0.22);
+            float bay_w        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BAY_WIDTH)            : 0, 0.22);
+            float win_wr       = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WINDOW_WIDTH_RATIO)   : 0, 0.55);
+            float win_hr       = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WINDOW_HEIGHT_RATIO)  : 0, 0.55);
+            float win_inset    = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_WINDOW_INSET)         : 0, 0.04);
+            float pav_h        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_PAVEMENT_HEIGHT)      : 0, 0.012);
+            float pav_w        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_PAVEMENT_WIDTH)       : 0, 0.04);
+            nmesh::generator::city(&obj, seed, blocks_x, blocks_z, block_size, road_width, height_min, height_max, lot_padding, bpb_x, bpb_z, floor_h, bay_w, win_wr, win_hr, win_inset, pav_h, pav_w);
         }
 
         else Log::handle().post_message("Invalid mesh generator: %s (%s)", token.c_str(), f.c_str());

@@ -245,6 +245,7 @@
 #define XTPROTO_LTRL_HEMISPHERE      "hemisphere"        /* string     */ /* Hemisphere dome */
 #define XTPROTO_LTRL_STAR            "star"              /* string     */ /* Extruded star */
 #define XTPROTO_LTRL_SUPERELLIPSOID  "superellipsoid"    /* string     */ /* Superellipsoid */
+#define XTPROTO_LTRL_CITY            "city"              /* string     */ /* Procedural city */
 
 /* New property tokens */
 #define XTPROTO_PROP_TOOTH_COUNT     "tooth_count"       /* integer    */ /* Number of gear teeth */
@@ -264,5 +265,21 @@
 #define XTPROTO_PROP_POINTS          "points"            /* integer    */ /* Star point count */
 #define XTPROTO_PROP_E1              "e1"                /* scalar_t   */ /* Superellipsoid N-S exponent */
 #define XTPROTO_PROP_E2              "e2"                /* scalar_t   */ /* Superellipsoid E-W exponent */
+#define XTPROTO_PROP_BLOCKS_X              "blocks_x"              /* integer    */ /* City blocks along X */
+#define XTPROTO_PROP_BLOCKS_Z              "blocks_z"              /* integer    */ /* City blocks along Z */
+#define XTPROTO_PROP_BLOCK_SIZE            "block_size"            /* scalar_t   */ /* City block size */
+#define XTPROTO_PROP_ROAD_WIDTH            "road_width"            /* scalar_t   */ /* Road width */
+#define XTPROTO_PROP_BUILDING_HEIGHT_MIN   "building_height_min"   /* scalar_t   */ /* Minimum building height */
+#define XTPROTO_PROP_BUILDING_HEIGHT_MAX   "building_height_max"   /* scalar_t   */ /* Maximum building height */
+#define XTPROTO_PROP_LOT_PADDING           "lot_padding"           /* scalar_t   */ /* Padding inside each lot */
+#define XTPROTO_PROP_BUILDINGS_PER_BLOCK_X "buildings_per_block_x" /* integer    */ /* Building columns per block */
+#define XTPROTO_PROP_BUILDINGS_PER_BLOCK_Z "buildings_per_block_z" /* integer    */ /* Building rows per block */
+#define XTPROTO_PROP_FLOOR_HEIGHT          "floor_height"          /* scalar_t   */ /* Height per building floor */
+#define XTPROTO_PROP_BAY_WIDTH             "bay_width"             /* scalar_t   */ /* Target window bay width */
+#define XTPROTO_PROP_WINDOW_WIDTH_RATIO    "window_width_ratio"    /* scalar_t   */ /* Window width / bay width */
+#define XTPROTO_PROP_WINDOW_HEIGHT_RATIO   "window_height_ratio"   /* scalar_t   */ /* Window height / floor height */
+#define XTPROTO_PROP_WINDOW_INSET          "window_inset"          /* scalar_t   */ /* Window recess depth */
+#define XTPROTO_PROP_PAVEMENT_HEIGHT       "pavement_height"       /* scalar_t   */ /* Raised kerb height */
+#define XTPROTO_PROP_PAVEMENT_WIDTH        "pavement_width"        /* scalar_t   */ /* Pavement strip width into road */
 
 #endif /* XTCORE_PROTO_H_INCLUDED */
