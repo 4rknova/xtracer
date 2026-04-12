@@ -63,7 +63,7 @@ With scene variant:
 | CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
 | Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
-| Web static app | `src/frontend/web-client/` | SPA for Render / Editor / Settings / Logs / About, including runtime JSON config in `app/data/` |
+| Web static app | `src/frontend/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies (registry: `docs/DEPENDENCIES.md`) |
@@ -90,6 +90,7 @@ With scene variant:
 | `pathtracer` | Brute-force path tracing | Yes |
 | `pathtracer_mis` | MIS diffuse path tracing | Yes |
 | `pathtracer_mis_full` | MIS path tracing with emissive-area and environment sampling | Yes |
+| `pathtracer_bdpt` | Experimental bidirectional path tracing with MIS path connection | Yes |
 | `photon_mapping` | Photon mapping | Yes |
 | `ao` | Ambient occlusion | Yes |
 | `debug_views` | Multi-mode debug integrator | Yes |
@@ -178,7 +179,7 @@ geometry = {
 | `shell_spiral` | `rock` | `chain_link` | `lathe` |
 | `snowflake` | `pyramid` | `gear` | `spring` |
 | `star` | `crystal` | `tree` | `coral` |
-| `terrain` | `draped_cloth_strip` |  |  |
+| `terrain` | `draped_cloth_strip` | `city` |  |
 
 Note: `menger_sponge` and `sierpinski_tetrahedron` can be used either as:
 - `geometry.type` values (native implicit xtcore surfaces), or
@@ -457,8 +458,9 @@ Rules:
 | Tab | Key Capabilities |
 |---|---|
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
-| Render | Scene/camera/integrator selection, render settings, a square preview container that fills the render pane as the largest square that fits, tile-size presets (`8`, `32`, `64`, `Auto` where auto derives a square tile from frame size and effective thread count), a preview-toolbar export format dropdown + live format-aware save button, preview sampling toggle, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
+| Render | Scene/camera/integrator selection, render settings, a square preview container that fills the render pane as the largest square that fits, tile-size presets (`8`, `32`, `64`, `Auto` where auto derives a square tile from frame size and effective thread count), a preview-toolbar export format dropdown + live format-aware save button, preview sampling toggle, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Incremental`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, 3D scene scale multiplier, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
+| Gallery | Cached render browser with card grid, detail view, pass thumbnails for progressive/incremental renders, refresh, and delete |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party dependency notices including usage/location |
@@ -522,7 +524,7 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/integrators` | List backend integrator metadata + controls |
 | GET | `/api/post_filters` | List backend post-filter metadata, stage support, and parameter schema |
 | GET | `/api/resolutions` | Resolution presets |
-| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,interactive}`; legacy `normal` is also accepted, optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`; returns `503` when the bounded server queue is full) |
+| POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,incremental,interactive}`; legacy `normal` is also accepted, optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`; returns `503` when the bounded server queue is full) |
 | GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
 | POST | `/api/jobs/abort/{id}` | Abort explicit job id |
 | GET | `/api/jobs/{id}` | Job status snapshot |
@@ -530,6 +532,10 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, supports tone mapping + optional post-filter query params) |
 | GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr}` | Download final export (supports optional post-filter query params) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
+| GET | `/api/gallery` | List cached gallery entries (newest first) |
+| GET | `/api/gallery/{id}/image` | Fetch the latest cached render image |
+| GET | `/api/gallery/{id}/pass/{n}/image` | Fetch a cached pass image for progressive/incremental renders |
+| DELETE | `/api/gallery/{id}` | Delete a cached gallery entry |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
 | GET | `/api/logs/wait?since={id}&timeout_ms={n}` | Wait for new backend logs (long-poll) |
 
@@ -589,6 +595,7 @@ Notes:
 
 Open: `http://127.0.0.1:8080`
 
+`--gallery-dir` controls where cached gallery renders and per-pass previews are stored (default: `gallery`).
 `--max-concurrent-renders` controls how many render jobs execute simultaneously (default: `1`).
 `--render-reserve-threads` controls how many threads auto-render mode keeps free for server responsiveness (default: `1`).
 When `/api/render` uses `threads=0`, backend auto mode resolves to `max(1, runtime_threads - reserve_threads)` (single-core hosts still render with `1` thread).
