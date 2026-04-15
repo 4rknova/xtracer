@@ -1940,10 +1940,6 @@ std::string encode_xdt1(const job_image_delta_t &delta)
 static job_ws_hub_t g_job_ws_hub;
 static log_ws_hub_t g_log_ws_hub;
 static log_ws_hub_t g_job_events_ws_hub;
-// Tracks jobs that have sent at least one tile so we can detect the
-// queued→running transition and broadcast jobs_changed exactly once.
-static std::set<std::string> g_known_running_jobs;
-static std::mutex g_known_running_mutex;
 
 // Build and broadcast {"type":"jobs_changed","jobs":[...]} to all /ws/jobs
 // subscribers.  Called after every mutation that changes the active job list.
@@ -3497,27 +3493,16 @@ void setup_routes(WebApp &app,
                                 const std::vector<unsigned char> &tile_bytes) {
         if (tile_bytes.empty()) {
             // Terminal state (done/aborted/error): send text snapshot so clients
-            // know to fetch the final image or handle completion.
+            // know to fetch the final image or handle completion, then immediately
+            // broadcast the updated (now-empty) job list to /ws/jobs subscribers.
             g_job_ws_hub.broadcast_text(job_id, job_snapshot_to_json(snap));
             if (snap.state == JOB_DONE || snap.state == JOB_ABORTED || snap.state == JOB_ERROR) {
-                {
-                    std::lock_guard<std::mutex> lk(g_known_running_mutex);
-                    g_known_running_jobs.erase(job_id);
-                }
                 broadcast_jobs_changed(jobs);
             }
         } else {
-            // Per-tile update: send binary only — the XTDR header already carries
-            // done/total/state so clients can update the progress bar without a
-            // separate text round-trip (halves mutex acquisitions per tile).
-            // Also detect the queued→running transition (first tile) and notify
-            // /ws/jobs subscribers once so the jobs card updates immediately.
-            bool first_tile = false;
-            {
-                std::lock_guard<std::mutex> lk(g_known_running_mutex);
-                first_tile = g_known_running_jobs.insert(job_id).second;
-            }
-            if (first_tile) broadcast_jobs_changed(jobs);
+            // Per-tile update: binary only to per-job render subscribers.
+            // The /ws/jobs heartbeat thread keeps the jobs card current; no
+            // extra broadcast needed here.
             g_job_ws_hub.broadcast_binary(
                 job_id,
                 std::string(reinterpret_cast<const char *>(tile_bytes.data()), tile_bytes.size()));
@@ -3534,6 +3519,17 @@ void setup_routes(WebApp &app,
            << "}]}";
         g_log_ws_hub.broadcast_text(ss.str());
     });
+
+    // Heartbeat thread: push the full active job list to all /ws/jobs
+    // subscribers every second.  Guarantees the jobs card stays current during
+    // renders (queued→running transition, live elapsed_ms / progress) without
+    // relying on per-tile mutation broadcasts.  Detached — runs for server lifetime.
+    std::thread([&jobs]() {
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            broadcast_jobs_changed(jobs);
+        }
+    }).detach();
 }
 
 } /* namespace web */
