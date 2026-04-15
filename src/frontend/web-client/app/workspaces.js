@@ -1,4 +1,3 @@
-UI_REFRESH_INTERVAL_MS_JOBS = 500;
 
 function updateWorkspaceActiveHint() {
   if (!el.workspaceActiveHint) return;
@@ -85,10 +84,8 @@ function updateWorkspaceServerStatsHints(data) {
 }
 
 let settingsJobsTotalRenderThreads = 0;
-let settingsJobsTickInterval = null;
 const settingsJobsAbortInFlight = new Set();
 const settingsJobsMoveInFlight = new Set();
-const sidebarJobSockets = new Map(); // jobId → WebSocket
 const SETTINGS_JOBS_GRAPH_WINDOW_MS = 60 * 1000;
 let settingsJobsThreadSamples = [];
 
@@ -335,30 +332,15 @@ function bindSettingsJobsCardLifecycle() {
   if (!card || card._settingsJobsLifecycleBound) return;
   card._settingsJobsLifecycleBound = true;
 
-  function startTick() {
-    if (settingsJobsTickInterval) return;
-    settingsJobsTickInterval = setInterval(refreshSettingsJobsCard, UI_REFRESH_INTERVAL_MS_JOBS);
-  }
-
-  function stopTick() {
-    if (settingsJobsTickInterval) {
-      clearInterval(settingsJobsTickInterval);
-      settingsJobsTickInterval = null;
-    }
-  }
-
   card.addEventListener("toggle", () => {
     if (card.open) {
       refreshSettingsJobsCard();
-      startTick();
     } else {
-      stopTick();
       resetSettingsJobsThreadGraph();
     }
   });
   if (card.open) {
     refreshSettingsJobsCard();
-    startTick();
   }
 }
 
@@ -631,122 +613,8 @@ function renderSettingsJobsList(activeJobs) {
     item.dataset.jobId = id;
     el.settingsJobsList.appendChild(item);
   });
-  syncSidebarJobSockets(jobs);
 }
 
-// Open a lightweight per-job WS subscription for the sidebar.
-// Patches progress/elapsed in-place on every tile/pass; does a full REST
-// refresh only when the job reaches a terminal state.
-function openSidebarJobSocket(jobId) {
-  if (!jobId || sidebarJobSockets.has(jobId)) return;
-  if (typeof WebSocket === "undefined") return;
-  let ws;
-  try { ws = new WebSocket(`ws://${location.host}/ws/jobs/${encodeURIComponent(jobId)}`); }
-  catch (_) { return; }
-  ws.binaryType = "arraybuffer";
-  sidebarJobSockets.set(jobId, ws);
-  ws.onmessage = (event) => {
-    if (event.data instanceof ArrayBuffer) {
-      // Binary XTDR packet — extract tiles_done / tiles_total / elapsed_ms from header.
-      // Header layout (32 bytes): magic(4) width(4) height(4) tiles_done(4)
-      //   tiles_total(4) state(4) tile_count(4) elapsed_ms(4)
-      const view = new DataView(event.data);
-      if (event.data.byteLength < 32) return;
-      if (view.getUint8(3) !== 0x52) return; // must be XTDR ('R'), not XTD1
-      const tilesDone  = view.getUint32(12, true);
-      const tilesTotal = view.getUint32(16, true);
-      const elapsedMs  = view.getUint32(28, true);
-      const pct = tilesTotal > 0 ? tilesDone / tilesTotal : 0;
-      patchSettingsJobProgress(jobId, pct, elapsedMs);
-    } else {
-      let data;
-      try { data = JSON.parse(event.data); } catch (_) { return; }
-      const state = String(data.state || "").toLowerCase();
-      if (state === "running" || state === "queued") {
-        patchSettingsJobFromSnapshot(jobId, data);
-      } else {
-        // Terminal state — close and do a full list refresh.
-        ws.close();
-        refreshSettingsJobsCard();
-      }
-    }
-  };
-  ws.onclose = () => {
-    if (sidebarJobSockets.get(jobId) === ws) sidebarJobSockets.delete(jobId);
-  };
-  ws.onerror = () => { try { ws.close(); } catch (_) {} };
-}
-
-function closeSidebarJobSocket(jobId) {
-  const ws = sidebarJobSockets.get(jobId);
-  if (!ws) return;
-  sidebarJobSockets.delete(jobId);
-  try { ws.close(); } catch (_) {}
-}
-
-// Keep sidebar subscriptions in sync with the displayed job list.
-function syncSidebarJobSockets(jobs) {
-  const activeIds = new Set(
-    (Array.isArray(jobs) ? jobs : [])
-      .filter((j) => {
-        const s = String((j && j.state) || "").toLowerCase();
-        return s === "running" || s === "queued";
-      })
-      .map((j) => String((j && j.id) || "").trim())
-      .filter(Boolean)
-  );
-  // Close sockets for jobs no longer in the list.
-  sidebarJobSockets.forEach((_, id) => { if (!activeIds.has(id)) closeSidebarJobSocket(id); });
-  // Open sockets for new running/queued jobs.
-  activeIds.forEach((id) => openSidebarJobSocket(id));
-}
-
-// Patch a job row's progress bar and % pill in-place from WS binary tile data.
-// Avoids a REST round-trip — called on every tile finish for real-time updates.
-function patchSettingsJobProgress(jobId, progress, elapsedMs) {
-  if (!el.settingsJobsList || !jobId) return;
-  const row = el.settingsJobsList.querySelector(`[data-job-id="${CSS.escape(String(jobId))}"]`);
-  if (!row) return;
-  const pct = Math.max(0, Math.min(1, Number(progress) || 0));
-  const pctText = `${(pct * 100).toFixed(1)}%`;
-  const fill = row.querySelector(".xui-progress__fill, .settings-job-progress > span");
-  if (fill) fill.style.width = pctText;
-  const pills = row.querySelectorAll(".settings-job-meta-pill");
-  if (pills[2]) pills[2].textContent = pctText;
-  if (pills[1] && elapsedMs > 0) pills[1].textContent = formatJobElapsedMs(elapsedMs);
-  if (el.settingsJobsUpdated) {
-    const ts = new Date();
-    const hh = String(ts.getHours()).padStart(2, "0");
-    const mm = String(ts.getMinutes()).padStart(2, "0");
-    const ss = String(ts.getSeconds()).padStart(2, "0");
-    updateWorkspaceServerStatHint(el.settingsJobsUpdated, "Updated", `${hh}:${mm}:${ss}`);
-  }
-}
-
-// Patch all live fields (progress, elapsed, threads) from a WS JSON snapshot.
-// Called on PASS_FINISHED broadcasts — richer than binary but still no REST call.
-function patchSettingsJobFromSnapshot(jobId, data) {
-  if (!el.settingsJobsList || !jobId || !data) return;
-  const row = el.settingsJobsList.querySelector(`[data-job-id="${CSS.escape(String(jobId))}"]`);
-  if (!row) return;
-  const pct = Math.max(0, Math.min(1, Number(data.progress) || 0));
-  const pctText = `${(pct * 100).toFixed(1)}%`;
-  const fill = row.querySelector(".xui-progress__fill, .settings-job-progress > span");
-  if (fill) fill.style.width = pctText;
-  const pills = row.querySelectorAll(".settings-job-meta-pill");
-  if (pills[2]) pills[2].textContent = pctText;
-  if (pills[1]) pills[1].textContent = formatJobElapsedMs(data.elapsed_ms);
-  const threads = Math.max(0, Number(data.threads) || 0);
-  if (pills[0] && threads > 0) pills[0].textContent = threads === 1 ? "1 thread" : `${threads} threads`;
-  // Keep the thread-usage graph up to date without a REST call.
-  recordSettingsJobsThreadUsage(threads);
-  renderSettingsJobsThreadGraph();
-  if (el.settingsJobsThreadsUsage) {
-    const total = Math.max(0, Number(settingsJobsTotalRenderThreads) || 0);
-    const value = total > 0 ? `${threads} / ${total}` : `${threads} / -`;
-    updateWorkspaceServerStatHint(el.settingsJobsThreadsUsage, "Threads In Use", value);
-  }
-}
 
 function refreshSettingsJobsCard() {
   if (!el.settingsJobsList) return Promise.resolve();

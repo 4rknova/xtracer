@@ -1122,6 +1122,7 @@ function getActiveJobsFromCache() {
   return Array.isArray(cachedActiveJobs) ? cachedActiveJobs : [];
 }
 
+
 function startJobEventsWebSocket() {
   if (jobEventsWebSocket && jobEventsWebSocket.readyState <= WebSocket.OPEN) return;
   let ws;
