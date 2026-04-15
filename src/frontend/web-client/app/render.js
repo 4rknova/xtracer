@@ -329,8 +329,11 @@ async function watchJobViaWebSocket(jobId, token) {
         // per-tile text message is needed.
         const delta = parseImageDeltaPacket(event.data);
         if (delta) {
+          if (Array.isArray(delta.tiles) && delta.tiles.length > 0 && typeof recordPreviewTransfer === "function") {
+            recordPreviewTransfer("delta", event.data.byteLength);
+          }
+          const pct = delta.tilesTotal > 0 ? delta.tilesDone / delta.tilesTotal : 0;
           if (delta.tilesTotal > 0) {
-            const pct = delta.tilesDone / delta.tilesTotal;
             const elapsedMs = Number(delta.elapsedMs) || 0;
             if (typeof syncRenderTimerToServer === "function") syncRenderTimerToServer(elapsedMs);
             setProgress(pct);
@@ -348,6 +351,7 @@ async function watchJobViaWebSocket(jobId, token) {
               active_tiles: delta.activeTiles,
               width: delta.width,
               height: delta.height,
+              progress: pct,
             });
           }
           if (Array.isArray(delta.tiles) && delta.tiles.length > 0) {
