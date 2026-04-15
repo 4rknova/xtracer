@@ -83,6 +83,7 @@ class job_manager_t
 {
     public:
     job_manager_t();
+    ~job_manager_t();
     void set_gallery_manager(gallery_manager_t *gm);
     void set_max_concurrent_renders(size_t max_concurrent);
     void set_render_thread_budget(size_t max_threads);
@@ -255,6 +256,7 @@ class job_manager_t
     size_t render_thread_budget;
     size_t active_render_threads;
     std::deque<std::string> queued_job_order;
+    std::atomic<bool> stopping_;
 };
 
 } /* namespace web */

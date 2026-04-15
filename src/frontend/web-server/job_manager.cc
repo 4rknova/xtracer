@@ -683,7 +683,29 @@ job_manager_t::job_manager_t()
     , render_thread_budget(1)
     , active_render_threads(0)
     , queued_job_order()
+    , stopping_(false)
 {}
+
+job_manager_t::~job_manager_t()
+{
+    stopping_.store(true);
+
+    // Signal all active/queued jobs to cancel so render threads exit promptly.
+    {
+        std::lock_guard<std::mutex> lock(jobs_mut);
+        for (auto &kv : jobs) {
+            kv.second->cancel_requested.store(true);
+        }
+    }
+
+    // Wait for every detached render thread to finish.  Each thread
+    // decrements active_renders (via render_slot_guard) as its very last
+    // action, so reaching 0 guarantees no thread is still touching *this.
+    {
+        std::unique_lock<std::mutex> lock(render_slots_mut);
+        render_slots_cv.wait(lock, [this]() { return active_renders == 0; });
+    }
+}
 
 void job_manager_t::set_gallery_manager(gallery_manager_t *gm)
 {
@@ -786,6 +808,7 @@ std::string job_manager_t::create(const common::render_request_t &request,
 
 void job_manager_t::dispatch_queued_jobs()
 {
+    if (stopping_.load()) return;
     std::vector<scheduled_job_t> to_start;
     while (true) {
         std::string next_id;
