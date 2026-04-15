@@ -72,6 +72,26 @@ material = {
         }
     }
 
+    phong_spec = {
+        type = phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.0,0.0,0.0)
+                }
+                specular = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                exponent    = 128
+                reflectance = 0.98
+            }
+        }
+    }
+
     dielectric_clear = {
         type = dielectric
         properties = {
@@ -88,6 +108,154 @@ material = {
             }
         }
     }
+
+    principled_white_diff = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 1.0
+                ior       = 1.5
+            }
+        }
+    }
+
+    principled_white_metal = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                metallic  = 1.0
+                roughness = 0.3
+                ior       = 1.5
+            }
+        }
+    }
+
+    rough_dielectric_white = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                ior          = 1.5
+                roughness    = 0.5
+                transparency = 0.98
+            }
+        }
+    }
+
+    thin_dielectric_white = {
+        type = thin_dielectric
+        properties = {
+            samplers = {
+                transmission = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                ior          = 1.45
+                roughness    = 0.02
+                transparency = 0.98
+            }
+        }
+    }
+
+    subsurface_white = {
+        type = subsurface
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+                subsurface_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+                subsurface_radius = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                subsurface = 0.5
+                thickness  = 0.0
+            }
+        }
+    }
+
+    sheen_gray = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+                sheen_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                sheen = 1.0
+            }
+        }
+    }
+
+    thin_translucent_white = {
+        type = thin_translucent
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+                translucency_color = {
+                    type  = color
+                    value = col3(1.0,1.0,1.0)
+                }
+            }
+            scalars = {
+                translucency = 0.5
+                thickness    = 0.0
+            }
+        }
+    }
+
+    emissive_mid = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(0.5,0.5,0.5)
+                }
+            }
+        }
+    }
+
+    boundary_clear = {
+        type = boundary
+        properties = {}
+    }
 }
 
 object = {
@@ -98,17 +266,19 @@ object = {
 }
 
 variants = {
-    base = {
+    hide_base = true
+
+    lambert_gray = {
         name        = Lambert Gray (Base)
-        description = White furnace test with a 0.5-albedo Lambert sphere under uniform white environment.
+        description = Sphere should appear as uniform mid-gray against the white background. R=G=B confirms achromatic diffuse response. Serves as the gray/white ratio baseline.
     }
 
     lambert_white = {
         name        = Lambert White
-        description = White furnace test with a unit-albedo Lambert sphere under uniform white environment.
+        description = Unit-albedo Lambert under white env: sphere should vanish into the background (mean ~1.0). Any visible dark silhouette indicates energy loss in the diffuse BRDF.
         set = {
             title       = Furnace Lambert White
-            description = White furnace test with a unit-albedo Lambert sphere under uniform white environment.
+            description = Unit-albedo Lambert under white env: sphere should vanish into the background (mean ~1.0). Any visible dark silhouette indicates energy loss in the diffuse BRDF.
             object = {
                 sphere = {
                     material = lambert_white
@@ -118,11 +288,11 @@ variants = {
     }
 
     blinn_high_spec = {
-        name        = Blinn High Spec
-        description = High-specular Blinn-Phong sphere under uniform white environment.
+        name        = Blinn-Phong High Spec (non-PBR)
+        description = Blinn-Phong is an empirical model and is not energy-conserving. A visible gray sphere with darkening toward the rim is the expected and correct result. The rim darkening comes from hemisphere truncation of the specular lobe at grazing angles, which is an inherent property of the model. Any color tint or left-right asymmetry would indicate a bug.
         set = {
             title       = Furnace Blinn High Spec
-            description = Furnace sanity scene with a high-specular Blinn-Phong sphere under uniform white environment.
+            description = Blinn-Phong is an empirical model and is not energy-conserving. A visible gray sphere with darkening toward the rim is the expected and correct result. The rim darkening comes from hemisphere truncation of the specular lobe at grazing angles, which is an inherent property of the model. Any color tint or left-right asymmetry would indicate a bug.
             object = {
                 sphere = {
                     material = blinn_spec
@@ -131,15 +301,155 @@ variants = {
         }
     }
 
+    phong_high_spec = {
+        name        = Phong High Spec (non-PBR)
+        description = Phong is an empirical model and is not energy-conserving. Like the Blinn-Phong variant, a visible gray sphere with rim darkening is the expected and correct result for the same reason: specular lobe hemisphere truncation at grazing angles. Any color tint or left-right asymmetry would indicate a bug.
+        set = {
+            title       = Furnace Phong High Spec
+            description = Phong is an empirical model and is not energy-conserving. Like the Blinn-Phong variant, a visible gray sphere with rim darkening is the expected and correct result for the same reason: specular lobe hemisphere truncation at grazing angles. Any color tint or left-right asymmetry would indicate a bug.
+            object = {
+                sphere = {
+                    material = phong_spec
+                }
+            }
+        }
+    }
+
     dielectric_clear = {
         name        = Dielectric Clear
-        description = Clear dielectric sphere under uniform white environment.
+        description = Clear dielectric (ior=1.5, transparency=0.98) under white env: sphere should be invisible. Fresnel split between reflection and transmission sees the same white environment from all angles, so no boundary should be visible. Any visible rim or halo indicates energy gain or loss at the interface.
         set = {
             title       = Furnace Dielectric Clear
-            description = Furnace sanity scene with a clear dielectric sphere in uniform white environment.
+            description = Clear dielectric (ior=1.5, transparency=0.98) under white env: sphere should be invisible. Fresnel split between reflection and transmission sees the same white environment from all angles, so no boundary should be visible. Any visible rim or halo indicates energy gain or loss at the interface.
             object = {
                 sphere = {
                     material = dielectric_clear
+                }
+            }
+        }
+    }
+
+    principled_diffuse = {
+        name        = Principled Diffuse
+        description = Principled BSDF at full roughness, metallic=0 (diffuse-dominated): white sphere should vanish into the background. Any dark silhouette indicates energy loss in the GGX diffuse path. Color tint indicates a channel-asymmetric bug.
+        set = {
+            title       = Furnace Principled Diffuse
+            description = Principled BSDF at full roughness, metallic=0 (diffuse-dominated): white sphere should vanish into the background. Any dark silhouette indicates energy loss in the GGX diffuse path. Color tint indicates a channel-asymmetric bug.
+            object = {
+                sphere = {
+                    material = principled_white_diff
+                }
+            }
+        }
+    }
+
+    principled_metallic = {
+        name        = Principled Metallic
+        description = Principled BSDF, fully metallic (metallic=1, roughness=0.3). The single-scattering GGX model does not account for inter-microfacet multiple scattering, so a visible gray sphere with rim darkening is expected and correct. Energy loss increases with roughness and toward grazing angles. A color tint or left-right asymmetry would indicate a bug. Full energy conservation requires Kulla-Conty compensation, which is not implemented.
+        set = {
+            title       = Furnace Principled Metallic
+            description = Principled BSDF, fully metallic (metallic=1, roughness=0.3). The single-scattering GGX model does not account for inter-microfacet multiple scattering, so a visible gray sphere with rim darkening is expected and correct. Energy loss increases with roughness and toward grazing angles. A color tint or left-right asymmetry would indicate a bug. Full energy conservation requires Kulla-Conty compensation, which is not implemented.
+            object = {
+                sphere = {
+                    material = principled_white_metal
+                }
+            }
+        }
+    }
+
+    rough_dielectric = {
+        name        = Rough Dielectric
+        description = Rough dielectric (ior=1.5, roughness=0.5, transparency=0.98) under white env: sphere nearly invisible. Roughness spreads the Fresnel lobe but under a uniform environment energy still cancels. Any dark boundary ring indicates GGX energy loss at the rough interface.
+        set = {
+            title       = Furnace Rough Dielectric
+            description = Rough dielectric (ior=1.5, roughness=0.5, transparency=0.98) under white env: sphere nearly invisible. Roughness spreads the Fresnel lobe but under a uniform environment energy still cancels. Any dark boundary ring indicates GGX energy loss at the rough interface.
+            object = {
+                sphere = {
+                    material = rough_dielectric_white
+                }
+            }
+        }
+    }
+
+    thin_dielectric = {
+        name        = Thin Dielectric
+        description = Thin dielectric sheet (ior=1.45, roughness=0.02, transparency=0.98) under white env: sphere invisible. The thin-surface model skips refraction offset so the sphere acts as a lossless mirror-plus-transmission. Any visible boundary indicates an energy imbalance in the delta path split.
+        set = {
+            title       = Furnace Thin Dielectric
+            description = Thin dielectric sheet (ior=1.45, roughness=0.02, transparency=0.98) under white env: sphere invisible. The thin-surface model skips refraction offset so the sphere acts as a lossless mirror-plus-transmission. Any visible boundary indicates an energy imbalance in the delta path split.
+            object = {
+                sphere = {
+                    material = thin_dielectric_white
+                }
+            }
+        }
+    }
+
+    subsurface = {
+        name        = Subsurface Scattering
+        description = Subsurface material (subsurface=0.5, white base and scatter colors, thickness=0) under white env: sphere should vanish. With thickness=0 the transmitted path carries no color absorption. A visible silhouette indicates energy loss in the diffuse-transmission split.
+        set = {
+            title       = Furnace Subsurface
+            description = Subsurface material (subsurface=0.5, white base and scatter colors, thickness=0) under white env: sphere should vanish. With thickness=0 the transmitted path carries no color absorption. A visible silhouette indicates energy loss in the diffuse-transmission split.
+            object = {
+                sphere = {
+                    material = subsurface_white
+                }
+            }
+        }
+    }
+
+    sheen = {
+        name        = Sheen / Cloth
+        description = Sheen material (base=gray 0.5, sheen_color=white, sheen=1.0) under white env: sphere visible as mid-gray with edges that may appear slightly brighter than center due to the additive retro-reflective sheen term. No color tint and no dark grazing shadow confirms achromatic response. A darker-than-gray center or absent edge brightening indicates the sheen lobe is not contributing.
+        set = {
+            title       = Furnace Sheen
+            description = Sheen material (base=gray 0.5, sheen_color=white, sheen=1.0) under white env: sphere visible as mid-gray with edges that may appear slightly brighter than center due to the additive retro-reflective sheen term. No color tint and no dark grazing shadow confirms achromatic response. A darker-than-gray center or absent edge brightening indicates the sheen lobe is not contributing.
+            object = {
+                sphere = {
+                    material = sheen_gray
+                }
+            }
+        }
+    }
+
+    thin_translucent = {
+        name        = Thin Translucent
+        description = Thin translucent sheet (translucency=0.5, white base and translucency colors, thickness=0) under white env: sphere should vanish. With no thickness attenuation both the reflected and transmitted diffuse lobes see the white environment. A visible silhouette or color cast indicates an energy or sampling bug in the wrap-diffuse transmission model.
+        set = {
+            title       = Furnace Thin Translucent
+            description = Thin translucent sheet (translucency=0.5, white base and translucency colors, thickness=0) under white env: sphere should vanish. With no thickness attenuation both the reflected and transmitted diffuse lobes see the white environment. A visible silhouette or color cast indicates an energy or sampling bug in the wrap-diffuse transmission model.
+            object = {
+                sphere = {
+                    material = thin_translucent_white
+                }
+            }
+        }
+    }
+
+    emissive = {
+        name        = Emissive
+        description = Emissive material (emission=0.5 gray) under white env: sphere should appear as a flat, uniformly lit mid-gray disc against the white background. No shading variation, no environment influence. Uniform brightness across the silhouette confirms path termination is working correctly. Any gradient or brightening at edges indicates the emissive path is incorrectly bouncing.
+        set = {
+            title       = Furnace Emissive
+            description = Emissive material (emission=0.5 gray) under white env: sphere should appear as a flat, uniformly lit mid-gray disc against the white background. No shading variation, no environment influence. Uniform brightness across the silhouette confirms path termination is working correctly. Any gradient or brightening at edges indicates the emissive path is incorrectly bouncing.
+            object = {
+                sphere = {
+                    material = emissive_mid
+                }
+            }
+        }
+    }
+
+    boundary = {
+        name        = Boundary Pass-Through
+        description = Boundary material under white env: sphere completely invisible. Rays pass straight through the surface unchanged and see the white environment behind. Any visible boundary, darkening, or silhouette means the pass-through is deflecting or absorbing rays.
+        set = {
+            title       = Furnace Boundary
+            description = Boundary material under white env: sphere completely invisible. Rays pass straight through the surface unchanged and see the white environment behind. Any visible boundary, darkening, or silhouette means the pass-through is deflecting or absorbing rays.
+            object = {
+                sphere = {
+                    material = boundary_clear
                 }
             }
         }

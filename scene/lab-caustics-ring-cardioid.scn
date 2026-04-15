@@ -53,15 +53,11 @@ geometry = {
     key_light = {
         type     = sphere
         position = vec3(1,15,10)
-        radius   = 2.0
+        radius   = 8.0
     }
 }
 
-material = {
-    ring_volume_boundary = {
-        type = boundary
-    }
-
+material = {   
     ground_plane = {
         type = blinn_phong
         properties = {
@@ -164,30 +160,13 @@ material = {
         }
     }
 
-    ring_frosted = {
-        type = rough_dielectric
-        properties = {
-            samplers = {
-                diffuse = { type = color, value = col3(0.98,1.0,1.0) }
-                roughness = { type = color, value = col3(0.18,0.18,0.18) }
-                absorption_color = { type = color, value = col3(0.90,0.96,1.0) }
-            }
-            scalars = {
-                ior = 1.48
-                transparency = 0.99
-                roughness = 0.18
-                absorption_distance = 3.0
-            }
-        }
-    }
-
     key_light = {
         type = emissive
         properties = {
             samplers = {
                 emissive = {
                     type  = color
-                    value = col3(200,200,200)
+                    value = col3(20,20,20)
                 }
             }
         }
@@ -253,19 +232,6 @@ variants = {
                 ring_mirror = {
                     geometry = ring_mirror
                     material = ring_polymer_clearcoat
-                }
-            }
-        }
-    }
-
-    frosted_glass = {
-        name = Frosted Glass
-        description = Rough dielectric ring for a softer transmissive caustic and blurrier highlight response.
-        set = {
-            object = {
-                ring_mirror = {
-                    geometry = ring_mirror
-                    material = ring_frosted
                 }
             }
         }
