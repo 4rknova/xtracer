@@ -48,14 +48,23 @@ void backend_log_t::add(const std::string &level, const std::string &message)
     e.level = level;
     e.message = message;
 
+    std::function<void(const backend_log_entry_t &)> cb;
     {
         std::lock_guard<std::mutex> lock(mut);
         entries.push_back(e);
         while (entries.size() > max_entries) {
             entries.pop_front();
         }
+        cb = push_callback_;
     }
     cv.notify_all();
+    if (cb) cb(e);
+}
+
+void backend_log_t::set_push_callback(std::function<void(const backend_log_entry_t &)> cb)
+{
+    std::lock_guard<std::mutex> lock(mut);
+    push_callback_ = std::move(cb);
 }
 
 std::vector<backend_log_entry_t> backend_log_t::since(unsigned long long last_id) const

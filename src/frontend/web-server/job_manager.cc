@@ -701,6 +701,14 @@ void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
     dispatch_queued_jobs();
 }
 
+void job_manager_t::set_push_callback(
+    std::function<void(const std::string &job_id,
+                       const job_snapshot_t &snap,
+                       const std::vector<unsigned char> &tile_xdt1)> cb)
+{
+    push_callback_ = std::move(cb);
+}
+
 void job_manager_t::set_render_thread_budget(size_t max_threads)
 {
     if (max_threads == 0) max_threads = 1;
@@ -925,8 +933,10 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
         std::chrono::system_clock::now().time_since_epoch()).count();
     bool gallery_entry_created = false;
 
+    auto push_cb = push_callback_;
+
     common::render_result_t rr = common::render_scene_to_png(request,
-        [job, gm, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
+        [this, job, gm, push_cb, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
          gallery_created_at_ms, &gallery_entry_created]
         (common::progress_event_t event, size_t done, size_t total,
          const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
@@ -962,6 +972,137 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
                     job->tiles_done = done;
                 }
+            }
+            if ((event == common::PROGRESS_EVENT_TILE_STARTED ||
+                 event == common::PROGRESS_EVENT_TILE_FINISHED) && push_cb) {
+                const bool has_upd_rect = (upd != nullptr && upd->has_rect);
+                const bool has_tile = (tile != nullptr);
+                const bool has_location = has_tile || has_upd_rect;
+
+                auto push_u32le = [](std::vector<unsigned char> &buf, uint32_t v) {
+                    buf.push_back((unsigned char)(v & 0xFF));
+                    buf.push_back((unsigned char)((v >> 8) & 0xFF));
+                    buf.push_back((unsigned char)((v >> 16) & 0xFF));
+                    buf.push_back((unsigned char)((v >> 24) & 0xFF));
+                };
+
+                // For TILE_FINISHED events with a known rect, extract and encode the pixel data.
+                std::vector<unsigned char> tile_rgba;
+                size_t tx0 = 0, ty0 = 0, tx1 = 0, ty1 = 0;
+                if (event == common::PROGRESS_EVENT_TILE_FINISHED && has_location) {
+                    tx0 = has_upd_rect ? upd->x0 : (size_t)tile->x0();
+                    ty0 = has_upd_rect ? upd->y0 : (size_t)tile->y0();
+                    tx1 = has_upd_rect ? upd->x1 : (size_t)tile->x1();
+                    ty1 = has_upd_rect ? upd->y1 : (size_t)tile->y1();
+
+                    nimg::Pixmap tile_fb;
+                    bool extracted = false;
+                    {
+                        std::lock_guard<std::mutex> lk(job->mut);
+                        extracted = extract_rect_from_framebuffer(
+                            job->progressive_fb, tx0, ty0, tx1, ty1, tile_fb);
+                    }
+                    if (extracted) {
+                        xtcore::tonemapping::settings_t tm;
+                        xtcore::tonemapping::apply(tile_fb, tm);
+                        const size_t tile_w = tx1 - tx0;
+                        const size_t tile_h = ty1 - ty0;
+                        tile_rgba.resize(tile_w * tile_h * 4);
+                        for (size_t py = 0; py < tile_h; ++py) {
+                            for (size_t px = 0; px < tile_w; ++px) {
+                                const nimg::ColorRGBAf &c = tile_fb.pixel_ro(px, py);
+                                const size_t off = (py * tile_w + px) * 4;
+                                auto to_u8 = [](float v) -> unsigned char {
+                                    const int i = static_cast<int>(v * 255.0f + 0.5f);
+                                    return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
+                                };
+                                tile_rgba[off + 0] = to_u8(c.r());
+                                tile_rgba[off + 1] = to_u8(c.g());
+                                tile_rgba[off + 2] = to_u8(c.b());
+                                tile_rgba[off + 3] = 255;
+                            }
+                        }
+                    }
+                }
+
+                // Snapshot includes the current active_tiles list (already updated above
+                // under the mutex for both STARTED and FINISHED events).
+                job_snapshot_t snap;
+                this->snapshot(job->id, snap);
+
+                // Build XTDR binary packet (all integers u32 little-endian).
+                //
+                // XTDR — xtracer tile-data raw
+                // ============================================================
+                // Header (32 bytes)
+                //   [0:4]   magic        "XTDR" (0x58 54 44 52) — raw RGBA variant
+                //                        cf. "XTD1" — PNG variant used by REST /image_delta only
+                //   [4:8]   width        image width in pixels
+                //   [8:12]  height       image height in pixels
+                //   [12:16] tiles_done   cumulative finished-tile count
+                //   [16:20] tiles_total  total tiles for this job
+                //   [20:24] state        JOB_RUNNING (4) always; terminal state goes as text JSON
+                //   [24:28] tile_count   number of finished-tile records below (0 or 1)
+                //   [28:32] elapsed_ms   server-authoritative render time (milliseconds, u32)
+                //
+                // Finished-tile record (24 + data_size bytes, repeated tile_count times)
+                //   [+0:4]  x0           left edge, pixels, 0-based inclusive
+                //   [+4:8]  y0           top edge, inclusive
+                //   [+8:12] x1           right edge, exclusive
+                //   [+12:16] y1          bottom edge, exclusive
+                //   [+16:20] done_index  tiles_done value when this tile finished
+                //   [+20:24] data_size   (x1-x0)*(y1-y0)*4 bytes
+                //   [+24:N]  data        raw RGBA pixels, row-major, 8 bpc, alpha=255
+                //                        default tonemapping applied server-side
+                //
+                // Active-tile section (4 + active_count*16 bytes)
+                //   active_count  tiles currently in progress
+                //   per entry: x0 y0 x1 y1 (4 bytes each, same coord convention)
+                //
+                // Firing rules
+                //   TILE_STARTED:  tile_count=0; active section includes the new tile
+                //   TILE_FINISHED: tile_count=1; active section already excludes it
+                //   Terminal:      text JSON snapshot only, no binary frame
+                //
+                // Client parser: src/frontend/web-client/app/preview.js parseImageDeltaPacket()
+                // Protocol doc:  AGENTS.md § WebSocket Protocol
+                std::vector<unsigned char> xdt1;
+                xdt1.reserve(32 + 24 + tile_rgba.size() + 4 + snap.active_tiles.size() * 16);
+                xdt1.push_back('X'); xdt1.push_back('T');
+                xdt1.push_back('D'); xdt1.push_back('R'); // 'R' = raw RGBA
+                push_u32le(xdt1, (uint32_t)job->request.width);
+                push_u32le(xdt1, (uint32_t)job->request.height);
+                push_u32le(xdt1, (uint32_t)done);
+                push_u32le(xdt1, (uint32_t)total);
+                push_u32le(xdt1, (uint32_t)JOB_RUNNING);
+                push_u32le(xdt1, tile_rgba.empty() ? 0u : 1u);
+                push_u32le(xdt1, (uint32_t)std::min(snap.elapsed_ms, (double)UINT32_MAX));
+                if (!tile_rgba.empty()) {
+                    push_u32le(xdt1, (uint32_t)tx0);
+                    push_u32le(xdt1, (uint32_t)ty0);
+                    push_u32le(xdt1, (uint32_t)tx1);
+                    push_u32le(xdt1, (uint32_t)ty1);
+                    push_u32le(xdt1, (uint32_t)done);
+                    push_u32le(xdt1, (uint32_t)tile_rgba.size());
+                    xdt1.insert(xdt1.end(), tile_rgba.begin(), tile_rgba.end());
+                }
+                // Active tile section: clients use this to draw in-progress tile markers.
+                push_u32le(xdt1, (uint32_t)snap.active_tiles.size());
+                for (const auto &r : snap.active_tiles) {
+                    push_u32le(xdt1, (uint32_t)r.x0);
+                    push_u32le(xdt1, (uint32_t)r.y0);
+                    push_u32le(xdt1, (uint32_t)r.x1);
+                    push_u32le(xdt1, (uint32_t)r.y1);
+                }
+
+                push_cb(job->id, snap, xdt1);
+            }
+            if (event == common::PROGRESS_EVENT_PASS_FINISHED && push_cb) {
+                // Broadcast a text JSON snapshot so WS clients update pass_current,
+                // pass_total, elapsed_ms, and the progress bar after each pass.
+                job_snapshot_t pass_snap;
+                snapshot(job->id, pass_snap);
+                push_cb(job->id, pass_snap, {});
             }
             if (event == common::PROGRESS_EVENT_PASS_FINISHED
                 && gm && gm->is_initialized()
@@ -1079,6 +1220,16 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
     if (!job->cleanup_scene_path.empty()) {
         unlink(job->cleanup_scene_path.c_str());
     }
+
+    // Notify WS subscribers of the terminal state (done/aborted/error).
+    // Tile push callbacks only fire during rendering, so we need an explicit
+    // final push here so connected clients can fetch the full image.
+    if (push_cb) {
+        job_snapshot_t terminal_snap;
+        snapshot(job->id, terminal_snap);
+        push_cb(job->id, terminal_snap, {});
+    }
+
     on_job_finished(job->id);
 }
 

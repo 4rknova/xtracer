@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
+    libasio-dev \
     libomp-dev \
     pkg-config \
     zlib1g-dev \

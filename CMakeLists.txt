@@ -585,6 +585,12 @@ if (XTRACER_ENABLE_WEB)
     target_include_directories(${OUT_EXE_WEB} SYSTEM PUBLIC
         ${ext_libs}
     )
+    # Asio is provided by libasio-dev (system package).
+    # Do NOT define CROW_USE_BOOST — crow checks #ifdef CROW_USE_BOOST, so any
+    # definition (including =0) triggers Boost. Just define ASIO_STANDALONE.
+    target_compile_definitions(${OUT_EXE_WEB} PRIVATE
+        ASIO_STANDALONE
+    )
     target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
     if (TARGET web_license_asset)
         add_dependencies(${OUT_EXE_WEB} web_license_asset)

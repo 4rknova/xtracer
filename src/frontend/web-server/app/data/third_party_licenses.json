@@ -42,11 +42,11 @@
     "url": "https://github.com/mattiasgustavsson/libs"
   },
   {
-    "name": "cpp-httplib",
-    "description": "HTTP server and client header library used by the web backend API layer.",
+    "name": "crow",
+    "description": "C++ HTTP and WebSocket server framework used by the web backend.",
     "used_in": "xtracer-web",
-    "license": "MIT",
-    "url": "https://github.com/yhirose/cpp-httplib"
+    "license": "BSD-3-Clause",
+    "url": "https://github.com/CrowCpp/Crow"
   },
   {
     "name": "Three.js",

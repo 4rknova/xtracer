@@ -23,7 +23,7 @@
 #include <omp.h>
 #endif
 
-#include <cpp-httplib/httplib.h>
+#include "ws_hub.h"
 #include <xtcore/camera.h>
 #include <xtcore/math/plane.h>
 #include <xtcore/math/sphere.h>
@@ -126,11 +126,47 @@ std::string json_escape(const std::string &s)
     return out.str();
 }
 
-void send_json(httplib::Response &res, const std::string &json, int status = 200)
+// ---------------------------------------------------------------------------
+// Unified request parameter accessor (merges URL query params + POST body).
+// ---------------------------------------------------------------------------
+struct params_view
 {
-    res.status = status;
+    const crow::request &req;
+    crow::query_string bp;
+
+    explicit params_view(const crow::request &r)
+        : req(r), bp(r.get_body_params()) {}
+
+    const char *get(const char *key) const {
+        const char *v = req.url_params.get(key);
+        return v ? v : bp.get(key);
+    }
+
+    bool has(const char *key) const { return get(key) != nullptr; }
+
+    std::string str(const char *key, const char *def = "") const {
+        const char *v = get(key);
+        return v ? std::string(v) : std::string(def);
+    }
+
+    std::vector<std::string> keys() const {
+        std::vector<std::string> k = req.url_params.keys();
+        for (const auto &bk : bp.keys()) {
+            bool found = false;
+            for (const auto &k1 : k) { if (k1 == bk) { found = true; break; } }
+            if (!found) k.push_back(bk);
+        }
+        return k;
+    }
+};
+
+void send_json(crow::response &res, const std::string &json, int status = 200)
+{
+    res.code = status;
     res.set_header("Cache-Control", "no-store");
-    res.set_content(json, "application/json");
+    res.set_header("Content-Type", "application/json");
+    res.body = json;
+    res.end();
 }
 
 std::string backend_logs_to_json(const std::vector<backend_log_entry_t> &list)
@@ -210,10 +246,10 @@ bool finite_aabb3(const xtcore::AABB3 &box)
         && std::isfinite((double)box.max.x) && std::isfinite((double)box.max.y) && std::isfinite((double)box.max.z);
 }
 
-bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v, size_t max_v, size_t &out)
+bool parse_u64_param(const params_view &params, const char *key, size_t min_v, size_t max_v, size_t &out)
 {
-    if (!req.has_param(key)) return false;
-    std::string s = req.get_param_value(key);
+    if (!params.has(key)) return false;
+    std::string s = params.str(key);
     if (s.empty()) return false;
 
     for (size_t i = 0; i < s.size(); ++i) {
@@ -229,10 +265,10 @@ bool parse_u64_param(const httplib::Request &req, const char *key, size_t min_v,
     return true;
 }
 
-bool parse_f64_param(const httplib::Request &req, const char *key, double min_v, double max_v, double &out)
+bool parse_f64_param(const params_view &params, const char *key, double min_v, double max_v, double &out)
 {
-    if (!req.has_param(key)) return false;
-    const std::string s = req.get_param_value(key);
+    if (!params.has(key)) return false;
+    const std::string s = params.str(key);
     if (s.empty()) return false;
     std::istringstream ss(s);
     double v = 0.0;
@@ -243,10 +279,10 @@ bool parse_f64_param(const httplib::Request &req, const char *key, double min_v,
     return true;
 }
 
-bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore::render::TILE_ORDER &out)
+bool parse_tile_order_param(const params_view &params, const char *key, xtcore::render::TILE_ORDER &out)
 {
-    if (!req.has_param(key)) return false;
-    std::string s = req.get_param_value(key);
+    if (!params.has(key)) return false;
+    std::string s = params.str(key);
     if (s == "scanline") {
         out = xtcore::render::TILE_ORDER_SCANLINE;
         return true;
@@ -274,12 +310,12 @@ bool parse_tile_order_param(const httplib::Request &req, const char *key, xtcore
     return false;
 }
 
-bool parse_render_mode_param(const httplib::Request &req,
+bool parse_render_mode_param(const params_view &params,
                              const char *key,
                              common::render_request_t::render_mode_t &out)
 {
-    if (!req.has_param(key)) return false;
-    std::string s = req.get_param_value(key);
+    if (!params.has(key)) return false;
+    std::string s = params.str(key);
     std::transform(s.begin(), s.end(), s.begin(),
         [](unsigned char c) { return (char)std::tolower(c); });
     if (s == "direct" || s == "normal") {
@@ -301,12 +337,12 @@ bool parse_render_mode_param(const httplib::Request &req,
     return false;
 }
 
-bool parse_sample_distribution_param(const httplib::Request &req,
+bool parse_sample_distribution_param(const params_view &params,
                                      const char *key,
                                      xtcore::antialiasing::SAMPLE_DISTRIBUTION &out)
 {
-    if (!req.has_param(key)) return false;
-    std::string s = req.get_param_value(key);
+    if (!params.has(key)) return false;
+    std::string s = params.str(key);
     std::transform(s.begin(), s.end(), s.begin(),
         [](unsigned char c) { return (char)std::tolower(c); });
     if (s == "grid" || s == "grid_aligned") {
@@ -337,10 +373,10 @@ bool parse_tonemapping_operator(const std::string &s, xtcore::tonemapping::opera
     return false;
 }
 
-bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping::settings_t &tm_settings, std::string &error_json)
+bool parse_tonemapping_settings(const params_view &params, xtcore::tonemapping::settings_t &tm_settings, std::string &error_json)
 {
-    if (req.has_param("tm")) {
-        std::string tm = req.get_param_value("tm");
+    if (params.has("tm")) {
+        std::string tm = params.str("tm");
         std::transform(tm.begin(), tm.end(), tm.begin(),
             [](unsigned char c) { return (char)std::tolower(c); });
         if (!parse_tonemapping_operator(tm, tm_settings.op)) {
@@ -348,8 +384,8 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
             return false;
         }
     }
-    if (req.has_param("tm_exposure")) {
-        std::istringstream es(req.get_param_value("tm_exposure"));
+    if (params.has("tm_exposure")) {
+        std::istringstream es(params.str("tm_exposure"));
         float exposure = 1.0f;
         es >> exposure;
         if (es.fail() || exposure <= 0.0f) {
@@ -358,8 +394,8 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
         }
         tm_settings.exposure = exposure;
     }
-    if (req.has_param("tm_white_point")) {
-        std::istringstream ws(req.get_param_value("tm_white_point"));
+    if (params.has("tm_white_point")) {
+        std::istringstream ws(params.str("tm_white_point"));
         float white_point = 1.0f;
         ws >> white_point;
         if (ws.fail() || white_point <= 0.0f) {
@@ -368,8 +404,8 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
         }
         tm_settings.white_point = white_point;
     }
-    if (req.has_param("tm_mantiuk_contrast")) {
-        std::istringstream cs(req.get_param_value("tm_mantiuk_contrast"));
+    if (params.has("tm_mantiuk_contrast")) {
+        std::istringstream cs(params.str("tm_mantiuk_contrast"));
         float v = 0.1f;
         cs >> v;
         if (cs.fail() || v < 0.0f || v > 1.0f) {
@@ -378,8 +414,8 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
         }
         tm_settings.mantiuk_contrast = v;
     }
-    if (req.has_param("tm_mantiuk_saturation")) {
-        std::istringstream ss(req.get_param_value("tm_mantiuk_saturation"));
+    if (params.has("tm_mantiuk_saturation")) {
+        std::istringstream ss(params.str("tm_mantiuk_saturation"));
         float v = 0.8f;
         ss >> v;
         if (ss.fail() || v < 0.0f || v > 2.0f) {
@@ -388,8 +424,8 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
         }
         tm_settings.mantiuk_saturation = v;
     }
-    if (req.has_param("tm_mantiuk_detail")) {
-        std::istringstream ds(req.get_param_value("tm_mantiuk_detail"));
+    if (params.has("tm_mantiuk_detail")) {
+        std::istringstream ds(params.str("tm_mantiuk_detail"));
         float v = 1.0f;
         ds >> v;
         if (ds.fail() || v < 1.0f || v > 99.0f) {
@@ -401,7 +437,7 @@ bool parse_tonemapping_settings(const httplib::Request &req, xtcore::tonemapping
     return true;
 }
 
-bool parse_post_filter_settings(const httplib::Request &req,
+bool parse_post_filter_settings(const params_view &params,
                                 bool &enabled,
                                 std::string &post_filters,
                                 std::string &error_json)
@@ -410,8 +446,8 @@ bool parse_post_filter_settings(const httplib::Request &req,
     post_filters.clear();
     error_json.clear();
 
-    if (req.has_param("post_filters_enabled")) {
-        const std::string raw = req.get_param_value("post_filters_enabled");
+    if (params.has("post_filters_enabled")) {
+        const std::string raw = params.str("post_filters_enabled");
         if (raw == "1" || raw == "true") enabled = true;
         else if (raw == "0" || raw == "false" || raw.empty()) enabled = false;
         else {
@@ -420,8 +456,8 @@ bool parse_post_filter_settings(const httplib::Request &req,
         }
     }
 
-    if (req.has_param("post_filters")) {
-        post_filters = req.get_param_value("post_filters");
+    if (params.has("post_filters")) {
+        post_filters = params.str("post_filters");
     }
 
     if (!enabled) {
@@ -663,10 +699,10 @@ bool is_client_id_safe(const std::string &client_id)
     return true;
 }
 
-std::string read_client_id(const httplib::Request &req)
+std::string read_client_id(const params_view &params)
 {
-    if (!req.has_param("client_id")) return "";
-    const std::string client_id = req.get_param_value("client_id");
+    if (!params.has("client_id")) return "";
+    const std::string client_id = params.str("client_id");
     if (!is_client_id_safe(client_id)) return "";
     return client_id;
 }
@@ -685,12 +721,12 @@ bool is_variant_name_safe(const std::string &variant)
     return true;
 }
 
-bool read_variant_name(const httplib::Request &req, std::string &variant, std::string &error)
+bool read_variant_name(const params_view &params, std::string &variant, std::string &error)
 {
     variant.clear();
     error.clear();
-    if (!req.has_param("variant")) return true;
-    variant = req.get_param_value("variant");
+    if (!params.has("variant")) return true;
+    variant = params.str("variant");
     if (variant.empty()) return true;
     if (!is_variant_name_safe(variant)) {
         error = "invalid variant";
@@ -1804,7 +1840,7 @@ bool scene_runtime_texture_png(const std::string &scene_path,
     return true;
 }
 
-void send_scene_loading(httplib::Response &res, unsigned long long load_job_id)
+void send_scene_loading(crow::response &res, unsigned long long load_job_id)
 {
     std::ostringstream ss;
     ss << "{"
@@ -1826,19 +1862,122 @@ const char *job_state_name(job_state_t state)
     return "unknown";
 }
 
-void serve_static_file(const std::string &path, const char *mime, httplib::Response &res)
+void serve_static_file(const std::string &path, const char *mime, crow::response &res)
 {
     std::vector<char> content;
     if (!read_binary_file(path, content)) {
-        res.status = 404;
+        res.code = 404;
+        res.end();
         return;
     }
-    res.set_content(content.data(), content.size(), mime);
+    res.body = std::string(content.data(), content.size());
+    res.set_header("Content-Type", mime);
+    res.set_header("Cache-Control", "no-store");
+    res.end();
+}
+
+std::string job_snapshot_to_json(const job_snapshot_t &snap)
+{
+    std::ostringstream ss;
+    ss << "{"
+       << "\"id\":\"" << json_escape(snap.id) << "\","
+       << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
+       << "\"scene\":\"" << json_escape(snap.scene) << "\","
+       << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+       << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
+       << "\"state\":\"" << job_state_name(snap.state) << "\","
+       << "\"threads\":" << snap.threads << ","
+       << "\"progress\":" << snap.progress << ","
+       << "\"tiles_done\":" << snap.tiles_done << ","
+       << "\"tiles_total\":" << snap.tiles_total << ","
+       << "\"pass_current\":" << snap.pass_current << ","
+       << "\"pass_total\":" << snap.pass_total << ","
+       << "\"elapsed_ms\":" << snap.elapsed_ms << ","
+       << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","
+       << "\"width\":" << snap.width << ","
+       << "\"height\":" << snap.height << ","
+       << "\"active_tiles\":[";
+    for (size_t i = 0; i < snap.active_tiles.size(); ++i) {
+        if (i) ss << ",";
+        const auto &r = snap.active_tiles[i];
+        ss << "[" << r.x0 << "," << r.y0 << "," << r.x1 << "," << r.y1 << "]";
+    }
+    ss << "],"
+       << "\"error\":\"" << json_escape(snap.error) << "\""
+       << "}";
+    return ss.str();
+}
+
+std::string encode_xdt1(const job_image_delta_t &delta)
+{
+    std::vector<unsigned char> payload;
+    payload.reserve(64 + delta.tiles.size() * 32);
+    payload.push_back('X');
+    payload.push_back('T');
+    payload.push_back('D');
+    payload.push_back('1');
+    append_u32le(payload, (uint32_t)delta.width);
+    append_u32le(payload, (uint32_t)delta.height);
+    append_u32le(payload, (uint32_t)delta.tiles_done);
+    append_u32le(payload, (uint32_t)delta.tiles_total);
+    append_u32le(payload, (uint32_t)delta.state);
+    append_u32le(payload, (uint32_t)delta.tiles.size());
+    for (size_t i = 0; i < delta.tiles.size(); ++i) {
+        const job_image_delta_t::tile_t &t = delta.tiles[i];
+        append_u32le(payload, (uint32_t)t.x0);
+        append_u32le(payload, (uint32_t)t.y0);
+        append_u32le(payload, (uint32_t)t.x1);
+        append_u32le(payload, (uint32_t)t.y1);
+        append_u32le(payload, (uint32_t)t.done_index);
+        append_u32le(payload, (uint32_t)t.png.size());
+        payload.insert(payload.end(), t.png.begin(), t.png.end());
+    }
+    return std::string(reinterpret_cast<const char *>(payload.data()), payload.size());
 }
 
 } // namespace
 
-void setup_routes(httplib::Server &server,
+static job_ws_hub_t g_job_ws_hub;
+static log_ws_hub_t g_log_ws_hub;
+static log_ws_hub_t g_job_events_ws_hub;
+// Tracks jobs that have sent at least one tile so we can detect the
+// queued→running transition and broadcast jobs_changed exactly once.
+static std::set<std::string> g_known_running_jobs;
+static std::mutex g_known_running_mutex;
+
+// Build and broadcast {"type":"jobs_changed","jobs":[...]} to all /ws/jobs
+// subscribers.  Called after every mutation that changes the active job list.
+static void broadcast_jobs_changed(job_manager_t &jobs)
+{
+    std::vector<job_snapshot_t> active;
+    jobs.list_active(active);
+    std::ostringstream ss;
+    ss << "{\"type\":\"jobs_changed\",\"jobs\":[";
+    for (size_t i = 0; i < active.size(); ++i) {
+        if (i) ss << ",";
+        const job_snapshot_t &snap = active[i];
+        ss << "{"
+           << "\"id\":\"" << json_escape(snap.id) << "\","
+           << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
+           << "\"scene\":\"" << json_escape(snap.scene) << "\","
+           << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+           << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
+           << "\"state\":\"" << job_state_name(snap.state) << "\","
+           << "\"threads\":" << snap.threads << ","
+           << "\"progress\":" << snap.progress << ","
+           << "\"tiles_done\":" << snap.tiles_done << ","
+           << "\"tiles_total\":" << snap.tiles_total << ","
+           << "\"pass_current\":" << snap.pass_current << ","
+           << "\"pass_total\":" << snap.pass_total << ","
+           << "\"elapsed_ms\":" << snap.elapsed_ms << ","
+           << "\"queue_index\":" << snap.queue_index
+           << "}";
+    }
+    ss << "]}";
+    g_job_events_ws_hub.broadcast_text(ss.str());
+}
+
+void setup_routes(WebApp &app,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
                   gallery_manager_t *gallery,
@@ -1848,11 +1987,13 @@ void setup_routes(httplib::Server &server,
 {
     backend_log_t::handle().add("info", "web routes initialized");
 
-    server.Get("/api/health", [](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/health")
+    ([](const crow::request &, crow::response &res) {
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/about", [&jobs, &web_root, thread_policy](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/about")
+    ([&jobs, &web_root, thread_policy](const crow::request &, crow::response &res) {
         std::time_t now = std::time(nullptr);
         std::tm *utc = std::gmtime(&now);
         int year = utc ? (utc->tm_year + 1900) : 2010;
@@ -1884,13 +2025,14 @@ void setup_routes(httplib::Server &server,
            << "\"render_auto_threads\":" << auto_render_threads << ","
            << "\"third_party_licenses\":";
         append_third_party_licenses_json(ss, web_root);
-        ss
-           << "}";
+        ss << "}";
         send_json(res, ss.str());
     });
 
-    server.Get("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
+    CROW_ROUTE(app, "/api/workspaces")
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
         std::vector<workspace_snapshot_t> list;
         std::string active_workspace;
         workspaces.list(client_id, list, active_workspace);
@@ -1935,9 +2077,11 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post("/api/workspaces", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
-        const std::string name = req.has_param("name") ? req.get_param_value("name") : "";
+    CROW_ROUTE(app, "/api/workspaces").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
+        const std::string name = params.str("name");
         const std::string workspace_id = workspaces.create(name, client_id);
         if (workspace_id.empty()) {
             backend_log_t::handle().add("warn", "workspace create rejected: retained workspace limit reached");
@@ -1956,17 +2100,19 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str(), 201);
     });
 
-    server.Post("/api/workspaces/active", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
+    CROW_ROUTE(app, "/api/workspaces/active").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
         if (client_id.empty()) {
             send_json(res, "{\"error\":\"client_id is required\"}", 400);
             return;
         }
-        if (!req.has_param("workspace_id")) {
+        if (!params.has("workspace_id")) {
             send_json(res, "{\"error\":\"workspace_id is required\"}", 400);
             return;
         }
-        const std::string workspace_id = req.get_param_value("workspace_id");
+        const std::string workspace_id = params.str("workspace_id");
         if (!workspaces.set_active(client_id, workspace_id)) {
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
@@ -1974,18 +2120,20 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Post("/api/workspaces/delete", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
+    CROW_ROUTE(app, "/api/workspaces/delete").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
         if (client_id.empty()) {
             send_json(res, "{\"error\":\"client_id is required\"}", 400);
             return;
         }
-        if (!req.has_param("workspace_id")) {
+        if (!params.has("workspace_id")) {
             send_json(res, "{\"error\":\"workspace_id is required\"}", 400);
             return;
         }
 
-        const std::string workspace_id = req.get_param_value("workspace_id");
+        const std::string workspace_id = params.str("workspace_id");
         std::string replacement_workspace_id;
         const workspace_manager_t::remove_result_t rc = workspaces.remove(workspace_id, replacement_workspace_id);
         if (rc == workspace_manager_t::REMOVE_NOT_FOUND) {
@@ -2008,29 +2156,31 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post("/api/workspaces/scene_draft", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
+    CROW_ROUTE(app, "/api/workspaces/scene_draft").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
         if (client_id.empty()) {
             send_json(res, "{\"error\":\"client_id is required\"}", 400);
             return;
         }
-        if (!req.has_param("scene")) {
+        if (!params.has("scene")) {
             send_json(res, "{\"error\":\"scene is required\"}", 400);
             return;
         }
-        if (!req.has_param("source")) {
+        if (!params.has("source")) {
             send_json(res, "{\"error\":\"source is required\"}", 400);
             return;
         }
         std::string workspace_id;
         workspaces.get_active(client_id, workspace_id);
-        const std::string scene = req.get_param_value("scene");
+        const std::string scene = params.str("scene");
         if (!is_scene_name_safe(scene)) {
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
         const workspace_manager_t::store_result_t rc =
-            workspaces.set_scene_draft(workspace_id, scene, req.get_param_value("source"));
+            workspaces.set_scene_draft(workspace_id, scene, params.str("source"));
         if (rc == workspace_manager_t::STORE_TOO_LARGE) {
             send_json(res, "{\"error\":\"scene draft too large\"}", 413);
             return;
@@ -2042,20 +2192,22 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Post("/api/workspaces/settings", [&](const httplib::Request &req, httplib::Response &res) {
-        const std::string client_id = read_client_id(req);
+    CROW_ROUTE(app, "/api/workspaces/settings").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string client_id = read_client_id(params);
         if (client_id.empty()) {
             send_json(res, "{\"error\":\"client_id is required\"}", 400);
             return;
         }
-        if (!req.has_param("settings_json")) {
+        if (!params.has("settings_json")) {
             send_json(res, "{\"error\":\"settings_json is required\"}", 400);
             return;
         }
 
         std::string workspace_id;
         workspaces.get_active(client_id, workspace_id);
-        const std::string settings_json = req.get_param_value("settings_json");
+        const std::string settings_json = params.str("settings_json");
         const workspace_manager_t::store_result_t rc =
             workspaces.set_settings_json(workspace_id, settings_json);
         if (rc == workspace_manager_t::STORE_TOO_LARGE) {
@@ -2069,7 +2221,8 @@ void setup_routes(httplib::Server &server,
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get("/api/scenes", [scene_dir](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/scenes")
+    ([scene_dir](const crow::request &, crow::response &res) {
         std::vector<std::string> scenes = list_scenes(scene_dir);
         std::ostringstream ss;
         ss << "{\"scenes\":[";
@@ -2081,10 +2234,12 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get("/api/logs", [](const httplib::Request &req, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/logs")
+    ([](const crow::request &req, crow::response &res) {
+        const params_view params(req);
         unsigned long long since = 0;
-        if (req.has_param("since")) {
-            std::istringstream ss(req.get_param_value("since"));
+        if (params.has("since")) {
+            std::istringstream ss(params.str("since"));
             ss >> since;
             if (ss.fail()) {
                 send_json(res, "{\"error\":\"invalid since\"}", 400);
@@ -2096,38 +2251,10 @@ void setup_routes(httplib::Server &server,
         send_json(res, backend_logs_to_json(list));
     });
 
-    server.Get("/api/logs/wait", [](const httplib::Request &req, httplib::Response &res) {
-        unsigned long long since = 0;
-        if (req.has_param("since")) {
-            std::istringstream ss(req.get_param_value("since"));
-            ss >> since;
-            if (ss.fail()) {
-                send_json(res, "{\"error\":\"invalid since\"}", 400);
-                return;
-            }
-        }
-
-        unsigned long timeout_ms = 15000;
-        if (req.has_param("timeout_ms")) {
-            std::istringstream ss(req.get_param_value("timeout_ms"));
-            unsigned long parsed = 0;
-            ss >> parsed;
-            if (ss.fail()) {
-                send_json(res, "{\"error\":\"invalid timeout_ms\"}", 400);
-                return;
-            }
-            if (parsed < 1000) parsed = 1000;
-            if (parsed > 60000) parsed = 60000;
-            timeout_ms = parsed;
-        }
-
-        std::vector<backend_log_entry_t> list = backend_log_t::handle().wait_since(since, timeout_ms);
-        send_json(res, backend_logs_to_json(list));
-    });
-
-    server.Get(R"(/api/scenes/load_jobs/([0-9]+))", [](const httplib::Request &req, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/scenes/load_jobs/<string>")
+    ([](const crow::request &, crow::response &res, std::string id_str) {
         unsigned long long id = 0ULL;
-        std::istringstream ss(req.matches[1].str());
+        std::istringstream ss(id_str);
         ss >> id;
         if (ss.fail() || !id) {
             send_json(res, "{\"error\":\"invalid job id\"}", 400);
@@ -2150,16 +2277,17 @@ void setup_routes(httplib::Server &server,
         send_json(res, out.str());
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/cameras)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/cameras")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "camera list rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        const params_view params(req);
         std::string variant;
         std::string variant_error;
-        if (!read_variant_name(req, variant, variant_error)) {
+        if (!read_variant_name(params, variant, variant_error)) {
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
@@ -2196,17 +2324,17 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/source)", [scene_dir, &workspaces](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/source")
+    ([scene_dir, &workspaces](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "source read rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-
+        const params_view params(req);
         std::string source;
         std::string source_origin = "disk";
-        const std::string client_id = read_client_id(req);
+        const std::string client_id = read_client_id(params);
         if (!client_id.empty()) {
             std::string workspace_id;
             workspaces.get_active(client_id, workspace_id);
@@ -2233,16 +2361,17 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/geometry)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/geometry")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "geometry rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        const params_view params(req);
         std::string variant;
         std::string variant_error;
-        if (!read_variant_name(req, variant, variant_error)) {
+        if (!read_variant_name(params, variant, variant_error)) {
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
@@ -2264,16 +2393,17 @@ void setup_routes(httplib::Server &server,
         send_json(res, payload);
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/runtime_graph)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/runtime_graph")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "runtime_graph rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        const params_view params(req);
         std::string variant;
         std::string variant_error;
-        if (!read_variant_name(req, variant, variant_error)) {
+        if (!read_variant_name(params, variant, variant_error)) {
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
@@ -2295,27 +2425,28 @@ void setup_routes(httplib::Server &server,
         send_json(res, payload);
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/runtime_texture)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/runtime_texture")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "runtime_texture rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-        if (!req.has_param("material") || !req.has_param("sampler")) {
+        const params_view params(req);
+        if (!params.has("material") || !params.has("sampler")) {
             send_json(res, "{\"error\":\"material and sampler are required\"}", 400);
             return;
         }
 
         std::string variant;
         std::string variant_error;
-        if (!read_variant_name(req, variant, variant_error)) {
+        if (!read_variant_name(params, variant, variant_error)) {
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
 
-        const std::string material = req.get_param_value("material");
-        const std::string sampler = req.get_param_value("sampler");
+        const std::string material = params.str("material");
+        const std::string sampler = params.str("sampler");
         std::vector<unsigned char> png;
         std::string error;
         bool loading = false;
@@ -2330,22 +2461,24 @@ void setup_routes(httplib::Server &server,
         }
 
         res.set_header("Cache-Control", "no-store");
-        res.set_content((const char *)png.data(), png.size(), "image/png");
+        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
+        res.set_header("Content-Type", "image/png");
+        res.end();
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/camera_resolve)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/camera_resolve")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "camera_resolve rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-
+        const params_view params(req);
         std::string requested_camera;
-        if (req.has_param("camera")) requested_camera = req.get_param_value("camera");
+        if (params.has("camera")) requested_camera = params.str("camera");
         std::string variant;
         std::string variant_error;
-        if (!read_variant_name(req, variant, variant_error)) {
+        if (!read_variant_name(params, variant, variant_error)) {
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
@@ -2371,19 +2504,20 @@ void setup_routes(httplib::Server &server,
         send_json(res, payload);
     });
 
-    server.Get(R"(/api/scenes/([A-Za-z0-9_.-]+)/asset)", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/api/scenes/<string>/asset")
+    ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "asset read rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
-        if (!req.has_param("path")) {
+        const params_view params(req);
+        if (!params.has("path")) {
             send_json(res, "{\"error\":\"path is required\"}", 400);
             return;
         }
 
-        std::string relpath = req.get_param_value("path");
+        std::string relpath = params.str("path");
         if (!is_asset_relpath_safe(relpath)) {
             backend_log_t::handle().add("warn", "asset read rejected: invalid path");
             send_json(res, "{\"error\":\"invalid asset path\"}", 400);
@@ -2401,28 +2535,33 @@ void setup_routes(httplib::Server &server,
             return;
         }
 
-        res.set_content(content.data(), content.size(), "text/plain; charset=utf-8");
+        res.body = std::string(content.data(), content.size());
+        res.set_header("Content-Type", "text/plain; charset=utf-8");
+        res.end();
     });
 
-    server.Get("/api/scenes/template/empty", [](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/scenes/template/empty")
+    ([](const crow::request &, crow::response &res) {
         std::ostringstream ss;
         ss << "{\"source\":\"" << json_escape(xtcore::get_empty_scene_template()) << "\"}";
         send_json(res, ss.str());
     });
 
-    server.Post("/api/scenes/save", [scene_dir, &workspaces](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("name")) {
+    CROW_ROUTE(app, "/api/scenes/save").methods(crow::HTTPMethod::Post)
+    ([scene_dir, &workspaces](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        if (!params.has("name")) {
             backend_log_t::handle().add("warn", "scene save rejected: name missing");
             send_json(res, "{\"error\":\"name is required\"}", 400);
             return;
         }
-        if (!req.has_param("source")) {
+        if (!params.has("source")) {
             backend_log_t::handle().add("warn", "scene save rejected: source missing");
             send_json(res, "{\"error\":\"source is required\"}", 400);
             return;
         }
 
-        std::string input_name = req.get_param_value("name");
+        std::string input_name = params.str("name");
         if (!is_scene_basename_safe(input_name)) {
             backend_log_t::handle().add("warn", "scene save rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene name\"}", 400);
@@ -2437,21 +2576,21 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string scene_path = join_path(scene_dir, scene_name);
-        bool overwrite = req.has_param("overwrite") && req.get_param_value("overwrite") == "1";
+        bool overwrite = params.has("overwrite") && params.str("overwrite") == "1";
         if (!overwrite && file_exists(scene_path)) {
             backend_log_t::handle().add("warn", "scene save conflict scene=" + scene_name);
             send_json(res, "{\"error\":\"scene already exists\"}", 409);
             return;
         }
 
-        std::string source = req.get_param_value("source");
+        std::string source = params.str("source");
         if (!write_text_file(scene_path, source)) {
             backend_log_t::handle().add("error", "scene save failed scene=" + scene_name);
             send_json(res, "{\"error\":\"failed to write scene\"}", 500);
             return;
         }
         scene_cache_t::handle().invalidate(scene_path);
-        const std::string client_id = read_client_id(req);
+        const std::string client_id = read_client_id(params);
         if (!client_id.empty()) {
             std::string workspace_id;
             workspaces.get_active(client_id, workspace_id);
@@ -2469,14 +2608,16 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post("/api/scenes/delete", [scene_dir](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("name")) {
+    CROW_ROUTE(app, "/api/scenes/delete").methods(crow::HTTPMethod::Post)
+    ([scene_dir](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        if (!params.has("name")) {
             backend_log_t::handle().add("warn", "scene delete rejected: name missing");
             send_json(res, "{\"error\":\"name is required\"}", 400);
             return;
         }
 
-        std::string scene_name = req.get_param_value("name");
+        std::string scene_name = params.str("name");
         if (!is_scene_name_safe(scene_name)) {
             backend_log_t::handle().add("warn", "scene delete rejected: invalid scene name");
             send_json(res, "{\"error\":\"invalid scene name\"}", 400);
@@ -2504,7 +2645,8 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get("/api/integrators", [](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/integrators")
+    ([](const crow::request &, crow::response &res) {
         std::vector<common::integrator_info_t> list = common::list_integrators();
         std::ostringstream ss;
         ss << "{\"integrators\":[";
@@ -2524,7 +2666,8 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get("/api/post_filters", [](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/post_filters")
+    ([](const crow::request &, crow::response &res) {
         std::vector<post_filter_info_t> list = list_post_filters();
         std::ostringstream ss;
         ss << "{\"post_filters\":[";
@@ -2546,7 +2689,8 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get("/api/resolutions", [](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/resolutions")
+    ([](const crow::request &, crow::response &res) {
         size_t count = 0;
         const xtcore::render::resolution_preset_t *presets = xtcore::render::resolution_presets(count);
         std::ostringstream ss;
@@ -2562,14 +2706,16 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post("/api/render", [&](const httplib::Request &req, httplib::Response &res) {
-        if (!req.has_param("scene")) {
+    CROW_ROUTE(app, "/api/render").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        if (!params.has("scene")) {
             backend_log_t::handle().add("warn", "render rejected: missing scene");
             send_json(res, "{\"error\":\"scene is required\"}", 400);
             return;
         }
 
-        std::string scene = req.get_param_value("scene");
+        std::string scene = params.str("scene");
         if (!is_scene_name_safe(scene)) {
             backend_log_t::handle().add("warn", "render rejected: invalid scene");
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
@@ -2579,22 +2725,18 @@ void setup_routes(httplib::Server &server,
         common::render_request_t rr;
         rr.scene_path = join_path(scene_dir, scene);
         std::string variant_error;
-        if (!read_variant_name(req, rr.variant, variant_error)) {
+        if (!read_variant_name(params, rr.variant, variant_error)) {
             backend_log_t::handle().add("warn", "render rejected: invalid variant");
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
 
-        const std::string requester_client_id = read_client_id(req);
+        const std::string requester_client_id = read_client_id(params);
 
         std::string workspace_id;
-        if (req.has_param("workspace_id")) {
-            workspace_id = req.get_param_value("workspace_id");
-        }
-        if (workspace_id.empty()) {
-            if (!requester_client_id.empty()) {
-                workspaces.get_active(requester_client_id, workspace_id);
-            }
+        if (params.has("workspace_id")) workspace_id = params.str("workspace_id");
+        if (workspace_id.empty() && !requester_client_id.empty()) {
+            workspaces.get_active(requester_client_id, workspace_id);
         }
         if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
         workspaces.set_active_scene(workspace_id, scene);
@@ -2609,22 +2751,22 @@ void setup_routes(httplib::Server &server,
             }
         }
 
-        if (req.has_param("integrator")) rr.integrator = req.get_param_value("integrator");
+        if (params.has("integrator")) rr.integrator = params.str("integrator");
         if (!common::is_integrator_supported(rr.integrator)) {
             backend_log_t::handle().add("warn", "render rejected: unsupported integrator=" + rr.integrator);
             send_json(res, "{\"error\":\"integrator not supported\"}", 400);
             return;
         }
-        if (!parse_render_mode_param(req, "render_mode", rr.render_mode) && req.has_param("render_mode")) {
+        if (!parse_render_mode_param(params, "render_mode", rr.render_mode) && params.has("render_mode")) {
             backend_log_t::handle().add("warn", "render rejected: invalid render_mode");
             send_json(res, "{\"error\":\"invalid render_mode\"}", 400);
             return;
         }
-        for (auto it = req.params.begin(); it != req.params.end(); ++it) {
-            if (!has_prefix((*it).first, "iopt.")) continue;
-            const std::string key = (*it).first.substr(5);
+        for (const auto &k : params.keys()) {
+            if (!has_prefix(k, "iopt.")) continue;
+            const std::string key = k.substr(5);
             if (key.empty()) continue;
-            rr.integrator_options[key] = (*it).second;
+            rr.integrator_options[key] = params.str(k.c_str());
         }
         std::string integrator_opt_error;
         if (!common::validate_integrator_options(rr.integrator, rr.integrator_options, integrator_opt_error)) {
@@ -2633,29 +2775,29 @@ void setup_routes(httplib::Server &server,
             return;
         }
 
-        if (req.has_param("camera")) rr.camera = req.get_param_value("camera");
+        if (params.has("camera")) rr.camera = params.str("camera");
 
         const bool has_cam_override =
-            req.has_param("cam_px") || req.has_param("cam_py") || req.has_param("cam_pz")
-            || req.has_param("cam_tx") || req.has_param("cam_ty") || req.has_param("cam_tz")
-            || req.has_param("cam_upx") || req.has_param("cam_upy") || req.has_param("cam_upz")
-            || req.has_param("cam_hfov");
+            params.has("cam_px") || params.has("cam_py") || params.has("cam_pz")
+            || params.has("cam_tx") || params.has("cam_ty") || params.has("cam_tz")
+            || params.has("cam_upx") || params.has("cam_upy") || params.has("cam_upz")
+            || params.has("cam_hfov");
         if (has_cam_override) {
             double cam_px = 0.0, cam_py = 0.0, cam_pz = 0.0;
             double cam_tx = 0.0, cam_ty = 0.0, cam_tz = 0.0;
             double cam_upx = 0.0, cam_upy = 1.0, cam_upz = 0.0;
             double cam_hfov = 60.0;
             const bool ok =
-                parse_f64_param(req, "cam_px", -1e9, 1e9, cam_px)
-                && parse_f64_param(req, "cam_py", -1e9, 1e9, cam_py)
-                && parse_f64_param(req, "cam_pz", -1e9, 1e9, cam_pz)
-                && parse_f64_param(req, "cam_tx", -1e9, 1e9, cam_tx)
-                && parse_f64_param(req, "cam_ty", -1e9, 1e9, cam_ty)
-                && parse_f64_param(req, "cam_tz", -1e9, 1e9, cam_tz)
-                && parse_f64_param(req, "cam_upx", -1e6, 1e6, cam_upx)
-                && parse_f64_param(req, "cam_upy", -1e6, 1e6, cam_upy)
-                && parse_f64_param(req, "cam_upz", -1e6, 1e6, cam_upz)
-                && parse_f64_param(req, "cam_hfov", 1.0, 179.0, cam_hfov);
+                parse_f64_param(params, "cam_px", -1e9, 1e9, cam_px)
+                && parse_f64_param(params, "cam_py", -1e9, 1e9, cam_py)
+                && parse_f64_param(params, "cam_pz", -1e9, 1e9, cam_pz)
+                && parse_f64_param(params, "cam_tx", -1e9, 1e9, cam_tx)
+                && parse_f64_param(params, "cam_ty", -1e9, 1e9, cam_ty)
+                && parse_f64_param(params, "cam_tz", -1e9, 1e9, cam_tz)
+                && parse_f64_param(params, "cam_upx", -1e6, 1e6, cam_upx)
+                && parse_f64_param(params, "cam_upy", -1e6, 1e6, cam_upy)
+                && parse_f64_param(params, "cam_upz", -1e6, 1e6, cam_upz)
+                && parse_f64_param(params, "cam_hfov", 1.0, 179.0, cam_hfov);
             if (!ok) {
                 backend_log_t::handle().add("warn", "render rejected: invalid camera override");
                 send_json(res, "{\"error\":\"invalid camera override\"}", 400);
@@ -2675,50 +2817,50 @@ void setup_routes(httplib::Server &server,
         }
 
         size_t v = 0;
-        if (parse_u64_param(req, "width", 8, 8192, v)) rr.width = v;
-        else if (req.has_param("width")) {
+        if (parse_u64_param(params, "width", 8, 8192, v)) rr.width = v;
+        else if (params.has("width")) {
             backend_log_t::handle().add("warn", "render rejected: invalid width");
             send_json(res, "{\"error\":\"invalid width\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "height", 8, 8192, v)) rr.height = v;
-        else if (req.has_param("height")) {
+        if (parse_u64_param(params, "height", 8, 8192, v)) rr.height = v;
+        else if (params.has("height")) {
             backend_log_t::handle().add("warn", "render rejected: invalid height");
             send_json(res, "{\"error\":\"invalid height\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "samples", 1, 1024, v)) rr.samples = v;
-        else if (req.has_param("samples")) {
+        if (parse_u64_param(params, "samples", 1, 1024, v)) rr.samples = v;
+        else if (params.has("samples")) {
             backend_log_t::handle().add("warn", "render rejected: invalid samples");
             send_json(res, "{\"error\":\"invalid samples\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "aa", 1, 16, v)) rr.aa = v;
-        else if (req.has_param("aa")) {
+        if (parse_u64_param(params, "aa", 1, 16, v)) rr.aa = v;
+        else if (params.has("aa")) {
             backend_log_t::handle().add("warn", "render rejected: invalid aa");
             send_json(res, "{\"error\":\"invalid aa\"}", 400);
             return;
         }
-        if (!parse_sample_distribution_param(req, "sample_distribution", rr.sample_distribution)
-            && req.has_param("sample_distribution")) {
+        if (!parse_sample_distribution_param(params, "sample_distribution", rr.sample_distribution)
+            && params.has("sample_distribution")) {
             backend_log_t::handle().add("warn", "render rejected: invalid sample_distribution");
             send_json(res, "{\"error\":\"invalid sample_distribution\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "rdepth", 1, 4096, v)) rr.rdepth = v;
-        else if (req.has_param("rdepth")) {
+        if (parse_u64_param(params, "rdepth", 1, 4096, v)) rr.rdepth = v;
+        else if (params.has("rdepth")) {
             backend_log_t::handle().add("warn", "render rejected: invalid rdepth");
             send_json(res, "{\"error\":\"invalid rdepth\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "tile_size", 8, 1024, v)) rr.tile_size = v;
-        else if (req.has_param("tile_size")) {
+        if (parse_u64_param(params, "tile_size", 8, 1024, v)) rr.tile_size = v;
+        else if (params.has("tile_size")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_size");
             send_json(res, "{\"error\":\"invalid tile_size\"}", 400);
             return;
         }
-        if (parse_u64_param(req, "threads", 0, 256, v)) rr.threads = v;
-        else if (req.has_param("threads")) {
+        if (parse_u64_param(params, "threads", 0, 256, v)) rr.threads = v;
+        else if (params.has("threads")) {
             backend_log_t::handle().add("warn", "render rejected: invalid threads");
             send_json(res, "{\"error\":\"invalid threads\"}", 400);
             return;
@@ -2731,7 +2873,7 @@ void setup_routes(httplib::Server &server,
         if (!auto_threads_requested && rr.threads > max_render_threads) {
             rr.threads = max_render_threads;
         }
-        if (!parse_tile_order_param(req, "tile_order", rr.tile_order) && req.has_param("tile_order")) {
+        if (!parse_tile_order_param(params, "tile_order", rr.tile_order) && params.has("tile_order")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_order");
             send_json(res, "{\"error\":\"invalid tile_order\"}", 400);
             return;
@@ -2755,6 +2897,7 @@ void setup_routes(httplib::Server &server,
             return;
         }
         workspaces.mark_job_started(workspace_id, job_id);
+        broadcast_jobs_changed(jobs);
         std::ostringstream ss;
         ss << "{"
            << "\"job_id\":\"" << json_escape(job_id) << "\","
@@ -2763,19 +2906,20 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str(), 202);
     });
 
-    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/image)", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
-        bool final_only = req.has_param("final") && req.get_param_value("final") == "1";
+    CROW_ROUTE(app, "/api/jobs/<string>/image")
+    ([&](const crow::request &req, crow::response &res, std::string id) {
+        const params_view params(req);
+        bool final_only = params.has("final") && params.str("final") == "1";
         xtcore::tonemapping::settings_t tm_settings;
         std::string tm_error_json;
-        if (!parse_tonemapping_settings(req, tm_settings, tm_error_json)) {
+        if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
             send_json(res, tm_error_json, 400);
             return;
         }
         bool post_filters_enabled = false;
         std::string post_filters;
         std::string post_filter_error_json;
-        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+        if (!parse_post_filter_settings(params, post_filters_enabled, post_filters, post_filter_error_json)) {
             send_json(res, post_filter_error_json, 400);
             return;
         }
@@ -2785,78 +2929,16 @@ void setup_routes(httplib::Server &server,
             send_json(res, "{\"error\":\"image not available\"}", 404);
             return;
         }
-        res.set_content((const char *)image.data(), image.size(), "image/png");
+        res.body = std::string(reinterpret_cast<const char *>(image.data()), image.size());
+        res.set_header("Content-Type", "image/png");
+        res.end();
     });
 
-    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/image_delta)", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
-        size_t since_done = 0;
-        size_t parsed = 0;
-        if (parse_u64_param(req, "since", 0, 1000000000, parsed)) {
-            since_done = parsed;
-        } else if (req.has_param("since")) {
-            send_json(res, "{\"error\":\"invalid since\"}", 400);
-            return;
-        }
-
-        size_t max_tiles = 16;
-        if (parse_u64_param(req, "limit", 1, 256, parsed)) {
-            max_tiles = parsed;
-        } else if (req.has_param("limit")) {
-            send_json(res, "{\"error\":\"invalid limit\"}", 400);
-            return;
-        }
-
-        xtcore::tonemapping::settings_t tm_settings;
-        std::string tm_error_json;
-        if (!parse_tonemapping_settings(req, tm_settings, tm_error_json)) {
-            send_json(res, tm_error_json, 400);
-            return;
-        }
-        bool post_filters_enabled = false;
-        std::string post_filters;
-        std::string post_filter_error_json;
-        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
-            send_json(res, post_filter_error_json, 400);
-            return;
-        }
-
-        job_image_delta_t delta;
-        if (!jobs.image_delta(id, since_done, max_tiles, tm_settings, post_filters_enabled, post_filters, delta)) {
-            send_json(res, "{\"error\":\"image delta not available\"}", 404);
-            return;
-        }
-
-        std::vector<unsigned char> payload;
-        payload.reserve(64);
-        payload.push_back('X');
-        payload.push_back('T');
-        payload.push_back('D');
-        payload.push_back('1');
-        append_u32le(payload, (uint32_t)delta.width);
-        append_u32le(payload, (uint32_t)delta.height);
-        append_u32le(payload, (uint32_t)delta.tiles_done);
-        append_u32le(payload, (uint32_t)delta.tiles_total);
-        append_u32le(payload, (uint32_t)delta.state);
-        append_u32le(payload, (uint32_t)delta.tiles.size());
-        for (size_t i = 0; i < delta.tiles.size(); ++i) {
-            const job_image_delta_t::tile_t &t = delta.tiles[i];
-            append_u32le(payload, (uint32_t)t.x0);
-            append_u32le(payload, (uint32_t)t.y0);
-            append_u32le(payload, (uint32_t)t.x1);
-            append_u32le(payload, (uint32_t)t.y1);
-            append_u32le(payload, (uint32_t)t.done_index);
-            append_u32le(payload, (uint32_t)t.png.size());
-            payload.insert(payload.end(), t.png.begin(), t.png.end());
-        }
-        res.set_header("Cache-Control", "no-store");
-        res.set_content((const char *)payload.data(), payload.size(), "application/octet-stream");
-    });
-
-    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/export)", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/<string>/export")
+    ([&](const crow::request &req, crow::response &res, std::string id) {
+        const params_view params(req);
         std::string format = "png";
-        if (req.has_param("format")) format = lower_ascii(req.get_param_value("format"));
+        if (params.has("format")) format = lower_ascii(params.str("format"));
         if (format != "png" && format != "exr" && format != "hdr"
             && format != "jpg" && format != "bmp" && format != "tga") {
             send_json(res, "{\"error\":\"unsupported format\"}", 400);
@@ -2869,7 +2951,7 @@ void setup_routes(httplib::Server &server,
         bool post_filters_enabled = false;
         std::string post_filters;
         std::string post_filter_error_json;
-        if (!parse_post_filter_settings(req, post_filters_enabled, post_filters, post_filter_error_json)) {
+        if (!parse_post_filter_settings(params, post_filters_enabled, post_filters, post_filter_error_json)) {
             send_json(res, post_filter_error_json, 400);
             return;
         }
@@ -2884,25 +2966,27 @@ void setup_routes(httplib::Server &server,
         if (jobs.snapshot(id, snap)) {
             scene_token = sanitize_filename_token(scene_basename_for_filename(snap.scene), "scene");
         }
-        const std::string requester_client_id = read_client_id(req);
+        const std::string requester_client_id = read_client_id(params);
         const std::string client_token = sanitize_filename_token(requester_client_id, "client");
         const std::string filename = "xtracer_"
             + scene_token + "_"
             + client_token + "_"
             + utc_timestamp_for_filename()
             + "." + extension;
-        const std::string content_disposition = "attachment; filename=\"" + filename + "\"";
         res.set_header("Cache-Control", "no-store");
-        res.set_header("Content-Disposition", content_disposition.c_str());
-        res.set_content((const char *)image.data(), image.size(), mime_type.c_str());
+        res.set_header("Content-Disposition", ("attachment; filename=\"" + filename + "\"").c_str());
+        res.body = std::string(reinterpret_cast<const char *>(image.data()), image.size());
+        res.set_header("Content-Type", mime_type.c_str());
+        res.end();
     });
 
-    server.Get(R"(/api/jobs/([A-Za-z0-9_]+)/photons)", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/<string>/photons")
+    ([&](const crow::request &req, crow::response &res, std::string id) {
+        const params_view params(req);
         size_t limit = 100000;
         size_t v = 0;
-        if (parse_u64_param(req, "limit", 1, 500000, v)) limit = v;
-        else if (req.has_param("limit")) {
+        if (parse_u64_param(params, "limit", 1, 500000, v)) limit = v;
+        else if (params.has("limit")) {
             send_json(res, "{\"error\":\"invalid limit\"}", 400);
             return;
         }
@@ -2929,7 +3013,8 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get("/api/jobs/active", [&](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/jobs/active")
+    ([&](const crow::request &, crow::response &res) {
         std::vector<job_snapshot_t> active;
         jobs.list_active(active);
         std::ostringstream ss;
@@ -2958,15 +3043,16 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Post(R"(/api/jobs/abort/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/abort/<string>").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res, std::string id) {
         job_snapshot_t snap;
         if (!jobs.snapshot(id, snap)) {
             send_json(res, "{\"error\":\"job not found\"}", 404);
             return;
         }
 
-        const std::string requester_client_id = read_client_id(req);
+        const params_view params(req);
+        const std::string requester_client_id = read_client_id(params);
         if (requester_client_id.empty()) {
             send_json(res, "{\"error\":\"client_id is required\"}", 400);
             return;
@@ -2982,14 +3068,11 @@ void setup_routes(httplib::Server &server,
         }
 
         std::string requester_workspace_id;
-        if (req.has_param("workspace_id")) {
-            requester_workspace_id = req.get_param_value("workspace_id");
+        if (params.has("workspace_id")) {
+            requester_workspace_id = params.str("workspace_id");
         }
-        if (requester_workspace_id.empty()) {
-            const std::string client_id = read_client_id(req);
-            if (!client_id.empty()) {
-                workspaces.get_active(client_id, requester_workspace_id);
-            }
+        if (requester_workspace_id.empty() && !requester_client_id.empty()) {
+            workspaces.get_active(requester_client_id, requester_workspace_id);
         }
         if (requester_workspace_id.empty()) {
             send_json(res, "{\"error\":\"workspace context required\"}", 400);
@@ -3014,31 +3097,34 @@ void setup_routes(httplib::Server &server,
             "info",
             "job abort requested id=" + id + " workspace=" + requester_workspace_id
         );
+        broadcast_jobs_changed(jobs);
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Post(R"(/api/jobs/queue/up/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/queue/up/<string>").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &, crow::response &res, std::string id) {
         if (!jobs.move_queue_up(id)) {
             send_json(res, "{\"error\":\"job not found or not queued\"}", 404);
             return;
         }
         backend_log_t::handle().add("info", "job queue move up id=" + id);
+        broadcast_jobs_changed(jobs);
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Post(R"(/api/jobs/queue/down/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/queue/down/<string>").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &, crow::response &res, std::string id) {
         if (!jobs.move_queue_down(id)) {
             send_json(res, "{\"error\":\"job not found or not queued\"}", 404);
             return;
         }
         backend_log_t::handle().add("info", "job queue move down id=" + id);
+        broadcast_jobs_changed(jobs);
         send_json(res, "{\"ok\":true}");
     });
 
-    server.Get(R"(/api/jobs/([A-Za-z0-9_]+))", [&](const httplib::Request &req, httplib::Response &res) {
-        std::string id = req.matches[1];
+    CROW_ROUTE(app, "/api/jobs/<string>")
+    ([&](const crow::request &, crow::response &res, std::string id) {
         job_snapshot_t snap;
         if (!jobs.snapshot(id, snap)) {
             backend_log_t::handle().add("warn", "job lookup failed id=" + id);
@@ -3048,39 +3134,12 @@ void setup_routes(httplib::Server &server,
         if (snap.state == JOB_DONE || snap.state == JOB_ABORTED || snap.state == JOB_ERROR) {
             workspaces.mark_job_finished(snap.workspace_id, snap.id);
         }
-
-        std::ostringstream ss;
-        ss << "{"
-           << "\"id\":\"" << json_escape(snap.id) << "\","
-           << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
-           << "\"scene\":\"" << json_escape(snap.scene) << "\","
-           << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
-           << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
-           << "\"state\":\"" << job_state_name(snap.state) << "\","
-           << "\"threads\":" << snap.threads << ","
-           << "\"progress\":" << snap.progress << ","
-           << "\"tiles_done\":" << snap.tiles_done << ","
-           << "\"tiles_total\":" << snap.tiles_total << ","
-           << "\"pass_current\":" << snap.pass_current << ","
-           << "\"pass_total\":" << snap.pass_total << ","
-           << "\"elapsed_ms\":" << snap.elapsed_ms << ","
-           << "\"has_image\":" << (snap.has_image ? "true" : "false") << ","
-           << "\"width\":" << snap.width << ","
-           << "\"height\":" << snap.height << ","
-           << "\"active_tiles\":[";
-        for (size_t i = 0; i < snap.active_tiles.size(); ++i) {
-            if (i) ss << ",";
-            const auto &r = snap.active_tiles[i];
-            ss << "[" << r.x0 << "," << r.y0 << "," << r.x1 << "," << r.y1 << "]";
-        }
-        ss << "],"
-           << "\"error\":\"" << json_escape(snap.error) << "\""
-           << "}";
-        send_json(res, ss.str());
+        send_json(res, job_snapshot_to_json(snap));
     });
 
     // Gallery API
-    server.Get("/api/gallery", [gallery](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/gallery")
+    ([gallery](const crow::request &, crow::response &res) {
         if (!gallery || !gallery->is_initialized()) {
             send_json(res, "{\"entries\":[]}");
             return;
@@ -3100,41 +3159,48 @@ void setup_routes(httplib::Server &server,
         send_json(res, ss.str());
     });
 
-    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/gallery/<string>/image")
+    ([gallery](const crow::request &, crow::response &res, std::string id) {
         if (!gallery || !gallery->is_initialized()) {
-            res.status = 404;
+            res.code = 404;
+            res.end();
             return;
         }
-        const std::string id = req.matches[1];
         std::vector<unsigned char> png;
         if (!gallery->get_image(id, png) || png.empty()) {
-            res.status = 404;
+            res.code = 404;
+            res.end();
             return;
         }
-        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
+        res.set_header("Content-Type", "image/png");
+        res.end();
     });
 
-    server.Get(R"(/api/gallery/([A-Za-z0-9_.-]+)/pass/(\d+)/image)", [gallery](const httplib::Request &req, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/gallery/<string>/pass/<uint>/image")
+    ([gallery](const crow::request &, crow::response &res, std::string id, unsigned int pass_index) {
         if (!gallery || !gallery->is_initialized()) {
-            res.status = 404;
+            res.code = 404;
+            res.end();
             return;
         }
-        const std::string id = req.matches[1];
-        const size_t pass_index = static_cast<size_t>(std::stoul(std::string(req.matches[2])));
         std::vector<unsigned char> png;
-        if (!gallery->get_pass_image(id, pass_index, png) || png.empty()) {
-            res.status = 404;
+        if (!gallery->get_pass_image(id, static_cast<size_t>(pass_index), png) || png.empty()) {
+            res.code = 404;
+            res.end();
             return;
         }
-        res.set_content(reinterpret_cast<const char *>(png.data()), png.size(), "image/png");
+        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
+        res.set_header("Content-Type", "image/png");
+        res.end();
     });
 
-    server.Delete(R"(/api/gallery/([A-Za-z0-9_.-]+))", [gallery](const httplib::Request &req, httplib::Response &res) {
+    CROW_ROUTE(app, "/api/gallery/<string>").methods(crow::HTTPMethod::Delete)
+    ([gallery](const crow::request &, crow::response &res, std::string id) {
         if (!gallery || !gallery->is_initialized()) {
             send_json(res, "{\"ok\":false}", 503);
             return;
         }
-        const std::string id = req.matches[1];
         if (gallery->delete_entry(id)) {
             send_json(res, "{\"ok\":true}");
         } else {
@@ -3142,108 +3208,331 @@ void setup_routes(httplib::Server &server,
         }
     });
 
-    server.Get("/", [web_root](const httplib::Request &, httplib::Response &res) {
+    // Static files
+    CROW_ROUTE(app, "/")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "index.html"), "text/html", res);
     });
 
-    server.Get("/showcase.html", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/showcase.html")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "showcase.html"), "text/html", res);
     });
 
-    server.Get("/app.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/app.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
     });
 
-    server.Get("/showcase.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/showcase.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "showcase.js"), "application/javascript", res);
     });
 
-    server.Get(R"(/app/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        const std::string name = req.matches[1];
+    CROW_ROUTE(app, "/app/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string name) {
         serve_static_file(join_path(web_root, "app/" + name), "application/javascript", res);
     });
 
-    server.Get(R"(/app/widgets/([A-Za-z0-9_.-]+\.js))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        const std::string name = req.matches[1];
+    CROW_ROUTE(app, "/app/widgets/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string name) {
         serve_static_file(join_path(web_root, "app/widgets/" + name), "application/javascript", res);
     });
 
-    server.Get("/visual_editor.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/visual_editor.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "visual_editor.js"), "application/javascript", res);
     });
 
-    server.Get("/vendor/three.min.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/vendor/three.min.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "vendor/three.min.js"), "application/javascript", res);
     });
 
-    server.Get("/wasm_adapter.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/wasm_adapter.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "wasm_adapter.js"), "application/javascript", res);
     });
 
-    server.Get("/wasm_worker.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/wasm_worker.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "wasm_worker.js"), "application/javascript", res);
     });
 
-    server.Get("/xtracer_wasm.js", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/xtracer_wasm.js")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "xtracer_wasm.js"), "application/javascript", res);
     });
 
-    server.Get("/xtracer_wasm.wasm", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/xtracer_wasm.wasm")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "xtracer_wasm.wasm"), "application/wasm", res);
     });
 
-    server.Get(R"(/app/data/([A-Za-z0-9_.-]+\.json))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        const std::string name = req.matches[1];
+    CROW_ROUTE(app, "/app/data/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string name) {
         serve_static_file(join_path(web_root, "app/data/" + name), "application/json", res);
     });
 
-    server.Get(R"(/scenes/([A-Za-z0-9_.-]+\.scn))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        std::string scene = req.matches[1];
+    CROW_ROUTE(app, "/scenes/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string scene) {
         serve_static_file(join_path(web_root, "scenes/" + scene), "text/plain", res);
     });
 
-    server.Get("/styles.css", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/styles.css")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "styles.css"), "text/css", res);
     });
 
-    server.Get(R"(/styles/([A-Za-z0-9_.-]+\.css))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        const std::string name = req.matches[1];
+    CROW_ROUTE(app, "/styles/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string name) {
         serve_static_file(join_path(web_root, "styles/" + name), "text/css", res);
     });
 
-    server.Get("/preview.jpg", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/preview.jpg")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "preview.jpg"), "image/jpeg", res);
     });
 
-    server.Get("/logo.png", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/logo.png")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "logo.png"), "image/png", res);
     });
 
-    server.Get("/logo.svg", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/logo.svg")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "logo.svg"), "image/svg+xml", res);
     });
 
-    server.Get(R"(/res/([A-Za-z0-9_.-]+\.png))", [web_root](const httplib::Request &req, httplib::Response &res) {
-        const std::string name = req.matches[1];
+    CROW_ROUTE(app, "/res/<string>")
+    ([web_root](const crow::request &, crow::response &res, std::string name) {
         const std::string direct_path = join_path("res", name);
         if (file_exists(direct_path)) {
             serve_static_file(direct_path, "image/png", res);
             return;
         }
-
         const std::string web_res_path = join_path(join_path(web_root, "res"), name);
         if (file_exists(web_res_path)) {
             serve_static_file(web_res_path, "image/png", res);
             return;
         }
-
         const std::string repo_root = join_path(join_path(join_path(web_root, ".."), ".."), "..");
         const std::string repo_res_path = join_path(join_path(repo_root, "res"), name);
         serve_static_file(repo_res_path, "image/png", res);
     });
 
-    server.Get("/license.txt", [web_root](const httplib::Request &, httplib::Response &res) {
+    CROW_ROUTE(app, "/license.txt")
+    ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "license.txt"), "text/plain; charset=utf-8", res);
+    });
+
+    // WebSocket: job status + tile streaming
+    // WebSocket: job-list event notifications (no job ID required)
+    // Broadcasts {"type":"jobs_changed","jobs":[...]} whenever any job is
+    // created, reaches a terminal state, is aborted, or the queue order
+    // changes.  Also sends the current job list immediately on connect so
+    // clients never need to call /api/jobs/active via REST.
+    CROW_WEBSOCKET_ROUTE(app, "/ws/jobs")
+        .onopen([&](crow::websocket::connection &conn) {
+            g_job_events_ws_hub.subscribe(&conn);
+            // Send the current active job list to this new subscriber so it
+            // has an up-to-date snapshot without waiting for the next mutation.
+            std::vector<job_snapshot_t> active;
+            jobs.list_active(active);
+            std::ostringstream ss;
+            ss << "{\"type\":\"jobs_changed\",\"jobs\":[";
+            for (size_t i = 0; i < active.size(); ++i) {
+                if (i) ss << ",";
+                const job_snapshot_t &snap = active[i];
+                ss << "{"
+                   << "\"id\":\"" << json_escape(snap.id) << "\","
+                   << "\"workspace_id\":\"" << json_escape(snap.workspace_id) << "\","
+                   << "\"scene\":\"" << json_escape(snap.scene) << "\","
+                   << "\"integrator\":\"" << json_escape(snap.integrator) << "\","
+                   << "\"render_mode\":\"" << json_escape(snap.render_mode) << "\","
+                   << "\"state\":\"" << job_state_name(snap.state) << "\","
+                   << "\"threads\":" << snap.threads << ","
+                   << "\"progress\":" << snap.progress << ","
+                   << "\"tiles_done\":" << snap.tiles_done << ","
+                   << "\"tiles_total\":" << snap.tiles_total << ","
+                   << "\"pass_current\":" << snap.pass_current << ","
+                   << "\"pass_total\":" << snap.pass_total << ","
+                   << "\"elapsed_ms\":" << snap.elapsed_ms << ","
+                   << "\"queue_index\":" << snap.queue_index
+                   << "}";
+            }
+            ss << "]}";
+            try { conn.send_text(ss.str()); } catch (...) {}
+        })
+        .onclose([&](crow::websocket::connection &conn, const std::string &) {
+            g_job_events_ws_hub.unsubscribe(&conn);
+        });
+
+    // onaccept extracts job_id and client_tag from the request and stores them
+    // in a heap-allocated struct; onopen/onmessage/onclose retrieve it via userdata().
+    struct ws_job_conn_data_t {
+        std::string job_id;
+        std::string client_tag;
+    };
+
+    CROW_WEBSOCKET_ROUTE(app, "/ws/jobs/<string>")
+        .onaccept([](const crow::request &req, void **userdata) -> bool {
+            const std::string &url = req.url;
+            const size_t pos = url.rfind('/');
+            const std::string job_id = (pos != std::string::npos) ? url.substr(pos + 1) : "";
+            if (job_id.empty()) return false;
+            auto *d = new ws_job_conn_data_t;
+            d->job_id     = job_id;
+            d->client_tag = rlm_request_client_tag(req);
+            *userdata = d;
+            return true;
+        })
+        .onopen([&](crow::websocket::connection &conn) {
+            auto *d = static_cast<ws_job_conn_data_t *>(conn.userdata());
+            if (!d) { conn.close("bad state"); return; }
+            const std::string &job_id = d->job_id;
+            job_snapshot_t snap;
+            if (!jobs.snapshot(job_id, snap)) {
+                conn.close("job not found");
+                return;
+            }
+            // Subscribe first so no tiles are lost between the initial send and live pushes.
+            g_job_ws_hub.subscribe(job_id, &conn);
+            // Send all tiles completed so far as a binary XDT1 catchup packet.
+            job_image_delta_t delta;
+            xtcore::tonemapping::settings_t tm_settings;
+            const bool has_catchup = jobs.image_delta(job_id, 0, 100000, tm_settings, false, "", delta)
+                                     && !delta.tiles.empty();
+            if (has_catchup) conn.send_binary(encode_xdt1(delta));
+            // Refresh snapshot after image_delta so progress/pass info is consistent
+            // with the catchup packet (the earlier snap may predate a few tile completions).
+            jobs.snapshot(job_id, snap);
+            // Send current status snapshot.
+            conn.send_text(job_snapshot_to_json(snap));
+            // Log after subscribe + initial send so the annotation is accurate.
+            std::string detail = "job=" + job_id;
+            if (has_catchup) detail += "  " + std::to_string(delta.tiles.size()) + " tiles catchup";
+            rlm_ws_log(d->client_tag, "OPEN", "/ws/jobs/" + job_id, detail);
+        })
+        .onmessage([&](crow::websocket::connection &conn, const std::string &data, bool is_binary) {
+            if (!is_binary && data.find("\"abort\"") != std::string::npos) {
+                auto *d = static_cast<ws_job_conn_data_t *>(conn.userdata());
+                if (d) {
+                    jobs.abort(d->job_id);
+                    rlm_ws_log(d->client_tag, "ABORT", "/ws/jobs/" + d->job_id);
+                }
+            }
+        })
+        .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
+            auto *d = static_cast<ws_job_conn_data_t *>(conn.userdata());
+            if (d) {
+                rlm_ws_log(d->client_tag, "CLOSE", "/ws/jobs/" + d->job_id,
+                           reason.empty() ? "" : "reason=" + reason);
+                g_job_ws_hub.unsubscribe(&conn);
+                delete d;
+                conn.userdata(nullptr);
+            } else {
+                g_job_ws_hub.unsubscribe(&conn);
+            }
+        });
+
+    // WebSocket: backend log streaming
+    // onaccept extracts "since" query param and client_tag; stores both in userdata.
+    struct ws_logs_conn_data_t {
+        unsigned long long since_id;
+        std::string client_tag;
+    };
+
+    CROW_WEBSOCKET_ROUTE(app, "/ws/logs")
+        .onaccept([](const crow::request &req, void **userdata) -> bool {
+            const char *since_str = req.url_params.get("since");
+            unsigned long long since_id = 0;
+            if (since_str) {
+                try { since_id = std::stoull(since_str); } catch (...) {}
+            }
+            auto *d = new ws_logs_conn_data_t;
+            d->since_id   = since_id;
+            d->client_tag = rlm_request_client_tag(req);
+            *userdata = d;
+            return true;
+        })
+        .onopen([&](crow::websocket::connection &conn) {
+            auto *d = static_cast<ws_logs_conn_data_t *>(conn.userdata());
+            const unsigned long long since_id = d ? d->since_id : 0;
+            auto entries = backend_log_t::handle().since(since_id);
+            if (!entries.empty()) {
+                std::ostringstream ss;
+                ss << "{\"entries\":[";
+                for (size_t i = 0; i < entries.size(); ++i) {
+                    if (i) ss << ",";
+                    ss << "{"
+                       << "\"id\":" << entries[i].id << ","
+                       << "\"ts\":\"" << json_escape(entries[i].timestamp) << "\","
+                       << "\"level\":\"" << json_escape(entries[i].level) << "\","
+                       << "\"message\":\"" << json_escape(entries[i].message) << "\""
+                       << "}";
+                }
+                ss << "]}";
+                conn.send_text(ss.str());
+            }
+            g_log_ws_hub.subscribe(&conn);
+            const std::string path = since_id > 0
+                ? "/ws/logs?since=" + std::to_string(since_id)
+                : "/ws/logs";
+            std::string detail;
+            if (!entries.empty()) detail = std::to_string(entries.size()) + " entries catchup";
+            rlm_ws_log(d ? d->client_tag : "", "OPEN", path, detail);
+        })
+        .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
+            auto *d = static_cast<ws_logs_conn_data_t *>(conn.userdata());
+            rlm_ws_log(d ? d->client_tag : "", "CLOSE", "/ws/logs",
+                       reason.empty() ? "" : "reason=" + reason);
+            g_log_ws_hub.unsubscribe(&conn);
+            if (d) { delete d; conn.userdata(nullptr); }
+        });
+
+    // Wire push callbacks so renders and log entries are pushed to WS subscribers
+    jobs.set_push_callback([&](const std::string &job_id,
+                                const job_snapshot_t &snap,
+                                const std::vector<unsigned char> &tile_bytes) {
+        if (tile_bytes.empty()) {
+            // Terminal state (done/aborted/error): send text snapshot so clients
+            // know to fetch the final image or handle completion.
+            g_job_ws_hub.broadcast_text(job_id, job_snapshot_to_json(snap));
+            if (snap.state == JOB_DONE || snap.state == JOB_ABORTED || snap.state == JOB_ERROR) {
+                {
+                    std::lock_guard<std::mutex> lk(g_known_running_mutex);
+                    g_known_running_jobs.erase(job_id);
+                }
+                broadcast_jobs_changed(jobs);
+            }
+        } else {
+            // Per-tile update: send binary only — the XTDR header already carries
+            // done/total/state so clients can update the progress bar without a
+            // separate text round-trip (halves mutex acquisitions per tile).
+            // Also detect the queued→running transition (first tile) and notify
+            // /ws/jobs subscribers once so the jobs card updates immediately.
+            bool first_tile = false;
+            {
+                std::lock_guard<std::mutex> lk(g_known_running_mutex);
+                first_tile = g_known_running_jobs.insert(job_id).second;
+            }
+            if (first_tile) broadcast_jobs_changed(jobs);
+            g_job_ws_hub.broadcast_binary(
+                job_id,
+                std::string(reinterpret_cast<const char *>(tile_bytes.data()), tile_bytes.size()));
+        }
+    });
+
+    backend_log_t::handle().set_push_callback([&](const backend_log_entry_t &e) {
+        std::ostringstream ss;
+        ss << "{\"entries\":[{"
+           << "\"id\":" << e.id << ","
+           << "\"ts\":\"" << json_escape(e.timestamp) << "\","
+           << "\"level\":\"" << json_escape(e.level) << "\","
+           << "\"message\":\"" << json_escape(e.message) << "\""
+           << "}]}";
+        g_log_ws_hub.broadcast_text(ss.str());
     });
 }
 

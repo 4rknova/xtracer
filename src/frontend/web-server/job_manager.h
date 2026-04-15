@@ -1,6 +1,7 @@
 #ifndef XTRACER_FRONTEND_WEB_JOB_MANAGER_H_INCLUDED
 #define XTRACER_FRONTEND_WEB_JOB_MANAGER_H_INCLUDED
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -124,6 +125,11 @@ class job_manager_t
     bool move_queue_down(const std::string &id);
     bool list_active(std::vector<job_snapshot_t> &out);
 
+    void set_push_callback(
+        std::function<void(const std::string &job_id,
+                           const job_snapshot_t &snap,
+                           const std::vector<unsigned char> &tile_xdt1)> cb);
+
     private:
     struct job_t
     {
@@ -225,6 +231,10 @@ class job_manager_t
                                                          const common::progress_tile_update_t *upd);
     static void add_active_tile(job_t &job, const job_t::active_tile_key_t &key);
     static void remove_active_tile(job_t &job, const job_t::active_tile_key_t &key);
+
+    std::function<void(const std::string &,
+                       const job_snapshot_t &,
+                       const std::vector<unsigned char> &)> push_callback_;
 
     gallery_manager_t *gallery_manager_;
     mutable std::mutex jobs_mut;

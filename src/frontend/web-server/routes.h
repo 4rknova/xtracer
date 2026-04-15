@@ -3,9 +3,7 @@
 
 #include <string>
 
-namespace httplib {
-class Server;
-}
+#include "request_logger_middleware.h"
 
 namespace xtracer {
 namespace frontend {
@@ -26,7 +24,7 @@ struct render_thread_policy_t
     {}
 };
 
-void setup_routes(httplib::Server &server,
+void setup_routes(WebApp &app,
                   job_manager_t &jobs,
                   workspace_manager_t &workspaces,
                   gallery_manager_t *gallery,
