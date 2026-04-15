@@ -504,10 +504,18 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 
 ### Web API Endpoints
 
+#### REST
+
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/health` | Health probe |
 | GET | `/api/about` | Backend/app metadata, runtime capacity stats, and license/third-party notice fields including dependency usage/location |
+| GET | `/api/workspaces?client_id={id}` | List workspaces + active workspace + workspace-scoped settings snapshot |
+| POST | `/api/workspaces` | Create workspace for client context (returns `409` when the retained workspace cap is saturated by active workspaces) |
+| POST | `/api/workspaces/active` | Switch active workspace for client |
+| POST | `/api/workspaces/delete` | Delete workspace |
+| POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft (returns `413` when the draft payload exceeds the backend limit; the backend retains up to 16 drafts per workspace) |
+| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters; returns `413` when `settings_json` exceeds the backend limit) |
 | GET | `/api/scenes` | List available scenes |
 | GET | `/api/scenes/{scene}/cameras` | List cameras in scene (optional `variant=<name>`; includes `camera_entries` with `name` + `type`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/source` | Fetch scene source |
@@ -515,26 +523,21 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/scenes/{scene}/runtime_graph` | Fetch runtime-resolved scene graph (objects/surfaces/materials/media/cameras; object entries may include `medium`) (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/runtime_texture?material=...&sampler=...` | Fetch a runtime material texture preview PNG, including embedded imported textures (optional `variant=<name>`; returns `202` while async scene load is in progress) |
 | GET | `/api/scenes/{scene}/camera_resolve` | Resolve active camera metadata (optional `variant=<name>`; returns `202` while async scene load is in progress) |
-| GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/{scene}/asset?path=...` | Fetch referenced scene asset |
+| GET | `/api/scenes/load_jobs/{id}` | Poll async scene load job status |
 | GET | `/api/scenes/template/empty` | Empty scene template |
 | POST | `/api/scenes/save` | Save scene source |
 | POST | `/api/scenes/delete` | Delete a scene file by name |
-| GET | `/api/workspaces?client_id={id}` | List workspaces + active workspace + workspace-scoped settings snapshot |
-| POST | `/api/workspaces` | Create workspace for client context (returns `409` when the retained workspace cap is saturated by active workspaces) |
-| POST | `/api/workspaces/active` | Switch active workspace for client |
-| POST | `/api/workspaces/delete` | Delete workspace |
-| POST | `/api/workspaces/scene_draft` | Save workspace-local scene draft (returns `413` when the draft payload exceeds the backend limit; the backend retains up to 16 drafts per workspace) |
-| POST | `/api/workspaces/settings` | Save workspace UI settings (quality/frame/integrator/tone mapping/preview/post-filters; returns `413` when `settings_json` exceeds the backend limit) |
 | GET | `/api/integrators` | List backend integrator metadata + controls |
 | GET | `/api/post_filters` | List backend post-filter metadata, stage support, and parameter schema |
 | GET | `/api/resolutions` | Resolution presets |
 | POST | `/api/render` | Create render job (optional `variant=<name>`, optional `render_mode={direct,progressive,incremental,interactive}`; legacy `normal` is also accepted, optional interactive camera override: `cam_px/cam_py/cam_pz`, `cam_tx/cam_ty/cam_tz`, `cam_upx/cam_upy/cam_upz`, `cam_hfov`; returns `503` when the bounded server queue is full) |
-| GET | `/api/jobs/active` | Server-authoritative list of active jobs (`jobs[]`, running first then queued) |
-| POST | `/api/jobs/abort/{id}` | Abort explicit job id |
+| GET | `/api/jobs/active` | Active jobs list (`jobs[]`, running first then queued) — available for external/tooling use; the web frontend uses `/ws/jobs` instead |
+| POST | `/api/jobs/abort/{id}` | Abort a job |
+| POST | `/api/jobs/queue/up/{id}` | Move a queued job up |
+| POST | `/api/jobs/queue/down/{id}` | Move a queued job down |
 | GET | `/api/jobs/{id}` | Job status snapshot |
 | GET | `/api/jobs/{id}/image` | PNG preview/final image (supports tone mapping + optional post-filter query params) |
-| GET | `/api/jobs/{id}/image_delta?since={n}&limit={m}` | Incremental preview tiles since tile index `n` (binary packet, supports tone mapping + optional post-filter query params) |
 | GET | `/api/jobs/{id}/export?format={png,jpg,bmp,tga,exr,hdr}` | Download final export (supports optional post-filter query params) |
 | GET | `/api/jobs/{id}/photons` | Photon debug points |
 | GET | `/api/gallery` | List cached gallery entries (newest first) |
@@ -542,7 +545,14 @@ Interactive preview controls (Render tab, with `Render Mode = Interactive`):
 | GET | `/api/gallery/{id}/pass/{n}/image` | Fetch a cached pass image for progressive/incremental renders |
 | DELETE | `/api/gallery/{id}` | Delete a cached gallery entry |
 | GET | `/api/logs?since={id}` | Incremental backend logs |
-| GET | `/api/logs/wait?since={id}&timeout_ms={n}` | Wait for new backend logs (long-poll) |
+
+#### WebSocket
+
+| Endpoint | Purpose |
+|---|---|
+| `/ws/jobs` | Active jobs stream — server pushes the full active job list (`{"type":"jobs_changed","jobs":[...]}`) immediately on connect, every second (heartbeat), and instantly on mutations (job created/finished/aborted/queue reorder). The web frontend uses this as its sole source of truth for the jobs sidebar card; no REST polling required. |
+| `/ws/jobs/{id}` | Per-job render stream — binary XTDR tile packets during rendering; JSON snapshots on pass-finish and terminal state. Used by the render preview tab for live tile streaming and progress tracking. |
+| `/ws/logs` | Backend log stream — JSON log entries (`{"entries":[...]}`) pushed as they arrive, with a catchup burst of recent entries sent immediately on connect. |
 
 ## Build
 
