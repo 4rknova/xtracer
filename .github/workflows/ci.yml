@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev libasio-dev
 
       - name: Configure
         run: cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON -DXTRACER_ENABLE_WASM=OFF
@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev
+          sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev libasound2-dev libasio-dev
 
       - name: Configure (Release)
         run: |
