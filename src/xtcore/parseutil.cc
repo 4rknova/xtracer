@@ -254,6 +254,78 @@ static void apply_heightfield_to_mesh(nmesh::object_t &obj,
     }
 }
 
+static void flatten_mesh_normals(nmesh::object_t &obj)
+{
+    std::vector<float> new_v;
+    std::vector<float> new_n;
+    std::vector<float> new_uv;
+    const bool has_uv = !obj.attributes.uv.empty();
+
+    int new_idx = 0;
+    for (auto &shape : obj.shapes) {
+        const size_t tri_count = shape.mesh.indices.size() / 3;
+        for (size_t t = 0; t < tri_count; ++t) {
+            nmesh::index_t &ia = shape.mesh.indices[t * 3 + 0];
+            nmesh::index_t &ib = shape.mesh.indices[t * 3 + 1];
+            nmesh::index_t &ic = shape.mesh.indices[t * 3 + 2];
+
+            const int vi_a = ia.v;
+            const int vi_b = ib.v;
+            const int vi_c = ic.v;
+
+            const float ax = obj.attributes.v[vi_a * 3 + 0];
+            const float ay = obj.attributes.v[vi_a * 3 + 1];
+            const float az = obj.attributes.v[vi_a * 3 + 2];
+            const float bx = obj.attributes.v[vi_b * 3 + 0];
+            const float by = obj.attributes.v[vi_b * 3 + 1];
+            const float bz = obj.attributes.v[vi_b * 3 + 2];
+            const float cx = obj.attributes.v[vi_c * 3 + 0];
+            const float cy = obj.attributes.v[vi_c * 3 + 1];
+            const float cz = obj.attributes.v[vi_c * 3 + 2];
+
+            const float ex = bx - ax, ey = by - ay, ez = bz - az;
+            const float fx = cx - ax, fy = cy - ay, fz = cz - az;
+
+            float nx = ey * fz - ez * fy;
+            float ny = ez * fx - ex * fz;
+            float nz = ex * fy - ey * fx;
+            const float len = std::sqrt(nx*nx + ny*ny + nz*nz);
+            if (len > 1e-8f) { nx /= len; ny /= len; nz /= len; }
+            else              { nx = 0.0f; ny = 1.0f; nz = 0.0f; }
+
+            const int vis[3] = { vi_a, vi_b, vi_c };
+            const int uis[3] = { ia.uv, ib.uv, ic.uv };
+            for (int k = 0; k < 3; ++k) {
+                new_v.push_back(obj.attributes.v[vis[k] * 3 + 0]);
+                new_v.push_back(obj.attributes.v[vis[k] * 3 + 1]);
+                new_v.push_back(obj.attributes.v[vis[k] * 3 + 2]);
+                new_n.push_back(nx);
+                new_n.push_back(ny);
+                new_n.push_back(nz);
+                if (has_uv) {
+                    const int ui = uis[k];
+                    if (ui >= 0 && (size_t)(ui * 2 + 1) < obj.attributes.uv.size()) {
+                        new_uv.push_back(obj.attributes.uv[ui * 2 + 0]);
+                        new_uv.push_back(obj.attributes.uv[ui * 2 + 1]);
+                    } else {
+                        new_uv.push_back(0.0f);
+                        new_uv.push_back(0.0f);
+                    }
+                }
+            }
+
+            ia.v = ia.n = new_idx;     if (has_uv) ia.uv = new_idx;
+            ib.v = ib.n = new_idx + 1; if (has_uv) ib.uv = new_idx + 1;
+            ic.v = ic.n = new_idx + 2; if (has_uv) ic.uv = new_idx + 2;
+            new_idx += 3;
+        }
+    }
+
+    obj.attributes.v = std::move(new_v);
+    obj.attributes.n = std::move(new_n);
+    if (has_uv) obj.attributes.uv = std::move(new_uv);
+}
+
 namespace {
 
 struct async_load_job_t {
@@ -1356,6 +1428,28 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             float pav_w        = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_PAVEMENT_WIDTH)       : 0, 0.04);
             nmesh::generator::city(&obj, seed, blocks_x, blocks_z, block_size, road_width, height_min, height_max, lot_padding, bpb_x, bpb_z, floor_h, bay_w, win_wr, win_hr, win_inset, pav_h, pav_w);
         }
+        else if (!token.compare(XTPROTO_LTRL_LOWPOLY_TERRAIN)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 24);
+            if (i < 2) i = 2;
+            if (i > 256) i = 256;
+
+            nmath::Vector3f dimensions = deserialize_vec3(p, XTPROTO_PROP_DIMENSIONS, nmath::Vector3f(8.0f, 1.5f, 8.0f));
+            if (dimensions.x <= 0.0f) dimensions.x = 8.0f;
+            if (dimensions.y < 0.0f)  dimensions.y = 1.5f;
+            if (dimensions.z <= 0.0f) dimensions.z = 8.0f;
+            nmesh::generator::plane(&obj, (size_t)i);
+
+            xtcore::sampler::ISampler *height_sampler = 0;
+            if (p && p->query_group(XTPROTO_PROP_HEIGHT_SAMPLER)) {
+                height_sampler = deserialize_sampler_node(source, p->get_group_by_name(XTPROTO_PROP_HEIGHT_SAMPLER));
+            }
+            if (!height_sampler) {
+                height_sampler = new (std::nothrow) xtcore::sampler::SceneryHeightfield();
+            }
+            apply_heightfield_to_mesh(obj, height_sampler, dimensions);
+            delete height_sampler;
+            flatten_mesh_normals(obj);
+        }
 
         else Log::handle().post_message("Invalid mesh generator: %s (%s)", token.c_str(), f.c_str());
     }
@@ -1419,16 +1513,16 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         return 0;
     }
 
-    Log::handle().post_message("Building octree..");
+    Log::handle().post_message("Building BVH..");
     auto t_oct_0 = std::chrono::steady_clock::now();
     if (obj.shapes.size() == 1) {
-        ((xtcore::surface::Mesh *)data)->build_octree(obj.shapes[0], obj.attributes);
+        ((xtcore::surface::Mesh *)data)->build_bvh(obj.shapes[0], obj.attributes);
     } else {
-	    ((xtcore::surface::Mesh *)data)->build_octree(obj);
+	    ((xtcore::surface::Mesh *)data)->build_bvh(obj);
     }
     auto t_oct_1 = std::chrono::steady_clock::now();
     const double oct_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_oct_1 - t_oct_0).count();
-    Log::handle().post_message("Mesh octree build done: %s (%zu shapes, %.0f ms)", f.c_str(), obj.shapes.size(), oct_ms);
+    Log::handle().post_message("Mesh BVH build done: %s (%zu shapes, %.0f ms)", f.c_str(), obj.shapes.size(), oct_ms);
 
     return data;
 }

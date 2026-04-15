@@ -246,6 +246,7 @@
 #define XTPROTO_LTRL_STAR            "star"              /* string     */ /* Extruded star */
 #define XTPROTO_LTRL_SUPERELLIPSOID  "superellipsoid"    /* string     */ /* Superellipsoid */
 #define XTPROTO_LTRL_CITY            "city"              /* string     */ /* Procedural city */
+#define XTPROTO_LTRL_LOWPOLY_TERRAIN "lowpoly_terrain"   /* string     */ /* Flat-shaded low-poly terrain */
 
 /* New property tokens */
 #define XTPROTO_PROP_TOOTH_COUNT     "tooth_count"       /* integer    */ /* Number of gear teeth */
