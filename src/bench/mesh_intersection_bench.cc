@@ -63,7 +63,7 @@ void setup_mesh_scene(xtcore::Scene &scene, size_t resolution)
     nmesh::mutator::translate(obj, 0.0f, 0.0f, 4.0f);
 
     xtcore::surface::Mesh *mesh = new xtcore::surface::Mesh();
-    mesh->build_octree(obj);
+    mesh->build_bvh(obj);
 
     xtcore::asset::Object *surface_ref = new xtcore::asset::Object();
     surface_ref->surface = kBenchSurfaceId;

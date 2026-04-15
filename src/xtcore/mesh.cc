@@ -301,7 +301,7 @@ uint32_t Mesh::build_bvh_node(uint32_t first, uint32_t count, uint32_t depth)
     return node_idx;
 }
 
-void Mesh::build_octree(shape_t &shape, attrib_t &attributes)
+void Mesh::build_bvh(shape_t &shape, attrib_t &attributes)
 {
     m_triangles.clear();
 
@@ -356,7 +356,7 @@ void Mesh::build_octree(shape_t &shape, attrib_t &attributes)
     build_bvh();
 }
 
-void Mesh::build_octree(object_t &object)
+void Mesh::build_bvh(object_t &object)
 {
     m_triangles.clear();
 

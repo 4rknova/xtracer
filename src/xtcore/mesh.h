@@ -51,8 +51,8 @@ class Mesh: public xtcore::asset::ISurface
 	bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
     nmath::scalar_t distance(nmath::Vector3f p) const;
 	void calc_aabb();
-    void build_octree(shape_t &shape, attrib_t &attributes);
-    void build_octree(object_t &object);
+    void build_bvh(shape_t &shape, attrib_t &attributes);
+    void build_bvh(object_t &object);
 	void set_uv_projection(uv_projection_t projection);
     uv_projection_t uv_projection() const;
     const std::vector<xtcore::surface::Triangle> &triangles() const;

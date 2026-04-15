@@ -895,7 +895,7 @@ xtcore::asset::ISurface *build_surface_from_imported_asset(const imported_asset_
     if (asset.shapes.size() == 1) {
         nmesh::shape_t shape = asset.shapes[0].shape;
         nmesh::attrib_t attributes = asset.attributes;
-        mesh->build_octree(shape, attributes);
+        mesh->build_bvh(shape, attributes);
         return mesh;
     }
 
@@ -904,7 +904,7 @@ xtcore::asset::ISurface *build_surface_from_imported_asset(const imported_asset_
     for (size_t i = 0; i < asset.shapes.size(); ++i) {
         object.shapes.push_back(asset.shapes[i].shape);
     }
-    mesh->build_octree(object);
+    mesh->build_bvh(object);
     return mesh;
 }
 
@@ -967,7 +967,7 @@ int create_objects_from_imported_asset(xtcore::Scene *scene,
 
         nmesh::shape_t shape_copy = shape.shape;
         nmesh::attrib_t attr_copy = asset.attributes;
-        surf->build_octree(shape_copy, attr_copy);
+        surf->build_bvh(shape_copy, attr_copy);
         scene->m_surface[id] = surf;
 
         xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
