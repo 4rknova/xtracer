@@ -392,7 +392,7 @@ function setActiveTab(mode) {
   if (typeof refreshSettingsJobsCard === "function"
     && typeof isJobsControlsCardVisible === "function"
     && isJobsControlsCardVisible()) {
-    refreshSettingsJobsCard().catch((err) => appendLog(`settings jobs refresh error: ${err.message}`));
+    refreshSettingsJobsCard();
   }
   if (isRender) {
     requestAnimationFrame(() => {
@@ -661,12 +661,6 @@ function clampVisualSceneScale(v) {
   return Math.max(0.01, Math.min(100, n));
 }
 
-function clampLogPollMs(v, fallback, min, max) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
 function updateFontScaleUI() {
   if (!el.fontSizePreset) return;
   el.fontSizePreset.value = normalizeFontSizePreset(uiOptions.fontSizePreset);
@@ -681,18 +675,6 @@ function applyFontScale(scale) {
 function loadUIOptions() {
   const poll = parseInt(localStorage.getItem("xtracer-poll-ms") || "300", 10);
   uiOptions.pollMs = Number.isFinite(poll) ? Math.max(100, Math.min(10000, poll)) : 300;
-  uiOptions.logPollActiveMs = clampLogPollMs(
-    localStorage.getItem("xtracer-log-poll-active-ms") || "3000",
-    3000,
-    1000,
-    60000
-  );
-  uiOptions.logPollBackgroundMs = clampLogPollMs(
-    localStorage.getItem("xtracer-log-poll-background-ms") || "20000",
-    20000,
-    1000,
-    120000
-  );
   uiOptions.textHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-text-history-limit") || "200");
   uiOptions.visualHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-visual-history-limit") || "200");
   uiOptions.visualSceneScale = clampVisualSceneScale(localStorage.getItem("xtracer-visual-scene-scale") || "1");
@@ -719,8 +701,6 @@ function loadUIOptions() {
   uiOptions.darkPalette = normalizeDarkPalette(localStorage.getItem("xtracer-dark-palette") || "slate");
   uiOptions.lightPalette = normalizeLightPalette(localStorage.getItem("xtracer-light-palette") || "coastal");
   el.pollInterval.value = String(uiOptions.pollMs);
-  if (el.logPollActiveInterval) el.logPollActiveInterval.value = String(uiOptions.logPollActiveMs);
-  if (el.logPollBackgroundInterval) el.logPollBackgroundInterval.value = String(uiOptions.logPollBackgroundMs);
   if (el.textHistorySize) el.textHistorySize.value = String(uiOptions.textHistoryLimit);
   if (el.visualHistorySize) el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
   if (el.visualSceneScale) el.visualSceneScale.value = String(uiOptions.visualSceneScale);
@@ -754,8 +734,6 @@ function loadUIOptions() {
 
 function persistUIOptions() {
   localStorage.setItem("xtracer-poll-ms", String(uiOptions.pollMs));
-  localStorage.setItem("xtracer-log-poll-active-ms", String(uiOptions.logPollActiveMs));
-  localStorage.setItem("xtracer-log-poll-background-ms", String(uiOptions.logPollBackgroundMs));
   localStorage.setItem("xtracer-text-history-limit", String(uiOptions.textHistoryLimit));
   localStorage.setItem("xtracer-visual-history-limit", String(uiOptions.visualHistoryLimit));
   localStorage.setItem("xtracer-visual-scene-scale", String(uiOptions.visualSceneScale));

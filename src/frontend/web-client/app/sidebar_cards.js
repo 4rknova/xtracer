@@ -36,6 +36,7 @@
           <div id="activeSceneCardSource" class="active-scene-row"></div>
           <div id="activeSceneCardCamera" class="active-scene-row"></div>
           <div id="activeSceneCardVariant" class="active-scene-row"></div>
+          <p id="activeSceneCardVariantDescription" class="active-scene-variant-description"></p>
         </section>
       `,
     },

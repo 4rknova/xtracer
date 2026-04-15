@@ -538,11 +538,11 @@
                     url: "https://github.com/jkuhlmann/cgltf",
                   }),
                   widgets.createDependencyItem({
-                    name: "cpp-httplib",
-                    description: "HTTP server and client header library used by the web backend API layer.",
+                    name: "crow",
+                    description: "C++ HTTP and WebSocket server framework used by the web backend.",
                     usedIn: "xtracer-web",
-                    license: "MIT",
-                    url: "https://github.com/yhirose/cpp-httplib",
+                    license: "BSD-3-Clause",
+                    url: "https://github.com/CrowCpp/Crow",
                   }),
                 ],
               })
@@ -806,6 +806,22 @@
                 return container;
               })()
               : dom.el("div", { text: "Dropdown widget unavailable." }),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
+          demoCard("Sampling Switch", "Toggle between smooth (bilinear) and nearest-neighbour canvas sampling. Used in the render preview and gallery toolbars. Arrow keys navigate between modes.", [
+            (() => {
+              const wrap = dom.el("div", { className: "showcase-demo-wrap" });
+              const smoothSwitch = widgets.createSamplingSwitch({
+                value: "smooth",
+                onChange: (mode) => widgets.syncSamplingSwitch(smoothSwitch, mode),
+              });
+              const nearestSwitch = widgets.createSamplingSwitch({
+                value: "nearest",
+                onChange: (mode) => widgets.syncSamplingSwitch(nearestSwitch, mode),
+              });
+              wrap.appendChild(smoothSwitch);
+              wrap.appendChild(nearestSwitch);
+              return wrap;
+            })(),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack" }),
         ],
       })

@@ -1,6 +1,6 @@
 function postFilterCatalogById(id) {
   const key = String(id || "").trim().toLowerCase();
-  return POST_FILTER_CATALOG.find((it) => it.id === key) || null;
+  return postFilterCatalog.find((it) => it.id === key) || null;
 }
 
 function postFilterDefaultsFromCatalog(filterId) {
@@ -355,7 +355,7 @@ async function loadPostFilters() {
   if (!api || typeof api.getPostFilters !== "function") return;
   const filters = await api.getPostFilters();
   if (!Array.isArray(filters) || filters.length === 0) return;
-  POST_FILTER_CATALOG = filters.slice();
+  postFilterCatalog = filters.slice();
   populatePostFilterTypeOptions();
   renderPostFilterChain();
 }
@@ -853,13 +853,13 @@ function populatePostFilterTypeOptions() {
   if (!el.postFilterType) return;
   const prev = String(el.postFilterType.value || "").trim();
   el.postFilterType.innerHTML = "";
-  POST_FILTER_CATALOG.forEach((item) => {
+  postFilterCatalog.forEach((item) => {
     addOption(el.postFilterType, item.id, item.label);
   });
   if (prev && normalizePostFilterId(prev)) {
     el.postFilterType.value = normalizePostFilterId(prev);
-  } else if (POST_FILTER_CATALOG.length > 0) {
-    el.postFilterType.value = POST_FILTER_CATALOG[0].id;
+  } else if (postFilterCatalog.length > 0) {
+    el.postFilterType.value = postFilterCatalog[0].id;
   }
 }
 

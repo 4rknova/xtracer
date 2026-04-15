@@ -180,7 +180,15 @@
                 </div>
                 <div id="progressBar" class="bar"><div id="progress"></div></div>
               </div>
-              <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls" aria-label="Preview export and sampling controls"></div>
+              <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls" aria-label="Preview export and sampling controls">
+                <div id="renderPreviewViewControls" class="render-preview-toolbar-view">
+                  <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
@@ -189,11 +197,6 @@
                 <p id="interactivePreviewHudSpeed" class="interactive-preview-hud-row">Speed: 1.0x</p>
                 <p id="interactivePreviewHudQuality" class="interactive-preview-hud-row">Quality: idle</p>
               </div>
-              <button id="resetViewBtn" class="preview-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                </svg>
-              </button>
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
             </div>
@@ -337,13 +340,26 @@
         </section>
         <section class="panel gallery-detail-panel" id="galleryDetail" hidden>
           <div class="gallery-detail-toolbar">
-            <button id="galleryDetailBackBtn" class="gallery-back-btn xui-button xui-button--secondary" type="button">Back</button>
-            <h3 id="galleryDetailTitle" class="gallery-detail-title"></h3>
-            <button id="galleryDetailDeleteBtn" class="xui-button xui-button--secondary" type="button">Delete</button>
+            <div class="gallery-detail-toolbar-main">
+              <button id="galleryDetailBackBtn" class="gallery-back-btn xui-button xui-button--secondary" type="button">Back</button>
+              <h3 id="galleryDetailTitle" class="gallery-detail-title"></h3>
+              <div class="gallery-detail-toolbar-view">
+                <button id="galleryResetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset gallery view" aria-disabled="true" title="Reset view">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                  </svg>
+                </button>
+                <div id="gallerySamplingSwitch" class="render-preview-sampling-switch gallery-sampling-switch" role="group" aria-label="Preview sampling" data-value="smooth"></div>
+              </div>
+            </div>
+            <div class="gallery-detail-toolbar-meta">
+              <button id="galleryDetailDeleteBtn" class="xui-button xui-button--secondary" type="button">Delete</button>
+            </div>
           </div>
           <div class="gallery-detail-body">
             <div class="gallery-detail-image-wrap">
               <img id="galleryDetailImage" class="gallery-detail-image" alt="Render preview">
+              <canvas id="galleryDetailCanvas" class="gallery-detail-canvas"></canvas>
             </div>
             <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
           </div>
@@ -411,14 +427,6 @@
                 <label class="xui-field">
                   <span class="xui-field__label">Render Poll Interval (ms)</span>
                   <input id="pollInterval" class="xui-input" type="number" min="100" max="10000" step="50" value="300">
-                </label>
-                <label class="xui-field">
-                  <span class="xui-field__label">Log Wait Poll (Logs Tab, ms)</span>
-                  <input id="logPollActiveInterval" class="xui-input" type="number" min="1000" max="60000" step="500" value="3000">
-                </label>
-                <label class="xui-field">
-                  <span class="xui-field__label">Log Wait Poll (Background, ms)</span>
-                  <input id="logPollBackgroundInterval" class="xui-input" type="number" min="1000" max="120000" step="1000" value="20000">
                 </label>
                 <label class="xui-field">
                   <span class="xui-field__label">Text History Size</span>
@@ -597,6 +605,7 @@
   <script src="/app/widgets/empty_state.js"></script>
   <script src="/app/widgets/menu.js"></script>
   <script src="/app/widgets/toolbar.js"></script>
+  <script src="/app/widgets/sampling_switch.js"></script>
   <script src="/app/widgets/panel_header.js"></script>
   <script src="/app/widgets/key_hint.js"></script>
   <script src="/app/widgets/dependencies.js"></script>
@@ -605,9 +614,12 @@
   <script src="/app/widgets/toast.js"></script>
   <script src="/app/widgets/tab_container.js"></script>
   <script src="/app/widgets/index.js"></script>
+  <script src="/app/format_utils.js"></script>
+  <script src="/app/vec3_utils.js"></script>
   <script src="/app/core_runtime.js"></script>
   <script src="/app/scene_source.js"></script>
   <script src="/app/graph.js"></script>
+  <script src="/app/interactive_camera.js"></script>
   <script src="/app/preview.js"></script>
   <script src="/app/workspaces.js"></script>
   <script src="/app/render.js"></script>

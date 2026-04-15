@@ -18,7 +18,7 @@ const DARK_PALETTES = new Set(DARK_PALETTE_OPTIONS.map((p) => p.value));
 const LIGHT_PALETTES = new Set(LIGHT_PALETTE_OPTIONS.map((p) => p.value));
 const FONT_SIZE_PRESET_DEFAULT = "default";
 const FONT_SIZE_PRESET_LARGE = "large";
-let POST_FILTER_CATALOG = [
+let postFilterCatalog = [
   { id: "desaturate", label: "Desaturate" },
   { id: "chromatic_aberration", label: "Chromatic Aberration" },
   { id: "vignette", label: "Vignette" },
@@ -182,8 +182,17 @@ function setStatus(text) {
     controls.statusPercent.textContent = statusPercent || "0.0%";
   }
   if (controls.renderTimer) {
-    controls.renderTimer.hidden = !statusTimer;
-    controls.renderTimer.textContent = statusTimer || "00:00";
+    if (statusTimer) {
+      // Server provided explicit elapsed time — use it directly.
+      controls.renderTimer.hidden = false;
+      controls.renderTimer.textContent = statusTimer;
+    } else if (!isRenderActive) {
+      // Idle: hide the timer and reset its text.
+      controls.renderTimer.hidden = true;
+      controls.renderTimer.textContent = "00:00";
+    }
+    // During an active render with no server-provided timer, leave the timer
+    // visible and let updateRenderTimer() keep it ticking client-side.
   }
 }
 
@@ -216,12 +225,6 @@ function setStatusPass(currentPass, totalPasses, mode) {
   el.statusPass.textContent = `pass ${Math.floor(current)}/${Math.floor(total)}`;
 }
 
-function formatElapsedShort(ms) {
-  const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 
 function renderSceneLoadStatus() {
   if (el.sceneLoadState) {
@@ -275,23 +278,6 @@ function setEditorOpStatus(kind, text) {
   else el.editorOpStatus.classList.add("is-info");
 }
 
-function formatElapsed(ms) {
-  const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function formatBytesShort(bytes) {
-  const n = Number(bytes) || 0;
-  if (n < 1024) return `${n} B`;
-  if (n < (1024 * 1024)) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
-}
 
 function renderPreviewTransferStats() {
   if (!el.previewTransferStats) return;
@@ -358,8 +344,25 @@ function recordPreviewTransfer(kind, bytes) {
   renderPreviewTransferStats();
 }
 
+// Align renderStartMs to the server's authoritative elapsed time so that the
+// client-side ticker (updateRenderTimer) stays in sync rather than drifting.
+// Only advances the timer — never goes backward. This guards against stale
+// snapshots (e.g. a PASS_FINISHED message captured at t=2s arriving at t=10s)
+// resetting a correctly-running client timer.
+function syncRenderTimerToServer(serverElapsedMs) {
+  const t = Number(serverElapsedMs) || 0;
+  if (t <= 0 || !renderActive) return;
+  const currentElapsed = renderStartMs > 0 ? Date.now() - renderStartMs : 0;
+  if (t > currentElapsed) {
+    renderStartMs = Date.now() - t;
+  }
+}
+
 function updateRenderTimer() {
-  // Timer text is set from server-provided elapsed_ms in setStatus().
+  if (!renderActive || !el.renderTimer || renderStartMs <= 0) return;
+  const elapsed = Math.max(0, Date.now() - renderStartMs);
+  el.renderTimer.hidden = false;
+  el.renderTimer.textContent = formatElapsed(elapsed);
 }
 
 function setRenderActive(active) {
@@ -652,8 +655,6 @@ function cancelActivePollingUi() {
 
 function resetProgressiveDeltaState(jobId) {
   progressiveDeltaJobId = String(jobId || "").trim();
-  progressiveDeltaSinceDone = 0;
-  progressiveDeltaTmKey = "";
 }
 
 function appendToneMappingQuery(parts, opts) {
@@ -727,19 +728,6 @@ function blobUrlForJobImage(jobId, opts) {
   return `/api/jobs/${jobId}/image${qs}`;
 }
 
-function urlForJobImageDelta(jobId, opts) {
-  const parts = [];
-  const since = Number(opts && opts.since);
-  const limit = Number(opts && opts.limit);
-  parts.push(`since=${encodeURIComponent(Number.isFinite(since) && since >= 0 ? Math.floor(since) : 0)}`);
-  parts.push(`limit=${encodeURIComponent(Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 16)}`);
-  appendToneMappingQuery(parts, opts);
-  appendPostFiltersQuery(parts, opts);
-  if (opts && opts.cacheBust) parts.push(`t=${Date.now()}`);
-  const qs = parts.length ? `?${parts.join("&")}` : "";
-  return `/api/jobs/${encodeURIComponent(jobId)}/image_delta${qs}`;
-}
-
 function normalizeVariantName(variant) {
   return String(variant || "").trim();
 }
@@ -761,16 +749,6 @@ function createServerApi() {
     mode: "server",
     async getLogsSince(sinceId) {
       const data = await getJSON(`/api/logs?since=${sinceId}`);
-      return data.entries || [];
-    },
-    async waitForLogsSince(sinceId, timeoutMs, opts) {
-      const waitMs = Number.isFinite(timeoutMs) ? Math.max(1000, Math.min(60000, Math.floor(timeoutMs))) : 15000;
-      const res = await fetch(`/api/logs/wait?since=${sinceId}&timeout_ms=${waitMs}`, {
-        cache: "no-store",
-        signal: opts && opts.signal ? opts.signal : undefined,
-      });
-      if (!res.ok) throw createHttpError(res.status, `HTTP ${res.status}`);
-      const data = await readJsonMaybe(res);
       return data.entries || [];
     },
     async getScenes() {
@@ -867,16 +845,6 @@ function createServerApi() {
     async getJob(jobId) {
       return getJSON(`/api/jobs/${jobId}`);
     },
-    async getActiveJob() {
-      const list = await this.getActiveJobs();
-      return list.length > 0 ? list[0] : null;
-    },
-    async getActiveJobs() {
-      const res = await fetch("/api/jobs/active", { cache: "no-store" });
-      const data = await readJsonMaybe(res);
-      if (!res.ok) throw createHttpError(res.status, (data && data.error) || `HTTP ${res.status}`);
-      return Array.isArray(data && data.jobs) ? data.jobs : [];
-    },
     async abortJob(jobId) {
       const encoded = encodeURIComponent(jobId);
       const body = new URLSearchParams();
@@ -930,11 +898,6 @@ function createServerApi() {
       const res = await fetch(blobUrlForJobImage(jobId, opts), { cache: "no-store" });
       if (!res.ok) return null;
       return res.blob();
-    },
-    async getJobImageDelta(jobId, opts) {
-      const res = await fetch(urlForJobImageDelta(jobId, opts), { cache: "no-store" });
-      if (!res.ok) return null;
-      return res.arrayBuffer();
     },
     async getJobExport(jobId, format, opts) {
       const fmt = encodeURIComponent(String(format || "png").toLowerCase());
@@ -1125,40 +1088,80 @@ function initializeBackendApi() {
   return serverApi;
 }
 
+let logWebSocket = null;
+
+function startLogWebSocket() {
+  if (logWebSocket && logWebSocket.readyState <= WebSocket.OPEN) return;
+  const wsUrl = `ws://${location.host}/ws/logs?since=${lastBackendLogId}`;
+  let ws;
+  try { ws = new WebSocket(wsUrl); } catch (_) { return; }
+  logWebSocket = ws;
+  ws.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch (_) { return; }
+    const entries = data.entries || [];
+    for (let i = 0; i < entries.length; i += 1) {
+      appendBackendLog(entries[i]);
+      if ((entries[i].id || 0) > lastBackendLogId) lastBackendLogId = entries[i].id;
+    }
+  };
+  ws.onclose = () => {
+    if (logWebSocket === ws) logWebSocket = null;
+    // Reconnect after a short delay
+    setTimeout(pollBackendLogs, 2000);
+  };
+  ws.onerror = () => {
+    try { ws.close(); } catch (_) {}
+  };
+}
+
+let jobEventsWebSocket = null;
+let cachedActiveJobs = null; // last jobs list received from /ws/jobs
+
+function getActiveJobsFromCache() {
+  return Array.isArray(cachedActiveJobs) ? cachedActiveJobs : [];
+}
+
+function startJobEventsWebSocket() {
+  if (jobEventsWebSocket && jobEventsWebSocket.readyState <= WebSocket.OPEN) return;
+  let ws;
+  try { ws = new WebSocket(`ws://${location.host}/ws/jobs`); } catch (_) { return; }
+  jobEventsWebSocket = ws;
+  ws.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch (_) { return; }
+    if (data.type === "jobs_changed") {
+      if (Array.isArray(data.jobs)) cachedActiveJobs = data.jobs;
+      if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
+    }
+  };
+  ws.onclose = () => {
+    if (jobEventsWebSocket === ws) jobEventsWebSocket = null;
+    setTimeout(startJobEventsWebSocket, 2000);
+  };
+  ws.onerror = () => {
+    try { ws.close(); } catch (_) {}
+  };
+}
+
 async function pollBackendLogs() {
   if (!api) return;
-  const supportsLogWait = hasBackendMethod(api, "waitForLogsSince");
-  const onLogsTab = String(activeTabMode || "") === "logs";
-  const waitMs = onLogsTab
-    ? Math.max(1000, Math.min(60000, Number(uiOptions.logPollActiveMs) || 3000))
-    : Math.max(1000, Math.min(120000, Number(uiOptions.logPollBackgroundMs) || 20000));
+  // Prefer WebSocket; fall back to REST long-poll if WS is unavailable.
+  if (typeof WebSocket !== "undefined") {
+    startLogWebSocket();
+    if (logWebSocket) return; // WS handles further delivery; onclose reschedules
+  }
   try {
-    if (supportsLogWait && typeof AbortController === "function") {
-      backendLogWaitAbortController = new AbortController();
-    } else {
-      backendLogWaitAbortController = null;
-    }
-    const entries = supportsLogWait
-      ? await api.waitForLogsSince(lastBackendLogId, waitMs, {
-        signal: backendLogWaitAbortController ? backendLogWaitAbortController.signal : undefined,
-      })
-      : await api.getLogsSince(lastBackendLogId);
+    const entries = await api.getLogsSince(lastBackendLogId);
     for (let i = 0; i < entries.length; i += 1) {
       appendBackendLog(entries[i]);
       if ((entries[i].id || 0) > lastBackendLogId) lastBackendLogId = entries[i].id;
     }
   } catch (err) {
-    if (err && (err.name === "AbortError" || String(err.message || "").toLowerCase().indexOf("aborted") >= 0)) {
-      // expected when prioritizing render/abort requests
-    } else {
-      appendLog(`backend logs unavailable: ${err.message}`);
-    }
+    appendLog(`backend logs unavailable: ${err.message}`);
     await new Promise((r) => setTimeout(r, 1000));
   } finally {
-    backendLogWaitAbortController = null;
-    // Long-poll already waits on the server; schedule the next cycle immediately.
-    const delay = supportsLogWait ? 0 : Math.max(500, uiOptions.pollMs);
-    setTimeout(pollBackendLogs, delay);
+    setTimeout(pollBackendLogs, Math.max(500, uiOptions.pollMs));
   }
 }
 

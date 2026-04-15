@@ -12,7 +12,7 @@ function updateDownloadUi() {
   const busy = !!exportRequestInFlight;
   const enabled = hasExportApi && hasCompletedJob && !renderActive && !busy;
   const shell = el.download ? el.download.closest(".render-toolbar-save-shell") : null;
-  syncRenderExportButtonDecor(el.download, fmt, busy ? "Saving" : "Save");
+  syncRenderExportButtonDecor(el.download, fmt);
   if (shell) {
     shell.classList.toggle("is-ready", enabled);
     shell.classList.toggle("is-busy", busy);

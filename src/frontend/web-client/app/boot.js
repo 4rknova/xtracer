@@ -68,6 +68,7 @@ async function boot() {
   setWorkspaceViewMode(localStorage.getItem(WORKSPACE_VIEW_MODE_KEY) || "cards", false);
   setWorkspaceSortMode(localStorage.getItem(WORKSPACE_SORT_MODE_KEY) || "name", false);
   pollBackendLogs();
+  if (typeof startJobEventsWebSocket === "function") startJobEventsWebSocket();
   advanceStartupProgress(1);
 
   setStatus("loading...");
@@ -761,24 +762,6 @@ async function boot() {
     appendLog(`render poll interval=${uiOptions.pollMs}ms`);
   });
 
-  if (el.logPollActiveInterval) {
-    el.logPollActiveInterval.addEventListener("change", () => {
-      uiOptions.logPollActiveMs = clampLogPollMs(el.logPollActiveInterval.value || "3000", 3000, 1000, 60000);
-      el.logPollActiveInterval.value = String(uiOptions.logPollActiveMs);
-      persistUIOptions();
-      appendLog(`logs wait interval (logs tab)=${uiOptions.logPollActiveMs}ms`);
-    });
-  }
-
-  if (el.logPollBackgroundInterval) {
-    el.logPollBackgroundInterval.addEventListener("change", () => {
-      uiOptions.logPollBackgroundMs = clampLogPollMs(el.logPollBackgroundInterval.value || "20000", 20000, 1000, 120000);
-      el.logPollBackgroundInterval.value = String(uiOptions.logPollBackgroundMs);
-      persistUIOptions();
-      appendLog(`logs wait interval (background)=${uiOptions.logPollBackgroundMs}ms`);
-    });
-  }
-
   if (el.textHistorySize) {
     el.textHistorySize.addEventListener("change", () => {
       uiOptions.textHistoryLimit = clampHistoryLimit(el.textHistorySize.value || "200");
@@ -1015,18 +998,6 @@ async function boot() {
       evt.preventDefault();
     });
   }
-
-  setInterval(() => {
-    if (activeTabMode !== "workspaces") return;
-    if (!hasBackendMethod(api, "getWorkspaces")) return;
-    refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
-  }, 2000);
-
-  setInterval(() => {
-    if (typeof refreshSettingsJobsCard !== "function") return;
-    if (typeof isJobsControlsCardVisible === "function" && !isJobsControlsCardVisible()) return;
-    refreshSettingsJobsCard().catch((err) => appendLog(`settings jobs refresh error: ${err.message}`));
-  }, 1000);
 
   el.loadSceneBtn.addEventListener("click", () => {
     setSceneLoadStatus("loading", `Loading source for ${el.scene.value || "scene"}...`, "");

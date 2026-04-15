@@ -882,6 +882,7 @@ function updateActiveSceneSidebarCard() {
   const variantName = selectedSceneVariantValue();
   const variantMeta = variantCatalogEntryByName(variantName);
   const variantLabel = String(variantMeta && variantMeta.label ? variantMeta.label : "").trim() || (variantName || "(base)");
+  const variantDescription = String(variantMeta && variantMeta.description ? variantMeta.description : "").trim();
   const sceneMeta = sceneCatalogEntryByFile(sceneName);
   const sceneLabel = String(sceneMeta && sceneMeta.label ? sceneMeta.label : "").trim()
     || String(sceneMeta && sceneMeta.sceneFile ? sceneMeta.sceneFile : "").trim()
@@ -925,6 +926,11 @@ function updateActiveSceneSidebarCard() {
     value.className = "active-scene-row-value";
     value.textContent = variantLabel;
     el.activeSceneCardVariant.appendChild(value);
+  }
+
+  if (el.activeSceneCardVariantDescription) {
+    el.activeSceneCardVariantDescription.textContent = variantDescription;
+    el.activeSceneCardVariantDescription.style.display = variantDescription ? "" : "none";
   }
 
   if (el.activeSceneCardCamera) {

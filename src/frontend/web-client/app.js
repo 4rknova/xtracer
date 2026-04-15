@@ -87,7 +87,7 @@ function decorateRenderExportButton(button) {
   button.appendChild(sr);
 }
 
-function syncRenderExportButtonDecor(button, format, actionLabel) {
+function syncRenderExportButtonDecor(button, format) {
   if (!button) return;
   const shell = button.closest(".render-toolbar-save-shell");
   if (shell && format) shell.dataset.exportFormat = String(format || "").toUpperCase();
@@ -121,12 +121,7 @@ function syncRenderPreviewSamplingSwitch() {
   const switchNode = document.getElementById("renderPreviewSamplingSwitch");
   if (!select || !switchNode) return;
   const value = String(select.value || "").toLowerCase() === "nearest" ? "nearest" : "smooth";
-  switchNode.dataset.value = value;
-  switchNode.querySelectorAll(".render-preview-sampling-btn").forEach((button) => {
-    const active = button.dataset.previewSampling === value;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-  });
+  window.XTracerWidgets.syncSamplingSwitch(switchNode, value);
 }
 
 function createRenderPreviewSamplingSwitch(field) {
@@ -146,36 +141,11 @@ function createRenderPreviewSamplingSwitch(field) {
   switchNode.setAttribute("aria-label", "Preview sampling");
   switchNode.appendChild(field);
 
-  [
-    {
-      mode: "smooth",
-      title: "Smooth preview sampling",
-      path: "M12 4a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm0 4a4 4 0 1 1-4 4 4 4 0 0 1 4-4z",
-    },
-    {
-      mode: "nearest",
-      title: "Nearest preview sampling",
-      path: "M5 5h5v5H5zm0 9h5v5H5zm9-9h5v5h-5zm0 9h5v5h-5z",
-    },
-  ].forEach((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "render-preview-sampling-btn";
-    button.dataset.previewSampling = item.mode;
-    button.setAttribute("aria-pressed", "false");
-    button.setAttribute("aria-label", item.title);
-    button.setAttribute("title", item.title);
-    button.appendChild(createRenderToolbarSvgIcon(item.path));
-    button.addEventListener("click", () => {
-      setRenderPreviewSamplingValue(item.mode);
-    });
-    button.addEventListener("keydown", (event) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      event.preventDefault();
-      setRenderPreviewSamplingValue(event.key === "ArrowLeft" ? "smooth" : "nearest");
-    });
-    switchNode.appendChild(button);
+  const samplingButtons = window.XTracerWidgets.createSamplingSwitch({
+    value: String(select.value || "").toLowerCase(),
+    onChange: setRenderPreviewSamplingValue,
   });
+  while (samplingButtons.firstChild) switchNode.appendChild(samplingButtons.firstChild);
 
   if (select.dataset.renderPreviewSamplingBound !== "1") {
     select.dataset.renderPreviewSamplingBound = "1";
@@ -188,6 +158,7 @@ function createRenderPreviewSamplingSwitch(field) {
 
 function relocateRenderExportControls() {
   const toolbarDock = document.getElementById("renderPreviewToolbarControls");
+  const viewDock = document.getElementById("renderPreviewViewControls");
   const auxDock = document.getElementById("renderPreviewAuxDock");
   const card = document.getElementById("exportControlsCard");
   const body = card ? card.querySelector(".control-section-body") : null;
@@ -220,8 +191,9 @@ function relocateRenderExportControls() {
 
   if (previewSamplingField) {
     const samplingSwitch = createRenderPreviewSamplingSwitch(previewSamplingField);
-    if (samplingSwitch) {
-      toolbarDock.appendChild(samplingSwitch);
+    const samplingDock = viewDock || toolbarDock;
+    if (samplingSwitch && samplingDock) {
+      samplingDock.appendChild(samplingSwitch);
       syncRenderPreviewSamplingSwitch();
     }
   }
@@ -288,8 +260,6 @@ const el = {
   theme: $("theme"),
   darkPalette: $("darkPalette"),
   pollInterval: $("pollInterval"),
-  logPollActiveInterval: $("logPollActiveInterval"),
-  logPollBackgroundInterval: $("logPollBackgroundInterval"),
   textHistorySize: $("textHistorySize"),
   visualHistorySize: $("visualHistorySize"),
   autoLoadEditor: $("autoLoadEditor"),
@@ -341,6 +311,7 @@ const el = {
   activeSceneCardSource: $("activeSceneCardSource"),
   activeSceneCardCamera: $("activeSceneCardCamera"),
   activeSceneCardVariant: $("activeSceneCardVariant"),
+  activeSceneCardVariantDescription: $("activeSceneCardVariantDescription"),
   workspaceList: $("workspaceList"),
   sceneRefreshBtn: $("sceneRefreshBtn"),
   sceneActiveFile: $("sceneActiveFile"),
@@ -485,15 +456,13 @@ const DEFAULT_THIRD_PARTY_LICENSES = [
   { name: "STB", description: "Collection of single-header image and utility libraries used for texture IO and image helpers.", used_in: "lib/nimg, xtcore, xtracer-web", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
   { name: "TinyEXR", description: "OpenEXR reader and writer used for high-dynamic-range image support.", used_in: "lib/nimg", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
   { name: "strpool", description: "String interning helper used to keep repeated identifiers compact in runtime data structures.", used_in: "xtcore, frontend/common, xtracer-web, xtracer-wasm", license: "MIT / Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
-  { name: "cpp-httplib", description: "HTTP server and client header library used by the web backend API layer.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/yhirose/cpp-httplib" },
+  { name: "crow", description: "C++ HTTP and WebSocket server framework used by the web backend.", used_in: "xtracer-web", license: "BSD-3-Clause", url: "https://github.com/CrowCpp/Crow" },
   { name: "Three.js", description: "3D scene graph and rendering toolkit used by the web visualizer and interactive previews.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/mrdoob/three.js" },
   { name: "ufbx", description: "FBX parser and evaluator used to read production-style geometry, transforms, and animation data.", used_in: "xtcore", license: "MIT", url: "https://github.com/ufbx/ufbx" },
 ];
 
 const uiOptions = {
   pollMs: 300,
-  logPollActiveMs: 3000,
-  logPollBackgroundMs: 20000,
   textHistoryLimit: 200,
   visualHistoryLimit: 200,
   visualSceneScale: 1.0,
@@ -519,7 +488,6 @@ let variantBrowserSelectedName = "";
 let cameraLoadToken = 0;
 let runtimeGraphLoadToken = 0;
 let lastBackendLogId = 0;
-let backendLogWaitAbortController = null;
 let previewObjectUrl = "";
 let previewPendingRevokeUrl = "";
 let previewPinnedBaseUrl = "";
@@ -530,9 +498,6 @@ let activePreviewTiles = [];
 let activePreviewTileWidth = 0;
 let activePreviewTileHeight = 0;
 let progressiveDeltaJobId = "";
-let progressiveDeltaSinceDone = 0;
-let progressiveDeltaEnabled = true;
-let progressiveDeltaTmKey = "";
 let pendingLogScroll = false;
 const LOG_HISTORY_LIMIT = 10000;
 const logEntries = [];
@@ -683,7 +648,6 @@ let interactivePreviewDirty = false;
 let interactivePreviewCameraSeq = 0;
 let interactivePreviewLastInputMs = 0;
 const INTERACTIVE_PREVIEW_SETTLE_MS = 420;
-const INTERACTIVE_PREVIEW_ACTIVE_POLL_MS = 90;
 const INTERACTIVE_PREVIEW_FLY_SPEED = 2.5;
 const INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER = 3.0;
 const INTERACTIVE_PREVIEW_TARGET_FRAME_MS = 110;

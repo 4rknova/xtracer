@@ -179,27 +179,23 @@ async function abortRenderJob(jobId) {
 async function resolveAbortJobId() {
   const localId = String(activeJobId || "").trim();
   if (localId) return localId;
-  if (hasBackendMethod(api, "getActiveJobs")) {
-    try {
-      const activeJobs = await api.getActiveJobs();
-      const workspaceId = String(activeWorkspaceId || "").trim();
-      const forWorkspace = workspaceId
-        ? activeJobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
-        : null;
-      const selected = forWorkspace || (activeJobs.length > 0 ? activeJobs[0] : null);
-      const state = String((selected && selected.state) || "").toLowerCase();
-      const serverJobId = (state === "queued" || state === "running")
-        ? String((selected && selected.id) || "").trim()
-        : "";
-      if (serverJobId) {
-        activeJobId = serverJobId;
-        syncGlobalsToWorkspaceRuntime();
-        updateRenderActionButton();
-        appendLog(`abort resolve server job=${serverJobId}`);
-        return serverJobId;
-      }
-    } catch (err) {
-      appendLog(`abort resolve server lookup failed: ${err.message}`);
+  {
+    const activeJobs = getActiveJobsFromCache();
+    const workspaceId = String(activeWorkspaceId || "").trim();
+    const forWorkspace = workspaceId
+      ? activeJobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
+      : null;
+    const selected = forWorkspace || (activeJobs.length > 0 ? activeJobs[0] : null);
+    const state = String((selected && selected.state) || "").toLowerCase();
+    const serverJobId = (state === "queued" || state === "running")
+      ? String((selected && selected.id) || "").trim()
+      : "";
+    if (serverJobId) {
+      activeJobId = serverJobId;
+      syncGlobalsToWorkspaceRuntime();
+      updateRenderActionButton();
+      appendLog(`abort resolve server job=${serverJobId}`);
+      return serverJobId;
     }
   }
   return "";
@@ -267,142 +263,183 @@ function exportTimestampUtc() {
   return `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}_${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}`;
 }
 
-async function pollJob(jobId, token) {
-  let lastState = "";
-  let doneButDeltaIncompleteCount = 0;
-  const MAX_DONE_DELTA_RETRIES = 20;
-  resetProgressiveDeltaState(jobId);
-  progressiveDeltaEnabled = true;
-  while (true) {
-    if (token !== undefined && token !== activePollToken) return;
-    const data = await api.getJob(jobId);
-    if (token !== undefined && token !== activePollToken) return;
-    const state = data.state || "unknown";
-    const progress = data.progress || 0;
-    const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
-    const threads = Math.max(0, Number(data.threads) || 0);
-    const jobRenderMode = String(data.render_mode || "").toLowerCase();
-    const passCurrent = Number(data.pass_current) || 0;
-    const passTotal = Number(data.pass_total) || 0;
-    updateActivePreviewTilesFromJob(data);
-    setProgress(progress);
-    setStatusThreads(threads);
-    setStatusPass(passCurrent, passTotal, jobRenderMode);
-    const stateLabel = state === "running" ? "rendering" : state;
-    if ((state === "queued" || state === "running") && elapsedMs > 0 && typeof formatElapsed === "function") {
-      setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
-    } else {
-      setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
-    }
-    applyPreviewTransform();
-
-    if (state !== lastState) {
-      appendLog(`job ${jobId} -> ${state}`);
-      lastState = state;
-    }
-
-    const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
-    const isInteractiveMovingJob = interactivePreviewEnabled
-      && !!interactivePreviewActiveMovingJob
-      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
-    let updatedByDelta = false;
-    let deltaTilesDone = 0;
-    let deltaTilesTotal = 0;
-    if (!abortPending) {
-      if (!isInteractiveMovingJob && (state === "queued" || state === "running" || state === "done")) {
-        try {
-          const info = await refreshProgressivePreviewDelta(jobId);
-          if (info && typeof info === "object") {
-            updatedByDelta = !!info.updated;
-            deltaTilesDone = Number(info.tilesDone) || 0;
-            deltaTilesTotal = Number(info.tilesTotal) || 0;
-          }
-        } catch (_) {
-          updatedByDelta = false;
-          deltaTilesDone = 0;
-          deltaTilesTotal = 0;
-        }
-      }
-      if (!updatedByDelta) {
-        await refreshProgressivePreview(jobId);
-      }
-    }
-    if (token !== undefined && token !== activePollToken) return;
-
-    const deltaComplete = !hasBackendMethod(api, "getJobImageDelta")
-      || deltaTilesTotal <= 0
-      || deltaTilesDone >= deltaTilesTotal;
-    if (state === "done" && !abortPending && !deltaComplete) {
-      doneButDeltaIncompleteCount++;
-      if (doneButDeltaIncompleteCount < MAX_DONE_DELTA_RETRIES) {
-        await new Promise((r) => setTimeout(r, uiOptions.pollMs));
-        continue;
-      }
-    }
-    doneButDeltaIncompleteCount = 0;
-
-    if (state === "done") {
-      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
-      clearActivePreviewTiles();
-      resetProgressiveDeltaState("");
-      progressiveDeltaEnabled = true;
-      const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
-      recordFullFrameRenderTime(elapsedMs);
-      const finalBlob = await api.getJobImage(jobId, {
-        final: true,
-        cacheBust: true,
-        toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
-        toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
-        toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
-        toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
-        toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
-        toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-        postFiltersEnabled: !!postFilterStackEnabled,
-        postFilters: gatherPostFilterParams(),
-      });
-      if (finalBlob && finalBlob.size > 0) {
-        recordPreviewTransfer("full", finalBlob.size || 0);
-        await setPreviewFromBlob(finalBlob);
-      }
-      lastCompletedJobId = jobId;
-      lastCompletedJobScene = String(data.scene || el.scene.value || "");
-      lastCompletedJobIntegrator = String(data.integrator || el.integrator.value || "");
-      syncGlobalsToWorkspaceRuntime();
-      updateDownloadUi();
-      refreshVisualPhotonOverlay().catch(() => {});
-      setStatus(`done in ${Math.round(elapsedMs)} ms`);
-      appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
-      return { state: "done", elapsedMs };
-    }
-
-    if (state === "aborted") {
-      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
-      clearActivePreviewTiles();
-      resetProgressiveDeltaState("");
-      progressiveDeltaEnabled = true;
-      applyPreviewTransform();
-      setStatus("aborted");
-      appendLog(`job ${jobId} aborted`);
-      return { state: "aborted", elapsedMs };
-    }
-
-    if (state === "error") {
-      if (String(abortRequestedJobId || "") === String(jobId || "")) abortRequestedJobId = "";
-      clearActivePreviewTiles();
-      resetProgressiveDeltaState("");
-      progressiveDeltaEnabled = true;
-      applyPreviewTransform();
-      throw new Error(data.error || "render failed");
-    }
-
-    const isInteractiveJob = interactivePreviewEnabled
-      && String(interactivePreviewJobId || "").trim()
-      && String(interactivePreviewJobId || "").trim() === String(jobId || "").trim();
-    const delayMs = isInteractiveJob
-      ? INTERACTIVE_PREVIEW_ACTIVE_POLL_MS
-      : uiOptions.pollMs;
-    await new Promise((r) => setTimeout(r, delayMs));
+// Applies a job status snapshot to the UI — shared between WS and REST poll paths.
+function applyJobStatusSnapshot(data) {
+  const progress = data.progress || 0;
+  const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
+  const threads = Math.max(0, Number(data.threads) || 0);
+  const jobRenderMode = String(data.render_mode || "").toLowerCase();
+  const passCurrent = Number(data.pass_current) || 0;
+  const passTotal = Number(data.pass_total) || 0;
+  if (typeof syncRenderTimerToServer === "function") syncRenderTimerToServer(elapsedMs);
+  updateActivePreviewTilesFromJob(data);
+  setProgress(progress);
+  setStatusThreads(threads);
+  setStatusPass(passCurrent, passTotal, jobRenderMode);
+  const state = data.state || "unknown";
+  const stateLabel = state === "running" ? "rendering" : state;
+  if ((state === "queued" || state === "running") && elapsedMs > 0) {
+    setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
+  } else {
+    setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
   }
+  applyPreviewTransform();
+}
+
+async function watchJobViaWebSocket(jobId, token) {
+  return new Promise((resolve, reject) => {
+    const wsUrl = `ws://${location.host}/ws/jobs/${encodeURIComponent(jobId)}`;
+    let ws;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (e) {
+      reject(e);
+      return;
+    }
+    ws.binaryType = "arraybuffer";
+    let lastState = "";
+    let settled = false;
+    // Serialize all tile draws so concurrent messages don't race on previewObjectUrl.
+    let drawQueue = Promise.resolve();
+
+    function finish(result) {
+      if (settled) return;
+      settled = true;
+      try { ws.close(); } catch (_) {}
+      resolve(result);
+    }
+
+    ws.onerror = () => {
+      if (!settled) reject(new Error("job WebSocket error"));
+      settled = true;
+    };
+
+    ws.onclose = () => {
+      if (!settled) reject(new Error("job WebSocket closed unexpectedly"));
+      settled = true;
+    };
+
+    ws.onmessage = (event) => {
+      if (token !== undefined && token !== activePollToken) {
+        finish(undefined);
+        return;
+      }
+      if (event.data instanceof ArrayBuffer) {
+        // Binary XTDR frame — header carries done/total/activeTiles so no
+        // per-tile text message is needed.
+        const delta = parseImageDeltaPacket(event.data);
+        if (delta) {
+          if (delta.tilesTotal > 0) {
+            const pct = delta.tilesDone / delta.tilesTotal;
+            const elapsedMs = Number(delta.elapsedMs) || 0;
+            if (typeof syncRenderTimerToServer === "function") syncRenderTimerToServer(elapsedMs);
+            setProgress(pct);
+            if (elapsedMs > 0) {
+              setStatus(`rendering ${(100 * pct).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
+            } else {
+              setStatus(`rendering ${(100 * pct).toFixed(1)}%`);
+            }
+            if (typeof patchSettingsJobProgress === "function" && jobId) {
+              patchSettingsJobProgress(jobId, pct);
+            }
+          }
+          if (delta.activeTiles !== null) {
+            updateActivePreviewTilesFromJob({
+              active_tiles: delta.activeTiles,
+              width: delta.width,
+              height: delta.height,
+            });
+          }
+          if (Array.isArray(delta.tiles) && delta.tiles.length > 0) {
+            drawQueue = drawQueue.then(() => drawDeltaTilesToPreviewCanvas(delta));
+          }
+        }
+        return;
+      }
+      // Text: job status snapshot — update UI immediately, but chain terminal actions onto drawQueue
+      // so the full-image fetch waits for all queued tile draws to finish first.
+      let data;
+      try { data = JSON.parse(event.data); } catch (_) { return; }
+      const state = data.state || "unknown";
+      applyJobStatusSnapshot(data);
+      if (state !== lastState) {
+        appendLog(`job ${jobId} -> ${state}`);
+        lastState = state;
+      }
+      const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
+      // For running-state snapshots (PASS_FINISHED broadcasts) patch the Jobs sidebar
+      // card in-place directly from WS data — no REST round-trip needed.
+      if ((state === "running" || state === "queued") && typeof patchSettingsJobFromSnapshot === "function") {
+        patchSettingsJobFromSnapshot(jobId, data);
+      }
+      if (state === "done" && !abortPending) {
+        const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
+        const snapData = data;
+        drawQueue = drawQueue.then(async () => {
+          clearActivePreviewTiles();
+          resetProgressiveDeltaState("");
+          recordFullFrameRenderTime(elapsedMs);
+          const finalBlob = await api.getJobImage(jobId, {
+            final: true,
+            cacheBust: true,
+            toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
+            toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
+            toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
+            toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
+            toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
+            toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
+            postFiltersEnabled: !!postFilterStackEnabled,
+            postFilters: gatherPostFilterParams(),
+          });
+          if (finalBlob && finalBlob.size > 0) {
+            recordPreviewTransfer("full", finalBlob.size || 0);
+            await setPreviewFromBlob(finalBlob);
+          }
+          lastCompletedJobId = jobId;
+          lastCompletedJobScene = String(snapData.scene || el.scene.value || "");
+          lastCompletedJobIntegrator = String(snapData.integrator || el.integrator.value || "");
+          syncGlobalsToWorkspaceRuntime();
+          updateDownloadUi();
+          refreshVisualPhotonOverlay().catch(() => {});
+          setStatus(`done in ${Math.round(elapsedMs)} ms`);
+          appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
+          finish({ state: "done", elapsedMs });
+          if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
+        });
+        return;
+      }
+      if (state === "aborted") {
+        if (abortPending) abortRequestedJobId = "";
+        drawQueue = drawQueue.then(() => {
+          clearActivePreviewTiles();
+          resetProgressiveDeltaState("");
+          applyPreviewTransform();
+          const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
+          setStatus("aborted");
+          appendLog(`job ${jobId} aborted`);
+          finish({ state: "aborted", elapsedMs });
+          if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
+        });
+        return;
+      }
+      if (state === "error") {
+        if (abortPending) abortRequestedJobId = "";
+        drawQueue = drawQueue.then(() => {
+          clearActivePreviewTiles();
+          resetProgressiveDeltaState("");
+          applyPreviewTransform();
+          finish(Promise.reject(new Error(data.error || "render failed")));
+          if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
+        });
+        return;
+      }
+    };
+  });
+}
+
+async function pollJob(jobId, token) {
+  resetProgressiveDeltaState(jobId);
+  return watchJobViaWebSocket(jobId, token);
 }
 
 function interactiveTargetDimensions() {
@@ -747,7 +784,6 @@ async function handleRender() {
       beginPollSession();
       clearActivePreviewTiles();
       resetProgressiveDeltaState("");
-      progressiveDeltaEnabled = false;
       applyPreviewTransform();
       appendLog(`abort requested for job ${jobId}`);
       const abortResult = await abortRenderJob(jobId);
@@ -764,6 +800,7 @@ async function handleRender() {
       abortRequestedJobId = "";
       syncGlobalsToWorkspaceRuntime();
       cancelActivePollingUi();
+      if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
     } catch (err) {
       setStatus(`error: ${err.message}`);
       appendLog(`abort error: ${err.message}`);
@@ -821,6 +858,7 @@ async function handleRender() {
     updateRenderActionButton();
     syncGlobalsToWorkspaceRuntime();
     appendLog(`job accepted: ${jobId}`);
+    if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
     await pollJob(jobId, pollToken);
     pollReachedTerminalState = true;
   } catch (err) {

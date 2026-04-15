@@ -3,9 +3,38 @@ function updatePreviewSizing() {
   applyPreviewTransform();
 }
 
-let workspacePollingJobId = "";
-let previewMinimapLayout = null;
-let previewLayoutObserver = null;
+const previewState = {
+  pollingJobId: "",
+
+  minimapLayout: null,
+  layoutObserver: null,
+
+  // Persistent canvas for progressive tile accumulation.
+  // Tiles are drawn directly here via putImageData (raw) or drawImage (PNG),
+  // eliminating the per-tile toBlob() → fetch → decode → redraw cycle.
+  tileAccumCanvas: null,
+  tileAccumCtx: null,
+
+  // Coalescing guard for refreshPreviewForToneMapping.
+  // Prevents concurrent fetches; ensures the last slider position always lands.
+  tmInFlight: false,
+  tmPending: false,
+};
+
+function resetTileAccumCanvas() {
+  previewState.tileAccumCanvas = null;
+  previewState.tileAccumCtx = null;
+}
+
+function ensureTileAccumCanvas(width, height) {
+  if (!previewState.tileAccumCanvas || previewState.tileAccumCanvas.width !== width || previewState.tileAccumCanvas.height !== height) {
+    previewState.tileAccumCanvas = document.createElement("canvas");
+    previewState.tileAccumCanvas.width = width;
+    previewState.tileAccumCanvas.height = height;
+    previewState.tileAccumCtx = previewState.tileAccumCanvas.getContext("2d");
+  }
+  return previewState.tileAccumCtx;
+}
 
 function normalizeRenderMode(value) {
   const mode = String(value || "").trim().toLowerCase();
@@ -25,364 +54,6 @@ function isProgressiveRenderMode() {
   return mode === RENDER_MODE_PROGRESSIVE || mode === RENDER_MODE_INCREMENTAL;
 }
 
-function clamp(value, lo, hi) {
-  return Math.min(hi, Math.max(lo, value));
-}
-
-function v3(x, y, z) {
-  return [Number(x) || 0, Number(y) || 0, Number(z) || 0];
-}
-
-function v3add(a, b) {
-  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-}
-
-function v3sub(a, b) {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-}
-
-function v3scale(a, s) {
-  return [a[0] * s, a[1] * s, a[2] * s];
-}
-
-function v3dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-function v3cross(a, b) {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ];
-}
-
-function v3len(a) {
-  return Math.sqrt(v3dot(a, a));
-}
-
-function v3norm(a, fallback) {
-  const l = v3len(a);
-  if (!Number.isFinite(l) || l < 1e-8) return fallback ? [...fallback] : [0, 0, 1];
-  return [a[0] / l, a[1] / l, a[2] / l];
-}
-
-function rotateAroundAxis(v, axisUnit, radians) {
-  const c = Math.cos(radians);
-  const s = Math.sin(radians);
-  const term1 = v3scale(v, c);
-  const term2 = v3scale(v3cross(axisUnit, v), s);
-  const term3 = v3scale(axisUnit, v3dot(axisUnit, v) * (1 - c));
-  return v3add(v3add(term1, term2), term3);
-}
-
-function interactivePreviewAvailable() {
-  return !!interactivePreviewEnabled
-    && activeTabMode === "render"
-    && interactivePreviewCamera.ready;
-}
-
-function markInteractiveInputActivity() {
-  interactivePreviewLastInputMs = Date.now();
-}
-
-function renderInteractivePreviewHud() {
-  if (!el.interactivePreviewHud) return;
-  if (el.interactivePreviewControls) {
-    el.interactivePreviewControls.hidden = !isInteractiveRenderMode();
-  }
-  if (typeof syncRenderPreviewAuxPanel === "function") syncRenderPreviewAuxPanel();
-  if (el.renderMode) {
-    el.renderMode.value = normalizeRenderMode(renderMode);
-  }
-  const show = !!interactivePreviewEnabled && activeTabMode === "render";
-  el.interactivePreviewHud.hidden = !show;
-  if (el.interactivePreviewSaveCameraBtn) {
-    const canSave = !!interactivePreviewEnabled && !!interactivePreviewCamera.ready;
-    el.interactivePreviewSaveCameraBtn.disabled = !canSave;
-    el.interactivePreviewSaveCameraBtn.classList.toggle("is-disabled", !canSave);
-    el.interactivePreviewSaveCameraBtn.setAttribute("aria-disabled", canSave ? "false" : "true");
-  }
-  if (!show) return;
-  if (el.interactivePreviewHudMode) {
-    el.interactivePreviewHudMode.textContent = `Mode: ${String(interactivePreviewHudMode || "LOOK").toUpperCase()}`;
-  }
-  if (el.interactivePreviewHudSpeed) {
-    const sp = Number(interactivePreviewFlySpeedScale) || 1;
-    el.interactivePreviewHudSpeed.textContent = `Speed: ${sp.toFixed(1)}x`;
-  }
-  if (el.interactivePreviewHudQuality) {
-    el.interactivePreviewHudQuality.textContent = `Quality: ${interactivePreviewHudQuality || "idle"}`;
-  }
-}
-
-function interactivePreviewCameraRequestParams() {
-  if (!interactivePreviewCamera.ready) return null;
-  const p = interactivePreviewCamera.position;
-  const t = interactivePreviewCamera.target;
-  const u = interactivePreviewCamera.up;
-  const nums = [p[0], p[1], p[2], t[0], t[1], t[2], u[0], u[1], u[2], interactivePreviewCamera.hfov];
-  for (let i = 0; i < nums.length; i += 1) {
-    if (!Number.isFinite(nums[i])) return null;
-  }
-  return {
-    camera: interactivePreviewCamera.sourceCamera || (el.camera ? (el.camera.value || "") : ""),
-    cam_px: String(p[0]),
-    cam_py: String(p[1]),
-    cam_pz: String(p[2]),
-    cam_tx: String(t[0]),
-    cam_ty: String(t[1]),
-    cam_tz: String(t[2]),
-    cam_upx: String(u[0]),
-    cam_upy: String(u[1]),
-    cam_upz: String(u[2]),
-    cam_hfov: String(interactivePreviewCamera.hfov || 60),
-  };
-}
-
-async function refreshInteractivePreviewCameraFromSelection() {
-  interactivePreviewCamera.ready = false;
-  if (!interactivePreviewEnabled) return false;
-  if (!hasBackendMethod(api, "getSceneResolvedCamera")) return false;
-  const scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
-  if (!scene) return false;
-  const variant = selectedSceneVariantValue();
-  const cameraName = String(el.camera && el.camera.value ? el.camera.value : "").trim();
-  try {
-    const resolved = await api.getSceneResolvedCamera(scene, variant, cameraName);
-    const pos = Array.isArray(resolved && resolved.position) ? resolved.position : null;
-    const target = Array.isArray(resolved && resolved.target) ? resolved.target : null;
-    const up = Array.isArray(resolved && resolved.up) ? resolved.up : null;
-    const hfov = Number(resolved && resolved.hfov);
-    if (!pos || !target || !up) {
-      appendLog("interactive preview unavailable for current camera");
-      return false;
-    }
-    const vals = [pos[0], pos[1], pos[2], target[0], target[1], target[2], up[0], up[1], up[2]];
-    if (vals.some((v) => !Number.isFinite(Number(v)))) {
-      appendLog("interactive preview unavailable: camera metadata is non-finite");
-      return false;
-    }
-    interactivePreviewCamera.ready = true;
-    interactivePreviewCamera.type = String((resolved && resolved.type) || "");
-    interactivePreviewCamera.sourceScene = scene;
-    interactivePreviewCamera.sourceVariant = variant;
-    interactivePreviewCamera.sourceCamera = String((resolved && resolved.resolved) || cameraName);
-    interactivePreviewCamera.position = v3(pos[0], pos[1], pos[2]);
-    interactivePreviewCamera.target = v3(target[0], target[1], target[2]);
-    interactivePreviewCamera.up = v3norm(v3(up[0], up[1], up[2]), [0, 1, 0]);
-    interactivePreviewCamera.hfov = Number.isFinite(hfov) ? clamp(hfov, 1, 179) : 60;
-    resetInteractiveOrbitFromCamera(true);
-    interactivePreviewCameraSeq += 1;
-    return true;
-  } catch (err) {
-    appendLog(`interactive camera resolve failed: ${err.message}`);
-    return false;
-  }
-}
-
-function interactiveCameraBasis() {
-  const yaw = Number(interactivePreviewCamera.orbitYaw) || 0;
-  const pitch = Number(interactivePreviewCamera.orbitPitch) || 0;
-  const cp = Math.cos(pitch);
-  const sp = Math.sin(pitch);
-  const sy = Math.sin(yaw);
-  const cy = Math.cos(yaw);
-  let forward = v3norm([sy * cp, sp, -cy * cp], [0, 0, -1]);
-  let right = v3cross(forward, [0, 1, 0]);
-  if (v3len(right) < 1e-6) right = v3cross(forward, [1, 0, 0]);
-  right = v3norm(right, [1, 0, 0]);
-  let up = v3cross(right, forward);
-  up = v3norm(up, [0, 1, 0]);
-  forward = v3norm(forward, [0, 0, -1]);
-  return { forward, right, up };
-}
-
-function applyInteractiveOrbitCameraState() {
-  const pivot = Array.isArray(interactivePreviewCamera.pivot)
-    ? v3(interactivePreviewCamera.pivot[0], interactivePreviewCamera.pivot[1], interactivePreviewCamera.pivot[2])
-    : [0, 0, 0];
-  const basis = interactiveCameraBasis();
-  const dist = clamp(Number(interactivePreviewCamera.orbitDistance) || 1, 0.02, 1e6);
-  interactivePreviewCamera.pivot = pivot;
-  interactivePreviewCamera.orbitDistance = dist;
-  interactivePreviewCamera.target = pivot;
-  interactivePreviewCamera.position = v3sub(pivot, v3scale(basis.forward, dist));
-  interactivePreviewCamera.up = basis.up;
-}
-
-function resetInteractiveOrbitFromCamera(anchorToOrigin) {
-  const pos = v3(
-    interactivePreviewCamera.position[0],
-    interactivePreviewCamera.position[1],
-    interactivePreviewCamera.position[2],
-  );
-  const target = v3(
-    interactivePreviewCamera.target[0],
-    interactivePreviewCamera.target[1],
-    interactivePreviewCamera.target[2],
-  );
-  const pivot = anchorToOrigin ? [0, 0, 0] : target;
-  let toPivot = v3sub(pivot, pos);
-  let distance = v3len(toPivot);
-  if (!Number.isFinite(distance) || distance < 1e-6) {
-    toPivot = v3sub(target, pos);
-    distance = v3len(toPivot);
-  }
-  if (!Number.isFinite(distance) || distance < 0.02) distance = 1.0;
-  const forward = v3norm(toPivot, [0, 0, -1]);
-  interactivePreviewCamera.pivot = pivot;
-  interactivePreviewCamera.orbitDistance = distance;
-  interactivePreviewCamera.orbitPitch = Math.asin(clamp(forward[1], -0.995, 0.995));
-  interactivePreviewCamera.orbitYaw = Math.atan2(forward[0], -forward[2]);
-  applyInteractiveOrbitCameraState();
-}
-
-function markInteractiveCameraDirty() {
-  interactivePreviewCameraSeq += 1;
-  interactivePreviewDirty = true;
-  markInteractiveInputActivity();
-  interactivePreviewHudQuality = "active";
-  renderInteractivePreviewHud();
-  if (typeof requestInteractivePreviewRender === "function") {
-    requestInteractivePreviewRender();
-  }
-}
-
-function interactiveLookCamera(dx, dy) {
-  if (!interactivePreviewCamera.ready) return;
-  interactivePreviewCamera.orbitYaw = (Number(interactivePreviewCamera.orbitYaw) || 0) - (dx * 0.005);
-  interactivePreviewCamera.orbitPitch = clamp(
-    (Number(interactivePreviewCamera.orbitPitch) || 0) - (dy * 0.005),
-    -1.45,
-    1.45,
-  );
-  applyInteractiveOrbitCameraState();
-  markInteractiveCameraDirty();
-}
-
-function hasInteractiveFlyInput() {
-  return !!(interactivePreviewKeyState.w
-    || interactivePreviewKeyState.a
-    || interactivePreviewKeyState.s
-    || interactivePreviewKeyState.d
-    || interactivePreviewKeyState.q
-    || interactivePreviewKeyState.e);
-}
-
-function tickInteractiveFly() {
-  if (!interactivePreviewAvailable()) return;
-  const now = Date.now();
-  if (!interactivePreviewFlyLastTickMs) interactivePreviewFlyLastTickMs = now;
-  const dt = Math.max(0.001, Math.min(0.05, (now - interactivePreviewFlyLastTickMs) / 1000));
-  interactivePreviewFlyLastTickMs = now;
-  if (!hasInteractiveFlyInput()) return;
-  const basis = interactiveCameraBasis();
-  const speed = INTERACTIVE_PREVIEW_FLY_SPEED
-    * Math.max(0.2, Math.min(5.0, Number(interactivePreviewFlySpeedScale) || 1.0))
-    * (interactivePreviewKeyState.shift ? INTERACTIVE_PREVIEW_FLY_SHIFT_MULTIPLIER : 1.0);
-  let move = [0, 0, 0];
-  if (interactivePreviewKeyState.w) move = v3add(move, basis.forward);
-  if (interactivePreviewKeyState.s) move = v3sub(move, basis.forward);
-  if (interactivePreviewKeyState.d) move = v3add(move, basis.right);
-  if (interactivePreviewKeyState.a) move = v3sub(move, basis.right);
-  if (interactivePreviewKeyState.e) move = v3add(move, basis.up);
-  if (interactivePreviewKeyState.q) move = v3sub(move, basis.up);
-  const moveNorm = v3norm(move, [0, 0, 0]);
-  if (v3len(moveNorm) < 1e-6) return;
-  const delta = v3scale(moveNorm, speed * dt);
-  interactivePreviewCamera.pivot = v3add(
-    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
-    delta,
-  );
-  applyInteractiveOrbitCameraState();
-  markInteractiveCameraDirty();
-}
-
-function stopInteractiveFlyTicker() {
-  if (interactivePreviewFlyTimer) {
-    clearInterval(interactivePreviewFlyTimer);
-    interactivePreviewFlyTimer = 0;
-  }
-  interactivePreviewFlyLastTickMs = 0;
-}
-
-function ensureInteractiveFlyTicker() {
-  if (interactivePreviewFlyTimer) return;
-  interactivePreviewFlyLastTickMs = Date.now();
-  interactivePreviewFlyTimer = setInterval(() => {
-    tickInteractiveFly();
-  }, 16);
-}
-
-function bindInteractivePreviewKeyboard() {
-  const isTypingTarget = (node) => {
-    if (!node || !(node instanceof HTMLElement)) return false;
-    const tag = String(node.tagName || "").toLowerCase();
-    return tag === "input" || tag === "textarea" || tag === "select" || node.isContentEditable;
-  };
-  const applyKey = (evt, down) => {
-    if (!interactivePreviewEnabled) return;
-    if (activeTabMode !== "render") return;
-    if (isTypingTarget(evt.target)) return;
-    const k = String(evt.key || "").toLowerCase();
-    let handled = true;
-    if (k === "w") interactivePreviewKeyState.w = down;
-    else if (k === "a") interactivePreviewKeyState.a = down;
-    else if (k === "s") interactivePreviewKeyState.s = down;
-    else if (k === "d") interactivePreviewKeyState.d = down;
-    else if (k === "q") interactivePreviewKeyState.q = down;
-    else if (k === "e") interactivePreviewKeyState.e = down;
-    else if (k === "shift") interactivePreviewKeyState.shift = down;
-    else handled = false;
-    if (!handled) return;
-    evt.preventDefault();
-    interactivePreviewHudMode = "FLY";
-    renderInteractivePreviewHud();
-    markInteractiveInputActivity();
-  };
-  window.addEventListener("keydown", (evt) => applyKey(evt, true));
-  window.addEventListener("keyup", (evt) => applyKey(evt, false));
-  window.addEventListener("blur", () => {
-    interactivePreviewKeyState.w = false;
-    interactivePreviewKeyState.a = false;
-    interactivePreviewKeyState.s = false;
-    interactivePreviewKeyState.d = false;
-    interactivePreviewKeyState.q = false;
-    interactivePreviewKeyState.e = false;
-    interactivePreviewKeyState.shift = false;
-    interactivePreviewHudMode = "LOOK";
-    renderInteractivePreviewHud();
-  });
-}
-
-function interactiveOrbitCamera(dx, dy) {
-  interactiveLookCamera(dx, dy);
-}
-
-function interactivePanCamera(dx, dy) {
-  if (!interactivePreviewCamera.ready) return;
-  const basis = interactiveCameraBasis();
-  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
-  const k = dist * 0.0018;
-  const move = v3add(v3scale(basis.right, -dx * k), v3scale(basis.up, dy * k));
-  interactivePreviewCamera.pivot = v3add(
-    Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
-    move,
-  );
-  applyInteractiveOrbitCameraState();
-  markInteractiveCameraDirty();
-}
-
-function interactiveZoomCamera(deltaY) {
-  if (!interactivePreviewCamera.ready) return;
-  const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
-  const amount = clamp(Math.exp(deltaY * 0.0015), 0.8, 1.25);
-  const nextDist = clamp(dist * amount, 0.02, 1e6);
-  interactivePreviewCamera.orbitDistance = nextDist;
-  applyInteractiveOrbitCameraState();
-  markInteractiveCameraDirty();
-}
 
 function isTileHeatmapEnabled() {
   return !!uiOptions.tileHeatmapEnabled;
@@ -553,6 +224,7 @@ function isNearestPreviewSampling() {
 }
 
 function hasPreviewImage() {
+  if (previewState.tileAccumCanvas && previewState.tileAccumCanvas.width > 0 && previewState.tileAccumCanvas.height > 0) return true;
   return !el.previewFrame.classList.contains("is-empty")
     && !!el.preview.getAttribute("src")
     && !!el.preview.naturalWidth
@@ -562,8 +234,8 @@ function hasPreviewImage() {
 function getPreviewFittedSize() {
   const frameW = el.previewFrame.clientWidth;
   const frameH = el.previewFrame.clientHeight;
-  const imgW = el.preview.naturalWidth;
-  const imgH = el.preview.naturalHeight;
+  const imgW = previewState.tileAccumCanvas ? previewState.tileAccumCanvas.width : el.preview.naturalWidth;
+  const imgH = previewState.tileAccumCanvas ? previewState.tileAccumCanvas.height : el.preview.naturalHeight;
   if (!frameW || !frameH || !imgW || !imgH) return null;
   const fit = Math.min(frameW / imgW, frameH / imgH);
   return {
@@ -609,7 +281,7 @@ function syncPreviewFrameSquareSize() {
 }
 
 function bindPreviewLayoutObserver() {
-  if (!el.previewFrame || previewLayoutObserver) return;
+  if (!el.previewFrame || previewState.layoutObserver) return;
   const panel = el.previewFrame.closest(".panel-preview");
   const toolbar = panel ? panel.querySelector(".preview-toolbar") : null;
   const aux = document.getElementById("renderPreviewAuxPanel");
@@ -617,19 +289,19 @@ function bindPreviewLayoutObserver() {
     syncPreviewFrameSquareSize();
     return;
   }
-  previewLayoutObserver = new ResizeObserver(() => {
+  previewState.layoutObserver = new ResizeObserver(() => {
     syncPreviewFrameSquareSize();
     applyPreviewTransform();
   });
-  previewLayoutObserver.observe(panel);
-  if (toolbar) previewLayoutObserver.observe(toolbar);
-  if (aux) previewLayoutObserver.observe(aux);
+  previewState.layoutObserver.observe(panel);
+  if (toolbar) previewState.layoutObserver.observe(toolbar);
+  if (aux) previewState.layoutObserver.observe(aux);
   syncPreviewFrameSquareSize();
 }
 
 function clearPreviewCanvas() {
   if (!el.previewCanvas) return;
-  previewMinimapLayout = null;
+  previewState.minimapLayout = null;
   const ctx = el.previewCanvas.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -661,7 +333,9 @@ function computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, image
   const miniSize = clamp(Math.round(Math.min(dims.cssW, dims.cssH) * 0.22), 96, 180);
   const miniX = dims.cssW - miniSize - miniMargin;
   const miniY = dims.cssH - miniSize - miniMargin;
-  const aspect = Math.max(1e-6, el.preview.naturalWidth / Math.max(1, el.preview.naturalHeight));
+  const srcW = previewState.tileAccumCanvas ? previewState.tileAccumCanvas.width : el.preview.naturalWidth;
+  const srcH = previewState.tileAccumCanvas ? previewState.tileAccumCanvas.height : el.preview.naturalHeight;
+  const aspect = Math.max(1e-6, srcW / Math.max(1, srcH));
   let mapW = miniSize;
   let mapH = Math.round(mapW / aspect);
   if (mapH > miniSize) {
@@ -685,11 +359,11 @@ function computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, image
 }
 
 function getPreviewMinimapHit(clientX, clientY, clampToBounds) {
-  if (!previewMinimapLayout || !el.previewFrame) return null;
+  if (!previewState.minimapLayout || !el.previewFrame) return null;
   const rect = el.previewFrame.getBoundingClientRect();
   const localX = clientX - rect.left;
   const localY = clientY - rect.top;
-  const layout = previewMinimapLayout;
+  const layout = previewState.minimapLayout;
   const minX = layout.mapX;
   const maxX = layout.mapX + layout.mapW;
   const minY = layout.mapY;
@@ -717,26 +391,14 @@ function recenterPreviewFromMinimap(clientX, clientY, clampToBounds) {
 }
 
 function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
-  previewMinimapLayout = null;
-  if (!ctx || !dims || !fitted) {
-    positionResetViewButton(null);
-    return;
-  }
-  if (!hasPreviewImage()) {
-    positionResetViewButton(null);
-    return;
-  }
-  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) {
-    positionResetViewButton(null);
-    return;
-  }
+  previewState.minimapLayout = null;
+  if (!ctx || !dims || !fitted) return;
+  if (!hasPreviewImage()) return;
+  if (!(previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5)) return;
 
   const layout = computePreviewMinimapLayout(dims, fitted, imageX, imageY, imageW, imageH);
-  if (!layout) {
-    positionResetViewButton(null);
-    return;
-  }
-  previewMinimapLayout = layout;
+  if (!layout) return;
+  previewState.minimapLayout = layout;
   const miniX = layout.miniX;
   const miniY = layout.miniY;
   const miniSize = layout.miniSize;
@@ -753,17 +415,13 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   ctx.roundRect(miniX - 6, miniY - 6, miniSize + 12, miniSize + 12, 10);
   ctx.fill();
   ctx.stroke();
-  positionResetViewButton({
-    x: miniX + miniSize - 38,
-    y: Math.max(12, miniY - 44),
-  });
 
   ctx.save();
   ctx.beginPath();
   ctx.rect(mapX, mapY, mapW, mapH);
   ctx.clip();
   ctx.imageSmoothingEnabled = !isNearestPreviewSampling();
-  ctx.drawImage(el.preview, mapX, mapY, mapW, mapH);
+  ctx.drawImage(previewState.tileAccumCanvas || el.preview, mapX, mapY, mapW, mapH);
   ctx.restore();
 
   const imgToMapX = mapW / Math.max(1e-6, imageW);
@@ -791,17 +449,6 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   ctx.restore();
 }
 
-function positionResetViewButton(layout) {
-  if (!el.resetViewBtn) return;
-  if (!layout) {
-    el.resetViewBtn.style.left = "";
-    el.resetViewBtn.style.top = "";
-    return;
-  }
-  el.resetViewBtn.style.left = `${Math.round(layout.x)}px`;
-  el.resetViewBtn.style.top = `${Math.round(layout.y)}px`;
-}
-
 function drawPreviewCanvas() {
   if (!el.previewCanvas) return;
   const dims = ensurePreviewCanvasSize();
@@ -827,15 +474,15 @@ function drawPreviewCanvas() {
   ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
   ctx.imageSmoothingEnabled = !nearest;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(el.preview, x, y, drawW, drawH);
+  ctx.drawImage(previewState.tileAccumCanvas || el.preview, x, y, drawW, drawH);
   drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
   drawPreviewMinimap(ctx, dims, fitted, x, y, drawW, drawH);
 }
 
 function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
   if (!ctx || !activePreviewTiles.length) return;
-  const srcW = Number(activePreviewTileWidth) || el.preview.naturalWidth || 0;
-  const srcH = Number(activePreviewTileHeight) || el.preview.naturalHeight || 0;
+  const srcW = Number(activePreviewTileWidth) || (previewState.tileAccumCanvas ? previewState.tileAccumCanvas.width : el.preview.naturalWidth) || 0;
+  const srcH = Number(activePreviewTileHeight) || (previewState.tileAccumCanvas ? previewState.tileAccumCanvas.height : el.preview.naturalHeight) || 0;
   if (srcW <= 0 || srcH <= 0 || imageW <= 0 || imageH <= 0) return;
 
   const sx = imageW / srcW;
@@ -1012,7 +659,6 @@ function updateResetViewUi(enabled) {
   el.resetViewBtn.classList.toggle("is-disabled", !active);
   el.resetViewBtn.disabled = !active;
   el.resetViewBtn.setAttribute("aria-disabled", active ? "false" : "true");
-  if (!active) positionResetViewButton(null);
 }
 
 async function setInteractivePreviewEnabled(enabled) {
@@ -1273,6 +919,7 @@ function bindPreviewInteraction() {
 function setPreviewEmptyState(isEmpty) {
   el.previewFrame.classList.toggle("is-empty", isEmpty);
   if (isEmpty) {
+    resetTileAccumCanvas();
     resetTileHeatmapState("");
     previewSwapToken += 1;
     if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
@@ -1327,6 +974,8 @@ async function setPreviewFromBlob(blob) {
   }
   previewObjectUrl = url;
   el.preview.src = previewObjectUrl;
+  // Clear the tile accumulation canvas so drawPreviewCanvas switches to el.preview.
+  resetTileAccumCanvas();
   const nearest = isNearestPreviewSampling();
   el.previewFrame.classList.toggle("sampling-nearest", nearest);
   setPreviewEmptyState(false);
@@ -1334,6 +983,25 @@ async function setPreviewFromBlob(blob) {
     applyPreviewTransform();
   });
   return true;
+}
+
+// Repaints previewState.tileAccumCanvas from a REST-fetched blob (e.g. partial image with
+// updated TM/post-FX settings) WITHOUT clearing the canvas or disrupting the
+// WS tile accumulation pipeline. Future WS tiles continue to draw on top.
+// Safe to call during active rendering; no-op if previewState.tileAccumCanvas is null.
+async function repaintTileAccumCanvasFromBlob(blob) {
+  if (!previewState.tileAccumCanvas || !previewState.tileAccumCtx) return false;
+  try {
+    const bmp = await createImageBitmap(blob);
+    // Guard against the canvas being cleared while awaiting decode.
+    if (!previewState.tileAccumCanvas || !previewState.tileAccumCtx) { bmp.close(); return false; }
+    previewState.tileAccumCtx.drawImage(bmp, 0, 0, previewState.tileAccumCanvas.width, previewState.tileAccumCanvas.height);
+    bmp.close();
+    applyPreviewTransform();
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function applyPreviewSampling() {
@@ -1379,11 +1047,57 @@ async function composeWithPinnedPreview(overlayBlob) {
   return composedBlob || overlayBlob;
 }
 
+// parseImageDeltaPacket — decode an XTDR or XTD1 binary tile-data packet.
+//
+// XTDR — xtracer tile-data raw  (WebSocket push, server → client)
+// XTD1 — xtracer tile-data v1   (WebSocket catchup on /ws/jobs/<id>, PNG-encoded tiles)
+//
+// All integers are unsigned 32-bit little-endian.
+//
+// Header
+//   XTDR (32 bytes):
+//   [0:4]   magic        "XTDR" (0x58 54 44 52)
+//   [4:8]   width        image width in pixels
+//   [8:12]  height       image height in pixels
+//   [12:16] tiles_done   cumulative finished-tile count
+//   [16:20] tiles_total  total tiles for this job
+//   [20:24] state        job state integer (see JOB_* constants server-side)
+//   [24:28] tile_count   number of tile records that follow
+//   [28:32] elapsed_ms   server-authoritative render time in milliseconds (u32)
+//
+//   XTD1 (28 bytes):
+//   [0:4]   magic        "XTD1" (0x58 54 44 31)
+//   [4:28]  same as XTDR [4:28] — no elapsed_ms field
+//
+// Tile record (24 + data_size bytes, repeated tile_count times)
+//   x0, y0             top-left corner, 0-based inclusive
+//   x1, y1             bottom-right corner, exclusive
+//   done_index         tiles_done value when this tile finished
+//   data_size          byte count of pixel data
+//   data               XTDR: raw RGBA row-major 8bpc (alpha=255 always)
+//                      XTD1: PNG-encoded image
+//
+// Active-tile section — XTDR only, follows tile records (absent in XTD1)
+//   active_count       tiles currently in progress
+//   per entry: x0 y0 x1 y1 (4 bytes each)
+//
+// Firing rules (XTDR / WebSocket only)
+//   TILE_STARTED:  tile_count=0; active section includes the newly-started tile
+//   TILE_FINISHED: tile_count=1; active section already excludes the finished tile
+//   Terminal state (done/aborted/error): text JSON only, no binary frame
+//
+// Server builder: src/frontend/web-server/job_manager.cc (PROGRESS_EVENT_TILE_*)
+// Protocol doc:   AGENTS.md § WebSocket Protocol
 function parseImageDeltaPacket(buffer) {
   if (!(buffer instanceof ArrayBuffer)) return null;
   if (buffer.byteLength < 28) return null;
   const bytes = new Uint8Array(buffer);
-  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44 || bytes[3] !== 0x31) return null;
+  // Accept "XTD1" (PNG tiles) or "XTDR" (raw RGBA tiles)
+  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44) return null;
+  const isRawRgba = bytes[3] === 0x52; // 'R'
+  if (bytes[3] !== 0x31 && bytes[3] !== 0x52) return null; // must be '1' or 'R'
+  // XTDR header is 32 bytes (includes elapsed_ms); XTD1 header is 28 bytes.
+  if (isRawRgba && buffer.byteLength < 32) return null;
 
   const view = new DataView(buffer);
   let off = 4;
@@ -1404,6 +1118,14 @@ function parseImageDeltaPacket(buffer) {
     return null;
   }
 
+  // XTDR carries server-authoritative elapsed_ms at [28:32]; XTD1 does not.
+  let elapsedMs = 0;
+  if (isRawRgba) {
+    const v = readU32();
+    if (v === null) return null;
+    elapsedMs = v;
+  }
+
   const tiles = [];
   for (let i = 0; i < tileCount; i += 1) {
     const x0 = readU32();
@@ -1416,128 +1138,62 @@ function parseImageDeltaPacket(buffer) {
     if (off + size > buffer.byteLength) return null;
     const pngBytes = bytes.slice(off, off + size);
     off += size;
-    tiles.push({ x0, y0, x1, y1, doneIndex, pngBytes });
+    tiles.push({ x0, y0, x1, y1, doneIndex, pngBytes, isRaw: isRawRgba });
   }
 
-  return { width, height, tilesDone, tilesTotal, state, tiles };
+  // Active tile section (appended after all finished tiles).
+  // Format: active_count(4) | [x0 y0 x1 y1](4 each) * N
+  let activeTiles = null;
+  if (off + 4 <= buffer.byteLength) {
+    const activeCount = view.getUint32(off, true);
+    off += 4;
+    if (activeCount <= 4096 && off + activeCount * 16 <= buffer.byteLength) {
+      activeTiles = [];
+      for (let i = 0; i < activeCount; i++) {
+        const ax0 = view.getUint32(off, true); off += 4;
+        const ay0 = view.getUint32(off, true); off += 4;
+        const ax1 = view.getUint32(off, true); off += 4;
+        const ay1 = view.getUint32(off, true); off += 4;
+        activeTiles.push([ax0, ay0, ax1, ay1]);
+      }
+    }
+  }
+
+  return { width, height, tilesDone, tilesTotal, state, tiles, activeTiles, elapsedMs };
 }
 
 async function drawDeltaTilesToPreviewCanvas(delta) {
   if (!delta || !delta.width || !delta.height) return false;
 
-  const canvas = document.createElement("canvas");
-  canvas.width = delta.width;
-  canvas.height = delta.height;
-  const ctx = canvas.getContext("2d");
+  const ctx = ensureTileAccumCanvas(delta.width, delta.height);
   if (!ctx) return false;
 
-  if (preservePreviewUnderlay && previewPinnedBaseUrl) {
-    try {
-      const base = await getPinnedBaseBitmap();
-      if (base) ctx.drawImage(base, 0, 0, delta.width, delta.height);
-    } catch (_) {
-      // best-effort underlay only
-    }
-  }
-
-  if (previewObjectUrl) {
-    try {
-      const res = await fetch(previewObjectUrl);
-      if (res.ok) {
-        const blob = await res.blob();
-        if (blob && blob.size > 0) {
-          const base = await createImageBitmap(blob);
-          ctx.drawImage(base, 0, 0, delta.width, delta.height);
-        }
-      }
-    } catch (_) {
-      // best-effort base image only
-    }
-  }
-
-  let maxDone = progressiveDeltaSinceDone;
   for (let i = 0; i < delta.tiles.length; i += 1) {
     const t = delta.tiles[i];
     if (!t || !t.pngBytes || !t.pngBytes.length) continue;
-    const tileBlob = new Blob([t.pngBytes], { type: "image/png" });
-    const tileImage = await createImageBitmap(tileBlob);
-    const w = Math.max(1, Number(t.x1) - Number(t.x0));
-    const h = Math.max(1, Number(t.y1) - Number(t.y0));
-    ctx.drawImage(tileImage, Number(t.x0), Number(t.y0), w, h);
-    if (Number.isFinite(t.doneIndex) && t.doneIndex > maxDone) maxDone = t.doneIndex;
+    const x0 = Number(t.x0);
+    const y0 = Number(t.y0);
+    const w = Math.max(1, Number(t.x1) - x0);
+    const h = Math.max(1, Number(t.y1) - y0);
+    if (t.isRaw) {
+      // Raw RGBA — synchronous putImageData, no decode cost
+      if (t.pngBytes.length === w * h * 4) {
+        const clamped = new Uint8ClampedArray(t.pngBytes.buffer, t.pngBytes.byteOffset, t.pngBytes.length);
+        ctx.putImageData(new ImageData(clamped, w, h), x0, y0);
+      }
+    } else {
+      // PNG-encoded tile (from WS catchup)
+      const tileBlob = new Blob([t.pngBytes], { type: "image/png" });
+      const tileImage = await createImageBitmap(tileBlob);
+      ctx.drawImage(tileImage, x0, y0, w, h);
+      tileImage.close();
+    }
   }
 
-  if (maxDone > progressiveDeltaSinceDone) progressiveDeltaSinceDone = maxDone;
-  const composedBlob = await new Promise((resolve) => {
-    canvas.toBlob((b) => resolve(b || null), "image/png");
-  });
-  if (!composedBlob || composedBlob.size === 0) return false;
-  return setPreviewFromBlob(composedBlob);
-}
-
-async function refreshProgressivePreviewDelta(jobId) {
-  if (!hasBackendMethod(api, "getJobImageDelta")) {
-    return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
-  }
-  if (!progressiveDeltaEnabled) {
-    return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
-  }
-
-  const id = String(jobId || "").trim();
-  if (!id) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
-  if (progressiveDeltaJobId !== id) resetProgressiveDeltaState(id);
-  const postFilters = gatherPostFilterParams();
-  const postFiltersEnabled = !!postFilterStackEnabled;
-  const tmKey = [
-    el.toneMapping ? el.toneMapping.value : "aces",
-    el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
-    el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
-    el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
-    el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
-    el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-    postFiltersEnabled ? "post:on" : "post:off",
-    postFilters,
-  ].join("|");
-  if (tmKey !== progressiveDeltaTmKey) {
-    progressiveDeltaTmKey = tmKey;
-    progressiveDeltaSinceDone = 0;
-  }
-
-  const packet = await api.getJobImageDelta(id, {
-    since: progressiveDeltaSinceDone,
-    limit: 24,
-    cacheBust: true,
-    toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
-    toneMappingExposure: el.toneMappingExposure ? el.toneMappingExposure.value : "1.0",
-    toneMappingWhitePoint: el.toneMappingWhitePoint ? el.toneMappingWhitePoint.value : "1.0",
-    toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
-    toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
-    toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-    postFiltersEnabled,
-    postFilters,
-  });
-  if (!packet) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
-  if (renderActive && activeJobId && id === String(activeJobId)) {
-    recordPreviewTransfer("delta", packet.byteLength || 0);
-  }
-
-  const delta = parseImageDeltaPacket(packet);
-  if (!delta) return { updated: false, tilesDone: 0, tilesTotal: 0, state: "" };
-  if (!Array.isArray(delta.tiles) || delta.tiles.length === 0) {
-    return {
-      updated: true,
-      tilesDone: Number(delta.tilesDone) || 0,
-      tilesTotal: Number(delta.tilesTotal) || 0,
-      state: String(delta.state || ""),
-    };
-  }
-  const updated = await drawDeltaTilesToPreviewCanvas(delta);
-  return {
-    updated: !!updated,
-    tilesDone: Number(delta.tilesDone) || 0,
-    tilesTotal: Number(delta.tilesTotal) || 0,
-    state: String(delta.state || ""),
-  };
+  // Drive display update through the existing transform/redraw path — no toBlob needed.
+  setPreviewEmptyState(false);
+  applyPreviewTransform();
+  return true;
 }
 
 function previewToneMappingParamsForJob(jobId) {
@@ -1599,12 +1255,38 @@ async function refreshProgressivePreview(jobId) {
 
 async function refreshPreviewForToneMapping() {
   if (typeof renderPostPipelineGraph === "function") renderPostPipelineGraph();
+  if (previewState.tmInFlight) {
+    previewState.tmPending = true;
+    return;
+  }
+  previewState.tmInFlight = true;
   try {
     if (renderActive && activeJobId) {
-      await refreshProgressivePreview(activeJobId);
-      return;
-    }
-    if (lastCompletedJobId) {
+      if (previewState.tileAccumCanvas) {
+        // WS tile streaming is active. Re-fetch the partial image with the new
+        // TM/post-FX settings and repaint the canvas in-place so all completed
+        // tiles reflect the new settings. Future WS tiles accumulate on top.
+        const id = String(activeJobId || "").trim();
+        const tm = previewToneMappingParamsForJob(id);
+        const blob = await api.getJobImage(id, {
+          partial: true,
+          cacheBust: true,
+          toneMapping: tm.toneMapping,
+          toneMappingExposure: tm.toneMappingExposure,
+          toneMappingWhitePoint: tm.toneMappingWhitePoint,
+          toneMappingMantiukContrast: tm.toneMappingMantiukContrast,
+          toneMappingMantiukSaturation: tm.toneMappingMantiukSaturation,
+          toneMappingMantiukDetail: tm.toneMappingMantiukDetail,
+          postFiltersEnabled: tm.postFiltersEnabled,
+          postFilters: tm.postFilters,
+        });
+        if (blob && blob.size > 0 && renderActive && activeJobId) {
+          await repaintTileAccumCanvasFromBlob(blob);
+        }
+      } else {
+        await refreshProgressivePreview(activeJobId);
+      }
+    } else if (lastCompletedJobId) {
       const finalBlob = await api.getJobImage(lastCompletedJobId, {
         final: true,
         cacheBust: true,
@@ -1621,26 +1303,28 @@ async function refreshPreviewForToneMapping() {
     }
   } catch (err) {
     appendLog(`tone mapping preview refresh failed: ${err.message}`);
+  } finally {
+    previewState.tmInFlight = false;
+    if (previewState.tmPending) {
+      previewState.tmPending = false;
+      refreshPreviewForToneMapping();
+    }
   }
 }
 
 async function restorePreviewForActiveWorkspace() {
-  if (!activeJobId && hasBackendMethod(api, "getActiveJobs")) {
-    try {
-      const jobs = await api.getActiveJobs();
-      const workspaceId = String(activeWorkspaceId || "").trim();
-      const candidate = workspaceId
-        ? jobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
-        : (jobs.length > 0 ? jobs[0] : null);
-      const state = String((candidate && candidate.state) || "").toLowerCase();
-      const id = String((candidate && candidate.id) || "").trim();
-      if (id && (state === "queued" || state === "running")) {
-        activeJobId = id;
-        syncGlobalsToWorkspaceRuntime();
-        appendLog(`restored active workspace job: ${id}`);
-      }
-    } catch (_) {
-      // No globally active job is fine.
+  if (!activeJobId) {
+    const jobs = getActiveJobsFromCache();
+    const workspaceId = String(activeWorkspaceId || "").trim();
+    const candidate = workspaceId
+      ? jobs.find((job) => String((job && job.workspace_id) || "").trim() === workspaceId)
+      : (jobs.length > 0 ? jobs[0] : null);
+    const state = String((candidate && candidate.state) || "").toLowerCase();
+    const id = String((candidate && candidate.id) || "").trim();
+    if (id && (state === "queued" || state === "running")) {
+      activeJobId = id;
+      syncGlobalsToWorkspaceRuntime();
+      appendLog(`restored active workspace job: ${id}`);
     }
   }
 
@@ -1655,15 +1339,20 @@ async function restorePreviewForActiveWorkspace() {
         const stateLabel = state === "running" ? "rendering" : state;
         updateActivePreviewTilesFromJob(data);
         setRenderActive(true);
+        if (typeof syncRenderTimerToServer === "function") syncRenderTimerToServer(elapsedMs);
         setProgress(progress);
         setStatusThreads(threads);
-        if (elapsedMs > 0 && typeof formatElapsed === "function") {
+        if (elapsedMs > 0) {
           setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
         } else {
           setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
         }
         if (typeof updateRenderActionButton === "function") updateRenderActionButton();
-        await refreshProgressivePreview(activeJobId);
+        // If previewState.tileAccumCanvas is active the WS connection is still streaming tiles —
+        // skip refreshProgressivePreview to avoid clearing the accumulated canvas.
+        if (!previewState.tileAccumCanvas) {
+          await refreshProgressivePreview(activeJobId);
+        }
         if (typeof resumeWorkspaceJobPolling === "function") {
           resumeWorkspaceJobPolling(activeJobId);
         }
@@ -1717,9 +1406,9 @@ async function restorePreviewForActiveWorkspace() {
 function resumeWorkspaceJobPolling(jobId) {
   const id = String(jobId || "").trim();
   if (!id) return;
-  if (workspacePollingJobId === id) return;
+  if (previewState.pollingJobId === id) return;
 
-  workspacePollingJobId = id;
+  previewState.pollingJobId = id;
   activeJobId = id;
   syncGlobalsToWorkspaceRuntime();
   const token = beginPollSession();
@@ -1732,7 +1421,7 @@ function resumeWorkspaceJobPolling(jobId) {
     })
     .finally(() => {
       const superseded = token !== undefined && token !== activePollToken;
-      if (workspacePollingJobId === id) workspacePollingJobId = "";
+      if (previewState.pollingJobId === id) previewState.pollingJobId = "";
       // A newer poll session owns the UI state now. Do not let an older
       // workspace poll tear down the active render badge/button on exit.
       if (superseded) return;
