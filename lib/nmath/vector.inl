@@ -718,12 +718,12 @@ inline Vector3f cross(const Vector3f& v1, const Vector3f& v2)
 namespace batch {
 
 inline void vec3_normalize_soa(
-    const scalar_t *in_x,
-    const scalar_t *in_y,
-    const scalar_t *in_z,
-    scalar_t *out_x,
-    scalar_t *out_y,
-    scalar_t *out_z,
+    const scalar_t * __restrict__ in_x,
+    const scalar_t * __restrict__ in_y,
+    const scalar_t * __restrict__ in_z,
+    scalar_t * __restrict__ out_x,
+    scalar_t * __restrict__ out_y,
+    scalar_t * __restrict__ out_z,
     std::size_t count)
 {
     std::size_t i = 0;
@@ -775,16 +775,16 @@ inline void vec3_normalize_soa(
 }
 
 inline void vec3_dot_cross_soa(
-    const scalar_t *ax,
-    const scalar_t *ay,
-    const scalar_t *az,
-    const scalar_t *bx,
-    const scalar_t *by,
-    const scalar_t *bz,
-    scalar_t *out_dot,
-    scalar_t *out_cx,
-    scalar_t *out_cy,
-    scalar_t *out_cz,
+    const scalar_t * __restrict__ ax,
+    const scalar_t * __restrict__ ay,
+    const scalar_t * __restrict__ az,
+    const scalar_t * __restrict__ bx,
+    const scalar_t * __restrict__ by,
+    const scalar_t * __restrict__ bz,
+    scalar_t * __restrict__ out_dot,
+    scalar_t * __restrict__ out_cx,
+    scalar_t * __restrict__ out_cy,
+    scalar_t * __restrict__ out_cz,
     std::size_t count)
 {
     std::size_t i = 0;
