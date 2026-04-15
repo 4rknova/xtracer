@@ -8,7 +8,6 @@
 
 #include <nmath/vector.h>
 
-#include "octree.h"
 #include "math/hitrecord.h"
 #include "math/surface.h"
 #include "strpool.h"

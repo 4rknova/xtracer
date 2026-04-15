@@ -38,29 +38,108 @@ This file is the orientation and operating guide for coding agents working in th
 - Integrator metadata exposed by web/WASM is defined in `src/frontend/common/render_service.*`.
 - CLI integrator selection code in `src/frontend/cli/xtracer.cc` is currently commented out; treat CLI rendering path as needing repair before relying on it.
 - Web frontend is implemented as `xtracer_web`:
-  - HTTP server via `ext/cpp-httplib/httplib.h`
+  - HTTP + WebSocket server via `ext/crow/crow_all.h` (crow framework) + standalone Asio (`ext/asio/`)
   - Async render jobs managed in `src/frontend/web-server/job_manager.*`
   - Shared render pipeline in `src/frontend/common/render_service.*`
   - Backend log stream in `src/frontend/web-server/backend_log.*`
+  - Request logger middleware in `src/frontend/web-server/request_logger_middleware.h`
+  - WebSocket pub/sub hub in `src/frontend/web-server/ws_hub.h`
   - Static SPA in `src/frontend/web-client/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
 
 ### Web API Surface (Current)
 
-- `GET /api/health`
-- `GET /api/about`
-- `GET /api/scenes`
-- `GET /api/scenes/{scene}/cameras`
-- `GET /api/scenes/{scene}/source`
-- `GET /api/scenes/{scene}/geometry`
-- `GET /api/scenes/{scene}/runtime_graph`
-- `GET /api/scenes/{scene}/camera_resolve`
-- `GET /api/scenes/load_jobs/{id}`
-- `POST /api/scenes/save`
-- `GET /api/integrators`
-- `POST /api/render`
-- `GET /api/jobs/{id}`
-- `GET /api/jobs/{id}/image`
-- `GET /api/logs?since=<id>`
+**REST endpoints**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Server liveness |
+| GET | `/api/about` | Build info |
+| GET | `/api/workspaces` | List workspaces |
+| POST | `/api/workspaces` | Create workspace |
+| POST | `/api/workspaces/active` | Set active workspace |
+| POST | `/api/workspaces/delete` | Delete workspace |
+| POST | `/api/workspaces/scene_draft` | Save scene draft to workspace |
+| POST | `/api/workspaces/settings` | Save workspace settings |
+| GET | `/api/scenes` | List `.scn` files in scene dir |
+| GET | `/api/scenes/{scene}/cameras` | Camera list for scene |
+| GET | `/api/scenes/{scene}/source` | Raw scene source text |
+| GET | `/api/scenes/{scene}/geometry` | Geometry inventory |
+| GET | `/api/scenes/{scene}/runtime_graph` | Material/object graph |
+| GET | `/api/scenes/{scene}/runtime_texture` | Texture asset (query: `name`) |
+| GET | `/api/scenes/{scene}/camera_resolve` | Resolved camera params |
+| GET | `/api/scenes/{scene}/asset` | Arbitrary scene asset (query: `path`) |
+| GET | `/api/scenes/template/empty` | Empty scene template |
+| GET | `/api/scenes/load_jobs/{id}` | Check async scene-load job status |
+| POST | `/api/scenes/save` | Save/overwrite scene file |
+| POST | `/api/scenes/delete` | Delete scene file |
+| GET | `/api/integrators` | Available integrators + metadata |
+| GET | `/api/post_filters` | Available post-processing filters |
+| GET | `/api/resolutions` | Preset resolution list |
+| POST | `/api/render` | Submit render job |
+| GET | `/api/jobs/active` | List active (queued/running) jobs |
+| GET | `/api/jobs/{id}` | Job status snapshot (JSON) |
+| GET | `/api/jobs/{id}/image` | Full or partial job image (PNG) |
+| GET | `/api/jobs/{id}/image_delta` | Incremental tile update (XTD1 binary, REST fallback) |
+| GET | `/api/jobs/{id}/export` | Export final image (PNG download) |
+| GET | `/api/jobs/{id}/photons` | Photon map debug image |
+| POST | `/api/jobs/abort/{id}` | Request job abort |
+| POST | `/api/jobs/queue/up/{id}` | Move job up in queue |
+| POST | `/api/jobs/queue/down/{id}` | Move job down in queue |
+| GET | `/api/logs?since=<id>` | Log entries since entry ID (non-blocking) |
+| GET | `/api/gallery` | Gallery entries |
+| GET | `/api/gallery/{id}/image` | Gallery entry final image |
+| GET | `/api/gallery/{id}/pass/{n}/image` | Gallery entry pass image |
+| DELETE | `/api/gallery/{id}` | Delete gallery entry |
+
+**WebSocket endpoints**
+
+| Path | Direction | Description |
+|------|-----------|-------------|
+| `ws://host/ws/jobs/{id}` | server→client | XTDR binary on tile start/finish; text JSON snapshot on terminal state |
+| `ws://host/ws/jobs/{id}` | client→server | Text `{"abort":true}` to request abort |
+| `ws://host/ws/logs?since=<id>` | server→client | Text JSON `{"entries":[...]}` on each new log entry; sends missed entries on connect |
+
+### WebSocket Protocol: XTDR Binary Tile Packets
+
+The primary render-progress path uses binary WebSocket frames in **XTDR** format. All integers are unsigned 32-bit little-endian.
+
+```
+Header (32 bytes — XTDR only; XTD1 header is 28 bytes, no elapsed_ms field)
+  [0:4]   magic        "XTDR" (0x58 0x54 0x44 0x52)
+                       contrast: "XTD1" = PNG-tile variant (REST /image_delta only, 28-byte header)
+  [4:8]   width        image width in pixels
+  [8:12]  height       image height in pixels
+  [12:16] tiles_done   cumulative finished-tile count
+  [16:20] tiles_total  total tiles for this job
+  [20:24] state        JOB_RUNNING (4) always; terminal state is text JSON, not binary
+  [24:28] tile_count   finished-tile records below (0 or 1)
+  [28:32] elapsed_ms   server-authoritative render time in milliseconds (u32)
+
+Finished-tile record (24 + data_size bytes, repeated tile_count times)
+  [+0:4]  x0           left edge, 0-based inclusive
+  [+4:8]  y0           top edge, inclusive
+  [+8:12] x1           right edge, exclusive
+  [+12:16] y1          bottom edge, exclusive
+  [+16:20] done_index  tiles_done when this tile completed
+  [+20:24] data_size   (x1−x0)×(y1−y0)×4 bytes
+  [+24:N]  data        raw RGBA pixels, row-major, 8 bpc, alpha=255
+                       default tonemapping applied server-side
+
+Active-tile section (4 + active_count×16 bytes)
+  active_count         tiles currently in progress
+  per entry: x0 y0 x1 y1 (4 bytes each, same coordinate convention)
+```
+
+**Firing rules:**
+- `TILE_STARTED`: `tile_count=0`; active section already includes the new tile
+- `TILE_FINISHED`: `tile_count=1`; active section already excludes the finished tile
+- Terminal state (done/aborted/error): text JSON snapshot only, no binary frame
+
+**Key files:**
+- Packet builder: `src/frontend/web-server/job_manager.cc` (`PROGRESS_EVENT_TILE_*` block)
+- Client parser: `src/frontend/web-client/app/preview.js` (`parseImageDeltaPacket`)
+- WS handler: `src/frontend/web-client/app/render.js` (`watchJobViaWebSocket` → `onmessage`)
+- Push hub: `src/frontend/web-server/ws_hub.h`
 
 ### Web Runtime Notes
 
@@ -70,7 +149,9 @@ This file is the orientation and operating guide for coding agents working in th
   - scene dir: `scene/`
   - web root: `src/frontend/web-client/`
 - Job execution is serialized via a global render mutex in web backend (avoids OpenMP oversubscription from concurrent jobs).
-- PNG responses are currently produced by rendering to `nimg::Pixmap` then encoding via temporary file path.
+- PNG responses are produced by rendering to `nimg::Pixmap` then encoding via a temporary file path.
+- Crow's void-return route handlers **must** call `res.end()` explicitly — crow does not call it automatically for void handlers (only for return-value handlers). Missing `res.end()` produces "Empty reply from server".
+- Per-tile push sends binary only (no redundant text snapshot per tile). The binary header carries `tiles_done`/`tiles_total`/`elapsed_ms` so the client can update progress bars with server-authoritative time without a separate text message.
 
 ## Branch Relationship Reminder
 
