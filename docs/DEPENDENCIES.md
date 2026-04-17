@@ -5,7 +5,7 @@ This registry tracks vendored third-party code and where each dependency is used
 | Dependency | Local Path | Used In | Upstream | License | Notes |
 |---|---|---|---|---|---|
 | `cgltf` | `ext/cgltf.h`, `ext/cgltf.c` | `xtcore` | <https://github.com/jkuhlmann/cgltf> | MIT | glTF/GLB parsing for external asset import |
-| `cpp-httplib` | `ext/cpp-httplib/httplib.h` | `xtracer-web` | <https://github.com/yhirose/cpp-httplib> | MIT | Header-only HTTP server/client used by `xtracer_web` |
+| `Crow` | `ext/crow/crow_all.h` | `xtracer-web` | <https://github.com/CrowCpp/Crow> | BSD-3-Clause | HTTP/WebSocket server framework used by `xtracer_web` |
 | `stb_image` | `ext/stb/stb_image.h` | `lib/nimg`, `xtcore` | <https://github.com/nothings/stb> | Public domain or MIT | Image decoding |
 | `stb_image_write` | `ext/stb/stb_image_write.h` | `lib/nimg`, `xtracer-web` | <https://github.com/nothings/stb> | Public domain or MIT | Image encoding |
 | `strpool` | `ext/strpool/strpool.h` | `xtcore`, `frontend/common`, `xtracer-web`, `xtracer-wasm` | <https://github.com/mattiasgustavsson/libs/blob/main/strpool.h> | MIT or public domain | String pool utility |

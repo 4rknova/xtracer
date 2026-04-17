@@ -62,7 +62,7 @@ Always add explicit `emissive` light objects when using `gradient` or `color` en
 - `plane` — floors, walls, infinite backdrops
 - `triangle` — custom facets
 
-**Use procedural generators for everything else** (`type = mesh, source = gen(<name>)`):
+**Use procedural generators for everything else** (`type = mesh, source = gen(<name>)`). Full parameter reference: `docs/GEOMETRY.md`.
 
 | Subject | Generator | Useful params |
 |---------|-----------|---------------|
