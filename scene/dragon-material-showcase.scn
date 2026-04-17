@@ -1,0 +1,277 @@
+# Dragon model by Delatronic
+# https://sketchfab.com/3d-models/dragon-d62d2dadb6f24b0aa09ca1d6ece5f6d7
+
+title       = Dragon Material Showcase
+description = Dragon with material variants: polished gold conductor, crystal glass dielectric, warm clay diffuse, and jade subsurface scattering.
+version     = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(-0.42, 0.80, -0.42)
+        sun_intensity      = col3(12, 11, 9)
+        beta_rayleigh      = col3(0.016, 0.036, 0.086)
+        ground_color       = col3(0.10, 0.09, 0.08)
+        density            = 1.05
+        horizon_falloff    = 1.8
+        sun_disk_radius    = 1.0
+        sun_disk_intensity = 1.2
+        sun_glow_radius    = 7.0
+        sun_glow_intensity = 0.18
+        sun_glow_falloff   = 3.0
+    }
+}
+
+camera = {
+    hhero = {
+        type     = thin-lens
+        fov      = 42
+        position = vec3(0, 2.5, -6.25)
+        target   = vec3(0.0, 0.0, 0.0)
+        up       = vec3(0, 1, 0)
+        flength  = 6.5
+        aperture = 0.1
+        aperture_blades = 6
+    }
+
+    portrait = {
+        type     = thin-lens
+        fov      = 32
+        position = vec3(1.2, 1.6, -6.5)
+        target   = vec3(0.0, 0.8, 0.0)
+        up       = vec3(0, 1, 0)
+        flength  = 65
+        aperture = 0.04
+        aperture_blades = 6
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0, 1, 0)
+        distance = -1.0
+    }
+
+    dragon = {
+        type = meshgroup
+        glob = geometry/dragon/Mesh*.obj
+        modifiers = {
+            scale       = vec3(0.1, 0.1, 0.1)
+            rotation    = vec3(0, 180, 0)
+            translation = vec3(0.0, -0.836, 0.29)
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(-4.5, 5.5, -2.5)
+        radius   = 0.9
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(5.0, 3.0, -3.0)
+        radius   = 1.2
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.0, 4.5, 4.0)
+        radius   = 0.6
+    }
+
+    ground_light = {
+        type     = sphere
+        position = vec3(0.0, 0.0, 3.5)
+        radius   = 1.0
+    }
+}
+
+material = {
+    floor_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type    = checker
+                    a       = col3(0.76, 0.75, 0.73)
+                    b       = col3(0.60, 0.59, 0.57)
+                    scale_u = 14
+                    scale_v = 14
+                }
+            }
+        }
+    }
+
+    polished_gold = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.94, 0.76, 0.28) }
+            }
+            scalars = {
+                metallic            = 1.0
+                roughness           = 0.04
+                ior                 = 1.5
+                clearcoat           = 0.0
+                clearcoat_roughness = 0.08
+            }
+        }
+    }
+
+    crystal_glass = {
+        type = dielectric
+        properties = {
+            samplers = {
+                transmission = { type = color, value = col3(0.96, 0.98, 1.0) }
+            }
+            scalars = {
+                ior          = 1.52
+                roughness    = 0.0
+                transparency = 1.0
+                reflectance  = 0.04
+            }
+        }
+    }
+
+    warm_clay = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.68, 0.44, 0.30)
+                    b              = col3(0.50, 0.32, 0.20)
+                    vein           = col3(0.36, 0.22, 0.14)
+                    scale          = 3.2
+                    turbulence     = 0.4
+                    vein_frequency = 3.0
+                    octaves        = 4
+                    lacunarity     = 2.0
+                    gain           = 0.5
+                    vein_strength  = 0.3
+                    vein_sharpness = 2.5
+                }
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 180
+                    max_deviation = 8
+                    seed          = 17
+                }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.74
+                ior                 = 1.48
+                clearcoat           = 0.12
+                clearcoat_roughness = 0.18
+            }
+        }
+    }
+
+    jade_sss = {
+        type = subsurface
+        properties = {
+            samplers = {
+                base_color        = { type = color, value = col3(0.44, 0.68, 0.54) }
+                subsurface_color  = { type = color, value = col3(0.58, 0.92, 0.70) }
+                subsurface_radius = { type = color, value = col3(0.72, 0.38, 0.20) }
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 44
+                    max_deviation = 4
+                    seed          = 11
+                }
+            }
+            scalars = {
+                subsurface = 0.64
+                thickness  = 0.52
+            }
+        }
+    }
+
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(36, 30, 24) }
+            }
+        }
+    }
+
+    fill_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(6, 8, 14) }
+            }
+        }
+    }
+
+    rim_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(18, 15, 12) }
+            }
+        }
+    }
+
+    ground_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(20, 20, 20) }
+            }
+        }
+    }
+}
+
+object = {
+    floor        = { geometry = floor,        material = floor_mat        }
+    key_light    = { geometry = key_light,    material = key_light_mat    }
+    fill_light   = { geometry = fill_light,   material = fill_light_mat   }
+    rim_light    = { geometry = rim_light,    material = rim_light_mat    }
+    ground_light = { geometry = ground_light, material = ground_light_mat }
+    dragon       = { geometry = dragon,       material = polished_gold    }
+}
+
+variants = {
+    gold = {
+        name        = Polished Gold
+        description = Mirror-sharp conductor — warm gold with near-zero roughness, full metallic response.
+    }
+
+    glass = {
+        name        = Crystal Glass
+        description = Solid dielectric at IOR 1.52 — full refraction and Fresnel reflection, near-zero roughness.
+        set = {
+            object = {
+                dragon = { geometry = dragon, material = crystal_glass }
+            }
+        }
+    }
+
+    clay = {
+        name        = Warm Clay
+        description = Rough dielectric with fbm_marble base color and voronoi normal for an earthen, hand-sculpted read.
+        set = {
+            object = {
+                dragon = { geometry = dragon, material = warm_clay }
+            }
+        }
+    }
+
+    jade = {
+        name        = Jade SSS
+        description = Subsurface scattering — cool green body tint with warm amber scatter through thin fins and tail edges.
+        set = {
+            default_camera = portrait
+            object = {
+                dragon = { geometry = dragon, material = jade_sss }
+            }
+        }
+    }
+}

@@ -70,8 +70,8 @@ geometry = {
 
     key_light = {
         type     = sphere
-        position = vec3(4.2,6.3,-3.0)
-        radius   = 0.85
+        position = vec3(5.2,7.3,-4.0)
+        radius   = 2
     }
 }
 
@@ -90,6 +90,124 @@ material = {
         properties = {
             samplers = {
                 diffuse  = { type = color, value = col3(0.67,0.76,0.88) }
+            }
+        }
+    }
+
+    menger_concrete = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.72,0.70,0.67) }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.78
+                ior       = 1.45
+            }
+        }
+    }
+
+    menger_steel = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.80,0.82,0.86) }
+            }
+            scalars = {
+                metallic           = 1.0
+                roughness          = 0.20
+                anisotropy         = 0.80
+                anisotropy_rotation = 15
+                ior                = 1.5
+            }
+        }
+    }
+
+    menger_gold = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.0,0.78,0.34) }
+            }
+            scalars = {
+                metallic  = 1.0
+                roughness = 0.10
+                ior       = 1.5
+            }
+        }
+    }
+
+    menger_obsidian = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.04,0.03,0.05) }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.04
+                ior                 = 1.52
+                clearcoat           = 1.0
+                clearcoat_roughness = 0.03
+            }
+        }
+    }
+
+    menger_verdigris = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.22,0.52,0.38)
+                    b              = col3(0.14,0.42,0.28)
+                    vein           = col3(0.62,0.82,0.56)
+                    scale          = 3
+                    turbulence     = 0.65
+                    vein_frequency = 3
+                }
+            }
+            scalars = {
+                metallic  = 0.25
+                roughness = 0.58
+                ior       = 1.5
+            }
+        }
+    }
+
+    menger_chrome = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.92,0.92,0.92) }
+            }
+            scalars = {
+                metallic  = 1.0
+                roughness = 0.01
+                ior       = 2.8
+            }
+        }
+    }
+
+    menger_bronze = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.72,0.45,0.20)
+                    b              = col3(0.58,0.36,0.16)
+                    vein           = col3(0.24,0.48,0.30)
+                    scale          = 4
+                    turbulence     = 0.60
+                    vein_frequency = 3
+                }
+            }
+            scalars = {
+                metallic  = 0.60
+                roughness = 0.65
+                ior       = 1.5
             }
         }
     }
@@ -138,6 +256,76 @@ variants = {
         set = {
             object = {
                 menger_main = { geometry = menger_main_analytic, material = menger_surface }
+            }
+        }
+    }
+
+    gen_implicit_concrete = {
+        name        = Menger Implicit — Concrete
+        description = Implicit mesh with rough dielectric concrete — highlights the face geometry and hole silhouettes.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_concrete }
+            }
+        }
+    }
+
+    gen_implicit_steel = {
+        name        = Menger Implicit — Brushed Steel
+        description = Implicit mesh with anisotropic brushed-steel conductor.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_steel }
+            }
+        }
+    }
+
+    gen_implicit_gold = {
+        name        = Menger Implicit — Gold
+        description = Implicit mesh with polished gold conductor.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_gold }
+            }
+        }
+    }
+
+    gen_implicit_obsidian = {
+        name        = Menger Implicit — Obsidian
+        description = Implicit mesh with dark volcanic glass — near-zero roughness and strong clearcoat.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_obsidian }
+            }
+        }
+    }
+
+    gen_implicit_verdigris = {
+        name        = Menger Implicit — Verdigris Copper
+        description = Implicit mesh with oxidized copper using procedural marble veining.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_verdigris }
+            }
+        }
+    }
+
+    gen_implicit_chrome = {
+        name        = Menger Implicit — Mirror Chrome
+        description = Near-perfect specular conductor — tunnels produce recursive reflections that recede into the fractal depth.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_chrome }
+            }
+        }
+    }
+
+    gen_implicit_bronze = {
+        name        = Menger Implicit — Patinated Bronze
+        description = Semi-metallic principled with fbm_marble mixing warm copper against green verdigris patches.
+        set = {
+            object = {
+                menger_main = { geometry = menger_main_gen_implicit, material = menger_bronze }
             }
         }
     }

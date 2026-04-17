@@ -1,0 +1,148 @@
+# "Giant Isopod" (https://skfb.ly/6Z7WO)
+# by RISD Nature Lab
+# licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+title       = "Isopod"
+description = "Macro-framed sandcrab isopod 3D scan at rest on a forest floor, natural lighting."
+version     = "1.0"
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction      = vec3(0.30, 0.75, 0.50)
+        sun_intensity      = col3(7.0, 6.0, 5.0)
+        beta_rayleigh      = col3(0.014, 0.035, 0.085)
+        ground_color       = col3(0.10, 0.12, 0.08)
+        sun_disk_radius    = 0.04
+        sun_disk_intensity = 6.0
+        sun_glow_radius    = 0.20
+        sun_glow_intensity = 2.0
+        sun_glow_falloff   = 3.5
+    }
+}
+
+camera = {
+    # Low macro angle, slight DOF
+    default = {
+        type            = thin-lens
+        position        = vec3(-2.624783, 1.602851, -0.58127)
+        target          = vec3(-0.104117, 0.006957, -0.266042)
+        up              = vec3(0, 1, 0)
+        fov             = 38
+        flength         = 2.5
+        aperture        = 0.045
+        aperture_blades = 6
+    }
+
+    # Dorsal overview
+    top_down = {
+        type     = thin-lens
+        position = vec3(0, 5.5, -0.5)
+        target   = vec3(0, 0, 0)
+        up       = vec3(0, 0, -1)
+        fov      = 40
+    }
+
+    # Side profile
+    side = {
+        type     = thin-lens
+        position = vec3(-5.5, 1.0, 0)
+        target   = vec3(0, 0.4, 0)
+        up       = vec3(0, 1, 0)
+        fov      = 35
+    }
+}
+
+geometry = {
+    floor = {
+        type     = plane
+        normal   = vec3(0, 1, 0)
+        distance = 0.0
+    }
+
+    isopod_body = {
+        type   = mesh
+        source = geometry/isopod/sandcrab_3Dscan_12-8_93.16_0.obj
+        modifiers = {
+            rotation    = vec3(-25, 0, 0)
+            scale       = vec3(0.01, 0.01, 0.01)
+            translation = vec3(0, 0.45, 0)
+        }
+    }
+
+    fill_light_geo = {
+        type     = sphere
+        position = vec3(4.5, 5.0, -2.5)
+        radius   = 2.5
+    }
+
+    rim_light_geo = {
+        type     = sphere
+        position = vec3(-1.5, 4.5, 4.5)
+        radius   = 1.2
+    }
+}
+
+material = {
+    mat_floor = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.86,0.86,0.86)
+                    minor       = col3(0.45,0.67,0.78)
+                    major       = col3(0.10,0.36,0.54)
+                    scale       = 10
+                    major_every = 5
+                    minor_width = 0.045
+                    major_width = 0.085
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.03,0.03,0.03)
+                }
+            }
+            scalars = {
+                exponent    = 40
+                reflectance = 0.03
+            }
+        }
+    }
+
+    mat_chitin = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.18, 0.16, 0.13) }
+                normal     = { type = voronoi_normal, cells = 140, max_deviation = 9, seed = 23 }
+            }
+            scalars = { metallic = 0, roughness = 0.26, clearcoat = 0.72, clearcoat_roughness = 0.10 }
+        }
+    }
+
+     mat_fill = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(2.5, 3.2, 5.5) }
+            }
+        }
+    }
+
+    mat_rim = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(6.5, 4.8, 2.8) }
+            }
+        }
+    }
+}
+
+object = {
+    floor      = { geometry = floor,          material = mat_floor  }
+    isopod     = { geometry = isopod_body,    material = mat_chitin }
+    fill_light = { geometry = fill_light_geo, material = mat_fill   }
+    rim_light  = { geometry = rim_light_geo,  material = mat_rim    }
+}

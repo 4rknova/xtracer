@@ -1,0 +1,523 @@
+# "Cloth On Cup" (https://skfb.ly/OrIx)
+# by blackSCORPIO
+# licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+title       = Cloth On Cup
+description = Draped linen cloth resting over a ceramic cup, studio-lit for a product-photography feel.
+version     = 1.0
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.18, 0.17, 0.16)
+        b = col3(0.06, 0.05, 0.05)
+    }
+}
+
+camera = {
+    default = {
+        type            = thin-lens
+        fov             = 46
+        position        = vec3(-5.480368, 3.695577, -2.179567)
+        target          = vec3(-0.354712, -0.367524, -0.888682)
+        up              = vec3(0, 1, 0)
+        flength         = 5.4
+        aperture        = 0.04
+        aperture_blades = 6
+    }
+
+    top = {
+        type     = thin-lens
+        fov      = 52
+        position = vec3(0.0, 5.5, -0.5)
+        target   = vec3(-0.2, 0.0, -0.3)
+        up       = vec3(0, 0, -1)
+    }
+}
+
+geometry = {
+    cloth = {
+        type = meshgroup
+        glob = geometry/cloth/plane_001_0*.gltf
+    }
+
+    cup = {
+        type = meshgroup
+        glob = geometry/cloth/sphere_0.gltf
+    }
+
+    floor = {
+        type     = plane
+        normal   = vec3(0, 1, 0)
+        distance = -1.0
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(-4.0, 5.5, -2.0)
+        radius   = 1.0
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(5.5, 2.5, -4.5)
+        radius   = 1.4
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.5, 5.0, 4.0)
+        radius   = 0.5
+    }
+}
+
+material = {
+    cloth_linen = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.62, 0.52, 0.44) }
+                sheen_color = { type = color, value = col3(0.82, 0.76, 0.70) }
+            }
+            scalars = {
+                sheen     = 0.88
+                roughness = 0.72
+            }
+        }
+    }
+
+    cloth_velvet = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.18, 0.08, 0.22) }
+                sheen_color = { type = color, value = col3(0.52, 0.28, 0.62) }
+            }
+            scalars = {
+                sheen     = 1.0
+                roughness = 0.85
+            }
+        }
+    }
+
+    cloth_silk = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.86, 0.78, 0.62) }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.08
+                ior                 = 1.46
+                clearcoat           = 0.3
+                clearcoat_roughness = 0.08
+            }
+        }
+    }
+
+    cloth_cotton = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.94, 0.92, 0.88) }
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 300
+                    max_deviation = 4
+                    seed          = 3
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.95
+                ior       = 1.46
+            }
+        }
+    }
+
+    cloth_crimson = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.52, 0.06, 0.08) }
+                sheen_color = { type = color, value = col3(0.74, 0.24, 0.18) }
+            }
+            scalars = {
+                sheen     = 0.90
+                roughness = 0.70
+            }
+        }
+    }
+
+    cloth_sage = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.34, 0.46, 0.36) }
+                sheen_color = { type = color, value = col3(0.52, 0.64, 0.50) }
+            }
+            scalars = {
+                sheen     = 0.85
+                roughness = 0.74
+            }
+        }
+    }
+
+    cloth_indigo = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.10, 0.12, 0.36) }
+                sheen_color = { type = color, value = col3(0.26, 0.30, 0.58) }
+            }
+            scalars = {
+                sheen     = 0.88
+                roughness = 0.72
+            }
+        }
+    }
+
+    cloth_charcoal = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = color, value = col3(0.11, 0.11, 0.13) }
+                sheen_color = { type = color, value = col3(0.28, 0.28, 0.34) }
+            }
+            scalars = {
+                sheen     = 0.82
+                roughness = 0.76
+            }
+        }
+    }
+
+    cloth_weave_natural = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type       = weave
+                    base       = col3(0.72, 0.64, 0.52)
+                    warp       = col3(0.62, 0.52, 0.38)
+                    weft       = col3(0.84, 0.78, 0.66)
+                    scale      = 28
+                    band_width = 0.42
+                }
+                sheen_color = { type = color, value = col3(0.90, 0.84, 0.74) }
+            }
+            scalars = {
+                sheen     = 0.80
+                roughness = 0.68
+            }
+        }
+    }
+
+    cloth_weave_cobalt = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type       = weave
+                    base       = col3(0.08, 0.14, 0.44)
+                    warp       = col3(0.06, 0.10, 0.36)
+                    weft       = col3(0.90, 0.88, 0.82)
+                    scale      = 24
+                    band_width = 0.38
+                }
+                sheen_color = { type = color, value = col3(0.60, 0.66, 0.90) }
+            }
+            scalars = {
+                sheen     = 0.78
+                roughness = 0.66
+            }
+        }
+    }
+
+    cloth_check_red = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type    = checker
+                    a       = col3(0.70, 0.06, 0.06)
+                    b       = col3(0.92, 0.90, 0.86)
+                    scale_u = 10
+                    scale_v = 10
+                }
+                sheen_color = { type = color, value = col3(0.88, 0.70, 0.70) }
+            }
+            scalars = {
+                sheen     = 0.72
+                roughness = 0.74
+            }
+        }
+    }
+
+    cloth_batik = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.12, 0.18, 0.50)
+                    b              = col3(0.08, 0.10, 0.34)
+                    vein           = col3(0.88, 0.84, 0.72)
+                    scale          = 3.6
+                    turbulence     = 0.9
+                    vein_frequency = 4.0
+                    octaves        = 5
+                    lacunarity     = 2.1
+                    gain           = 0.52
+                    vein_strength  = 0.60
+                    vein_sharpness = 1.4
+                }
+                sheen_color = { type = color, value = col3(0.50, 0.56, 0.86) }
+            }
+            scalars = {
+                sheen     = 0.76
+                roughness = 0.70
+            }
+        }
+    }
+
+    cloth_pinstripe = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color = {
+                    type        = graphpaper
+                    base        = col3(0.14, 0.16, 0.22)
+                    minor       = col3(0.68, 0.66, 0.60)
+                    major       = col3(0.80, 0.78, 0.72)
+                    scale       = 40
+                    minor_width = 0.06
+                    major_width = 0.10
+                    major_every = 4
+                }
+                sheen_color = { type = color, value = col3(0.58, 0.58, 0.66) }
+            }
+            scalars = {
+                sheen     = 0.84
+                roughness = 0.65
+            }
+        }
+    }
+
+    cup_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type           = fbm_marble
+                    a              = col3(0.58, 0.36, 0.22)
+                    b              = col3(0.44, 0.26, 0.14)
+                    vein           = col3(0.32, 0.18, 0.10)
+                    scale          = 2.8
+                    turbulence     = 0.5
+                    vein_frequency = 2.5
+                    octaves        = 4
+                    lacunarity     = 2.0
+                    gain           = 0.5
+                    vein_strength  = 0.25
+                    vein_sharpness = 2.0
+                }
+                normal = {
+                    type          = voronoi_normal
+                    cells         = 120
+                    max_deviation = 6
+                    seed          = 7
+                }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.78
+                ior                 = 1.48
+                clearcoat           = 0.0
+                clearcoat_roughness = 0.0
+            }
+        }
+    }
+
+    floor_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type    = checker
+                    a       = col3(0.72, 0.70, 0.68)
+                    b       = col3(0.58, 0.56, 0.54)
+                    scale_u = 12
+                    scale_v = 12
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.88
+            }
+        }
+    }
+
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(32, 27, 20) }
+            }
+        }
+    }
+
+    fill_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(6, 8, 14) }
+            }
+        }
+    }
+
+    rim_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(18, 15, 12) }
+            }
+        }
+    }
+}
+
+object = {
+    cloth      = { geometry = cloth,      material = cloth_linen    }
+    cup        = { geometry = cup,        material = cup_mat        }
+    floor      = { geometry = floor,      material = floor_mat      }
+    key_light  = { geometry = key_light,  material = key_light_mat  }
+    fill_light = { geometry = fill_light, material = fill_light_mat }
+    rim_light  = { geometry = rim_light,  material = rim_light_mat  }
+}
+
+variants = {
+    linen = {
+        name        = Linen
+        description = Natural undyed linen — warm sand tones with soft fabric sheen.
+    }
+
+    velvet = {
+        name        = Velvet
+        description = Deep plum velvet — saturated sheen with high nap and rich edge glow.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_velvet }
+            }
+        }
+    }
+
+    silk = {
+        name        = Silk
+        description = Champagne silk — smooth low-roughness surface with specular sheen.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_silk }
+            }
+        }
+    }
+
+    cotton = {
+        name        = Cotton
+        description = Off-white cotton — flat matte with fine voronoi surface texture.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_cotton }
+            }
+        }
+    }
+
+    crimson = {
+        name        = Crimson
+        description = Deep crimson sheen — rich red body with warm edge highlight.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_crimson }
+            }
+        }
+    }
+
+    sage = {
+        name        = Sage
+        description = Muted sage green sheen — soft earthy fabric tone.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_sage }
+            }
+        }
+    }
+
+    indigo = {
+        name        = Indigo
+        description = Deep indigo sheen — dark navy body with cool blue edge glow.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_indigo }
+            }
+        }
+    }
+
+    charcoal = {
+        name        = Charcoal
+        description = Near-black charcoal with subtle cool sheen.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_charcoal }
+            }
+        }
+    }
+
+    weave_natural = {
+        name        = Woven Natural
+        description = Natural linen weave — tan warp and cream weft at 28 tpi.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_weave_natural }
+            }
+        }
+    }
+
+    weave_cobalt = {
+        name        = Woven Cobalt
+        description = Navy and cream weave — high contrast two-tone twill.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_weave_cobalt }
+            }
+        }
+    }
+
+    check_red = {
+        name        = Red Check
+        description = Classic red and ivory checker — tablecloth scale pattern.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_check_red }
+            }
+        }
+    }
+
+    batik = {
+        name        = Batik Indigo
+        description = Indigo batik — turbulent fbm_marble veins simulate wax-resist dye.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_batik }
+            }
+        }
+    }
+
+    pinstripe = {
+        name        = Pinstripe
+        description = Dark navy pinstripe — graphpaper grid at fine scale with ivory lines.
+        set = {
+            object = {
+                cloth = { geometry = cloth, material = cloth_pinstripe }
+            }
+        }
+    }
+}
