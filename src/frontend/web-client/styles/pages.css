@@ -8823,7 +8823,9 @@ button:disabled {
 /* ── Toolbar ── */
 
 .gallery-panel {
-  margin-bottom: 0;
+  margin: 0;
+  border: none;
+  background-color: transparent;
 }
 
 .gallery-toolbar {

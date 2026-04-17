@@ -1,0 +1,338 @@
+.sp-page {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--xui-font-sans);
+  font-size: 0.875rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xui-space-3) var(--xui-space-5);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  flex-shrink: 0;
+  gap: var(--xui-space-4);
+}
+
+.sp-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.sp-header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--xui-space-3);
+}
+
+.sp-mode-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.sp-search {
+  background: var(--field-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  width: 160px;
+  outline: none;
+}
+.sp-search:focus {
+  border-color: var(--accent);
+}
+.sp-search::placeholder {
+  color: var(--muted);
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+
+.sp-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+
+.sp-sidebar {
+  width: 256px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  background: var(--panel);
+}
+
+.sp-group {
+  padding: 0 0 var(--xui-space-3);
+}
+
+.sp-group-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: var(--xui-space-3) var(--xui-space-3) var(--xui-space-2);
+  user-select: none;
+}
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 0 var(--xui-space-3);
+}
+
+.sp-thumb {
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.1s;
+}
+.sp-thumb:hover {
+  border-color: var(--line-strong);
+}
+.sp-thumb.selected {
+  border-color: var(--accent);
+}
+
+.sp-thumb canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+
+.sp-thumb-name {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 2px 2px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--bg-2);
+  line-height: 1.2;
+}
+.sp-thumb.selected .sp-thumb-name {
+  color: var(--accent);
+}
+
+/* ── Main area ───────────────────────────────────────────────── */
+
+.sp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Preview canvas ──────────────────────────────────────────── */
+
+.sp-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--preview-bg);
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+
+.sp-preview canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+.sp-preview-label {
+  position: absolute;
+  top: var(--xui-space-3);
+  left: var(--xui-space-4);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.sp-preview-size {
+  position: absolute;
+  bottom: var(--xui-space-3);
+  right: var(--xui-space-4);
+  font-size: 0.7rem;
+  color: var(--muted);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Parameters panel ────────────────────────────────────────── */
+
+.sp-params {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  overflow-y: auto;
+  max-height: 260px;
+}
+
+.sp-params-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xui-space-2) var(--xui-space-5) var(--xui-space-2) var(--xui-space-4);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.sp-params-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.sp-params-subtitle {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.sp-params-body {
+  display: flex;
+  flex-wrap: wrap;
+  padding: var(--xui-space-2) var(--xui-space-2);
+  gap: 0;
+}
+
+.sp-param {
+  display: flex;
+  align-items: center;
+  gap: var(--xui-space-2);
+  padding: 3px var(--xui-space-3);
+  width: 50%;
+  min-width: 240px;
+}
+
+@media (max-width: 900px) {
+  .sp-param { width: 100%; }
+}
+
+.sp-param-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+.sp-param-control {
+  display: flex;
+  align-items: center;
+  gap: var(--xui-space-2);
+  flex: 1;
+}
+
+.sp-range {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.sp-range-val {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2rem;
+  text-align: right;
+}
+
+.sp-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sp-color-swatch input[type="color"] {
+  width: 200%;
+  height: 200%;
+  margin: -50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sp-select {
+  background: var(--field-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  flex: 1;
+}
+
+.sp-params-empty {
+  padding: var(--xui-space-4);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Size selector chips */
+.sp-size-chips {
+  display: flex;
+  gap: 4px;
+}
+.sp-chip {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  transition: border-color 0.1s, color 0.1s;
+}
+.sp-chip.active, .sp-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Hidden utility */
+.sp-hidden { display: none !important; }

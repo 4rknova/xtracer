@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XTRACER Sampler Gallery</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles/samplers.css">
+  <script>
+    (function() {
+      var root = document.documentElement;
+      root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
+      root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
+      root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
+      var preset = localStorage.getItem('xtracer-ui-font-size-preset');
+      var scale = preset ? (preset === 'large' ? 1.1 : 1.0) : (parseFloat(localStorage.getItem('xtracer-ui-font-scale') || '1') > 1.02 ? 1.1 : 1.0);
+      root.style.fontSize = (scale * 100).toFixed(1) + '%';
+    })();
+  </script>
+</head>
+<body class="sp-page">
+  <div class="sp-shell">
+
+    <header class="sp-header">
+      <h1 class="sp-title">Sampler Gallery</h1>
+      <div class="sp-header-controls">
+        <input id="searchInput" type="search" class="sp-search" placeholder="Filter samplers…">
+        <span class="sp-mode-label">Preview size</span>
+        <div class="sp-size-chips">
+          <button class="sp-chip" data-size="128">128</button>
+          <button class="sp-chip active" data-size="256">256</button>
+          <button class="sp-chip" data-size="512">512</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="sp-body">
+
+      <!-- ── Sidebar: sampler grid ── -->
+      <div class="sp-sidebar" id="sidebar">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- ── Main: preview + params ── -->
+      <div class="sp-main">
+
+        <div class="sp-preview" id="previewArea">
+          <canvas id="mainCanvas"></canvas>
+          <span class="sp-preview-label" id="previewLabel">—</span>
+          <span class="sp-preview-size" id="previewSize"></span>
+        </div>
+
+        <div class="sp-params">
+          <div class="sp-params-head">
+            <span class="sp-params-title" id="paramsTitle">Parameters</span>
+            <span class="sp-params-subtitle" id="paramsSubtitle"></span>
+          </div>
+          <div class="sp-params-body" id="paramsBody">
+            <p class="sp-params-empty">Select a sampler to edit its parameters.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <script src="/samplers.js"></script>
+</body>
+</html>
