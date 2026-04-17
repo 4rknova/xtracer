@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XTRACER Furnace Tests</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles/furnace.css">
+  <script>
+    (function() {
+      var root = document.documentElement;
+      root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
+      root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
+      root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
+      var preset = localStorage.getItem('xtracer-ui-font-size-preset');
+      var scale = preset ? (preset === 'large' ? 1.1 : 1.0) : (parseFloat(localStorage.getItem('xtracer-ui-font-scale') || '1') > 1.02 ? 1.1 : 1.0);
+      root.style.fontSize = (scale * 100).toFixed(1) + '%';
+    })();
+  </script>
+</head>
+<body class="furnace-page">
+  <div class="furnace-shell">
+    <header class="furnace-header">
+      <h1 class="furnace-title">White Furnace Tests</h1>
+      <div class="furnace-header-actions">
+        <button id="runBtn" class="xui-button xui-button--primary">Run Tests</button>
+      </div>
+    </header>
+
+    <div id="furnaceStatus" class="furnace-bar furnace-bar--idle">
+      <span id="furnaceStatusText">Press Run Tests to execute all material furnace tests.</span>
+      <div class="furnace-status-right">
+        <div id="furnaceProgressWrap" class="xui-progress furnace-progress" hidden>
+          <div class="xui-progress__track">
+            <div id="furnaceProgressFill" class="xui-progress__fill"></div>
+          </div>
+        </div>
+        <span id="furnaceSummary" class="furnace-summary"></span>
+      </div>
+    </div>
+
+    <div id="furnaceResults" class="furnace-results"></div>
+  </div>
+  <script src="/furnace.js"></script>
+</body>
+</html>

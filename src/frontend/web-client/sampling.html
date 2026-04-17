@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XTRACER Sampling Visualization</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles/sampling.css">
+  <script>
+    (function() {
+      var root = document.documentElement;
+      root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
+      root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
+      root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
+      var preset = localStorage.getItem('xtracer-ui-font-size-preset');
+      var scale = preset ? (preset === 'large' ? 1.1 : 1.0) : (parseFloat(localStorage.getItem('xtracer-ui-font-scale') || '1') > 1.02 ? 1.1 : 1.0);
+      root.style.fontSize = (scale * 100).toFixed(1) + '%';
+    })();
+  </script>
+</head>
+<body class="sampling-page">
+  <div class="sampling-shell">
+    <header class="sampling-header">
+      <h1 class="sampling-title">Sampling Methods</h1>
+    </header>
+    <div class="sampling-controls">
+      <div class="sampling-controls-row">
+        <label class="sampling-label" for="methodSelect">Method</label>
+        <select id="methodSelect" class="xui-select">
+          <optgroup label="xtcore">
+            <option value="uniform_sphere">uniform sphere</option>
+            <option value="cosine_hemisphere" selected>cosine hemisphere</option>
+            <option value="power_cosine_lobe">power cosine lobe</option>
+            <option value="ggx_half_vector">GGX half vector</option>
+            <option value="ggx_half_vector_anisotropic">GGX half vector (anisotropic)</option>
+            <option value="uniform_cone">uniform cone</option>
+          </optgroup>
+          <optgroup label="nmath">
+            <option value="nmath_sphere">nmath sphere</option>
+            <option value="nmath_hemisphere">nmath hemisphere</option>
+            <option value="nmath_diffuse">nmath diffuse</option>
+            <option value="nmath_lobe">nmath lobe</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="sampling-controls-row">
+        <label class="sampling-label" for="countRange">Samples</label>
+        <input type="range" id="countRange" class="sampling-range" min="100" max="20000" step="100" value="5000">
+        <span id="countVal" class="sampling-range-val">5000</span>
+      </div>
+
+      <div id="paramRow" class="sampling-controls-row sampling-hidden">
+        <label class="sampling-label" id="paramLabel" for="paramRange">Param</label>
+        <input type="range" id="paramRange" class="sampling-range" min="0.01" max="1.0" step="0.01" value="0.3">
+        <span id="paramVal" class="sampling-range-val">0.30</span>
+      </div>
+
+      <div id="paramXRow" class="sampling-controls-row sampling-hidden">
+        <label class="sampling-label" for="paramXRange">Alpha X</label>
+        <input type="range" id="paramXRange" class="sampling-range" min="0.02" max="1.0" step="0.01" value="0.3">
+        <span id="paramXVal" class="sampling-range-val">0.30</span>
+      </div>
+
+      <div id="paramYRow" class="sampling-controls-row sampling-hidden">
+        <label class="sampling-label" for="paramYRange">Alpha Y</label>
+        <input type="range" id="paramYRange" class="sampling-range" min="0.02" max="1.0" step="0.01" value="0.7">
+        <span id="paramYVal" class="sampling-range-val">0.70</span>
+      </div>
+
+      <div id="expRow" class="sampling-controls-row sampling-hidden">
+        <label class="sampling-label" for="expRange">Exponent</label>
+        <input type="range" id="expRange" class="sampling-range" min="1" max="128" step="1" value="16">
+        <span id="expVal" class="sampling-range-val">16</span>
+      </div>
+
+      <div id="coneRow" class="sampling-controls-row sampling-hidden">
+        <label class="sampling-label" for="coneRange">cos θ max</label>
+        <input type="range" id="coneRange" class="sampling-range" min="0.01" max="0.99" step="0.01" value="0.866">
+        <span id="coneVal" class="sampling-range-val">0.87</span>
+      </div>
+
+      <button id="regenerateBtn" class="xui-button xui-button--primary">Regenerate</button>
+    </div>
+
+    <div class="sampling-viewport">
+      <canvas id="samplingCanvas"></canvas>
+      <div id="samplingStatus" class="sampling-status"></div>
+    </div>
+  </div>
+  <script src="/vendor/three.min.js"></script>
+  <script src="/sampling.js"></script>
+</body>
+</html>

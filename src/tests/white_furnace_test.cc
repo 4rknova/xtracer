@@ -116,7 +116,7 @@ bool run_case(bool use_importance_sampling, float albedo, rgb_stats_t &out)
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -210,7 +210,7 @@ bool run_rough_dielectric_case(bool use_importance_sampling, float roughness, rg
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -311,7 +311,7 @@ bool run_principled_clearcoat_case(bool use_importance_sampling, float clearcoat
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -373,7 +373,7 @@ bool run_principled_anisotropy_case(bool use_importance_sampling, float anisotro
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -464,7 +464,7 @@ bool run_thin_dielectric_case(bool use_importance_sampling, float roughness, rgb
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -535,7 +535,7 @@ bool run_subsurface_case(bool use_importance_sampling,
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -597,7 +597,7 @@ bool run_sheen_case(bool use_importance_sampling, float sheen, rgb_stats_t &out)
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
@@ -664,7 +664,7 @@ bool run_thin_translucent_case(bool use_importance_sampling,
 
     std::unique_ptr<xtcore::render::IIntegrator> integrator;
     if (use_importance_sampling) {
-        integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
+        integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
     } else {
         integrator.reset(new xtcore::integrator::pathtracer::Integrator());
     }
