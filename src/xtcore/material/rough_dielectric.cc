@@ -144,18 +144,19 @@ inline void dielectric_media(const hit_record_t &hit_record,
     const nmath::scalar_t mat_ior = material_ior(mat);
     const nmath::scalar_t cos_g = nmath::dot(hit_record.normal.normalized(), wo.normalized());
 
-    // cos_g >= 0: wo comes from outside the surface → entering the material.
-    // cos_g <  0: wo comes from inside → exiting.  The integrator only updates its
-    //             tracked IOR variable via sample_path (delta materials); for non-delta
-    //             materials that use bsdf_sample, hit_record.ior may still read 1.0 even
-    //             when the ray is already inside this material.  We recover the correct
-    //             incident IOR by using mat_ior directly when wo comes from the inside.
+    // cos_g >= 0: entering — eta_i is the current tracked medium, eta_t is this material.
+    // cos_g <  0: exiting  — eta_i is this material, eta_t is hardcoded to 1.0 (vacuum).
+    //
+    // KNOWN LIMITATION: eta_t = 1.0 is correct for glass-in-air but wrong when the
+    // surrounding medium has a different IOR (e.g. glass submerged in water, nested
+    // dielectrics).  A proper fix requires an IOR stack in the integrator so the outside
+    // medium's IOR can be passed here at exit time.
     if (cos_g >= (nmath::scalar_t)0.0) {
         eta_i = current_ior;
         eta_t = mat_ior;
     } else {
         eta_i = mat_ior;
-        eta_t = current_ior;
+        eta_t = (nmath::scalar_t)1.0;
     }
 }
 
@@ -268,7 +269,9 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
 
     const nmath::scalar_t F = xtcore::math::sampling::fresnel_dielectric(nmath_abs(wo_h), eta_i, eta_t);
     const nmath::scalar_t D = xtcore::math::sampling::ggx_ndf(n, h, roughness);
-    const nmath::scalar_t G = xtcore::math::sampling::smith_ggx_g(n, wo_n, wi_n, roughness);
+    // For BTDF, wi is on the opposite side of n — use |dot(n,wi)| via -wi_n to avoid G1=0.
+    const nmath::scalar_t G = xtcore::math::sampling::smith_ggx_g1(n, wo_n, roughness)
+                            * xtcore::math::sampling::smith_ggx_g1(n, -wi_n, roughness);
     const nmath::scalar_t denom = wo_h + eta * wi_h;
     const nmath::scalar_t denom2 = denom * denom;
     if (denom2 <= (nmath::scalar_t)EPSILON) {
