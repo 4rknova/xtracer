@@ -6,6 +6,7 @@
 #include <xtcore/aa.h>
 #include <xtcore/material.h>
 #include <xtcore/math/sampling_util.h>
+#include <xtcore/scene.h>
 #include "util/raygraph.h"
 #include "integrator.h"
 
@@ -88,6 +89,12 @@ xtcore::render::integrator_metadata_t Integrator::metadata() const
             meta.description = "Emission debug integrator.";
             meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
             break;
+        case VIEW_OBJECT_MASK:
+            meta.id = "object_mask";
+            meta.name = "Object Mask";
+            meta.description = "Object mask debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
         case VIEW_NORMAL:
         default:
             meta.id = "debug_views";
@@ -104,11 +111,30 @@ void Integrator::configure(const std::map<std::string, std::string> &options)
     auto mode_it = options.find("mode");
     if (mode_it != options.end()) {
         const std::string &v = mode_it->second;
-        if      (v == "depth")    m_mode = VIEW_DEPTH;
-        else if (v == "stencil")  m_mode = VIEW_STENCIL;
-        else if (v == "normal")   m_mode = VIEW_NORMAL;
-        else if (v == "uv")       m_mode = VIEW_UV;
-        else if (v == "emission") m_mode = VIEW_EMISSION;
+        if      (v == "depth")       m_mode = VIEW_DEPTH;
+        else if (v == "stencil")     m_mode = VIEW_STENCIL;
+        else if (v == "normal")      m_mode = VIEW_NORMAL;
+        else if (v == "uv")          m_mode = VIEW_UV;
+        else if (v == "emission")    m_mode = VIEW_EMISSION;
+        else if (v == "object_mask") m_mode = VIEW_OBJECT_MASK;
+    }
+
+    auto obj_it = options.find("objects");
+    if (obj_it != options.end()) {
+        m_mask_names.clear();
+        const std::string &v = obj_it->second;
+        std::string token;
+        for (size_t i = 0; i <= v.size(); ++i) {
+            if (i == v.size() || v[i] == ',') {
+                const size_t start = token.find_first_not_of(" \t");
+                const size_t end   = token.find_last_not_of(" \t");
+                if (start != std::string::npos)
+                    m_mask_names.push_back(token.substr(start, end - start + 1));
+                token.clear();
+            } else {
+                token += v[i];
+            }
+        }
     }
 
     auto enc_it = options.find("depth_encoding");
@@ -126,6 +152,22 @@ void Integrator::configure(const std::map<std::string, std::string> &options)
         double v = std::strtod(dist_it->second.c_str(), &end);
         if (!(end == dist_it->second.c_str() || !end || *end != '\0') && v > 0.0) {
             m_max_distance = (nmath::scalar_t)v;
+        }
+    }
+}
+
+void Integrator::setup_auxiliary()
+{
+    m_mask_ids.clear();
+    if (m_mode != VIEW_OBJECT_MASK || !ctx) return;
+    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
+        const char *name = xtcore::pool::str::get(it->first);
+        if (!name) continue;
+        for (const auto &mask_name : m_mask_names) {
+            if (mask_name == name) {
+                m_mask_ids.insert(it->first);
+                break;
+            }
         }
     }
 }
@@ -243,6 +285,12 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
                     if (mat) acc_emission += mat->get_sample("emissive", hit_record.texcoord) * sample.weight;
                 }
                 color_pixel = acc_emission;
+                break;
+            }
+
+            case VIEW_OBJECT_MASK: {
+                if (found_hit && m_mask_ids.count(hit_record.id_object))
+                    color_pixel = nimg::ColorRGBAf(1, 1, 1, color_pixel.a() + sample.weight);
                 break;
             }
         }

@@ -136,6 +136,7 @@ static const integrator_control_option_t k_debug_mode_options[] = {
     , { "normal", "Normal" }
     , { "uv", "UV" }
     , { "emission", "Emission" }
+    , { "object_mask", "Object Mask" }
 };
 
 static const integrator_control_option_t k_depth_encoding_options[] = {
@@ -149,6 +150,7 @@ static const integrator_control_info_t k_debug_views_controls[] = {
       { "mode", "Mode", "enum", "Debug output mode", "normal", nullptr, nullptr, nullptr, nullptr, nullptr, k_debug_mode_options, sizeof(k_debug_mode_options) / sizeof(k_debug_mode_options[0]) }
     , { "depth_encoding", "Depth Encoding", "enum", "Depth output encoding", "legacy", nullptr, nullptr, nullptr, "mode", "depth", k_depth_encoding_options, sizeof(k_depth_encoding_options) / sizeof(k_depth_encoding_options[0]) }
     , { "max_distance", "Max Distance", "float", "Used by depth mode", "1000", "0.01", "1000000", "0.01", "mode", "depth", nullptr, 0 }
+    , { "objects", "Objects", "string", "Comma-separated object names to include in the mask", "", nullptr, nullptr, nullptr, "mode", "object_mask", nullptr, 0 }
 };
 
 static const integrator_control_info_t k_ao_controls[] = {
@@ -168,7 +170,6 @@ static const integrator_info_t k_integrators[] = {
       { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
     , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
     , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
-    , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
     , { xtcore::render::integrator_metadata_t(), k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
@@ -178,7 +179,6 @@ static const integrator_info_t k_integrators[] = {
 static const char *k_integrator_ids[] = {
       "raytracer"
     , "pathtracer_mis"
-    , "pathtracer_mis_full"
     , "pathtracer"
     , "photon_mapping"
     , "debug_views"
@@ -206,9 +206,7 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
 {
     if      (name == "raytracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::raytracer::Integrator());
     else if (name == "pathtracer") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer::Integrator());
-    else if (name == "pathtracer_mis") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
-    else if (name == "pathtracer_is") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_is::Integrator());
-    else if (name == "pathtracer_mis_full") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_mis_full::Integrator());
+    else if (name == "pathtracer_mis") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_mis::Integrator());
     else if (name == "photon_mapping") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::photon_mapping::Integrator());
     else if (name == "debug_views") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator());
     else if (name == "depth")      return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_DEPTH));
@@ -405,6 +403,8 @@ bool validate_integrator_options(const std::string &integrator,
                 error = "invalid enum integrator option: " + key;
                 return false;
             }
+        } else if (type == "string") {
+            // any value is valid
         } else {
             error = "unknown integrator option type: " + key;
             return false;

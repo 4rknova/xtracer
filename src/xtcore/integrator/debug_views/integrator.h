@@ -2,8 +2,11 @@
 #define XTCORE_INTEGRATOR_DEBUG_VIEWS_H_INCLUDED
 
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
 
+#include <xtcore/strpool.h>
 #include <xtcore/tile.h>
 #include <xtcore/integrator.h>
 
@@ -19,7 +22,8 @@ class Integrator : public xtcore::render::IIntegrator
         VIEW_STENCIL,
         VIEW_NORMAL,
         VIEW_UV,
-        VIEW_EMISSION
+        VIEW_EMISSION,
+        VIEW_OBJECT_MASK
     };
 
     enum depth_encoding_t {
@@ -33,12 +37,15 @@ class Integrator : public xtcore::render::IIntegrator
 
     virtual xtcore::render::integrator_metadata_t metadata() const;
     virtual void configure(const std::map<std::string, std::string> &options);
+    virtual void setup_auxiliary();
     virtual void render_tile(xtcore::render::tile_t *tile);
 
     private:
     view_mode_t m_mode;
     depth_encoding_t m_encoding;
     nmath::scalar_t m_max_distance;
+    std::vector<std::string> m_mask_names;
+    std::set<HASH_ID>        m_mask_ids;
 };
 
         } /* namespace debug_views */

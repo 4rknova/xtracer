@@ -121,9 +121,7 @@ int main(int argc, char **argv)
             else if (RENDERER("emission"      )) integrator.reset(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
             else if (RENDERER("ao"            )) integrator.reset(new xtcore::integrator::ao::Integrator());
             else if (RENDERER("pathtracer"    )) integrator.reset(new xtcore::integrator::pathtracer::Integrator());
-            else if (RENDERER("pathtracer_mis")) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
-            else if (RENDERER("pathtracer_is" )) integrator.reset(new xtcore::integrator::pathtracer_is::Integrator());
-            else if (RENDERER("pathtracer_mis_full")) integrator.reset(new xtcore::integrator::pathtracer_mis_full::Integrator());
+            else if (RENDERER("pathtracer_mis")) integrator.reset(new xtcore::integrator::pathtracer_mis::Integrator());
             else if (RENDERER("photon_mapping")) integrator.reset(new xtcore::integrator::photon_mapping::Integrator());
             else if (RENDERER("raytracer"     )) integrator.reset(new xtcore::integrator::raytracer::Integrator());
             else if (RENDERER("pathtracer_bdpt")) integrator.reset(new xtcore::integrator::pathtracer_bdpt::Integrator());

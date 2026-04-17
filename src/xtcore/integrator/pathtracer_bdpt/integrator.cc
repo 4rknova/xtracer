@@ -29,7 +29,7 @@ namespace {
 typedef Integrator::area_light_t area_light_t;
 
 // ---------------------------------------------------------------------------
-// Geometry helpers (shared with pathtracer_mis_full pattern)
+// Geometry helpers (shared with pathtracer_mis pattern)
 // ---------------------------------------------------------------------------
 
 inline nmath::scalar_t triangle_area(const nmath::Vector3f &a,

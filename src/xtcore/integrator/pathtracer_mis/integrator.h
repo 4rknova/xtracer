@@ -1,5 +1,5 @@
-#ifndef XTCORE_INTEGRATOR_PATHTRACER_MIS_FULL_H_INCLUDED
-#define XTCORE_INTEGRATOR_PATHTRACER_MIS_FULL_H_INCLUDED
+#ifndef XTCORE_INTEGRATOR_PATHTRACER_MIS_H_INCLUDED
+#define XTCORE_INTEGRATOR_PATHTRACER_MIS_H_INCLUDED
 
 #include <map>
 #include <vector>
@@ -17,7 +17,7 @@ using nimg::Pixmap;
 
 namespace xtcore {
     namespace integrator {
-        namespace pathtracer_mis_full {
+        namespace pathtracer_mis {
 
 class Integrator : public xtcore::render::IIntegrator
 {
@@ -34,8 +34,8 @@ class Integrator : public xtcore::render::IIntegrator
     virtual void clean_auxiliary();
     virtual xtcore::render::integrator_metadata_t metadata() const {
         xtcore::render::integrator_metadata_t meta;
-        meta.id = "pathtracer_mis_full";
-        meta.name = "Pathtracer (MIS Full)";
+        meta.id = "pathtracer_mis";
+        meta.name = "Pathtracer (MIS)";
         meta.status = xtcore::render::INTEGRATOR_STATUS_RECOMMENDED;
         meta.description = "Full MIS path tracer with direct light and environment sampling.";
         return meta;
@@ -51,8 +51,8 @@ class Integrator : public xtcore::render::IIntegrator
     nmath::scalar_t m_light_weight_sum;
 };
 
-        } /* namespace pathtracer_mis_full */
+        } /* namespace pathtracer_mis */
     } /* namespace integrator */
 } /* namespace xtcore */
 
-#endif /* XTCORE_INTEGRATOR_PATHTRACER_MIS_FULL_H_INCLUDED */
+#endif /* XTCORE_INTEGRATOR_PATHTRACER_MIS_H_INCLUDED */
