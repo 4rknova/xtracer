@@ -309,7 +309,7 @@ function applySidebarCardLayout(mode) {
 }
 
 function isMobileTabMenuViewport() {
-  return !!(window.matchMedia && window.matchMedia("(max-width: 1450px)").matches);
+  return !!(window.matchMedia && window.matchMedia("(max-width: 1099px)").matches);
 }
 
 function syncMobileLogsViewport() {
@@ -320,9 +320,8 @@ function syncMobileLogsViewport() {
 
   const isMobile = isMobileTabMenuViewport();
   const isActive = pane.classList.contains("active");
-  // On narrow mobile (<= 1024px) #mainTabs is collapsed in the topbar, not a visible sidebar nav.
-  // The height calculation below only makes sense for the 1025-1450px sidebar layout.
-  const isNarrowMobile = !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
+  // On phone (<= 767px) the sidebar is hidden; the log height calc needs a visible sidebar.
+  const isNarrowMobile = !!(window.matchMedia && window.matchMedia("(max-width: 767px)").matches);
   if (!isMobile || !isActive || !el.mainTabs || isNarrowMobile) {
     panel.style.height = "";
     panel.style.maxHeight = "";
@@ -367,6 +366,16 @@ function setActiveTab(mode) {
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
+  const bnModes = ["scene", "render", "workspaces", "visual", "gallery"];
+  if (bnModes.includes(nextMode)) {
+    ["bnTabScene", "bnTabRender", "bnTabWorkspaces", "bnTabVisual", "bnTabGallery"].forEach((id) => {
+      const btn = el[id];
+      if (!btn) return;
+      const isBtn = btn.dataset.mode === nextMode;
+      btn.classList.toggle("active", isBtn);
+      btn.setAttribute("aria-pressed", isBtn ? "true" : "false");
+    });
+  }
   setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
@@ -533,6 +542,7 @@ async function loadVisualSceneFromSelected() {
   visualLoadedSceneName = sceneName;
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
+  if (typeof refreshVisualCameraEditorPanel === "function") refreshVisualCameraEditorPanel();
   refreshVisualPhotonOverlay().catch(() => {});
   appendLog("visual loaded: " + sceneName + (variantName ? " (" + variantName + ")" : ""));
 }
@@ -558,6 +568,7 @@ function syncVisualCameraFromRenderSelection() {
   if (values.indexOf(selected) < 0) return;
   el.visualCamera.value = selected;
   if (visualEditor.setActiveCamera) visualEditor.setActiveCamera(selected);
+  if (typeof refreshVisualCameraEditorPanel === "function") refreshVisualCameraEditorPanel();
 }
 
 async function refreshVisualPhotonOverlay() {
@@ -673,8 +684,6 @@ function applyFontScale(scale) {
 }
 
 function loadUIOptions() {
-  const poll = parseInt(localStorage.getItem("xtracer-poll-ms") || "300", 10);
-  uiOptions.pollMs = Number.isFinite(poll) ? Math.max(100, Math.min(10000, poll)) : 300;
   uiOptions.textHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-text-history-limit") || "200");
   uiOptions.visualHistoryLimit = clampHistoryLimit(localStorage.getItem("xtracer-visual-history-limit") || "200");
   uiOptions.visualSceneScale = clampVisualSceneScale(localStorage.getItem("xtracer-visual-scene-scale") || "1");
@@ -700,7 +709,6 @@ function loadUIOptions() {
     : "smooth";
   uiOptions.darkPalette = normalizeDarkPalette(localStorage.getItem("xtracer-dark-palette") || "slate");
   uiOptions.lightPalette = normalizeLightPalette(localStorage.getItem("xtracer-light-palette") || "coastal");
-  el.pollInterval.value = String(uiOptions.pollMs);
   if (el.textHistorySize) el.textHistorySize.value = String(uiOptions.textHistoryLimit);
   if (el.visualHistorySize) el.visualHistorySize.value = String(uiOptions.visualHistoryLimit);
   if (el.visualSceneScale) el.visualSceneScale.value = String(uiOptions.visualSceneScale);
@@ -733,7 +741,6 @@ function loadUIOptions() {
 }
 
 function persistUIOptions() {
-  localStorage.setItem("xtracer-poll-ms", String(uiOptions.pollMs));
   localStorage.setItem("xtracer-text-history-limit", String(uiOptions.textHistoryLimit));
   localStorage.setItem("xtracer-visual-history-limit", String(uiOptions.visualHistoryLimit));
   localStorage.setItem("xtracer-visual-scene-scale", String(uiOptions.visualSceneScale));

@@ -2685,5 +2685,33 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     requestAnimationFrame(this._animateBound);
   };
 
+  SceneVisualEditor.prototype.getViewportPose = function () {
+    var scale = normalizeSceneScaleMultiplier(this.sceneScaleMultiplier);
+    var t = this.target;
+    var d = this.distance;
+    var el = this.elevation;
+    var az = this.azimuth;
+    var wx = t.x + d * Math.cos(el) * Math.sin(az);
+    var wy = t.y + d * Math.sin(el);
+    var wz = t.z + d * Math.cos(el) * Math.cos(az);
+    return {
+      position: [wx / scale, wy / scale, wz / scale],
+      target: [t.x / scale, t.y / scale, t.z / scale],
+    };
+  };
+
+  SceneVisualEditor.prototype.getActiveCameraSnapshot = function () {
+    if (!this.activeSceneCamera || !this.selectedCameraPose) return null;
+    var pose = this.selectedCameraPose;
+    return {
+      name: this.activeSceneCamera,
+      position: [pose.position.x, pose.position.y, pose.position.z],
+      target: [pose.target.x, pose.target.y, pose.target.z],
+      flength: this.selectedCameraFLength,
+      fov: this.selectedCameraHFov,
+      type: this.selectedCameraType,
+    };
+  };
+
   window.SceneVisualEditor = SceneVisualEditor;
 })();

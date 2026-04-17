@@ -422,6 +422,41 @@ function addMeshObjectToSceneSource(source, options) {
   return { source: next, objectId, geometryId };
 }
 
+function upsertSceneScalarProp(block, key, value, indent) {
+  const baseIndent = String(indent || "");
+  const formatted = formatSceneNumber(value, 0);
+  const re = new RegExp(`(\\b${key}\\s*=\\s*)[^\\n\\r]+`, "i");
+  if (re.test(block)) return String(block || "").replace(re, `$1${formatted}`);
+  const trimmed = String(block || "").replace(/\s*$/, "");
+  const suffix = String(block || "").slice(trimmed.length);
+  const join = trimmed.length > 0 ? (trimmed.endsWith("\n") ? "" : "\n") : "";
+  return `${trimmed}${join}${baseIndent}${key} = ${formatted}${suffix}`;
+}
+
+function updateCameraInSource(source, cameraId, params) {
+  const model = parseSceneEditModel(String(source || ""));
+  const cam = (model.cameras || []).find((c) => c.id === String(cameraId || ""));
+  if (!cam) throw new Error(`camera not found: ${cameraId}`);
+
+  const entryIndent = `${geometryEntryIndent(source, cam.entryStart)}\t`;
+  let body = source.slice(cam.bodyStart, cam.bodyEnd);
+
+  if (Array.isArray(params.position)) {
+    body = upsertSceneVec3Prop(body, "position", params.position, entryIndent);
+  }
+  if (Array.isArray(params.target)) {
+    body = upsertSceneVec3Prop(body, "target", params.target, entryIndent);
+  }
+  if (params.flength != null && Number.isFinite(Number(params.flength))) {
+    body = upsertSceneScalarProp(body, "flength", Number(params.flength), entryIndent);
+  }
+  if (params.fov != null && Number.isFinite(Number(params.fov))) {
+    body = upsertSceneScalarProp(body, "fov", Number(params.fov), entryIndent);
+  }
+
+  return `${source.slice(0, cam.bodyStart)}${body}${source.slice(cam.bodyEnd)}`;
+}
+
 function addInteractiveCameraToSceneSource(source, options) {
   const model = parseSceneEditModel(source);
   const cameraIds = new Set((model.cameras || []).map((cam) => String(cam && cam.id ? cam.id : "").trim()).filter(Boolean));

@@ -1554,12 +1554,16 @@ function renderWorkspaceList(items) {
     var state = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-state");
     head.appendChild(title);
 
+    var badgesEl = document.createElement("div");
+    badgesEl.className = "workspace-item-badges";
+
     if (isMine) {
       var mineBadge = createWorkspaceStateBadge("This Client", "workspace-item-state");
-      head.appendChild(mineBadge);
+      badgesEl.appendChild(mineBadge);
     }
 
-    head.appendChild(state);
+    badgesEl.appendChild(state);
+    head.appendChild(badgesEl);
     var actions = document.createElement("div");
     actions.className = "workspace-item-actions";
     var useBtn = createWorkspaceActionButton(id === activeWorkspaceId ? "Active" : "Use", {

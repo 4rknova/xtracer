@@ -4,8 +4,7 @@
   const LOCAL_SCENES_KEY = "xtracer-wasm-local-scenes-v1";
   const DEFAULT_INTEGRATORS = [
     { id: "pathtracer", label: "Pathtracer (Brute Force)" },
-    { id: "pathtracer_mis", label: "Pathtracer (MIS Diffuse)" },
-    { id: "pathtracer_mis_full", label: "Pathtracer (MIS Full)" },
+    { id: "pathtracer_mis", label: "Pathtracer (MIS)" },
     { id: "photon_mapping", label: "Photon Mapping" },
     { id: "debug_views", label: "Debug Views" },
     { id: "ao", label: "Ambient Occlusion" },

@@ -1174,11 +1174,14 @@ function renderWorkspaceList(items) {
     title.textContent = String((ws && ws.name) || id || "Workspace");
     const state = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-state");
     head.appendChild(title);
+    const badgesEl = document.createElement("div");
+    badgesEl.className = "workspace-item-badges";
     if (isMine) {
       const mineBadge = createWorkspaceStateBadge("This Client", "workspace-item-state");
-      head.appendChild(mineBadge);
+      badgesEl.appendChild(mineBadge);
     }
-    head.appendChild(state);
+    badgesEl.appendChild(state);
+    head.appendChild(badgesEl);
 
     const actions = document.createElement("div");
     actions.className = "workspace-item-actions";

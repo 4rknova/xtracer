@@ -1489,12 +1489,8 @@ async function loadIntegrators() {
     el.integrator.value = prev;
   } else if (configuredDefault && integratorCatalog.some((it) => it.id === configuredDefault)) {
     el.integrator.value = configuredDefault;
-  } else if (integratorCatalog.some((it) => it.id === "pathtracer_mis_full")) {
-    el.integrator.value = "pathtracer_mis_full";
   } else if (integratorCatalog.some((it) => it.id === "pathtracer_mis")) {
     el.integrator.value = "pathtracer_mis";
-  } else if (integratorCatalog.some((it) => it.id === "pathtracer_is")) {
-    el.integrator.value = "pathtracer_is";
   } else if (!el.integrator.value && el.integrator.options.length > 0) {
     el.integrator.selectedIndex = 0;
   }

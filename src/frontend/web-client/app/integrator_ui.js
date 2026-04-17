@@ -123,6 +123,12 @@ function renderIntegratorControls() {
           dom.el("option", { attrs: { value: "true" }, text: "True" }),
         ],
       });
+    } else if (ctrl.type === "string" || ctrl.type === "text") {
+      input = dom.el("input", {
+        className: "xui-input",
+        attrs: { type: "text", placeholder: ctrl.placeholder || "" },
+        dataset: { ioptId: id, ioptType: "string" },
+      });
     } else {
       input = dom.el("input", {
         className: "xui-input",

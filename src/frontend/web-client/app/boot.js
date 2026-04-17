@@ -1,3 +1,72 @@
+function refreshVisualCameraEditorPanel() {
+  if (!el.visualCameraEditor) return;
+  const fmt = (v) => Number.isFinite(Number(v)) ? String(Math.round(Number(v) * 1e6) / 1e6) : "";
+
+  // Read camera data from the scene source using the render camera selection
+  const cameraId = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+  const sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+  if (!cameraId || !sourceText.trim()) {
+    el.visualCameraEditor.hidden = true;
+    return;
+  }
+  const model = parseSceneEditModel(sourceText);
+  const cam = (model.cameras || []).find((c) => c.id === cameraId);
+  if (!cam) {
+    el.visualCameraEditor.hidden = true;
+    return;
+  }
+  const position = readSceneVec3Prop(cam.body, "position");
+  const target = readSceneVec3Prop(cam.body, "target");
+  const flength = readSceneNumber(readSceneStringProp(cam.body, "flength"), null);
+  const fov = readSceneNumber(readSceneStringProp(cam.body, "fov"), null);
+  if (el.visualCamPosX) el.visualCamPosX.value = fmt(position[0]);
+  if (el.visualCamPosY) el.visualCamPosY.value = fmt(position[1]);
+  if (el.visualCamPosZ) el.visualCamPosZ.value = fmt(position[2]);
+  if (el.visualCamTgtX) el.visualCamTgtX.value = fmt(target[0]);
+  if (el.visualCamTgtY) el.visualCamTgtY.value = fmt(target[1]);
+  if (el.visualCamTgtZ) el.visualCamTgtZ.value = fmt(target[2]);
+  if (el.visualCamFLength) el.visualCamFLength.value = flength != null ? fmt(flength) : "";
+  if (el.visualCamFov) el.visualCamFov.value = fov != null ? fmt(fov) : "";
+  el.visualCameraEditor.hidden = false;
+}
+
+async function applyCameraEditorChanges() {
+  if (!visualEditor) throw new Error("visual editor not ready");
+  const snap = visualEditor.getActiveCameraSnapshot ? visualEditor.getActiveCameraSnapshot() : null;
+  const cameraId = snap
+    ? snap.name
+    : String(el.camera && el.camera.value ? el.camera.value : "").trim();
+  if (!cameraId) throw new Error("no active camera");
+
+  const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!sceneName) throw new Error("no active scene");
+
+  let sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+  if (!sourceText.trim()) {
+    await loadSceneSource(sceneName);
+    sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+  }
+  if (!sourceText.trim()) throw new Error("scene source is empty");
+
+  const parseNum = (inp) => { const v = Number(inp && inp.value); return Number.isFinite(v) ? v : null; };
+  const posX = parseNum(el.visualCamPosX), posY = parseNum(el.visualCamPosY), posZ = parseNum(el.visualCamPosZ);
+  const tgtX = parseNum(el.visualCamTgtX), tgtY = parseNum(el.visualCamTgtY), tgtZ = parseNum(el.visualCamTgtZ);
+  const flength = parseNum(el.visualCamFLength);
+  const fov = parseNum(el.visualCamFov);
+
+  const params = {};
+  if (posX !== null && posY !== null && posZ !== null) params.position = [posX, posY, posZ];
+  if (tgtX !== null && tgtY !== null && tgtZ !== null) params.target = [tgtX, tgtY, tgtZ];
+  if (flength !== null) params.flength = flength;
+  if (fov !== null) params.fov = fov;
+
+  const nextSource = updateCameraInSource(sourceText, cameraId, params);
+  updateSceneSourceText(nextSource, { history: "visual" });
+  await api.saveScene(sceneName, nextSource, true);
+  appendLog(`camera ${cameraId} updated`);
+  await loadVisualSceneFromSelected();
+}
+
 function upgradeLegacyStatMarkup() {
   const widgets = window.XTracerWidgets || {};
   if (typeof widgets.renderStatHint !== "function") return;
@@ -5,6 +74,7 @@ function upgradeLegacyStatMarkup() {
     if (!(node instanceof HTMLElement)) return;
     const labelNode = node.querySelector(".workspace-active-label, .xui-stat__label");
     const valueNode = node.querySelector(".workspace-active-value, .xui-stat__value");
+    if (valueNode && valueNode.id) return;
     let label = labelNode ? String(labelNode.textContent || "").trim() : "";
     let value = valueNode ? String(valueNode.textContent || "").trim() : "";
     if (!label) {
@@ -234,6 +304,28 @@ async function boot() {
       if (!visualEditor || !visualEditor.setActiveCamera) return;
       visualEditor.setActiveCamera(el.visualCamera.value || "");
       appendLog(`visual camera=${el.visualCamera.value || "free"}`);
+      refreshVisualCameraEditorPanel();
+    });
+  }
+  if (el.visualCameraSnapBtn) {
+    el.visualCameraSnapBtn.addEventListener("click", () => {
+      if (!visualEditor || !visualEditor.getViewportPose) return;
+      const pose = visualEditor.getViewportPose();
+      if (!pose) return;
+      const fmt = (v) => String(Math.round(v * 1e6) / 1e6);
+      if (el.visualCamPosX) el.visualCamPosX.value = fmt(pose.position[0]);
+      if (el.visualCamPosY) el.visualCamPosY.value = fmt(pose.position[1]);
+      if (el.visualCamPosZ) el.visualCamPosZ.value = fmt(pose.position[2]);
+      if (el.visualCamTgtX) el.visualCamTgtX.value = fmt(pose.target[0]);
+      if (el.visualCamTgtY) el.visualCamTgtY.value = fmt(pose.target[1]);
+      if (el.visualCamTgtZ) el.visualCamTgtZ.value = fmt(pose.target[2]);
+    });
+  }
+  if (el.visualCameraApplyBtn) {
+    el.visualCameraApplyBtn.addEventListener("click", () => {
+      applyCameraEditorChanges().catch((err) => {
+        appendLog(`camera apply error: ${err.message}`);
+      });
     });
   }
   if (el.visualProjection) {
@@ -478,6 +570,7 @@ async function boot() {
   el.camera.addEventListener("change", () => {
     setCameraBrowserSelectedCamera(el.camera.value);
     syncVisualCameraFromRenderSelection();
+    if (typeof refreshVisualCameraEditorPanel === "function") refreshVisualCameraEditorPanel();
     lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
     if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
       refreshInteractivePreviewCameraFromSelection()
@@ -754,13 +847,7 @@ async function boot() {
     }
   });
 
-  el.pollInterval.addEventListener("change", () => {
-    const v = parseInt(el.pollInterval.value || "300", 10);
-    uiOptions.pollMs = Number.isFinite(v) ? Math.max(100, Math.min(10000, v)) : 300;
-    el.pollInterval.value = String(uiOptions.pollMs);
-    persistUIOptions();
-    appendLog(`render poll interval=${uiOptions.pollMs}ms`);
-  });
+
 
   if (el.textHistorySize) {
     el.textHistorySize.addEventListener("change", () => {
@@ -862,6 +949,49 @@ async function boot() {
   el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
   el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.bnTabScene) el.bnTabScene.addEventListener("click", () => setActiveTab("scene"));
+  if (el.bnTabRender) el.bnTabRender.addEventListener("click", () => setActiveTab("render"));
+  if (el.bnTabWorkspaces) el.bnTabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
+  if (el.bnTabVisual) el.bnTabVisual.addEventListener("click", () => setActiveTab("visual"));
+  if (el.bnTabGallery) el.bnTabGallery.addEventListener("click", () => setActiveTab("gallery"));
+
+  const SIDEBAR_EXPANDED_KEY = "xtracer-sidebar-rail-expanded";
+  const appShell = document.querySelector(".app-shell");
+  function setSidebarExpanded(expanded) {
+    if (!appShell) return;
+    appShell.classList.toggle("is-sidebar-expanded", expanded);
+    localStorage.setItem(SIDEBAR_EXPANDED_KEY, expanded ? "1" : "0");
+    if (el.sidebarRailToggle) {
+      el.sidebarRailToggle.setAttribute("aria-label", expanded ? "Collapse sidebar" : "Expand sidebar");
+      el.sidebarRailToggle.setAttribute("title", expanded ? "Collapse sidebar" : "Expand sidebar");
+    }
+  }
+  if (el.sidebarRailToggle) {
+    const savedExpanded = localStorage.getItem(SIDEBAR_EXPANDED_KEY) === "1";
+    setSidebarExpanded(savedExpanded);
+    el.sidebarRailToggle.addEventListener("click", () => {
+      const isExpanded = appShell && appShell.classList.contains("is-sidebar-expanded");
+      setSidebarExpanded(!isExpanded);
+    });
+  }
+
+  const persistentSidebar = document.querySelector(".persistent-sidebar");
+  function openControlsSheet() {
+    if (persistentSidebar) persistentSidebar.classList.add("is-sheet-open");
+    if (el.sheetBackdrop) el.sheetBackdrop.classList.add("is-open");
+  }
+  function closeControlsSheet() {
+    if (persistentSidebar) persistentSidebar.classList.remove("is-sheet-open");
+    if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
+  }
+  if (el.controlsSheetFab) el.controlsSheetFab.addEventListener("click", openControlsSheet);
+  if (el.sheetBackdrop) el.sheetBackdrop.addEventListener("click", closeControlsSheet);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) {
+      closeControlsSheet();
+    }
+  });
+
   if (el.mainMenuToggle) {
     el.mainMenuToggle.addEventListener("click", () => {
       const topbar = document.querySelector(".topbar");

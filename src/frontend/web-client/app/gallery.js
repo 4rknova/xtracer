@@ -2,6 +2,89 @@
 
 let galleryEntries = [];
 let galleryDetailId = null;
+let galleryCurrentPassIndex = -1; // -1 = main render, >=0 = pass index
+
+// ── Gallery TM state ───────────────────────────────────────────────────────
+
+const galleryTm = {
+  op:               "aces",
+  exposure:         1.0,
+  whitePoint:       1.0,
+  mantiukContrast:  0.1,
+  mantiukSaturation: 0.8,
+  mantiukDetail:    1.0,
+};
+
+function buildGalleryDetailImageUrl(entryId, passIndex) {
+  const op = galleryTm.op;
+  const parts = [`t=${Date.now()}`, `tm=${encodeURIComponent(op)}`];
+  const spec = toneMappingControlSpec(op);
+  if (spec.usesExposure) {
+    parts.push(`tm_exposure=${encodeURIComponent(galleryTm.exposure)}`);
+  }
+  if (spec.usesWhitePoint) {
+    parts.push(`tm_white_point=${encodeURIComponent(galleryTm.whitePoint)}`);
+  }
+  if (spec.usesMantiuk) {
+    parts.push(`tm_mantiuk_contrast=${encodeURIComponent(galleryTm.mantiukContrast)}`);
+    parts.push(`tm_mantiuk_saturation=${encodeURIComponent(galleryTm.mantiukSaturation)}`);
+    parts.push(`tm_mantiuk_detail=${encodeURIComponent(galleryTm.mantiukDetail)}`);
+  }
+  const qs = `?${parts.join("&")}`;
+  if (passIndex >= 0) {
+    return `/api/gallery/${encodeURIComponent(entryId)}/pass/${passIndex}/image${qs}`;
+  }
+  return `/api/gallery/${encodeURIComponent(entryId)}/image${qs}`;
+}
+
+function syncGalleryTmParamsVisibility() {
+  const op = galleryTm.op;
+  const spec = toneMappingControlSpec(op);
+  const paramsRow    = document.getElementById("galleryTmParams");
+  const exposureRow  = document.getElementById("galleryTmExposureRow");
+  const wpRow        = document.getElementById("galleryTmWhitePointRow");
+  const mContRow     = document.getElementById("galleryTmMantiukContrastRow");
+  const mSatRow      = document.getElementById("galleryTmMantiukSaturationRow");
+  const mDetRow      = document.getElementById("galleryTmMantiukDetailRow");
+  const anyParams    = spec.usesExposure || spec.usesWhitePoint || spec.usesMantiuk;
+  if (paramsRow)   paramsRow.hidden   = !anyParams;
+  if (exposureRow) exposureRow.hidden = !spec.usesExposure;
+  if (wpRow)       wpRow.hidden       = !spec.usesWhitePoint;
+  if (mContRow)    mContRow.hidden    = !spec.usesMantiuk;
+  if (mSatRow)     mSatRow.hidden     = !spec.usesMantiuk;
+  if (mDetRow)     mDetRow.hidden     = !spec.usesMantiuk;
+}
+
+function reloadGalleryDetailImage() {
+  if (!galleryDetailId) return;
+  const img = document.getElementById("galleryDetailImage");
+  if (!img) return;
+  img.onload = () => { resetGalleryView(); syncGalleryCanvasSize(); };
+  img.src = buildGalleryDetailImageUrl(galleryDetailId, galleryCurrentPassIndex);
+}
+
+function initGalleryTmFromEntry(entry) {
+  galleryTm.op               = (entry && entry.tm_op)               || "aces";
+  galleryTm.exposure         = (entry && entry.tm_exposure   != null) ? entry.tm_exposure   : 1.0;
+  galleryTm.whitePoint       = (entry && entry.tm_white_point != null) ? entry.tm_white_point : 1.0;
+  galleryTm.mantiukContrast  = (entry && entry.tm_mantiuk_contrast  != null) ? entry.tm_mantiuk_contrast  : 0.1;
+  galleryTm.mantiukSaturation = (entry && entry.tm_mantiuk_saturation != null) ? entry.tm_mantiuk_saturation : 0.8;
+  galleryTm.mantiukDetail    = (entry && entry.tm_mantiuk_detail    != null) ? entry.tm_mantiuk_detail    : 1.0;
+
+  const opSel  = document.getElementById("galleryTmOp");
+  const expInp = document.getElementById("galleryTmExposure");
+  const wpInp  = document.getElementById("galleryTmWhitePoint");
+  const mCont  = document.getElementById("galleryTmMantiukContrast");
+  const mSat   = document.getElementById("galleryTmMantiukSaturation");
+  const mDet   = document.getElementById("galleryTmMantiukDetail");
+  if (opSel)  opSel.value  = galleryTm.op;
+  if (expInp) expInp.value = galleryTm.exposure;
+  if (wpInp)  wpInp.value  = galleryTm.whitePoint;
+  if (mCont)  mCont.value  = galleryTm.mantiukContrast;
+  if (mSat)   mSat.value   = galleryTm.mantiukSaturation;
+  if (mDet)   mDet.value   = galleryTm.mantiukDetail;
+  syncGalleryTmParamsVisibility();
+}
 
 // ── Gallery detail zoom / pan / minimap / sampling ────────────────────────
 
@@ -262,6 +345,10 @@ function setGalleryViewSampling(mode) {
 function bindGalleryViewEvents() {
   const { canvas, wrap } = getGalleryViewEls();
   if (!canvas) return;
+  const touchPoints = {};
+  let pinchDistance = 0;
+  let pinchCenterX = 0;
+  let pinchCenterY = 0;
 
   // Populate the static sampling switch container in the toolbar.
   const sw = document.getElementById("gallerySamplingSwitch");
@@ -284,6 +371,19 @@ function bindGalleryViewEvents() {
   canvas.addEventListener("pointerdown", (evt) => {
     if (evt.button !== 0 && evt.button !== 1) return;
     evt.preventDefault();
+    if (evt.pointerType === "touch") {
+      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+      if (Object.keys(touchPoints).length >= 2) {
+        const ids = Object.keys(touchPoints).slice(0, 2);
+        const a = touchPoints[ids[0]];
+        const b = touchPoints[ids[1]];
+        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+        pinchCenterX = (a.x + b.x) * 0.5;
+        pinchCenterY = (a.y + b.y) * 0.5;
+        canvas.setPointerCapture(evt.pointerId);
+        return;
+      }
+    }
     // Minimap click-to-recenter
     if (evt.button === 0 && recenterGalleryFromMinimap(canvas, evt.clientX, evt.clientY, false)) {
       galleryView.panning  = true;
@@ -304,6 +404,38 @@ function bindGalleryViewEvents() {
   });
 
   canvas.addEventListener("pointermove", (evt) => {
+    if (evt.pointerType === "touch" && Object.prototype.hasOwnProperty.call(touchPoints, String(evt.pointerId))) {
+      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+      const ids = Object.keys(touchPoints);
+      if (ids.length >= 2) {
+        const a = touchPoints[ids[0]];
+        const b = touchPoints[ids[1]];
+        const dist = Math.max(1e-6, Math.hypot(a.x - b.x, a.y - b.y));
+        const centerX = (a.x + b.x) * 0.5;
+        const centerY = (a.y + b.y) * 0.5;
+        if (pinchDistance > 1e-6) {
+          // Zoom around the old pinch center, then pan by center movement.
+          const { canvas: cv } = getGalleryViewEls();
+          const rect = cv ? cv.getBoundingClientRect() : null;
+          if (rect) {
+            const c1x = pinchCenterX - rect.left - rect.width * 0.5;
+            const c1y = pinchCenterY - rect.top - rect.height * 0.5;
+            const nextScale = Math.min(galleryView.maxScale, Math.max(galleryView.minScale, galleryView.scale * (dist / pinchDistance)));
+            const k = nextScale / galleryView.scale;
+            galleryView.tx = c1x - (c1x - galleryView.tx) * k;
+            galleryView.ty = c1y - (c1y - galleryView.ty) * k;
+            galleryView.scale = nextScale;
+          }
+        }
+        galleryView.tx += centerX - pinchCenterX;
+        galleryView.ty += centerY - pinchCenterY;
+        applyGalleryTransform();
+        pinchDistance = dist;
+        pinchCenterX = centerX;
+        pinchCenterY = centerY;
+        return;
+      }
+    }
     if (!galleryView.panning || galleryView.pointerId !== evt.pointerId) return;
     if (galleryView.panMode === "minimap") {
       galleryView.lastX = evt.clientX;
@@ -321,6 +453,14 @@ function bindGalleryViewEvents() {
   });
 
   const endPan = (evt) => {
+    if (evt.pointerType === "touch") {
+      delete touchPoints[String(evt.pointerId)];
+      if (Object.keys(touchPoints).length < 2) {
+        pinchDistance = 0;
+        pinchCenterX = 0;
+        pinchCenterY = 0;
+      }
+    }
     if (!galleryView.panning || galleryView.pointerId !== evt.pointerId) return;
     galleryView.panning  = false;
     galleryView.panMode  = "";
@@ -417,6 +557,7 @@ function renderGalleryGrid(entries) {
 
 function openGalleryDetail(entry) {
   galleryDetailId = entry.id;
+  galleryCurrentPassIndex = -1;
 
   const panel = document.getElementById("galleryDetail");
   const grid = document.querySelector(".gallery-panel");
@@ -429,6 +570,14 @@ function openGalleryDetail(entry) {
   if (grid) grid.hidden = true;
   if (panel) panel.hidden = false;
 
+  const exportFormatSel = document.getElementById("galleryExportFormat");
+  if (exportFormatSel && window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelect === "function") {
+    window.XTracerWidgets.enhanceSelect(exportFormatSel);
+  }
+
+  initGalleryTmFromEntry(entry);
+  updateGalleryExportUi();
+
   if (title) title.textContent = entry.scene || entry.id;
   if (img) {
     resetGalleryView();
@@ -436,7 +585,7 @@ function openGalleryDetail(entry) {
       resetGalleryView();
       syncGalleryCanvasSize();
     };
-    img.src = galleryThumbUrl(entry.id);
+    img.src = buildGalleryDetailImageUrl(entry.id, -1);
     img.alt = entry.scene || entry.id;
     if (img.complete && img.naturalWidth) syncGalleryCanvasSize();
   }
@@ -474,12 +623,13 @@ function openGalleryDetail(entry) {
         t.alt = `Pass ${i + 1}`;
         btn.appendChild(t);
         btn.addEventListener("click", () => {
+          galleryCurrentPassIndex = i;
           if (img) {
             img.onload = () => {
               resetGalleryView();
               syncGalleryCanvasSize();
             };
-            img.src = galleryPassThumbUrl(entry.id, i);
+            img.src = buildGalleryDetailImageUrl(entry.id, i);
           }
           passThumbs.querySelectorAll(".gallery-pass-thumb-btn").forEach((b) => b.classList.remove("is-active"));
           btn.classList.add("is-active");
@@ -493,8 +643,91 @@ function openGalleryDetail(entry) {
   }
 }
 
+// ── Gallery export ──────────────────────────────────────────────────────────
+
+let galleryExportInFlight = false;
+
+function selectedGalleryExportFormat() {
+  const sel = document.getElementById("galleryExportFormat");
+  const raw = String(sel && sel.value ? sel.value : "png").toLowerCase();
+  if (raw === "png" || raw === "jpg" || raw === "bmp" || raw === "tga" || raw === "exr" || raw === "hdr") return raw;
+  return "png";
+}
+
+function buildGalleryExportUrl(entryId, passIndex, format) {
+  const parts = [`format=${encodeURIComponent(format)}`];
+  const isHdrFormat = format === "exr" || format === "hdr";
+  if (!isHdrFormat) {
+    const op = galleryTm.op;
+    parts.push(`tm=${encodeURIComponent(op)}`);
+    const spec = toneMappingControlSpec(op);
+    if (spec.usesExposure) parts.push(`tm_exposure=${encodeURIComponent(galleryTm.exposure)}`);
+    if (spec.usesWhitePoint) parts.push(`tm_white_point=${encodeURIComponent(galleryTm.whitePoint)}`);
+    if (spec.usesMantiuk) {
+      parts.push(`tm_mantiuk_contrast=${encodeURIComponent(galleryTm.mantiukContrast)}`);
+      parts.push(`tm_mantiuk_saturation=${encodeURIComponent(galleryTm.mantiukSaturation)}`);
+      parts.push(`tm_mantiuk_detail=${encodeURIComponent(galleryTm.mantiukDetail)}`);
+    }
+  }
+  const qs = `?${parts.join("&")}`;
+  if (passIndex >= 0) {
+    return `/api/gallery/${encodeURIComponent(entryId)}/pass/${passIndex}/export${qs}`;
+  }
+  return `/api/gallery/${encodeURIComponent(entryId)}/export${qs}`;
+}
+
+function updateGalleryExportUi() {
+  const btn = document.getElementById("galleryExportBtn");
+  const shell = document.getElementById("galleryExportShell");
+  const fmt = selectedGalleryExportFormat().toUpperCase();
+  const enabled = !!galleryDetailId && !galleryExportInFlight;
+  const busy = galleryExportInFlight;
+  if (btn) {
+    btn.disabled = !enabled;
+    btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    btn.classList.toggle("is-disabled", !enabled);
+    btn.classList.toggle("is-busy", busy);
+    btn.classList.toggle("is-ready", enabled);
+  }
+  if (typeof syncRenderExportButtonDecor === "function") syncRenderExportButtonDecor(btn, fmt);
+  if (shell) {
+    shell.classList.toggle("is-disabled", !enabled);
+    shell.classList.toggle("is-busy", busy);
+    shell.classList.toggle("is-ready", enabled);
+  }
+}
+
+async function handleGalleryExportClick() {
+  if (!galleryDetailId || galleryExportInFlight) return;
+  const format = selectedGalleryExportFormat();
+  const url = buildGalleryExportUrl(galleryDetailId, galleryCurrentPassIndex, format);
+  galleryExportInFlight = true;
+  updateGalleryExportUi();
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`export failed: ${res.status}`);
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `gallery_export.${format}`;
+    const tmp = document.createElement("a");
+    tmp.href = URL.createObjectURL(blob);
+    tmp.download = filename;
+    document.body.appendChild(tmp);
+    tmp.click();
+    tmp.remove();
+    URL.revokeObjectURL(tmp.href);
+  } catch (err) {
+    if (typeof appendLog === "function") appendLog(`gallery export failed: ${err.message}`);
+  } finally {
+    galleryExportInFlight = false;
+    updateGalleryExportUi();
+  }
+}
+
 function closeGalleryDetail() {
   galleryDetailId = null;
+  updateGalleryExportUi();
   const panel = document.getElementById("galleryDetail");
   const grid = document.querySelector(".gallery-panel");
   if (panel) panel.hidden = true;
@@ -537,6 +770,71 @@ document.addEventListener("DOMContentLoaded", () => {
       if (galleryDetailId) deleteGalleryEntry(galleryDetailId);
     });
   }
+
+  // ── Tone mapping controls ────────────────────────────────────────────────
+  const tmOp = document.getElementById("galleryTmOp");
+  if (tmOp) {
+    tmOp.addEventListener("change", () => {
+      galleryTm.op = tmOp.value;
+      syncGalleryTmParamsVisibility();
+      reloadGalleryDetailImage();
+    });
+  }
+
+  const tmExposure = document.getElementById("galleryTmExposure");
+  if (tmExposure) {
+    tmExposure.addEventListener("change", () => {
+      const v = parseFloat(tmExposure.value);
+      galleryTm.exposure = Number.isFinite(v) && v > 0 ? v : 1.0;
+      reloadGalleryDetailImage();
+    });
+  }
+
+  const tmWhitePoint = document.getElementById("galleryTmWhitePoint");
+  if (tmWhitePoint) {
+    tmWhitePoint.addEventListener("change", () => {
+      const v = parseFloat(tmWhitePoint.value);
+      galleryTm.whitePoint = Number.isFinite(v) && v > 0 ? v : 1.0;
+      reloadGalleryDetailImage();
+    });
+  }
+
+  const tmMantiukContrast = document.getElementById("galleryTmMantiukContrast");
+  if (tmMantiukContrast) {
+    tmMantiukContrast.addEventListener("change", () => {
+      const v = parseFloat(tmMantiukContrast.value);
+      galleryTm.mantiukContrast = Number.isFinite(v) ? Math.min(1.0, Math.max(0.0, v)) : 0.1;
+      reloadGalleryDetailImage();
+    });
+  }
+
+  const tmMantiukSaturation = document.getElementById("galleryTmMantiukSaturation");
+  if (tmMantiukSaturation) {
+    tmMantiukSaturation.addEventListener("change", () => {
+      const v = parseFloat(tmMantiukSaturation.value);
+      galleryTm.mantiukSaturation = Number.isFinite(v) ? Math.min(2.0, Math.max(0.0, v)) : 0.8;
+      reloadGalleryDetailImage();
+    });
+  }
+
+  const tmMantiukDetail = document.getElementById("galleryTmMantiukDetail");
+  if (tmMantiukDetail) {
+    tmMantiukDetail.addEventListener("change", () => {
+      const v = parseFloat(tmMantiukDetail.value);
+      galleryTm.mantiukDetail = Number.isFinite(v) ? Math.min(99.0, Math.max(1.0, v)) : 1.0;
+      reloadGalleryDetailImage();
+    });
+  }
+
+  // ── Export controls ──────────────────────────────────────────────────────
+  const exportBtn = document.getElementById("galleryExportBtn");
+  if (exportBtn) {
+    if (typeof decorateRenderExportButton === "function") decorateRenderExportButton(exportBtn);
+    exportBtn.addEventListener("click", handleGalleryExportClick);
+  }
+
+  const exportFormat = document.getElementById("galleryExportFormat");
+  if (exportFormat) exportFormat.addEventListener("change", updateGalleryExportUi);
 
   bindGalleryViewEvents();
 });

@@ -46,15 +46,31 @@
     });
   }
 
+  const TAB_ICONS = {
+    scene: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 1.5L18.5 8H14V3.5zM8 13h8v1.5H8V13zm0 3.5h5v1.5H8V16.5z"></path></svg>',
+    render: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"></path></svg>',
+    workspaces: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path></svg>',
+    visual: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>',
+    gallery: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zm-11-4 2.53 3.21L17 11l5 7H8l3-6zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"></path></svg>',
+  };
+
+  function makeTabIcon(mode) {
+    const svg = TAB_ICONS[mode];
+    if (!svg) return null;
+    const wrap = dom.el("span", { className: "tab-icon" });
+    wrap.innerHTML = svg;
+    return wrap;
+  }
+
   function createMainTabs() {
     const tabs = [
       { id: "tabScene", label: "Scene", mode: "scene", active: true },
       { id: "tabRender", label: "Render", mode: "render" },
       {
         id: "tabWorkspaces",
-        label: "Workspaces",
         mode: "workspaces",
         children: [
+          makeTabIcon("workspaces"),
           dom.el("span", { className: "tab-label tab-label-desktop", text: "Workspaces" }),
           dom.el("span", { className: "tab-label tab-label-mobile", text: "Spaces" }),
         ],
@@ -75,7 +91,10 @@
         ariaLabel: tab.ariaLabel || null,
         className: `tab main-menu__item${tab.active ? " active" : ""}`,
         dataset: { mode: tab.mode },
-        children: tab.children || dom.el("span", { className: "tab-label", text: tab.label }),
+        children: tab.children || [
+          makeTabIcon(tab.mode),
+          dom.el("span", { className: "tab-label", text: tab.label }),
+        ],
       })),
     });
   }

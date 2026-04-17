@@ -26,6 +26,7 @@
   <main class="page">
     <div class="app-shell">
       <aside class="persistent-sidebar">
+        <div class="sheet-handle" aria-hidden="true"></div>
         <header class="topbar">
           <div class="topbar-head">
             <div class="brand-lockup">
@@ -77,6 +78,18 @@
                   <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
                   <circle cx="12" cy="8" r="1.1"></circle>
                   <path d="M11.2 10.75h1.6v5.2h-1.6z"></path>
+                </svg>
+              </button>
+              <button
+                id="sidebarRailToggle"
+                class="main-menu-settings sidebar-rail-toggle"
+                type="button"
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="rail-icon-expand" d="M9 18l6-6-6-6"></path>
+                  <path class="rail-icon-collapse" d="M15 18l-6-6 6-6"></path>
                 </svg>
               </button>
               <button
@@ -153,33 +166,28 @@
               </section>
               <section class="render-stats-group workspace-info-group">
                 <h4>Tile Heatmap</h4>
-                <label class="xui-field xui-field--checkbox render-stats-toggle">
-                  <span class="xui-field__check-row">
-                    <span class="xui-field__check-label">Enable tile heatmap overlay</span>
-                    <input id="tileHeatmapEnabled" type="checkbox" checked>
-                  </span>
-                </label>
+                <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
                 <p id="tileHeatmapBuckets" class="workspace-active-hint"><span class="workspace-active-label">Buckets</span><code class="workspace-active-value">fast - | mid - | slow -</code></p>
                 <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
                 <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
                 <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
                 <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
               </section>
+              <section id="renderStatusGroup" class="render-stats-group render-status-stats-group">
+                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code id="statusThreads" class="workspace-active-value status-field status-threads">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass" class="workspace-active-value status-field status-pass">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code id="statusPercent" class="workspace-active-value status-field status-percent">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code id="renderTimer" class="workspace-active-value status-field status-timer">-</code></p>
+              </section>
+            </div>
+            <div id="previewHeadline" class="preview-headline is-idle">
+              <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn" type="button">Render</button>
+              <p id="status" class="status-chip">Idle</p>
+              <div id="progressBar" class="bar"><div id="progress"></div></div>
             </div>
           </section>
           <section class="panel panel-preview">
             <div class="preview-toolbar">
-              <div id="previewHeadline" class="preview-headline is-idle">
-                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn" type="button">Render</button>
-                <div class="preview-status-row">
-                  <p id="status" class="status-chip">Idle</p>
-                  <span id="statusThreads" class="status-field status-threads" hidden>threads 0</span>
-                  <span id="statusPass" class="status-field status-pass" hidden>pass 1/1</span>
-                  <span id="statusPercent" class="status-field status-percent" hidden>0.0%</span>
-                  <span id="renderTimer" class="status-field status-timer" hidden>00:00</span>
-                </div>
-                <div id="progressBar" class="bar"><div id="progress"></div></div>
-              </div>
               <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls" aria-label="Preview export and sampling controls">
                 <div id="renderPreviewViewControls" class="render-preview-toolbar-view">
                   <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
@@ -361,7 +369,67 @@
               <img id="galleryDetailImage" class="gallery-detail-image" alt="Render preview">
               <canvas id="galleryDetailCanvas" class="gallery-detail-canvas"></canvas>
             </div>
-            <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
+            <div class="gallery-detail-sidebar">
+              <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
+              <div class="gallery-detail-tm" id="galleryDetailTm">
+                <div class="gallery-tm-header">Tone Mapping</div>
+                <label class="xui-field">
+                  <span class="xui-field__label">Operator</span>
+                  <select id="galleryTmOp" class="xui-select">
+                    <option value="aces">ACES (Fitted)</option>
+                    <option value="agx">AgX</option>
+                    <option value="khronos_pbr">Khronos PBR Neutral</option>
+                    <option value="hable">Hable (Uncharted 2)</option>
+                    <option value="uchimura">Uchimura (Gran Turismo)</option>
+                    <option value="lottes">Lottes</option>
+                    <option value="reinhard">Reinhard</option>
+                    <option value="reinhard_luma">Reinhard (Luma)</option>
+                    <option value="cineon">Cineon</option>
+                    <option value="exponential">Exponential</option>
+                    <option value="mantiuk_2006">Mantiuk 2006</option>
+                    <option value="none">None</option>
+                  </select>
+                </label>
+                <div id="galleryTmParams" class="gallery-tm-params" hidden>
+                  <label id="galleryTmExposureRow" class="xui-field">
+                    <span class="xui-field__label">Exposure</span>
+                    <input id="galleryTmExposure" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
+                  </label>
+                  <label id="galleryTmWhitePointRow" class="xui-field">
+                    <span class="xui-field__label">White Point</span>
+                    <input id="galleryTmWhitePoint" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
+                  </label>
+                  <label id="galleryTmMantiukContrastRow" class="xui-field">
+                    <span class="xui-field__label">Contrast</span>
+                    <input id="galleryTmMantiukContrast" class="xui-input" type="number" min="0" max="1" step="0.01" value="0.1">
+                  </label>
+                  <label id="galleryTmMantiukSaturationRow" class="xui-field">
+                    <span class="xui-field__label">Saturation</span>
+                    <input id="galleryTmMantiukSaturation" class="xui-input" type="number" min="0" max="2" step="0.01" value="0.8">
+                  </label>
+                  <label id="galleryTmMantiukDetailRow" class="xui-field">
+                    <span class="xui-field__label">Detail</span>
+                    <input id="galleryTmMantiukDetail" class="xui-input" type="number" min="1" max="99" step="1" value="1">
+                  </label>
+                </div>
+              </div>
+              <div class="gallery-detail-export">
+                <div class="render-toolbar-save-shell is-disabled" id="galleryExportShell">
+                  <button id="galleryExportBtn" class="xui-button xui-button--secondary is-disabled export-download-link" type="button" disabled aria-disabled="true" title="Save As" aria-label="Save As">Save As</button>
+                  <label for="galleryExportFormat" class="xui-field render-toolbar-save-format">
+                    <span class="xui-field__label sr-only">Export Format</span>
+                    <select id="galleryExportFormat" class="xui-select render-toolbar-save-select export-format" aria-label="Export format">
+                      <option value="png">PNG</option>
+                      <option value="jpg">JPG</option>
+                      <option value="bmp">BMP</option>
+                      <option value="tga">TGA</option>
+                      <option value="exr">EXR</option>
+                      <option value="hdr">HDR</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="gallery-pass-strip" id="galleryPassStrip" hidden>
             <div class="gallery-pass-label">Passes</div>
@@ -377,10 +445,7 @@
               <h2>Log</h2>
             </div>
             <div class="log-actions">
-              <label class="log-head-toggle" title="Auto-scroll frontend log output">
-                <span>Auto-scroll</span>
-                <input id="autoScrollLogs" type="checkbox" checked>
-              </label>
+              <label class="xui-switch log-head-toggle" title="Auto-scroll frontend log output"><span class="xui-switch__label">Auto-scroll</span><input id="autoScrollLogs" type="checkbox" checked></label>
               <button id="clearLogsBtn" class="log-clear-btn" type="button" aria-label="Clear logs" title="Clear logs">Clear</button>
             </div>
           </div>
@@ -425,10 +490,6 @@
               </div>
               <div class="about-meta-list">
                 <label class="xui-field">
-                  <span class="xui-field__label">Render Poll Interval (ms)</span>
-                  <input id="pollInterval" class="xui-input" type="number" min="100" max="10000" step="50" value="300">
-                </label>
-                <label class="xui-field">
                   <span class="xui-field__label">Text History Size</span>
                   <input id="textHistorySize" class="xui-input" type="number" min="10" max="2000" step="10" value="200">
                 </label>
@@ -445,18 +506,8 @@
               <h3>Behavior</h3>
             </div>
             <div class="about-meta-list">
-              <label class="xui-field xui-field--checkbox">
-                <span class="xui-field__check-row">
-                  <span class="xui-field__check-label">Auto-load scene source in editor when scene changes</span>
-                  <input id="autoLoadEditor" type="checkbox" checked>
-                </span>
-              </label>
-              <label class="xui-field xui-field--checkbox">
-                <span class="xui-field__check-row">
-                  <span class="xui-field__check-label">Show tutorial on next launch</span>
-                  <input id="ftueShowOnNextLaunch" type="checkbox">
-                </span>
-              </label>
+              <label class="xui-switch"><span class="xui-switch__label">Auto-load scene source in editor when scene changes</span><input id="autoLoadEditor" type="checkbox" checked></label>
+              <label class="xui-switch"><span class="xui-switch__label">Show tutorial on next launch</span><input id="ftueShowOnNextLaunch" type="checkbox"></label>
               <button id="ftueStartNowBtn" class="xui-button xui-button--primary" type="button">Start Tutorial Now</button>
               <p class="settings-note">Backend logs use wait polling. Logs tab and background wait intervals are configurable.</p>
             </div>
@@ -560,10 +611,58 @@
             </div>
             <div id="aboutThirdPartyList" class="about-third-party-list">loading...</div>
           </section>
+
+          <section class="about-card about-devtools-card">
+            <div class="about-card-head" data-widget-panel-head>
+              <h3>Developer Tools</h3>
+            </div>
+            <div class="about-meta-list">
+              <div class="about-meta-row">
+                <span class="about-key">Sampling Visualization</span>
+                <a href="/sampling.html" target="_blank" rel="noopener noreferrer">/sampling.html</a>
+              </div>
+              <div class="about-meta-row">
+                <span class="about-key">UI Showcase</span>
+                <a href="/showcase.html" target="_blank" rel="noopener noreferrer">/showcase.html</a>
+              </div>
+              <div class="about-meta-row">
+                <span class="about-key">Furnace Tests</span>
+                <a href="/furnace.html" target="_blank" rel="noopener noreferrer">/furnace.html</a>
+              </div>
+            </div>
+          </section>
         </section>
       </section>
       </div>
     </div>
+    <nav id="bottomNav" class="bottom-nav" aria-label="Primary navigation">
+      <button id="bnTabScene" class="bottom-nav-item active" type="button" data-mode="scene" aria-label="Scene" aria-pressed="true">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 1.5L18.5 8H14V3.5zM8 13h8v1.5H8V13zm0 3.5h5v1.5H8V16.5z"></path></svg></span>
+        <span class="bottom-nav-label">Scene</span>
+      </button>
+      <button id="bnTabRender" class="bottom-nav-item" type="button" data-mode="render" aria-label="Render" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"></path></svg></span>
+        <span class="bottom-nav-label">Render</span>
+      </button>
+      <button id="bnTabWorkspaces" class="bottom-nav-item" type="button" data-mode="workspaces" aria-label="Workspaces" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path></svg></span>
+        <span class="bottom-nav-label">Spaces</span>
+      </button>
+      <button id="bnTabVisual" class="bottom-nav-item" type="button" data-mode="visual" aria-label="Editor" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg></span>
+        <span class="bottom-nav-label">Editor</span>
+      </button>
+      <button id="bnTabGallery" class="bottom-nav-item" type="button" data-mode="gallery" aria-label="Gallery" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zm-11-4 2.53 3.21L17 11l5 7H8l3-6zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"></path></svg></span>
+        <span class="bottom-nav-label">Gallery</span>
+      </button>
+    </nav>
+    <div id="sheetBackdrop" class="sheet-backdrop" aria-hidden="true"></div>
+    <button id="controlsSheetFab" class="controls-sheet-fab" type="button" aria-label="Open render controls">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M4 6h16v2H4zm2 5h12v2H6zm2 5h8v2H8z"/>
+      </svg>
+    </button>
   </main>
 
   <div id="ftueOverlay" class="ftue-overlay" hidden aria-hidden="true">
@@ -606,6 +705,7 @@
   <script src="/app/widgets/menu.js"></script>
   <script src="/app/widgets/toolbar.js"></script>
   <script src="/app/widgets/sampling_switch.js"></script>
+  <script src="/app/widgets/toggle.js"></script>
   <script src="/app/widgets/panel_header.js"></script>
   <script src="/app/widgets/key_hint.js"></script>
   <script src="/app/widgets/dependencies.js"></script>

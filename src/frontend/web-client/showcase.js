@@ -357,6 +357,12 @@
             }),
             widgets.createCheckboxField({ label: "Enable post filters", checked: true }),
           ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack showcase-demo-stack--form" }),
+          demoCard("Toggle", "On/off switch control. createToggle produces a standalone xui-switch; createCheckboxField also emits xui-switch markup when used in a form context.", [
+            widgets.createToggle({ label: "Enable feature", checked: true }),
+            widgets.createToggle({ label: "Dark mode sync" }),
+            widgets.createToggle({ label: "Disabled option", checked: true, disabled: true }),
+            widgets.createToggle({ label: "Auto-scroll logs", checked: false, title: "Scroll to newest entry" }),
+          ], { className: "showcase-specimen--widgets", bodyClassName: "showcase-demo-stack showcase-demo-stack--form" }),
           demoCard("Create Field", "Integrated name-and-create control for inline creation flows.", [
             typeof widgets.createCreateField === "function"
               ? widgets.createCreateField({

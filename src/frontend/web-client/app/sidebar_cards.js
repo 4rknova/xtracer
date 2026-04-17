@@ -91,12 +91,7 @@
         <div id="integratorControlsSection" hidden>
           <div id="integratorControls"></div>
         </div>
-        <label class="xui-field xui-field--checkbox">
-          <span class="xui-field__check-row">
-            <span class="xui-field__check-label">Clear preview on render</span>
-            <input id="clearPreviewOnRender" type="checkbox">
-          </span>
-        </label>
+        <label class="xui-switch"><span class="xui-switch__label">Clear preview on render</span><input id="clearPreviewOnRender" type="checkbox"></label>
       `,
     },
     {
@@ -152,6 +147,30 @@
           <span class="xui-field__label">Camera</span>
           <select id="visualCamera" class="xui-select visual-camera-inline" aria-label="Visual camera"></select>
         </label>
+        <div id="visualCameraEditor" class="visual-camera-editor" hidden>
+          <div class="visual-camera-editor__row">
+            <span class="visual-camera-editor__label">Pos</span>
+            <input id="visualCamPosX" class="visual-camera-editor__input" type="number" step="any" placeholder="X" aria-label="Position X">
+            <input id="visualCamPosY" class="visual-camera-editor__input" type="number" step="any" placeholder="Y" aria-label="Position Y">
+            <input id="visualCamPosZ" class="visual-camera-editor__input" type="number" step="any" placeholder="Z" aria-label="Position Z">
+          </div>
+          <div class="visual-camera-editor__row">
+            <span class="visual-camera-editor__label">Target</span>
+            <input id="visualCamTgtX" class="visual-camera-editor__input" type="number" step="any" placeholder="X" aria-label="Target X">
+            <input id="visualCamTgtY" class="visual-camera-editor__input" type="number" step="any" placeholder="Y" aria-label="Target Y">
+            <input id="visualCamTgtZ" class="visual-camera-editor__input" type="number" step="any" placeholder="Z" aria-label="Target Z">
+          </div>
+          <div class="visual-camera-editor__row">
+            <span class="visual-camera-editor__label">F-Len</span>
+            <input id="visualCamFLength" class="visual-camera-editor__input visual-camera-editor__input--wide" type="number" step="any" min="0" placeholder="—" aria-label="Focal length">
+            <span class="visual-camera-editor__label">FOV</span>
+            <input id="visualCamFov" class="visual-camera-editor__input visual-camera-editor__input--wide" type="number" step="1" min="1" max="179" placeholder="—" aria-label="Field of view">
+          </div>
+          <div class="visual-camera-editor__actions">
+            <button id="visualCameraSnapBtn" class="visual-camera-editor__btn visual-camera-editor__btn--secondary" type="button" title="Set position and target to match current viewport viewpoint">Snap to View</button>
+            <button id="visualCameraApplyBtn" class="visual-camera-editor__btn visual-camera-editor__btn--primary" type="button">Apply</button>
+          </div>
+        </div>
         <label for="visualProjection" class="xui-field">
           <span class="xui-field__label">Projection</span>
           <select id="visualProjection" class="xui-select visual-projection-inline" aria-label="Visual projection">
@@ -164,24 +183,9 @@
           <input id="visualSceneScale" class="xui-input visual-scene-scale-inline" type="number" min="0.01" max="100" step="0.1" value="1" aria-label="3D scene scale multiplier">
         </label>
         <button id="visualLoadBtn" class="action-btn xui-button xui-button--primary visual-load-btn" type="button" title="Reload visual scene">Load Visual</button>
-        <label class="xui-field xui-field--checkbox" title="Show or hide visual grid">
-          <span class="xui-field__check-row">
-            <span class="xui-field__check-label">Grid</span>
-            <input id="visualShowGrid" type="checkbox" checked>
-          </span>
-        </label>
-        <label class="xui-field xui-field--checkbox" title="Show scene-wide BVH boxes">
-          <span class="xui-field__check-row">
-            <span class="xui-field__check-label">Global BVH</span>
-            <input id="visualShowGlobalBvh" type="checkbox">
-          </span>
-        </label>
-        <label class="xui-field xui-field--checkbox" title="Show mesh-local BVH boxes">
-          <span class="xui-field__check-row">
-            <span class="xui-field__check-label">Mesh BVH</span>
-            <input id="visualShowMeshBvh" type="checkbox">
-          </span>
-        </label>
+        <label class="xui-switch" title="Show or hide visual grid"><span class="xui-switch__label">Grid</span><input id="visualShowGrid" type="checkbox" checked></label>
+        <label class="xui-switch" title="Show scene-wide BVH boxes"><span class="xui-switch__label">Global BVH</span><input id="visualShowGlobalBvh" type="checkbox"></label>
+        <label class="xui-switch" title="Show mesh-local BVH boxes"><span class="xui-switch__label">Mesh BVH</span><input id="visualShowMeshBvh" type="checkbox"></label>
         <section class="visual-controls-info" aria-label="3D controls help">
           <h4 class="visual-controls-title">Controls</h4>
           <div class="visual-controls-list">
@@ -283,12 +287,7 @@
       note: "Filter chain order",
       open: true,
       bodyHTML: `
-        <label class="xui-field xui-field--checkbox" for="postFiltersEnabled">
-          <span class="xui-field__check-row">
-            <span class="xui-field__check-label">Enable Post Filters</span>
-            <input id="postFiltersEnabled" type="checkbox" checked>
-          </span>
-        </label>
+        <label class="xui-switch"><span class="xui-switch__label">Enable Post Filters</span><input id="postFiltersEnabled" type="checkbox" checked></label>
         <div class="post-filters-toolbar">
           <select id="postFilterType" class="xui-select" aria-label="Filter to add">
             <option value="desaturate">Desaturate</option>

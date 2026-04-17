@@ -1,8 +1,7 @@
 {
   "integrators": [
     { "id": "raytracer", "label": "Raytracer (Whitted)" },
-    { "id": "pathtracer_mis", "label": "Pathtracer (MIS Diffuse)" },
-    { "id": "pathtracer_mis_full", "label": "Pathtracer (MIS Full)" },
+    { "id": "pathtracer_mis", "label": "Pathtracer (MIS)" },
     { "id": "pathtracer", "label": "Pathtracer (Brute Force)" },
     {
       "id": "photon_mapping",

@@ -178,21 +178,10 @@ function setStatus(text) {
   controls.status.classList.remove("is-idle", "is-running", "is-error");
   controls.status.classList.add(`is-${state}`);
   if (controls.statusPercent) {
-    controls.statusPercent.hidden = !statusPercent;
-    controls.statusPercent.textContent = statusPercent || "0.0%";
+    controls.statusPercent.textContent = statusPercent || "-";
   }
-  if (controls.renderTimer) {
-    if (statusTimer) {
-      // Server provided explicit elapsed time — use it directly.
-      controls.renderTimer.hidden = false;
-      controls.renderTimer.textContent = statusTimer;
-    } else if (!isRenderActive) {
-      // Idle: hide the timer and reset its text.
-      controls.renderTimer.hidden = true;
-      controls.renderTimer.textContent = "00:00";
-    }
-    // During an active render with no server-provided timer, leave the timer
-    // visible and let updateRenderTimer() keep it ticking client-side.
+  if (controls.renderTimer && statusTimer) {
+    controls.renderTimer.textContent = statusTimer;
   }
 }
 
@@ -200,12 +189,7 @@ function setStatusThreads(threads) {
   if (!el.statusThreads) return;
   const n = Number(threads);
   const valid = Number.isFinite(n) && n > 0;
-  el.statusThreads.hidden = !valid;
-  if (valid) {
-    el.statusThreads.textContent = `threads ${Math.max(1, Math.floor(n))}`;
-  } else {
-    el.statusThreads.textContent = "threads 0";
-  }
+  el.statusThreads.textContent = valid ? `${Math.max(1, Math.floor(n))}` : "-";
 }
 
 function setStatusPass(currentPass, totalPasses, mode) {
@@ -215,14 +199,12 @@ function setStatusPass(currentPass, totalPasses, mode) {
   const total = Math.max(0, Number(totalPasses) || 0);
   let current = Math.max(0, Number(currentPass) || 0);
   if (!isProgressive || total <= 0 || !renderActive) {
-    el.statusPass.hidden = true;
-    el.statusPass.textContent = "pass 1/1";
+    el.statusPass.textContent = "-";
     return;
   }
   if (current <= 0) current = 1;
   if (current > total) current = total;
-  el.statusPass.hidden = false;
-  el.statusPass.textContent = `pass ${Math.floor(current)}/${Math.floor(total)}`;
+  el.statusPass.textContent = `${Math.floor(current)}/${Math.floor(total)}`;
 }
 
 
@@ -361,7 +343,6 @@ function syncRenderTimerToServer(serverElapsedMs) {
 function updateRenderTimer() {
   if (!renderActive || !el.renderTimer || renderStartMs <= 0) return;
   const elapsed = Math.max(0, Date.now() - renderStartMs);
-  el.renderTimer.hidden = false;
   el.renderTimer.textContent = formatElapsed(elapsed);
 }
 
@@ -392,6 +373,7 @@ function setRenderActive(active) {
     setStatusThreads(0);
     setStatusPass(0, 0, "");
     setStatus("Idle");
+    if (el.renderTimer) el.renderTimer.textContent = "-";
   }
   if (typeof updateRenderActionButton === "function") {
     updateRenderActionButton();
@@ -899,6 +881,17 @@ function createServerApi() {
       if (!res.ok) return null;
       return res.blob();
     },
+    async putJobLiveTm(jobId, opts) {
+      const parts = [];
+      appendToneMappingQuery(parts, opts || {});
+      const body = parts.join("&");
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/live-tm`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      return res.ok;
+    },
     async getJobExport(jobId, format, opts) {
       const fmt = encodeURIComponent(String(format || "png").toLowerCase());
       const parts = [`format=${fmt}`];
@@ -1162,7 +1155,7 @@ async function pollBackendLogs() {
     appendLog(`backend logs unavailable: ${err.message}`);
     await new Promise((r) => setTimeout(r, 1000));
   } finally {
-    setTimeout(pollBackendLogs, Math.max(500, uiOptions.pollMs));
+    setTimeout(pollBackendLogs, 500);
   }
 }
 

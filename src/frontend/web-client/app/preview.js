@@ -577,7 +577,7 @@ function updateActivePreviewTilesFromJob(data) {
     entry.seenCount += 1;
   }
 
-  const finalizeMs = Math.max(220, Math.floor((Number(uiOptions.pollMs) || 300) * 1.4));
+  const finalizeMs = 420;
   tileHeatmapState.tiles.forEach((entry, key) => {
     if (!entry || entry.done) return;
     if (activeKeys.has(key)) return;
@@ -813,6 +813,19 @@ function bindPreviewInteraction() {
       el.previewFrame.setPointerCapture(evt.pointerId);
       return;
     }
+    if (evt.pointerType === "touch") {
+      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+      if (Object.keys(touchPoints).length >= 2) {
+        const ids = Object.keys(touchPoints).slice(0, 2);
+        const a = touchPoints[ids[0]];
+        const b = touchPoints[ids[1]];
+        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+        pinchCenterX = (a.x + b.x) * 0.5;
+        pinchCenterY = (a.y + b.y) * 0.5;
+        el.previewFrame.setPointerCapture(evt.pointerId);
+        return;
+      }
+    }
     if (evt.button === 0 && recenterPreviewFromMinimap(evt.clientX, evt.clientY)) {
       previewView.panning = true;
       previewView.panMode = "minimap";
@@ -863,6 +876,35 @@ function bindPreviewInteraction() {
       if (previewView.panMode === "pan") interactivePanCamera(-dx, -dy);
       else interactiveLookCamera(dx, dy);
       return;
+    }
+    if (evt.pointerType === "touch" && Object.prototype.hasOwnProperty.call(touchPoints, String(evt.pointerId))) {
+      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
+      const ids = Object.keys(touchPoints);
+      if (ids.length >= 2) {
+        const a = touchPoints[ids[0]];
+        const b = touchPoints[ids[1]];
+        const dist = Math.max(1e-6, Math.hypot(a.x - b.x, a.y - b.y));
+        const centerX = (a.x + b.x) * 0.5;
+        const centerY = (a.y + b.y) * 0.5;
+        if (pinchDistance > 1e-6) {
+          // Zoom around the old pinch center, then pan by center movement.
+          const rect = el.previewFrame.getBoundingClientRect();
+          const c1x = pinchCenterX - rect.left - rect.width * 0.5;
+          const c1y = pinchCenterY - rect.top - rect.height * 0.5;
+          const nextScale = clamp(previewView.scale * (dist / pinchDistance), previewView.minScale, previewView.maxScale);
+          const k = nextScale / previewView.scale;
+          previewView.tx = c1x - (c1x - previewView.tx) * k;
+          previewView.ty = c1y - (c1y - previewView.ty) * k;
+          previewView.scale = nextScale;
+        }
+        previewView.tx += centerX - pinchCenterX;
+        previewView.ty += centerY - pinchCenterY;
+        applyPreviewTransform();
+        pinchDistance = dist;
+        pinchCenterX = centerX;
+        pinchCenterY = centerY;
+        return;
+      }
     }
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     if (previewView.panMode === "minimap") {
@@ -1268,6 +1310,8 @@ async function refreshPreviewForToneMapping() {
         // tiles reflect the new settings. Future WS tiles accumulate on top.
         const id = String(activeJobId || "").trim();
         const tm = previewToneMappingParamsForJob(id);
+        // Push live TM settings to server so incoming WS tiles match the canvas.
+        if (typeof api.putJobLiveTm === "function") api.putJobLiveTm(id, tm);
         const blob = await api.getJobImage(id, {
           partial: true,
           cacheBust: true,
@@ -1391,6 +1435,9 @@ async function restorePreviewForActiveWorkspace() {
       postFiltersEnabled: !!postFilterStackEnabled,
       postFilters: gatherPostFilterParams(),
     });
+    // A new render may have started while the image fetch was in flight.
+    // Don't overwrite a freshly cleared preview.
+    if (renderActive) return;
     if (finalBlob && finalBlob.size > 0) {
       await setPreviewFromBlob(finalBlob);
       updateDownloadUi();

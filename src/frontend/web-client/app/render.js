@@ -149,6 +149,16 @@ async function startRender(extraParams) {
   delete extra.__skipIntegratorOptions;
   delete extra.__skipPostFilters;
 
+  const tmParts = [];
+  if (typeof appendToneMappingQuery === "function") {
+    appendToneMappingQuery(tmParts, {});
+  }
+  const tmParams = {};
+  tmParts.forEach((p) => {
+    const eq = p.indexOf("=");
+    if (eq !== -1) tmParams[decodeURIComponent(p.slice(0, eq))] = decodeURIComponent(p.slice(eq + 1));
+  });
+
   return api.startRender({
     scene: el.scene.value,
     variant: selectedSceneVariantValue(),
@@ -166,6 +176,7 @@ async function startRender(extraParams) {
     render_mode: normalizeRenderMode(renderMode),
     ...(skipPostFilters ? {} : { post_filters: gatherPostFilterParams() }),
     ...(skipIntegratorOptions ? {} : gatherIntegratorOptionParams()),
+    ...tmParams,
     ...extra,
   });
 }
@@ -861,6 +872,7 @@ async function handleRender() {
     activeJobId = jobId;
     updateRenderActionButton();
     syncGlobalsToWorkspaceRuntime();
+    setStatus("queued 0.0%");
     appendLog(`job accepted: ${jobId}`);
     if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
     await pollJob(jobId, pollToken);

@@ -10,9 +10,11 @@ if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSideba
 if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer === "function") {
   const aboutPanel = document.querySelector("#paneAbout .about-panel");
   const overviewGrid = aboutPanel && aboutPanel.querySelector(".about-grid");
+  const devtoolsCard = aboutPanel && aboutPanel.querySelector(".about-devtools-card");
   const licenseCard = aboutPanel && aboutPanel.querySelector(".about-license-card");
   const thirdPartyCard = aboutPanel && aboutPanel.querySelector(".about-third-party-card");
   if (aboutPanel && overviewGrid && licenseCard && thirdPartyCard) {
+    if (devtoolsCard) overviewGrid.appendChild(devtoolsCard);
     const tabs = window.XTracerWidgets.createTabContainer({
       className: "about-tabs",
       tabs: [
@@ -247,6 +249,14 @@ const el = {
   tabSettings: $("tabSettings"),
   tabAbout: $("tabAbout"),
   tabLogs: $("tabLogs"),
+  sidebarRailToggle: $("sidebarRailToggle"),
+  sheetBackdrop: $("sheetBackdrop"),
+  controlsSheetFab: $("controlsSheetFab"),
+  bnTabScene: $("bnTabScene"),
+  bnTabRender: $("bnTabRender"),
+  bnTabWorkspaces: $("bnTabWorkspaces"),
+  bnTabVisual: $("bnTabVisual"),
+  bnTabGallery: $("bnTabGallery"),
   paneScene: $("paneScene"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
@@ -259,7 +269,6 @@ const el = {
   exportControlsCard: $("exportControlsCard"),
   theme: $("theme"),
   darkPalette: $("darkPalette"),
-  pollInterval: $("pollInterval"),
   textHistorySize: $("textHistorySize"),
   visualHistorySize: $("visualHistorySize"),
   autoLoadEditor: $("autoLoadEditor"),
@@ -430,6 +439,17 @@ const el = {
   visualShowMeshBvh: $("visualShowMeshBvh"),
   visualViewport: $("visualViewport"),
   visualPanel: $("visualPanel"),
+  visualCameraEditor: $("visualCameraEditor"),
+  visualCamPosX: $("visualCamPosX"),
+  visualCamPosY: $("visualCamPosY"),
+  visualCamPosZ: $("visualCamPosZ"),
+  visualCamTgtX: $("visualCamTgtX"),
+  visualCamTgtY: $("visualCamTgtY"),
+  visualCamTgtZ: $("visualCamTgtZ"),
+  visualCamFLength: $("visualCamFLength"),
+  visualCamFov: $("visualCamFov"),
+  visualCameraSnapBtn: $("visualCameraSnapBtn"),
+  visualCameraApplyBtn: $("visualCameraApplyBtn"),
   graphPanel: $("graphPanel"),
   graphCanvas: $("graphCanvas"),
   graphLegend: $("graphLegend"),
@@ -462,7 +482,6 @@ const DEFAULT_THIRD_PARTY_LICENSES = [
 ];
 
 const uiOptions = {
-  pollMs: 300,
   textHistoryLimit: 200,
   visualHistoryLimit: 200,
   visualSceneScale: 1.0,

@@ -191,16 +191,6 @@
       ]
     },
     {
-      "title": "Render Polling",
-      "body": "Polling interval controls how often render status is refreshed. Lower is faster but more chatty.",
-      "target_selector": "#pollInterval",
-      "placement": "right",
-      "tab": "settings",
-      "open_cards": [
-        "settingsControlsCard"
-      ]
-    },
-    {
       "title": "Reset Tutorial Later",
       "body": "In Settings, use this toggle to replay tutorial on next launch, or Start Tutorial Now.",
       "target_selector": "#ftueShowOnNextLaunch",

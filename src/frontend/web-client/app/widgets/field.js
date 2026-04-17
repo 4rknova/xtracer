@@ -40,21 +40,17 @@
   function createCheckboxField(options) {
     const opts = options || {};
     const input = dom.el("input", {
-      attrs: { type: "checkbox" },
-      props: { checked: !!opts.checked },
+      attrs: { type: "checkbox", id: opts.id || null },
+      props: { checked: !!opts.checked, disabled: !!opts.disabled },
     });
     if (typeof opts.onChange === "function") input.addEventListener("change", opts.onChange);
     return dom.el("label", {
-      className: `xui-field xui-field--checkbox${opts.className ? ` ${opts.className}` : ""}`,
+      className: `xui-switch${opts.className ? ` ${opts.className}` : ""}`,
+      attrs: opts.title ? { title: opts.title } : {},
       children: [
-        dom.el("span", {
-          className: "xui-field__check-row",
-          children: [
-            dom.el("span", { className: "xui-field__check-label", text: opts.label || "" }),
-            input,
-          ],
-        }),
+        opts.label ? dom.el("span", { className: "xui-switch__label", text: opts.label }) : null,
         opts.help ? dom.el("small", { className: "xui-field__help", text: opts.help }) : null,
+        input,
       ],
     });
   }

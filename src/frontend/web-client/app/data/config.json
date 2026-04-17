@@ -1,5 +1,5 @@
 {
   "defaults": {
-    "integrator": "pathtracer_mis_full"
+    "integrator": "pathtracer_mis"
   }
 }
