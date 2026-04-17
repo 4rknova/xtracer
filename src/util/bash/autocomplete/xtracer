@@ -1,0 +1,89 @@
+# XTRACER bash completion
+# Provides tab-completion for xtracer_cli and xtracer_web.
+#
+# INSTALLATION
+#
+# Option 1 — system-wide (requires root):
+#   sudo cp xtracer /etc/bash_completion.d/xtracer
+#   # Takes effect in new shells. To apply immediately:
+#   source /etc/bash_completion.d/xtracer
+#
+# Option 2 — current user only:
+#   mkdir -p ~/.local/share/bash-completion/completions
+#   cp xtracer ~/.local/share/bash-completion/completions/xtracer
+#   # Takes effect in new shells. To apply immediately:
+#   source ~/.local/share/bash-completion/completions/xtracer
+#
+# Option 3 — source directly from your shell rc:
+#   echo "source /path/to/xtracer" >> ~/.bashrc
+#   source ~/.bashrc
+#
+# REQUIREMENTS
+#   bash >= 4.0 and bash-completion >= 2.0 (for options 1 and 2).
+#   Install with: sudo apt install bash-completion   # Debian/Ubuntu
+#                 sudo dnf install bash-completion   # Fedora/RHEL
+#                 brew install bash-completion@2     # macOS
+
+_xtracer_cli_complete()
+{
+    local cur prev opts integrators
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="-renderer -threads -res -rdepth -samples -tile_size -aa -cam -variant -outdir -mod"
+    integrators="raytracer pathtracer pathtracer_mis pathtracer_bdpt photon_mapping ao debug_views depth stencil normal uv emission"
+
+    case "${prev}" in
+        -renderer)
+            COMPREPLY=( $(compgen -W "${integrators}" -- "${cur}") )
+            return 0
+            ;;
+        -outdir)
+            COMPREPLY=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        -cam|-variant|-mod|-res|-threads|-rdepth|-samples|-tile_size|-aa)
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "version" -- "${cur}") )
+        return 0
+    fi
+
+    COMPREPLY=( $(compgen -f -X '!*.scn' -- "${cur}") )
+    return 0
+}
+
+_xtracer_web_complete()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="--host --port --scene-dir --gallery-dir --web-root --max-concurrent-renders --render-reserve-threads --verbose --help -v"
+
+    case "${prev}" in
+        --scene-dir|--gallery-dir|--web-root)
+            COMPREPLY=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --host|--port|--max-concurrent-renders|--render-reserve-threads)
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+    fi
+    return 0
+}
+
+complete -F _xtracer_cli_complete xtracer_cli
+complete -F _xtracer_web_complete xtracer_web

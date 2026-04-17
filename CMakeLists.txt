@@ -119,7 +119,6 @@ set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
 set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
 set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
-set(PATH_SRC_UTIL_VIZ     ${PATH_SRC}/util/viz)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
 set(IN_MAN_CLI  xtracer_cli.1)
@@ -554,26 +553,6 @@ else()
     target_compile_options(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE -mavx)
 endif()
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE NMATH_BENCH_FORCE_SCALAR=1)
-
-if (XTRACER_ENABLE_VIZ)
-    find_package(OpenGL REQUIRED)
-    find_package(glfw3 REQUIRED)
-    find_package(GLEW REQUIRED)
-
-    set(OUT_EXE_SAMPLING_VIZ xtracer_viz_sampling)
-    add_executable(${OUT_EXE_SAMPLING_VIZ} ${PATH_SRC_UTIL_VIZ}/sampling/main.cc)
-    target_include_directories(${OUT_EXE_SAMPLING_VIZ} PUBLIC
-        ${PATH_LIB}
-        ${PATH_SRC}
-    )
-    target_include_directories(${OUT_EXE_SAMPLING_VIZ} SYSTEM PUBLIC
-        ${ext_libs}
-    )
-    target_link_libraries(${OUT_EXE_SAMPLING_VIZ} PRIVATE xtcore_static OpenGL::GL glfw GLEW::GLEW pthread)
-    set_target_properties(${OUT_EXE_SAMPLING_VIZ} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
-    )
-endif()
 
 if (XTRACER_ENABLE_WEB)
     set(OUT_EXE_WEB xtracer_web)
