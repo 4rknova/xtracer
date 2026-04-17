@@ -223,6 +223,20 @@
 #define XTPROTO_FBM_MARBLE          "fbm_marble"
 #define XTPROTO_VORONOI_NORMAL      "voronoi_normal"
 #define XTPROTO_SCENERY_HEIGHTFIELD "scenery_heightfield"
+#define XTPROTO_FBM_WOOD            "fbm_wood"
+#define XTPROTO_CURL_NOISE          "curl_noise"
+#define XTPROTO_SCRATCHES           "scratches"
+#define XTPROTO_EDGE_WEAR           "edge_wear"
+#define XTPROTO_FINGERPRINT         "fingerprint"
+#define XTPROTO_BRICK               "brick"
+#define XTPROTO_HEXGRID             "hexgrid"
+#define XTPROTO_DOTS                "dots"
+#define XTPROTO_PREETHAM_SKY        "preetham_sky"
+#define XTPROTO_HOSEK_WILKIE_SKY    "hosek_wilkie_sky"
+#define XTPROTO_STARS               "stars"
+#define XTPROTO_BLEND               "blend"
+#define XTPROTO_MIX_MASKED          "mix_masked"
+#define XTPROTO_TRIPLANAR           "triplanar"
 #define XTPROTO_PROPERTIES          "properties"
 #define XTPROTO_SAMPLERS            "samplers"
 #define XTPROTO_SCALARS             "scalars"
@@ -282,5 +296,10 @@
 #define XTPROTO_PROP_WINDOW_INSET          "window_inset"          /* scalar_t   */ /* Window recess depth */
 #define XTPROTO_PROP_PAVEMENT_HEIGHT       "pavement_height"       /* scalar_t   */ /* Raised kerb height */
 #define XTPROTO_PROP_PAVEMENT_WIDTH        "pavement_width"        /* scalar_t   */ /* Pavement strip width into road */
+
+/* Meshgroup geometry */
+#define XTPROTO_LTRL_MESHGROUP       "meshgroup"         /* string     */ /* Multi-file mesh group */
+#define XTPROTO_PROP_SOURCES         "sources"           /* group      */ /* File path list for meshgroup (keys ignored, values are paths) */
+#define XTPROTO_PROP_GLOB            "glob"              /* string     */ /* Glob pattern for meshgroup file discovery */
 
 #endif /* XTCORE_PROTO_H_INCLUDED */

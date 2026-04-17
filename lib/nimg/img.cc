@@ -102,6 +102,29 @@ int image_memory(const unsigned char *buffer, size_t size, Pixmap &map)
     return res;
 }
 
+int exr_memory(const unsigned char *data, size_t size, Pixmap &map)
+{
+    if (!data || size == 0u) return 1;
+    float *rgba = NULL;
+    int w = 0, h = 0;
+    const char *err = NULL;
+    const int ret = LoadEXRFromMemory(&rgba, &w, &h, data, (size_t)size, &err);
+    if (ret != TINYEXR_SUCCESS) {
+        if (err) FreeEXRErrorMessage(err);
+        return 1;
+    }
+    map.init(w, h);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            const int idx = (y * w + x) * 4;
+            ColorRGBAf pixel(rgba[idx], rgba[idx + 1], rgba[idx + 2], rgba[idx + 3]);
+            map.pixel(x, y) = pixel;
+        }
+    }
+    free(rgba);
+    return 0;
+}
+
         } /* namespace load */
 
         namespace save {

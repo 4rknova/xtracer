@@ -10,7 +10,7 @@
 #include <atomic>
 #include <memory>
 #include <fstream>
-#include <random>
+#include <glob.h>
 
 #include <nmath/precision.h>
 #include <ncf/util.h>
@@ -50,6 +50,20 @@
 #include "sampler/sampler_rayleigh_sky.h"
 #include "sampler/sampler_voronoi_normal.h"
 #include "sampler/sampler_scenery_heightfield.h"
+#include "sampler/sampler_fbm_wood.h"
+#include "sampler/sampler_curl_noise.h"
+#include "sampler/sampler_scratches.h"
+#include "sampler/sampler_edge_wear.h"
+#include "sampler/sampler_fingerprint.h"
+#include "sampler/sampler_brick.h"
+#include "sampler/sampler_hexgrid.h"
+#include "sampler/sampler_dots.h"
+#include "sampler/sampler_preetham_sky.h"
+#include "sampler/sampler_hosek_wilkie_sky.h"
+#include "sampler/sampler_stars.h"
+#include "sampler/sampler_blend.h"
+#include "sampler/sampler_mix_masked.h"
+#include "sampler/sampler_triplanar.h"
 #include "macro.h"
 
 #include "extrude.h"
@@ -188,6 +202,20 @@ xtcore::sampler::ISampler *deserialize_weave(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_fbm_marble(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_voronoi_normal(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_scenery_heightfield(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_fbm_wood(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_curl_noise(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_scratches(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_edge_wear(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_fingerprint(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_brick(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_hexgrid(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_dots(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_preetham_sky(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_hosek_wilkie_sky(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_stars(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_blend(const char *source, const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_mix_masked(const char *source, const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_triplanar(const char *source, const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const ncf::NCF *p);
 
 static void apply_heightfield_to_mesh(nmesh::object_t &obj,
@@ -509,166 +537,6 @@ static bool path_is_absolute(const std::string &path)
         && path[1] == ':';
 }
 
-static int create_random_sphere_grid(Scene *scene, const ncf::NCF *p)
-{
-    if (!scene || !p) return -1;
-
-    const char *seed_prop = p->get_property_by_name("seed");
-    if (!seed_prop) {
-        Log::handle().post_error("random.%s requires seed for repeatable generation", p->get_name());
-        return 1;
-    }
-
-    const int seed = deserialize_numi(seed_prop, 0);
-    const int x_min = deserialize_numi(p->get_property_by_name("x_min"), -11);
-    const int x_max = deserialize_numi(p->get_property_by_name("x_max"), 11);
-    const int z_min = deserialize_numi(p->get_property_by_name("z_min"), -11);
-    const int z_max = deserialize_numi(p->get_property_by_name("z_max"), 11);
-    const nmath::scalar_t y = deserialize_numf(p->get_property_by_name("y"), (nmath::scalar_t)0.2);
-    const nmath::scalar_t radius = deserialize_numf(p->get_property_by_name("radius"), (nmath::scalar_t)0.2);
-    const nmath::scalar_t jitter = deserialize_numf(p->get_property_by_name("jitter"), (nmath::scalar_t)0.9);
-    const nmath::Vector3f avoid_center = deserialize_vec3(p, "avoid_center", nmath::Vector3f(4.0f, 0.2f, 0.0f));
-    const nmath::scalar_t avoid_radius = deserialize_numf(p->get_property_by_name("avoid_radius"), (nmath::scalar_t)0.9);
-
-    const nmath::scalar_t lambert_ratio = clampf(deserialize_numf(p->get_property_by_name("lambert_ratio"), (nmath::scalar_t)0.8), 0.0f, 1.0f);
-    const nmath::scalar_t metal_ratio = clampf(deserialize_numf(p->get_property_by_name("metal_ratio"), (nmath::scalar_t)0.95), lambert_ratio, 1.0f);
-    const nmath::scalar_t metal_fuzz_min = clampf(deserialize_numf(p->get_property_by_name("metal_fuzz_min"), (nmath::scalar_t)0.0), 0.0f, 1.0f);
-    const nmath::scalar_t metal_fuzz_max = clampf(deserialize_numf(p->get_property_by_name("metal_fuzz_max"), (nmath::scalar_t)0.5), metal_fuzz_min, 1.0f);
-    const nmath::scalar_t dielectric_ior = std::max((nmath::scalar_t)1.0, deserialize_numf(p->get_property_by_name("ior"), (nmath::scalar_t)1.5));
-    const nmath::scalar_t dielectric_reflectance = clampf(deserialize_numf(p->get_property_by_name("glass_reflectance"), (nmath::scalar_t)0.04), 0.0f, 1.0f);
-
-    if (x_max <= x_min || z_max <= z_min) {
-        Log::handle().post_error("random.%s has invalid grid bounds", p->get_name());
-        return 1;
-    }
-    if (radius <= (nmath::scalar_t)EPSILON) {
-        Log::handle().post_error("random.%s requires radius > 0", p->get_name());
-        return 1;
-    }
-
-    std::string prefix = deserialize_cstr(p->get_property_by_name("prefix"), p->get_name());
-    if (prefix.empty()) prefix = "random";
-
-    std::mt19937 rng((uint32_t)seed);
-    std::uniform_real_distribution<nmath::scalar_t> u01(0.0f, 1.0f);
-    const auto rand01 = [&]() -> nmath::scalar_t { return u01(rng); };
-    const auto rand_range = [&](nmath::scalar_t lo, nmath::scalar_t hi) -> nmath::scalar_t {
-        return lo + (hi - lo) * rand01();
-    };
-
-    HASH_UINT64 dielectric_mat_id = HASH_ID_INVALID;
-    int created = 0;
-    int skipped = 0;
-
-    for (int a = x_min; a < x_max; ++a) {
-        for (int b = z_min; b < z_max; ++b) {
-            const nmath::Vector3f center(
-                (nmath::scalar_t)a + jitter * rand01(),
-                y,
-                (nmath::scalar_t)b + jitter * rand01()
-            );
-            if ((center - avoid_center).length() <= avoid_radius) {
-                ++skipped;
-                continue;
-            }
-
-            const nmath::scalar_t choose_mat = rand01();
-            const std::string suffix = std::to_string(created);
-            const std::string gname = prefix + "_geo_" + suffix;
-            const std::string mname = prefix + "_mat_" + suffix;
-            const std::string oname = prefix + "_obj_" + suffix;
-
-            HASH_UINT64 gid = xtcore::pool::str::add(gname.c_str());
-            HASH_UINT64 mid = xtcore::pool::str::add(mname.c_str());
-            HASH_UINT64 oid = xtcore::pool::str::add(oname.c_str());
-
-            xtcore::surface::Sphere *surf = new (std::nothrow) xtcore::surface::Sphere();
-            if (!surf) return 1;
-            surf->origin = center;
-            surf->radius = radius;
-            scene->destroy_surface(gid);
-            scene->m_surface[gid] = surf;
-
-            HASH_UINT64 object_mat_id = mid;
-            xtcore::asset::IMaterial *mat = 0;
-
-            if (choose_mat < lambert_ratio) {
-                xtcore::asset::material::Lambert *lm = new (std::nothrow) xtcore::asset::material::Lambert();
-                if (!lm) return 1;
-                float kd[3] = {
-                    (float)(rand01() * rand01()),
-                    (float)(rand01() * rand01()),
-                    (float)(rand01() * rand01())
-                };
-                lm->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler("", "", kd, false));
-                mat = lm;
-            } else if (choose_mat < metal_ratio) {
-                xtcore::asset::material::BlinnPhong *bm = new (std::nothrow) xtcore::asset::material::BlinnPhong();
-                if (!bm) return 1;
-                float ks[3] = {
-                    (float)rand_range(0.5f, 1.0f),
-                    (float)rand_range(0.5f, 1.0f),
-                    (float)rand_range(0.5f, 1.0f)
-                };
-                const nmath::scalar_t fuzz = rand_range(metal_fuzz_min, metal_fuzz_max);
-                const nmath::scalar_t norm = (metal_fuzz_max > metal_fuzz_min + (nmath::scalar_t)EPSILON)
-                    ? ((fuzz - metal_fuzz_min) / (metal_fuzz_max - metal_fuzz_min))
-                    : 0.0f;
-                const nmath::scalar_t exponent = 16.0f + (1.0f - norm) * 1008.0f;
-                bm->add_sampler(MAT_SAMPLER_DIFFUSE, create_sampler("", "", ks, false));
-                bm->add_sampler(MAT_SAMPLER_SPECULAR, create_sampler("", "", ks, false));
-                bm->add_scalar(MAT_SCALART_REFLECTANCE, clampf(1.0f - fuzz, 0.0f, 1.0f));
-                bm->add_scalar(MAT_SCALART_EXPONENT, exponent);
-                mat = bm;
-            } else {
-                if (dielectric_mat_id == HASH_ID_INVALID) {
-                    const std::string dname = prefix + "_glass";
-                    dielectric_mat_id = xtcore::pool::str::add(dname.c_str());
-                    if (scene->m_materials.find(dielectric_mat_id) == scene->m_materials.end()) {
-                        xtcore::asset::material::Dielectric *dm = new (std::nothrow) xtcore::asset::material::Dielectric();
-                        if (!dm) return 1;
-                        dm->add_scalar(MAT_SCALART_IOR, dielectric_ior);
-                        dm->add_scalar(MAT_SCALART_TRANSPARENCY, 1.0f);
-                        dm->add_scalar(MAT_SCALART_REFLECTANCE, dielectric_reflectance);
-                        scene->m_materials[dielectric_mat_id] = dm;
-                    }
-                }
-                object_mat_id = dielectric_mat_id;
-            }
-
-            if (mat) {
-                scene->destroy_material(mid);
-                scene->m_materials[mid] = mat;
-            }
-
-            xtcore::asset::Object *obj = new (std::nothrow) xtcore::asset::Object();
-            if (!obj) return 1;
-            obj->surface = gid;
-            obj->material = object_mat_id;
-            scene->destroy_object(oid);
-            scene->m_objects[oid] = obj;
-            ++created;
-        }
-    }
-
-    scene->mark_spatial_index_dirty();
-    Log::handle().post_message("Created random sphere grid %s (%d spheres, %d skipped) [seed=%d]",
-                               p->get_name(), created, skipped, seed);
-    return 0;
-}
-
-static int create_random(Scene *scene, const ncf::NCF *p)
-{
-    if (!scene || !p) return -1;
-    const std::string type = deserialize_cstr(p->get_property_by_name("type"));
-    if (type.empty()) {
-        Log::handle().post_error("random.%s is missing type", p->get_name());
-        return 1;
-    }
-    if (!type.compare("sphere_grid")) return create_random_sphere_grid(scene, p);
-    Log::handle().post_error("Unsupported random generator type %s in random.%s", type.c_str(), p->get_name());
-    return 1;
-}
 
 static void merge_ncf_group(ncf::NCF *dst, const ncf::NCF *src)
 {
@@ -1643,6 +1511,141 @@ xtcore::asset::ISurface *deserialize_geometry_csg_node(const char *source, const
     return deserialize_geometry(source, p);
 }
 
+xtcore::asset::ISurface *deserialize_geometry_meshgroup(const char *source, const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    std::vector<std::string> paths;
+
+    std::string base_dir, file_name;
+    std::string fsource = source ? source : "";
+    ncf::util::path_comp(fsource, base_dir, file_name);
+
+    // Form 1: sources block — property values are file paths, keys are ignored
+    if (p->query_group(XTPROTO_PROP_SOURCES)) {
+        const ncf::NCF *srcs = p->get_group_by_name(XTPROTO_PROP_SOURCES);
+        const size_t n = srcs->count_properties();
+        for (size_t i = 0; i < n; ++i) {
+            const char *val = srcs->get_property_by_index(i);
+            if (!val || !*val) continue;
+            std::string path = val;
+            if (!path_is_absolute(path)) path = base_dir + path;
+            paths.push_back(path);
+        }
+    }
+
+    // Form 2: glob pattern expanded relative to the scene file
+    if (p->query_property(XTPROTO_PROP_GLOB)) {
+        std::string pattern = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_GLOB));
+        if (!path_is_absolute(pattern)) pattern = base_dir + pattern;
+        glob_t gresult;
+        memset(&gresult, 0, sizeof(gresult));
+        if (glob(pattern.c_str(), GLOB_TILDE, nullptr, &gresult) == 0) {
+            for (size_t i = 0; i < gresult.gl_pathc; ++i) {
+                paths.push_back(gresult.gl_pathv[i]);
+            }
+        } else {
+            Log::handle().post_warning("meshgroup: glob matched no files: %s", pattern.c_str());
+        }
+        globfree(&gresult);
+    }
+
+    if (paths.empty()) {
+        Log::handle().post_warning("meshgroup: no source files [%s]", p->get_name());
+        return 0;
+    }
+
+    Log::handle().post_message("meshgroup [%s]: loading %zu file(s)..", p->get_name(), paths.size());
+
+    nmesh::object_t merged;
+
+    for (const std::string &path : paths) {
+        const size_t vtx_offset  = merged.attributes.v.size()  / 3;
+        const size_t norm_offset = merged.attributes.n.size()  / 3;
+        const size_t uv_offset   = merged.attributes.uv.size() / 2;
+
+        Log::handle().post_message("meshgroup: loading %s", path.c_str());
+        auto t0 = std::chrono::steady_clock::now();
+        xtcore::imported_asset_t imported;
+        std::string import_error;
+        if (!xtcore::import_asset_file(path.c_str(), imported, import_error)) {
+            Log::handle().post_warning("meshgroup: failed to load %s (%s)", path.c_str(), import_error.c_str());
+            continue;
+        }
+
+        // Append flat attribute data
+        for (float v  : imported.attributes.v)  merged.attributes.v.push_back(v);
+        for (float n  : imported.attributes.n)  merged.attributes.n.push_back(n);
+        for (float uv : imported.attributes.uv) merged.attributes.uv.push_back(uv);
+
+        // Append shapes with indices rebased onto the merged attribute arrays
+        for (size_t i = 0; i < imported.shapes.size(); ++i) {
+            const nmesh::shape_t &src = imported.shapes[i].shape;
+            nmesh::shape_t dst;
+            dst.name = src.name;
+            dst.mesh.materials = src.mesh.materials;
+            dst.mesh.indices.reserve(src.mesh.indices.size());
+            for (const nmesh::index_t &idx : src.mesh.indices) {
+                nmesh::index_t out_idx;
+                out_idx.v  = (idx.v  >= 0) ? (int)(idx.v  + vtx_offset)  : idx.v;
+                out_idx.n  = (idx.n  >= 0) ? (int)(idx.n  + norm_offset) : idx.n;
+                out_idx.uv = (idx.uv >= 0) ? (int)(idx.uv + uv_offset)   : idx.uv;
+                dst.mesh.indices.push_back(out_idx);
+            }
+            merged.shapes.push_back(dst);
+        }
+
+        auto t1 = std::chrono::steady_clock::now();
+        const double ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        Log::handle().post_message("meshgroup: loaded %s (%.0f ms)", path.c_str(), ms);
+    }
+
+    if (merged.shapes.empty()) {
+        Log::handle().post_warning("meshgroup: no shapes loaded [%s]", p->get_name());
+        return 0;
+    }
+
+    // Apply shared modifiers to the merged object
+    if (p->query_group(XTPROTO_MODIFIERS)) {
+        auto t_mod_0 = std::chrono::steady_clock::now();
+        ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
+
+        nmath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION,    nmath::Vector3f(0, 0, 0));
+        nmath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE,       nmath::Vector3f(1, 1, 1));
+        nmath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION, nmath::Vector3f(0, 0, 0));
+        nmesh::mutator::rotate   (merged, xform_rot.x, xform_rot.y, xform_rot.z);
+        nmesh::mutator::scale    (merged, xform_scl.x, xform_scl.y, xform_scl.z);
+        nmesh::mutator::translate(merged, xform_tsl.x, xform_tsl.y, xform_tsl.z);
+
+        if (mods->query_property(XTPROTO_FLIP_NORMALS)) {
+            bool flag = deserialize_bool(mods->get_property_by_name(XTPROTO_FLIP_NORMALS));
+            if (flag) {
+                Log::handle().post_message("meshgroup: applying modifier: flip normals..");
+                nmesh::mutator::invert_normals(&merged);
+            }
+        }
+
+        auto t_mod_1 = std::chrono::steady_clock::now();
+        const double ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_mod_1 - t_mod_0).count();
+        Log::handle().post_message("meshgroup: modifiers done [%s] (%.0f ms)", p->get_name(), ms);
+    }
+
+    xtcore::asset::ISurface *data = new (std::nothrow) xtcore::surface::Mesh;
+
+    Log::handle().post_message("meshgroup: building BVH [%s]..", p->get_name());
+    auto t_oct_0 = std::chrono::steady_clock::now();
+    if (merged.shapes.size() == 1) {
+        ((xtcore::surface::Mesh *)data)->build_bvh(merged.shapes[0], merged.attributes);
+    } else {
+        ((xtcore::surface::Mesh *)data)->build_bvh(merged);
+    }
+    auto t_oct_1 = std::chrono::steady_clock::now();
+    const double oct_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_oct_1 - t_oct_0).count();
+    Log::handle().post_message("meshgroup: BVH done [%s] (%zu shapes, %.0f ms)", p->get_name(), merged.shapes.size(), oct_ms);
+
+    return data;
+}
+
 xtcore::asset::ISurface *deserialize_geometry_csg(const char *source, const ncf::NCF *p)
 {
     return deserialize_geometry_csg_node(source, p, 0);
@@ -1751,7 +1754,8 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
         data = deserialize_geometry_csg(source, p);
     }
 	// - Mesh
-	else if (!type.compare(XTPROTO_LTRL_MESH)) data = deserialize_geometry_mesh(source, p);
+	else if (!type.compare(XTPROTO_LTRL_MESH))      data = deserialize_geometry_mesh(source, p);
+    else if (!type.compare(XTPROTO_LTRL_MESHGROUP)) data = deserialize_geometry_meshgroup(source, p);
 	// unknown
 	else {
 		Log::handle().post_warning("Unsupported geometry type %s [%s]. Skipping..", p->get_name(), type.c_str());
@@ -1871,6 +1875,190 @@ xtcore::sampler::ISampler *deserialize_scenery_heightfield(const ncf::NCF *p)
     return sampler;
 }
 
+xtcore::sampler::ISampler *deserialize_fbm_wood(const ncf::NCF *p)
+{
+    xtcore::sampler::FBMWood *s = new (std::nothrow) xtcore::sampler::FBMWood();
+    if (!s || !p) return s;
+    s->color_a        = deserialize_col3(p, "a",              s->color_a);
+    s->color_b        = deserialize_col3(p, "b",              s->color_b);
+    s->scale          = deserialize_numf(p->get_property_by_name("scale"),          s->scale);
+    s->ring_frequency = deserialize_numf(p->get_property_by_name("ring_frequency"), s->ring_frequency);
+    s->turbulence     = deserialize_numf(p->get_property_by_name("turbulence"),     s->turbulence);
+    s->octaves        = deserialize_numi(p->get_property_by_name("octaves"),        s->octaves);
+    s->lacunarity     = deserialize_numf(p->get_property_by_name("lacunarity"),     s->lacunarity);
+    s->gain           = deserialize_numf(p->get_property_by_name("gain"),           s->gain);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_curl_noise(const ncf::NCF *p)
+{
+    xtcore::sampler::CurlNoise *s = new (std::nothrow) xtcore::sampler::CurlNoise();
+    if (!s || !p) return s;
+    s->color_a    = deserialize_col3(p, "a",           s->color_a);
+    s->color_b    = deserialize_col3(p, "b",           s->color_b);
+    s->scale      = deserialize_numf(p->get_property_by_name("scale"),      s->scale);
+    s->strength   = deserialize_numf(p->get_property_by_name("strength"),   s->strength);
+    s->octaves    = deserialize_numi(p->get_property_by_name("octaves"),    s->octaves);
+    s->lacunarity = deserialize_numf(p->get_property_by_name("lacunarity"), s->lacunarity);
+    s->gain       = deserialize_numf(p->get_property_by_name("gain"),       s->gain);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_scratches(const ncf::NCF *p)
+{
+    xtcore::sampler::Scratches *s = new (std::nothrow) xtcore::sampler::Scratches();
+    if (!s || !p) return s;
+    s->color_base    = deserialize_col3(p, "base",          s->color_base);
+    s->color_scratch = deserialize_col3(p, "scratch",       s->color_scratch);
+    s->scale         = deserialize_numf(p->get_property_by_name("scale"),         s->scale);
+    s->density       = deserialize_numi(p->get_property_by_name("density"),       s->density);
+    s->width         = deserialize_numf(p->get_property_by_name("width"),         s->width);
+    s->angle         = deserialize_numf(p->get_property_by_name("angle"),         s->angle);
+    s->angle_jitter  = deserialize_numf(p->get_property_by_name("angle_jitter"),  s->angle_jitter);
+    s->seed          = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), s->seed);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_edge_wear(const ncf::NCF *p)
+{
+    xtcore::sampler::EdgeWear *s = new (std::nothrow) xtcore::sampler::EdgeWear();
+    if (!s || !p) return s;
+    s->color_base = deserialize_col3(p, "base",     s->color_base);
+    s->color_worn = deserialize_col3(p, "worn",     s->color_worn);
+    s->scale      = deserialize_numf(p->get_property_by_name("scale"),     s->scale);
+    s->sharpness  = deserialize_numf(p->get_property_by_name("sharpness"), s->sharpness);
+    s->coverage   = deserialize_numf(p->get_property_by_name("coverage"),  s->coverage);
+    s->seed       = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), s->seed);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_fingerprint(const ncf::NCF *p)
+{
+    xtcore::sampler::Fingerprint *s = new (std::nothrow) xtcore::sampler::Fingerprint();
+    if (!s || !p) return s;
+    s->color_a         = deserialize_col3(p, "a",              s->color_a);
+    s->color_b         = deserialize_col3(p, "b",              s->color_b);
+    s->scale           = deserialize_numf(p->get_property_by_name("scale"),           s->scale);
+    s->ridge_frequency = deserialize_numf(p->get_property_by_name("ridge_frequency"), s->ridge_frequency);
+    s->ridge_width     = deserialize_numf(p->get_property_by_name("ridge_width"),     s->ridge_width);
+    s->distortion      = deserialize_numf(p->get_property_by_name("distortion"),      s->distortion);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_brick(const ncf::NCF *p)
+{
+    xtcore::sampler::Brick *s = new (std::nothrow) xtcore::sampler::Brick();
+    if (!s || !p) return s;
+    s->color_brick    = deserialize_col3(p, "brick",          s->color_brick);
+    s->color_mortar   = deserialize_col3(p, "mortar",         s->color_mortar);
+    s->scale_u        = deserialize_numf(p->get_property_by_name("scale_u"),        s->scale_u);
+    s->scale_v        = deserialize_numf(p->get_property_by_name("scale_v"),        s->scale_v);
+    s->mortar_u       = deserialize_numf(p->get_property_by_name("mortar_u"),       s->mortar_u);
+    s->mortar_v       = deserialize_numf(p->get_property_by_name("mortar_v"),       s->mortar_v);
+    s->color_variation = deserialize_numf(p->get_property_by_name("color_variation"), s->color_variation);
+    s->seed           = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), s->seed);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_hexgrid(const ncf::NCF *p)
+{
+    xtcore::sampler::HexGrid *s = new (std::nothrow) xtcore::sampler::HexGrid();
+    if (!s || !p) return s;
+    s->color_tile    = deserialize_col3(p, "tile",           s->color_tile);
+    s->color_border  = deserialize_col3(p, "border",         s->color_border);
+    s->scale         = deserialize_numf(p->get_property_by_name("scale"),          s->scale);
+    s->border_width  = deserialize_numf(p->get_property_by_name("border_width"),   s->border_width);
+    s->border_softness = deserialize_numf(p->get_property_by_name("border_softness"), s->border_softness);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_dots(const ncf::NCF *p)
+{
+    xtcore::sampler::Dots *s = new (std::nothrow) xtcore::sampler::Dots();
+    if (!s || !p) return s;
+    s->color_bg  = deserialize_col3(p, "bg",       s->color_bg);
+    s->color_dot = deserialize_col3(p, "dot",      s->color_dot);
+    s->scale     = deserialize_numf(p->get_property_by_name("scale"),    s->scale);
+    s->radius    = deserialize_numf(p->get_property_by_name("radius"),   s->radius);
+    s->softness  = deserialize_numf(p->get_property_by_name("softness"), s->softness);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_preetham_sky(const ncf::NCF *p)
+{
+    xtcore::sampler::PreethamSky *s = new (std::nothrow) xtcore::sampler::PreethamSky();
+    if (!s || !p) return s;
+    s->sun_direction = deserialize_vec3(p, "sun_direction", s->sun_direction);
+    s->turbidity     = deserialize_numf(p->get_property_by_name("turbidity"), s->turbidity);
+    s->exposure      = deserialize_numf(p->get_property_by_name("exposure"),  s->exposure);
+    s->ground_color  = deserialize_col3(p, "ground_color",  s->ground_color);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_hosek_wilkie_sky(const ncf::NCF *p)
+{
+    xtcore::sampler::HosekWilkieSky *s = new (std::nothrow) xtcore::sampler::HosekWilkieSky();
+    if (!s || !p) return s;
+    s->sun_direction = deserialize_vec3(p, "sun_direction", s->sun_direction);
+    s->turbidity     = deserialize_numf(p->get_property_by_name("turbidity"),     s->turbidity);
+    s->ground_albedo = deserialize_numf(p->get_property_by_name("ground_albedo"), s->ground_albedo);
+    s->exposure      = deserialize_numf(p->get_property_by_name("exposure"),      s->exposure);
+    s->ground_color  = deserialize_col3(p, "ground_color", s->ground_color);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_stars(const ncf::NCF *p)
+{
+    xtcore::sampler::Stars *s = new (std::nothrow) xtcore::sampler::Stars();
+    if (!s || !p) return s;
+    s->background_color = deserialize_col3(p, "background", s->background_color);
+    s->density          = deserialize_numf(p->get_property_by_name("density"),        s->density);
+    s->min_brightness   = deserialize_numf(p->get_property_by_name("min_brightness"), s->min_brightness);
+    s->max_brightness   = deserialize_numf(p->get_property_by_name("max_brightness"), s->max_brightness);
+    s->star_size        = deserialize_numf(p->get_property_by_name("star_size"),      s->star_size);
+    s->seed             = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), s->seed);
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_blend(const char *source, const ncf::NCF *p)
+{
+    xtcore::sampler::Blend *s = new (std::nothrow) xtcore::sampler::Blend();
+    if (!s || !p) return s;
+    s->t = deserialize_numf(p->get_property_by_name("t"), s->t);
+    if (p->query_group("a")) s->a = deserialize_sampler_node(source, p->get_group_by_name("a"));
+    if (p->query_group("b")) s->b = deserialize_sampler_node(source, p->get_group_by_name("b"));
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_mix_masked(const char *source, const ncf::NCF *p)
+{
+    xtcore::sampler::MixMasked *s = new (std::nothrow) xtcore::sampler::MixMasked();
+    if (!s || !p) return s;
+    s->t = deserialize_numf(p->get_property_by_name("t"), s->t);
+    const char *mode_str = p->get_property_by_name("mode");
+    if (mode_str) {
+        std::string m = mode_str;
+        if      (m == "multiply") s->mode = xtcore::sampler::MixMasked::MODE_MULTIPLY;
+        else if (m == "add")      s->mode = xtcore::sampler::MixMasked::MODE_ADD;
+        else if (m == "screen")   s->mode = xtcore::sampler::MixMasked::MODE_SCREEN;
+        else                      s->mode = xtcore::sampler::MixMasked::MODE_LERP;
+    }
+    if (p->query_group("base"))    s->base    = deserialize_sampler_node(source, p->get_group_by_name("base"));
+    if (p->query_group("overlay")) s->overlay = deserialize_sampler_node(source, p->get_group_by_name("overlay"));
+    if (p->query_group("mask"))    s->mask    = deserialize_sampler_node(source, p->get_group_by_name("mask"));
+    return s;
+}
+
+xtcore::sampler::ISampler *deserialize_triplanar(const char *source, const ncf::NCF *p)
+{
+    xtcore::sampler::Triplanar *s = new (std::nothrow) xtcore::sampler::Triplanar();
+    if (!s || !p) return s;
+    s->scale           = deserialize_numf(p->get_property_by_name("scale"),           s->scale);
+    s->blend_sharpness = deserialize_numf(p->get_property_by_name("blend_sharpness"), s->blend_sharpness);
+    if (p->query_group("child")) s->child = deserialize_sampler_node(source, p->get_group_by_name("child"));
+    return s;
+}
+
 xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const ncf::NCF *entry)
 {
     if (!entry) return 0;
@@ -1888,6 +2076,20 @@ xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const nc
     else if (!type.compare(XTPROTO_VORONOI_NORMAL)) return deserialize_voronoi_normal(entry);
     else if (!type.compare(XTPROTO_SCENERY_HEIGHTFIELD)) return deserialize_scenery_heightfield(entry);
     else if (!type.compare(XTPROTO_COLOR)) return deserialize_rgba(entry);
+    else if (!type.compare(XTPROTO_FBM_WOOD))         return deserialize_fbm_wood(entry);
+    else if (!type.compare(XTPROTO_CURL_NOISE))        return deserialize_curl_noise(entry);
+    else if (!type.compare(XTPROTO_SCRATCHES))         return deserialize_scratches(entry);
+    else if (!type.compare(XTPROTO_EDGE_WEAR))         return deserialize_edge_wear(entry);
+    else if (!type.compare(XTPROTO_FINGERPRINT))       return deserialize_fingerprint(entry);
+    else if (!type.compare(XTPROTO_BRICK))             return deserialize_brick(entry);
+    else if (!type.compare(XTPROTO_HEXGRID))           return deserialize_hexgrid(entry);
+    else if (!type.compare(XTPROTO_DOTS))              return deserialize_dots(entry);
+    else if (!type.compare(XTPROTO_PREETHAM_SKY))      return deserialize_preetham_sky(entry);
+    else if (!type.compare(XTPROTO_HOSEK_WILKIE_SKY))  return deserialize_hosek_wilkie_sky(entry);
+    else if (!type.compare(XTPROTO_STARS))             return deserialize_stars(entry);
+    else if (!type.compare(XTPROTO_BLEND))             return deserialize_blend(source, entry);
+    else if (!type.compare(XTPROTO_MIX_MASKED))        return deserialize_mix_masked(source, entry);
+    else if (!type.compare(XTPROTO_TRIPLANAR))         return deserialize_triplanar(source, entry);
     return 0;
 }
 
@@ -2407,17 +2609,6 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 		}
 	}
 
-    ncf::NCF *random_node = root.get_group_by_name("random");
-    const size_t random_count = random_node->count_groups();
-    for (size_t i = 0; i < random_count; ++i) {
-        ncf::NCF *entry = random_node->get_group_by_index(i);
-        Log::handle().post_message("Creating random / %s..", entry->get_name());
-        if (create_random(scene, entry)) {
-            Log::handle().post_error("Failed to load random generator: %s", entry->get_name());
-            scene->release();
-            return 1;
-        }
-    }
 
     scene->rebuild_spatial_index();
     for (auto it = medium_defs.begin(); it != medium_defs.end(); ++it) delete it->second;
