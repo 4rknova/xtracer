@@ -31,7 +31,7 @@ bool arg_eq(const char *arg, const char *name)
 
 void print_usage(const char *argv0)
 {
-    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--web-root <path>] [--max-concurrent-renders <n>] [--render-reserve-threads <n>] [--verbose]\n", argv0);
+    std::printf("Usage: %s [--host <ip>] [--port <num>] [--scene-dir <path>] [--gallery-dir <path>] [--web-root <path>] [--max-concurrent-renders <n>] [--render-reserve-threads <n>] [--verbose]\n", argv0);
 }
 
 const char *to_backend_level(xtcore::LOGENTRY_TYPE type)

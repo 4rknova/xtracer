@@ -49,9 +49,12 @@
 #include <xtcore/strpool.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
+#include <xtcore/math/sampling_util.h>
+#include <nmath/sample.h>
 #include <nimg/img.h>
 
 #include "backend_log.h"
+#include "furnace_tests.h"
 #include "gallery_manager.h"
 #include "job_manager.h"
 #include "post_filters.h"
@@ -475,13 +478,6 @@ bool parse_post_filter_settings(const params_view &params,
     return true;
 }
 
-void append_u32le(std::vector<unsigned char> &out, uint32_t v)
-{
-    out.push_back((unsigned char)(v & 0xFFu));
-    out.push_back((unsigned char)((v >> 8) & 0xFFu));
-    out.push_back((unsigned char)((v >> 16) & 0xFFu));
-    out.push_back((unsigned char)((v >> 24) & 0xFFu));
-}
 
 bool has_suffix(const std::string &s, const std::string &suffix)
 {
@@ -1908,33 +1904,6 @@ std::string job_snapshot_to_json(const job_snapshot_t &snap)
     return ss.str();
 }
 
-std::string encode_xdt1(const job_image_delta_t &delta)
-{
-    std::vector<unsigned char> payload;
-    payload.reserve(64 + delta.tiles.size() * 32);
-    payload.push_back('X');
-    payload.push_back('T');
-    payload.push_back('D');
-    payload.push_back('1');
-    append_u32le(payload, (uint32_t)delta.width);
-    append_u32le(payload, (uint32_t)delta.height);
-    append_u32le(payload, (uint32_t)delta.tiles_done);
-    append_u32le(payload, (uint32_t)delta.tiles_total);
-    append_u32le(payload, (uint32_t)delta.state);
-    append_u32le(payload, (uint32_t)delta.tiles.size());
-    for (size_t i = 0; i < delta.tiles.size(); ++i) {
-        const job_image_delta_t::tile_t &t = delta.tiles[i];
-        append_u32le(payload, (uint32_t)t.x0);
-        append_u32le(payload, (uint32_t)t.y0);
-        append_u32le(payload, (uint32_t)t.x1);
-        append_u32le(payload, (uint32_t)t.y1);
-        append_u32le(payload, (uint32_t)t.done_index);
-        append_u32le(payload, (uint32_t)t.png.size());
-        payload.insert(payload.end(), t.png.begin(), t.png.end());
-    }
-    return std::string(reinterpret_cast<const char *>(payload.data()), payload.size());
-}
-
 } // namespace
 
 static job_ws_hub_t g_job_ws_hub;
@@ -1986,6 +1955,76 @@ void setup_routes(WebApp &app,
     CROW_ROUTE(app, "/api/health")
     ([](const crow::request &, crow::response &res) {
         send_json(res, "{\"ok\":true}");
+    });
+
+    CROW_ROUTE(app, "/api/sampling/samples")
+    ([](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const std::string method = params.str("method", "uniform_sphere");
+
+        size_t count = 5000;
+        parse_u64_param(params, "count", 1, 100000, count);
+
+        double param   = 0.3;
+        double param_x = 0.3;
+        double param_y = 0.3;
+        parse_f64_param(params, "param",   0.0, 1024.0, param);
+        parse_f64_param(params, "param_x", 0.0, 1024.0, param_x);
+        parse_f64_param(params, "param_y", 0.0, 1024.0, param_y);
+
+        const nmath::Vector3f up(0.0f, 1.0f, 0.0f);
+
+        std::ostringstream ss;
+        ss << "{\"method\":\"" << json_escape(method) << "\",\"samples\":[";
+
+        for (size_t i = 0; i < count; ++i) {
+            nmath::Vector3f s;
+            nmath::scalar_t pdf = 0.0;
+
+            if (method == "uniform_sphere") {
+                s = xtcore::math::sampling::sample_uniform_sphere(pdf);
+            } else if (method == "cosine_hemisphere") {
+                s = xtcore::math::sampling::sample_cosine_hemisphere(up, pdf);
+            } else if (method == "power_cosine_lobe") {
+                const nmath::scalar_t exp = (nmath::scalar_t)(param > 0.0 ? param : 16.0);
+                s = xtcore::math::sampling::sample_power_cosine_lobe(up, exp, pdf);
+            } else if (method == "ggx_half_vector") {
+                const nmath::scalar_t roughness = (nmath::scalar_t)(param > 0.0 ? param : 0.3);
+                s = xtcore::math::sampling::sample_ggx_half_vector(up, roughness, pdf);
+            } else if (method == "ggx_half_vector_anisotropic") {
+                const nmath::Vector3f tangent(1.0f, 0.0f, 0.0f);
+                const nmath::Vector3f bitangent(0.0f, 0.0f, 1.0f);
+                const nmath::scalar_t ax = (nmath::scalar_t)(param_x > 0.0 ? param_x : 0.3);
+                const nmath::scalar_t ay = (nmath::scalar_t)(param_y > 0.0 ? param_y : 0.3);
+                s = xtcore::math::sampling::sample_ggx_half_vector_anisotropic(up, tangent, bitangent, ax, ay, pdf);
+            } else if (method == "uniform_cone") {
+                const nmath::scalar_t cos_max = (nmath::scalar_t)(param > 0.0 ? param : 0.866);
+                s = xtcore::math::sampling::sample_uniform_cone(up, cos_max, pdf);
+            } else if (method == "nmath_sphere") {
+                s = nmath::sample::sphere();
+            } else if (method == "nmath_hemisphere") {
+                s = nmath::sample::hemisphere(up, up);
+            } else if (method == "nmath_diffuse") {
+                s = nmath::sample::diffuse(up);
+            } else if (method == "nmath_lobe") {
+                const nmath::scalar_t exp = (nmath::scalar_t)(param > 0.0 ? param : 16.0);
+                s = nmath::sample::lobe(up, up, exp);
+            } else {
+                send_json(res, "{\"error\":\"unknown method\"}", 400);
+                return;
+            }
+
+            if (i) ss << ',';
+            ss << "[" << s.x << "," << s.y << "," << s.z << "]";
+        }
+
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    CROW_ROUTE(app, "/api/tests/furnace/<string>/<string>")
+    ([](const crow::request &, crow::response &res, std::string group, std::string integrator) {
+        send_json(res, run_furnace_group(group, integrator));
     });
 
     CROW_ROUTE(app, "/api/about")
@@ -2885,7 +2924,10 @@ void setup_routes(WebApp &app,
             backend_log_t::handle().add("debug", policy_log.str());
         }
 
-        std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path);
+        xtcore::tonemapping::settings_t initial_tm;
+        std::string tm_error_json;
+        parse_tonemapping_settings(params, initial_tm, tm_error_json); // best-effort; ignore errors
+        std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path, initial_tm);
         if (job_id.empty()) {
             if (!cleanup_scene_path.empty()) unlink(cleanup_scene_path.c_str());
             backend_log_t::handle().add("warn", "render rejected: queue full workspace=" + workspace_id);
@@ -2900,6 +2942,22 @@ void setup_routes(WebApp &app,
            << "\"workspace_id\":\"" << json_escape(workspace_id) << "\""
            << "}";
         send_json(res, ss.str(), 202);
+    });
+
+    CROW_ROUTE(app, "/api/jobs/<string>/live-tm").methods(crow::HTTPMethod::Put)
+    ([&](const crow::request &req, crow::response &res, std::string id) {
+        const params_view params(req);
+        xtcore::tonemapping::settings_t tm_settings;
+        std::string tm_error_json;
+        if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
+            send_json(res, tm_error_json, 400);
+            return;
+        }
+        if (!jobs.set_live_tm_settings(id, tm_settings)) {
+            send_json(res, "{\"error\":\"not found\"}", 404);
+            return;
+        }
+        send_json(res, "{\"ok\":true}", 200);
     });
 
     CROW_ROUTE(app, "/api/jobs/<string>/image")
@@ -3156,15 +3214,45 @@ void setup_routes(WebApp &app,
     });
 
     CROW_ROUTE(app, "/api/gallery/<string>/image")
-    ([gallery](const crow::request &, crow::response &res, std::string id) {
+    ([gallery](const crow::request &req, crow::response &res, std::string id) {
         if (!gallery || !gallery->is_initialized()) {
             res.code = 404;
             res.end();
             return;
         }
-        std::vector<unsigned char> png;
-        if (!gallery->get_image(id, png) || png.empty()) {
+        std::vector<unsigned char> exr;
+        if (!gallery->get_image_exr(id, exr) || exr.empty()) {
             res.code = 404;
+            res.end();
+            return;
+        }
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        // Build default TM settings from meta, allow query-param overrides
+        xtcore::tonemapping::settings_t tm_settings;
+        gallery_entry_meta_t meta;
+        if (gallery->get_meta_struct(id, meta)) {
+            parse_tonemapping_operator(meta.tm_op, tm_settings.op);
+            tm_settings.exposure           = meta.tm_exposure;
+            tm_settings.white_point        = meta.tm_white_point;
+            tm_settings.mantiuk_contrast   = meta.tm_mantiuk_contrast;
+            tm_settings.mantiuk_saturation = meta.tm_mantiuk_saturation;
+            tm_settings.mantiuk_detail     = meta.tm_mantiuk_detail;
+        }
+        const params_view params(req);
+        std::string tm_error_json;
+        if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
+            send_json(res, tm_error_json, 400);
+            return;
+        }
+        xtcore::tonemapping::apply(fb, tm_settings);
+        std::vector<unsigned char> png;
+        if (nimg::io::save::png_memory(fb, png) != 0) {
+            res.code = 500;
             res.end();
             return;
         }
@@ -3174,20 +3262,229 @@ void setup_routes(WebApp &app,
     });
 
     CROW_ROUTE(app, "/api/gallery/<string>/pass/<uint>/image")
-    ([gallery](const crow::request &, crow::response &res, std::string id, unsigned int pass_index) {
+    ([gallery](const crow::request &req, crow::response &res, std::string id, unsigned int pass_index) {
         if (!gallery || !gallery->is_initialized()) {
             res.code = 404;
             res.end();
             return;
         }
-        std::vector<unsigned char> png;
-        if (!gallery->get_pass_image(id, static_cast<size_t>(pass_index), png) || png.empty()) {
+        std::vector<unsigned char> exr;
+        if (!gallery->get_pass_image_exr(id, static_cast<size_t>(pass_index), exr) || exr.empty()) {
             res.code = 404;
+            res.end();
+            return;
+        }
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        xtcore::tonemapping::settings_t tm_settings;
+        gallery_entry_meta_t meta;
+        if (gallery->get_meta_struct(id, meta)) {
+            parse_tonemapping_operator(meta.tm_op, tm_settings.op);
+            tm_settings.exposure           = meta.tm_exposure;
+            tm_settings.white_point        = meta.tm_white_point;
+            tm_settings.mantiuk_contrast   = meta.tm_mantiuk_contrast;
+            tm_settings.mantiuk_saturation = meta.tm_mantiuk_saturation;
+            tm_settings.mantiuk_detail     = meta.tm_mantiuk_detail;
+        }
+        const params_view params(req);
+        std::string tm_error_json;
+        if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
+            send_json(res, tm_error_json, 400);
+            return;
+        }
+        xtcore::tonemapping::apply(fb, tm_settings);
+        std::vector<unsigned char> png;
+        if (nimg::io::save::png_memory(fb, png) != 0) {
+            res.code = 500;
             res.end();
             return;
         }
         res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
         res.set_header("Content-Type", "image/png");
+        res.end();
+    });
+
+    CROW_ROUTE(app, "/api/gallery/<string>/export")
+    ([gallery](const crow::request &req, crow::response &res, std::string id) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.code = 404;
+            res.end();
+            return;
+        }
+        const params_view params(req);
+        std::string format = "png";
+        if (params.has("format")) format = lower_ascii(params.str("format"));
+        if (format != "png" && format != "jpg" && format != "bmp" && format != "tga"
+            && format != "exr" && format != "hdr") {
+            send_json(res, "{\"error\":\"unsupported format\"}", 400);
+            return;
+        }
+        std::vector<unsigned char> exr;
+        if (!gallery->get_image_exr(id, exr) || exr.empty()) {
+            res.code = 404;
+            res.end();
+            return;
+        }
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        gallery_entry_meta_t meta;
+        const bool has_meta = gallery->get_meta_struct(id, meta);
+        const bool is_hdr_format = (format == "exr" || format == "hdr");
+        if (!is_hdr_format) {
+            xtcore::tonemapping::settings_t tm_settings;
+            if (has_meta) {
+                parse_tonemapping_operator(meta.tm_op, tm_settings.op);
+                tm_settings.exposure           = meta.tm_exposure;
+                tm_settings.white_point        = meta.tm_white_point;
+                tm_settings.mantiuk_contrast   = meta.tm_mantiuk_contrast;
+                tm_settings.mantiuk_saturation = meta.tm_mantiuk_saturation;
+                tm_settings.mantiuk_detail     = meta.tm_mantiuk_detail;
+            }
+            std::string tm_error_json;
+            if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
+                send_json(res, tm_error_json, 400);
+                return;
+            }
+            xtcore::tonemapping::apply(fb, tm_settings);
+        }
+        std::vector<unsigned char> image;
+        std::string mime_type;
+        int encode_result = 1;
+        if (format == "png") {
+            encode_result = nimg::io::save::png_memory(fb, image);
+            mime_type = "image/png";
+        } else if (format == "jpg") {
+            encode_result = nimg::io::save::jpg_memory(fb, image);
+            mime_type = "image/jpeg";
+        } else if (format == "bmp") {
+            encode_result = nimg::io::save::bmp_memory(fb, image);
+            mime_type = "image/bmp";
+        } else if (format == "tga") {
+            encode_result = nimg::io::save::tga_memory(fb, image);
+            mime_type = "image/x-tga";
+        } else if (format == "exr") {
+            encode_result = nimg::io::save::exr_memory(fb, image);
+            mime_type = "image/x-exr";
+        } else if (format == "hdr") {
+            encode_result = nimg::io::save::hdr_memory(fb, image);
+            mime_type = "image/vnd.radiance";
+        }
+        if (encode_result != 0 || image.empty()) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        const std::string scene_token = has_meta
+            ? sanitize_filename_token(scene_basename_for_filename(meta.scene), "gallery")
+            : std::string("gallery");
+        const std::string client_token = sanitize_filename_token(read_client_id(params), "client");
+        const std::string filename = "xtracer_"
+            + scene_token + "_"
+            + client_token + "_"
+            + utc_timestamp_for_filename()
+            + "." + format;
+        res.set_header("Cache-Control", "no-store");
+        res.set_header("Content-Disposition", ("attachment; filename=\"" + filename + "\"").c_str());
+        res.body = std::string(reinterpret_cast<const char *>(image.data()), image.size());
+        res.set_header("Content-Type", mime_type.c_str());
+        res.end();
+    });
+
+    CROW_ROUTE(app, "/api/gallery/<string>/pass/<uint>/export")
+    ([gallery](const crow::request &req, crow::response &res, std::string id, unsigned int pass_index) {
+        if (!gallery || !gallery->is_initialized()) {
+            res.code = 404;
+            res.end();
+            return;
+        }
+        const params_view params(req);
+        std::string format = "png";
+        if (params.has("format")) format = lower_ascii(params.str("format"));
+        if (format != "png" && format != "jpg" && format != "bmp" && format != "tga"
+            && format != "exr" && format != "hdr") {
+            send_json(res, "{\"error\":\"unsupported format\"}", 400);
+            return;
+        }
+        std::vector<unsigned char> exr;
+        if (!gallery->get_pass_image_exr(id, static_cast<size_t>(pass_index), exr) || exr.empty()) {
+            res.code = 404;
+            res.end();
+            return;
+        }
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        gallery_entry_meta_t meta;
+        const bool has_meta = gallery->get_meta_struct(id, meta);
+        const bool is_hdr_format = (format == "exr" || format == "hdr");
+        if (!is_hdr_format) {
+            xtcore::tonemapping::settings_t tm_settings;
+            if (has_meta) {
+                parse_tonemapping_operator(meta.tm_op, tm_settings.op);
+                tm_settings.exposure           = meta.tm_exposure;
+                tm_settings.white_point        = meta.tm_white_point;
+                tm_settings.mantiuk_contrast   = meta.tm_mantiuk_contrast;
+                tm_settings.mantiuk_saturation = meta.tm_mantiuk_saturation;
+                tm_settings.mantiuk_detail     = meta.tm_mantiuk_detail;
+            }
+            std::string tm_error_json;
+            if (!parse_tonemapping_settings(params, tm_settings, tm_error_json)) {
+                send_json(res, tm_error_json, 400);
+                return;
+            }
+            xtcore::tonemapping::apply(fb, tm_settings);
+        }
+        std::vector<unsigned char> image;
+        std::string mime_type;
+        int encode_result = 1;
+        if (format == "png") {
+            encode_result = nimg::io::save::png_memory(fb, image);
+            mime_type = "image/png";
+        } else if (format == "jpg") {
+            encode_result = nimg::io::save::jpg_memory(fb, image);
+            mime_type = "image/jpeg";
+        } else if (format == "bmp") {
+            encode_result = nimg::io::save::bmp_memory(fb, image);
+            mime_type = "image/bmp";
+        } else if (format == "tga") {
+            encode_result = nimg::io::save::tga_memory(fb, image);
+            mime_type = "image/x-tga";
+        } else if (format == "exr") {
+            encode_result = nimg::io::save::exr_memory(fb, image);
+            mime_type = "image/x-exr";
+        } else if (format == "hdr") {
+            encode_result = nimg::io::save::hdr_memory(fb, image);
+            mime_type = "image/vnd.radiance";
+        }
+        if (encode_result != 0 || image.empty()) {
+            res.code = 500;
+            res.end();
+            return;
+        }
+        const std::string scene_token = has_meta
+            ? sanitize_filename_token(scene_basename_for_filename(meta.scene), "gallery")
+            : std::string("gallery");
+        const std::string client_token = sanitize_filename_token(read_client_id(params), "client");
+        const std::string filename = "xtracer_"
+            + scene_token + "_"
+            + client_token + "_"
+            + utc_timestamp_for_filename()
+            + "." + format;
+        res.set_header("Cache-Control", "no-store");
+        res.set_header("Content-Disposition", ("attachment; filename=\"" + filename + "\"").c_str());
+        res.body = std::string(reinterpret_cast<const char *>(image.data()), image.size());
+        res.set_header("Content-Type", mime_type.c_str());
         res.end();
     });
 
@@ -3213,6 +3510,26 @@ void setup_routes(WebApp &app,
     CROW_ROUTE(app, "/showcase.html")
     ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "showcase.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/sampling.html")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "sampling.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/sampling.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "sampling.js"), "application/javascript", res);
+    });
+
+    CROW_ROUTE(app, "/furnace.html")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "furnace.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/furnace.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "furnace.js"), "application/javascript", res);
     });
 
     CROW_ROUTE(app, "/app.js")
@@ -3394,20 +3711,53 @@ void setup_routes(WebApp &app,
             }
             // Subscribe first so no tiles are lost between the initial send and live pushes.
             g_job_ws_hub.subscribe(job_id, &conn);
-            // Send all tiles completed so far as a binary XDT1 catchup packet.
-            job_image_delta_t delta;
-            xtcore::tonemapping::settings_t tm_settings;
-            const bool has_catchup = jobs.image_delta(job_id, 0, 100000, tm_settings, false, "", delta)
-                                     && !delta.tiles.empty();
-            if (has_catchup) conn.send_binary(encode_xdt1(delta));
-            // Refresh snapshot after image_delta so progress/pass info is consistent
+            // Send a full-frame XTDR catchup (raw RGBA) so the client can use
+            // putImageData — no PNG encode/decode at all.
+            bool has_catchup = false;
+            if (snap.tiles_done > 0 && snap.width > 0 && snap.height > 0) {
+                std::vector<unsigned char> rgba;
+                size_t cw = 0, ch = 0, cdone = 0, ctotal = 0;
+                if (jobs.image_rgba(job_id, rgba, cw, ch, cdone, ctotal) && !rgba.empty()) {
+                    // Build an XTDR packet: header (32 bytes) + one tile record + 0 active tiles.
+                    auto push_u32le = [](std::vector<unsigned char> &buf, uint32_t v) {
+                        buf.push_back((unsigned char)(v & 0xFF));
+                        buf.push_back((unsigned char)((v >> 8) & 0xFF));
+                        buf.push_back((unsigned char)((v >> 16) & 0xFF));
+                        buf.push_back((unsigned char)((v >> 24) & 0xFF));
+                    };
+                    std::vector<unsigned char> pkt;
+                    pkt.reserve(32 + 24 + rgba.size() + 4);
+                    pkt.push_back('X'); pkt.push_back('T');
+                    pkt.push_back('D'); pkt.push_back('R');
+                    push_u32le(pkt, (uint32_t)cw);
+                    push_u32le(pkt, (uint32_t)ch);
+                    push_u32le(pkt, (uint32_t)cdone);
+                    push_u32le(pkt, (uint32_t)ctotal);
+                    push_u32le(pkt, (uint32_t)JOB_RUNNING);
+                    push_u32le(pkt, 1u); // tile_count
+                    push_u32le(pkt, (uint32_t)snap.elapsed_ms);
+                    // Tile record: full frame as single tile.
+                    push_u32le(pkt, 0u);              // x0
+                    push_u32le(pkt, 0u);              // y0
+                    push_u32le(pkt, (uint32_t)cw);    // x1
+                    push_u32le(pkt, (uint32_t)ch);    // y1
+                    push_u32le(pkt, (uint32_t)cdone); // done_index
+                    push_u32le(pkt, (uint32_t)rgba.size());
+                    pkt.insert(pkt.end(), rgba.begin(), rgba.end());
+                    // Active tiles section: none (catchup frame, not a live event).
+                    push_u32le(pkt, 0u);
+                    conn.send_binary(std::string(reinterpret_cast<const char *>(pkt.data()), pkt.size()));
+                    has_catchup = true;
+                }
+            }
+            // Refresh snapshot after image fetch so progress/pass info is consistent
             // with the catchup packet (the earlier snap may predate a few tile completions).
             jobs.snapshot(job_id, snap);
             // Send current status snapshot.
             conn.send_text(job_snapshot_to_json(snap));
             // Log after subscribe + initial send so the annotation is accurate.
             std::string detail = "job=" + job_id;
-            if (has_catchup) detail += "  " + std::to_string(delta.tiles.size()) + " tiles catchup";
+            if (has_catchup) detail += "  full-frame catchup";
             rlm_ws_log(d->client_tag, "OPEN", "/ws/jobs/" + job_id, detail);
         })
         .onmessage([&](crow::websocket::connection &conn, const std::string &data, bool is_binary) {

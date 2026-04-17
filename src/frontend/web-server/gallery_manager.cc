@@ -73,14 +73,14 @@ std::string json_str(const std::string &s)
 std::string pass_filename(size_t idx)
 {
     std::ostringstream ss;
-    ss << "pass_" << std::setw(4) << std::setfill('0') << idx << ".png";
+    ss << "pass_" << std::setw(4) << std::setfill('0') << idx << ".exr";
     return ss.str();
 }
 
 std::string meta_to_json(const gallery_entry_meta_t &m)
 {
     std::ostringstream ss;
-    ss << std::fixed << std::setprecision(1);
+    ss << std::fixed << std::setprecision(6);
     ss << "{"
        << "\"id\":"          << json_str(m.id) << ","
        << "\"scene\":"       << json_str(m.scene) << ","
@@ -96,9 +96,65 @@ std::string meta_to_json(const gallery_entry_meta_t &m)
        << "\"tile_size\":"   << m.tile_size << ","
        << "\"elapsed_ms\":"  << m.elapsed_ms << ","
        << "\"created_at_ms\":" << m.created_at_ms << ","
-       << "\"pass_count\":"  << m.pass_count
+       << "\"pass_count\":"  << m.pass_count << ","
+       << "\"tm_op\":"       << json_str(m.tm_op) << ","
+       << "\"tm_exposure\":"           << m.tm_exposure << ","
+       << "\"tm_white_point\":"        << m.tm_white_point << ","
+       << "\"tm_mantiuk_contrast\":"   << m.tm_mantiuk_contrast << ","
+       << "\"tm_mantiuk_saturation\":" << m.tm_mantiuk_saturation << ","
+       << "\"tm_mantiuk_detail\":"     << m.tm_mantiuk_detail
        << "}";
     return ss.str();
+}
+
+gallery_entry_meta_t parse_meta_from_json(const std::string &json)
+{
+    gallery_entry_meta_t m;
+
+    auto extract_str = [&](const std::string &key) -> std::string {
+        const std::string search = "\"" + key + "\":\"";
+        const size_t pos = json.find(search);
+        if (pos == std::string::npos) return "";
+        const size_t start = pos + search.size();
+        const size_t end = json.find('"', start);
+        return (end != std::string::npos) ? json.substr(start, end - start) : "";
+    };
+
+    auto extract_num = [&](const std::string &key) -> std::string {
+        const std::string search = "\"" + key + "\":";
+        const size_t pos = json.find(search);
+        if (pos == std::string::npos) return "";
+        const size_t start = pos + search.size();
+        const size_t end = json.find_first_of(",}", start);
+        return (end != std::string::npos) ? json.substr(start, end - start) : "";
+    };
+
+    m.id          = extract_str("id");
+    m.scene       = extract_str("scene");
+    m.workspace_id = extract_str("workspace_id");
+    m.integrator  = extract_str("integrator");
+    m.render_mode = extract_str("render_mode");
+
+    try { const std::string s = extract_num("width");       if (!s.empty()) m.width       = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("height");      if (!s.empty()) m.height      = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("samples");     if (!s.empty()) m.samples     = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("aa");          if (!s.empty()) m.aa          = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("rdepth");      if (!s.empty()) m.rdepth      = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("threads");     if (!s.empty()) m.threads     = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("tile_size");   if (!s.empty()) m.tile_size   = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+    try { const std::string s = extract_num("elapsed_ms");  if (!s.empty()) m.elapsed_ms  = std::stod(s); } catch (...) {}
+    try { const std::string s = extract_num("created_at_ms"); if (!s.empty()) m.created_at_ms = std::stoll(s); } catch (...) {}
+    try { const std::string s = extract_num("pass_count");  if (!s.empty()) m.pass_count  = static_cast<size_t>(std::stoul(s)); } catch (...) {}
+
+    const std::string tm_op_s = extract_str("tm_op");
+    if (!tm_op_s.empty()) m.tm_op = tm_op_s;
+    try { const std::string s = extract_num("tm_exposure");           if (!s.empty()) m.tm_exposure           = std::stof(s); } catch (...) {}
+    try { const std::string s = extract_num("tm_white_point");        if (!s.empty()) m.tm_white_point        = std::stof(s); } catch (...) {}
+    try { const std::string s = extract_num("tm_mantiuk_contrast");   if (!s.empty()) m.tm_mantiuk_contrast   = std::stof(s); } catch (...) {}
+    try { const std::string s = extract_num("tm_mantiuk_saturation"); if (!s.empty()) m.tm_mantiuk_saturation = std::stof(s); } catch (...) {}
+    try { const std::string s = extract_num("tm_mantiuk_detail");     if (!s.empty()) m.tm_mantiuk_detail     = std::stof(s); } catch (...) {}
+
+    return m;
 }
 
 } // namespace
@@ -154,7 +210,7 @@ bool gallery_manager_t::write_meta_locked(const std::string &id)
 }
 
 bool gallery_manager_t::create_entry(const gallery_entry_meta_t &meta,
-                                     const std::vector<unsigned char> &png)
+                                     const std::vector<unsigned char> &exr)
 {
     if (!initialized_) return false;
     gallery_entry_meta_t m = meta;
@@ -166,43 +222,43 @@ bool gallery_manager_t::create_entry(const gallery_entry_meta_t &meta,
     if (!make_dir(dir)) return false;
     entries_[meta.id] = m;
     if (!write_meta_locked(meta.id)) return false;
-    if (!png.empty()) {
-        write_file(dir + "/render.png", png.data(), png.size());
+    if (!exr.empty()) {
+        write_file(dir + "/render.exr", exr.data(), exr.size());
     }
     return true;
 }
 
 bool gallery_manager_t::update_render(const std::string &id,
-                                      const std::vector<unsigned char> &png,
+                                      const std::vector<unsigned char> &exr,
                                       double elapsed_ms)
 {
-    if (!initialized_ || png.empty()) return false;
+    if (!initialized_ || exr.empty()) return false;
     std::lock_guard<std::mutex> lock(mut_);
     auto it = entries_.find(id);
     if (it != entries_.end()) {
         it->second.elapsed_ms = elapsed_ms;
         write_meta_locked(id);
     }
-    return write_file(entry_dir(id) + "/render.png", png.data(), png.size());
+    return write_file(entry_dir(id) + "/render.exr", exr.data(), exr.size());
 }
 
 bool gallery_manager_t::save_pass(const std::string &id,
                                   size_t pass_index,
-                                  const std::vector<unsigned char> &png,
+                                  const std::vector<unsigned char> &exr,
                                   double elapsed_ms)
 {
-    if (!initialized_ || png.empty()) return false;
+    if (!initialized_ || exr.empty()) return false;
     std::lock_guard<std::mutex> lock(mut_);
     const std::string dir = entry_dir(id);
-    write_file(dir + "/" + pass_filename(pass_index), png.data(), png.size());
+    write_file(dir + "/" + pass_filename(pass_index), exr.data(), exr.size());
     auto it = entries_.find(id);
     if (it != entries_.end()) {
         it->second.pass_count = pass_index + 1;
         it->second.elapsed_ms = elapsed_ms;
         write_meta_locked(id);
     }
-    // Always update render.png with the latest pass
-    write_file(dir + "/render.png", png.data(), png.size());
+    // Always update render.exr with the latest pass
+    write_file(dir + "/render.exr", exr.data(), exr.size());
     return true;
 }
 
@@ -278,17 +334,36 @@ bool gallery_manager_t::get_meta_json(const std::string &id, std::string &out) c
     return !out.empty();
 }
 
-bool gallery_manager_t::get_image(const std::string &id, std::vector<unsigned char> &out) const
+bool gallery_manager_t::get_image_exr(const std::string &id, std::vector<unsigned char> &out) const
 {
     if (!initialized_) return false;
-    return read_file(entry_dir(id) + "/render.png", out);
+    return read_file(entry_dir(id) + "/render.exr", out);
 }
 
-bool gallery_manager_t::get_pass_image(const std::string &id, size_t pass_index,
-                                       std::vector<unsigned char> &out) const
+bool gallery_manager_t::get_pass_image_exr(const std::string &id, size_t pass_index,
+                                            std::vector<unsigned char> &out) const
 {
     if (!initialized_) return false;
     return read_file(entry_dir(id) + "/" + pass_filename(pass_index), out);
+}
+
+bool gallery_manager_t::get_meta_struct(const std::string &id, gallery_entry_meta_t &out) const
+{
+    if (!initialized_) return false;
+    {
+        std::lock_guard<std::mutex> lock(mut_);
+        auto it = entries_.find(id);
+        if (it != entries_.end()) {
+            out = it->second;
+            return true;
+        }
+    }
+    std::ifstream f(entry_dir(id) + "/meta.json");
+    if (!f.is_open()) return false;
+    const std::string json((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    if (json.empty()) return false;
+    out = parse_meta_from_json(json);
+    return !out.id.empty();
 }
 
 bool gallery_manager_t::delete_entry(const std::string &id)

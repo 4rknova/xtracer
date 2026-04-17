@@ -94,7 +94,8 @@ class job_manager_t
                        const std::string &scene_name,
                        const std::string &workspace_id,
                        const std::string &owner_client_id,
-                       const std::string &cleanup_scene_path);
+                       const std::string &cleanup_scene_path,
+                       const xtcore::tonemapping::settings_t &initial_tm_settings = xtcore::tonemapping::settings_t());
     bool snapshot(const std::string &id, job_snapshot_t &out);
     bool image(const std::string &id,
                std::vector<unsigned char> &out,
@@ -102,6 +103,16 @@ class job_manager_t
                const xtcore::tonemapping::settings_t &tm_settings,
                bool post_filters_enabled,
                const std::string &post_filters);
+    // Returns the full progressive frame as raw RGBA u8 (sRGB, alpha=255) with
+    // tonemapping applied — same pixel pipeline as live XTDR tile pushes.
+    // Populates width_out / height_out / tiles_done_out / tiles_total_out.
+    // Returns false if the job has no partial data yet.
+    bool image_rgba(const std::string &id,
+                    std::vector<unsigned char> &rgba_out,
+                    size_t &width_out,
+                    size_t &height_out,
+                    size_t &tiles_done_out,
+                    size_t &tiles_total_out);
     bool image_delta(const std::string &id,
                      size_t since_done,
                      size_t max_tiles,
@@ -121,6 +132,7 @@ class job_manager_t
                  std::vector<common::render_result_t::point3_t> &caustic_out,
                  size_t limit_per_set);
     bool abort(const std::string &id);
+    bool set_live_tm_settings(const std::string &id, const xtcore::tonemapping::settings_t &tm);
     bool belongs_to_client(const std::string &id, const std::string &client_id);
     bool move_queue_up(const std::string &id);
     bool move_queue_down(const std::string &id);
@@ -129,7 +141,7 @@ class job_manager_t
     void set_push_callback(
         std::function<void(const std::string &job_id,
                            const job_snapshot_t &snap,
-                           const std::vector<unsigned char> &tile_xdt1)> cb);
+                           const std::vector<unsigned char> &tile_xtdr)> cb);
 
     private:
     struct job_t
@@ -191,6 +203,7 @@ class job_manager_t
         bool preview_last_post_filters_enabled;
         std::string preview_last_post_filters;
         std::vector<unsigned char> preview_png_cache;
+        xtcore::tonemapping::settings_t live_tm_settings;
         size_t effective_threads;
         common::render_request_t request;
         std::string cleanup_scene_path;
@@ -216,7 +229,7 @@ class job_manager_t
         size_t width;
         size_t height;
         size_t threads;
-        std::string png_path;
+        std::string exr_path;
     };
 
     void run(const std::shared_ptr<job_t> &job, size_t granted_threads);

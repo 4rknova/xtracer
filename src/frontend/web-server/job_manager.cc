@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <ctime>
 #include <iomanip>
 #include <fstream>
 #include <iterator>
@@ -12,6 +13,7 @@
 #include <unistd.h>
 
 #include <nimg/img.h>
+#include <nimg/conversion.h>
 #include <xtcore/filter/postfx.h>
 #include <xtcore/filter/desaturate.h>
 #include <xtcore/tonemapping/tonemapping.h>
@@ -24,6 +26,29 @@ namespace frontend {
 namespace web {
 
 namespace {
+
+static uint32_t fnv1a_32(const std::string &s)
+{
+    uint32_t h = 2166136261u;
+    for (unsigned char c : s) {
+        h ^= c;
+        h *= 16777619u;
+    }
+    return h;
+}
+
+static std::string make_gallery_entry_id(long long created_at_ms, const std::string &scene_name)
+{
+    const time_t t = static_cast<time_t>(created_at_ms / 1000);
+    const int ms   = static_cast<int>(created_at_ms % 1000);
+    struct tm tm_buf = {};
+    gmtime_r(&t, &tm_buf);
+    char ts_buf[32];
+    std::strftime(ts_buf, sizeof(ts_buf), "%Y%m%d-%H%M%S", &tm_buf);
+    char id_buf[64];
+    std::snprintf(id_buf, sizeof(id_buf), "%s-%03d_%08x", ts_buf, ms, fnv1a_32(scene_name));
+    return std::string(id_buf);
+}
 
 bool read_file_bytes(const char *path, std::vector<unsigned char> &out)
 {
@@ -726,7 +751,7 @@ void job_manager_t::set_max_concurrent_renders(size_t max_concurrent)
 void job_manager_t::set_push_callback(
     std::function<void(const std::string &job_id,
                        const job_snapshot_t &snap,
-                       const std::vector<unsigned char> &tile_xdt1)> cb)
+                       const std::vector<unsigned char> &tile_xtdr)> cb)
 {
     push_callback_ = std::move(cb);
 }
@@ -758,7 +783,8 @@ std::string job_manager_t::create(const common::render_request_t &request,
                                   const std::string &scene_name,
                                   const std::string &workspace_id,
                                   const std::string &owner_client_id,
-                                  const std::string &cleanup_scene_path)
+                                  const std::string &cleanup_scene_path,
+                                  const xtcore::tonemapping::settings_t &initial_tm_settings)
 {
     std::shared_ptr<job_t> job(new job_t());
     unsigned long long id = ++next_id;
@@ -772,6 +798,7 @@ std::string job_manager_t::create(const common::render_request_t &request,
     job->integrator = request.integrator;
     job->request = request;
     job->cleanup_scene_path = cleanup_scene_path;
+    job->live_tm_settings = initial_tm_settings;
 
     {
         std::lock_guard<std::mutex> lock(jobs_mut);
@@ -949,11 +976,11 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
     request.threads = granted_threads;
 
     gallery_manager_t *gm = gallery_manager_;
-    const std::string gallery_job_id = job->id;
     const std::string gallery_workspace_id = job->workspace_id;
     const std::string gallery_integrator = job->integrator;
     const long long gallery_created_at_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
+    const std::string gallery_job_id = make_gallery_entry_id(gallery_created_at_ms, job->scene);
     bool gallery_entry_created = false;
 
     auto push_cb = push_callback_;
@@ -1020,13 +1047,14 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
 
                     nimg::Pixmap tile_fb;
                     bool extracted = false;
+                    xtcore::tonemapping::settings_t tm;
                     {
                         std::lock_guard<std::mutex> lk(job->mut);
                         extracted = extract_rect_from_framebuffer(
                             job->progressive_fb, tx0, ty0, tx1, ty1, tile_fb);
+                        tm = job->live_tm_settings;
                     }
                     if (extracted) {
-                        xtcore::tonemapping::settings_t tm;
                         xtcore::tonemapping::apply(tile_fb, tm);
                         const size_t tile_w = tx1 - tx0;
                         const size_t tile_h = ty1 - ty0;
@@ -1035,13 +1063,14 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                             for (size_t px = 0; px < tile_w; ++px) {
                                 const nimg::ColorRGBAf &c = tile_fb.pixel_ro(px, py);
                                 const size_t off = (py * tile_w + px) * 4;
-                                auto to_u8 = [](float v) -> unsigned char {
-                                    const int i = static_cast<int>(v * 255.0f + 0.5f);
+                                auto to_u8_srgb = [](float v) -> unsigned char {
+                                    const float s = linear_to_srgb(v);
+                                    const int i = static_cast<int>(s * 255.0f + 0.5f);
                                     return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
                                 };
-                                tile_rgba[off + 0] = to_u8(c.r());
-                                tile_rgba[off + 1] = to_u8(c.g());
-                                tile_rgba[off + 2] = to_u8(c.b());
+                                tile_rgba[off + 0] = to_u8_srgb(c.r());
+                                tile_rgba[off + 1] = to_u8_srgb(c.g());
+                                tile_rgba[off + 2] = to_u8_srgb(c.b());
                                 tile_rgba[off + 3] = 255;
                             }
                         }
@@ -1059,7 +1088,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 // ============================================================
                 // Header (32 bytes)
                 //   [0:4]   magic        "XTDR" (0x58 54 44 52) — raw RGBA variant
-                //                        cf. "XTD1" — PNG variant used by REST /image_delta only
+                //                        cf. REST /image_delta which uses PNG per tile
                 //   [4:8]   width        image width in pixels
                 //   [8:12]  height       image height in pixels
                 //   [12:16] tiles_done   cumulative finished-tile count
@@ -1089,36 +1118,36 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 //
                 // Client parser: src/frontend/web-client/app/preview.js parseImageDeltaPacket()
                 // Protocol doc:  AGENTS.md § WebSocket Protocol
-                std::vector<unsigned char> xdt1;
-                xdt1.reserve(32 + 24 + tile_rgba.size() + 4 + snap.active_tiles.size() * 16);
-                xdt1.push_back('X'); xdt1.push_back('T');
-                xdt1.push_back('D'); xdt1.push_back('R'); // 'R' = raw RGBA
-                push_u32le(xdt1, (uint32_t)job->request.width);
-                push_u32le(xdt1, (uint32_t)job->request.height);
-                push_u32le(xdt1, (uint32_t)done);
-                push_u32le(xdt1, (uint32_t)total);
-                push_u32le(xdt1, (uint32_t)JOB_RUNNING);
-                push_u32le(xdt1, tile_rgba.empty() ? 0u : 1u);
-                push_u32le(xdt1, (uint32_t)std::min(snap.elapsed_ms, (double)UINT32_MAX));
+                std::vector<unsigned char> xtdr;
+                xtdr.reserve(32 + 24 + tile_rgba.size() + 4 + snap.active_tiles.size() * 16);
+                xtdr.push_back('X'); xtdr.push_back('T');
+                xtdr.push_back('D'); xtdr.push_back('R'); // 'R' = raw RGBA
+                push_u32le(xtdr, (uint32_t)job->request.width);
+                push_u32le(xtdr, (uint32_t)job->request.height);
+                push_u32le(xtdr, (uint32_t)done);
+                push_u32le(xtdr, (uint32_t)total);
+                push_u32le(xtdr, (uint32_t)JOB_RUNNING);
+                push_u32le(xtdr, tile_rgba.empty() ? 0u : 1u);
+                push_u32le(xtdr, (uint32_t)std::min(snap.elapsed_ms, (double)UINT32_MAX));
                 if (!tile_rgba.empty()) {
-                    push_u32le(xdt1, (uint32_t)tx0);
-                    push_u32le(xdt1, (uint32_t)ty0);
-                    push_u32le(xdt1, (uint32_t)tx1);
-                    push_u32le(xdt1, (uint32_t)ty1);
-                    push_u32le(xdt1, (uint32_t)done);
-                    push_u32le(xdt1, (uint32_t)tile_rgba.size());
-                    xdt1.insert(xdt1.end(), tile_rgba.begin(), tile_rgba.end());
+                    push_u32le(xtdr, (uint32_t)tx0);
+                    push_u32le(xtdr, (uint32_t)ty0);
+                    push_u32le(xtdr, (uint32_t)tx1);
+                    push_u32le(xtdr, (uint32_t)ty1);
+                    push_u32le(xtdr, (uint32_t)done);
+                    push_u32le(xtdr, (uint32_t)tile_rgba.size());
+                    xtdr.insert(xtdr.end(), tile_rgba.begin(), tile_rgba.end());
                 }
                 // Active tile section: clients use this to draw in-progress tile markers.
-                push_u32le(xdt1, (uint32_t)snap.active_tiles.size());
+                push_u32le(xtdr, (uint32_t)snap.active_tiles.size());
                 for (const auto &r : snap.active_tiles) {
-                    push_u32le(xdt1, (uint32_t)r.x0);
-                    push_u32le(xdt1, (uint32_t)r.y0);
-                    push_u32le(xdt1, (uint32_t)r.x1);
-                    push_u32le(xdt1, (uint32_t)r.y1);
+                    push_u32le(xtdr, (uint32_t)r.x0);
+                    push_u32le(xtdr, (uint32_t)r.y0);
+                    push_u32le(xtdr, (uint32_t)r.x1);
+                    push_u32le(xtdr, (uint32_t)r.y1);
                 }
 
-                push_cb(job->id, snap, xdt1);
+                push_cb(job->id, snap, xtdr);
             }
             if (event == common::PROGRESS_EVENT_PASS_FINISHED && push_cb) {
                 // Broadcast a text JSON snapshot so WS clients update pass_current,
@@ -1135,10 +1164,9 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 const double elapsed_ms = std::chrono::duration<double, std::milli>(
                     now - job->started_at).count();
 
-                nimg::Pixmap ldr = *upd->source_fb;
-                xtcore::tonemapping::apply(ldr);
-                std::vector<unsigned char> png;
-                nimg::io::save::png_memory(ldr, png);
+                nimg::Pixmap fb_copy = *upd->source_fb;
+                std::vector<unsigned char> exr;
+                nimg::io::save::exr_memory(fb_copy, exr);
 
                 if (!gallery_entry_created) {
                     gallery_entry_meta_t meta;
@@ -1156,10 +1184,10 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                     meta.tile_size    = job->request.tile_size;
                     meta.elapsed_ms   = elapsed_ms;
                     meta.created_at_ms = gallery_created_at_ms;
-                    gm->create_entry(meta, png);
+                    gm->create_entry(meta, exr);
                     gallery_entry_created = true;
                 }
-                gm->save_pass(gallery_job_id, pass_index, png, elapsed_ms);
+                gm->save_pass(gallery_job_id, pass_index, exr, elapsed_ms);
             }
         },
         &job->cancel_requested
@@ -1207,10 +1235,9 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
 
             // Save to gallery for direct/interactive mode (no pass events fired)
             if (gm && gm->is_initialized() && !gallery_entry_created) {
-                nimg::Pixmap ldr = rr.framebuffer;
-                xtcore::tonemapping::apply(ldr);
-                std::vector<unsigned char> png;
-                nimg::io::save::png_memory(ldr, png);
+                nimg::Pixmap fb_copy = rr.framebuffer;
+                std::vector<unsigned char> exr;
+                nimg::io::save::exr_memory(fb_copy, exr);
                 gallery_entry_meta_t meta;
                 meta.id           = gallery_job_id;
                 meta.scene        = job->request.scene_path;
@@ -1226,10 +1253,13 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 meta.tile_size    = job->request.tile_size;
                 meta.elapsed_ms   = rr.elapsed_ms;
                 meta.created_at_ms = gallery_created_at_ms;
-                gm->create_entry(meta, png);
+                gm->create_entry(meta, exr);
             } else if (gm && gm->is_initialized() && gallery_entry_created) {
-                // Progressive/incremental: update final elapsed time
-                gm->update_render(gallery_job_id, job->image_png, rr.elapsed_ms);
+                // Progressive/incremental: update render.exr with final framebuffer
+                nimg::Pixmap fb_copy = job->final_fb;
+                std::vector<unsigned char> exr;
+                nimg::io::save::exr_memory(fb_copy, exr);
+                gm->update_render(gallery_job_id, exr, rr.elapsed_ms);
             }
         } else {
             job->error = rr.error;
@@ -1300,10 +1330,14 @@ void job_manager_t::cache_evicted_job_locked(const std::shared_ptr<job_t> &job)
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
-        if (!job->image_png.empty()) {
-            std::string png_path = "/tmp/xtracer_web_job_cache_" + job->id + ".png";
-            if (write_file_bytes(png_path.c_str(), job->image_png)) {
-                rec.png_path = png_path;
+        if (job->final_fb.width() > 0 && job->final_fb.height() > 0) {
+            const std::string exr_path = "/tmp/xtracer_web_job_cache_" + job->id + ".exr";
+            nimg::Pixmap fb_copy = job->final_fb;
+            std::vector<unsigned char> exr;
+            if (nimg::io::save::exr_memory(fb_copy, exr) == 0) {
+                if (write_file_bytes(exr_path.c_str(), exr)) {
+                    rec.exr_path = exr_path;
+                }
             }
         }
     }
@@ -1320,8 +1354,8 @@ void job_manager_t::prune_evicted_jobs_locked()
         evicted_job_order.pop_front();
         auto it = evicted_jobs.find(id);
         if (it == evicted_jobs.end()) continue;
-        if (!it->second.png_path.empty()) {
-            unlink(it->second.png_path.c_str());
+        if (!it->second.exr_path.empty()) {
+            unlink(it->second.exr_path.c_str());
         }
         evicted_jobs.erase(it);
     }
@@ -1354,7 +1388,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.state = e.state;
         out.error = e.error;
         out.elapsed_ms = e.elapsed_ms;
-        out.has_image = !e.png_path.empty();
+        out.has_image = !e.exr_path.empty();
         out.width = e.width;
         out.height = e.height;
         out.threads = e.threads;
@@ -1440,14 +1474,19 @@ bool job_manager_t::image(const std::string &id,
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) {
         if (allow_partial) return false;
-        std::string png_path;
+        std::string exr_path;
         {
             std::lock_guard<std::mutex> lock(jobs_mut);
             auto eit = evicted_jobs.find(id);
-            if (eit == evicted_jobs.end() || eit->second.png_path.empty()) return false;
-            png_path = eit->second.png_path;
+            if (eit == evicted_jobs.end() || eit->second.exr_path.empty()) return false;
+            exr_path = eit->second.exr_path;
         }
-        return read_file_bytes(png_path.c_str(), out);
+        std::vector<unsigned char> exr;
+        if (!read_file_bytes(exr_path.c_str(), exr)) return false;
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) return false;
+        xtcore::tonemapping::apply(fb, tm_settings);
+        return nimg::io::save::png_memory(fb, out) == 0;
     }
 
     post_filter_chain_t post_chain;
@@ -1515,6 +1554,52 @@ bool job_manager_t::image(const std::string &id,
     }
 
     out.swap(encoded);
+    return true;
+}
+
+bool job_manager_t::image_rgba(const std::string &id,
+                               std::vector<unsigned char> &rgba_out,
+                               size_t &width_out,
+                               size_t &height_out,
+                               size_t &tiles_done_out,
+                               size_t &tiles_total_out)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+
+    nimg::Pixmap fb;
+    xtcore::tonemapping::settings_t tm;
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        if (!job->progressive_ready) return false;
+        width_out       = job->request.width;
+        height_out      = job->request.height;
+        tiles_done_out  = job->tiles_done.load();
+        tiles_total_out = job->tiles_total.load();
+        tm = job->live_tm_settings;
+        if (!extract_rect_from_framebuffer(job->progressive_fb, 0, 0,
+                                           width_out, height_out, fb)) return false;
+    }
+
+    xtcore::tonemapping::apply(fb, tm);
+
+    const size_t npx = width_out * height_out;
+    rgba_out.resize(npx * 4);
+    auto to_u8_srgb = [](float v) -> unsigned char {
+        const float s = linear_to_srgb(v);
+        const int i = static_cast<int>(s * 255.0f + 0.5f);
+        return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
+    };
+    for (size_t py = 0; py < height_out; ++py) {
+        for (size_t px = 0; px < width_out; ++px) {
+            const nimg::ColorRGBAf &c = fb.pixel_ro(px, py);
+            const size_t off = (py * width_out + px) * 4;
+            rgba_out[off + 0] = to_u8_srgb(c.r());
+            rgba_out[off + 1] = to_u8_srgb(c.g());
+            rgba_out[off + 2] = to_u8_srgb(c.b());
+            rgba_out[off + 3] = 255;
+        }
+    }
     return true;
 }
 
@@ -1659,15 +1744,28 @@ bool job_manager_t::image_export(const std::string &id,
 {
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) {
-        if (format != "png") return false;
-        std::string png_path;
+        if (format != "png" && format != "exr") return false;
+        std::string exr_path;
         {
             std::lock_guard<std::mutex> lock(jobs_mut);
             auto eit = evicted_jobs.find(id);
-            if (eit == evicted_jobs.end() || eit->second.png_path.empty()) return false;
-            png_path = eit->second.png_path;
+            if (eit == evicted_jobs.end() || eit->second.exr_path.empty()) return false;
+            exr_path = eit->second.exr_path;
         }
-        if (!read_file_bytes(png_path.c_str(), out)) return false;
+        if (format == "exr") {
+            if (!read_file_bytes(exr_path.c_str(), out)) return false;
+            mime_type = "image/x-exr";
+            extension = "exr";
+            return true;
+        }
+        // format == "png": decode EXR, apply default tonemapping, encode PNG
+        std::vector<unsigned char> exr;
+        if (!read_file_bytes(exr_path.c_str(), exr)) return false;
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) return false;
+        xtcore::tonemapping::settings_t tm_defaults;
+        xtcore::tonemapping::apply(fb, tm_defaults);
+        if (nimg::io::save::png_memory(fb, out) != 0) return false;
         mime_type = "image/png";
         extension = "png";
         return true;
@@ -1809,6 +1907,16 @@ bool job_manager_t::abort(const std::string &id)
         }
     }
     dispatch_queued_jobs();
+    return true;
+}
+
+bool job_manager_t::set_live_tm_settings(const std::string &id,
+                                         const xtcore::tonemapping::settings_t &tm)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) return false;
+    std::lock_guard<std::mutex> lock(job->mut);
+    job->live_tm_settings = tm;
     return true;
 }
 
