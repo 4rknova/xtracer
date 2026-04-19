@@ -69,6 +69,8 @@
 #define XTPROTO_PROP_COLORS			"colors"			/* string     */ /* color properties */
 #define XTPROTO_PROP_TEXTURES		"textures"			/* string     */ /* texture properties */
 #define XTPROTO_PROP_PREFIX			"prefix"			/* string     */ /* A prefix string */
+#define XTPROTO_PROP_TEXTURE_DIR	"texture_dir"		/* string     */ /* Override directory for imported textures */
+#define XTPROTO_PROP_IGNORE			"ignore"			/* string     */ /* Comma-separated list of material names to skip during import */
 #define XTPROTO_PROP_TYPE			"type"				/* string     */ /* Type */
 #define XTPROTO_PROP_DEFAULT		"default"			/* string     */ /* Default value */
 #define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */ /* Translation */
@@ -227,9 +229,7 @@
 #define XTPROTO_CURL_NOISE          "curl_noise"
 #define XTPROTO_SCRATCHES           "scratches"
 #define XTPROTO_EDGE_WEAR           "edge_wear"
-#define XTPROTO_FINGERPRINT         "fingerprint"
 #define XTPROTO_BRICK               "brick"
-#define XTPROTO_HEXGRID             "hexgrid"
 #define XTPROTO_DOTS                "dots"
 #define XTPROTO_PREETHAM_SKY        "preetham_sky"
 #define XTPROTO_HOSEK_WILKIE_SKY    "hosek_wilkie_sky"

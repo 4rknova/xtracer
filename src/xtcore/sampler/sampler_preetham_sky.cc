@@ -124,8 +124,6 @@ PreethamSky::~PreethamSky()
 
 nimg::ColorRGBf PreethamSky::sample(const nmath::Vector3f &uvw) const
 {
-    const nmath::scalar_t pi = (nmath::scalar_t)3.14159265358979323846;
-
     // Normalise view direction (uvw is used as a direction vector, same as other sky samplers)
     const nmath::scalar_t len = (nmath::scalar_t)std::sqrt((double)(uvw.x*uvw.x + uvw.y*uvw.y + uvw.z*uvw.z));
     if (len < (nmath::scalar_t)1e-6) return ground_color;

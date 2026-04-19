@@ -23,7 +23,7 @@ inline uint32_t uhash(int x, int y, int seed)
 
 inline nmath::scalar_t h01(int x, int y, int seed, uint32_t ch)
 {
-    return (nmath::scalar_t)(uhash(x, y, seed) ^ (ch * 0xc2b2ae35u) & 0x00ffffffu) / (nmath::scalar_t)0x01000000u;
+    return (nmath::scalar_t)(uhash(x, y, seed) ^ ((ch * 0xc2b2ae35u) & 0x00ffffffu)) / (nmath::scalar_t)0x01000000u;
 }
 
 // Voronoi F2-F1 distance: returns distance to nearest cell boundary.
