@@ -734,7 +734,8 @@ bool read_variant_name(const params_view &params, std::string &variant, std::str
 bool write_workspace_temp_scene(const std::string &workspace_id,
                                 const std::string &scene_name,
                                 const std::string &source,
-                                std::string &out_path)
+                                std::string &out_path,
+                                const std::string &dir = "/tmp")
 {
     std::string ws = workspace_id.empty() ? "ws" : workspace_id;
     for (size_t i = 0; i < ws.size(); ++i) {
@@ -746,10 +747,13 @@ bool write_workspace_temp_scene(const std::string &workspace_id,
         const unsigned char c = (unsigned char)scene[i];
         if (!(std::isalnum(c) || c == '_' || c == '-')) scene[i] = '_';
     }
-    std::string pattern = "/tmp/xtracer_ws_" + ws + "_" + scene + "_XXXXXX.scn";
+    // Use .scntmp extension so the file doesn't appear in scene listings
+    // (is_scene_name_safe requires .scn suffix).
+    const std::string base = dir.empty() ? "/tmp" : dir;
+    std::string pattern = base + "/xtracer_ws_" + ws + "_" + scene + "_XXXXXX.scntmp";
     std::vector<char> buf(pattern.begin(), pattern.end());
     buf.push_back('\0');
-    int fd = mkstemps(buf.data(), 4);
+    int fd = mkstemps(buf.data(), 7);
     if (fd < 0) return false;
     close(fd);
     out_path = std::string(buf.data());
@@ -2817,7 +2821,11 @@ void setup_routes(WebApp &app,
         std::string draft_source;
         if (workspaces.get_scene_draft(workspace_id, scene, draft_source) && !draft_source.empty()) {
             std::string tmp_scene_path;
-            if (write_workspace_temp_scene(workspace_id, scene, draft_source, tmp_scene_path)) {
+            // Write the temp scene into the real scene's directory so that
+            // relative asset paths (geometry/, textures/, etc.) resolve
+            // identically to the saved scene.
+            const std::string real_scene_dir = dirname_path(rr.scene_path);
+            if (write_workspace_temp_scene(workspace_id, scene, draft_source, tmp_scene_path, real_scene_dir)) {
                 rr.scene_path = tmp_scene_path;
                 cleanup_scene_path = tmp_scene_path;
             }
