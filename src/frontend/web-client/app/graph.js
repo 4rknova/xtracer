@@ -145,7 +145,7 @@ function drawGraphCanvas() {
 
   const { cssW, cssH, dpr } = dims;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = "rgba(9,15,21,0.22)";
+  ctx.fillStyle = "#00000000";
   ctx.fillRect(0, 0, cssW, cssH);
 
   // Miro-like infinite grid in screen space derived from world transform.
@@ -172,7 +172,7 @@ function drawGraphCanvas() {
   ctx.translate(graphView.tx, graphView.ty);
   ctx.scale(graphView.scale, graphView.scale);
 
-  ctx.fillStyle = "rgba(9,15,21,0.22)";
+  ctx.fillStyle = "rgba(9,15,21,0.22, 0.1)";
   ctx.fillRect(0, 0, data.viewW, data.viewH);
 
   ctx.font = "700 14px IBM Plex Sans, sans-serif";

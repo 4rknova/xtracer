@@ -622,7 +622,16 @@ function openGalleryDetail(entry) {
         t.loading = "lazy";
         t.alt = `Pass ${i + 1}`;
         btn.appendChild(t);
+        const dot = document.createElement("span");
+        dot.className = "gallery-pass-thumb-dot";
+        dot.setAttribute("aria-hidden", "true");
+        btn.appendChild(dot);
+        const num = document.createElement("span");
+        num.className = "gallery-pass-thumb-num";
+        num.textContent = String(i + 1);
+        btn.appendChild(num);
         btn.addEventListener("click", () => {
+          if (passThumbs._passStripDragged && passThumbs._passStripDragged()) return;
           galleryCurrentPassIndex = i;
           if (img) {
             img.onload = () => {
@@ -744,13 +753,29 @@ async function deleteGalleryEntry(id) {
   }
 }
 
+function getGallerySearchQuery() {
+  const input = document.getElementById("gallerySearch");
+  return input ? input.value.trim().toLowerCase() : "";
+}
+
+function filteredGalleryEntries() {
+  const q = getGallerySearchQuery();
+  if (!q) return galleryEntries;
+  return galleryEntries.filter((e) => {
+    const scene = (e.scene || e.id || "").toLowerCase();
+    const integrator = (e.integrator || "").toLowerCase();
+    const mode = (e.render_mode || "").toLowerCase();
+    return scene.includes(q) || integrator.includes(q) || mode.includes(q);
+  });
+}
+
 async function refreshGallery() {
   try {
     const res = await fetch("/api/gallery?t=" + Date.now());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     galleryEntries = Array.isArray(data.entries) ? data.entries : [];
-    renderGalleryGrid(galleryEntries);
+    renderGalleryGrid(filteredGalleryEntries());
   } catch (err) {
     if (typeof appendLog === "function") appendLog(`gallery fetch error: ${err.message}`);
   }
@@ -760,6 +785,11 @@ async function refreshGallery() {
 document.addEventListener("DOMContentLoaded", () => {
   const refreshBtn = document.getElementById("galleryRefreshBtn");
   if (refreshBtn) refreshBtn.addEventListener("click", () => refreshGallery());
+
+  const searchInput = document.getElementById("gallerySearch");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => renderGalleryGrid(filteredGalleryEntries()));
+  }
 
   const backBtn = document.getElementById("galleryDetailBackBtn");
   if (backBtn) backBtn.addEventListener("click", closeGalleryDetail);
@@ -835,6 +865,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const exportFormat = document.getElementById("galleryExportFormat");
   if (exportFormat) exportFormat.addEventListener("change", updateGalleryExportUi);
+
+  // ── Pass strip drag-to-scroll ────────────────────────────────────────────
+  const passThumbsEl = document.getElementById("galleryPassThumbs");
+  if (passThumbsEl) {
+    let dragging = false;
+    let startX = 0;
+    let scrollStart = 0;
+    let moved = false;
+    passThumbsEl._passStripDragged = () => moved;
+
+    passThumbsEl.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      moved = false;
+      startX = e.clientX;
+      scrollStart = passThumbsEl.scrollLeft;
+      passThumbsEl.setPointerCapture(e.pointerId);
+      passThumbsEl.classList.add("is-dragging");
+    });
+
+    passThumbsEl.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      passThumbsEl.scrollLeft = scrollStart - dx;
+    });
+
+    const endDrag = () => {
+      dragging = false;
+      passThumbsEl.classList.remove("is-dragging");
+    };
+    passThumbsEl.addEventListener("pointerup", endDrag);
+    passThumbsEl.addEventListener("pointercancel", endDrag);
+  }
 
   bindGalleryViewEvents();
 });

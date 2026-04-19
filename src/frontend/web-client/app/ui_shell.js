@@ -90,7 +90,7 @@ async function refreshSidebarCardVisibilityConfig(activeMode) {
 function normalizeEditorViewMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "3d") return "visual";
-  if (raw === "visual" || raw === "graph" || raw === "text") return raw;
+  if (raw === "visual" || raw === "graph" || raw === "text" || raw === "samplers" || raw === "geometry") return raw;
   return "visual";
 }
 
@@ -117,12 +117,29 @@ function setEditorViewMode(mode, persist) {
   const nextMode = normalizeEditorViewMode(mode);
   const isVisual = nextMode === "visual";
   const isGraph = nextMode === "graph";
+  const isText = nextMode === "text";
+  const isSamplers = nextMode === "samplers";
+  const isGeometry = nextMode === "geometry";
   editorViewMode = nextMode;
 
   if (el.visualPanel) el.visualPanel.hidden = !isVisual;
   if (el.graphPanel) el.graphPanel.hidden = !isGraph;
-  if (el.textEditorPanel) el.textEditorPanel.hidden = (isVisual || isGraph);
+  if (el.textEditorPanel) el.textEditorPanel.hidden = !isText;
   if (el.graphResetLayoutBtn) el.graphResetLayoutBtn.hidden = !isGraph;
+  if (el.samplersPanel) {
+    el.samplersPanel.hidden = !isSamplers;
+    if (isSamplers) {
+      const iframe = el.samplersPanel.querySelector("iframe");
+      if (iframe && !iframe.dataset.loaded) { iframe.src = "/samplers.html"; iframe.dataset.loaded = "1"; }
+    }
+  }
+  if (el.geometryPanel) {
+    el.geometryPanel.hidden = !isGeometry;
+    if (isGeometry) {
+      const iframe = el.geometryPanel.querySelector("iframe");
+      if (iframe && !iframe.dataset.loaded) { iframe.src = "/geometry.html"; iframe.dataset.loaded = "1"; }
+    }
+  }
 
   const setActive = (node, state) => {
     if (!node) return;
@@ -132,7 +149,9 @@ function setEditorViewMode(mode, persist) {
   };
   setActive(el.editorView3dBtn, isVisual);
   setActive(el.editorViewGraphBtn, isGraph);
-  setActive(el.editorViewTextBtn, !isVisual && !isGraph);
+  setActive(el.editorViewTextBtn, isText);
+  setActive(el.editorViewSamplersBtn, isSamplers);
+  setActive(el.editorViewGeometryBtn, isGeometry);
 
   if (persist !== false) localStorage.setItem(EDITOR_VIEW_MODE_KEY, nextMode);
   if (activeTabMode === "visual") {
@@ -305,6 +324,14 @@ function applySidebarCardLayout(mode) {
     setSidebarCardVisibility(card, visibleSet.has(card.id));
   });
 
+  const sidebar = document.querySelector(".persistent-sidebar");
+  const hadNoCards = sidebar && sidebar.classList.contains("has-no-sidebar-cards");
+  const hasNoCards = visibleIds.length === 0;
+  if (sidebar) sidebar.classList.toggle("has-no-sidebar-cards", hasNoCards);
+  if (hasNoCards && !hadNoCards) {
+    document.dispatchEvent(new CustomEvent("sheet:close"));
+  }
+
   requestAnimationFrame(refreshMobileCardSwitcher);
 }
 
@@ -366,16 +393,13 @@ function setActiveTab(mode) {
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
-  const bnModes = ["scene", "render", "workspaces", "visual", "gallery"];
-  if (bnModes.includes(nextMode)) {
-    ["bnTabScene", "bnTabRender", "bnTabWorkspaces", "bnTabVisual", "bnTabGallery"].forEach((id) => {
-      const btn = el[id];
-      if (!btn) return;
-      const isBtn = btn.dataset.mode === nextMode;
-      btn.classList.toggle("active", isBtn);
-      btn.setAttribute("aria-pressed", isBtn ? "true" : "false");
-    });
-  }
+  ["bnTabScene", "bnTabRender", "bnTabWorkspaces", "bnTabVisual", "bnTabGallery", "bnTabLogs", "bnTabSettings", "bnTabAbout"].forEach((id) => {
+    const btn = el[id];
+    if (!btn) return;
+    const isBtn = btn.dataset.mode === nextMode;
+    btn.classList.toggle("active", isBtn);
+    btn.setAttribute("aria-pressed", isBtn ? "true" : "false");
+  });
   setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);

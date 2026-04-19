@@ -622,7 +622,7 @@ function clampPreviewPan() {
 
 function applyPreviewTransform() {
   if (!el.preview || !el.previewCanvas) return;
-  const isZoomed = previewView.scale > 1.001 || Math.abs(previewView.tx) > 0.5 || Math.abs(previewView.ty) > 0.5;
+  const isZoomed = previewView.scale > 1.001;
   updateResetViewUi(isZoomed);
   if (!hasPreviewImage()) {
     if (el.preview.getAttribute("src")) {

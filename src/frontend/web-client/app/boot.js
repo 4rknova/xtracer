@@ -845,6 +845,12 @@ async function boot() {
         syncMobileLogsViewport();
       });
     }
+    if (persistentSidebar && !isMobileTabMenuViewport()) {
+      persistentSidebar.style.transform = "";
+      persistentSidebar.style.transition = "";
+      persistentSidebar.classList.remove("is-sheet-open");
+      if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
+    }
   });
 
 
@@ -954,6 +960,9 @@ async function boot() {
   if (el.bnTabWorkspaces) el.bnTabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   if (el.bnTabVisual) el.bnTabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.bnTabGallery) el.bnTabGallery.addEventListener("click", () => setActiveTab("gallery"));
+  if (el.bnTabLogs) el.bnTabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.bnTabSettings) el.bnTabSettings.addEventListener("click", () => setActiveTab("settings"));
+  if (el.bnTabAbout) el.bnTabAbout.addEventListener("click", () => setActiveTab("about"));
 
   const SIDEBAR_EXPANDED_KEY = "xtracer-sidebar-rail-expanded";
   const appShell = document.querySelector(".app-shell");
@@ -976,21 +985,118 @@ async function boot() {
   }
 
   const persistentSidebar = document.querySelector(".persistent-sidebar");
+  const SHEET_PEEK_PX = 28;
+  const SHEET_EASE = "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)";
+
+  function sheetPeekY() {
+    // offsetHeight can be 0 before first paint; fall back to 72vh (CSS max-height)
+    const h = persistentSidebar.offsetHeight || Math.round(window.innerHeight * 0.72);
+    return h - SHEET_PEEK_PX;
+  }
   function openControlsSheet() {
-    if (persistentSidebar) persistentSidebar.classList.add("is-sheet-open");
+    if (!isMobileTabMenuViewport()) return;
+    if (persistentSidebar && persistentSidebar.classList.contains("has-no-sidebar-cards")) return;
+    if (persistentSidebar) {
+      persistentSidebar.style.transition = SHEET_EASE;
+      persistentSidebar.style.transform = "translateY(0)";
+      persistentSidebar.classList.add("is-sheet-open");
+    }
     if (el.sheetBackdrop) el.sheetBackdrop.classList.add("is-open");
   }
   function closeControlsSheet() {
-    if (persistentSidebar) persistentSidebar.classList.remove("is-sheet-open");
+    if (!isMobileTabMenuViewport()) return;
+    if (persistentSidebar) {
+      persistentSidebar.style.transition = SHEET_EASE;
+      persistentSidebar.style.transform = `translateY(${sheetPeekY()}px)`;
+      persistentSidebar.classList.remove("is-sheet-open");
+    }
     if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
   }
-  if (el.controlsSheetFab) el.controlsSheetFab.addEventListener("click", openControlsSheet);
   if (el.sheetBackdrop) el.sheetBackdrop.addEventListener("click", closeControlsSheet);
+  document.addEventListener("sheet:close", () => {
+    if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
+    if (persistentSidebar) persistentSidebar.classList.remove("is-sheet-open");
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) {
       closeControlsSheet();
     }
   });
+
+  // Tap the sheet handle to open when closed.
+  const sheetHandle = document.querySelector(".sheet-handle");
+  if (sheetHandle) {
+    sheetHandle.addEventListener("click", () => {
+      if (!persistentSidebar || persistentSidebar.classList.contains("is-sheet-open")) return;
+      openControlsSheet();
+    });
+  }
+
+
+  // Drag-to-open / drag-to-close bottom sheet.
+  // Attach to the sidebar itself so the full visible peek strip is a hit target,
+  // not just the 4px handle pill. Move/end listeners go on document so the
+  // finger can travel outside the element without losing the gesture.
+  if (persistentSidebar) {
+    let dragging = false;
+    let startTouchY = 0;
+    let startTranslateY = 0;
+    let lastTouchY = 0;
+    let lastTouchTime = 0;
+    let velocity = 0;
+
+    function currentTranslateY() {
+      const inline = persistentSidebar.style.transform;
+      if (inline && inline !== "none") return new DOMMatrix(inline).m42;
+      const t = getComputedStyle(persistentSidebar).transform;
+      if (t && t !== "none") return new DOMMatrix(t).m42;
+      return sheetPeekY();
+    }
+
+    persistentSidebar.addEventListener("touchstart", (e) => {
+      if (!isMobileTabMenuViewport()) return;
+      if (persistentSidebar.classList.contains("has-no-sidebar-cards")) return;
+      const isOpen = persistentSidebar.classList.contains("is-sheet-open");
+      // When open, only drag from the top 48px (handle zone) to close
+      if (isOpen) {
+        const rect = persistentSidebar.getBoundingClientRect();
+        if (e.touches[0].clientY > rect.top + 48) return;
+      }
+      dragging = true;
+      startTouchY = e.touches[0].clientY;
+      lastTouchY = startTouchY;
+      lastTouchTime = Date.now();
+      velocity = 0;
+      startTranslateY = currentTranslateY();
+      persistentSidebar.style.transition = "none";
+    }, { passive: true });
+
+    document.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const y = e.touches[0].clientY;
+      const now = Date.now();
+      const dt = now - lastTouchTime;
+      if (dt > 0) velocity = (y - lastTouchY) / dt;
+      lastTouchY = y;
+      lastTouchTime = now;
+      const raw = startTranslateY + (y - startTouchY);
+      persistentSidebar.style.transform = `translateY(${Math.max(0, Math.min(sheetPeekY(), raw))}px)`;
+      e.preventDefault();
+    }, { passive: false });
+
+    function onTouchEnd() {
+      if (!dragging) return;
+      dragging = false;
+      const finalY = startTranslateY + (lastTouchY - startTouchY);
+      const draggedUp = startTranslateY - finalY; // positive = moved toward open
+      // Open on fast upward flick OR any 60px+ upward drag from closed position
+      const open = velocity < -0.3 || draggedUp >= 60;
+      if (open) openControlsSheet(); else closeControlsSheet();
+    }
+
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+  }
 
   if (el.mainMenuToggle) {
     el.mainMenuToggle.addEventListener("click", () => {
@@ -1039,6 +1145,12 @@ async function boot() {
   }
   if (el.editorViewTextBtn) {
     el.editorViewTextBtn.addEventListener("click", () => setEditorViewMode("text"));
+  }
+  if (el.editorViewSamplersBtn) {
+    el.editorViewSamplersBtn.addEventListener("click", () => setEditorViewMode("samplers"));
+  }
+  if (el.editorViewGeometryBtn) {
+    el.editorViewGeometryBtn.addEventListener("click", () => setEditorViewMode("geometry"));
   }
   document.addEventListener("keydown", handleUndoRedoShortcut);
 

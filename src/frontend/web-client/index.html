@@ -173,32 +173,34 @@
                 <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
                 <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
               </section>
-              <section id="renderStatusGroup" class="render-stats-group render-status-stats-group">
-                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code id="statusThreads" class="workspace-active-value status-field status-threads">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass" class="workspace-active-value status-field status-pass">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code id="statusPercent" class="workspace-active-value status-field status-percent">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code id="renderTimer" class="workspace-active-value status-field status-timer">-</code></p>
-              </section>
             </div>
-            <div id="previewHeadline" class="preview-headline is-idle">
-              <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn" type="button">Render</button>
-              <p id="status" class="status-chip">Idle</p>
-              <div id="progressBar" class="bar"><div id="progress"></div></div>
+            <div class="render-action-row">
+              <div id="previewHeadline" class="preview-headline is-idle">
+                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn" type="button">Render</button>
+                <p id="status" class="status-chip">Idle</p>
+                <div id="progressBar" class="bar"><div id="progress"></div></div>
+              </div>
+              <section id="renderStatusGroup" class="render-stats-group render-status-stats-group">
+                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code id="statusThreads" class="workspace-active-value status-threads">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass" class="workspace-active-value status-pass">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code id="statusPercent" class="workspace-active-value status-percent">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code id="renderTimer" class="workspace-active-value status-timer">-</code></p>
+              </section>
             </div>
           </section>
           <section class="panel panel-preview">
             <div class="preview-toolbar">
               <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls" aria-label="Preview export and sampling controls">
                 <div id="renderPreviewViewControls" class="render-preview-toolbar-view">
-                  <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
+              <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                </svg>
+              </button>
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
               <div id="interactivePreviewHud" class="interactive-preview-hud" hidden>
                 <p id="interactivePreviewHudMode" class="interactive-preview-hud-row">Mode: LOOK</p>
@@ -220,6 +222,8 @@
               <button id="editorView3dBtn" class="editor-view-btn active" type="button" role="tab" aria-selected="true" aria-controls="visualPanel">3D View</button>
               <button id="editorViewGraphBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="graphPanel">Graph</button>
               <button id="editorViewTextBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="textEditorPanel">Text Editor</button>
+              <button id="editorViewSamplersBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="samplersPanel">Samplers</button>
+              <button id="editorViewGeometryBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="geometryPanel">Geometry</button>
             </div>
             <div class="editor-view-actions">
               <button id="graphResetLayoutBtn" class="editor-view-icon-btn" type="button" title="Reset node positions and auto layout" aria-label="Reset node positions">
@@ -256,8 +260,7 @@
         <section class="panel editor-panel" id="textEditorPanel" hidden>
           <div class="editor-toolbar">
             <label class="xui-field">
-              <span class="xui-field__label">Scene Name</span>
-              <input id="sceneName" class="xui-input" type="text" placeholder="new_scene.scn">
+              <input id="sceneName" class="xui-input" type="text" placeholder="Scene name…">
             </label>
             <button id="newSceneBtn" class="xui-button xui-button--secondary" type="button">New Scene</button>
           </div>
@@ -272,6 +275,12 @@
             <textarea id="sceneSource" class="xui-textarea" rows="22" spellcheck="false" wrap="off"></textarea>
           </div>
 
+        </section>
+        <section class="panel editor-util-panel" id="samplersPanel" hidden>
+          <iframe class="editor-util-frame" title="Sampler Gallery"></iframe>
+        </section>
+        <section class="panel editor-util-panel" id="geometryPanel" hidden>
+          <iframe class="editor-util-frame" title="Geometry Gallery"></iframe>
         </section>
       </section>
 
@@ -336,7 +345,7 @@
       <section class="tab-pane" id="paneGallery">
         <section class="panel gallery-panel">
           <div class="gallery-toolbar">
-            <h2 class="gallery-title">Gallery</h2>
+            <input id="gallerySearch" class="gallery-search-input" type="search" placeholder="Search gallery" aria-label="Search gallery">
             <button id="galleryRefreshBtn" class="gallery-refresh-btn" type="button" title="Refresh gallery" aria-label="Refresh gallery">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
@@ -350,7 +359,6 @@
           <div class="gallery-detail-toolbar">
             <div class="gallery-detail-toolbar-main">
               <button id="galleryDetailBackBtn" class="gallery-back-btn xui-button xui-button--secondary" type="button">Back</button>
-              <h3 id="galleryDetailTitle" class="gallery-detail-title"></h3>
               <div class="gallery-detail-toolbar-view">
                 <button id="galleryResetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset gallery view" aria-disabled="true" title="Reset view">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -358,6 +366,20 @@
                   </svg>
                 </button>
                 <div id="gallerySamplingSwitch" class="render-preview-sampling-switch gallery-sampling-switch" role="group" aria-label="Preview sampling" data-value="smooth"></div>
+                <div class="render-toolbar-save-shell is-disabled" id="galleryExportShell">
+                  <button id="galleryExportBtn" class="xui-button xui-button--secondary is-disabled export-download-link" type="button" disabled aria-disabled="true" title="Save As" aria-label="Save As">Save As</button>
+                  <label for="galleryExportFormat" class="xui-field render-toolbar-save-format">
+                    <span class="xui-field__label sr-only">Export Format</span>
+                    <select id="galleryExportFormat" class="xui-select render-toolbar-save-select export-format" aria-label="Export format">
+                      <option value="png">PNG</option>
+                      <option value="jpg">JPG</option>
+                      <option value="bmp">BMP</option>
+                      <option value="tga">TGA</option>
+                      <option value="exr">EXR</option>
+                      <option value="hdr">HDR</option>
+                    </select>
+                  </label>
+                </div>
               </div>
             </div>
             <div class="gallery-detail-toolbar-meta">
@@ -410,22 +432,6 @@
                   <label id="galleryTmMantiukDetailRow" class="xui-field">
                     <span class="xui-field__label">Detail</span>
                     <input id="galleryTmMantiukDetail" class="xui-input" type="number" min="1" max="99" step="1" value="1">
-                  </label>
-                </div>
-              </div>
-              <div class="gallery-detail-export">
-                <div class="render-toolbar-save-shell is-disabled" id="galleryExportShell">
-                  <button id="galleryExportBtn" class="xui-button xui-button--secondary is-disabled export-download-link" type="button" disabled aria-disabled="true" title="Save As" aria-label="Save As">Save As</button>
-                  <label for="galleryExportFormat" class="xui-field render-toolbar-save-format">
-                    <span class="xui-field__label sr-only">Export Format</span>
-                    <select id="galleryExportFormat" class="xui-select render-toolbar-save-select export-format" aria-label="Export format">
-                      <option value="png">PNG</option>
-                      <option value="jpg">JPG</option>
-                      <option value="bmp">BMP</option>
-                      <option value="tga">TGA</option>
-                      <option value="exr">EXR</option>
-                      <option value="hdr">HDR</option>
-                    </select>
                   </label>
                 </div>
               </div>
@@ -509,7 +515,6 @@
               <label class="xui-switch"><span class="xui-switch__label">Auto-load scene source in editor when scene changes</span><input id="autoLoadEditor" type="checkbox" checked></label>
               <label class="xui-switch"><span class="xui-switch__label">Show tutorial on next launch</span><input id="ftueShowOnNextLaunch" type="checkbox"></label>
               <button id="ftueStartNowBtn" class="xui-button xui-button--primary" type="button">Start Tutorial Now</button>
-              <p class="settings-note">Backend logs use wait polling. Logs tab and background wait intervals are configurable.</p>
             </div>
           </section>
         </section>
@@ -606,9 +611,6 @@
           </section>
 
           <section class="about-card about-third-party-card">
-            <div class="about-card-head" data-widget-panel-head>
-              <h3>Third-Party Software</h3>
-            </div>
             <div id="aboutThirdPartyList" class="about-third-party-list">loading...</div>
           </section>
 
@@ -620,6 +622,14 @@
               <div class="about-meta-row">
                 <span class="about-key">Sampling Visualization</span>
                 <a href="/sampling.html" target="_blank" rel="noopener noreferrer">/sampling.html</a>
+              </div>
+              <div class="about-meta-row">
+                <span class="about-key">Sampler Gallery</span>
+                <a href="/samplers.html" target="_blank" rel="noopener noreferrer">/samplers.html</a>
+              </div>
+              <div class="about-meta-row">
+                <span class="about-key">Geometry Gallery</span>
+                <a href="/geometry.html" target="_blank" rel="noopener noreferrer">/geometry.html</a>
               </div>
               <div class="about-meta-row">
                 <span class="about-key">UI Showcase</span>
@@ -656,13 +666,20 @@
         <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zm-11-4 2.53 3.21L17 11l5 7H8l3-6zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"></path></svg></span>
         <span class="bottom-nav-label">Gallery</span>
       </button>
+      <button id="bnTabLogs" class="bottom-nav-item" type="button" data-mode="logs" aria-label="Logs" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.75 5.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.25v-8.5A2.25 2.25 0 0 1 6.75 5.5zm.5 3.25h4.25v1.5H7.25zm0 3.5h9.5v1.5h-9.5zm0 3.5h6.25v1.5H7.25z"></path></svg></span>
+        <span class="bottom-nav-label">Logs</span>
+      </button>
+      <button id="bnTabSettings" class="bottom-nav-item" type="button" data-mode="settings" aria-label="Settings" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94a7.9 7.9 0 0 0 .05-.94 7.9 7.9 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.9 7.9 0 0 0-.05.94 7.9 7.9 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"></path></svg></span>
+        <span class="bottom-nav-label">Settings</span>
+      </button>
+      <button id="bnTabAbout" class="bottom-nav-item" type="button" data-mode="about" aria-label="About" aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle><circle cx="12" cy="8" r="1.1"></circle><path d="M11.2 10.75h1.6v5.2h-1.6z"></path></svg></span>
+        <span class="bottom-nav-label">About</span>
+      </button>
     </nav>
     <div id="sheetBackdrop" class="sheet-backdrop" aria-hidden="true"></div>
-    <button id="controlsSheetFab" class="controls-sheet-fab" type="button" aria-label="Open render controls">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M4 6h16v2H4zm2 5h12v2H6zm2 5h8v2H8z"/>
-      </svg>
-    </button>
   </main>
 
   <div id="ftueOverlay" class="ftue-overlay" hidden aria-hidden="true">

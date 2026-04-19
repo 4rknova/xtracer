@@ -49,8 +49,8 @@
 
     var density = (sigmaT.r + sigmaT.g + sigmaT.b) / 3.0;
     var emissionBoost = (emission.r + emission.g + emission.b) / 3.0;
-    var opacity = clamp(0.08 + density * 0.65 + emissionBoost * 0.25, 0.1, 0.5);
-    var edgeOpacity = clamp(opacity * 1.35, 0.2, 0.85);
+    var opacity = clamp(0.04 + density * 0.18 + emissionBoost * 0.08, 0.05, 0.18);
+    var edgeOpacity = clamp(opacity * 1.4, 0.1, 0.32);
     return {
       color: color,
       opacity: opacity,
@@ -215,6 +215,39 @@ async function loadTextureForScene(ctx, sceneName, sourcePath, colorTexture) {
   return tex;
 }
 
+async function loadEmbeddedTextureForScene(ctx, sceneName, materialId, samplerName, colorTexture) {
+  var scene = String(sceneName || "").trim();
+  var matId = String(materialId || "").trim();
+  var samp = String(samplerName || "").trim();
+  if (!ctx || !scene || !matId || !samp) return null;
+  var key = scene + "::__rt__::" + matId + "::" + samp + "::" + (colorTexture ? "color" : "linear");
+  if (Object.prototype.hasOwnProperty.call(ctx.textureCache, key)) {
+    return ctx.textureCache[key];
+  }
+  if (!ctx.textureLoader) {
+    ctx.textureLoader = new THREE.TextureLoader();
+  }
+  var url = "/api/scenes/" + encodeURIComponent(scene) + "/runtime_texture"
+    + "?material=" + encodeURIComponent(matId)
+    + "&sampler=" + encodeURIComponent(samp);
+  var tex = await new Promise(function (resolve) {
+    ctx.textureLoader.load(
+      url,
+      function (loaded) { resolve(loaded || null); },
+      undefined,
+      function () { resolve(null); }
+    );
+  });
+  if (tex) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    if (colorTexture) tex.encoding = THREE.sRGBEncoding;
+    tex.needsUpdate = true;
+  }
+  ctx.textureCache[key] = tex;
+  return tex;
+}
+
 function applySurfaceDepthBias(mat) {
   if (!mat) return mat;
   mat.polygonOffset = true;
@@ -233,9 +266,12 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     }));
   }
 
-  var diffuseMap = await loadTextureForScene(ctx, sceneName, matDef.diffuseTextureSource, true);
-  var specularMap = await loadTextureForScene(ctx, sceneName, matDef.specularTextureSource, false);
-  var normalMap = await loadTextureForScene(ctx, sceneName, matDef.normalTextureSource, false);
+  var diffuseMap = await loadTextureForScene(ctx, sceneName, matDef.diffuseTextureSource, true)
+    || await loadEmbeddedTextureForScene(ctx, sceneName, matDef.id, matDef.diffuseEmbeddedSampler, true);
+  var specularMap = await loadTextureForScene(ctx, sceneName, matDef.specularTextureSource, false)
+    || await loadEmbeddedTextureForScene(ctx, sceneName, matDef.id, matDef.specularEmbeddedSampler, false);
+  var normalMap = await loadTextureForScene(ctx, sceneName, matDef.normalTextureSource, false)
+    || await loadEmbeddedTextureForScene(ctx, sceneName, matDef.id, matDef.normalEmbeddedSampler, false);
   var baseDiffuse = matDef.diffuse || new THREE.Color(0.75, 0.78, 0.82);
   var baseSpecular = matDef.specular || new THREE.Color(0.08, 0.08, 0.08);
 
@@ -414,6 +450,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       if (!mat || !mat.id) return;
       var mid = String(mat.id || "");
       var outMat = {
+        id: mid,
         type: String(mat.type || "").toLowerCase(),
         diffuse: null,
         specular: null,
@@ -421,11 +458,15 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         diffuseTextureSource: "",
         specularTextureSource: "",
         normalTextureSource: "",
+        diffuseEmbeddedSampler: "",
+        specularEmbeddedSampler: "",
+        normalEmbeddedSampler: "",
       };
       var samplers = Array.isArray(mat.samplers) ? mat.samplers : [];
       samplers.forEach(function (sampler) {
         if (!sampler) return;
-        var sName = String(sampler.name || "").toLowerCase();
+        var sNameRaw = String(sampler.name || "").toLowerCase();
+        var sName = sNameRaw === "base_color" || sNameRaw === "albedo" ? "diffuse" : sNameRaw;
         var sType = String(sampler.type || "").toLowerCase();
         var hasColor = Array.isArray(sampler.color) && sampler.color.length >= 3;
         var sColor = hasColor ? new THREE.Color(
@@ -443,6 +484,11 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
           if (sName === "diffuse") outMat.diffuseTextureSource = sAsset;
           else if (sName === "specular") outMat.specularTextureSource = sAsset;
           else if (sName === "normal") outMat.normalTextureSource = sAsset;
+        } else if (sType === "texture" && sampler.embedded) {
+          var rawName = String(sampler.name || "");
+          if (sName === "diffuse") outMat.diffuseEmbeddedSampler = rawName;
+          else if (sName === "specular") outMat.specularEmbeddedSampler = rawName;
+          else if (sName === "normal") outMat.normalEmbeddedSampler = rawName;
         }
       });
       parsed.materials[mid] = outMat;

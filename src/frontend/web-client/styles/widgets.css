@@ -1160,6 +1160,8 @@
 
 .xui-tab-container {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
 }
 
 .xui-tab-container-nav {
@@ -1170,6 +1172,12 @@
   border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
   border-radius: 10px;
   background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+}
+
+.xui-tab-container-body,
+.xui-tab-pane {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .xui-tab-btn {
@@ -1280,6 +1288,42 @@
 .xui-switch input[type="checkbox"][disabled] {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ── Infinite grid / timeline view ──────────────────────────────────── */
+
+.xui-grid-view {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius, 6px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.xui-grid-view__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.xui-grid-view__canvas.is-grabbing,
+.xui-grid-view:has(.xui-grid-view__canvas.is-grabbing) {
+  cursor: grabbing;
+}
+
+.xui-grid-view__hint {
+  position: absolute;
+  bottom: var(--xui-space-3, 8px);
+  right: var(--xui-space-3, 8px);
+  font-size: 0.68rem;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+  font-family: IBM Plex Mono, monospace;
 }
 
 /* ── Animations ─────────────────────────────────────────────────────── */
