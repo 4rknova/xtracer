@@ -398,23 +398,6 @@ Voronoi-based edge wear: Worley F2−F1 distance highlights cell boundaries, sim
 roughness = { type = edge_wear, scale = 6, sharpness = 8, coverage = 0.3 }
 ```
 
-### `fingerprint`
-Concentric ridge-loop pattern resembling a fingerprint. Low-frequency warp noise deforms the loops into arch and whorl shapes.
-
-| Parameter | Type | Default | Notes |
-|-----------|------|---------|-------|
-| `a` | col3 | `col3(0.18, 0.16, 0.14)` | Ridge valley colour |
-| `b` | col3 | `col3(0.50, 0.46, 0.42)` | Ridge peak colour |
-| `scale` | float | `6.0` | Overall scale |
-| `ridge_frequency` | float | `18.0` | Ridges per unit |
-| `ridge_width` | float | `0.4` | Relative ridge width; range 0–1 |
-| `distortion` | float | `1.8` | Warp noise strength |
-
-```
-normal = { type = fingerprint, scale = 4, ridge_frequency = 24, distortion = 2.0 }
-```
-
----
 
 ## Procedural — Pattern (continued)
 
@@ -434,21 +417,6 @@ Staggered brick pattern with mortar joints. Odd rows are offset by half a brick 
 
 ```
 diffuse = { type = brick, brick = col3(0.65, 0.28, 0.18), mortar = col3(0.75, 0.73, 0.70), scale_u = 6 }
-```
-
-### `hexgrid`
-Flat-top hexagonal tile grid with soft border blending.
-
-| Parameter | Type | Default | Notes |
-|-----------|------|---------|-------|
-| `tile` | col3 | `col3(0.20, 0.55, 0.60)` | Tile interior colour |
-| `border` | col3 | `col3(0.10, 0.10, 0.10)` | Border colour |
-| `scale` | float | `4.0` | Tiles per unit |
-| `border_width` | float | `0.08` | Border width as a fraction of inradius |
-| `border_softness` | float | `0.02` | Anti-alias softness |
-
-```
-diffuse = { type = hexgrid, tile = col3(0.3, 0.6, 0.7), border = col3(0.05, 0.05, 0.05), scale = 6 }
 ```
 
 ### `dots`
