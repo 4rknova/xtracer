@@ -823,6 +823,23 @@ std::string make_asset_relpath_for_scene(const std::string &scene_path, const st
     return full.substr(prefix.size());
 }
 
+static const char *mime_type_for_path(const std::string &path)
+{
+    auto ext_pos = path.rfind('.');
+    if (ext_pos == std::string::npos) return "application/octet-stream";
+    std::string ext = path.substr(ext_pos + 1);
+    for (auto &c : ext) c = (char)tolower((unsigned char)c);
+    if (ext == "png")  return "image/png";
+    if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
+    if (ext == "webp") return "image/webp";
+    if (ext == "gif")  return "image/gif";
+    if (ext == "bmp")  return "image/bmp";
+    if (ext == "tga")  return "image/x-tga";
+    if (ext == "hdr")  return "image/vnd.radiance";
+    if (ext == "exr")  return "image/x-exr";
+    return "application/octet-stream";
+}
+
 bool is_asset_relpath_safe(const std::string &path)
 {
     if (path.empty()) return false;
@@ -1230,6 +1247,8 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
                 }
                 if (!texture_asset_relpath.empty()) {
                     ss << ",\"asset\":\"" << json_escape(texture_asset_relpath) << "\"";
+                } else if (tex && tex->width() > 0 && tex->height() > 0) {
+                    ss << ",\"embedded\":true";
                 }
                 ss << "}";
             }
@@ -2396,6 +2415,24 @@ void setup_routes(WebApp &app,
         send_json(res, ss.str());
     });
 
+    CROW_ROUTE(app, "/api/geometry/generate").methods(crow::HTTPMethod::Post)
+    ([](const crow::request &req, crow::response &res) {
+        const params_view params(req);
+        const char *gen_id = params.get("gen");
+        if (!gen_id || !*gen_id) {
+            send_json(res, "{\"error\":\"gen is required\"}", 400);
+            return;
+        }
+        std::map<std::string, std::string> p;
+        for (const auto &k : params.keys()) {
+            if (k == "gen") continue;
+            const char *v = params.get(k.c_str());
+            if (v) p[k] = v;
+        }
+        std::string json = xtcore::io::scn::generate_geometry_mesh_json(gen_id, p);
+        send_json(res, json);
+    });
+
     CROW_ROUTE(app, "/api/scenes/<string>/geometry")
     ([scene_dir](const crow::request &req, crow::response &res, std::string scene) {
         if (!is_scene_name_safe(scene)) {
@@ -2571,7 +2608,7 @@ void setup_routes(WebApp &app,
         }
 
         res.body = std::string(content.data(), content.size());
-        res.set_header("Content-Type", "text/plain; charset=utf-8");
+        res.set_header("Content-Type", mime_type_for_path(relpath));
         res.end();
     });
 
@@ -3530,6 +3567,26 @@ void setup_routes(WebApp &app,
     CROW_ROUTE(app, "/furnace.js")
     ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "furnace.js"), "application/javascript", res);
+    });
+
+    CROW_ROUTE(app, "/samplers.html")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "samplers.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/samplers.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "samplers.js"), "application/javascript", res);
+    });
+
+    CROW_ROUTE(app, "/geometry.html")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "geometry.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/geometry.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "geometry.js"), "application/javascript", res);
     });
 
     CROW_ROUTE(app, "/app.js")
