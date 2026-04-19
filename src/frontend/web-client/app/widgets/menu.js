@@ -64,17 +64,16 @@
 
   function createMainTabs() {
     const tabs = [
-      { id: "tabScene", label: "Scene", mode: "scene", active: true },
-      { id: "tabRender", label: "Render", mode: "render" },
       {
         id: "tabWorkspaces",
         mode: "workspaces",
+        active: true,
         children: [
           makeTabIcon("workspaces"),
           dom.el("span", { className: "tab-label tab-label-desktop", text: "Workspaces" }),
-          dom.el("span", { className: "tab-label tab-label-mobile", text: "Spaces" }),
         ],
       },
+      { id: "tabRender", label: "Render", mode: "render" },
       { id: "tabVisual", label: "Editor", mode: "visual" },
       { id: "tabGallery", label: "Gallery", mode: "gallery" },
     ];

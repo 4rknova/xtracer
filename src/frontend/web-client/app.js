@@ -241,7 +241,6 @@ const el = {
   mainTabs: $("mainTabs"),
   sidebarCards: $("sidebarCards"),
   themeToggle: $("themeToggle"),
-  tabScene: $("tabScene"),
   tabRender: $("tabRender"),
   tabVisual: $("tabVisual"),
   tabWorkspaces: $("tabWorkspaces"),
@@ -252,7 +251,6 @@ const el = {
   sidebarRailToggle: $("sidebarRailToggle"),
   sheetBackdrop: $("sheetBackdrop"),
   controlsSheetFab: $("controlsSheetFab"),
-  bnTabScene: $("bnTabScene"),
   bnTabRender: $("bnTabRender"),
   bnTabWorkspaces: $("bnTabWorkspaces"),
   bnTabVisual: $("bnTabVisual"),
@@ -260,7 +258,6 @@ const el = {
   bnTabLogs: $("bnTabLogs"),
   bnTabSettings: $("bnTabSettings"),
   bnTabAbout: $("bnTabAbout"),
-  paneScene: $("paneScene"),
   paneRender: $("paneRender"),
   paneVisual: $("paneVisual"),
   paneWorkspaces: $("paneWorkspaces"),
@@ -321,7 +318,6 @@ const el = {
   activeSceneCardScene: $("activeSceneCardScene"),
   activeSceneCardDescription: $("activeSceneCardDescription"),
   activeSceneCardSource: $("activeSceneCardSource"),
-  activeSceneCardCamera: $("activeSceneCardCamera"),
   activeSceneCardVariant: $("activeSceneCardVariant"),
   activeSceneCardVariantDescription: $("activeSceneCardVariantDescription"),
   workspaceList: $("workspaceList"),
@@ -453,6 +449,7 @@ const el = {
   visualCamFov: $("visualCamFov"),
   visualCameraSnapBtn: $("visualCameraSnapBtn"),
   visualCameraApplyBtn: $("visualCameraApplyBtn"),
+  visualCameraNewBtn: $("visualCameraNewBtn"),
   graphPanel: $("graphPanel"),
   graphCanvas: $("graphCanvas"),
   graphLegend: $("graphLegend"),
@@ -594,7 +591,7 @@ const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
 const FTUE_VERSION = 1;
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
 const APP_CONFIG_URL = "/app/data/config.json";
-const TAB_MODES = ["scene", "render", "visual", "workspaces", "gallery", "logs", "settings", "about"];
+const TAB_MODES = ["workspaces", "render", "visual", "gallery", "logs", "settings", "about"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
 let api = null;
@@ -613,7 +610,7 @@ let visualEditor = null;
 let visualLoadedSceneName = "";
 let editorViewMode = "visual";
 let runtimeGraphByScene = new Map();
-let activeTabMode = "scene";
+let activeTabMode = "workspaces";
 let graphRenderRafPrimary = 0;
 let graphRenderRafSecondary = 0;
 const graphView = {

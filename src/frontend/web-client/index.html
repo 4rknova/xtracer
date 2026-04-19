@@ -111,46 +111,82 @@
         <section class="panel panel-controls" id="sidebarCards"></section>
       </aside>
 
+      <div id="sceneDataBindings" hidden aria-hidden="true">
+        <select id="scene" tabindex="-1"></select>
+        <select id="camera" tabindex="-1"></select>
+        <select id="variant" tabindex="-1"></select>
+        <input id="sceneSearch" tabindex="-1">
+        <button id="sceneRefreshBtn" type="button">Refresh</button>
+        <span id="sceneFileCount">0</span>
+        <span id="cameraFileCount">0</span>
+        <span id="variantFileCount">0</span>
+        <span id="sceneActiveFile"></span>
+        <span id="cameraActiveName"></span>
+        <span id="variantActiveName"></span>
+        <span id="variantActiveDescription"></span>
+        <span id="sceneDependencyPill"></span>
+        <div id="sceneFileList"></div>
+        <div id="cameraFileList"></div>
+        <div id="variantFileList"></div>
+      </div>
+
       <div class="tab-stage">
-        <section class="tab-pane active" id="paneScene">
-          <section class="panel panel-scene-setup">
-            <div class="scene-setup-grid">
-              <section class="scene-panel scene-panel-variant">
-                <div class="scene-panel-head">
-                  <h3>Variants</h3>
-                  <span id="variantFileCount" class="scene-file-count scene-count-pill">0</span>
+        <section class="tab-pane active" id="paneWorkspaces">
+          <div class="workspace-listing-head">
+            <div class="workspace-toolbar-actions">
+              <div class="workspace-create-inline">
+                <div id="workspaceCreateField"></div>
+                <div id="workspaceRefreshBtnMount"></div>
+              </div>
+<div class="workspace-view-control" role="group" aria-label="Workspace list controls">
+                <div class="workspace-view-switch">
+                  <button id="workspaceViewCardsBtn" class="workspace-view-btn active" type="button" data-mode="cards" aria-pressed="true" title="Cards view">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
+                      <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
+                      <rect x="3" y="13" width="8" height="7" rx="1.5"></rect>
+                      <rect x="13" y="13" width="8" height="7" rx="1.5"></rect>
+                    </svg>
+                    <span class="sr-only">Cards</span>
+                  </button>
+                  <button id="workspaceViewListBtn" class="workspace-view-btn" type="button" data-mode="list" aria-pressed="false" title="List view">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="4" y="5" width="3" height="3" rx="0.6"></rect>
+                      <rect x="9" y="5" width="11" height="3" rx="1"></rect>
+                      <rect x="4" y="10.5" width="3" height="3" rx="0.6"></rect>
+                      <rect x="9" y="10.5" width="11" height="3" rx="1"></rect>
+                      <rect x="4" y="16" width="3" height="3" rx="0.6"></rect>
+                      <rect x="9" y="16" width="11" height="3" rx="1"></rect>
+                    </svg>
+                    <span class="sr-only">List</span>
+                  </button>
                 </div>
-                <div id="variantFileList" class="scene-file-list camera-file-list variant-file-list" role="listbox" aria-label="Scene variants"></div>
-                <select id="variant" hidden aria-hidden="true" tabindex="-1"></select>
-              </section>
-
-              <section class="scene-panel scene-panel-camera">
-                <div class="scene-panel-head">
-                  <h3>Cameras</h3>
-                  <span id="cameraFileCount" class="scene-file-count scene-count-pill">0</span>
+                <div class="workspace-view-switch workspace-sort-switch" role="group" aria-label="Workspace sort order">
+                  <button id="workspaceSortNameBtn" class="workspace-view-btn active" type="button" data-sort="name" aria-pressed="true" title="Sort by name">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 6h16v2H4zM4 11h10v2H4zM4 16h6v2H4z"></path>
+                    </svg>
+                    <span class="sr-only">Sort by name</span>
+                  </button>
+                  <button id="workspaceSortUpdatedBtn" class="workspace-view-btn" type="button" data-sort="updated" aria-pressed="false" title="Sort by last updated">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 4a8 8 0 1 1-8 8h2a6 6 0 1 0 6-6v3l4-4-4-4z"></path>
+                      <path d="M11 8h2v5h4v2h-6z"></path>
+                    </svg>
+                    <span class="sr-only">Sort by last updated</span>
+                  </button>
+                  <button id="workspaceSortSceneBtn" class="workspace-view-btn" type="button" data-sort="scene" aria-pressed="false" title="Sort by scene">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 5h18v14H3zM5 7v10h14V7z"></path>
+                      <path d="M7 15l3-3 2 2 3-4 2 5z"></path>
+                    </svg>
+                    <span class="sr-only">Sort by scene</span>
+                  </button>
                 </div>
-                <div id="cameraFileList" class="scene-file-list camera-file-list" role="listbox" aria-label="Scene cameras"></div>
-                <select id="camera" hidden aria-hidden="true" tabindex="-1"></select>
-              </section>
-
-              <section class="scene-panel scene-panel-files">
-                <div class="scene-panel-head">
-                  <h3>Scenes</h3>
-                  <div class="scene-panel-head-actions">
-                    <button id="sceneRefreshBtn" class="scene-refresh-btn" type="button" title="Reload scene list" aria-label="Reload scene list">
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                      </svg>
-                    </button>
-                    <span id="sceneFileCount" class="scene-file-count scene-count-pill">0</span>
-                  </div>
-                </div>
-                <input id="sceneSearch" class="scene-search-input" type="search" placeholder="Search scenes" aria-label="Search scenes">
-                <div id="sceneFileList" class="scene-file-list" role="listbox" aria-label="Scene files"></div>
-                <select id="scene" hidden aria-hidden="true" tabindex="-1"></select>
-              </section>
+              </div>
             </div>
-          </section>
+          </div>
+          <div id="workspaceList" class="workspace-list workspace-list-cards" aria-live="polite"></div>
         </section>
 
         <section class="tab-pane" id="paneRender">
@@ -282,64 +318,6 @@
         <section class="panel editor-util-panel" id="geometryPanel" hidden>
           <iframe class="editor-util-frame" title="Geometry Gallery"></iframe>
         </section>
-      </section>
-
-      <section class="tab-pane" id="paneWorkspaces">
-        <div class="workspace-listing-head">
-          <div class="workspace-toolbar-actions">
-            <div class="workspace-create-inline">
-              <div id="workspaceCreateField"></div>
-              <div id="workspaceRefreshBtnMount"></div>
-            </div>
-            <div class="workspace-view-control" role="group" aria-label="Workspace list controls">
-              <div class="workspace-view-switch">
-                <button id="workspaceViewCardsBtn" class="workspace-view-btn active" type="button" data-mode="cards" aria-pressed="true" title="Cards view">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
-                    <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
-                    <rect x="3" y="13" width="8" height="7" rx="1.5"></rect>
-                    <rect x="13" y="13" width="8" height="7" rx="1.5"></rect>
-                  </svg>
-                  <span class="sr-only">Cards</span>
-                </button>
-                <button id="workspaceViewListBtn" class="workspace-view-btn" type="button" data-mode="list" aria-pressed="false" title="List view">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="4" y="5" width="3" height="3" rx="0.6"></rect>
-                    <rect x="9" y="5" width="11" height="3" rx="1"></rect>
-                    <rect x="4" y="10.5" width="3" height="3" rx="0.6"></rect>
-                    <rect x="9" y="10.5" width="11" height="3" rx="1"></rect>
-                    <rect x="4" y="16" width="3" height="3" rx="0.6"></rect>
-                    <rect x="9" y="16" width="11" height="3" rx="1"></rect>
-                  </svg>
-                  <span class="sr-only">List</span>
-                </button>
-              </div>
-              <div class="workspace-view-switch workspace-sort-switch" role="group" aria-label="Workspace sort order">
-                <button id="workspaceSortNameBtn" class="workspace-view-btn active" type="button" data-sort="name" aria-pressed="true" title="Sort by name">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 6h16v2H4zM4 11h10v2H4zM4 16h6v2H4z"></path>
-                  </svg>
-                  <span class="sr-only">Sort by name</span>
-                </button>
-                <button id="workspaceSortUpdatedBtn" class="workspace-view-btn" type="button" data-sort="updated" aria-pressed="false" title="Sort by last updated">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 4a8 8 0 1 1-8 8h2a6 6 0 1 0 6-6v3l4-4-4-4z"></path>
-                    <path d="M11 8h2v5h4v2h-6z"></path>
-                  </svg>
-                  <span class="sr-only">Sort by last updated</span>
-                </button>
-                <button id="workspaceSortSceneBtn" class="workspace-view-btn" type="button" data-sort="scene" aria-pressed="false" title="Sort by scene">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 5h18v14H3zM5 7v10h14V7z"></path>
-                    <path d="M7 15l3-3 2 2 3-4 2 5z"></path>
-                  </svg>
-                  <span class="sr-only">Sort by scene</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="workspaceList" class="workspace-list workspace-list-cards" aria-live="polite"></div>
       </section>
 
       <section class="tab-pane" id="paneGallery">
@@ -646,17 +624,13 @@
       </div>
     </div>
     <nav id="bottomNav" class="bottom-nav" aria-label="Primary navigation">
-      <button id="bnTabScene" class="bottom-nav-item active" type="button" data-mode="scene" aria-label="Scene" aria-pressed="true">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 1.5L18.5 8H14V3.5zM8 13h8v1.5H8V13zm0 3.5h5v1.5H8V16.5z"></path></svg></span>
-        <span class="bottom-nav-label">Scene</span>
+      <button id="bnTabWorkspaces" class="bottom-nav-item active" type="button" data-mode="workspaces" aria-label="Workspaces" aria-pressed="true">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path></svg></span>
+        <span class="bottom-nav-label">Spaces</span>
       </button>
       <button id="bnTabRender" class="bottom-nav-item" type="button" data-mode="render" aria-label="Render" aria-pressed="false">
         <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"></path></svg></span>
         <span class="bottom-nav-label">Render</span>
-      </button>
-      <button id="bnTabWorkspaces" class="bottom-nav-item" type="button" data-mode="workspaces" aria-label="Workspaces" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path></svg></span>
-        <span class="bottom-nav-label">Spaces</span>
       </button>
       <button id="bnTabVisual" class="bottom-nav-item" type="button" data-mode="visual" aria-label="Editor" aria-pressed="false">
         <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg></span>

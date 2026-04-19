@@ -1,9 +1,4 @@
 {
-  "scene": [
-    "JobsControlsCard",
-    "activeSceneControlsCard",
-    "sceneLoadingControlsCard"
-  ],
   "render": [
     "JobsControlsCard",
     "activeSceneControlsCard",

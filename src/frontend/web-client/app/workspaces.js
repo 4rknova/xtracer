@@ -1406,6 +1406,7 @@ async function refreshWorkspaces() {
   renderWorkspaceList(sortedWorkspaceItems);
   if (activeChanged) {
     await applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null);
+    if (typeof syncRenderTabEnabled === "function") syncRenderTabEnabled();
   }
 }
 

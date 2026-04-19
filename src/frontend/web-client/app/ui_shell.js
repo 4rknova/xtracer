@@ -1,12 +1,11 @@
 function normalizeTabMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "editor") return "visual";
-  if (raw === "workspace") return "workspaces";
-  if (raw === "scene_setup" || raw === "scenesetup") return "scene";
-  if (raw === "scene" || raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "logs" || raw === "about") {
+  if (raw === "workspace" || raw === "scene" || raw === "scene_setup" || raw === "scenesetup") return "workspaces";
+  if (raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "logs" || raw === "about") {
     return raw;
   }
-  return "scene";
+  return "workspaces";
 }
 
 function normalizeSidebarCardVisibilityConfig(rawConfig) {
@@ -373,10 +372,32 @@ function setMainMenuOpen(open) {
   el.mainMenuToggle.setAttribute("aria-expanded", next ? "true" : "false");
 }
 
+function syncRenderTabEnabled() {
+  const hasWorkspace = !!String(activeWorkspaceId || "").trim();
+  const hasScene = !!String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  const enabled = hasWorkspace && hasScene;
+  [el.tabRender, el.bnTabRender].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    btn.classList.toggle("is-tab-disabled", !enabled);
+  });
+  if (!enabled && activeTabMode === "render") {
+    setActiveTab("workspaces");
+  }
+}
+
 function setActiveTab(mode) {
   const nextMode = normalizeTabMode(mode);
+  if (nextMode === "render") {
+    const hasWorkspace = !!String(activeWorkspaceId || "").trim();
+    const hasScene = !!String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    if (!hasWorkspace || !hasScene) {
+      setActiveTab("workspaces");
+      return;
+    }
+  }
   activeTabMode = nextMode;
-  const isScene = nextMode === "scene";
   const isRender = nextMode === "render";
   const isVisual = nextMode === "visual";
   const isWorkspaces = nextMode === "workspaces";
@@ -385,7 +406,6 @@ function setActiveTab(mode) {
   const isLogs = nextMode === "logs";
   const isAbout = nextMode === "about";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
-  setActive(el.tabScene, isScene);
   setActive(el.tabRender, isRender);
   setActive(el.tabVisual, isVisual);
   setActive(el.tabWorkspaces, isWorkspaces);
@@ -393,14 +413,13 @@ function setActiveTab(mode) {
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
-  ["bnTabScene", "bnTabRender", "bnTabWorkspaces", "bnTabVisual", "bnTabGallery", "bnTabLogs", "bnTabSettings", "bnTabAbout"].forEach((id) => {
+  ["bnTabWorkspaces", "bnTabRender", "bnTabVisual", "bnTabGallery", "bnTabLogs", "bnTabSettings", "bnTabAbout"].forEach((id) => {
     const btn = el[id];
     if (!btn) return;
     const isBtn = btn.dataset.mode === nextMode;
     btn.classList.toggle("active", isBtn);
     btn.setAttribute("aria-pressed", isBtn ? "true" : "false");
   });
-  setActive(el.paneScene, isScene);
   setActive(el.paneRender, isRender);
   setActive(el.paneVisual, isVisual);
   setActive(el.paneWorkspaces, isWorkspaces);
