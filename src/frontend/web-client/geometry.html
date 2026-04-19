@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XTRACER Geometry Gallery</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles/samplers.css">
+  <script>
+    (function() {
+      var root = document.documentElement;
+      root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
+      root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
+      root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
+      var preset = localStorage.getItem('xtracer-ui-font-size-preset');
+      var scale = preset ? (preset === 'large' ? 1.1 : 1.0) : (parseFloat(localStorage.getItem('xtracer-ui-font-scale') || '1') > 1.02 ? 1.1 : 1.0);
+      root.style.fontSize = (scale * 100).toFixed(1) + '%';
+    })();
+  </script>
+  <style>
+    .sp-preview #mainCanvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      max-width: none; max-height: none;
+      image-rendering: auto;
+      cursor: grab; display: block;
+    }
+    .sp-preview #mainCanvas.grabbing { cursor: grabbing; }
+    .gp-orbit-hint {
+      position: absolute; bottom: var(--xui-space-3); left: var(--xui-space-4);
+      font-size: 0.7rem; color: var(--muted);
+      pointer-events: none; user-select: none; opacity: 0.55;
+    }
+  </style>
+</head>
+<body class="sp-page">
+
+  <!-- NCF modal -->
+  <div id="ncfModal" class="sp-modal" hidden>
+    <div class="sp-modal-backdrop"></div>
+    <div class="sp-modal-box">
+      <div class="sp-modal-head">
+        <span class="sp-modal-title">NCF Code</span>
+        <div class="sp-modal-head-actions">
+          <button id="ncfCopyBtn" class="xui-button xui-button--secondary">Copy</button>
+          <button id="ncfCloseBtn" class="xui-button xui-button--ghost">Close</button>
+        </div>
+      </div>
+      <div class="sp-modal-context">
+        <span class="sp-modal-context-label">Name</span>
+        <input id="ncfNameInput" type="text" class="xui-input sp-search" style="width:140px" placeholder="my_object">
+        <button id="ncfRefreshBtn" class="xui-button xui-button--ghost" style="margin-left:auto">Refresh</button>
+      </div>
+      <pre id="ncfCode" class="sp-modal-code"></pre>
+    </div>
+  </div>
+
+  <div class="sp-shell">
+    <header class="sp-header">
+      <h1 class="sp-title">Geometry Gallery</h1>
+      <div class="sp-header-controls">
+        <input id="searchInput" type="search" class="xui-input sp-search" placeholder="Filter shapes…">
+        <span class="sp-mode-label">Display</span>
+        <div class="sp-size-chips">
+          <button class="sp-chip active" data-display="solid">Solid</button>
+          <button class="sp-chip" data-display="wire">Wire</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="sp-body">
+
+      <div class="sp-sidebar" id="sidebar"></div>
+
+      <div class="sp-main">
+        <div class="sp-preview" id="previewArea">
+          <canvas id="mainCanvas"></canvas>
+          <span class="sp-preview-label" id="previewLabel">—</span>
+          <span class="sp-preview-size" id="previewTris"></span>
+          <span class="gp-orbit-hint">Drag to orbit · Scroll to zoom</span>
+        </div>
+
+        <div class="sp-params">
+          <div class="sp-params-head">
+            <span class="sp-params-title" id="paramsTitle">Parameters</span>
+            <span class="sp-params-subtitle" id="paramsSubtitle"></span>
+            <button id="generateBtn" class="xui-button xui-button--primary sp-hidden"
+                    style="font-size:0.75rem">Generate</button>
+            <button id="ncfBtn" class="xui-button xui-button--ghost sp-hidden"
+                    style="margin-left:auto;font-size:0.75rem">NCF</button>
+          </div>
+          <div class="sp-params-body" id="paramsBody">
+            <p class="sp-params-empty">Select a shape to edit its parameters.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/geometry.js"></script>
+</body>
+</html>
