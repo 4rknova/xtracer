@@ -19,12 +19,38 @@
   </script>
 </head>
 <body class="sp-page">
+  <!-- NCF modal -->
+  <div id="ncfModal" class="sp-modal" hidden>
+    <div class="sp-modal-backdrop"></div>
+    <div class="sp-modal-box">
+      <div class="sp-modal-head">
+        <span class="sp-modal-title">NCF Code</span>
+        <div class="sp-modal-head-actions">
+          <button id="ncfCopyBtn" class="xui-button xui-button--secondary">Copy</button>
+          <button id="ncfCloseBtn" class="xui-button xui-button--ghost">Close</button>
+        </div>
+      </div>
+      <div class="sp-modal-context">
+        <span class="sp-modal-context-label">Slot</span>
+        <input id="ncfSlotInput" type="text" class="xui-input sp-search" style="width:140px" placeholder="base_color">
+        <span class="sp-modal-context-label" style="margin-left:var(--xui-space-3)">Context</span>
+        <select id="ncfContextSel" class="xui-select" style="font-size:0.78rem">
+          <option value="material">Material sampler slot</option>
+          <option value="environment">Environment block</option>
+          <option value="height">Height sampler</option>
+        </select>
+        <button id="ncfRefreshBtn" class="xui-button xui-button--ghost" style="margin-left:auto">Refresh</button>
+      </div>
+      <pre id="ncfCode" class="sp-modal-code"></pre>
+    </div>
+  </div>
+
   <div class="sp-shell">
 
     <header class="sp-header">
       <h1 class="sp-title">Sampler Gallery</h1>
       <div class="sp-header-controls">
-        <input id="searchInput" type="search" class="sp-search" placeholder="Filter samplers…">
+        <input id="searchInput" type="search" class="xui-input sp-search" placeholder="Filter samplers…">
         <span class="sp-mode-label">Preview size</span>
         <div class="sp-size-chips">
           <button class="sp-chip" data-size="128">128</button>
@@ -54,6 +80,7 @@
           <div class="sp-params-head">
             <span class="sp-params-title" id="paramsTitle">Parameters</span>
             <span class="sp-params-subtitle" id="paramsSubtitle"></span>
+            <button id="ncfBtn" class="xui-button xui-button--ghost sp-hidden" style="margin-left:auto;font-size:0.75rem">NCF</button>
           </div>
           <div class="sp-params-body" id="paramsBody">
             <p class="sp-params-empty">Select a sampler to edit its parameters.</p>
