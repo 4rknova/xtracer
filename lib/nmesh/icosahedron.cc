@@ -30,11 +30,15 @@ void icosahedron(object_t *obj)
     v[11] = nmath::Vector3f(-k, 0, 1).normalized();
 
     std::vector<float> *c = &(obj->attributes.v);
+    std::vector<float> *n = &(obj->attributes.n);
 
     for (size_t i = 0; i < 12; ++i) {
         c->push_back(v[i].x);
         c->push_back(v[i].y);
         c->push_back(v[i].z);
+        n->push_back(v[i].x);
+        n->push_back(v[i].y);
+        n->push_back(v[i].z);
     }
 
     const size_t idx[] = {
@@ -66,6 +70,8 @@ void icosahedron(object_t *obj)
     for (size_t i = 0; i < 60; ++i) {
         nmesh::index_t f;
         f.v  = idx[i];
+        f.n  = idx[i];
+        f.uv = -1;
         obj->shapes[0].mesh.indices.push_back(f);
     }
 }
