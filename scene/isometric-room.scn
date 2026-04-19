@@ -1,5 +1,7 @@
 # "Isometric Room" lowpoly model
 # Source: geometry/room/source/isometric_room_lowpoly.fbx
+# Note that the scene base texture has lighting baked in so it's not the
+# best candidate to demo the renderer
 
 title       = "Isometric Room"
 description = "Low-poly isometric room with participating medium light shafts."
@@ -10,23 +12,21 @@ camera = {
     iso = {
         type     = thin-lens
         fov      = 38
-        position = vec3(1000.471887, 990.167435, 1040.778236)
-        target   = vec3(-14.765053, 192.932435, 2.128336)
+        position = vec3(7.188543, 429.211616, 30.797685)
+        target   = vec3(-43.459044, 386.415423, -34.461001)
         up       = vec3(0, 1, 0)
         flength  = 0
         aperture = 0
     }
-
-    close = {
-        type            = thin-lens
-        fov             = 45
-        position        = vec3(3.0, 3.2, -3.2)
-        target          = vec3(0.0, 0.5, 0.0)
-        up              = vec3(0, 1, 0)
-        flength         = 5.0
-        aperture        = 0.04
-        aperture_blades = 6
-    }
+	camera = {
+		type = thin-lens
+		position = vec3(1000.471887, 990.167435, 1040.778236)
+		target = vec3(-14.765053, 192.932435, 2.128336)
+		up = vec3(0, 1, 0)
+		fov = 38
+		flength = 0
+		aperture = 0.0
+	}
 }
 
 material = {
