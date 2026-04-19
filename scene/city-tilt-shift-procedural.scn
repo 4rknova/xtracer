@@ -1,0 +1,110 @@
+# Low poly city (https://skfb.ly/6R9r7)
+# by Boris731
+# licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+title       = "City"
+description = "Procedural city framed with a tilt-shift lens at golden hour for a miniature diorama look."
+version     = "1.0"
+default_camera = miniature
+
+environment = {
+    type = preetham_sky
+    config = {
+        sun_direction = vec3(0.55,0.28,0.78)
+        turbidity     = 3.5
+        exposure      = 0.055
+        ground_color  = col3(0.10,0.09,0.08)
+    }
+}
+
+camera = {
+    miniature = {
+        type              = tilt-shift
+        fov               = 35
+        position          = vec3(2.0,11.0,-9.0)
+        target            = vec3(0.0,0.0,0.5)
+        up                = vec3(0,1,0)
+        flength           = 13
+        aperture          = 0.2
+        aperture_blades   = 6
+        aperture_rotation = 20
+        tilt              = 16
+        shift_y           = 0.06
+    }
+
+    hero = {
+        type     = thin-lens
+        fov      = 50
+        position = vec3(5.5,4.2,-8.5)
+        target   = vec3(0.0,0.4,0.0)
+        up       = vec3(0,1,0)
+        flength  = 10
+        aperture = 0
+    }
+}
+
+geometry = {
+    city = {
+        type                  = mesh
+        source                = gen(city)
+        seed                  = 42
+        blocks_x              = 18
+        blocks_z              = 18
+        block_size            = 1.0
+        road_width            = 0.18
+        building_height_min   = 0.22
+        building_height_max   = 1.8
+        lot_padding           = 0.03
+        buildings_per_block_x = 3
+        buildings_per_block_z = 3
+        floor_height          = 0.22
+        bay_width             = 0.20
+        window_width_ratio    = 0.55
+        window_height_ratio   = 0.55
+        window_inset          = 0.035
+        pavement_height       = 0.014
+        pavement_width        = 0.045
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-10.0,7.0,-3.0)
+        radius   = 1.4
+    }
+}
+
+material = {
+    city_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = {
+                    type  = color
+                    value = col3(0.92,0.88,0.82)
+                }
+            }
+            scalars = {
+                metallic  = 0.0
+                roughness = 0.70
+                ior       = 1.45
+            }
+        }
+    }
+
+    fill_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(3,4,7)
+                }
+            }
+        }
+    }
+}
+
+object = {
+    city       = { geometry = city,       material = city_mat       }
+    fill_light = { geometry = fill_light, material = fill_light_mat }
+}

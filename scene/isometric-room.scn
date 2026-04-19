@@ -1,0 +1,148 @@
+# "Isometric Room" lowpoly model
+# Source: geometry/room/source/isometric_room_lowpoly.fbx
+
+title       = "Isometric Room"
+description = "Low-poly isometric room with participating medium light shafts."
+version     = "1.0"
+default_camera = iso
+
+camera = {
+    iso = {
+        type     = thin-lens
+        fov      = 38
+        position = vec3(1000.471887, 990.167435, 1040.778236)
+        target   = vec3(-14.765053, 192.932435, 2.128336)
+        up       = vec3(0, 1, 0)
+        flength  = 0
+        aperture = 0
+    }
+
+    close = {
+        type            = thin-lens
+        fov             = 45
+        position        = vec3(3.0, 3.2, -3.2)
+        target          = vec3(0.0, 0.5, 0.0)
+        up              = vec3(0, 1, 0)
+        flength         = 5.0
+        aperture        = 0.04
+        aperture_blades = 6
+    }
+}
+
+material = {
+    # --- room structure: name must match prefix + FBX material name ---
+    room_room_material = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = texture, source = geometry/room/textures/room_material_diffuse.jpg,   filtering = bilinear, flip_x = false, flip_y = true }
+                normal     = { type = texture, source = geometry/room/textures/room_material_normal.jpg,    filtering = bilinear, flip_x = false, flip_y = true }
+                roughness  = { type = texture, source = geometry/room/textures/room_material_roughness.jpg, filtering = bilinear, flip_x = false, flip_y = true }
+                occlusion  = { type = texture, source = geometry/room/textures/room_material_occlusion.jpg, filtering = bilinear, flip_x = false, flip_y = true }
+            }
+            scalars = {
+                metallic = 0.0
+                ior      = 1.45
+            }
+        }
+    }
+
+    # --- furniture / equipment ---
+    room_equipment_material = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = texture, source = geometry/room/textures/equipment_material_diffuse.jpg,   filtering = bilinear, flip_x = false, flip_y = true  }
+                normal     = { type = texture, source = geometry/room/textures/equipment_material_normal.jpg,    filtering = bilinear, flip_x = false, flip_y = true  }
+                roughness  = { type = texture, source = geometry/room/textures/equipment_material_roughness.jpg, filtering = bilinear, flip_x = false, flip_y = true  }
+                metallic   = { type = texture, source = geometry/room/textures/equipment_material_metalic.jpg,   filtering = bilinear, flip_x = false, flip_y = true  }
+                occlusion  = { type = texture, source = geometry/room/textures/equipment_material_occlusion.jpg, filtering = bilinear, flip_x = false, flip_y = true  }
+            }
+            scalars = {
+                ior = 1.5
+            }
+        }
+    }
+
+    # --- light shaft volume boundary (second import, shafts_ prefix) ---
+    shafts_ray_material = {
+        type = boundary
+    }
+
+    # --- window glass emissive ---
+    window_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(12, 14, 20) }
+            }
+        }
+    }
+}
+
+geometry = {
+    # Window A: on -X wall. Glass: Y[210,490] Z[-60,80]. Normal: +X.
+    # gen(plane) is XZ; rotate 90° around Z to orient it in YZ plane (normal along X).
+    window_a1_geo = {
+        type   = mesh
+        source = gen(plane)
+        modifiers = {
+            rotation    = vec3(0.0, 0.0, -1.5708)
+            scale       = vec3(1.0, 280.0, 140.0)
+            translation = vec3(-350.0, 350.0, 10.0)
+        }
+    }
+
+    window_a2_geo = {
+        type   = mesh
+        source = gen(plane)
+        modifiers = {
+            rotation    = vec3(0.0, 0.0, -1.5708)
+            scale       = vec3(1.0, 280.0, 140.0)
+            translation = vec3(-350.0, 350.0, 160.0)
+        }
+    }
+
+    # Window B: on -Z wall. Glass: Y[210,490] X[-170,-30]. Normal: +Z.
+    # gen(plane) is XZ; rotate +90° around X → normal +Y becomes +Z; scale in post-rot XY.
+    window_b_geo = {
+        type   = mesh
+        source = gen(plane)
+        modifiers = {
+            rotation    = vec3(1.5708, 0.0, 0.0)
+            scale       = vec3(140.0, 280.0, 1.0)
+            translation = vec3(-100.0, 350.0, -350.0)
+        }
+    }
+}
+
+medium = {
+    light_shaft = {
+        type        = heterogeneous_noise
+        sigma_a     = col3(0.001, 0.001, 0.001)
+        sigma_s     = col3(0.035, 0.033, 0.030)
+        g           = 0.05
+        emission    = col3(0, 0, 0)
+        density     = 1.2
+        noise_scale = 0.08
+        noise_min   = 0.55
+        noise_max   = 1.0
+        octaves     = 6
+        lacunarity  = 2.1
+        gain        = 0.48
+        seed        = 42
+    }
+}
+
+object = {
+    room = {
+        source = geometry/room/source/isometric_room_lowpoly.fbx
+        prefix = room_
+        ignore = ray_material
+    }
+
+
+    window_a1 = { geometry = window_a1_geo,  material = window_mat }
+    window_a2 = { geometry = window_a2_geo, material = window_mat }
+    window_b  = { geometry = window_b_geo,  material = window_mat }
+}

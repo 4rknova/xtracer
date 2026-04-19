@@ -24,7 +24,7 @@ environment = {
 }
 
 camera = {
-    hhero = {
+    hero = {
         type     = thin-lens
         fov      = 42
         position = vec3(0, 2.5, -6.25)
