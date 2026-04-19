@@ -10,6 +10,7 @@
 #include <atomic>
 #include <memory>
 #include <fstream>
+#include <sstream>
 #include <glob.h>
 
 #include <nmath/precision.h>
@@ -54,9 +55,7 @@
 #include "sampler/sampler_curl_noise.h"
 #include "sampler/sampler_scratches.h"
 #include "sampler/sampler_edge_wear.h"
-#include "sampler/sampler_fingerprint.h"
 #include "sampler/sampler_brick.h"
-#include "sampler/sampler_hexgrid.h"
 #include "sampler/sampler_dots.h"
 #include "sampler/sampler_preetham_sky.h"
 #include "sampler/sampler_hosek_wilkie_sky.h"
@@ -206,9 +205,7 @@ xtcore::sampler::ISampler *deserialize_fbm_wood(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_curl_noise(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_scratches(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_edge_wear(const ncf::NCF *p);
-xtcore::sampler::ISampler *deserialize_fingerprint(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_brick(const ncf::NCF *p);
-xtcore::sampler::ISampler *deserialize_hexgrid(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_dots(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_preetham_sky(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_hosek_wilkie_sky(const ncf::NCF *p);
@@ -521,11 +518,6 @@ static std::vector<nmath::Vector3f> deserialize_spline_points(const ncf::NCF *sp
     points.reserve(entries.size());
     for (size_t i = 0; i < entries.size(); ++i) points.push_back(entries[i].value);
     return points;
-}
-
-static nmath::scalar_t clampf(nmath::scalar_t v, nmath::scalar_t lo, nmath::scalar_t hi)
-{
-    return std::max(lo, std::min(v, hi));
 }
 
 static bool path_is_absolute(const std::string &path)
@@ -1395,6 +1387,276 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     return data;
 }
 
+static const char *map_get(const std::map<std::string, std::string> &m, const char *key)
+{
+    auto it = m.find(key);
+    return (it != m.end()) ? it->second.c_str() : nullptr;
+}
+
+static std::string nmesh_obj_to_json(const nmesh::object_t &obj)
+{
+    std::ostringstream ss;
+    ss << "{\"positions\":[";
+    bool first = true;
+    size_t tri_count = 0;
+
+    const size_t vsize = obj.attributes.v.size();
+    for (size_t si = 0; si < obj.shapes.size(); ++si) {
+        const nmesh::mesh_t &mesh = obj.shapes[si].mesh;
+        for (size_t ii = 0; ii + 2 < mesh.indices.size(); ii += 3) {
+            bool valid = true;
+            for (int v = 0; v < 3; ++v) {
+                int vi = mesh.indices[ii + v].v * 3;
+                if (vi < 0 || (size_t)(vi + 2) >= vsize) { valid = false; break; }
+            }
+            if (!valid) continue;
+            for (int v = 0; v < 3; ++v) {
+                int vi = mesh.indices[ii + v].v * 3;
+                if (!first) ss << ',';
+                first = false;
+                ss << obj.attributes.v[vi] << ',' << obj.attributes.v[vi+1] << ',' << obj.attributes.v[vi+2];
+            }
+            ++tri_count;
+        }
+    }
+
+    ss << "],\"normals\":[";
+    first = true;
+    const bool has_normals = !obj.attributes.n.empty();
+    const size_t nsize = obj.attributes.n.size();
+    for (size_t si = 0; si < obj.shapes.size(); ++si) {
+        const nmesh::mesh_t &mesh = obj.shapes[si].mesh;
+        for (size_t ii = 0; ii + 2 < mesh.indices.size(); ii += 3) {
+            int vi0 = mesh.indices[ii + 0].v * 3;
+            int vi1 = mesh.indices[ii + 1].v * 3;
+            int vi2 = mesh.indices[ii + 2].v * 3;
+            if (vi0 < 0 || (size_t)(vi0 + 2) >= vsize) continue;
+            if (vi1 < 0 || (size_t)(vi1 + 2) >= vsize) continue;
+            if (vi2 < 0 || (size_t)(vi2 + 2) >= vsize) continue;
+
+            float fnx = 0, fny = 0, fnz = 0;
+            if (!has_normals) {
+                float ax = obj.attributes.v[vi1]   - obj.attributes.v[vi0];
+                float ay = obj.attributes.v[vi1+1] - obj.attributes.v[vi0+1];
+                float az = obj.attributes.v[vi1+2] - obj.attributes.v[vi0+2];
+                float bx = obj.attributes.v[vi2]   - obj.attributes.v[vi0];
+                float by = obj.attributes.v[vi2+1] - obj.attributes.v[vi0+1];
+                float bz = obj.attributes.v[vi2+2] - obj.attributes.v[vi0+2];
+                fnx = ay * bz - az * by;
+                fny = az * bx - ax * bz;
+                fnz = ax * by - ay * bx;
+                float len = std::sqrt(fnx*fnx + fny*fny + fnz*fnz);
+                if (len > 1e-8f) { fnx /= len; fny /= len; fnz /= len; }
+            }
+
+            for (int v = 0; v < 3; ++v) {
+                if (!first) ss << ',';
+                first = false;
+                if (has_normals) {
+                    int ni = mesh.indices[ii + v].n * 3;
+                    if (ni >= 0 && (size_t)(ni + 2) < nsize) {
+                        ss << obj.attributes.n[ni] << ',' << obj.attributes.n[ni+1] << ',' << obj.attributes.n[ni+2];
+                    } else {
+                        ss << fnx << ',' << fny << ',' << fnz;
+                    }
+                } else {
+                    ss << fnx << ',' << fny << ',' << fnz;
+                }
+            }
+        }
+    }
+
+    ss << "],\"triangles\":" << tri_count << "}";
+    return ss.str();
+}
+
+std::string generate_geometry_mesh_json(const std::string &gen_id, const std::map<std::string, std::string> &params)
+{
+    auto get = [&](const char *key) -> const char* { return map_get(params, key); };
+
+    std::string token = gen_id;
+    std::transform(token.begin(), token.end(), token.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+    token.erase(std::remove_if(token.begin(), token.end(), [](unsigned char c){ return std::isspace(c) != 0; }), token.end());
+
+    nmesh::object_t obj;
+
+    if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
+        nmesh::generator::icosahedron(&obj);
+    }
+    else if (!token.compare(XTPROTO_LTRL_TETRAHEDRON)) {
+        nmesh::generator::tetrahedron(&obj);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CUBE) || !token.compare(XTPROTO_LTRL_HEXAHEDRON)) {
+        nmesh::generator::cube(&obj);
+    }
+    else if (!token.compare(XTPROTO_LTRL_OCTAHEDRON)) {
+        nmesh::generator::octahedron(&obj);
+    }
+    else if (!token.compare(XTPROTO_LTRL_DODECAHEDRON)) {
+        nmesh::generator::dodecahedron(&obj);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CAPSULE)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 12) res = 12;
+        nmesh::generator::capsule(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CYLINDER)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 12) res = 12;
+        nmesh::generator::cylinder(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CAPPED_CYLINDER)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 12) res = 12;
+        nmesh::generator::capped_cylinder(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CONE)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 12) res = 12;
+        nmesh::generator::cone(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_RING) || !token.compare(XTPROTO_LTRL_TORUS)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 16) res = 16;
+        float radius    = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS),    1.0f);
+        float height    = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),    0.64f);
+        float thickness = (float)deserialize_numf(get(XTPROTO_PROP_THICKNESS), -1.0f);
+        int   hres      =        deserialize_numi(get(XTPROTO_PROP_HEIGHT_RESOLUTION), 1);
+        if (radius    <= 0.0f) radius    = 1.0f;
+        if (height    <= 0.0f) height    = 0.64f;
+        if (thickness <= 0.0f) thickness = -1.0f;
+        if (hres      <  1)   hres      = 1;
+        nmesh::generator::ring(&obj, (size_t)res, radius, height, thickness, hres);
+    }
+    else if (!token.compare(XTPROTO_LTRL_TORUS_KNOT)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 48);
+        if (res < 24) res = 24;
+        nmesh::generator::torus_knot(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_ICOSPHERE)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 4) res = 4;
+        nmesh::generator::icosphere(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_GEODESIC_DOME)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);
+        if (res < 4) res = 4;
+        nmesh::generator::geodesic_dome(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_HEMISPHERE)) {
+        int res = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32), 8, 512);
+        nmesh::generator::hemisphere(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_DISC)) {
+        int   res          = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32), 8, 512);
+        float inner_radius = (float)deserialize_numf(get(XTPROTO_PROP_INNER_RADIUS), 0.0f);
+        float outer_radius = (float)deserialize_numf(get(XTPROTO_PROP_OUTER_RADIUS), 1.0f);
+        nmesh::generator::disc(&obj, (size_t)res, inner_radius, outer_radius);
+    }
+    else if (!token.compare(XTPROTO_LTRL_MENGER_SPONGE)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 2);
+        if (res < 1) res = 1;
+        if (res > 3) res = 3;
+        nmesh::generator::menger_sponge(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)) {
+        int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 2);
+        if (res < 1) res = 1;
+        if (res > 4) res = 4;
+        nmesh::generator::sierpinski_tetrahedron(&obj, (size_t)res);
+    }
+    else if (!token.compare(XTPROTO_LTRL_MOBIUS_STRIP)) {
+        int   res    = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 64);
+        float radius = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS), 1.0f);
+        float width  = (float)deserialize_numf(get(XTPROTO_PROP_WIDTH),  0.64f);
+        if (res < 24) res = 24;
+        if (radius <= 0.0f) radius = 1.0f;
+        if (width  <= 0.0f) width  = 0.64f;
+        nmesh::generator::mobius_strip(&obj, (size_t)res, radius, width);
+    }
+    else if (!token.compare(XTPROTO_LTRL_SHELL_SPIRAL)) {
+        int   res        = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 64), 16, 4096);
+        float turns      = nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_TURNS),      4.0f),  0.5f, 24.0f);
+        float growth     = nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_GROWTH),     0.22f), 0.01f, 1.0f);
+        float tube_radius= nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_TUBE_RADIUS),0.14f), 0.001f, 2.0f);
+        nmesh::generator::shell_spiral(&obj, (size_t)res, turns, growth, tube_radius);
+    }
+    else if (!token.compare(XTPROTO_LTRL_ROCK)) {
+        int   res      = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 48), 8, 2048);
+        int   seed     = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
+        float radius   = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS), 1.0f);
+        float roughness= nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_ROUGH), 0.35f), 0.0f, 2.0f);
+        int   octaves  = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_OCTAVES), 4), 1, 8);
+        if (radius <= 0.0f) radius = 1.0f;
+        nmesh::generator::rock(&obj, (size_t)res, seed, radius, roughness, (size_t)octaves);
+    }
+    else if (!token.compare(XTPROTO_LTRL_GEAR)) {
+        int   res          = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION),   32), 8, 512);
+        int   tooth_count  = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_TOOTH_COUNT),  12), 3, 128);
+        float tooth_depth  = (float)deserialize_numf(get(XTPROTO_PROP_TOOTH_DEPTH),  0.1f);
+        float inner_radius = (float)deserialize_numf(get(XTPROTO_PROP_INNER_RADIUS), 0.2f);
+        float outer_radius = (float)deserialize_numf(get(XTPROTO_PROP_OUTER_RADIUS), 0.5f);
+        float height       = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),       0.2f);
+        nmesh::generator::gear(&obj, (size_t)res, (size_t)tooth_count, tooth_depth, inner_radius, outer_radius, height);
+    }
+    else if (!token.compare(XTPROTO_LTRL_SPRING)) {
+        int   res           = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION),    32),  8, 512);
+        float coils         = (float)deserialize_numf(get(XTPROTO_PROP_COILS),          6.0f);
+        float wire_radius   = (float)deserialize_numf(get(XTPROTO_PROP_WIRE_RADIUS),    0.05f);
+        float spring_radius = (float)deserialize_numf(get(XTPROTO_PROP_SPRING_RADIUS),  0.3f);
+        float height        = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),         1.2f);
+        nmesh::generator::spring(&obj, (size_t)res, coils, wire_radius, spring_radius, height);
+    }
+    else if (!token.compare(XTPROTO_LTRL_STAR)) {
+        int   res          = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION),   32), 8, 512);
+        int   points       = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_POINTS),        5), 3, 32);
+        float inner_radius = (float)deserialize_numf(get(XTPROTO_PROP_INNER_RADIUS), 0.4f);
+        float outer_radius = (float)deserialize_numf(get(XTPROTO_PROP_OUTER_RADIUS), 1.0f);
+        float height       = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),       0.2f);
+        nmesh::generator::star(&obj, (size_t)res, (size_t)points, inner_radius, outer_radius, height);
+    }
+    else if (!token.compare(XTPROTO_LTRL_SUPERELLIPSOID)) {
+        int   res = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32), 8, 512);
+        float e1  = (float)deserialize_numf(get(XTPROTO_PROP_E1), 1.0f);
+        float e2  = (float)deserialize_numf(get(XTPROTO_PROP_E2), 1.0f);
+        nmesh::generator::superellipsoid(&obj, (size_t)res, e1, e2);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CRYSTAL)) {
+        int   res        = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32), 8, 512);
+        int   count      = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_COUNT),       5), 1, 32);
+        float radius     = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS),     0.8f);
+        float height     = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),     1.5f);
+        float tip_height = (float)deserialize_numf(get(XTPROTO_PROP_TIP_HEIGHT), 0.6f);
+        int   seed       = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
+        nmesh::generator::crystal(&obj, (size_t)res, (size_t)count, radius, height, tip_height, seed);
+    }
+    else if (!token.compare(XTPROTO_LTRL_TREE)) {
+        int   res          = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION),    32),   8, 256);
+        int   depth        = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_DEPTH),          4),   1, 8);
+        int   branch_count = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_BRANCH_COUNT),   3),   2, 8);
+        float branch_angle = (float)deserialize_numf(get(XTPROTO_PROP_BRANCH_ANGLE),  0.6f);
+        float trunk_height = (float)deserialize_numf(get(XTPROTO_PROP_TRUNK_HEIGHT),  1.2f);
+        float trunk_radius = (float)deserialize_numf(get(XTPROTO_PROP_TRUNK_RADIUS),  0.08f);
+        int   seed         = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
+        nmesh::generator::tree(&obj, (size_t)res, depth, branch_count, branch_angle, trunk_height, trunk_radius, seed);
+    }
+    else if (!token.compare(XTPROTO_LTRL_CORAL)) {
+        int   res           = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION),    32),   8, 256);
+        int   depth         = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_DEPTH),          4),   1, 8);
+        int   branch_count  = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_BRANCH_COUNT),   4),   2, 8);
+        float branch_angle  = (float)deserialize_numf(get(XTPROTO_PROP_BRANCH_ANGLE),  0.7f);
+        float height        = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT),        1.0f);
+        float branch_radius = (float)deserialize_numf(get(XTPROTO_PROP_BRANCH_RADIUS), 0.05f);
+        int   seed          = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
+        nmesh::generator::coral(&obj, (size_t)res, depth, branch_count, branch_angle, height, branch_radius, seed);
+    }
+    else {
+        return "{\"error\":\"unknown generator: " + gen_id + "\"}";
+    }
+
+    return nmesh_obj_to_json(obj);
+}
+
 bool csg_supports_leaf_type(const std::string &type_lc)
 {
     return !type_lc.compare(XTPROTO_LTRL_SPHERE)
@@ -1932,19 +2194,6 @@ xtcore::sampler::ISampler *deserialize_edge_wear(const ncf::NCF *p)
     return s;
 }
 
-xtcore::sampler::ISampler *deserialize_fingerprint(const ncf::NCF *p)
-{
-    xtcore::sampler::Fingerprint *s = new (std::nothrow) xtcore::sampler::Fingerprint();
-    if (!s || !p) return s;
-    s->color_a         = deserialize_col3(p, "a",              s->color_a);
-    s->color_b         = deserialize_col3(p, "b",              s->color_b);
-    s->scale           = deserialize_numf(p->get_property_by_name("scale"),           s->scale);
-    s->ridge_frequency = deserialize_numf(p->get_property_by_name("ridge_frequency"), s->ridge_frequency);
-    s->ridge_width     = deserialize_numf(p->get_property_by_name("ridge_width"),     s->ridge_width);
-    s->distortion      = deserialize_numf(p->get_property_by_name("distortion"),      s->distortion);
-    return s;
-}
-
 xtcore::sampler::ISampler *deserialize_brick(const ncf::NCF *p)
 {
     xtcore::sampler::Brick *s = new (std::nothrow) xtcore::sampler::Brick();
@@ -1957,18 +2206,6 @@ xtcore::sampler::ISampler *deserialize_brick(const ncf::NCF *p)
     s->mortar_v       = deserialize_numf(p->get_property_by_name("mortar_v"),       s->mortar_v);
     s->color_variation = deserialize_numf(p->get_property_by_name("color_variation"), s->color_variation);
     s->seed           = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_SEED), s->seed);
-    return s;
-}
-
-xtcore::sampler::ISampler *deserialize_hexgrid(const ncf::NCF *p)
-{
-    xtcore::sampler::HexGrid *s = new (std::nothrow) xtcore::sampler::HexGrid();
-    if (!s || !p) return s;
-    s->color_tile    = deserialize_col3(p, "tile",           s->color_tile);
-    s->color_border  = deserialize_col3(p, "border",         s->color_border);
-    s->scale         = deserialize_numf(p->get_property_by_name("scale"),          s->scale);
-    s->border_width  = deserialize_numf(p->get_property_by_name("border_width"),   s->border_width);
-    s->border_softness = deserialize_numf(p->get_property_by_name("border_softness"), s->border_softness);
     return s;
 }
 
@@ -2080,9 +2317,7 @@ xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const nc
     else if (!type.compare(XTPROTO_CURL_NOISE))        return deserialize_curl_noise(entry);
     else if (!type.compare(XTPROTO_SCRATCHES))         return deserialize_scratches(entry);
     else if (!type.compare(XTPROTO_EDGE_WEAR))         return deserialize_edge_wear(entry);
-    else if (!type.compare(XTPROTO_FINGERPRINT))       return deserialize_fingerprint(entry);
     else if (!type.compare(XTPROTO_BRICK))             return deserialize_brick(entry);
-    else if (!type.compare(XTPROTO_HEXGRID))           return deserialize_hexgrid(entry);
     else if (!type.compare(XTPROTO_DOTS))              return deserialize_dots(entry);
     else if (!type.compare(XTPROTO_PREETHAM_SKY))      return deserialize_preetham_sky(entry);
     else if (!type.compare(XTPROTO_HOSEK_WILKIE_SKY))  return deserialize_hosek_wilkie_sky(entry);
@@ -2362,7 +2597,9 @@ xtcore::sampler::ISampler *create_sampler(const char *base, const char *texture,
 int create_object(Scene *scene,
                   const char *filepath,
                   const char *prefix,
-                  const xtcore::asset::medium::IMedium *medium_proto)
+                  const xtcore::asset::medium::IMedium *medium_proto,
+                  const char *texture_dir,
+                  const std::set<std::string> &ignore)
 {
     if (!scene) return -1;
 
@@ -2374,6 +2611,11 @@ int create_object(Scene *scene,
    		Log::handle().post_warning("Failed to load asset from %s (%s)", filepath, import_error.c_str());
         return 1;
     }
+    if (texture_dir && texture_dir[0]) {
+        imported.texture_dir = texture_dir;
+        if (imported.texture_dir.back() != '/') imported.texture_dir += '/';
+    }
+    imported.ignore = ignore;
     auto t_import_1 = std::chrono::steady_clock::now();
     const double import_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_import_1 - t_import_0).count();
     Log::handle().post_message("External asset import done: %s (%zu shapes, %.0f ms)",
@@ -2386,9 +2628,17 @@ int create_object(Scene *scene,
     return 0;
 }
 
+int create_object(Scene *scene,
+                  const char *filepath,
+                  const char *prefix,
+                  const xtcore::asset::medium::IMedium *medium_proto)
+{
+    return create_object(scene, filepath, prefix, medium_proto, nullptr, std::set<std::string>());
+}
+
 int create_object(Scene *scene, const char *filepath, const char *prefix)
 {
-    return create_object(scene, filepath, prefix, 0);
+    return create_object(scene, filepath, prefix, 0, nullptr, std::set<std::string>());
 }
 
 int create_object(Scene *scene,
@@ -2503,7 +2753,10 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
     else if (!environment.compare(XTPROTO_ERP         )) scene->m_environment = deserialize_erp         (scene->m_source.c_str(), env_data);
     else if (!environment.compare(XTPROTO_GRADIENT    )) scene->m_environment = deserialize_gradient    (env_data);
     else if (!environment.compare(XTPROTO_COLOR       )) scene->m_environment = deserialize_rgba        (env_data);
-    else if (!environment.compare(XTPROTO_RAYLEIGH_SKY)) scene->m_environment = deserialize_rayleigh_sky(env_data);
+    else if (!environment.compare(XTPROTO_RAYLEIGH_SKY    )) scene->m_environment = deserialize_rayleigh_sky    (env_data);
+    else if (!environment.compare(XTPROTO_PREETHAM_SKY    )) scene->m_environment = deserialize_preetham_sky    (env_data);
+    else if (!environment.compare(XTPROTO_HOSEK_WILKIE_SKY)) scene->m_environment = deserialize_hosek_wilkie_sky(env_data);
+    else if (!environment.compare(XTPROTO_STARS           )) scene->m_environment = deserialize_stars           (env_data);
 
     std::map<HASH_UINT64, xtcore::asset::medium::IMedium*> medium_defs;
     ncf::NCF *medium_root = root.get_group_by_name(XTPROTO_NODE_MEDIUM);
@@ -2565,8 +2818,26 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 	                    std::string base, file, fsource = scene->m_source;
                 		ncf::util::path_comp(fsource, base, file);
 
-                        std::string flpath = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_SOURCE));
-                        std::string prefix = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_PREFIX));
+                        std::string flpath      = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_SOURCE));
+                        std::string prefix      = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_PREFIX));
+                        std::string texture_dir = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_TEXTURE_DIR));
+                        std::string ignore_str  = deserialize_cstr(lnode->get_property_by_name(XTPROTO_PROP_IGNORE));
+                        std::set<std::string> ignore_set;
+                        {
+                            std::istringstream ss(ignore_str);
+                            std::string token;
+                            while (std::getline(ss, token, ',')) {
+                                const size_t a = token.find_first_not_of(" \t");
+                                const size_t b = token.find_last_not_of(" \t");
+                                if (a != std::string::npos) ignore_set.insert(token.substr(a, b - a + 1));
+                            }
+                        }
+                        if (!texture_dir.empty()) {
+                            std::string tbase, tfile, tfsource = scene->m_source;
+                            ncf::util::path_comp(tfsource, tbase, tfile);
+                            if (!path_is_absolute(texture_dir)) texture_dir = tbase + texture_dir;
+                            if (texture_dir.back() != '/') texture_dir += '/';
+                        }
                         const xtcore::asset::medium::IMedium *medium_proto = 0;
                         if (lnode->query_group(XTPROTO_PROP_MEDIUM)) {
                             Log::handle().post_error("Object %s uses inline medium block; only top-level medium assets are supported", lnode->get_name());
@@ -2592,7 +2863,9 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
                         flpath = asset_fetcher::resolve(flpath);
                         if (flpath.empty() || path_is_absolute(flpath) || asset_fetcher::is_url(flpath)) base = flpath;
                         else base.append(flpath);
-                        res = create_object(scene, base.c_str(), prefix.c_str(), medium_proto);
+                        res = create_object(scene, base.c_str(), prefix.c_str(), medium_proto,
+                                            texture_dir.empty() ? nullptr : texture_dir.c_str(),
+                                            ignore_set);
                     }
                     else res = create_object(scene, lnode, medium_defs);
                 }

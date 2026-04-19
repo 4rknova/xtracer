@@ -4,8 +4,10 @@
 #include <nmath/vector.h>
 #include <nimg/color.h>
 #include <ncf/ncf.h>
+#include <map>
 #include <memory>
 #include <list>
+#include <string>
 #include "math/surface.h"
 #include "camera.h"
 #include "material.h"
@@ -54,6 +56,8 @@ int create_camera   (Scene *scene, ncf::NCF *p);
 int create_material (Scene *scene, ncf::NCF *p);
 int create_geometry (Scene *scene, ncf::NCF *p);
 int create_object   (Scene *scene, ncf::NCF *p);
+
+std::string generate_geometry_mesh_json(const std::string &gen_id, const std::map<std::string, std::string> &params);
 
 int load(Scene *scene,
          const char *filename,

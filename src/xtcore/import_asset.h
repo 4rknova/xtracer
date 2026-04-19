@@ -1,6 +1,7 @@
 #ifndef XTCORE_IMPORT_ASSET_H_INCLUDED
 #define XTCORE_IMPORT_ASSET_H_INCLUDED
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -92,6 +93,8 @@ struct imported_asset_t
 {
     std::string source_path;
     std::string base_dir;
+    std::string texture_dir;
+    std::set<std::string> ignore;
     nmesh::attrib_t attributes;
     std::vector<imported_texture_t> textures;
     std::vector<imported_material_t> materials;

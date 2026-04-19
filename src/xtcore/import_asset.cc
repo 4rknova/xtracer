@@ -138,7 +138,6 @@ static xtcore::sampler::ISampler *create_texture_sampler(const imported_asset_t 
         if (tex && src.is_embedded && !src.embedded_bytes.empty()) {
             if (tex->load_memory(src.embedded_bytes.data(), src.embedded_bytes.size()) == 0) {
                 tex->set_filtering(xtcore::sampler::FILTERING_BILINEAR);
-                tex->flip_vertical();
                 return tex;
             }
             Log::handle().post_warning("Failed to load embedded imported texture %s, trying file path fallback",
@@ -146,12 +145,20 @@ static xtcore::sampler::ISampler *create_texture_sampler(const imported_asset_t 
         }
 
         if (tex && !src.path.empty()) {
-            std::string normalized_path = asset.base_dir;
-            normalized_path.append(src.path);
-            std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
+            std::string normalized_path;
+            if (!asset.texture_dir.empty()) {
+                std::string raw = src.path;
+                std::replace(raw.begin(), raw.end(), '\\', '/');
+                const size_t sep = raw.rfind('/');
+                const std::string basename = (sep != std::string::npos) ? raw.substr(sep + 1) : raw;
+                normalized_path = asset.texture_dir + basename;
+            } else {
+                normalized_path = asset.base_dir;
+                normalized_path.append(src.path);
+                std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
+            }
             if (tex->load(normalized_path.c_str()) == 0) {
                 tex->set_filtering(xtcore::sampler::FILTERING_BILINEAR);
-                tex->flip_vertical();
                 return tex;
             }
             Log::handle().post_warning("Failed to load imported texture %s, using solid color fallback", normalized_path.c_str());
@@ -940,19 +947,36 @@ int create_objects_from_imported_asset(xtcore::Scene *scene,
         }
         if (loaded) continue;
 
+        if (asset.ignore.count(asset.materials[m].name)) {
+            Log::handle().post_message("Import: ignoring material '%s'", name.c_str());
+            matids.push_back(HASH_ID_INVALID);
+            continue;
+        }
+
+        matids.push_back(id);
+
+        if (scene->m_materials.count(id)) {
+            Log::handle().post_message("Import: using scene-defined material '%s'", name.c_str());
+            continue;
+        }
+        Log::handle().post_message("Import: creating material '%s'", name.c_str());
+
         xtcore::asset::IMaterial *mat = build_runtime_material(asset, asset.materials[m]);
         if (!mat) {
             err = "failed to allocate imported material";
             return 1;
         }
-
-        matids.push_back(id);
         scene->m_materials[id] = mat;
     }
 
     HASH_UINT64 fallback_mat_id = HASH_ID_INVALID;
     for (size_t i = 0; i < asset.shapes.size(); ++i) {
         const imported_shape_t &shape = asset.shapes[i];
+
+        if (shape.material_index >= 0 && (size_t)shape.material_index < asset.materials.size()
+            && asset.ignore.count(asset.materials[(size_t)shape.material_index].name)) {
+            continue;
+        }
 
         std::string name = std::to_string((int)i + 1);
         name.append(prefix ? prefix : "");
