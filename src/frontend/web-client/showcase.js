@@ -834,6 +834,77 @@
     );
   }
 
+  function buildTimelineDemo() {
+    if (typeof widgets.createInfiniteGrid !== "function") return null;
+    const wrapper = dom.el("div", { className: "showcase-specimen showcase-specimen--full" });
+    const head = dom.el("div", {
+      className: "showcase-specimen-head",
+      children: [
+        dom.el("h3", { text: "Infinite Grid / Timeline" }),
+        dom.el("p", { text: "Pannable and zoomable canvas grid. Drag to pan, scroll to zoom. The playhead marks world x=0." }),
+      ],
+    });
+    wrapper.appendChild(head);
+
+    const controls = dom.el("div", {
+      className: "showcase-demo-row showcase-demo-row--toolbar",
+      children: [
+        dom.el("span", { className: "showcase-meta", text: "Label suffix" }),
+        (function () {
+          const sel = document.createElement("select");
+          sel.className = "xui-select";
+          [["", "none"], ["f", "frames"], ["s", "seconds"], ["ms", "ms"]].forEach(([v, l]) => {
+            const o = document.createElement("option");
+            o.value = v; o.textContent = l;
+            sel.appendChild(o);
+          });
+          return sel;
+        })(),
+        dom.el("span", { className: "showcase-meta", text: "Major every" }),
+        (function () {
+          const sel = document.createElement("select");
+          sel.className = "xui-select";
+          [4, 5, 8, 10].forEach((n) => {
+            const o = document.createElement("option");
+            o.value = n; o.textContent = n; o.selected = n === 5;
+            sel.appendChild(o);
+          });
+          return sel;
+        })(),
+      ],
+    });
+    wrapper.appendChild(controls);
+
+    let grid = null;
+    function buildGrid() {
+      if (grid && grid._gridDestroy) grid._gridDestroy();
+      if (grid && grid.parentNode) grid.parentNode.removeChild(grid);
+      const suffixSel = controls.querySelectorAll("select")[0];
+      const majorSel  = controls.querySelectorAll("select")[1];
+      grid = widgets.createInfiniteGrid({
+        height: 240,
+        baseStep: 60,
+        majorEvery: majorSel ? parseInt(majorSel.value, 10) : 5,
+        labelSuffix: suffixSel ? suffixSel.value : "",
+        showPlayhead: true,
+        showLabels: true,
+        showAxisLine: true,
+      });
+      const hint = dom.el("span", { className: "xui-grid-view__hint", text: "drag · scroll" });
+      grid.appendChild(hint);
+      wrapper.appendChild(grid);
+    }
+
+    controls.querySelectorAll("select").forEach((sel) => {
+      sel.addEventListener("change", buildGrid);
+    });
+
+    // Defer first build until layout is ready
+    requestAnimationFrame(buildGrid);
+
+    return wrapper;
+  }
+
   function buildCompositions() {
     return section(
       "compositions",
@@ -842,6 +913,7 @@
       dom.el("div", {
         className: "showcase-grid",
         children: [
+          buildTimelineDemo(),
           dom.el("section", {
             className: "showcase-specimen",
             children: [
