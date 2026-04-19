@@ -3921,6 +3921,119 @@ textarea {
   text-overflow: ellipsis;
 }
 
+.active-scene-camera-row {
+  align-items: center;
+}
+
+.active-scene-camera-select {
+  min-width: 0;
+  width: 100%;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+
+/* ── Render tab disabled state ─────────────────────────────────────── */
+
+.main-menu .xui-menu__item.is-tab-disabled,
+.main-menu .xui-menu__item:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.bottom-nav .bottom-nav-item.is-tab-disabled,
+.bottom-nav .bottom-nav-item:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Scene select modal ────────────────────────────────────────────── */
+
+.scene-select-dialog {
+  width: min(560px, calc(100vw - 2rem));
+}
+
+.scene-select-dialog .xui-modal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.scene-select-step-label,
+.scene-select-step-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.scene-select-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.scene-select-list,
+.scene-select-variant-list {
+  overflow-y: auto;
+  height: 42vh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overscroll-behavior: contain;
+}
+
+.scene-select-scene-btn,
+.scene-select-variant-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+}
+
+.scene-select-scene-btn:hover,
+.scene-select-variant-btn:hover {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.scene-select-scene-btn.is-selected,
+.scene-select-variant-btn.is-selected {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-color: var(--accent);
+}
+
+.scene-select-scene-name,
+.scene-select-variant-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.scene-select-scene-meta,
+.scene-select-variant-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.scene-select-empty {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .active-scene-camera-icon {
   width: 14px;
   height: 11px;

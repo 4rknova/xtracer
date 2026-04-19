@@ -242,17 +242,20 @@ function triggerSceneSave() {
           setStatus(`saved ${scene}`);
           setEditorOpStatus("success", `Saved: ${scene}`);
           appendLog(`saved scene: ${scene}`);
+          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Scene saved: ${scene}`, tone: "success" });
         })
         .catch((err) => {
           setStatus(`error: ${err.message}`);
           setEditorOpStatus("error", `Save failed: ${err.message}`);
           appendLog(`post-save error: ${err.message}`);
+          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
         });
     })
     .catch((err) => {
       setStatus(`error: ${err.message}`);
       setEditorOpStatus("error", `Save failed: ${err.message}`);
       appendLog(`save error: ${err.message}`);
+      if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
     });
 }
 
@@ -418,6 +421,7 @@ async function watchJobViaWebSocket(jobId, token) {
           refreshVisualPhotonOverlay().catch(() => {});
           setStatus(`done in ${Math.round(elapsedMs)} ms`);
           appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
+          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Render complete (${Math.round(elapsedMs)} ms)`, tone: "success" });
           finish({ state: "done", elapsedMs });
           if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
         });
@@ -874,6 +878,7 @@ async function handleRender() {
     syncGlobalsToWorkspaceRuntime();
     setStatus("queued 0.0%");
     appendLog(`job accepted: ${jobId}`);
+    if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: "Render started", tone: "info" });
     if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
     await pollJob(jobId, pollToken);
     pollReachedTerminalState = true;

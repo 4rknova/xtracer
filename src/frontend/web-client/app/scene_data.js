@@ -1,5 +1,6 @@
 let appConfigLoadPromise = null;
 let sceneSearchQuery = "";
+let pendingVariantForNextSceneLoad = null;
 let currentSceneSourceOrigin = "";
 
 function normalizeSceneSourceOrigin(value) {
@@ -933,32 +934,7 @@ function updateActiveSceneSidebarCard() {
     el.activeSceneCardVariantDescription.style.display = variantDescription ? "" : "none";
   }
 
-  if (el.activeSceneCardCamera) {
-    const cameraMeta = cameraCatalogEntryByName(cameraName);
-    const cameraType = String(cameraMeta && cameraMeta.type ? cameraMeta.type : "").trim();
-    const cameraLabel = cameraName || "-";
-    el.activeSceneCardCamera.replaceChildren();
-
-    const key = document.createElement("span");
-    key.className = "active-scene-row-label";
-    key.textContent = "Camera";
-    el.activeSceneCardCamera.appendChild(key);
-
-    const valueWrap = document.createElement("span");
-    valueWrap.className = "active-scene-camera-field";
-    const valueNode = document.createElement("code");
-    valueNode.className = "active-scene-row-value active-scene-camera-name";
-    valueNode.textContent = cameraLabel;
-    valueWrap.appendChild(valueNode);
-
-    if (cameraType && cameraLabel !== "-") {
-      const icon = createCameraIcon(cameraType);
-      icon.classList.add("active-scene-camera-icon");
-      valueWrap.appendChild(icon);
-    }
-
-    el.activeSceneCardCamera.appendChild(valueWrap);
-  }
+  syncActiveCameraSelect(cameraName);
 }
 
 function cameraTypeLooksGeneric(cameraType) {
@@ -1071,6 +1047,46 @@ function updateVariantActivePanel() {
   updateActiveSceneSidebarCard();
 }
 
+function syncActiveCameraSelect(activeCameraName) {
+  const select = document.getElementById("activeSceneCameraSelect");
+  if (!select) return;
+
+  const activeCamera = activeCameraName !== undefined
+    ? String(activeCameraName || "")
+    : String(el.camera && el.camera.value ? el.camera.value : "");
+
+  const catalogValues = cameraCatalog.map((c) => String(c.value || ""));
+  const currentValues = Array.from(select.options).map((o) => o.value);
+  const needsRebuild = catalogValues.length !== currentValues.length
+    || catalogValues.some((v, i) => v !== currentValues[i]);
+
+  if (needsRebuild) {
+    select.innerHTML = "";
+    if (!cameraCatalog.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No cameras";
+      select.appendChild(opt);
+    } else {
+      cameraCatalog.forEach((item) => {
+        const opt = document.createElement("option");
+        opt.value = String(item.value || "");
+        opt.textContent = String(item.label || item.value || "");
+        select.appendChild(opt);
+      });
+    }
+  }
+
+  if (select.value !== activeCamera) select.value = activeCamera;
+
+  if (!select._cameraSelectBound) {
+    select._cameraSelectBound = true;
+    select.addEventListener("change", () => {
+      activateCamera(select.value);
+    });
+  }
+}
+
 function renderCameraBrowser() {
   if (!el.cameraFileList) return;
   const widgets = window.XTracerWidgets || {};
@@ -1118,6 +1134,7 @@ function renderCameraBrowser() {
 
     el.cameraFileList.appendChild(button);
   });
+  syncActiveCameraSelect();
 }
 
 function renderVariantBrowser() {
@@ -1434,6 +1451,10 @@ async function loadVariants(scene, preferredVariant) {
   if (!el.variant) return;
   el.variant.innerHTML = "";
   const sceneName = String(scene || "").trim();
+  if (preferredVariant === undefined && pendingVariantForNextSceneLoad !== null) {
+    preferredVariant = pendingVariantForNextSceneLoad;
+    pendingVariantForNextSceneLoad = null;
+  }
   let parsed = null;
 
   if (sceneName) {
@@ -1646,4 +1667,300 @@ async function loadEmptySceneTemplate() {
   }
   const data = await getJSON("/api/scenes/template/empty");
   return data.source || "";
+}
+
+function showSceneSelectModal(options) {
+  const opts = options || {};
+  const dom = window.XTracerWidgets && window.XTracerWidgets.dom;
+  if (!dom) return;
+
+  let selectedScene = null;
+  let selectedVariant = null;
+  let step = 1;
+  let stepVariants = [];
+
+  const overlay = document.createElement("div");
+  overlay.className = "xui-modal scene-select-modal";
+  overlay.setAttribute("role", "presentation");
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "xui-modal-backdrop";
+  backdrop.setAttribute("aria-hidden", "true");
+
+  const dialog = document.createElement("div");
+  dialog.className = "xui-modal-dialog scene-select-dialog";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.setAttribute("tabindex", "-1");
+
+  overlay.appendChild(backdrop);
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  function close() {
+    overlay.remove();
+  }
+
+  backdrop.addEventListener("click", close);
+  overlay.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+
+  function applySelection() {
+    if (!selectedScene) return;
+    close();
+    if (typeof opts.onConfirm === "function") {
+      opts.onConfirm(selectedScene, selectedVariant);
+    } else {
+      if (selectedVariant !== null) pendingVariantForNextSceneLoad = selectedVariant;
+      activateSceneFile(selectedScene);
+    }
+  }
+
+  function buildStep2() {
+    step = 2;
+    dialog.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "xui-modal-head";
+    const title = document.createElement("h2");
+    title.className = "xui-modal-title";
+    title.textContent = "Select Variant";
+    const stepLabel = document.createElement("span");
+    stepLabel.className = "scene-select-step-label";
+    stepLabel.textContent = "Step 2 of 2";
+    head.appendChild(title);
+    head.appendChild(stepLabel);
+
+    const body = document.createElement("div");
+    body.className = "xui-modal-body scene-select-body";
+
+    const list = document.createElement("div");
+    list.className = "scene-select-variant-list";
+
+    stepVariants.forEach((entry) => {
+      const value = String(entry.value || "");
+      const label = String(entry.label || value || "(base)");
+      const description = String(entry.description || "");
+      const isBase = !value;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "scene-select-variant-btn";
+      btn.setAttribute("role", "option");
+      if (isBase) btn.classList.add("is-base");
+      if (value === (selectedVariant || "")) btn.classList.add("is-selected");
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "scene-select-variant-name";
+      nameEl.textContent = label;
+      btn.appendChild(nameEl);
+
+      if (description) {
+        const descEl = document.createElement("span");
+        descEl.className = "scene-select-variant-desc";
+        descEl.textContent = description;
+        btn.appendChild(descEl);
+      }
+
+      btn.addEventListener("click", () => {
+        list.querySelectorAll(".scene-select-variant-btn").forEach((b) => b.classList.remove("is-selected"));
+        btn.classList.add("is-selected");
+        selectedVariant = value;
+      });
+
+      list.appendChild(btn);
+    });
+
+    body.appendChild(list);
+
+    const actions = document.createElement("div");
+    actions.className = "xui-modal-actions";
+
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "xui-button xui-button--ghost";
+    backBtn.textContent = "Back";
+    backBtn.addEventListener("click", buildStep1);
+
+    const selectBtn = document.createElement("button");
+    selectBtn.type = "button";
+    selectBtn.className = "xui-button xui-button--primary";
+    selectBtn.textContent = "Select";
+    selectBtn.addEventListener("click", applySelection);
+
+    actions.appendChild(backBtn);
+    actions.appendChild(selectBtn);
+
+    dialog.appendChild(head);
+    dialog.appendChild(body);
+    dialog.appendChild(actions);
+    dialog.setAttribute("aria-label", "Select Variant");
+    dialog.focus();
+  }
+
+  async function advanceFromStep1() {
+    if (!selectedScene) return;
+    const entry = sceneCatalog.find((s) => s.sceneFile === selectedScene);
+    const hasVariants = entry && entry.hasVariants;
+
+    if (!hasVariants) {
+      selectedVariant = null;
+      applySelection();
+      return;
+    }
+
+    try {
+      const data = await api.getSceneSource(selectedScene);
+      const parsed = extractSceneVariantNames(data && data.source ? data.source : "");
+      stepVariants = [];
+      if (parsed && !parsed.hideBase) {
+        const baseLabel = String(parsed.base && parsed.base.label ? parsed.base.label : "(base)");
+        const baseDesc = String(parsed.base && parsed.base.description ? parsed.base.description : "");
+        stepVariants.push({ value: "", label: baseLabel, description: baseDesc });
+      }
+      const variants = Array.isArray(parsed && parsed.variants) ? parsed.variants : [];
+      variants.forEach((v) => {
+        const id = normalizeVariantName(v && v.id ? v.id : "");
+        if (!id) return;
+        stepVariants.push({
+          value: id,
+          label: String(v.label || id).trim() || id,
+          description: String(v.description || ""),
+        });
+      });
+
+      if (stepVariants.length <= 1) {
+        selectedVariant = stepVariants.length ? String(stepVariants[0].value || "") : null;
+        applySelection();
+        return;
+      }
+
+      selectedVariant = stepVariants[0] ? String(stepVariants[0].value || "") : null;
+      buildStep2();
+    } catch (_) {
+      selectedVariant = null;
+      applySelection();
+    }
+  }
+
+  function buildStep1() {
+    step = 1;
+    dialog.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "xui-modal-head";
+    const title = document.createElement("h2");
+    title.className = "xui-modal-title";
+    title.textContent = "Select Scene";
+    const stepHint = document.createElement("span");
+    stepHint.className = "scene-select-step-hint";
+    stepHint.textContent = "Choose a scene for the active workspace";
+    head.appendChild(title);
+    head.appendChild(stepHint);
+
+    const body = document.createElement("div");
+    body.className = "xui-modal-body scene-select-body";
+
+    const searchInput = document.createElement("input");
+    searchInput.type = "search";
+    searchInput.className = "scene-select-search xui-input";
+    searchInput.placeholder = "Search scenes…";
+    searchInput.setAttribute("aria-label", "Search scenes");
+
+    const list = document.createElement("div");
+    list.className = "scene-select-list";
+    list.setAttribute("role", "listbox");
+    list.setAttribute("aria-label", "Scene files");
+
+    const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+    if (!selectedScene && currentScene) selectedScene = currentScene;
+
+    function renderSceneList(query) {
+      list.innerHTML = "";
+      const q = String(query || "").trim().toLowerCase();
+      const items = sceneCatalog.filter((s) => {
+        if (!q) return true;
+        return String(s.sceneFile || "").toLowerCase().includes(q)
+          || String(s.label || "").toLowerCase().includes(q)
+          || String(s.title || "").toLowerCase().includes(q);
+      });
+
+      if (!items.length) {
+        const empty = document.createElement("p");
+        empty.className = "scene-select-empty";
+        empty.textContent = q ? "No scenes match your search." : "No scenes available.";
+        list.appendChild(empty);
+        return;
+      }
+
+      items.forEach((s) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "scene-select-scene-btn";
+        btn.setAttribute("role", "option");
+        if (s.sceneFile === selectedScene) btn.classList.add("is-selected");
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "scene-select-scene-name";
+        nameEl.textContent = s.label || s.sceneFile || "-";
+        btn.appendChild(nameEl);
+
+        const metaEl = document.createElement("span");
+        metaEl.className = "scene-select-scene-meta";
+        const pills = [];
+        if (s.hasVariants) pills.push(`${s.variantCount} variant${s.variantCount !== 1 ? "s" : ""}`);
+        if (s.cameraCount) pills.push(`${s.cameraCount} cam${s.cameraCount !== 1 ? "s" : ""}`);
+        if (s.dependsExternal) pills.push("EXT");
+        metaEl.textContent = pills.join(" · ");
+        if (pills.length) btn.appendChild(metaEl);
+
+        btn.addEventListener("click", () => {
+          list.querySelectorAll(".scene-select-scene-btn").forEach((b) => b.classList.remove("is-selected"));
+          btn.classList.add("is-selected");
+          selectedScene = s.sceneFile;
+        });
+
+        btn.addEventListener("dblclick", () => {
+          selectedScene = s.sceneFile;
+          advanceFromStep1();
+        });
+
+        list.appendChild(btn);
+      });
+    }
+
+    searchInput.addEventListener("input", () => renderSceneList(searchInput.value));
+    renderSceneList("");
+
+    body.appendChild(searchInput);
+    body.appendChild(list);
+
+    const actions = document.createElement("div");
+    actions.className = "xui-modal-actions";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "xui-button xui-button--ghost";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", close);
+
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "xui-button xui-button--primary";
+    nextBtn.textContent = "Next";
+    nextBtn.addEventListener("click", () => advanceFromStep1());
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(nextBtn);
+
+    dialog.appendChild(head);
+    dialog.appendChild(body);
+    dialog.appendChild(actions);
+    dialog.setAttribute("aria-label", "Select Scene");
+    dialog.focus();
+    requestAnimationFrame(() => searchInput.focus());
+  }
+
+  buildStep1();
 }

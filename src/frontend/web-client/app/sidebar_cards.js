@@ -34,7 +34,10 @@
           <div id="activeSceneCardScene" class="active-scene-header"></div>
           <p id="activeSceneCardDescription" class="active-scene-description">-</p>
           <div id="activeSceneCardSource" class="active-scene-row"></div>
-          <div id="activeSceneCardCamera" class="active-scene-row"></div>
+          <div class="active-scene-row active-scene-camera-row">
+            <span class="active-scene-row-label">Camera</span>
+            <select id="activeSceneCameraSelect" class="xui-select active-scene-camera-select" aria-label="Active camera"></select>
+          </div>
           <div id="activeSceneCardVariant" class="active-scene-row"></div>
           <p id="activeSceneCardVariantDescription" class="active-scene-variant-description"></p>
         </section>
@@ -169,6 +172,7 @@
           <div class="visual-camera-editor__actions">
             <button id="visualCameraSnapBtn" class="visual-camera-editor__btn visual-camera-editor__btn--secondary" type="button" title="Set position and target to match current viewport viewpoint">Snap to View</button>
             <button id="visualCameraApplyBtn" class="visual-camera-editor__btn visual-camera-editor__btn--primary" type="button">Apply</button>
+            <button id="visualCameraNewBtn" class="visual-camera-editor__btn visual-camera-editor__btn--secondary" type="button" title="Add a new camera with the current settings to the scene">New Camera</button>
           </div>
         </div>
         <label for="visualProjection" class="xui-field">
