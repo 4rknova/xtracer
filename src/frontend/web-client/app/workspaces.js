@@ -1172,7 +1172,6 @@ function renderWorkspaceList(items) {
     const title = document.createElement("h3");
     title.className = "workspace-item-title";
     title.textContent = String((ws && ws.name) || id || "Workspace");
-    const state = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-state");
     head.appendChild(title);
     const badgesEl = document.createElement("div");
     badgesEl.className = "workspace-item-badges";
@@ -1180,7 +1179,6 @@ function renderWorkspaceList(items) {
       const mineBadge = createWorkspaceStateBadge("This Client", "workspace-item-state");
       badgesEl.appendChild(mineBadge);
     }
-    badgesEl.appendChild(state);
     head.appendChild(badgesEl);
 
     const actions = document.createElement("div");
@@ -1295,9 +1293,7 @@ function renderWorkspaceList(items) {
     if (workspaceViewMode === "list") {
       const previewCol = document.createElement("div");
       previewCol.className = "workspace-item-preview-col";
-      const listState = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-list-state");
       previewCol.appendChild(previewWrap);
-      previewCol.appendChild(listState);
 
       const main = document.createElement("div");
       main.className = "workspace-item-list-main";

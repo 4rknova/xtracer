@@ -2,38 +2,44 @@
   "steps": [
     {
       "title": "Welcome to XTRACER",
-      "body": "This guided tour walks through scene setup, rendering, editor workflows, logs, workspaces, and settings.",
-      "target_selector": "#tabScene",
+      "body": "This guided tour walks through workspace setup, rendering, editor workflows, logs, and settings.",
+      "target_selector": "#tabWorkspaces",
       "placement": "bottom",
-      "tab": "scene"
+      "tab": "workspaces"
     },
     {
-      "title": "Pick a Scene",
-      "body": "Start in Scene. Pick a scene file from the scene list to drive render and editor context.",
-      "target_selector": "#sceneFileList",
-      "placement": "right",
-      "tab": "scene"
+      "title": "Create a Workspace",
+      "body": "Enter a name and click '+' to create a workspace. A scene picker dialog will appear to bind a scene and variant.",
+      "target_selector": "#workspaceCreateField",
+      "placement": "bottom",
+      "tab": "workspaces"
     },
     {
-      "title": "Choose Variant",
-      "body": "Use variants to load alternate scene setups (lighting, layout, or overrides) without editing base files.",
-      "target_selector": "#variantFileList",
+      "title": "Active Scene",
+      "body": "This card shows the scene, camera, and variant bound to the active workspace.",
+      "target_selector": "#activeSceneControlsCard",
       "placement": "right",
-      "tab": "scene"
+      "tab": "workspaces",
+      "open_cards": [
+        "activeSceneControlsCard"
+      ]
     },
     {
       "title": "Choose Camera",
       "body": "Select the render camera used for the next render job.",
-      "target_selector": "#cameraFileList",
+      "target_selector": "#activeSceneCameraSelect",
       "placement": "right",
-      "tab": "scene"
+      "tab": "workspaces",
+      "open_cards": [
+        "activeSceneControlsCard"
+      ]
     },
     {
       "title": "Open Render",
       "body": "Move to Render to configure integrator, quality, tone mapping, and export.",
       "target_selector": "#tabRender",
       "placement": "bottom",
-      "tab": "scene"
+      "tab": "workspaces"
     },
     {
       "title": "Select Integrator",
@@ -160,25 +166,11 @@
       ]
     },
     {
-      "title": "Open Workspaces",
-      "body": "Workspaces let you keep separate session context and saved settings.",
-      "target_selector": "#tabWorkspaces",
-      "placement": "bottom",
-      "tab": "logs"
-    },
-    {
-      "title": "Create Workspace",
-      "body": "Create a workspace to isolate scene drafts and render setup for a workflow.",
-      "target_selector": "#workspaceCreateBtn",
-      "placement": "right",
-      "tab": "workspaces"
-    },
-    {
       "title": "Open Settings",
       "body": "Settings controls theme, UI behavior, and runtime polling preferences.",
       "target_selector": "#tabSettings",
       "placement": "bottom",
-      "tab": "workspaces"
+      "tab": "logs"
     },
     {
       "title": "Theme and Palette",
