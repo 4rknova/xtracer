@@ -27,6 +27,15 @@ camera = {
 		flength = 0
 		aperture = 0.0
 	}
+	camera_1 = {
+		type = thin-lens
+		position = vec3(-31.631497, 270.840819, -52.62396)
+		target = vec3(-38.356522, 271.217848, -52.53516)
+		up = vec3(0, 1, 0)
+		fov = 38
+		flength = 0
+		aperture = 0.0
+	}
 }
 
 material = {
