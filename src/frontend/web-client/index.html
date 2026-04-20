@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>XTRACER</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
   <div id="startupScreen" class="startup-screen" role="status" aria-live="polite" aria-label="Loading XTRACER">
     <div class="startup-screen-inner">
@@ -33,73 +35,37 @@
               <img class="brand-logo" src="/logo.svg" alt="XTRACER">
             </div>
             <div class="topbar-actions">
-              <button
-                id="themeToggle"
-                class="main-menu-settings main-menu-theme-toggle"
-                type="button"
-                aria-label="Theme"
-                title="Theme"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
-                  <path d="M12 4.75a7.25 7.25 0 0 1 0 14.5z"></path>
+              <button id="controlsPanelToggle" class="main-menu-settings controls-panel-toggle" type="button"
+                aria-label="Open controls" title="Open controls" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="6" x2="20" y2="6"></line>
+                  <circle cx="10" cy="6" r="2"></circle>
+                  <line x1="4" y1="12" x2="20" y2="12"></line>
+                  <circle cx="16" cy="12" r="2"></circle>
+                  <line x1="4" y1="18" x2="20" y2="18"></line>
+                  <circle cx="10" cy="18" r="2"></circle>
                 </svg>
               </button>
-              <button
-                id="tabLogs"
-                class="main-menu-settings"
-                type="button"
-                aria-label="Logs"
-                title="Logs"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6.75 5.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.25v-8.5A2.25 2.25 0 0 1 6.75 5.5zm.5 3.25h4.25v1.5H7.25zm0 3.5h9.5v1.5h-9.5zm0 3.5h6.25v1.5H7.25z"></path>
+              <button id="topbarLogsBtn" class="main-menu-settings" type="button"
+                aria-label="Logs" title="Logs">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M20 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zm-1 16H5V5h14v14zM7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z"/>
                 </svg>
               </button>
-              <button
-                id="tabSettings"
-                class="main-menu-settings"
-                type="button"
-                aria-label="Settings"
-                title="Settings"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19.14 12.94a7.9 7.9 0 0 0 .05-.94 7.9 7.9 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.9 7.9 0 0 0-.05.94 7.9 7.9 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"></path>
+              <button id="topbarConfigBtn" class="main-menu-settings" type="button"
+                aria-label="Settings" title="Settings">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a6.96 6.96 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
                 </svg>
               </button>
-              <button
-                id="tabAbout"
-                class="main-menu-settings"
-                type="button"
-                aria-label="About"
-                title="About"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
-                  <circle cx="12" cy="8" r="1.1"></circle>
-                  <path d="M11.2 10.75h1.6v5.2h-1.6z"></path>
+              <button id="topbarAboutBtn" class="main-menu-settings" type="button"
+                aria-label="About" title="About">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                 </svg>
               </button>
-              <button
-                id="sidebarRailToggle"
-                class="main-menu-settings sidebar-rail-toggle"
-                type="button"
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path class="rail-icon-expand" d="M9 18l6-6-6-6"></path>
-                  <path class="rail-icon-collapse" d="M15 18l-6-6 6-6"></path>
-                </svg>
-              </button>
-              <button
-                id="mainMenuToggle"
-                class="menu-toggle"
-                type="button"
-                aria-expanded="false"
-                aria-controls="mainTabs"
-                aria-label="Toggle main menu"
-              >
+              <button id="mainMenuToggle" class="menu-toggle" type="button" aria-expanded="false"
+                aria-controls="mainTabs" aria-label="Toggle main menu">
                 <span class="menu-toggle-bar" aria-hidden="true"></span>
                 <span class="menu-toggle-bar" aria-hidden="true"></span>
                 <span class="menu-toggle-bar" aria-hidden="true"></span>
@@ -110,6 +76,8 @@
         </header>
         <section class="panel panel-controls" id="sidebarCards"></section>
       </aside>
+
+      <div class="controls-flyout-backdrop" id="controlsFlyoutBackdrop" aria-hidden="true"></div>
 
       <div id="sceneDataBindings" hidden aria-hidden="true">
         <select id="scene" tabindex="-1"></select>
@@ -138,9 +106,10 @@
                 <div id="workspaceCreateField"></div>
                 <div id="workspaceRefreshBtnMount"></div>
               </div>
-<div class="workspace-view-control" role="group" aria-label="Workspace list controls">
+              <div class="workspace-view-control" role="group" aria-label="Workspace list controls">
                 <div class="workspace-view-switch">
-                  <button id="workspaceViewCardsBtn" class="workspace-view-btn active" type="button" data-mode="cards" aria-pressed="true" title="Cards view">
+                  <button id="workspaceViewCardsBtn" class="workspace-view-btn active" type="button" data-mode="cards"
+                    aria-pressed="true" title="Cards view">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="3" y="4" width="8" height="7" rx="1.5"></rect>
                       <rect x="13" y="4" width="8" height="7" rx="1.5"></rect>
@@ -149,7 +118,8 @@
                     </svg>
                     <span class="sr-only">Cards</span>
                   </button>
-                  <button id="workspaceViewListBtn" class="workspace-view-btn" type="button" data-mode="list" aria-pressed="false" title="List view">
+                  <button id="workspaceViewListBtn" class="workspace-view-btn" type="button" data-mode="list"
+                    aria-pressed="false" title="List view">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="4" y="5" width="3" height="3" rx="0.6"></rect>
                       <rect x="9" y="5" width="11" height="3" rx="1"></rect>
@@ -162,20 +132,23 @@
                   </button>
                 </div>
                 <div class="workspace-view-switch workspace-sort-switch" role="group" aria-label="Workspace sort order">
-                  <button id="workspaceSortNameBtn" class="workspace-view-btn active" type="button" data-sort="name" aria-pressed="true" title="Sort by name">
+                  <button id="workspaceSortNameBtn" class="workspace-view-btn active" type="button" data-sort="name"
+                    aria-pressed="true" title="Sort by name">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M4 6h16v2H4zM4 11h10v2H4zM4 16h6v2H4z"></path>
                     </svg>
                     <span class="sr-only">Sort by name</span>
                   </button>
-                  <button id="workspaceSortUpdatedBtn" class="workspace-view-btn" type="button" data-sort="updated" aria-pressed="false" title="Sort by last updated">
+                  <button id="workspaceSortUpdatedBtn" class="workspace-view-btn" type="button" data-sort="updated"
+                    aria-pressed="false" title="Sort by last updated">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M12 4a8 8 0 1 1-8 8h2a6 6 0 1 0 6-6v3l4-4-4-4z"></path>
                       <path d="M11 8h2v5h4v2h-6z"></path>
                     </svg>
                     <span class="sr-only">Sort by last updated</span>
                   </button>
-                  <button id="workspaceSortSceneBtn" class="workspace-view-btn" type="button" data-sort="scene" aria-pressed="false" title="Sort by scene">
+                  <button id="workspaceSortSceneBtn" class="workspace-view-btn" type="button" data-sort="scene"
+                    aria-pressed="false" title="Sort by scene">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M3 5h18v14H3zM5 7v10h14V7z"></path>
                       <path d="M7 15l3-3 2 2 3-4 2 5z"></path>
@@ -194,49 +167,72 @@
             <div id="previewTransferStats" class="render-stats-grid preview-transfer-stats-card">
               <section class="render-stats-group workspace-info-group">
                 <h4>Preview Transfer</h4>
-                <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">-</code></p>
-                <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code></p>
-                <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code></p>
-                <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code></p>
-                <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code></p>
+                <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame
+                    Render</span><code class="workspace-active-value">-</code></p>
+                <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta
+                    Bytes</span><code class="workspace-active-value">-</code></p>
+                <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta
+                    Requests</span><code class="workspace-active-value">-</code></p>
+                <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full
+                    Bytes</span><code class="workspace-active-value">-</code></p>
+                <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full
+                    Requests</span><code class="workspace-active-value">-</code></p>
               </section>
               <section class="render-stats-group workspace-info-group">
                 <h4>Tile Heatmap</h4>
-                <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
-                <p id="tileHeatmapBuckets" class="workspace-active-hint"><span class="workspace-active-label">Buckets</span><code class="workspace-active-value">fast - | mid - | slow -</code></p>
-                <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
-                <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
-                <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
-                <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
+                <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap
+                    overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
+                <p id="tileHeatmapBuckets" class="workspace-active-hint"><span
+                    class="workspace-active-label">Buckets</span><code
+                    class="workspace-active-value">fast - | mid - | slow -</code></p>
+                <p id="tileHeatmapThroughput" class="workspace-active-hint"><span
+                    class="workspace-active-label">Throughput</span><code
+                    class="workspace-active-value">- tiles/s</code></p>
+                <p id="tileHeatmapEta" class="workspace-active-hint"><span
+                    class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
+                <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA
+                    Confidence</span><code class="workspace-active-value">-</code></p>
+                <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span
+                    class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code>
+                </p>
               </section>
             </div>
             <div class="render-action-row">
               <div id="previewHeadline" class="preview-headline is-idle">
-                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn" type="button">Render</button>
+                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn"
+                  type="button">Render</button>
                 <p id="status" class="status-chip">Idle</p>
-                <div id="progressBar" class="bar"><div id="progress"></div></div>
+                <div id="progressBar" class="bar">
+                  <div id="progress"></div>
+                </div>
               </div>
               <section id="renderStatusGroup" class="render-stats-group render-status-stats-group">
-                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code id="statusThreads" class="workspace-active-value status-threads">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass" class="workspace-active-value status-pass">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code id="statusPercent" class="workspace-active-value status-percent">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code id="renderTimer" class="workspace-active-value status-timer">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code
+                    id="statusThreads" class="workspace-active-value status-threads">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass"
+                    class="workspace-active-value status-pass">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code
+                    id="statusPercent" class="workspace-active-value status-percent">-</code></p>
+                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code
+                    id="renderTimer" class="workspace-active-value status-timer">-</code></p>
               </section>
             </div>
           </section>
           <section class="panel panel-preview">
             <div class="preview-toolbar">
-              <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls" aria-label="Preview export and sampling controls">
+              <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls"
+                aria-label="Preview export and sampling controls">
                 <div id="renderPreviewViewControls" class="render-preview-toolbar-view">
                 </div>
+                <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden
+                  aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                  </svg>
+                </button>
               </div>
             </div>
             <div id="previewFrame" class="preview-frame is-empty">
-              <button id="resetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-                </svg>
-              </button>
               <div id="previewEmpty" class="preview-empty">No image yet. Start a render to preview output.</div>
               <div id="interactivePreviewHud" class="interactive-preview-hud" hidden>
                 <p id="interactivePreviewHudMode" class="interactive-preview-hud-row">Mode: LOOK</p>
@@ -246,7 +242,8 @@
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
             </div>
-            <section id="renderPreviewAuxPanel" class="render-preview-aux-panel" aria-label="Interactive preview controls" hidden>
+            <section id="renderPreviewAuxPanel" class="render-preview-aux-panel"
+              aria-label="Interactive preview controls" hidden>
               <div id="renderPreviewAuxDock" class="render-preview-aux-dock control-section-body"></div>
             </section>
           </section>
@@ -255,14 +252,20 @@
         <section class="tab-pane" id="paneVisual">
           <div class="editor-view-toolbar">
             <div class="editor-view-switch" role="tablist" aria-label="Editor view mode">
-              <button id="editorView3dBtn" class="editor-view-btn active" type="button" role="tab" aria-selected="true" aria-controls="visualPanel">3D View</button>
-              <button id="editorViewGraphBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="graphPanel">Graph</button>
-              <button id="editorViewTextBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="textEditorPanel">Text Editor</button>
-              <button id="editorViewSamplersBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="samplersPanel">Samplers</button>
-              <button id="editorViewGeometryBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false" aria-controls="geometryPanel">Geometry</button>
+              <button id="editorView3dBtn" class="editor-view-btn active" type="button" role="tab" aria-selected="true"
+                aria-controls="visualPanel">3D View</button>
+              <button id="editorViewGraphBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
+                aria-controls="graphPanel">Graph</button>
+              <button id="editorViewTextBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
+                aria-controls="textEditorPanel">Text Editor</button>
+              <button id="editorViewSamplersBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
+                aria-controls="samplersPanel">Samplers</button>
+              <button id="editorViewGeometryBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
+                aria-controls="geometryPanel">Geometry</button>
             </div>
             <div class="editor-view-actions">
-              <button id="graphResetLayoutBtn" class="editor-view-icon-btn" type="button" title="Reset node positions and auto layout" aria-label="Reset node positions">
+              <button id="graphResetLayoutBtn" class="editor-view-icon-btn" type="button"
+                title="Reset node positions and auto layout" aria-label="Reset node positions">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
                 </svg>
@@ -270,85 +273,275 @@
             </div>
           </div>
           <section class="panel panel-preview" id="visualPanel">
-          <div id="visualViewport" class="visual-viewport-top" aria-label="3D scene viewport">
-            <span id="visualSelectionTag" class="visual-selection-tag" hidden></span>
-          </div>
-        </section>
-        <section class="panel graph-panel" id="graphPanel" hidden>
-          <div class="graph-stage">
-            <table id="graphLegend" class="graph-legend" aria-label="Scene graph legend">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>Camera</td><td>0</td></tr>
-                <tr><td>Object</td><td>0</td></tr>
-                <tr><td>Surface</td><td>0</td></tr>
-                <tr><td>Material</td><td>0</td></tr>
-              </tbody>
-            </table>
-            <canvas id="graphCanvas" class="graph-canvas" aria-label="Scene node graph"></canvas>
-          </div>
-        </section>
-        <section class="panel editor-panel" id="textEditorPanel" hidden>
-          <div class="editor-toolbar">
-            <label class="xui-field">
-              <input id="sceneName" class="xui-input" type="text" placeholder="Scene name…">
-            </label>
-            <button id="newSceneBtn" class="xui-button xui-button--secondary" type="button">New Scene</button>
-          </div>
-
-          <div class="editor-meta">
-            <span id="lineCount">1 line</span>
-            <span id="charCount">0 chars</span>
-          </div>
-
-          <div class="editor-shell" aria-label="Scene Source Editor">
-            <pre id="lineNumbers" class="line-numbers" aria-hidden="true">1</pre>
-            <textarea id="sceneSource" class="xui-textarea" rows="22" spellcheck="false" wrap="off"></textarea>
-          </div>
-
-        </section>
-        <section class="panel editor-util-panel" id="samplersPanel" hidden>
-          <iframe class="editor-util-frame" title="Sampler Gallery"></iframe>
-        </section>
-        <section class="panel editor-util-panel" id="geometryPanel" hidden>
-          <iframe class="editor-util-frame" title="Geometry Gallery"></iframe>
-        </section>
-      </section>
-
-      <section class="tab-pane" id="paneGallery">
-        <section class="panel gallery-panel">
-          <div class="gallery-toolbar">
-            <input id="gallerySearch" class="gallery-search-input" type="search" placeholder="Search gallery" aria-label="Search gallery">
-            <button id="galleryRefreshBtn" class="gallery-refresh-btn" type="button" title="Refresh gallery" aria-label="Refresh gallery">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
-              </svg>
-            </button>
-          </div>
-          <div id="galleryEmpty" class="gallery-empty" hidden>No renders cached yet. Complete a render to see it here.</div>
-          <div id="galleryGrid" class="gallery-grid" aria-live="polite"></div>
-        </section>
-        <section class="panel gallery-detail-panel" id="galleryDetail" hidden>
-          <div class="gallery-detail-toolbar">
-            <div class="gallery-detail-toolbar-main">
-              <button id="galleryDetailBackBtn" class="gallery-back-btn xui-button xui-button--secondary" type="button">Back</button>
-              <div class="gallery-detail-toolbar-view">
-                <button id="galleryResetViewBtn" class="preview-toolbar-reset-btn is-disabled" type="button" hidden aria-label="Reset gallery view" aria-disabled="true" title="Reset view">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+            <div id="visualViewport" class="visual-viewport-top" aria-label="3D scene viewport">
+              <span id="visualSelectionTag" class="visual-selection-tag" hidden></span>
+              <div id="visualOverlayBtns" class="visual-overlay-btns visual-overlay-btns--top-left">
+                <button id="visualShowGrid" class="visual-overlay-btn is-active" type="button" aria-label="Toggle grid"
+                  title="Grid" aria-pressed="true">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="2" width="16" height="16" rx="1" />
+                    <line x1="8" y1="2" x2="8" y2="18" />
+                    <line x1="12" y1="2" x2="12" y2="18" />
+                    <line x1="2" y1="8" x2="18" y2="8" />
+                    <line x1="2" y1="12" x2="18" y2="12" />
                   </svg>
                 </button>
-                <div id="gallerySamplingSwitch" class="render-preview-sampling-switch gallery-sampling-switch" role="group" aria-label="Preview sampling" data-value="smooth"></div>
+                <button id="visualShowGlobalBvh" class="visual-overlay-btn" type="button" aria-label="Toggle global BVH"
+                  title="Global BVH" aria-pressed="false">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M10 2 L17 6 L17 14 L10 18 L3 14 L3 6 Z" />
+                    <line x1="3" y1="6" x2="10" y2="10" />
+                    <line x1="17" y1="6" x2="10" y2="10" />
+                    <line x1="10" y1="10" x2="10" y2="18" />
+                  </svg>
+                </button>
+                <button id="visualShowMeshBvh" class="visual-overlay-btn" type="button" aria-label="Toggle mesh BVH"
+                  title="Mesh BVH" aria-pressed="false">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="14" height="14" rx="1" />
+                    <rect x="6" y="6" width="8" height="8" rx="0.5" stroke-dasharray="2 1.5" />
+                  </svg>
+                </button>
+                <span class="visual-overlay-btns-sep" aria-hidden="true"></span>
+                <button id="visualLoadBtn" class="visual-overlay-btn" type="button" aria-label="Reload visual scene"
+                  title="Reload visual scene">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" />
+                    <polyline points="13 3 15.5 5.9 12.6 8" />
+                  </svg>
+                </button>
+                <span class="visual-overlay-btns-sep" aria-hidden="true"></span>
+                <button id="visualProjectionPerspective" class="visual-overlay-btn is-active" type="button"
+                  aria-label="Perspective projection" title="Perspective" aria-pressed="true">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 16 L10 4 L17 16 Z" />
+                    <line x1="5.5" y1="12" x2="14.5" y2="12" />
+                  </svg>
+                </button>
+                <button id="visualProjectionIsometric" class="visual-overlay-btn" type="button"
+                  aria-label="Isometric projection" title="Isometric" aria-pressed="false">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M10 3 L17 7 L17 13 L10 17 L3 13 L3 7 Z" />
+                    <line x1="10" y1="3" x2="10" y2="10" />
+                    <line x1="3" y1="7" x2="10" y2="10" />
+                    <line x1="17" y1="7" x2="10" y2="10" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Camera bar: compact selector + edit toggle, bottom-center -->
+              <div id="visualCameraBar" class="visual-camera-bar">
+                <svg class="visual-camera-bar__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none"
+                  stroke="currentColor" stroke-width="1.5">
+                  <rect x="2" y="5" width="16" height="11" rx="1.5" />
+                  <circle cx="10" cy="10.5" r="3" />
+                  <path d="M7 5 L8.5 2.5 L11.5 2.5 L13 5" />
+                </svg>
+                <select id="visualCamera" class="visual-camera-bar__select" aria-label="Active camera"></select>
+                <button id="visualCameraEditBtn" class="visual-camera-bar__edit-btn" type="button"
+                  aria-label="Edit camera" title="Edit camera" aria-expanded="false">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M13.5 3.5 L16.5 6.5 L7 16 L3 17 L4 13 Z" />
+                    <line x1="11" y1="6" x2="14" y2="9" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Camera editor panel, toggled by edit button -->
+              <div id="visualCameraEditorPanel" class="visual-camera-editor-panel" hidden>
+                <div id="visualCameraEditor" class="visual-camera-editor">
+                  <div class="visual-camera-editor__row">
+                    <span class="visual-camera-editor__label">Pos</span>
+                    <input id="visualCamPosX" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="X" aria-label="Position X">
+                    <input id="visualCamPosY" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="Y" aria-label="Position Y">
+                    <input id="visualCamPosZ" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="Z" aria-label="Position Z">
+                  </div>
+                  <div class="visual-camera-editor__row">
+                    <span class="visual-camera-editor__label">Target</span>
+                    <input id="visualCamTgtX" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="X" aria-label="Target X">
+                    <input id="visualCamTgtY" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="Y" aria-label="Target Y">
+                    <input id="visualCamTgtZ" class="visual-camera-editor__input" type="number" step="any"
+                      placeholder="Z" aria-label="Target Z">
+                  </div>
+                  <div class="visual-camera-editor__row">
+                    <span class="visual-camera-editor__label">F-Len</span>
+                    <input id="visualCamFLength" class="visual-camera-editor__input visual-camera-editor__input--wide"
+                      type="number" step="any" min="0" placeholder="—" aria-label="Focal length">
+                    <span class="visual-camera-editor__label">FOV</span>
+                    <input id="visualCamFov" class="visual-camera-editor__input visual-camera-editor__input--wide"
+                      type="number" step="1" min="1" max="179" placeholder="—" aria-label="Field of view">
+                  </div>
+                  <div class="visual-camera-editor__actions">
+                    <button id="visualCameraSnapBtn"
+                      class="visual-camera-editor__btn visual-camera-editor__btn--secondary" type="button"
+                      title="Snap position and target to current viewport viewpoint">Snap to View</button>
+                    <button id="visualCameraApplyBtn"
+                      class="visual-camera-editor__btn visual-camera-editor__btn--primary" type="button">Apply</button>
+                    <button id="visualCameraNewBtn"
+                      class="visual-camera-editor__btn visual-camera-editor__btn--secondary" type="button"
+                      title="Add a new camera with these settings to the scene">New Camera</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Scale bar: bottom-left, map-style -->
+              <div id="visualScaleBar" class="visual-scale-bar">
+                <div class="visual-scale-bar__rule" aria-hidden="true"></div>
+                <input id="visualSceneScale" class="visual-scale-bar__input" type="number" min="0.01" max="100"
+                  step="0.1" value="1" aria-label="Scene scale multiplier" title="Scene scale">
+              </div>
+              <button id="visualInfoBtn" class="visual-info-btn" type="button" aria-label="Show controls"
+                title="Controls" aria-expanded="false">
+                <svg viewBox="0 0 20 20" aria-hidden="true" fill="currentColor">
+                  <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="9.25" y="8.5" width="1.5" height="5.5" rx="0.75" />
+                  <circle cx="10" cy="6.25" r="0.9" />
+                </svg>
+              </button>
+              <div id="visualControlsOverlay" class="visual-controls-overlay" hidden>
+                <h4 class="visual-controls-title">Controls</h4>
+                <div class="visual-controls-list">
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>Left Click</kbd> /
+                      <kbd>Tap</kbd></span><small class="control-hint">Select object</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>Left Drag</kbd> /
+                      <kbd>1-Finger Drag</kbd></span><small class="control-hint">Orbit camera</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>Right Drag</kbd> /
+                      <kbd>Middle Drag</kbd> / <kbd>2-Finger Drag</kbd></span><small class="control-hint">Pan
+                      camera</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>Wheel</kbd> /
+                      <kbd>Pinch</kbd></span><small class="control-hint">Zoom</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>Ctrl</kbd> + <kbd>Left
+                        Drag</kbd></span><small class="control-hint">Move selected object</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>F</kbd></span><small
+                      class="control-hint">Focus selected object</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key"><kbd>M</kbd></span><small
+                      class="control-hint">Jump to selected scene camera</small></div>
+                  <div class="visual-controls-item"><span class="visual-controls-key">Axis gizmo click</span><small
+                      class="control-hint">Snap view to axis</small></div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="panel graph-panel" id="graphPanel" hidden>
+            <div class="graph-stage">
+              <table id="graphLegend" class="graph-legend" aria-label="Scene graph legend">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Camera</td>
+                    <td>0</td>
+                  </tr>
+                  <tr>
+                    <td>Object</td>
+                    <td>0</td>
+                  </tr>
+                  <tr>
+                    <td>Surface</td>
+                    <td>0</td>
+                  </tr>
+                  <tr>
+                    <td>Material</td>
+                    <td>0</td>
+                  </tr>
+                </tbody>
+              </table>
+              <canvas id="graphCanvas" class="graph-canvas" aria-label="Scene node graph"></canvas>
+            </div>
+          </section>
+          <section class="panel editor-panel" id="textEditorPanel" hidden>
+            <div class="editor-toolbar">
+              <label class="xui-field">
+                <input id="sceneName" class="xui-input" type="text" placeholder="Scene name…">
+              </label>
+              <button id="newSceneBtn" class="xui-button xui-button--secondary" type="button">New Scene</button>
+            </div>
+
+            <div class="editor-meta">
+              <span id="lineCount">1 line</span>
+              <span id="charCount">0 chars</span>
+            </div>
+
+            <div class="editor-shell" aria-label="Scene Source Editor">
+              <pre id="lineNumbers" class="line-numbers" aria-hidden="true">1</pre>
+              <textarea id="sceneSource" class="xui-textarea" rows="22" spellcheck="false" wrap="off"></textarea>
+            </div>
+
+          </section>
+          <section class="panel editor-util-panel" id="samplersPanel" hidden>
+            <iframe class="editor-util-frame" title="Sampler Gallery"></iframe>
+          </section>
+          <section class="panel editor-util-panel" id="geometryPanel" hidden>
+            <iframe class="editor-util-frame" title="Geometry Gallery"></iframe>
+          </section>
+        </section>
+
+        <section class="tab-pane" id="paneGallery">
+          <section class="panel gallery-panel">
+            <div class="gallery-toolbar">
+              <input id="gallerySearch" class="gallery-search-input" type="search" placeholder="Search gallery"
+                aria-label="Search gallery">
+              <span id="galleryDeleteSelectedCount" class="gallery-delete-selected-count" hidden></span>
+              <button id="galleryDeleteSelectedBtn" class="xui-delete-btn" type="button" hidden title="Delete selected"
+                aria-label="Delete selected">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                </svg>
+              </button>
+              <button id="gallerySelectBtn" class="gallery-select-btn input-nofill" type="button" title="Select renders"
+                aria-label="Select renders">
+                <svg class="gallery-icon-btn-svg gallery-select-icon-select" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                <svg class="gallery-icon-btn-svg gallery-select-icon-cancel" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </svg>
+              </button>
+              <button id="galleryRefreshBtn" class="gallery-refresh-btn" type="button" title="Refresh gallery"
+                aria-label="Refresh gallery">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="gallery-scroll-wrap">
+              <div id="galleryEmpty" class="gallery-empty" hidden>No renders cached yet. Complete a render to see it
+                here.</div>
+              <div id="galleryGrid" class="gallery-grid" aria-live="polite"></div>
+            </div>
+          </section>
+          <section class="panel gallery-detail-panel" id="galleryDetail" hidden>
+            <div class="gallery-detail-toolbar">
+              <button id="galleryDetailBackBtn" class="gallery-back-btn" type="button" title="Back" aria-label="Back">
+                <svg class="gallery-icon-btn-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                </svg>
+              </button>
+              <div class="gallery-detail-toolbar-view">
+                <div id="gallerySamplingSwitch" class="render-preview-sampling-switch gallery-sampling-switch"
+                  role="group" aria-label="Preview sampling" data-value="smooth"></div>
+                <button id="galleryInfoBtn" class="gallery-overlay-toggle-btn" type="button" title="Render info" aria-label="Render info" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                </button>
+                <button id="galleryTmBtn" class="gallery-overlay-toggle-btn" type="button" title="Tone mapping" aria-label="Tone mapping" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+                </button>
                 <div class="render-toolbar-save-shell is-disabled" id="galleryExportShell">
-                  <button id="galleryExportBtn" class="xui-button xui-button--secondary is-disabled export-download-link" type="button" disabled aria-disabled="true" title="Save As" aria-label="Save As">Save As</button>
+                  <button id="galleryExportBtn"
+                    class="xui-button xui-button--secondary is-disabled export-download-link" type="button" disabled
+                    aria-disabled="true" title="Save As" aria-label="Save As">Save As</button>
                   <label for="galleryExportFormat" class="xui-field render-toolbar-save-format">
                     <span class="xui-field__label sr-only">Export Format</span>
-                    <select id="galleryExportFormat" class="xui-select render-toolbar-save-select export-format" aria-label="Export format">
+                    <select id="galleryExportFormat" class="xui-select render-toolbar-save-select export-format"
+                      aria-label="Export format">
                       <option value="png">PNG</option>
                       <option value="jpg">JPG</option>
                       <option value="bmp">BMP</option>
@@ -359,297 +552,341 @@
                   </label>
                 </div>
               </div>
+              <button id="galleryDetailDeleteBtn" class="xui-delete-btn" type="button" title="Delete render"
+                aria-label="Delete render">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                </svg>
+              </button>
             </div>
-            <div class="gallery-detail-toolbar-meta">
-              <button id="galleryDetailDeleteBtn" class="xui-button xui-button--secondary" type="button">Delete</button>
+            <div class="gallery-pass-strip" id="galleryPassStrip" hidden>
+              <div class="gallery-pass-thumbs" id="galleryPassThumbs"></div>
             </div>
-          </div>
-          <div class="gallery-detail-body">
-            <div class="gallery-detail-image-wrap">
-              <img id="galleryDetailImage" class="gallery-detail-image" alt="Render preview">
-              <canvas id="galleryDetailCanvas" class="gallery-detail-canvas"></canvas>
-            </div>
-            <div class="gallery-detail-sidebar">
-              <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
-              <div class="gallery-detail-tm" id="galleryDetailTm">
-                <div class="gallery-tm-header">Tone Mapping</div>
-                <label class="xui-field">
-                  <span class="xui-field__label">Operator</span>
-                  <select id="galleryTmOp" class="xui-select">
-                    <option value="aces">ACES (Fitted)</option>
-                    <option value="agx">AgX</option>
-                    <option value="khronos_pbr">Khronos PBR Neutral</option>
-                    <option value="hable">Hable (Uncharted 2)</option>
-                    <option value="uchimura">Uchimura (Gran Turismo)</option>
-                    <option value="lottes">Lottes</option>
-                    <option value="reinhard">Reinhard</option>
-                    <option value="reinhard_luma">Reinhard (Luma)</option>
-                    <option value="cineon">Cineon</option>
-                    <option value="exponential">Exponential</option>
-                    <option value="mantiuk_2006">Mantiuk 2006</option>
-                    <option value="none">None</option>
-                  </select>
-                </label>
-                <div id="galleryTmParams" class="gallery-tm-params" hidden>
-                  <label id="galleryTmExposureRow" class="xui-field">
-                    <span class="xui-field__label">Exposure</span>
-                    <input id="galleryTmExposure" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
-                  </label>
-                  <label id="galleryTmWhitePointRow" class="xui-field">
-                    <span class="xui-field__label">White Point</span>
-                    <input id="galleryTmWhitePoint" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
-                  </label>
-                  <label id="galleryTmMantiukContrastRow" class="xui-field">
-                    <span class="xui-field__label">Contrast</span>
-                    <input id="galleryTmMantiukContrast" class="xui-input" type="number" min="0" max="1" step="0.01" value="0.1">
-                  </label>
-                  <label id="galleryTmMantiukSaturationRow" class="xui-field">
-                    <span class="xui-field__label">Saturation</span>
-                    <input id="galleryTmMantiukSaturation" class="xui-input" type="number" min="0" max="2" step="0.01" value="0.8">
-                  </label>
-                  <label id="galleryTmMantiukDetailRow" class="xui-field">
-                    <span class="xui-field__label">Detail</span>
-                    <input id="galleryTmMantiukDetail" class="xui-input" type="number" min="1" max="99" step="1" value="1">
-                  </label>
+            <div class="gallery-detail-body">
+              <div class="gallery-detail-image-wrap">
+                <img id="galleryDetailImage" class="gallery-detail-image" alt="Render preview">
+                <canvas id="galleryDetailCanvas" class="gallery-detail-canvas"></canvas>
+                <button id="galleryResetViewBtn" class="preview-toolbar-reset-btn" type="button" hidden
+                  aria-label="Reset gallery view" title="Reset view">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                  </svg>
+                </button>
+                <div id="galleryInfoPanel" class="gallery-overlay-panel" hidden>
+                  <div class="gallery-detail-meta" id="galleryDetailMeta"></div>
+                </div>
+                <div id="galleryTmPanel" class="gallery-overlay-panel" hidden>
+                  <div class="gallery-detail-tm" id="galleryDetailTm">
+                    <label class="xui-field">
+                      <span class="xui-field__label">Operator</span>
+                      <select id="galleryTmOp" class="xui-select">
+                        <option value="aces">ACES (Fitted)</option>
+                        <option value="agx">AgX</option>
+                        <option value="khronos_pbr">Khronos PBR Neutral</option>
+                        <option value="hable">Hable (Uncharted 2)</option>
+                        <option value="uchimura">Uchimura (Gran Turismo)</option>
+                        <option value="lottes">Lottes</option>
+                        <option value="reinhard">Reinhard</option>
+                        <option value="reinhard_luma">Reinhard (Luma)</option>
+                        <option value="cineon">Cineon</option>
+                        <option value="exponential">Exponential</option>
+                        <option value="mantiuk_2006">Mantiuk 2006</option>
+                        <option value="none">None</option>
+                      </select>
+                    </label>
+                    <div id="galleryTmParams" class="gallery-tm-params" hidden>
+                      <label id="galleryTmExposureRow" class="xui-field">
+                        <span class="xui-field__label">Exposure</span>
+                        <input id="galleryTmExposure" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
+                      </label>
+                      <label id="galleryTmWhitePointRow" class="xui-field">
+                        <span class="xui-field__label">White Point</span>
+                        <input id="galleryTmWhitePoint" class="xui-input" type="number" min="0.001" max="64" step="0.1" value="1.0">
+                      </label>
+                      <label id="galleryTmMantiukContrastRow" class="xui-field">
+                        <span class="xui-field__label">Contrast</span>
+                        <input id="galleryTmMantiukContrast" class="xui-input" type="number" min="0" max="1" step="0.01" value="0.1">
+                      </label>
+                      <label id="galleryTmMantiukSaturationRow" class="xui-field">
+                        <span class="xui-field__label">Saturation</span>
+                        <input id="galleryTmMantiukSaturation" class="xui-input" type="number" min="0" max="2" step="0.01" value="0.8">
+                      </label>
+                      <label id="galleryTmMantiukDetailRow" class="xui-field">
+                        <span class="xui-field__label">Detail</span>
+                        <input id="galleryTmMantiukDetail" class="xui-input" type="number" min="1" max="99" step="1" value="1">
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="gallery-pass-strip" id="galleryPassStrip" hidden>
-            <div class="gallery-pass-label">Passes</div>
-            <div class="gallery-pass-thumbs" id="galleryPassThumbs"></div>
-          </div>
+          </section>
         </section>
-      </section>
 
-      <section class="tab-pane" id="paneLogs">
-        <section class="panel log-panel">
-          <div class="log-head">
-            <div class="log-title-wrap">
-              <h2>Log</h2>
-            </div>
-            <div class="log-actions">
-              <label class="xui-switch log-head-toggle" title="Auto-scroll frontend log output"><span class="xui-switch__label">Auto-scroll</span><input id="autoScrollLogs" type="checkbox" checked></label>
-              <button id="clearLogsBtn" class="log-clear-btn" type="button" aria-label="Clear logs" title="Clear logs">Clear</button>
-            </div>
-          </div>
-          <pre id="logOutput" class="log-output"></pre>
-        </section>
-      </section>
-
-      <section class="tab-pane" id="paneSettings">
-        <section class="panel about-panel">
-          <div class="about-grid">
-            <section class="about-card">
-              <div class="about-card-head" data-widget-panel-head>
-                <h3>Appearance</h3>
+        <section class="tab-pane" id="paneLogs">
+          <section class="panel log-panel">
+            <div class="log-head">
+              <div class="log-title-wrap">
+                <h2>Log</h2>
               </div>
-              <div class="about-meta-list">
-                <label class="xui-field">
-                  <span class="xui-field__label">Theme</span>
-                  <select id="theme" class="xui-select">
+              <div class="log-actions">
+                <label class="xui-switch log-head-toggle" title="Auto-scroll frontend log output"><span
+                    class="xui-switch__label">Auto-scroll</span><input id="autoScrollLogs" type="checkbox"
+                    checked></label>
+                <button id="clearLogsBtn" class="log-clear-btn" type="button" aria-label="Clear logs"
+                  title="Clear logs">Clear</button>
+              </div>
+            </div>
+            <pre id="logOutput" class="log-output"></pre>
+          </section>
+        </section>
+
+        <section class="tab-pane" id="paneSettings">
+          <div class="settings-page">
+            <div class="settings-group">
+              <div class="settings-group-label">Appearance</div>
+              <div class="settings-group-body">
+                <div class="settings-row">
+                  <label class="settings-row-label" for="theme">Theme</label>
+                  <select id="theme" class="xui-select settings-row-select">
                     <option value="system">System</option>
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
                   </select>
-                </label>
-                <label class="xui-field">
-                  <span class="xui-field__label">Palette</span>
-                  <select id="darkPalette" class="xui-select">
+                </div>
+                <div class="settings-row">
+                  <label class="settings-row-label" for="darkPalette">Palette</label>
+                  <select id="darkPalette" class="xui-select settings-row-select">
                     <option value="slate">Slate</option>
                   </select>
-                </label>
-                <label class="xui-field">
-                  <span class="xui-field__label">UI Font Size</span>
-                  <select id="fontSizePreset" class="xui-select">
-                    <option value="default">Default</option>
-                    <option value="large">Large</option>
-                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="settings-group">
+              <div class="settings-group-label">Runtime</div>
+              <div class="settings-group-body">
+                <div class="settings-row">
+                  <label class="settings-row-label" for="textHistorySize">Text History</label>
+                  <input id="textHistorySize" class="xui-input settings-row-input" type="number" min="10" max="2000"
+                    step="10" value="200">
+                </div>
+                <div class="settings-row">
+                  <label class="settings-row-label" for="visualHistorySize">3D History</label>
+                  <input id="visualHistorySize" class="xui-input settings-row-input" type="number" min="10" max="2000"
+                    step="10" value="200">
+                </div>
+              </div>
+            </div>
+            <div class="settings-group">
+              <div class="settings-group-label">Behavior</div>
+              <div class="settings-group-body">
+                <label class="settings-row settings-row--toggle" for="autoLoadEditor">
+                  <span class="settings-row-label">Auto-load scene source in editor when scene changes</span>
+                  <input id="autoLoadEditor" class="settings-toggle" type="checkbox" checked>
                 </label>
               </div>
-            </section>
-            <section class="about-card">
+            </div>
+            <div class="settings-group">
+              <div class="settings-group-label">Tutorial</div>
+              <div class="settings-group-body">
+                <label class="settings-row settings-row--toggle" for="ftueShowOnNextLaunch">
+                  <span class="settings-row-label">Show on next launch</span>
+                  <input id="ftueShowOnNextLaunch" class="settings-toggle" type="checkbox">
+                </label>
+                <div class="settings-row settings-row--action">
+                  <button id="ftueStartNowBtn" class="xui-button xui-button--secondary settings-action-btn"
+                    type="button">Start Tutorial Now</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-pane" id="paneAbout">
+          <section class="panel about-panel">
+            <div class="about-grid">
+              <section class="about-card">
+                <div class="about-card-head" data-widget-panel-head>
+                  <h3>Build</h3>
+                </div>
+                <div class="about-meta-list">
+                  <div class="about-meta-row" id="aboutVersionRow">
+                    <span class="about-key">Version</span>
+                    <code id="aboutVersion">loading...</code>
+                  </div>
+                  <div class="about-meta-row">
+                    <span class="about-key">Author's Page</span>
+                    <a id="aboutHomepage" href="https://www.4rknova.com" target="_blank"
+                      rel="noopener noreferrer">https://www.4rknova.com</a>
+                  </div>
+                  <div class="about-meta-row">
+                    <span class="about-key">Repository</span>
+                    <a id="aboutWebsite" href="https://github.com/4rknova/xtracer" target="_blank"
+                      rel="noopener noreferrer">https://github.com/4rknova/xtracer</a>
+                  </div>
+                  <div class="about-meta-row">
+                    <span class="about-key">Copyright</span>
+                    <code id="aboutCopyright">loading...</code>
+                  </div>
+                </div>
+              </section>
+              <section class="about-card">
+                <div class="about-card-head" data-widget-panel-head>
+                  <h3>Runtime</h3>
+                  <span id="aboutBuildPill" class="about-pill" hidden>WASM BUILD</span>
+                </div>
+                <div class="about-runtime">
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Backend</strong>
+                    <code id="aboutBackend" class="runtime-value">loading...</code>
+                  </div>
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Default URL</strong>
+                    <code id="aboutDefaultUrl" class="runtime-value">loading...</code>
+                  </div>
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Scene Directory</strong>
+                    <code id="aboutSceneDir" class="runtime-value">loading...</code>
+                  </div>
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Static Assets</strong>
+                    <code id="aboutStaticAssets" class="runtime-value">loading...</code>
+                  </div>
+                </div>
+              </section>
+              <section class="about-card about-server-card">
+                <div class="about-card-head" data-widget-panel-head>
+                  <h3>Server</h3>
+                </div>
+                <div class="about-meta-list about-server-list">
+                  <p id="workspaceMaxConcurrentHint" class="workspace-active-hint">Max concurrent renders: -</p>
+                  <p id="workspaceThreadsHint" class="workspace-active-hint">Hardware threads: -</p>
+                  <p id="workspaceOpenmpHint" class="workspace-active-hint">OpenMP max threads: -</p>
+                  <p id="workspaceRenderReserveHint" class="workspace-active-hint">Render reserve threads: -</p>
+                  <p id="workspaceRenderAutoHint" class="workspace-active-hint">Render auto threads: -</p>
+                </div>
+              </section>
+              <section class="about-card about-client-card">
+                <div class="about-card-head" data-widget-panel-head>
+                  <h3>Client</h3>
+                </div>
+                <div class="about-runtime">
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Browser</strong>
+                    <code id="aboutClientBrowser" class="runtime-value">-</code>
+                  </div>
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Theme</strong>
+                    <code id="aboutClientTheme" class="runtime-value">-</code>
+                  </div>
+                  <div class="runtime-row">
+                    <strong class="runtime-key">Client ID</strong>
+                    <code id="aboutClientId" class="runtime-value">-</code>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <section class="about-card about-license-card">
               <div class="about-card-head" data-widget-panel-head>
-                <h3>Runtime</h3>
+                <h3>License</h3>
+              </div>
+              <pre id="aboutLicense" class="about-license">loading...</pre>
+            </section>
+
+            <section class="about-card about-third-party-card">
+              <div id="aboutThirdPartyList" class="about-third-party-list">loading...</div>
+            </section>
+
+            <section class="about-card about-devtools-card">
+              <div class="about-card-head" data-widget-panel-head>
+                <h3>Developer Tools</h3>
               </div>
               <div class="about-meta-list">
-                <label class="xui-field">
-                  <span class="xui-field__label">Text History Size</span>
-                  <input id="textHistorySize" class="xui-input" type="number" min="10" max="2000" step="10" value="200">
-                </label>
-                <label class="xui-field">
-                  <span class="xui-field__label">3D History Size</span>
-                  <input id="visualHistorySize" class="xui-input" type="number" min="10" max="2000" step="10" value="200">
-                </label>
+                <div class="about-meta-row">
+                  <span class="about-key">Sampling Visualization</span>
+                  <a href="/sampling.html" target="_blank" rel="noopener noreferrer">/sampling.html</a>
+                </div>
+                <div class="about-meta-row">
+                  <span class="about-key">Sampler Gallery</span>
+                  <a href="/samplers.html" target="_blank" rel="noopener noreferrer">/samplers.html</a>
+                </div>
+                <div class="about-meta-row">
+                  <span class="about-key">Geometry Gallery</span>
+                  <a href="/geometry.html" target="_blank" rel="noopener noreferrer">/geometry.html</a>
+                </div>
+                <div class="about-meta-row">
+                  <span class="about-key">UI Showcase</span>
+                  <a href="/showcase.html" target="_blank" rel="noopener noreferrer">/showcase.html</a>
+                </div>
+                <div class="about-meta-row">
+                  <span class="about-key">Furnace Tests</span>
+                  <a href="/furnace.html" target="_blank" rel="noopener noreferrer">/furnace.html</a>
+                </div>
               </div>
             </section>
-          </div>
-
-          <section class="about-card about-license-card">
-            <div class="about-card-head" data-widget-panel-head>
-              <h3>Behavior</h3>
-            </div>
-            <div class="about-meta-list">
-              <label class="xui-switch"><span class="xui-switch__label">Auto-load scene source in editor when scene changes</span><input id="autoLoadEditor" type="checkbox" checked></label>
-              <label class="xui-switch"><span class="xui-switch__label">Show tutorial on next launch</span><input id="ftueShowOnNextLaunch" type="checkbox"></label>
-              <button id="ftueStartNowBtn" class="xui-button xui-button--primary" type="button">Start Tutorial Now</button>
-            </div>
           </section>
         </section>
-      </section>
-
-      <section class="tab-pane" id="paneAbout">
-        <section class="panel about-panel">
-          <div class="about-grid">
-            <section class="about-card">
-              <div class="about-card-head" data-widget-panel-head>
-                <h3>Build</h3>
-              </div>
-              <div class="about-meta-list">
-                <div class="about-meta-row" id="aboutVersionRow">
-                  <span class="about-key">Version</span>
-                  <code id="aboutVersion">loading...</code>
-                </div>
-                <div class="about-meta-row">
-                  <span class="about-key">Author's Page</span>
-                  <a id="aboutHomepage" href="https://www.4rknova.com" target="_blank" rel="noopener noreferrer">https://www.4rknova.com</a>
-                </div>
-                <div class="about-meta-row">
-                  <span class="about-key">Repository</span>
-                  <a id="aboutWebsite" href="https://github.com/4rknova/xtracer" target="_blank" rel="noopener noreferrer">https://github.com/4rknova/xtracer</a>
-                </div>
-                <div class="about-meta-row">
-                  <span class="about-key">Copyright</span>
-                  <code id="aboutCopyright">loading...</code>
-                </div>
-              </div>
-            </section>
-            <section class="about-card">
-              <div class="about-card-head" data-widget-panel-head>
-                <h3>Runtime</h3>
-                <span id="aboutBuildPill" class="about-pill" hidden>WASM BUILD</span>
-              </div>
-              <div class="about-runtime">
-                <div class="runtime-row">
-                  <strong class="runtime-key">Backend</strong>
-                  <code id="aboutBackend" class="runtime-value">loading...</code>
-                </div>
-                <div class="runtime-row">
-                  <strong class="runtime-key">Default URL</strong>
-                  <code id="aboutDefaultUrl" class="runtime-value">loading...</code>
-                </div>
-                <div class="runtime-row">
-                  <strong class="runtime-key">Scene Directory</strong>
-                  <code id="aboutSceneDir" class="runtime-value">loading...</code>
-                </div>
-                <div class="runtime-row">
-                  <strong class="runtime-key">Static Assets</strong>
-                  <code id="aboutStaticAssets" class="runtime-value">loading...</code>
-                </div>
-              </div>
-            </section>
-            <section class="about-card about-server-card">
-              <div class="about-card-head" data-widget-panel-head>
-                <h3>Server</h3>
-              </div>
-              <div class="about-meta-list about-server-list">
-                <p id="workspaceMaxConcurrentHint" class="workspace-active-hint">Max concurrent renders: -</p>
-                <p id="workspaceThreadsHint" class="workspace-active-hint">Hardware threads: -</p>
-                <p id="workspaceOpenmpHint" class="workspace-active-hint">OpenMP max threads: -</p>
-                <p id="workspaceRenderReserveHint" class="workspace-active-hint">Render reserve threads: -</p>
-                <p id="workspaceRenderAutoHint" class="workspace-active-hint">Render auto threads: -</p>
-              </div>
-            </section>
-            <section class="about-card about-client-card">
-              <div class="about-card-head" data-widget-panel-head>
-                <h3>Client</h3>
-              </div>
-              <div class="about-runtime">
-                <div class="runtime-row">
-                  <strong class="runtime-key">Browser</strong>
-                  <code id="aboutClientBrowser" class="runtime-value">-</code>
-                </div>
-                <div class="runtime-row">
-                  <strong class="runtime-key">Theme</strong>
-                  <code id="aboutClientTheme" class="runtime-value">-</code>
-                </div>
-                <div class="runtime-row">
-                  <strong class="runtime-key">Client ID</strong>
-                  <code id="aboutClientId" class="runtime-value">-</code>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <section class="about-card about-license-card">
-            <div class="about-card-head" data-widget-panel-head>
-              <h3>License</h3>
-            </div>
-            <pre id="aboutLicense" class="about-license">loading...</pre>
-          </section>
-
-          <section class="about-card about-third-party-card">
-            <div id="aboutThirdPartyList" class="about-third-party-list">loading...</div>
-          </section>
-
-          <section class="about-card about-devtools-card">
-            <div class="about-card-head" data-widget-panel-head>
-              <h3>Developer Tools</h3>
-            </div>
-            <div class="about-meta-list">
-              <div class="about-meta-row">
-                <span class="about-key">Sampling Visualization</span>
-                <a href="/sampling.html" target="_blank" rel="noopener noreferrer">/sampling.html</a>
-              </div>
-              <div class="about-meta-row">
-                <span class="about-key">Sampler Gallery</span>
-                <a href="/samplers.html" target="_blank" rel="noopener noreferrer">/samplers.html</a>
-              </div>
-              <div class="about-meta-row">
-                <span class="about-key">Geometry Gallery</span>
-                <a href="/geometry.html" target="_blank" rel="noopener noreferrer">/geometry.html</a>
-              </div>
-              <div class="about-meta-row">
-                <span class="about-key">UI Showcase</span>
-                <a href="/showcase.html" target="_blank" rel="noopener noreferrer">/showcase.html</a>
-              </div>
-              <div class="about-meta-row">
-                <span class="about-key">Furnace Tests</span>
-                <a href="/furnace.html" target="_blank" rel="noopener noreferrer">/furnace.html</a>
-              </div>
-            </div>
-          </section>
-        </section>
-      </section>
       </div>
     </div>
     <nav id="bottomNav" class="bottom-nav" aria-label="Primary navigation">
-      <button id="bnTabWorkspaces" class="bottom-nav-item active" type="button" data-mode="workspaces" aria-label="Workspaces" aria-pressed="true">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path></svg></span>
+      <button id="bnTabWorkspaces" class="bottom-nav-item active" type="button" data-mode="workspaces"
+        aria-label="Workspaces" aria-pressed="true">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8zm-10 0h8v8H3v-8z"></path>
+          </svg></span>
         <span class="bottom-nav-label">Spaces</span>
       </button>
-      <button id="bnTabRender" class="bottom-nav-item" type="button" data-mode="render" aria-label="Render" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"></path></svg></span>
+      <button id="bnTabRender" class="bottom-nav-item" type="button" data-mode="render" aria-label="Render"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5v14l11-7L8 5z"></path>
+          </svg></span>
         <span class="bottom-nav-label">Render</span>
       </button>
-      <button id="bnTabVisual" class="bottom-nav-item" type="button" data-mode="visual" aria-label="Editor" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg></span>
+      <button id="bnTabVisual" class="bottom-nav-item" type="button" data-mode="visual" aria-label="Editor"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z">
+            </path>
+          </svg></span>
         <span class="bottom-nav-label">Editor</span>
       </button>
-      <button id="bnTabGallery" class="bottom-nav-item" type="button" data-mode="gallery" aria-label="Gallery" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zm-11-4 2.53 3.21L17 11l5 7H8l3-6zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"></path></svg></span>
+      <button id="bnTabGallery" class="bottom-nav-item" type="button" data-mode="gallery" aria-label="Gallery"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zm-11-4 2.53 3.21L17 11l5 7H8l3-6zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z">
+            </path>
+          </svg></span>
         <span class="bottom-nav-label">Gallery</span>
       </button>
-      <button id="bnTabLogs" class="bottom-nav-item" type="button" data-mode="logs" aria-label="Logs" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.75 5.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.25v-8.5A2.25 2.25 0 0 1 6.75 5.5zm.5 3.25h4.25v1.5H7.25zm0 3.5h9.5v1.5h-9.5zm0 3.5h6.25v1.5H7.25z"></path></svg></span>
+      <button id="bnTabLogs" class="bottom-nav-item" type="button" data-mode="logs" aria-label="Logs"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M6.75 5.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.25v-8.5A2.25 2.25 0 0 1 6.75 5.5zm.5 3.25h4.25v1.5H7.25zm0 3.5h9.5v1.5h-9.5zm0 3.5h6.25v1.5H7.25z">
+            </path>
+          </svg></span>
         <span class="bottom-nav-label">Logs</span>
       </button>
-      <button id="bnTabSettings" class="bottom-nav-item" type="button" data-mode="settings" aria-label="Settings" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94a7.9 7.9 0 0 0 .05-.94 7.9 7.9 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.9 7.9 0 0 0-.05.94 7.9 7.9 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"></path></svg></span>
+      <button id="bnTabSettings" class="bottom-nav-item" type="button" data-mode="settings" aria-label="Settings"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M19.14 12.94a7.9 7.9 0 0 0 .05-.94 7.9 7.9 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.9 7.9 0 0 0-.05.94 7.9 7.9 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z">
+            </path>
+          </svg></span>
         <span class="bottom-nav-label">Settings</span>
       </button>
-      <button id="bnTabAbout" class="bottom-nav-item" type="button" data-mode="about" aria-label="About" aria-pressed="false">
-        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle><circle cx="12" cy="8" r="1.1"></circle><path d="M11.2 10.75h1.6v5.2h-1.6z"></path></svg></span>
+      <button id="bnTabAbout" class="bottom-nav-item" type="button" data-mode="about" aria-label="About"
+        aria-pressed="false">
+        <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+            <circle cx="12" cy="8" r="1.1"></circle>
+            <path d="M11.2 10.75h1.6v5.2h-1.6z"></path>
+          </svg></span>
         <span class="bottom-nav-label">About</span>
       </button>
     </nav>
@@ -659,7 +896,8 @@
   <div id="ftueOverlay" class="ftue-overlay" hidden aria-hidden="true">
     <div id="ftueDim" class="ftue-dim" aria-hidden="true"></div>
     <div id="ftueSpotlight" class="ftue-spotlight" hidden aria-hidden="true"></div>
-    <div id="ftueDialog" class="ftue-dialog" role="dialog" aria-modal="true" aria-labelledby="ftueTitle" aria-describedby="ftueBody">
+    <div id="ftueDialog" class="ftue-dialog" role="dialog" aria-modal="true" aria-labelledby="ftueTitle"
+      aria-describedby="ftueBody">
       <div class="ftue-head">
         <span id="ftueStepLabel" class="ftue-step-label">Step 1 of 1</span>
         <button id="ftueSkipBtn" class="ftue-skip-btn" type="button" aria-label="Skip tutorial">Skip tutorial</button>
@@ -724,4 +962,5 @@
   <script src="/app/ftue.js"></script>
   <script src="/app/boot.js"></script>
 </body>
+
 </html>

@@ -321,18 +321,25 @@ async function boot() {
       }
     );
     if (visualEditor.init()) {
+      if (el.visualOverlayBtns) el.visualViewport.appendChild(el.visualOverlayBtns);
+      if (el.visualCameraBar) el.visualViewport.appendChild(el.visualCameraBar);
+      if (el.visualCameraEditorPanel) el.visualViewport.appendChild(el.visualCameraEditorPanel);
+      if (el.visualScaleBar) el.visualViewport.appendChild(el.visualScaleBar);
+      if (el.visualInfoBtn) el.visualViewport.appendChild(el.visualInfoBtn);
+      if (el.visualControlsOverlay) el.visualViewport.appendChild(el.visualControlsOverlay);
       syncVisualFrameAspect();
-      if (el.visualProjection && visualEditor.setProjectionMode) {
-        visualEditor.setProjectionMode(el.visualProjection.value || "perspective");
+      if (visualEditor.setProjectionMode) {
+        const initMode = (el.visualProjectionIsometric && el.visualProjectionIsometric.getAttribute("aria-pressed") === "true") ? "isometric" : "perspective";
+        visualEditor.setProjectionMode(initMode);
       }
       if (el.visualSceneScale && visualEditor.setSceneScaleMultiplier) {
         visualEditor.setSceneScaleMultiplier(uiOptions.visualSceneScale, false);
       }
       if (el.visualShowGlobalBvh && visualEditor.setGlobalBvhVisible) {
-        visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+        visualEditor.setGlobalBvhVisible(el.visualShowGlobalBvh.getAttribute("aria-pressed") === "true");
       }
       if (el.visualShowMeshBvh && visualEditor.setMeshBvhVisible) {
-        visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
+        visualEditor.setMeshBvhVisible(el.visualShowMeshBvh.getAttribute("aria-pressed") === "true");
       }
       try {
         await loadVisualSceneFromSelected();
@@ -344,6 +351,43 @@ async function boot() {
     }
   }
   el.renderBtn.addEventListener("click", handleRender);
+  if (el.visualOverlayBtns) {
+    el.visualOverlayBtns.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+  }
+  if (el.visualCameraBar) {
+    el.visualCameraBar.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+  }
+  if (el.visualCameraEditBtn && el.visualCameraEditorPanel) {
+    el.visualCameraEditorPanel.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+    el.visualCameraEditBtn.addEventListener("click", () => {
+      const open = !el.visualCameraEditorPanel.hidden;
+      el.visualCameraEditorPanel.hidden = open;
+      el.visualCameraEditBtn.setAttribute("aria-expanded", open ? "false" : "true");
+      el.visualCameraEditBtn.classList.toggle("is-active", !open);
+    });
+  }
+  if (el.visualScaleBar) {
+    el.visualScaleBar.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+  }
+  if (el.visualInfoBtn && el.visualControlsOverlay) {
+    el.visualInfoBtn.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+    el.visualControlsOverlay.addEventListener("pointerdown", (evt) => evt.stopPropagation());
+    el.visualInfoBtn.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      const open = !el.visualControlsOverlay.hidden;
+      el.visualControlsOverlay.hidden = open;
+      el.visualInfoBtn.setAttribute("aria-expanded", open ? "false" : "true");
+      el.visualInfoBtn.classList.toggle("is-active", !open);
+    });
+    document.addEventListener("pointerdown", (evt) => {
+      if (evt.target instanceof Element && evt.target.closest("#visualInfoBtn, #visualControlsOverlay")) return;
+      if (!el.visualControlsOverlay.hidden) {
+        el.visualControlsOverlay.hidden = true;
+        el.visualInfoBtn.setAttribute("aria-expanded", "false");
+        el.visualInfoBtn.classList.remove("is-active");
+      }
+    }, { capture: true });
+  }
   if (el.visualLoadBtn) {
     el.visualLoadBtn.addEventListener("click", () => {
       loadVisualSceneFromSelected().catch((err) => {
@@ -388,13 +432,24 @@ async function boot() {
       });
     });
   }
-  if (el.visualProjection) {
-    el.visualProjection.addEventListener("change", () => {
-      if (!visualEditor || !visualEditor.setProjectionMode) return;
-      const mode = String(el.visualProjection.value || "perspective").toLowerCase();
-      visualEditor.setProjectionMode(mode);
-      appendLog(`visual projection=${mode}`);
-    });
+  const setProjection = (mode) => {
+    if (visualEditor && visualEditor.setProjectionMode) visualEditor.setProjectionMode(mode);
+    const isPerspective = mode === "perspective";
+    if (el.visualProjectionPerspective) {
+      el.visualProjectionPerspective.setAttribute("aria-pressed", String(isPerspective));
+      el.visualProjectionPerspective.classList.toggle("is-active", isPerspective);
+    }
+    if (el.visualProjectionIsometric) {
+      el.visualProjectionIsometric.setAttribute("aria-pressed", String(!isPerspective));
+      el.visualProjectionIsometric.classList.toggle("is-active", !isPerspective);
+    }
+    appendLog(`visual projection=${mode}`);
+  };
+  if (el.visualProjectionPerspective) {
+    el.visualProjectionPerspective.addEventListener("click", () => setProjection("perspective"));
+  }
+  if (el.visualProjectionIsometric) {
+    el.visualProjectionIsometric.addEventListener("click", () => setProjection("isometric"));
   }
   if (el.visualSceneScale) {
     el.visualSceneScale.addEventListener("change", () => {
@@ -409,25 +464,34 @@ async function boot() {
     });
   }
   if (el.visualShowGrid) {
-    el.visualShowGrid.addEventListener("change", () => {
-      if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(!!el.visualShowGrid.checked);
-      appendLog(`visual grid=${el.visualShowGrid.checked ? "on" : "off"}`);
+    el.visualShowGrid.addEventListener("click", () => {
+      const next = el.visualShowGrid.getAttribute("aria-pressed") !== "true";
+      el.visualShowGrid.setAttribute("aria-pressed", String(next));
+      el.visualShowGrid.classList.toggle("is-active", next);
+      if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(next);
+      appendLog(`visual grid=${next ? "on" : "off"}`);
     });
-    if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(!!el.visualShowGrid.checked);
+    if (visualEditor && visualEditor.setGridVisible) visualEditor.setGridVisible(el.visualShowGrid.getAttribute("aria-pressed") === "true");
   }
   if (el.visualShowGlobalBvh) {
-    el.visualShowGlobalBvh.addEventListener("change", () => {
-      if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
-      appendLog(`visual global bvh=${el.visualShowGlobalBvh.checked ? "on" : "off"}`);
+    el.visualShowGlobalBvh.addEventListener("click", () => {
+      const next = el.visualShowGlobalBvh.getAttribute("aria-pressed") !== "true";
+      el.visualShowGlobalBvh.setAttribute("aria-pressed", String(next));
+      el.visualShowGlobalBvh.classList.toggle("is-active", next);
+      if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(next);
+      appendLog(`visual global bvh=${next ? "on" : "off"}`);
     });
-    if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(!!el.visualShowGlobalBvh.checked);
+    if (visualEditor && visualEditor.setGlobalBvhVisible) visualEditor.setGlobalBvhVisible(el.visualShowGlobalBvh.getAttribute("aria-pressed") === "true");
   }
   if (el.visualShowMeshBvh) {
-    el.visualShowMeshBvh.addEventListener("change", () => {
-      if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
-      appendLog(`visual mesh bvh=${el.visualShowMeshBvh.checked ? "on" : "off"}`);
+    el.visualShowMeshBvh.addEventListener("click", () => {
+      const next = el.visualShowMeshBvh.getAttribute("aria-pressed") !== "true";
+      el.visualShowMeshBvh.setAttribute("aria-pressed", String(next));
+      el.visualShowMeshBvh.classList.toggle("is-active", next);
+      if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(next);
+      appendLog(`visual mesh bvh=${next ? "on" : "off"}`);
     });
-    if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(!!el.visualShowMeshBvh.checked);
+    if (visualEditor && visualEditor.setMeshBvhVisible) visualEditor.setMeshBvhVisible(el.visualShowMeshBvh.getAttribute("aria-pressed") === "true");
   }
   if (el.resetViewBtn) {
     el.resetViewBtn.addEventListener("click", () => {
@@ -999,23 +1063,14 @@ async function boot() {
     });
   }
 
-  if (el.fontSizePreset) {
-    el.fontSizePreset.addEventListener("change", () => {
-      uiOptions.fontSizePreset = normalizeFontSizePreset(el.fontSizePreset.value);
-      applyFontScale(scaleForFontSizePreset(uiOptions.fontSizePreset));
-      persistUIOptions();
-      appendLog(`ui font size=${uiOptions.fontSizePreset}`);
-    });
-  }
-
-  if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene"));
+if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene"));
   el.tabRender.addEventListener("click", () => setActiveTab("render"));
   el.tabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.tabWorkspaces) el.tabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   if (el.tabGallery) el.tabGallery.addEventListener("click", () => setActiveTab("gallery"));
-  el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
+  if (el.tabSettings) el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
-  el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.tabLogs) el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
   if (el.bnTabScene) el.bnTabScene.addEventListener("click", () => setActiveTab("scene"));
   if (el.bnTabRender) el.bnTabRender.addEventListener("click", () => setActiveTab("render"));
   if (el.bnTabWorkspaces) el.bnTabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
@@ -1025,24 +1080,33 @@ async function boot() {
   if (el.bnTabSettings) el.bnTabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.bnTabAbout) el.bnTabAbout.addEventListener("click", () => setActiveTab("about"));
 
-  const SIDEBAR_EXPANDED_KEY = "xtracer-sidebar-rail-expanded";
+  const controlsFlyoutBackdrop = document.getElementById("controlsFlyoutBackdrop");
   const appShell = document.querySelector(".app-shell");
-  function setSidebarExpanded(expanded) {
+
+  function setControlsPanelOpen(open) {
     if (!appShell) return;
-    appShell.classList.toggle("is-sidebar-expanded", expanded);
-    localStorage.setItem(SIDEBAR_EXPANDED_KEY, expanded ? "1" : "0");
-    if (el.sidebarRailToggle) {
-      el.sidebarRailToggle.setAttribute("aria-label", expanded ? "Collapse sidebar" : "Expand sidebar");
-      el.sidebarRailToggle.setAttribute("title", expanded ? "Collapse sidebar" : "Expand sidebar");
+    appShell.classList.toggle("is-controls-open", open);
+    if (controlsFlyoutBackdrop) controlsFlyoutBackdrop.classList.toggle("is-open", open);
+    if (el.controlsPanelToggle) {
+      el.controlsPanelToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      el.controlsPanelToggle.setAttribute("aria-label", open ? "Close controls" : "Open controls");
+      el.controlsPanelToggle.setAttribute("title", open ? "Close controls" : "Open controls");
     }
   }
-  if (el.sidebarRailToggle) {
-    const savedExpanded = localStorage.getItem(SIDEBAR_EXPANDED_KEY) === "1";
-    setSidebarExpanded(savedExpanded);
-    el.sidebarRailToggle.addEventListener("click", () => {
-      const isExpanded = appShell && appShell.classList.contains("is-sidebar-expanded");
-      setSidebarExpanded(!isExpanded);
+
+  if (el.controlsPanelToggle) {
+    el.controlsPanelToggle.addEventListener("click", () => {
+      const isOpen = appShell && appShell.classList.contains("is-controls-open");
+      setControlsPanelOpen(!isOpen);
     });
+  }
+
+  if (el.topbarLogsBtn)   el.topbarLogsBtn.addEventListener("click",   () => setActiveTab("logs"));
+  if (el.topbarConfigBtn) el.topbarConfigBtn.addEventListener("click", () => setActiveTab("settings"));
+  if (el.topbarAboutBtn)  el.topbarAboutBtn.addEventListener("click",  () => setActiveTab("about"));
+
+  if (controlsFlyoutBackdrop) {
+    controlsFlyoutBackdrop.addEventListener("click", () => setControlsPanelOpen(false));
   }
 
   const persistentSidebar = document.querySelector(".persistent-sidebar");
@@ -1077,11 +1141,12 @@ async function boot() {
   document.addEventListener("sheet:close", () => {
     if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
     if (persistentSidebar) persistentSidebar.classList.remove("is-sheet-open");
+    setControlsPanelOpen(false);
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) {
-      closeControlsSheet();
-    }
+    if (event.key !== "Escape") return;
+    if (el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) closeControlsSheet();
+    if (appShell && appShell.classList.contains("is-controls-open")) setControlsPanelOpen(false);
   });
 
   // Tap the sheet handle to open when closed.
@@ -1263,14 +1328,14 @@ async function boot() {
       const rawName = el.workspaceCreateName ? String(el.workspaceCreateName.value || "").trim() : "";
       showSceneSelectModal({
         onConfirm: (sceneName, variantName) => {
-          if (variantName !== null) pendingVariantForNextSceneLoad = variantName;
-          activateSceneFile(sceneName);
           api.createWorkspace(rawName)
             .then((data) => {
               const id = String((data && data.id) || "").trim();
               if (el.workspaceCreateName) el.workspaceCreateName.value = "";
               if (!id) return refreshWorkspaces();
               return switchActiveWorkspace(id).then(() => {
+                if (variantName !== null) pendingVariantForNextSceneLoad = variantName;
+                activateSceneFile(sceneName);
                 if (typeof queueWorkspaceDraftSave === "function") queueWorkspaceDraftSave();
               });
             })
@@ -1387,6 +1452,16 @@ async function boot() {
   updateEditorMetrics();
   syncEditorScroll();
   initializeFtueTutorial();
+
+  window.addEventListener("scene-load-warnings", (ev) => {
+    const warnings = Array.isArray(ev.detail && ev.detail.warnings) ? ev.detail.warnings : [];
+    warnings.forEach((msg) => {
+      appendLog(`scene load warning: ${msg}`);
+      if (widgets && typeof widgets.showToast === "function") {
+        widgets.showToast({ message: String(msg), tone: "warning" });
+      }
+    });
+  });
 }
 
 setTimeout(() => {

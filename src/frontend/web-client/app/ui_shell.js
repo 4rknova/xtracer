@@ -112,6 +112,7 @@ function syncSamplesPresetUi() {
   });
 }
 
+
 function setEditorViewMode(mode, persist) {
   const nextMode = normalizeEditorViewMode(mode);
   const isVisual = nextMode === "visual";
@@ -413,6 +414,9 @@ function setActiveTab(mode) {
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
   setActive(el.tabLogs, isLogs);
+  setActive(el.topbarLogsBtn,   isLogs);
+  setActive(el.topbarConfigBtn, isSettings);
+  setActive(el.topbarAboutBtn,  isAbout);
   ["bnTabWorkspaces", "bnTabRender", "bnTabVisual", "bnTabGallery", "bnTabLogs", "bnTabSettings", "bnTabAbout"].forEach((id) => {
     const btn = el[id];
     if (!btn) return;
@@ -582,6 +586,13 @@ async function loadVisualSceneFromSelected() {
   const geometryData = pair[0] || { meshes: {} };
   const runtimeData = pair[1] || null;
   await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
+  const baseRadius = Number(visualEditor.sceneBaseRadius);
+  if (Number.isFinite(baseRadius) && baseRadius > 1e-6 && visualEditor.setSceneScaleMultiplier) {
+    const autoScale = clampVisualSceneScale(5.0 / baseRadius);
+    visualEditor.setSceneScaleMultiplier(autoScale, false);
+    uiOptions.visualSceneScale = autoScale;
+    if (el.visualSceneScale) el.visualSceneScale.value = String(autoScale);
+  }
   visualLoadedSceneName = sceneName;
   refreshVisualCameraOptions();
   syncVisualCameraFromRenderSelection();
@@ -715,15 +726,9 @@ function clampVisualSceneScale(v) {
   return Math.max(0.01, Math.min(100, n));
 }
 
-function updateFontScaleUI() {
-  if (!el.fontSizePreset) return;
-  el.fontSizePreset.value = normalizeFontSizePreset(uiOptions.fontSizePreset);
-}
-
 function applyFontScale(scale) {
   uiOptions.fontScale = clampFontScale(scale);
   document.documentElement.style.fontSize = `${(uiOptions.fontScale * 100).toFixed(1)}%`;
-  updateFontScaleUI();
 }
 
 function loadUIOptions() {
@@ -734,15 +739,7 @@ function loadUIOptions() {
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
   uiOptions.tileHeatmapEnabled = localStorage.getItem("xtracer-tile-heatmap-enabled") !== "0";
-  const presetRaw = localStorage.getItem("xtracer-ui-font-size-preset");
-  if (presetRaw) {
-    uiOptions.fontSizePreset = normalizeFontSizePreset(presetRaw);
-  } else {
-    const fontScaleRaw = parseFloat(localStorage.getItem("xtracer-ui-font-scale") || "1");
-    const legacyScale = Number.isFinite(fontScaleRaw) ? clampFontScale(fontScaleRaw) : 1.0;
-    uiOptions.fontSizePreset = fontSizePresetFromScale(legacyScale);
-  }
-  uiOptions.fontScale = scaleForFontSizePreset(uiOptions.fontSizePreset);
+  uiOptions.fontScale = 1.0;
   const previewSamplingRaw = String(localStorage.getItem("xtracer-preview-sampling") || "smooth").toLowerCase();
   const previewSampling = (previewSamplingRaw === "linear" || previewSamplingRaw === "bilinear")
     ? "smooth"
@@ -792,8 +789,6 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");
   localStorage.setItem("xtracer-tile-heatmap-enabled", uiOptions.tileHeatmapEnabled ? "1" : "0");
   localStorage.setItem("xtracer-preview-sampling", uiOptions.previewSampling);
-  localStorage.setItem("xtracer-ui-font-size-preset", uiOptions.fontSizePreset);
-  localStorage.setItem("xtracer-ui-font-scale", String(uiOptions.fontScale));
   localStorage.setItem("xtracer-dark-palette", uiOptions.darkPalette);
   localStorage.setItem("xtracer-light-palette", uiOptions.lightPalette);
   localStorage.setItem(LOG_FILTERS_KEY, JSON.stringify(logFilters));
