@@ -358,6 +358,7 @@ struct async_load_job_t {
     async_load_state_t state;
     std::string filename;
     std::string error;
+    std::vector<std::string> warnings;
     std::shared_ptr<Scene> scene;
     std::list<std::string> modifiers;
     bool has_modifiers;
@@ -369,6 +370,7 @@ struct async_load_job_t {
         , state(ASYNC_LOAD_QUEUED)
         , filename()
         , error()
+        , warnings()
         , scene()
         , modifiers()
         , has_modifiers(false)
@@ -2685,7 +2687,7 @@ int create_object(Scene *scene, ncf::NCF *p)
     return create_object(scene, p, k_empty_media_defs);
 }
 
-int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers, const char *variant)
+int load(Scene *scene, const char *filename, const std::list<std::string> *modifiers, const char *variant, std::vector<std::string> *out_warnings)
 {
 	Log::handle().post_message("Loading script [%s]..", filename);
     auto t_load_0 = std::chrono::steady_clock::now();
@@ -2872,11 +2874,17 @@ int load(Scene *scene, const char *filename, const std::list<std::string> *modif
 
                 // Check for parsing errors
                 if (res) {
-                    Log::handle().post_error("Failed to load: %s", lnode->get_name());
-                    for (auto mit = medium_defs.begin(); mit != medium_defs.end(); ++mit) delete mit->second;
-                    medium_defs.clear();
-                    scene->release();
-                    return 1;
+                    if (!(*it).compare(XTPROTO_NODE_GEOMETRY)) {
+                        std::string wmsg = std::string("Geometry '") + lnode->get_name() + "' failed to load and was skipped.";
+                        Log::handle().post_warning("%s", wmsg.c_str());
+                        if (out_warnings) out_warnings->push_back(wmsg);
+                    } else {
+                        Log::handle().post_error("Failed to load: %s", lnode->get_name());
+                        for (auto mit = medium_defs.begin(); mit != medium_defs.end(); ++mit) delete mit->second;
+                        medium_defs.clear();
+                        scene->release();
+                        return 1;
+                    }
                 }
 			}
 		}
@@ -2934,7 +2942,7 @@ unsigned long long load_async_start(const char *filename,
             std::lock_guard<std::mutex> lock(g_async_load_exec_mut);
             const std::list<std::string> *mods = job->has_modifiers ? &job->modifiers : 0;
             const char *variant_name = job->has_variant ? job->variant.c_str() : 0;
-            result = load(loaded_scene.get(), job->filename.c_str(), mods, variant_name);
+            result = load(loaded_scene.get(), job->filename.c_str(), mods, variant_name, &job->warnings);
         }
 
         std::lock_guard<std::mutex> lock(g_async_jobs_mut);
@@ -2965,6 +2973,7 @@ bool load_async_snapshot(unsigned long long id, async_load_snapshot_t *out)
     out->state_name = async_load_state_name(it->second->state);
     out->filename = it->second->filename;
     out->error = it->second->error;
+    out->warnings = it->second->warnings;
     return true;
 }
 

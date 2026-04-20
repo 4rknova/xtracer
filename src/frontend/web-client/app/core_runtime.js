@@ -433,6 +433,10 @@ async function waitForSceneLoadJob(jobId, timeoutMs) {
     const state = String(data && data.state ? data.state : "").toLowerCase();
     if (state === "done") {
       setSceneLoadStatus("done", "Scene load completed.", id);
+      const warnings = Array.isArray(data && data.warnings) ? data.warnings : [];
+      if (warnings.length > 0) {
+        window.dispatchEvent(new CustomEvent("scene-load-warnings", { detail: { warnings } }));
+      }
       return;
     }
     if (state === "error") {

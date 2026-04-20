@@ -8,6 +8,7 @@
 #include <memory>
 #include <list>
 #include <string>
+#include <vector>
 #include "math/surface.h"
 #include "camera.h"
 #include "material.h"
@@ -62,7 +63,8 @@ std::string generate_geometry_mesh_json(const std::string &gen_id, const std::ma
 int load(Scene *scene,
          const char *filename,
          const std::list<std::string> *modifiers = 0,
-         const char *variant = 0);
+         const char *variant = 0,
+         std::vector<std::string> *out_warnings = 0);
 
 enum async_load_state_t
 {
@@ -79,6 +81,7 @@ struct async_load_snapshot_t
     std::string state_name;
     std::string filename;
     std::string error;
+    std::vector<std::string> warnings;
 };
 
 unsigned long long load_async_start(const char *filename,

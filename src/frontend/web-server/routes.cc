@@ -2330,8 +2330,13 @@ void setup_routes(WebApp &app,
             << "\"job_id\":" << snap.id << ","
             << "\"state\":\"" << json_escape(snap.state_name) << "\","
             << "\"filename\":\"" << json_escape(snap.filename) << "\","
-            << "\"error\":\"" << json_escape(snap.error) << "\""
-            << "}";
+            << "\"error\":\"" << json_escape(snap.error) << "\","
+            << "\"warnings\":[";
+        for (size_t wi = 0; wi < snap.warnings.size(); ++wi) {
+            if (wi > 0) out << ",";
+            out << "\"" << json_escape(snap.warnings[wi]) << "\"";
+        }
+        out << "]}";
         send_json(res, out.str());
     });
 
