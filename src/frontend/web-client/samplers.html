@@ -12,9 +12,6 @@
       root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
       root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
       root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
-      var preset = localStorage.getItem('xtracer-ui-font-size-preset');
-      var scale = preset ? (preset === 'large' ? 1.1 : 1.0) : (parseFloat(localStorage.getItem('xtracer-ui-font-scale') || '1') > 1.02 ? 1.1 : 1.0);
-      root.style.fontSize = (scale * 100).toFixed(1) + '%';
     })();
   </script>
 </head>
