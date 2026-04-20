@@ -22,11 +22,23 @@
 
     let dismissed = false;
 
+    const closeSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    closeSvg.setAttribute("viewBox", "0 0 16 16");
+    closeSvg.setAttribute("aria-hidden", "true");
+    const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line1.setAttribute("x1", "3"); line1.setAttribute("y1", "3");
+    line1.setAttribute("x2", "13"); line1.setAttribute("y2", "13");
+    const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line2.setAttribute("x1", "13"); line2.setAttribute("y1", "3");
+    line2.setAttribute("x2", "3"); line2.setAttribute("y2", "13");
+    closeSvg.appendChild(line1);
+    closeSvg.appendChild(line2);
+
     const closeBtn = dom.el("button", {
       className: "xui-toast-close",
       attrs: { type: "button", "aria-label": "Dismiss" },
-      text: "×",
     });
+    closeBtn.appendChild(closeSvg);
 
     const toast = dom.el("div", {
       className: `xui-toast xui-toast--${tone}`,
