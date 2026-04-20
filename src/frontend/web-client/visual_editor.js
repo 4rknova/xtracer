@@ -1071,8 +1071,12 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       if (e.pointerType === "touch") {
         e.preventDefault();
         setTouchPoint(e.pointerId, e.clientX, e.clientY);
-        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
         var touchCount = touchPointCount();
+        if (touchCount === 1 && self.handleAxisWidgetPointerDown(e.clientX, e.clientY)) {
+          removeTouchPoint(e.pointerId);
+          return;
+        }
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
         if (touchCount >= 2) {
           beginTwoFingerGesture();
           return;
