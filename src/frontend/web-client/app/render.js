@@ -242,20 +242,20 @@ function triggerSceneSave() {
           setStatus(`saved ${scene}`);
           setEditorOpStatus("success", `Saved: ${scene}`);
           appendLog(`saved scene: ${scene}`);
-          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Scene saved: ${scene}`, tone: "success" });
+          if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") window.XTracerWidgets.showToast({ message: `Scene saved: ${scene}`, tone: "success" });
         })
         .catch((err) => {
           setStatus(`error: ${err.message}`);
           setEditorOpStatus("error", `Save failed: ${err.message}`);
           appendLog(`post-save error: ${err.message}`);
-          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
+          if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") window.XTracerWidgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
         });
     })
     .catch((err) => {
       setStatus(`error: ${err.message}`);
       setEditorOpStatus("error", `Save failed: ${err.message}`);
       appendLog(`save error: ${err.message}`);
-      if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
+      if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") window.XTracerWidgets.showToast({ message: `Save failed: ${err.message}`, tone: "error" });
     });
 }
 
@@ -313,6 +313,10 @@ async function watchJobViaWebSocket(jobId, token) {
     ws.binaryType = "arraybuffer";
     let lastState = "";
     let settled = false;
+    // Set when a terminal state message ("done", "aborted", "error") is received so
+    // that the server legitimately closing the WebSocket afterwards is not treated as
+    // an unexpected disconnect.
+    let terminalStateSeen = false;
     // Serialize all tile draws so concurrent messages don't race on previewObjectUrl.
     let drawQueue = Promise.resolve();
 
@@ -329,7 +333,13 @@ async function watchJobViaWebSocket(jobId, token) {
     };
 
     ws.onclose = () => {
-      if (!settled) reject(new Error("job WebSocket closed unexpectedly"));
+      if (settled) return;
+      // Server closes the socket after sending a terminal state message.  Treat
+      // this as a normal close so the drawQueue async chain can still finish
+      // updating the UI; resolve with undefined so handleRender's finally block
+      // resets the button/progress correctly.
+      if (terminalStateSeen) { settled = true; resolve(undefined); return; }
+      reject(new Error("job WebSocket closed unexpectedly"));
       settled = true;
     };
 
@@ -391,6 +401,7 @@ async function watchJobViaWebSocket(jobId, token) {
         patchSettingsJobFromSnapshot(jobId, data);
       }
       if (state === "done" && !abortPending) {
+        terminalStateSeen = true;
         const elapsedMs = Math.max(0, Number(data.elapsed_ms) || 0);
         const snapData = data;
         drawQueue = drawQueue.then(async () => {
@@ -421,13 +432,14 @@ async function watchJobViaWebSocket(jobId, token) {
           refreshVisualPhotonOverlay().catch(() => {});
           setStatus(`done in ${Math.round(elapsedMs)} ms`);
           appendLog(`job ${jobId} finished in ${Math.round(elapsedMs)} ms`);
-          if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: `Render complete (${Math.round(elapsedMs)} ms)`, tone: "success" });
+          if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") window.XTracerWidgets.showToast({ message: `Render complete (${Math.round(elapsedMs)} ms)`, tone: "success" });
           finish({ state: "done", elapsedMs });
           if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
         });
         return;
       }
       if (state === "aborted") {
+        terminalStateSeen = true;
         if (abortPending) abortRequestedJobId = "";
         drawQueue = drawQueue.then(() => {
           clearActivePreviewTiles();
@@ -442,6 +454,7 @@ async function watchJobViaWebSocket(jobId, token) {
         return;
       }
       if (state === "error") {
+        terminalStateSeen = true;
         if (abortPending) abortRequestedJobId = "";
         drawQueue = drawQueue.then(() => {
           clearActivePreviewTiles();
@@ -878,7 +891,7 @@ async function handleRender() {
     syncGlobalsToWorkspaceRuntime();
     setStatus("queued 0.0%");
     appendLog(`job accepted: ${jobId}`);
-    if (widgets && typeof widgets.showToast === "function") widgets.showToast({ message: "Render started", tone: "info" });
+    if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") window.XTracerWidgets.showToast({ message: "Render started", tone: "info" });
     if (typeof notifyActiveJobsChanged === "function") notifyActiveJobsChanged();
     await pollJob(jobId, pollToken);
     pollReachedTerminalState = true;
@@ -922,6 +935,12 @@ async function handleRender() {
     if (shouldClearActiveJob && ownPollSession) {
       activeJobId = "";
       updateRenderActionButton();
+      syncGlobalsToWorkspaceRuntime();
+    } else if (shouldClearActiveJob && submittedJobId && activeJobId === submittedJobId) {
+      // Poll session was superseded (e.g. resumeWorkspaceJobPolling called beginPollSession
+      // mid-render), but we still own this specific job.  Clear it so the button resets
+      // instead of staying stuck on "Abort".
+      activeJobId = "";
       syncGlobalsToWorkspaceRuntime();
     }
     if (!activeJobId) {
