@@ -4,6 +4,84 @@ let galleryEntries = [];
 let galleryDetailId = null;
 let galleryCurrentPassIndex = -1; // -1 = main render, >=0 = pass index
 
+// ── Multi-select state ─────────────────────────────────────────────────────
+
+let gallerySelectionMode = false;
+const gallerySelectedIds = new Set();
+
+function updateGallerySelectionUi(syncCards = true) {
+  const selectBtn = document.getElementById("gallerySelectBtn");
+  const deleteBtn = document.getElementById("galleryDeleteSelectedBtn");
+  const grid = document.getElementById("galleryGrid");
+  const count = gallerySelectedIds.size;
+  if (selectBtn) {
+    selectBtn.classList.toggle("is-active", gallerySelectionMode);
+    selectBtn.title = gallerySelectionMode ? "Cancel selection" : "Select renders";
+    selectBtn.setAttribute("aria-label", gallerySelectionMode ? "Cancel selection" : "Select renders");
+  }
+  const countEl = document.getElementById("galleryDeleteSelectedCount");
+  const showDelete = gallerySelectionMode && count > 0;
+  if (deleteBtn) deleteBtn.hidden = !showDelete;
+  if (countEl) {
+    countEl.hidden = !showDelete;
+    countEl.textContent = String(count);
+  }
+  if (grid) {
+    grid.classList.toggle("gallery-select-mode", gallerySelectionMode);
+  }
+  if (syncCards) {
+    grid && grid.querySelectorAll(".gallery-card").forEach((card) => {
+      const id = card.dataset.entryId;
+      card.classList.toggle("is-selected", id ? gallerySelectedIds.has(id) : false);
+    });
+  }
+}
+
+function enterGallerySelectionMode() {
+  gallerySelectionMode = true;
+  gallerySelectedIds.clear();
+  updateGallerySelectionUi();
+}
+
+function exitGallerySelectionMode() {
+  gallerySelectionMode = false;
+  gallerySelectedIds.clear();
+  updateGallerySelectionUi();
+}
+
+function toggleGalleryCardSelection(id, card) {
+  if (gallerySelectedIds.has(id)) {
+    gallerySelectedIds.delete(id);
+    card.classList.remove("is-selected");
+  } else {
+    gallerySelectedIds.add(id);
+    card.classList.add("is-selected");
+  }
+  updateGallerySelectionUi(false); // card class already updated above
+}
+
+async function deleteSelectedGalleryEntries() {
+  const ids = [...gallerySelectedIds];
+  if (ids.length === 0) return;
+  const label = ids.length === 1 ? "1 render" : `${ids.length} renders`;
+  const confirmed = await window.XTracerWidgets.showModal({
+    title: "Delete renders",
+    body: `Delete ${label}? This cannot be undone.`,
+    confirmLabel: `Delete ${label}`,
+    danger: true,
+  });
+  if (!confirmed) return;
+  try {
+    await Promise.all(ids.map((id) =>
+      fetch(`/api/gallery/${encodeURIComponent(id)}`, { method: "DELETE" })
+    ));
+  } catch (err) {
+    if (typeof appendLog === "function") appendLog(`gallery delete error: ${err.message}`);
+  }
+  exitGallerySelectionMode();
+  await refreshGallery();
+}
+
 // ── Gallery TM state ───────────────────────────────────────────────────────
 
 const galleryTm = {
@@ -101,16 +179,52 @@ const galleryView = {
   lastY: 0,
 };
 let galleryViewSampling = "smooth"; // "smooth" | "nearest"
-let galleryMinimapLayout = null;
+let galleryMinimapActive = false;
+const galleryMinimapLayout = { miniX: 0, miniY: 0, miniSize: 0, mapX: 0, mapY: 0, mapW: 0, mapH: 0, imageW: 0, imageH: 0 };
+const galleryFittedCache   = { frameW: 0, frameH: 0, width: 0, height: 0 };
 let galleryViewResizeObserver = null;
+let galleryRafId = null;
+let galleryViewElsCache = null;
+let galleryFrameIsZoomed = null;
+let galleryFrameIsPanning = null;
 
 function getGalleryViewEls() {
-  return {
-    canvas: document.getElementById("galleryDetailCanvas"),
-    img:    document.getElementById("galleryDetailImage"),
-    wrap:   document.querySelector(".gallery-detail-image-wrap"),
-    btn:    document.getElementById("galleryResetViewBtn"),
-  };
+  if (!galleryViewElsCache) {
+    galleryViewElsCache = {
+      canvas: document.getElementById("galleryDetailCanvas"),
+      img:    document.getElementById("galleryDetailImage"),
+      wrap:   document.querySelector(".gallery-detail-image-wrap"),
+      btn:    document.getElementById("galleryResetViewBtn"),
+    };
+  }
+  return galleryViewElsCache;
+}
+
+function scheduleGalleryFrame() {
+  if (galleryRafId !== null) return;
+  galleryRafId = requestAnimationFrame(flushGalleryFrame);
+}
+
+function flushGalleryFrame() {
+  galleryRafId = null;
+  clampGalleryPan();
+  const { wrap, btn } = getGalleryViewEls();
+  const isZoomed  = galleryView.scale > 1.001 || Math.abs(galleryView.tx) > 0.5 || Math.abs(galleryView.ty) > 0.5;
+  const isPanning = !!galleryView.panning;
+  if (isZoomed !== galleryFrameIsZoomed) {
+    galleryFrameIsZoomed = isZoomed;
+    if (wrap) wrap.classList.toggle("is-zoomed", isZoomed);
+    if (btn) {
+      btn.hidden   = !isZoomed;
+      btn.disabled = !isZoomed;
+      btn.setAttribute("aria-disabled", isZoomed ? "false" : "true");
+    }
+  }
+  if (isPanning !== galleryFrameIsPanning) {
+    galleryFrameIsPanning = isPanning;
+    if (wrap) wrap.classList.toggle("is-panning", isPanning);
+  }
+  drawGalleryCanvas();
 }
 
 function isGalleryNearestSampling() {
@@ -122,12 +236,11 @@ function getGalleryFittedSize(canvas, img) {
   const frameH = canvas.height;
   if (!frameW || !frameH || !img.naturalWidth || !img.naturalHeight) return null;
   const fit = Math.min(frameW / img.naturalWidth, frameH / img.naturalHeight);
-  return {
-    frameW,
-    frameH,
-    width:  img.naturalWidth  * fit,
-    height: img.naturalHeight * fit,
-  };
+  galleryFittedCache.frameW = frameW;
+  galleryFittedCache.frameH = frameH;
+  galleryFittedCache.width  = img.naturalWidth  * fit;
+  galleryFittedCache.height = img.naturalHeight * fit;
+  return galleryFittedCache;
 }
 
 function clampGalleryPan() {
@@ -145,9 +258,29 @@ function clampGalleryPan() {
 
 // ── Minimap ────────────────────────────────────────────────────────────────
 
-function computeGalleryMinimapLayout(fitted, imageX, imageY, imageW, imageH) {
+function recenterGalleryFromMinimap(canvas, clientX, clientY, clampToBounds, rect) {
+  if (!galleryMinimapActive) return false;
+  if (!rect) rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const localX = (clientX - rect.left) * scaleX;
+  const localY = (clientY - rect.top)  * scaleY;
+  const { mapX, mapY, mapW, mapH, imageW, imageH } = galleryMinimapLayout;
+  if (!clampToBounds && (localX < mapX || localX > mapX + mapW || localY < mapY || localY > mapY + mapH)) return false;
+  const hitX = clampToBounds ? Math.min(mapX + mapW, Math.max(mapX, localX)) : localX;
+  const hitY = clampToBounds ? Math.min(mapY + mapH, Math.max(mapY, localY)) : localY;
+  const u = Math.min(1, Math.max(0, (hitX - mapX) / Math.max(1e-6, mapW)));
+  const v = Math.min(1, Math.max(0, (hitY - mapY) / Math.max(1e-6, mapH)));
+  galleryView.tx = (0.5 - u) * imageW;
+  galleryView.ty = (0.5 - v) * imageH;
+  scheduleGalleryFrame();
+  return true;
+}
+
+function drawGalleryMinimap(ctx, fitted, img, imageX, imageY, imageW, imageH) {
+  galleryMinimapActive = false;
   const isZoomed = galleryView.scale > 1.001 || Math.abs(galleryView.tx) > 0.5 || Math.abs(galleryView.ty) > 0.5;
-  if (!fitted || !isZoomed) return null;
+  if (!fitted || !isZoomed) return;
   const miniMargin = 14;
   const miniSize = Math.min(180, Math.max(96, Math.round(Math.min(fitted.frameW, fitted.frameH) * 0.22)));
   const miniX = fitted.frameW - miniSize - miniMargin;
@@ -158,41 +291,12 @@ function computeGalleryMinimapLayout(fitted, imageX, imageY, imageW, imageH) {
   if (mapH > miniSize) { mapH = miniSize; mapW = Math.round(mapH * aspect); }
   const mapX = miniX + Math.round((miniSize - mapW) * 0.5);
   const mapY = miniY + Math.round((miniSize - mapH) * 0.5);
-  return { miniX, miniY, miniSize, mapX, mapY, mapW, mapH, imageW, imageH };
-}
-
-function getGalleryMinimapHit(canvas, clientX, clientY, clampToBounds) {
-  if (!galleryMinimapLayout) return null;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width  / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const localX = (clientX - rect.left) * scaleX;
-  const localY = (clientY - rect.top)  * scaleY;
-  const { mapX, mapY, mapW, mapH } = galleryMinimapLayout;
-  if (!clampToBounds && (localX < mapX || localX > mapX + mapW || localY < mapY || localY > mapY + mapH)) return null;
-  const hitX = clampToBounds ? Math.min(mapX + mapW, Math.max(mapX, localX)) : localX;
-  const hitY = clampToBounds ? Math.min(mapY + mapH, Math.max(mapY, localY)) : localY;
-  return {
-    u: Math.min(1, Math.max(0, (hitX - mapX) / Math.max(1e-6, mapW))),
-    v: Math.min(1, Math.max(0, (hitY - mapY) / Math.max(1e-6, mapH))),
-  };
-}
-
-function recenterGalleryFromMinimap(canvas, clientX, clientY, clampToBounds) {
-  const hit = getGalleryMinimapHit(canvas, clientX, clientY, !!clampToBounds);
-  if (!hit || !galleryMinimapLayout) return false;
-  galleryView.tx = (0.5 - hit.u) * galleryMinimapLayout.imageW;
-  galleryView.ty = (0.5 - hit.v) * galleryMinimapLayout.imageH;
-  applyGalleryTransform();
-  return true;
-}
-
-function drawGalleryMinimap(ctx, fitted, img, imageX, imageY, imageW, imageH) {
-  galleryMinimapLayout = null;
-  const layout = computeGalleryMinimapLayout(fitted, imageX, imageY, imageW, imageH);
-  if (!layout) return;
-  galleryMinimapLayout = layout;
-  const { miniX, miniY, miniSize, mapX, mapY, mapW, mapH } = layout;
+  galleryMinimapLayout.miniX  = miniX;  galleryMinimapLayout.miniY  = miniY;
+  galleryMinimapLayout.miniSize = miniSize;
+  galleryMinimapLayout.mapX   = mapX;   galleryMinimapLayout.mapY   = mapY;
+  galleryMinimapLayout.mapW   = mapW;   galleryMinimapLayout.mapH   = mapH;
+  galleryMinimapLayout.imageW = imageW; galleryMinimapLayout.imageH = imageH;
+  galleryMinimapActive = true;
 
   ctx.save();
   ctx.fillStyle = "rgba(9, 16, 24, 0.62)";
@@ -253,7 +357,7 @@ function drawGalleryCanvas() {
   const x = (fitted.frameW - drawW) * 0.5 + tx;
   const y = (fitted.frameH - drawH) * 0.5 + ty;
   ctx.clearRect(0, 0, fitted.frameW, fitted.frameH);
-  ctx.imageSmoothingEnabled = !nearest;
+  ctx.imageSmoothingEnabled = !nearest && !galleryView.panning;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, x, y, drawW, drawH);
   drawGalleryMinimap(ctx, fitted, img, x, y, drawW, drawH);
@@ -274,21 +378,7 @@ function syncGalleryCanvasSize() {
 // ── View state ─────────────────────────────────────────────────────────────
 
 function applyGalleryTransform() {
-  const { wrap } = getGalleryViewEls();
-  const isZoomed = galleryView.scale > 1.001 || Math.abs(galleryView.tx) > 0.5 || Math.abs(galleryView.ty) > 0.5;
-  if (wrap) {
-    wrap.classList.toggle("is-zoomed",  isZoomed);
-    wrap.classList.toggle("is-panning", !!galleryView.panning);
-  }
-  const btn = document.getElementById("galleryResetViewBtn");
-  if (btn) {
-    btn.hidden = !isZoomed;
-    btn.classList.toggle("is-disabled", !isZoomed);
-    btn.disabled = !isZoomed;
-    btn.setAttribute("aria-disabled", isZoomed ? "false" : "true");
-  }
-  clampGalleryPan();
-  drawGalleryCanvas();
+  scheduleGalleryFrame();
 }
 
 function resetGalleryView() {
@@ -298,8 +388,10 @@ function resetGalleryView() {
   galleryView.panning  = false;
   galleryView.panMode  = "";
   galleryView.pointerId = null;
-  galleryMinimapLayout  = null;
-  applyGalleryTransform();
+  galleryMinimapActive  = false;
+  galleryFrameIsZoomed  = null;
+  galleryFrameIsPanning = null;
+  scheduleGalleryFrame();
 }
 
 function zoomGalleryAt(clientX, clientY, wheelDeltaY) {
@@ -345,10 +437,14 @@ function setGalleryViewSampling(mode) {
 function bindGalleryViewEvents() {
   const { canvas, wrap } = getGalleryViewEls();
   if (!canvas) return;
-  const touchPoints = {};
+  let touch0Id = -1, touch0X = 0, touch0Y = 0;
+  let touch1Id = -1, touch1X = 0, touch1Y = 0;
+  let touchCount = 0;
   let pinchDistance = 0;
   let pinchCenterX = 0;
   let pinchCenterY = 0;
+  let pinchRect = null;
+  let panRect = null;
 
   // Populate the static sampling switch container in the toolbar.
   const sw = document.getElementById("gallerySamplingSwitch");
@@ -372,20 +468,25 @@ function bindGalleryViewEvents() {
     if (evt.button !== 0 && evt.button !== 1) return;
     evt.preventDefault();
     if (evt.pointerType === "touch") {
-      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
-      if (Object.keys(touchPoints).length >= 2) {
-        const ids = Object.keys(touchPoints).slice(0, 2);
-        const a = touchPoints[ids[0]];
-        const b = touchPoints[ids[1]];
-        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
-        pinchCenterX = (a.x + b.x) * 0.5;
-        pinchCenterY = (a.y + b.y) * 0.5;
+      if (touch0Id === -1) {
+        touch0Id = evt.pointerId; touch0X = evt.clientX; touch0Y = evt.clientY;
+        touchCount = 1;
+      } else if (touch1Id === -1) {
+        touch1Id = evt.pointerId; touch1X = evt.clientX; touch1Y = evt.clientY;
+        touchCount = 2;
+        pinchDistance = Math.hypot(touch0X - touch1X, touch0Y - touch1Y);
+        pinchCenterX = (touch0X + touch1X) * 0.5;
+        pinchCenterY = (touch0Y + touch1Y) * 0.5;
+        pinchRect = canvas.getBoundingClientRect();
         canvas.setPointerCapture(evt.pointerId);
         return;
+      } else {
+        return; // more than 2 fingers — ignore
       }
     }
+    panRect = canvas.getBoundingClientRect();
     // Minimap click-to-recenter
-    if (evt.button === 0 && recenterGalleryFromMinimap(canvas, evt.clientX, evt.clientY, false)) {
+    if (evt.button === 0 && recenterGalleryFromMinimap(canvas, evt.clientX, evt.clientY, false, panRect)) {
       galleryView.panning  = true;
       galleryView.panMode  = "minimap";
       galleryView.pointerId = evt.pointerId;
@@ -400,36 +501,30 @@ function bindGalleryViewEvents() {
     galleryView.lastX     = evt.clientX;
     galleryView.lastY     = evt.clientY;
     canvas.setPointerCapture(evt.pointerId);
-    applyGalleryTransform();
+    scheduleGalleryFrame();
   });
 
   canvas.addEventListener("pointermove", (evt) => {
-    if (evt.pointerType === "touch" && Object.prototype.hasOwnProperty.call(touchPoints, String(evt.pointerId))) {
-      touchPoints[String(evt.pointerId)] = { x: evt.clientX, y: evt.clientY };
-      const ids = Object.keys(touchPoints);
-      if (ids.length >= 2) {
-        const a = touchPoints[ids[0]];
-        const b = touchPoints[ids[1]];
-        const dist = Math.max(1e-6, Math.hypot(a.x - b.x, a.y - b.y));
-        const centerX = (a.x + b.x) * 0.5;
-        const centerY = (a.y + b.y) * 0.5;
-        if (pinchDistance > 1e-6) {
-          // Zoom around the old pinch center, then pan by center movement.
-          const { canvas: cv } = getGalleryViewEls();
-          const rect = cv ? cv.getBoundingClientRect() : null;
-          if (rect) {
-            const c1x = pinchCenterX - rect.left - rect.width * 0.5;
-            const c1y = pinchCenterY - rect.top - rect.height * 0.5;
-            const nextScale = Math.min(galleryView.maxScale, Math.max(galleryView.minScale, galleryView.scale * (dist / pinchDistance)));
-            const k = nextScale / galleryView.scale;
-            galleryView.tx = c1x - (c1x - galleryView.tx) * k;
-            galleryView.ty = c1y - (c1y - galleryView.ty) * k;
-            galleryView.scale = nextScale;
-          }
+    if (evt.pointerType === "touch") {
+      if      (evt.pointerId === touch0Id) { touch0X = evt.clientX; touch0Y = evt.clientY; }
+      else if (evt.pointerId === touch1Id) { touch1X = evt.clientX; touch1Y = evt.clientY; }
+      else return;
+      if (touchCount >= 2) {
+        const dist    = Math.max(1e-6, Math.hypot(touch0X - touch1X, touch0Y - touch1Y));
+        const centerX = (touch0X + touch1X) * 0.5;
+        const centerY = (touch0Y + touch1Y) * 0.5;
+        if (pinchDistance > 1e-6 && pinchRect) {
+          const c1x = pinchCenterX - pinchRect.left - pinchRect.width * 0.5;
+          const c1y = pinchCenterY - pinchRect.top - pinchRect.height * 0.5;
+          const nextScale = Math.min(galleryView.maxScale, Math.max(galleryView.minScale, galleryView.scale * (dist / pinchDistance)));
+          const k = nextScale / galleryView.scale;
+          galleryView.tx = c1x - (c1x - galleryView.tx) * k;
+          galleryView.ty = c1y - (c1y - galleryView.ty) * k;
+          galleryView.scale = nextScale;
         }
         galleryView.tx += centerX - pinchCenterX;
         galleryView.ty += centerY - pinchCenterY;
-        applyGalleryTransform();
+        scheduleGalleryFrame();
         pinchDistance = dist;
         pinchCenterX = centerX;
         pinchCenterY = centerY;
@@ -440,7 +535,7 @@ function bindGalleryViewEvents() {
     if (galleryView.panMode === "minimap") {
       galleryView.lastX = evt.clientX;
       galleryView.lastY = evt.clientY;
-      recenterGalleryFromMinimap(canvas, evt.clientX, evt.clientY, true);
+      recenterGalleryFromMinimap(canvas, evt.clientX, evt.clientY, true, panRect);
       return;
     }
     const dx = evt.clientX - galleryView.lastX;
@@ -449,24 +544,28 @@ function bindGalleryViewEvents() {
     galleryView.lastY = evt.clientY;
     galleryView.tx += dx;
     galleryView.ty += dy;
-    applyGalleryTransform();
+    scheduleGalleryFrame();
   });
 
   const endPan = (evt) => {
     if (evt.pointerType === "touch") {
-      delete touchPoints[String(evt.pointerId)];
-      if (Object.keys(touchPoints).length < 2) {
-        pinchDistance = 0;
-        pinchCenterX = 0;
-        pinchCenterY = 0;
+      if (evt.pointerId === touch1Id) {
+        touch1Id = -1; touchCount = Math.max(0, touchCount - 1);
+      } else if (evt.pointerId === touch0Id) {
+        touch0Id = touch1Id; touch0X = touch1X; touch0Y = touch1Y;
+        touch1Id = -1; touchCount = Math.max(0, touchCount - 1);
+      }
+      if (touchCount < 2) {
+        pinchDistance = 0; pinchCenterX = 0; pinchCenterY = 0; pinchRect = null;
       }
     }
     if (!galleryView.panning || galleryView.pointerId !== evt.pointerId) return;
     galleryView.panning  = false;
     galleryView.panMode  = "";
     galleryView.pointerId = null;
+    panRect = null;
     try { canvas.releasePointerCapture(evt.pointerId); } catch (_) {}
-    applyGalleryTransform();
+    scheduleGalleryFrame();
   };
 
   canvas.addEventListener("pointerup",     endPan);
@@ -511,13 +610,26 @@ function renderGalleryGrid(entries) {
     const card = document.createElement("button");
     card.className = "gallery-card";
     card.type = "button";
+    card.dataset.entryId = entry.id;
     card.setAttribute("aria-label", `View render: ${entry.scene || entry.id}`);
+    if (gallerySelectedIds.has(entry.id)) card.classList.add("is-selected");
+
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "gallery-card-thumb-wrap";
 
     const thumb = document.createElement("img");
     thumb.className = "gallery-card-thumb";
     thumb.alt = entry.scene || entry.id;
     thumb.loading = "lazy";
     thumb.src = galleryThumbUrl(entry.id);
+
+    const check = document.createElement("div");
+    check.className = "gallery-card-check";
+    check.setAttribute("aria-hidden", "true");
+    check.innerHTML = `<svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>`;
+
+    thumbWrap.appendChild(thumb);
+    thumbWrap.appendChild(check);
 
     const info = document.createElement("div");
     info.className = "gallery-card-info";
@@ -547,10 +659,16 @@ function renderGalleryGrid(entries) {
     info.appendChild(scene);
     info.appendChild(meta);
     if (entry.render_mode) info.appendChild(mode);
-    card.appendChild(thumb);
+    card.appendChild(thumbWrap);
     card.appendChild(info);
 
-    card.addEventListener("click", () => openGalleryDetail(entry));
+    card.addEventListener("click", () => {
+      if (gallerySelectionMode) {
+        toggleGalleryCardSelection(entry.id, card);
+      } else {
+        openGalleryDetail(entry);
+      }
+    });
     grid.appendChild(card);
   });
 }
@@ -569,6 +687,8 @@ function openGalleryDetail(entry) {
 
   if (grid) grid.hidden = true;
   if (panel) panel.hidden = false;
+  const pane = document.getElementById("paneGallery");
+  if (pane) pane.classList.add("is-detail-open");
 
   const exportFormatSel = document.getElementById("galleryExportFormat");
   if (exportFormatSel && window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelect === "function") {
@@ -741,6 +861,16 @@ function closeGalleryDetail() {
   const grid = document.querySelector(".gallery-panel");
   if (panel) panel.hidden = true;
   if (grid) grid.hidden = false;
+  const infoPanel = document.getElementById("galleryInfoPanel");
+  const tmPanel   = document.getElementById("galleryTmPanel");
+  const infoBtn   = document.getElementById("galleryInfoBtn");
+  const tmBtn     = document.getElementById("galleryTmBtn");
+  if (infoPanel) infoPanel.hidden = true;
+  if (tmPanel)   tmPanel.hidden   = true;
+  if (infoBtn)   { infoBtn.classList.remove("is-active"); infoBtn.setAttribute("aria-pressed", "false"); }
+  if (tmBtn)     { tmBtn.classList.remove("is-active");   tmBtn.setAttribute("aria-pressed",   "false"); }
+  const pane = document.getElementById("paneGallery");
+  if (pane) pane.classList.remove("is-detail-open");
 }
 
 async function deleteGalleryEntry(id) {
@@ -786,6 +916,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const refreshBtn = document.getElementById("galleryRefreshBtn");
   if (refreshBtn) refreshBtn.addEventListener("click", () => refreshGallery());
 
+  const selectBtn = document.getElementById("gallerySelectBtn");
+  if (selectBtn) {
+    selectBtn.addEventListener("click", () => {
+      if (gallerySelectionMode) exitGallerySelectionMode();
+      else enterGallerySelectionMode();
+    });
+  }
+
+  const deleteSelectedBtn = document.getElementById("galleryDeleteSelectedBtn");
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener("click", () => deleteSelectedGalleryEntries());
+  }
+
   const searchInput = document.getElementById("gallerySearch");
   if (searchInput) {
     searchInput.addEventListener("input", () => renderGalleryGrid(filteredGalleryEntries()));
@@ -797,7 +940,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteBtn = document.getElementById("galleryDetailDeleteBtn");
   if (deleteBtn) {
     deleteBtn.addEventListener("click", () => {
-      if (galleryDetailId) deleteGalleryEntry(galleryDetailId);
+      if (!galleryDetailId) return;
+      const id = galleryDetailId;
+      window.XTracerWidgets.showModal({
+        title: "Delete render?",
+        message: "This render will be permanently deleted.",
+        confirmLabel: "Delete",
+        danger: true,
+        onConfirm: () => deleteGalleryEntry(id),
+      });
     });
   }
 
@@ -875,30 +1026,56 @@ document.addEventListener("DOMContentLoaded", () => {
     let moved = false;
     passThumbsEl._passStripDragged = () => moved;
 
+    let activePointerId = null;
+
     passThumbsEl.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
       dragging = true;
       moved = false;
+      activePointerId = e.pointerId;
       startX = e.clientX;
       scrollStart = passThumbsEl.scrollLeft;
-      passThumbsEl.setPointerCapture(e.pointerId);
-      passThumbsEl.classList.add("is-dragging");
     });
 
     passThumbsEl.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
+      if (!dragging || e.pointerId !== activePointerId) return;
       const dx = e.clientX - startX;
-      if (Math.abs(dx) > 4) moved = true;
-      passThumbsEl.scrollLeft = scrollStart - dx;
+      if (!moved && Math.abs(dx) > 4) {
+        moved = true;
+        passThumbsEl.setPointerCapture(e.pointerId);
+        passThumbsEl.classList.add("is-dragging");
+      }
+      if (moved) passThumbsEl.scrollLeft = scrollStart - dx;
     });
 
     const endDrag = () => {
       dragging = false;
-      passThumbsEl.classList.remove("is-dragging");
+      activePointerId = null;
+      if (moved) passThumbsEl.classList.remove("is-dragging");
     };
     passThumbsEl.addEventListener("pointerup", endDrag);
     passThumbsEl.addEventListener("pointercancel", endDrag);
   }
+
+  // ── Info / TM overlay panels ─────────────────────────────────────────────
+  const infoBtn    = document.getElementById("galleryInfoBtn");
+  const tmBtn      = document.getElementById("galleryTmBtn");
+  const infoPanel  = document.getElementById("galleryInfoPanel");
+  const tmPanel    = document.getElementById("galleryTmPanel");
+
+  function setGalleryOverlay(panel, btn, open) {
+    if (panel) panel.hidden = !open;
+    if (btn)   { btn.classList.toggle("is-active", open); btn.setAttribute("aria-pressed", String(open)); }
+  }
+
+  function toggleGalleryOverlay(panel, btn, other, otherBtn) {
+    const opening = panel ? panel.hidden : false;
+    setGalleryOverlay(other, otherBtn, false);
+    setGalleryOverlay(panel, btn, opening);
+  }
+
+  if (infoBtn)  infoBtn.addEventListener("click",  () => toggleGalleryOverlay(infoPanel,  infoBtn,  tmPanel,   tmBtn));
+  if (tmBtn)    tmBtn.addEventListener("click",    () => toggleGalleryOverlay(tmPanel,    tmBtn,    infoPanel, infoBtn));
 
   bindGalleryViewEvents();
 });
