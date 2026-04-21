@@ -1393,8 +1393,6 @@ h2 {
 
 .panel-controls {
   align-self: start;
-  position: sticky;
-  top: 0;
   margin: 0;
   border: 0;
   box-shadow: none;
@@ -8908,8 +8906,9 @@ button:disabled {
   bottom: 10px;
   width: 420px;
   z-index: 100;
-  overflow-y: auto;
+  overflow-y: scroll;
   scrollbar-gutter: stable;
+  overscroll-behavior: contain;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
   border-radius: 16px;
