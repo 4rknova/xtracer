@@ -111,7 +111,7 @@ static void find_files(const std::string& dir, const std::string& ext,
 // ─── zip extraction ───────────────────────────────────────────────────────────
 
 static std::string make_temp_dir() {
-    char tmpl[] = "/tmp/mitsuba2xtracer_XXXXXX";
+    char tmpl[] = "/tmp/convertMitsuba_XXXXXX";
     const char* p = mkdtemp(tmpl);
     return p ? p : "";
 }
@@ -177,15 +177,14 @@ static std::string find_scene_xml(const std::string& dir, std::ostream& err) {
 
 static void copy_assets(const std::vector<ResourceEntry>& resources,
                         const std::string& dest_dir,
+                        const std::string& scene_name,
                         bool verbose, std::ostream& err) {
+    std::string res_dir = pb_join(pb_join(dest_dir, "resources"), scene_name);
+    make_dirs(res_dir, err);
+
     for (auto& r : resources) {
-        std::string sub = (r.type == "texture") ? "textures" : "geometry";
-        std::string dst_dir = pb_join(pb_join(dest_dir, "resources"), sub);
-        make_dirs(dst_dir, err);
+        std::string dst = pb_join(res_dir, r.filename);
 
-        std::string dst = pb_join(dst_dir, r.filename);
-
-        // Skip if source doesn't exist (referenced but not in zip — warn)
         struct stat st;
         if (stat(r.src_path.c_str(), &st) != 0) {
             err << "Warning: asset not found, skipping: " << r.src_path << "\n";
@@ -200,7 +199,7 @@ static void copy_assets(const std::vector<ResourceEntry>& resources,
             std::string mtl_src = pb_join(pb_dirname(r.src_path),
                                           pb_stem(r.filename) + ".mtl");
             if (stat(mtl_src.c_str(), &st) == 0) {
-                std::string mtl_dst = pb_join(dst_dir, pb_stem(r.filename) + ".mtl");
+                std::string mtl_dst = pb_join(res_dir, pb_stem(r.filename) + ".mtl");
                 if (verbose) err << "  copying geometry: " << pb_stem(r.filename) << ".mtl\n";
                 copy_file(mtl_src, mtl_dst, err);
             }
@@ -257,6 +256,8 @@ bool run_packager(const PackageOptions& popts, std::ostream& err) {
     copts.xml_dir     = pb_dirname(xml_path);
     copts.dest_dir    = dest;
     copts.scene_name  = name;
+    copts.source_path = popts.input_path;  // original zip path for title derivation
+    copts.comment     = popts.comment;
     copts.verbose     = popts.verbose;
 
     std::vector<ResourceEntry> resources;
@@ -287,7 +288,7 @@ bool run_packager(const PackageOptions& popts, std::ostream& err) {
     // ── 6. Copy assets ────────────────────────────────────────────────────────
     if (popts.copy_assets && !resources.empty()) {
         if (popts.verbose) err << "Copying " << resources.size() << " asset(s)...\n";
-        copy_assets(resources, dest, popts.verbose, err);
+        copy_assets(resources, dest, name, popts.verbose, err);
     }
 
     // ── 7. Cleanup temp dir ───────────────────────────────────────────────────

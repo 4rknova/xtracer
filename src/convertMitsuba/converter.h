@@ -14,6 +14,8 @@ struct ConvertOptions {
     std::string xml_dir;     // directory containing the xml (for resolving relative paths)
     std::string dest_dir;    // if set, rewrite asset paths into resources/ layout
     std::string scene_name;  // override scene name (defaults to stem of input_path)
+    std::string source_path; // original user-supplied path (zip or xml); used for title
+    std::string comment;     // optional comment written as # line in output
     bool verbose = false;
 };
 

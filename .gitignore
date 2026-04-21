@@ -46,7 +46,11 @@ src/xtcore/license.h
 
 # other files
 *.cbp
+*.scntmp
 .codex
+
+# generated scenes
+scene/mitsuba-*
 
 # generated web assets
 res/web/license.txt

@@ -6,6 +6,7 @@ struct PackageOptions {
     std::string input_path;     // .zip or .xml
     std::string dest_dir;       // output directory (default: "./scene")
     std::string scene_name;     // override scene stem name
+    std::string comment;        // optional comment written as # line in output
     bool copy_assets = true;    // copy referenced textures / meshes
     bool verbose     = false;
 };

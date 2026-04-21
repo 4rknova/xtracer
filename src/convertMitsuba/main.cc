@@ -22,6 +22,7 @@ static void usage(const char* prog) {
         << "  -o, --output FILE    Write .scn to FILE (stdout if omitted; XML input only)\n"
         << "  -d, --dest DIR       Output directory for .scn + resources/ (default: ./scene)\n"
         << "  -n, --name NAME      Override output scene name\n"
+        << "  -c, --comment TEXT   Write TEXT as a # comment line in the output\n"
         << "      --no-assets      Skip copying referenced textures / meshes\n"
         << "  -v, --verbose        Print conversion warnings and progress\n"
         << "  -h, --help           Show this help\n";
@@ -32,6 +33,7 @@ int main(int argc, char* argv[]) {
     std::string output_path;
     std::string dest_dir;
     std::string scene_name;
+    std::string comment;
     bool verbose    = false;
     bool no_assets  = false;
 
@@ -49,6 +51,8 @@ int main(int argc, char* argv[]) {
             dest_dir = argv[++i];
         } else if ((!std::strcmp(argv[i], "-n") || !std::strcmp(argv[i], "--name")) && i + 1 < argc) {
             scene_name = argv[++i];
+        } else if ((!std::strcmp(argv[i], "-c") || !std::strcmp(argv[i], "--comment")) && i + 1 < argc) {
+            comment = argv[++i];
         } else if (argv[i][0] != '-') {
             if (input_path.empty()) {
                 input_path = argv[i];
@@ -81,6 +85,7 @@ int main(int argc, char* argv[]) {
         popts.input_path   = input_path;
         popts.dest_dir     = dest_dir.empty() ? "./scene" : dest_dir;
         popts.scene_name   = scene_name;
+        popts.comment      = comment;
         popts.copy_assets  = !no_assets;
         popts.verbose      = verbose;
         return run_packager(popts, std::cerr) ? 0 : 1;
@@ -92,6 +97,7 @@ int main(int argc, char* argv[]) {
     copts.xml_dir     = "";  // no asset rewriting in plain mode
     copts.verbose     = verbose;
     copts.scene_name  = scene_name;
+    copts.comment     = comment;
 
     if (output_path.empty()) {
         return convert_mitsuba(copts, std::cout, std::cerr) ? 0 : 1;

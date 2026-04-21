@@ -69,6 +69,7 @@ With scene variant:
 | Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
 | Web static app | `src/frontend/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
+| Mitsuba scene converter | `src/convertMitsuba/` | Standalone `convertMitsuba` tool for converting Mitsuba XML/zip scenes into `.scn` scenes plus packaged assets |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
 | Third-party deps | `ext/` | Vendored external dependencies (registry: `docs/DEPENDENCIES.md`) |
@@ -215,6 +216,13 @@ Notes:
 
 ```bash
 ./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+```
+
+### Mitsuba Converter
+
+```bash
+./build/intermediate/build/convertMitsuba path/to/scene.xml -o scene.scn
+./build/intermediate/build/convertMitsuba path/to/archive.zip -d scene
 ```
 
 ### Web Server
