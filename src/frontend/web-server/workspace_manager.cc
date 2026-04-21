@@ -41,7 +41,6 @@ workspace_manager_t::workspace_manager_t()
     , clients_()
     , next_id_(0)
 {
-    create_locked("Workspace 1", "");
 }
 
 std::string workspace_manager_t::create_locked(const std::string &name,
@@ -90,7 +89,7 @@ void workspace_manager_t::touch_client_locked(const std::string &client_id)
     if (it == clients_.end()) {
         client_t c;
         c.last_seen_ms = now_ms();
-        c.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+        c.workspace_id = workspaces_.empty() ? "" : workspaces_.begin()->first;
         auto wit = workspaces_.find(c.workspace_id);
         if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
             wit->second.owner_client_id = client_id;
@@ -101,7 +100,7 @@ void workspace_manager_t::touch_client_locked(const std::string &client_id)
     }
     it->second.last_seen_ms = now_ms();
     if (!exists_locked(it->second.workspace_id)) {
-        it->second.workspace_id = workspaces_.empty() ? create_locked("Workspace 1", "") : workspaces_.begin()->first;
+        it->second.workspace_id = workspaces_.empty() ? "" : workspaces_.begin()->first;
     }
     auto wit = workspaces_.find(it->second.workspace_id);
     if (wit != workspaces_.end() && wit->second.owner_client_id.empty()) {
@@ -134,7 +133,7 @@ void workspace_manager_t::clear_stale_workspace_owners_locked()
 void workspace_manager_t::prune_workspaces_locked(long long now)
 {
     clear_stale_workspace_owners_locked();
-    if (workspaces_.size() <= 1) return;
+    if (workspaces_.empty()) return;
 
     std::map<std::string, size_t> client_counts;
     for (auto it = clients_.begin(); it != clients_.end(); ++it) {
@@ -161,7 +160,7 @@ void workspace_manager_t::prune_workspaces_locked(long long now)
     std::sort(ttl_candidates.begin(), ttl_candidates.end(), cmp);
     std::sort(overflow_candidates.begin(), overflow_candidates.end(), cmp);
 
-    for (size_t i = 0; i < ttl_candidates.size() && workspaces_.size() > 1; ++i) {
+    for (size_t i = 0; i < ttl_candidates.size(); ++i) {
         workspaces_.erase(ttl_candidates[i].second);
     }
 
@@ -176,9 +175,8 @@ std::string workspace_manager_t::ensure_client(const std::string &client_id)
     const long long now = now_ms();
     prune_clients_locked(now);
     prune_workspaces_locked(now);
-    if (workspaces_.empty()) create_locked("Workspace 1", "");
     touch_client_locked(client_id);
-    if (client_id.empty()) return workspaces_.begin()->first;
+    if (client_id.empty()) return workspaces_.empty() ? "" : workspaces_.begin()->first;
     return clients_[client_id].workspace_id;
 }
 
@@ -201,10 +199,9 @@ workspace_manager_t::remove_result_t workspace_manager_t::remove(const std::stri
     prune_workspaces_locked(now);
     auto it = workspaces_.find(workspace_id);
     if (it == workspaces_.end()) return REMOVE_NOT_FOUND;
-    if (workspaces_.size() <= 1) return REMOVE_LAST_WORKSPACE;
 
     workspaces_.erase(it);
-    replacement_workspace_id_out = workspaces_.begin()->first;
+    replacement_workspace_id_out = workspaces_.empty() ? "" : workspaces_.begin()->first;
 
     for (auto cit = clients_.begin(); cit != clients_.end(); ++cit) {
         if (cit->second.workspace_id == workspace_id) {
@@ -241,11 +238,9 @@ bool workspace_manager_t::get_active(const std::string &client_id, std::string &
     prune_clients_locked(now);
     prune_workspaces_locked(now);
     if (client_id.empty()) {
-        if (workspaces_.empty()) create_locked("Workspace 1", "");
-        workspace_id_out = workspaces_.begin()->first;
+        workspace_id_out = workspaces_.empty() ? "" : workspaces_.begin()->first;
         return true;
     }
-    if (workspaces_.empty()) create_locked("Workspace 1", "");
     touch_client_locked(client_id);
     workspace_id_out = clients_[client_id].workspace_id;
     return true;
@@ -259,11 +254,10 @@ bool workspace_manager_t::list(const std::string &client_id,
     const long long now = now_ms();
     prune_clients_locked(now);
     prune_workspaces_locked(now);
-    if (workspaces_.empty()) create_locked("Workspace 1", "");
     if (!client_id.empty()) touch_client_locked(client_id);
 
     if (!client_id.empty()) active_workspace_out = clients_[client_id].workspace_id;
-    else active_workspace_out = workspaces_.begin()->first;
+    else active_workspace_out = workspaces_.empty() ? "" : workspaces_.begin()->first;
 
     std::map<std::string, size_t> client_counts;
     for (auto it = clients_.begin(); it != clients_.end(); ++it) {

@@ -2198,10 +2198,6 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
-        if (rc == workspace_manager_t::REMOVE_LAST_WORKSPACE) {
-            send_json(res, "{\"error\":\"cannot delete last workspace\"}", 409);
-            return;
-        }
 
         std::string active_workspace;
         workspaces.get_active(client_id, active_workspace);

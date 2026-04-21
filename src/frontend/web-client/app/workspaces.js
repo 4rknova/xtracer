@@ -1133,7 +1133,7 @@ function renderWorkspaceList(items) {
   const widgets = window.XTracerWidgets || {};
   el.workspaceList.innerHTML = "";
   const list = Array.isArray(items) ? items : [];
-  const canDeleteAny = list.length > 1;
+  const canDeleteAny = list.length >= 1;
   if (list.length === 0) {
     const empty = createWorkspaceEmptyState("No workspaces", "No workspaces available.", "workspace-empty");
     el.workspaceList.appendChild(empty);

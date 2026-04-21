@@ -234,9 +234,12 @@ async function boot() {
       seen.add(name);
       out.push(name);
     };
+    if (hasWorkspaceApi && !activeWorkspaceId) return out;
     push(activeWorkspaceScene());
     push(el.scene && el.scene.value ? el.scene.value : "");
-    sceneCatalog.forEach((item) => push(item && item.sceneFile ? item.sceneFile : ""));
+    if (!hasWorkspaceApi) {
+      sceneCatalog.forEach((item) => push(item && item.sceneFile ? item.sceneFile : ""));
+    }
     return out;
   };
 
