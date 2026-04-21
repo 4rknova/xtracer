@@ -66,8 +66,8 @@ const char* Perspective::get_type() const
 void Perspective::calculate_transform(Matrix4x4f &mat)
 {
 	Vector3f rz = (target - position).normalized();
-	Vector3f rx = cross(up, rz).normalized();
-	Vector3f ry = cross(rx, rz).normalized();
+	Vector3f rx = cross(rz, up).normalized();
+	Vector3f ry = cross(rz, rx).normalized();
 
 	mat = Matrix4x4f(rx.x, ry.x, rz.x, 0,
 		                 rx.y, ry.y, rz.y, 0,
