@@ -152,6 +152,7 @@ set(OUT_EXE_NMATH_BENCH_SIMD bench_nmath_simd)
 set(OUT_EXE_NMATH_BENCH_AVX bench_nmath_avx)
 set(OUT_EXE_NMATH_BENCH_SCALAR bench_nmath_scalar)
 set(OUT_EXE_NMATH_SIMD_PERF_COMPARE test_nmath_simd_perf_compare)
+set(OUT_EXE_MITSUBA2XTRACER mitsuba2xtracer)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PATH_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PATH_BIN})
@@ -241,6 +242,11 @@ target_include_directories(xtcore_dynamic SYSTEM PUBLIC
 )
 
 add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
+add_executable(${OUT_EXE_MITSUBA2XTRACER}
+    ${PATH_SRC}/util/mitsuba2xtracer/main.cc
+    ${PATH_SRC}/util/mitsuba2xtracer/converter.cc
+    ${PATH_SRC}/util/mitsuba2xtracer/packager.cc
+)
 add_executable(${OUT_EXE_COLORSPACE_TEST} ${PATH_SRC_TESTS}/colorspace_test.cc)
 add_executable(${OUT_EXE_COLORSPACE_VECTORS_TEST} ${PATH_SRC_TESTS}/colorspace_vectors_test.cc)
 add_executable(${OUT_EXE_TILE_TEST} ${PATH_SRC_TESTS}/tile_test.cc)
@@ -344,6 +350,16 @@ target_include_directories(${OUT_EXE_CLI} PUBLIC
 )
 target_include_directories(${OUT_EXE_CLI} SYSTEM PUBLIC
     ${ext_libs}
+)
+target_include_directories(${OUT_EXE_MITSUBA2XTRACER} PRIVATE
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_MITSUBA2XTRACER} SYSTEM PRIVATE
+    ${PATH_EXT}/pugixml
+)
+target_compile_options(${OUT_EXE_MITSUBA2XTRACER} PRIVATE -std=c++17)
+set_target_properties(${OUT_EXE_MITSUBA2XTRACER} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PATH_BIN}
 )
 target_include_directories(${OUT_EXE_COLORSPACE_TEST} PUBLIC
     ${PATH_LIB}
@@ -836,6 +852,10 @@ install (TARGETS ${OUT_EXE_CLI}
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
+)
+
+install (TARGETS ${OUT_EXE_MITSUBA2XTRACER}
+    RUNTIME DESTINATION bin
 )
 
 install (FILES ${PATH_BIN}/${OUT_MAN_CLI} ${PATH_BIN}/${OUT_MAN_WEB} DESTINATION man/man1)

@@ -1,5 +1,8 @@
 scene/data
 scene/geometry/
+scene/models/
+scene/textures/
+scene/resources/
 media/
 temp/
 *.o
