@@ -23,7 +23,8 @@ class Integrator : public xtcore::render::IIntegrator
         VIEW_NORMAL,
         VIEW_UV,
         VIEW_EMISSION,
-        VIEW_OBJECT_MASK
+        VIEW_OBJECT_MASK,
+        VIEW_ENVIRONMENT
     };
 
     enum depth_encoding_t {
@@ -46,6 +47,7 @@ class Integrator : public xtcore::render::IIntegrator
     nmath::scalar_t m_max_distance;
     std::vector<std::string> m_mask_names;
     std::set<HASH_ID>        m_mask_ids;
+    bool m_ignore_geometry = false;
 };
 
         } /* namespace debug_views */

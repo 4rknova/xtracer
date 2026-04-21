@@ -116,7 +116,7 @@ function getSettingsJobsOccupiedThreads(activeJobs) {
   const jobs = Array.isArray(activeJobs) ? activeJobs : [];
   return jobs.reduce((sum, job) => {
     const state = String((job && job.state) || "").toLowerCase();
-    if (state !== "running") return sum;
+    if (state !== "running" && state !== "preparing") return sum;
     const threads = Math.max(0, Number((job && job.threads) || 0));
     return sum + (Number.isFinite(threads) ? Math.floor(threads) : 0);
   }, 0);
@@ -364,8 +364,9 @@ function compareActiveJobsForSettings(a, b) {
   const stateB = String((b && b.state) || "").toLowerCase();
   const priority = (state) => {
     if (state === "running") return 0;
-    if (state === "queued") return 1;
-    return 2;
+    if (state === "preparing") return 1;
+    if (state === "queued") return 2;
+    return 3;
   };
   const pa = priority(stateA);
   const pb = priority(stateB);
@@ -411,7 +412,7 @@ function createSettingsJobActionIcon(kind) {
 
 function createSettingsJobStateTag(state) {
   if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
-    const tone = state === "running" ? "success" : (state === "queued" ? "warning" : "neutral");
+    const tone = state === "running" ? "success" : (state === "preparing" ? "info" : (state === "queued" ? "warning" : "neutral"));
     return window.XTracerWidgets.createTag({
       label: state,
       tone,
@@ -578,7 +579,7 @@ function renderSettingsJobsList(activeJobs) {
       queueControls.appendChild(downBtn);
       controlNodes.push(queueControls);
     }
-    if (state === "running" || state === "queued") {
+    if (state === "running" || state === "preparing" || state === "queued") {
       const abortBtn = createSettingsJobActionButton("abort", {
         className: "settings-job-abort-btn",
         ariaLabel: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort job",
@@ -1036,7 +1037,7 @@ function mapActiveJobsByWorkspace(activeJobs) {
     const jobId = String((job && job.id) || "").trim();
     const state = String((job && job.state) || "").toLowerCase();
     if (!workspaceId || !jobId) return;
-    if (state !== "queued" && state !== "running") return;
+    if (state !== "queued" && state !== "preparing" && state !== "running") return;
     if (!byWorkspace.has(workspaceId)) byWorkspace.set(workspaceId, jobId);
   });
   return byWorkspace;

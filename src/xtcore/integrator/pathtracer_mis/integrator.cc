@@ -546,7 +546,9 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             if (ctx->scene.sample_environment_direction(env_dir, p_env, le_env) &&
                 p_env > (nmath::scalar_t)EPSILON &&
                 visible_to_environment(ctx, hit_record.point + env_dir * EPSILON, env_dir)) {
-                const nmath::scalar_t cos_s = nmath_abs(nmath::dot(hit_record.normal, env_dir));
+                nmath::Vector3f shading_n = hit_record.normal.normalized();
+                if (nmath::dot(shading_n, wo) < (nmath::scalar_t)0.0) shading_n = -shading_n;
+                const nmath::scalar_t cos_s = std::max((nmath::scalar_t)0.0, nmath::dot(shading_n, env_dir));
                 if (cos_s > (nmath::scalar_t)EPSILON) {
                     nimg::ColorRGBf f_env;
                     nmath::scalar_t p_bsdf_env = 0.0;

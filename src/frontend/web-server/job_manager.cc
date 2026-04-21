@@ -888,7 +888,7 @@ void job_manager_t::dispatch_queued_jobs()
 
         {
             std::lock_guard<std::mutex> lock(job->mut);
-            job->state = JOB_RUNNING;
+            job->state = JOB_PREPARING;
             job->effective_threads = granted_threads;
         }
 
@@ -962,10 +962,10 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             job->started_at = std::chrono::steady_clock::now();
             job->has_started = true;
             job->effective_threads = granted_threads;
-            job->state = JOB_RUNNING;
+            job->state = JOB_PREPARING;
         }
     }
-    if (job->state.load() != JOB_RUNNING) {
+    if (job->state.load() == JOB_ERROR) {
         backend_log_t::handle().add("error", "job failed id=" + job->id + " reason=" + job->error);
         on_job_finished(job->id);
         return;
@@ -984,15 +984,25 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
     bool gallery_entry_created = false;
 
     auto push_cb = push_callback_;
+    if (push_cb) {
+        job_snapshot_t preparing_snap;
+        snapshot(job->id, preparing_snap);
+        push_cb(job->id, preparing_snap, {});
+    }
 
     common::render_result_t rr = common::render_scene_to_png(request,
         [this, job, gm, push_cb, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
          gallery_created_at_ms, &gallery_entry_created]
         (common::progress_event_t event, size_t done, size_t total,
          const xtcore::render::tile_t *tile, const common::progress_tile_update_t *upd) {
+            bool entered_running = false;
             {
                 std::lock_guard<std::mutex> lock(job->mut);
                 if (event == common::PROGRESS_EVENT_TILE_STARTED) {
+                    if (job->state.load() == JOB_PREPARING) {
+                        job->state = JOB_RUNNING;
+                        entered_running = true;
+                    }
                     const bool has_upd_rect = upd && upd->has_rect;
                     if (tile || has_upd_rect) add_active_tile(*job, make_active_tile_key(tile, upd));
                 } else if (event == common::PROGRESS_EVENT_TILE_FINISHED) {
@@ -1015,6 +1025,11 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                     }
                     if (tile || has_upd_rect) remove_active_tile(*job, make_active_tile_key(tile, upd));
                 }
+            }
+            if (entered_running && push_cb) {
+                job_snapshot_t running_snap;
+                this->snapshot(job->id, running_snap);
+                push_cb(job->id, running_snap, {});
             }
             if (event == common::PROGRESS_EVENT_TILE_STARTED ||
                 event == common::PROGRESS_EVENT_TILE_FINISHED) {
@@ -1304,7 +1319,7 @@ void job_manager_t::prune_completed_jobs_locked()
         if (it == jobs.end()) continue;
 
         const job_state_t st = it->second->state.load();
-        if (st == JOB_RUNNING || st == JOB_QUEUED) continue;
+        if (st == JOB_RUNNING || st == JOB_PREPARING || st == JOB_QUEUED) continue;
 
         cache_evicted_job_locked(it->second);
         jobs.erase(it);
@@ -1412,7 +1427,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.state = job->state.load();
     out.error = job->error;
     out.elapsed_ms = job->elapsed_ms;
-    if ((out.state == JOB_RUNNING || out.state == JOB_QUEUED) && job->has_started) {
+    if ((out.state == JOB_RUNNING || out.state == JOB_PREPARING || out.state == JOB_QUEUED) && job->has_started) {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         out.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - job->started_at).count();
     }
@@ -1446,7 +1461,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
             const size_t completed_passes = (tiles_per_pass > 0) ? (out.tiles_done / tiles_per_pass) : 0;
             const bool in_pass = (tiles_per_pass > 0) ? ((out.tiles_done % tiles_per_pass) != 0) : false;
             size_t curr = completed_passes + (in_pass ? 1 : 0);
-            if ((out.state == JOB_QUEUED || out.state == JOB_RUNNING) && curr == 0) curr = 1;
+            if ((out.state == JOB_QUEUED || out.state == JOB_PREPARING || out.state == JOB_RUNNING) && curr == 0) curr = 1;
             if (curr > out.pass_total) curr = out.pass_total;
             out.pass_current = curr;
         }
@@ -1982,7 +1997,7 @@ bool job_manager_t::list_active(std::vector<job_snapshot_t> &out)
             const std::shared_ptr<job_t> &job = it->second;
             if (!job) continue;
             const job_state_t st = job->state.load();
-            if (st == JOB_RUNNING) {
+            if (st == JOB_RUNNING || st == JOB_PREPARING) {
                 running_ids.push_back(job->id);
             } else if (st == JOB_QUEUED) {
                 queued_ids.push_back(job->id);

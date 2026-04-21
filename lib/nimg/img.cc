@@ -73,9 +73,44 @@ int decode_image_buffer(const unsigned char *data, int w, int h, int bpp, Pixmap
 
 } // namespace
 
+int exr(const char *filename, Pixmap &map)
+{
+    if (!filename) return 1;
+    float *rgba = NULL;
+    int w = 0, h = 0;
+    const char *err = NULL;
+    const int ret = LoadEXR(&rgba, &w, &h, filename, &err);
+    if (ret != TINYEXR_SUCCESS) {
+        if (err) FreeEXRErrorMessage(err);
+        return 1;
+    }
+    map.init(w, h);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            const int idx = (y * w + x) * 4;
+            map.pixel(x, y) = ColorRGBAf(rgba[idx], rgba[idx+1], rgba[idx+2], rgba[idx+3]);
+        }
+    }
+    free(rgba);
+    return 0;
+}
+
 int image(const char *filename, Pixmap &map)
 {
     if (!filename) return 1;
+
+    // Dispatch .exr files to the tinyexr loader
+    {
+        const char *dot = nullptr;
+        for (const char *p = filename; *p; ++p) if (*p == '.') dot = p;
+        if (dot) {
+            char ext[8] = {};
+            for (int i = 0; i < 7 && dot[i+1]; ++i)
+                ext[i] = (char)tolower((unsigned char)dot[i+1]);
+            if (ext[0]=='e' && ext[1]=='x' && ext[2]=='r' && ext[3]=='\0')
+                return exr(filename, map);
+        }
+    }
 
     int w, h, bpp;
     unsigned char *data = stbi_load(filename, &w, &h, &bpp, 0);

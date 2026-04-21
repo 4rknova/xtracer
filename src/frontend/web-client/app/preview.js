@@ -1365,7 +1365,7 @@ async function restorePreviewForActiveWorkspace() {
       : (jobs.length > 0 ? jobs[0] : null);
     const state = String((candidate && candidate.state) || "").toLowerCase();
     const id = String((candidate && candidate.id) || "").trim();
-    if (id && (state === "queued" || state === "running")) {
+    if (id && (state === "queued" || state === "preparing" || state === "running")) {
       activeJobId = id;
       syncGlobalsToWorkspaceRuntime();
       appendLog(`restored active workspace job: ${id}`);
@@ -1376,7 +1376,7 @@ async function restorePreviewForActiveWorkspace() {
     try {
       const data = await api.getJob(activeJobId);
       const state = String((data && data.state) || "").toLowerCase();
-      if (state === "queued" || state === "running") {
+      if (state === "queued" || state === "preparing" || state === "running") {
         const progress = Number((data && data.progress) || 0);
         const elapsedMs = Math.max(0, Number((data && data.elapsed_ms) || 0));
         const threads = Math.max(0, Number((data && data.threads) || 0));

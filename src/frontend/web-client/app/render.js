@@ -198,7 +198,7 @@ async function resolveAbortJobId() {
       : null;
     const selected = forWorkspace || (activeJobs.length > 0 ? activeJobs[0] : null);
     const state = String((selected && selected.state) || "").toLowerCase();
-    const serverJobId = (state === "queued" || state === "running")
+    const serverJobId = (state === "queued" || state === "preparing" || state === "running")
       ? String((selected && selected.id) || "").trim()
       : "";
     if (serverJobId) {
@@ -292,7 +292,7 @@ function applyJobStatusSnapshot(data) {
   setStatusPass(passCurrent, passTotal, jobRenderMode);
   const state = data.state || "unknown";
   const stateLabel = state === "running" ? "rendering" : state;
-  if ((state === "queued" || state === "running") && elapsedMs > 0) {
+  if ((state === "queued" || state === "preparing" || state === "running") && elapsedMs > 0) {
     setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}% (${formatElapsed(elapsedMs)})`);
   } else {
     setStatus(`${stateLabel} ${(100 * progress).toFixed(1)}%`);
@@ -397,7 +397,7 @@ async function watchJobViaWebSocket(jobId, token) {
       const abortPending = String(abortRequestedJobId || "") === String(jobId || "");
       // For running-state snapshots (PASS_FINISHED broadcasts) patch the Jobs sidebar
       // card in-place directly from WS data — no REST round-trip needed.
-      if ((state === "running" || state === "queued") && typeof patchSettingsJobFromSnapshot === "function") {
+      if ((state === "running" || state === "preparing" || state === "queued") && typeof patchSettingsJobFromSnapshot === "function") {
         patchSettingsJobFromSnapshot(jobId, data);
       }
       if (state === "done" && !abortPending) {
@@ -916,7 +916,7 @@ async function handleRender() {
         const serverState = String((snap && snap.state) || "").toLowerCase();
         if (serverState === "done" || serverState === "aborted" || serverState === "error") {
           shouldClearActiveJob = true;
-        } else if (serverState === "queued" || serverState === "running") {
+        } else if (serverState === "queued" || serverState === "preparing" || serverState === "running") {
           activeJobId = candidateJobId;
           syncGlobalsToWorkspaceRuntime();
           setRenderActive(true);

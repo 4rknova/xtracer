@@ -24,6 +24,7 @@ namespace web {
 enum job_state_t
 {
     JOB_QUEUED = 0,
+    JOB_PREPARING,
     JOB_RUNNING,
     JOB_DONE,
     JOB_ABORTED,

@@ -137,6 +137,7 @@ static const integrator_control_option_t k_debug_mode_options[] = {
     , { "uv", "UV" }
     , { "emission", "Emission" }
     , { "object_mask", "Object Mask" }
+    , { "environment", "Environment" }
 };
 
 static const integrator_control_option_t k_depth_encoding_options[] = {
@@ -151,6 +152,7 @@ static const integrator_control_info_t k_debug_views_controls[] = {
     , { "depth_encoding", "Depth Encoding", "enum", "Depth output encoding", "legacy", nullptr, nullptr, nullptr, "mode", "depth", k_depth_encoding_options, sizeof(k_depth_encoding_options) / sizeof(k_depth_encoding_options[0]) }
     , { "max_distance", "Max Distance", "float", "Used by depth mode", "1000", "0.01", "1000000", "0.01", "mode", "depth", nullptr, 0 }
     , { "objects", "Objects", "string", "Comma-separated object names to include in the mask", "", nullptr, nullptr, nullptr, "mode", "object_mask", nullptr, 0 }
+    , { "ignore_geometry", "Ignore Geometry", "bool", "Sample environment for all rays, ignoring geometry", "false", nullptr, nullptr, nullptr, "mode", "environment", nullptr, 0 }
 };
 
 static const integrator_control_info_t k_ao_controls[] = {

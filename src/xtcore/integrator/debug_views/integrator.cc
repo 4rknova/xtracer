@@ -95,6 +95,12 @@ xtcore::render::integrator_metadata_t Integrator::metadata() const
             meta.description = "Object mask debug integrator.";
             meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
             break;
+        case VIEW_ENVIRONMENT:
+            meta.id = "environment";
+            meta.name = "Environment";
+            meta.description = "Environment debug integrator.";
+            meta.status = xtcore::render::INTEGRATOR_STATUS_HIDDEN;
+            break;
         case VIEW_NORMAL:
         default:
             meta.id = "debug_views";
@@ -117,6 +123,13 @@ void Integrator::configure(const std::map<std::string, std::string> &options)
         else if (v == "uv")          m_mode = VIEW_UV;
         else if (v == "emission")    m_mode = VIEW_EMISSION;
         else if (v == "object_mask") m_mode = VIEW_OBJECT_MASK;
+        else if (v == "environment") m_mode = VIEW_ENVIRONMENT;
+    }
+
+    auto ig_it = options.find("ignore_geometry");
+    if (ig_it != options.end()) {
+        const std::string &v = ig_it->second;
+        m_ignore_geometry = (v == "1" || v == "true" || v == "yes");
     }
 
     auto obj_it = options.find("objects");
@@ -291,6 +304,16 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             case VIEW_OBJECT_MASK: {
                 if (found_hit && m_mask_ids.count(hit_record.id_object))
                     color_pixel = nimg::ColorRGBAf(1, 1, 1, color_pixel.a() + sample.weight);
+                break;
+            }
+
+            case VIEW_ENVIRONMENT: {
+                nimg::ColorRGBf env(0, 0, 0);
+                if (!found_hit || m_ignore_geometry)
+                    env = ctx->scene.sample_environment(ray.direction);
+                nimg::ColorRGBf acc(color_pixel.r(), color_pixel.g(), color_pixel.b());
+                acc += env * sample.weight;
+                color_pixel = nimg::ColorRGBAf(acc.r(), acc.g(), acc.b(), 1.0f);
                 break;
             }
         }

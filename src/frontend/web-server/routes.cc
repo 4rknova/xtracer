@@ -1872,11 +1872,12 @@ void send_scene_loading(crow::response &res, unsigned long long load_job_id)
 const char *job_state_name(job_state_t state)
 {
     switch (state) {
-        case JOB_QUEUED:  return "queued";
-        case JOB_RUNNING: return "running";
-        case JOB_DONE:    return "done";
-        case JOB_ABORTED: return "aborted";
-        case JOB_ERROR:   return "error";
+        case JOB_QUEUED:    return "queued";
+        case JOB_PREPARING: return "preparing";
+        case JOB_RUNNING:   return "running";
+        case JOB_DONE:      return "done";
+        case JOB_ABORTED:   return "aborted";
+        case JOB_ERROR:     return "error";
     }
     return "unknown";
 }

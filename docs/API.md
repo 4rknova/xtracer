@@ -263,7 +263,7 @@ Returns HTTP 503 `{"error":"render queue is full"}` if the job queue is at capac
 
 ### `GET /api/jobs/active`
 
-List all active (queued, running, recently completed) jobs.
+List all active (queued, preparing, running, recently completed) jobs.
 
 **Job snapshot fields:**
 
@@ -274,7 +274,7 @@ List all active (queued, running, recently completed) jobs.
 | `scene` | Scene filename |
 | `integrator` | Integrator ID |
 | `render_mode` | Render mode string |
-| `state` | `queued`, `running`, `done`, `aborted`, `error` |
+| `state` | `queued`, `preparing`, `running`, `done`, `aborted`, `error` |
 | `progress` | Float 0.0–1.0 |
 | `tiles_done` / `tiles_total` | Tile completion counts |
 | `pass_current` / `pass_total` | Pass counts (progressive modes) |

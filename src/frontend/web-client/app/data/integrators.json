@@ -84,8 +84,17 @@
             { "value": "stencil", "label": "Stencil" },
             { "value": "normal", "label": "Normal" },
             { "value": "uv", "label": "UV" },
-            { "value": "emission", "label": "Emission" }
+            { "value": "emission", "label": "Emission" },
+            { "value": "environment", "label": "Environment" }
           ]
+        },
+        {
+          "id": "ignore_geometry",
+          "label": "Ignore Geometry",
+          "type": "bool",
+          "description": "Sample environment for all rays, ignoring geometry",
+          "default": "false",
+          "visible_when": { "id": "mode", "value": "environment" }
         },
         {
           "id": "depth_encoding",
