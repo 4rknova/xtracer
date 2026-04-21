@@ -1,0 +1,469 @@
+title       = "Isometric Study - Procedural"
+description = "A cozy study with bookshelves, a glowing desk lamp, and dramatic warm/cool mixed lighting from a classic isometric viewpoint"
+version     = "1.0"
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.06, 0.06, 0.10)
+        b = col3(0.02, 0.02, 0.04)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        position = vec3(6.5, 7.0, 6.5)
+        target   = vec3(1.1, 0.8, 1.1)
+        up       = vec3(0, 1, 0)
+        fov      = 38
+    }
+}
+
+geometry = {
+
+    # ── Room surfaces ──────────────────────────────────────────────────────────
+    floor  = { type = plane, normal = vec3(0,1,0),  distance = 0    }
+    wall_z = { type = plane, normal = vec3(0,0,-1), distance = -2.6 }
+    wall_x = { type = plane, normal = vec3(-1,0,0), distance = -2.6 }
+
+    # ── Bookshelf (against back-z wall) ───────────────────────────────────────
+    shelf_body = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(0.85, 1.40, 0.28)
+            translation = vec3(0.85, 0.70, 2.36)
+        }
+    }
+    shelf_divider_hi = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(0.83, 0.025, 0.27)
+            translation = vec3(0.85, 0.70, 2.36)
+        }
+    }
+    shelf_divider_lo = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(0.83, 0.025, 0.27)
+            translation = vec3(0.85, 0.20, 2.36)
+        }
+    }
+
+    # ── Books (upper shelf) ────────────────────────────────────────────────────
+    book1 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.055,0.225,0.22), translation = vec3(0.52, 1.015, 2.36) }
+    }
+    book2 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.060,0.260,0.22), translation = vec3(0.60, 1.035, 2.36) }
+    }
+    book3 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.050,0.190,0.22), translation = vec3(0.68, 1.000, 2.36) }
+    }
+    book4 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.065,0.280,0.22), translation = vec3(0.76, 1.065, 2.36) }
+    }
+    book5 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.055,0.210,0.22), translation = vec3(0.84, 1.010, 2.36) }
+    }
+    book6 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.070,0.300,0.22), translation = vec3(0.93, 1.075, 2.36) }
+    }
+
+    # ── Books (lower shelf) ────────────────────────────────────────────────────
+    book7 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.055,0.240,0.22), translation = vec3(0.54, 0.515, 2.36) }
+    }
+    book8 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.065,0.270,0.22), translation = vec3(0.63, 0.530, 2.36) }
+    }
+    book9 = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.060,0.200,0.22), translation = vec3(0.72, 0.515, 2.36) }
+    }
+
+    # ── Desk ──────────────────────────────────────────────────────────────────
+    desk_top = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(1.00, 0.040, 0.60)
+            translation = vec3(1.00, 0.760, 1.10)
+        }
+    }
+    desk_leg_fl = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.04,0.370,0.04), translation = vec3(0.54, 0.370, 1.38) }
+    }
+    desk_leg_fr = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.04,0.370,0.04), translation = vec3(1.46, 0.370, 1.38) }
+    }
+    desk_leg_bl = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.04,0.370,0.04), translation = vec3(0.54, 0.370, 0.82) }
+    }
+    desk_leg_br = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.04,0.370,0.04), translation = vec3(1.46, 0.370, 0.82) }
+    }
+
+    # ── Desk lamp ─────────────────────────────────────────────────────────────
+    lamp_base = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.09,0.020,0.09), translation = vec3(0.65, 0.810, 0.90) }
+    }
+    lamp_pole = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.015,0.30,0.015), translation = vec3(0.65, 1.110, 0.90) }
+    }
+    lamp_shade = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.16,0.100,0.16), translation = vec3(0.65, 1.440, 0.90) }
+    }
+    lamp_bulb  = { type = sphere, position = vec3(0.65, 1.40, 0.90), radius = 0.060 }
+
+    # ── Chair ─────────────────────────────────────────────────────────────────
+    chair_seat = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.42,0.040,0.40), translation = vec3(1.00, 0.460, 1.66) }
+    }
+    chair_back = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.42,0.400,0.035), translation = vec3(1.00, 0.880, 1.46) }
+    }
+    chair_leg_fl = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.03,0.220,0.03), translation = vec3(0.62, 0.220, 1.84) }
+    }
+    chair_leg_fr = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.03,0.220,0.03), translation = vec3(1.38, 0.220, 1.84) }
+    }
+    chair_leg_bl = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.03,0.220,0.03), translation = vec3(0.62, 0.220, 1.48) }
+    }
+    chair_leg_br = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.03,0.220,0.03), translation = vec3(1.38, 0.220, 1.48) }
+    }
+
+    # ── Rug ───────────────────────────────────────────────────────────────────
+    rug = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = {
+            scale       = vec3(1.10, 0.012, 0.88)
+            translation = vec3(1.05, 0.006, 1.42)
+        }
+    }
+
+    # ── Desk objects ──────────────────────────────────────────────────────────
+    desk_tome = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.16,0.04,0.22), translation = vec3(1.28, 0.82, 0.98) }
+    }
+    desk_mug  = { type = sphere, position = vec3(1.38, 0.86, 1.18), radius = 0.055 }
+    globe     = { type = sphere, position = vec3(1.40, 0.84, 0.88), radius = 0.075 }
+
+    # ── Oil painting on wall ──────────────────────────────────────────────────
+    picture_frame = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.38,0.28,0.025), translation = vec3(1.90, 1.55, 2.595) }
+    }
+    picture_canvas = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.33,0.23,0.012), translation = vec3(1.90, 1.55, 2.608) }
+    }
+
+    # ── Plant pot in corner ───────────────────────────────────────────────────
+    pot_body = {
+        type   = mesh
+        source = gen(hexahedron)
+        modifiers = { scale = vec3(0.12,0.14,0.12), translation = vec3(0.18, 0.14, 2.10) }
+    }
+    plant = { type = sphere, position = vec3(0.18, 0.36, 2.10), radius = 0.14 }
+
+    # ── Light sources ─────────────────────────────────────────────────────────
+    lamp_area = { type = sphere, position = vec3(0.65, 1.60, 0.90), radius = 0.18 }
+    overhead  = { type = sphere, position = vec3(1.20, 3.10, 1.20), radius = 0.30 }
+    moonlight = { type = sphere, position = vec3(3.30, 2.40, 0.50), radius = 0.55 }
+}
+
+material = {
+
+    # ── Room ──────────────────────────────────────────────────────────────────
+    floor_wood = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = fbm_marble, a = col3(0.52,0.36,0.20), b = col3(0.40,0.26,0.13), vein = col3(0.30,0.18,0.07), scale = 3.5, turbulence = 0.28, vein_frequency = 5 }
+            }
+            scalars = { metallic = 0, roughness = 0.55 }
+        }
+    }
+
+    plaster = {
+        type = lambert
+        properties = {
+            samplers = { diffuse = { type = color, value = col3(0.86, 0.83, 0.78) } }
+        }
+    }
+
+    # ── Furniture ─────────────────────────────────────────────────────────────
+    dark_wood = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.20, 0.11, 0.05) } }
+            scalars  = { metallic = 0, roughness = 0.42, clearcoat = 0.35, clearcoat_roughness = 0.18 }
+        }
+    }
+
+    # ── Books ─────────────────────────────────────────────────────────────────
+    book_red = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.55,0.10,0.08) } }
+            scalars  = { metallic = 0, roughness = 0.75 }
+        }
+    }
+    book_blue = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.12,0.22,0.50) } }
+            scalars  = { metallic = 0, roughness = 0.75 }
+        }
+    }
+    book_green = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.32,0.18) } }
+            scalars  = { metallic = 0, roughness = 0.75 }
+        }
+    }
+    book_tan = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.65,0.52,0.30) } }
+            scalars  = { metallic = 0, roughness = 0.72 }
+        }
+    }
+    book_burgundy = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.40,0.08,0.15) } }
+            scalars  = { metallic = 0, roughness = 0.73 }
+        }
+    }
+    book_slate = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.28,0.30,0.38) } }
+            scalars  = { metallic = 0, roughness = 0.72 }
+        }
+    }
+
+    # ── Rug ───────────────────────────────────────────────────────────────────
+    rug_fabric = {
+        type = sheen
+        properties = {
+            samplers = {
+                base_color  = { type = checker, a = col3(0.52,0.14,0.09), b = col3(0.35,0.07,0.05), scale_u = 14, scale_v = 10 }
+                sheen_color = { type = color, value = col3(0.70,0.20,0.14) }
+            }
+            scalars = { sheen = 0.88 }
+        }
+    }
+
+    # ── Lamp ──────────────────────────────────────────────────────────────────
+    brass = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.62,0.50,0.28) } }
+            scalars  = { metallic = 0.95, roughness = 0.28 }
+        }
+    }
+    lamp_shade_mat = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.88,0.72,0.42) } }
+            scalars  = { metallic = 0, roughness = 0.58 }
+        }
+    }
+    lamp_bulb_mat = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(22, 16, 9) } } }
+    }
+
+    # ── Desk objects ──────────────────────────────────────────────────────────
+    ceramic = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.90,0.88,0.85) } }
+            scalars  = { metallic = 0, roughness = 0.18, clearcoat = 0.8, clearcoat_roughness = 0.05 }
+        }
+    }
+    globe_mat = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = checker, a = col3(0.20,0.45,0.65), b = col3(0.60,0.50,0.30), scale_u = 8, scale_v = 8 } }
+            scalars  = { metallic = 0, roughness = 0.35, clearcoat = 0.6 }
+        }
+    }
+    desk_book_mat = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.18,0.25,0.45) } }
+            scalars  = { metallic = 0, roughness = 0.70 }
+        }
+    }
+
+    # ── Painting ──────────────────────────────────────────────────────────────
+    picture_frame_mat = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.32,0.20,0.09) } }
+            scalars  = { metallic = 0, roughness = 0.38, clearcoat = 0.55 }
+        }
+    }
+    oil_painting = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = fbm_marble, a = col3(0.68,0.52,0.38), b = col3(0.30,0.20,0.12), vein = col3(0.85,0.68,0.42), scale = 1.8, turbulence = 0.65, vein_frequency = 2.5 }
+            }
+            scalars = { metallic = 0, roughness = 0.92 }
+        }
+    }
+
+    # ── Plant ─────────────────────────────────────────────────────────────────
+    terracotta = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.58,0.28,0.16) } }
+            scalars  = { metallic = 0, roughness = 0.80 }
+        }
+    }
+    foliage = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.15,0.42,0.18) } }
+            scalars  = { metallic = 0, roughness = 0.85 }
+        }
+    }
+
+    # ── Lights ────────────────────────────────────────────────────────────────
+    lamp_area_mat = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(14, 9.5, 5.0) } } }
+    }
+    overhead_mat = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(5.5, 4.8, 3.5) } } }
+    }
+    moonlight_mat = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(2.8, 3.8, 6.5) } } }
+    }
+}
+
+object = {
+
+    # Room
+    floor  = { geometry = floor,  material = floor_wood }
+    wall_z = { geometry = wall_z, material = plaster }
+    wall_x = { geometry = wall_x, material = plaster }
+
+    # Bookshelf
+    shelf    = { geometry = shelf_body,        material = dark_wood }
+    shelf_hi = { geometry = shelf_divider_hi,  material = dark_wood }
+    shelf_lo = { geometry = shelf_divider_lo,  material = dark_wood }
+
+    # Books
+    book1 = { geometry = book1, material = book_red }
+    book2 = { geometry = book2, material = book_blue }
+    book3 = { geometry = book3, material = book_tan }
+    book4 = { geometry = book4, material = book_green }
+    book5 = { geometry = book5, material = book_burgundy }
+    book6 = { geometry = book6, material = book_slate }
+    book7 = { geometry = book7, material = book_tan }
+    book8 = { geometry = book8, material = book_red }
+    book9 = { geometry = book9, material = book_blue }
+
+    # Desk
+    desk   = { geometry = desk_top,    material = dark_wood }
+    leg_fl = { geometry = desk_leg_fl, material = dark_wood }
+    leg_fr = { geometry = desk_leg_fr, material = dark_wood }
+    leg_bl = { geometry = desk_leg_bl, material = dark_wood }
+    leg_br = { geometry = desk_leg_br, material = dark_wood }
+
+    # Lamp
+    lbase  = { geometry = lamp_base,  material = brass }
+    lpole  = { geometry = lamp_pole,  material = brass }
+    lshade = { geometry = lamp_shade, material = lamp_shade_mat }
+    lbulb  = { geometry = lamp_bulb,  material = lamp_bulb_mat }
+
+    # Chair
+    cseat   = { geometry = chair_seat,   material = dark_wood }
+    cback   = { geometry = chair_back,   material = dark_wood }
+    cleg_fl = { geometry = chair_leg_fl, material = dark_wood }
+    cleg_fr = { geometry = chair_leg_fr, material = dark_wood }
+    cleg_bl = { geometry = chair_leg_bl, material = dark_wood }
+    cleg_br = { geometry = chair_leg_br, material = dark_wood }
+
+    # Rug & desk objects
+    rug_obj  = { geometry = rug,       material = rug_fabric }
+    tome     = { geometry = desk_tome, material = desk_book_mat }
+    mug      = { geometry = desk_mug,  material = ceramic }
+    globe_ob = { geometry = globe,     material = globe_mat }
+
+    # Painting
+    frame  = { geometry = picture_frame,  material = picture_frame_mat }
+    canvas = { geometry = picture_canvas, material = oil_painting }
+
+    # Plant
+    pot   = { geometry = pot_body, material = terracotta }
+    plant = { geometry = plant,    material = foliage }
+
+    # Lights
+    lamp_area_ob = { geometry = lamp_area, material = lamp_area_mat }
+    overhead_ob  = { geometry = overhead,  material = overhead_mat }
+    moonlight_ob = { geometry = moonlight, material = moonlight_mat }
+}
