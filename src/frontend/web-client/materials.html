@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XTRACER Material Gallery</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles/samplers.css">
+  <link rel="stylesheet" href="/styles/materials.css">
+  <script>
+    (function() {
+      var root = document.documentElement;
+      root.setAttribute('data-theme', localStorage.getItem('xtracer-theme') || 'system');
+      root.setAttribute('data-dark-palette', localStorage.getItem('xtracer-dark-palette') || 'slate');
+      root.setAttribute('data-light-palette', localStorage.getItem('xtracer-light-palette') || 'coastal');
+    })();
+  </script>
+</head>
+<body class="sp-page">
+
+  <!-- NCF modal -->
+  <div id="ncfModal" class="sp-modal" hidden>
+    <div class="sp-modal-backdrop"></div>
+    <div class="sp-modal-box">
+      <div class="sp-modal-head">
+        <span class="sp-modal-title">NCF Code</span>
+        <div class="sp-modal-head-actions">
+          <button id="ncfCopyBtn" class="xui-button xui-button--secondary">Copy</button>
+          <button id="ncfCloseBtn" class="xui-button xui-button--ghost">Close</button>
+        </div>
+      </div>
+      <div class="sp-modal-context">
+        <span class="sp-modal-context-label">Name</span>
+        <input id="ncfNameInput" type="text" class="xui-input sp-search" style="width:160px" placeholder="my_material">
+      </div>
+      <pre id="ncfCode" class="sp-modal-code"></pre>
+    </div>
+  </div>
+
+  <div class="sp-shell">
+    <header class="sp-header">
+      <h1 class="sp-title">Material Gallery</h1>
+      <div class="sp-header-controls">
+        <input id="searchInput" type="search" class="xui-input sp-search" placeholder="Filter materials…">
+        <span class="sp-mode-label">Preview</span>
+        <div class="sp-size-chips">
+          <button class="sp-chip active" data-quality="fast">Fast</button>
+          <button class="sp-chip" data-quality="hq">HQ</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="sp-body">
+
+      <div class="sp-sidebar" id="sidebar">
+        <!-- populated by JS -->
+      </div>
+
+      <div class="sp-main">
+
+        <div class="mat-preview-area" id="previewArea">
+          <div class="mat-preview-image-wrap" id="previewImageWrap">
+            <div class="mat-preview-empty" id="previewEmpty">
+              Select a material to preview
+            </div>
+            <img id="previewImage" class="mat-preview-image" alt="Material preview" hidden>
+            <div class="mat-preview-spinner" id="previewSpinner" hidden>
+              <div class="mat-spinner-ring"></div>
+              <span class="mat-spinner-label" id="previewSpinnerLabel">Rendering…</span>
+            </div>
+            <div class="mat-preview-progress" id="previewProgress" hidden>
+              <div class="mat-preview-progress-bar" id="previewProgressBar"></div>
+            </div>
+          </div>
+          <div class="mat-preview-meta" id="previewMeta" hidden>
+            <div class="mat-preview-meta-head">
+              <span class="mat-preview-name" id="previewName"></span>
+              <span class="mat-preview-category" id="previewCategory"></span>
+            </div>
+            <p class="mat-preview-desc" id="previewDesc"></p>
+            <div class="mat-preview-actions">
+              <button id="addToSceneBtn" class="xui-button xui-button--primary">Add to Current Scene</button>
+              <button id="ncfBtn" class="xui-button xui-button--secondary">Copy NCF</button>
+              <button id="reRenderBtn" class="xui-button xui-button--ghost">Re-render</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/materials.js"></script>
+</body>
+</html>

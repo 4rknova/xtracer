@@ -1,0 +1,200 @@
+/* ── Material card grid ─────────────────────────────────────────────────────── */
+
+.mat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  padding: 0 var(--xui-space-3) var(--xui-space-2);
+}
+
+.mat-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.12s;
+  background: var(--bg-2);
+}
+
+.mat-card:hover { border-color: var(--line-strong); }
+.mat-card.selected { border-color: var(--accent); }
+
+/* ── Material thumbnail ──────────────────────────────────────────────────────── */
+
+.mat-thumb-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 3px 3px 0 0;
+}
+
+.mat-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: auto;
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+
+.mat-thumb-img.is-pending {
+  opacity: 0;
+}
+
+@keyframes mat-spin {
+  to { transform: rotate(360deg); }
+}
+
+.mat-card-name {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 3px 3px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--bg-2);
+  line-height: 1.2;
+}
+.mat-card.selected .mat-card-name { color: var(--accent); }
+
+/* ── Detail preview area ─────────────────────────────────────────────────────── */
+
+.mat-preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mat-preview-image-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--preview-bg);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.mat-preview-empty {
+  font-size: 0.8rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+.mat-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: auto;
+  object-fit: contain;
+}
+
+/* ── Spinner overlay ─────────────────────────────────────────────────────────── */
+
+.mat-preview-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xui-space-2);
+  background: color-mix(in srgb, var(--preview-bg) 82%, transparent);
+}
+
+.mat-spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: mat-spin 0.9s linear infinite;
+}
+
+.mat-spinner-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────────── */
+
+.mat-preview-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.mat-preview-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+/* ── Meta panel ──────────────────────────────────────────────────────────────── */
+
+.mat-preview-meta {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding: var(--xui-space-3) var(--xui-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xui-space-2);
+}
+
+.mat-preview-meta-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xui-space-3);
+}
+
+.mat-preview-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mat-preview-category {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.mat-preview-desc {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mat-preview-actions {
+  display: flex;
+  gap: var(--xui-space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .mat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
