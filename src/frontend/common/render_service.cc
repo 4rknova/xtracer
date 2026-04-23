@@ -7,7 +7,9 @@
 #include <iterator>
 #include <mutex>
 #include <memory>
+#include <list>
 #include <map>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <xtcore/strpool.h>
@@ -258,10 +260,397 @@ struct pooled_hash_guard_t
     }
 };
 
+struct prepared_render_t
+{
+    xtcore::render::context_t context;
+    pooled_hash_guard_t camera_guard;
+};
+
+std::string hex_u64(std::uint64_t value)
+{
+    std::ostringstream ss;
+    ss << std::hex << value;
+    return ss.str();
+}
+
+bool file_cache_stamp(const std::string &path, std::uint64_t &out)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return false;
+    std::uint64_t sec = (st.st_mtime >= 0) ? (std::uint64_t)st.st_mtime : 0ULL;
+    std::uint64_t nsec = 0ULL;
+#if defined(__linux__)
+    nsec = (st.st_mtim.tv_nsec >= 0) ? (std::uint64_t)st.st_mtim.tv_nsec : 0ULL;
+#elif defined(__APPLE__)
+    nsec = (st.st_mtimespec.tv_nsec >= 0) ? (std::uint64_t)st.st_mtimespec.tv_nsec : 0ULL;
+#endif
+    const std::uint64_t size = (st.st_size >= 0) ? (std::uint64_t)st.st_size : 0ULL;
+    out = ((sec & 0xffffffffULL) << 32) ^ (nsec & 0xffffffffULL) ^ (size * 0x9e3779b97f4a7c15ULL);
+    return true;
+}
+
+std::string fallback_scene_cache_key(const render_request_t &request)
+{
+    if (request.scene_path.empty()) return std::string();
+    std::uint64_t stamp = 0ULL;
+    if (!file_cache_stamp(request.scene_path, stamp)) return std::string();
+
+    std::ostringstream ss;
+    ss << "file\n"
+       << request.scene_path << "\n"
+       << request.variant << "\n"
+       << hex_u64(stamp);
+    return ss.str();
+}
+
+bool resolve_scene_cache_key(const render_request_t &request, std::string &out)
+{
+    out = request.scene_cache_key;
+    if (!out.empty()) return true;
+    out = fallback_scene_cache_key(request);
+    return !out.empty();
+}
+
+bool can_reuse_cached_scene(const render_request_t &request)
+{
+    if (!request.scene_cache_enabled) return false;
+    return true;
+}
+
+std::unique_ptr<xtcore::asset::ICamera> clone_override_camera(const xtcore::asset::ICamera *base_camera,
+                                                              const render_request_t::camera_override_t &camera_override,
+                                                              std::string &error)
+{
+    if (!base_camera) {
+        error = "no valid camera found";
+        return std::unique_ptr<xtcore::asset::ICamera>();
+    }
+
+    const xtcore::camera::Perspective *perspective = dynamic_cast<const xtcore::camera::Perspective *>(base_camera);
+    if (perspective) {
+        std::unique_ptr<xtcore::camera::Perspective> clone(new xtcore::camera::Perspective(*perspective));
+        clone->position = nmath::Vector3f(
+            static_cast<float>(camera_override.px),
+            static_cast<float>(camera_override.py),
+            static_cast<float>(camera_override.pz));
+        clone->target = nmath::Vector3f(
+            static_cast<float>(camera_override.tx),
+            static_cast<float>(camera_override.ty),
+            static_cast<float>(camera_override.tz));
+        clone->up = nmath::Vector3f(
+            static_cast<float>(camera_override.upx),
+            static_cast<float>(camera_override.upy),
+            static_cast<float>(camera_override.upz));
+        if (camera_override.hfov > 0.01) {
+            clone->fov = static_cast<float>(camera_override.hfov);
+        }
+        return std::unique_ptr<xtcore::asset::ICamera>(clone.release());
+    }
+
+    const xtcore::camera::TiltShift *tilt_shift = dynamic_cast<const xtcore::camera::TiltShift *>(base_camera);
+    if (tilt_shift) {
+        std::unique_ptr<xtcore::camera::TiltShift> clone(new xtcore::camera::TiltShift(*tilt_shift));
+        clone->position = nmath::Vector3f(
+            static_cast<float>(camera_override.px),
+            static_cast<float>(camera_override.py),
+            static_cast<float>(camera_override.pz));
+        clone->target = nmath::Vector3f(
+            static_cast<float>(camera_override.tx),
+            static_cast<float>(camera_override.ty),
+            static_cast<float>(camera_override.tz));
+        clone->up = nmath::Vector3f(
+            static_cast<float>(camera_override.upx),
+            static_cast<float>(camera_override.upy),
+            static_cast<float>(camera_override.upz));
+        if (camera_override.hfov > 0.01) {
+            clone->fov = static_cast<float>(camera_override.hfov);
+        }
+        return std::unique_ptr<xtcore::asset::ICamera>(clone.release());
+    }
+
+    error = "interactive camera override requires perspective camera";
+    return std::unique_ptr<xtcore::asset::ICamera>();
+}
+
+class prepared_scene_cache_t
+{
+    public:
+    static prepared_scene_cache_t &handle()
+    {
+        static prepared_scene_cache_t cache;
+        return cache;
+    }
+
+    bool checkout(const std::string &key, std::unique_ptr<prepared_render_t> &out)
+    {
+        if (key.empty()) return false;
+        std::lock_guard<std::mutex> lock(mut_);
+        auto it = entries_.find(key);
+        if (it == entries_.end()) return false;
+        out = std::move(it->second.prepared);
+        lru_.erase(it->second.lru_it);
+        entries_.erase(it);
+        return out.get() != nullptr;
+    }
+
+    void store(const std::string &key, std::unique_ptr<prepared_render_t> prepared)
+    {
+        if (key.empty() || !prepared) return;
+        std::lock_guard<std::mutex> lock(mut_);
+        erase_locked(key);
+        lru_.push_front(key);
+        cache_entry_t entry;
+        entry.prepared = std::move(prepared);
+        entry.lru_it = lru_.begin();
+        entries_[key] = std::move(entry);
+        prune_locked();
+    }
+
+    private:
+    struct cache_entry_t
+    {
+        std::unique_ptr<prepared_render_t> prepared;
+        std::list<std::string>::iterator lru_it;
+    };
+
+    prepared_scene_cache_t()
+        : mut_()
+        , entries_()
+        , lru_()
+        , max_entries_(4)
+    {}
+
+    void erase_locked(const std::string &key)
+    {
+        auto it = entries_.find(key);
+        if (it == entries_.end()) return;
+        lru_.erase(it->second.lru_it);
+        entries_.erase(it);
+    }
+
+    void prune_locked()
+    {
+        while (entries_.size() > max_entries_ && !lru_.empty()) {
+            const std::string key = lru_.back();
+            erase_locked(key);
+        }
+    }
+
+    std::mutex mut_;
+    std::map<std::string, cache_entry_t> entries_;
+    std::list<std::string> lru_;
+    size_t max_entries_;
+};
+
+struct prepared_render_lease_t
+{
+    bool cacheable;
+    std::string cache_key;
+    std::unique_ptr<prepared_render_t> prepared;
+
+    prepared_render_lease_t()
+        : cacheable(false)
+        , cache_key()
+        , prepared()
+    {}
+
+    ~prepared_render_lease_t()
+    {
+        if (!cacheable || !prepared) return;
+        prepared_scene_cache_t::handle().store(cache_key, std::move(prepared));
+    }
+};
+
+bool load_scene_into_prepared(const render_request_t &request,
+                              prepared_render_t &prepared,
+                              std::string &error)
+{
+    if (request.scene_path.empty()) {
+        error = "scene path is empty";
+        return false;
+    }
+
+    const char *variant_name = request.variant.empty() ? nullptr : request.variant.c_str();
+    int load_err = xtcore::io::scn::load(&(prepared.context.scene), request.scene_path.c_str(), nullptr, variant_name);
+    if (load_err) {
+        error = "failed to load scene";
+        return false;
+    }
+    return true;
+}
+
+bool configure_prepared_render(const render_request_t &request,
+                               prepared_render_t &prepared,
+                               std::string &error)
+{
+    prepared.camera_guard.reset(HASH_ID_INVALID);
+    prepared.context.transient_camera.reset();
+    if (!request.camera.empty()) {
+        prepared.camera_guard.reset(xtcore::pool::str::add(request.camera.c_str()));
+        prepared.context.params.camera = prepared.camera_guard.value;
+    } else {
+        prepared.context.params.camera = find_camera_id_by_name(prepared.context.scene, prepared.context.scene.m_default_camera);
+        if (prepared.context.params.camera == HASH_ID_INVALID) {
+            auto first_cam = prepared.context.scene.m_cameras.begin();
+            if (first_cam != prepared.context.scene.m_cameras.end()) {
+                prepared.context.params.camera = (*first_cam).first;
+            } else {
+                prepared.context.params.camera = HASH_ID_INVALID;
+            }
+        }
+    }
+
+    if (prepared.context.params.camera == HASH_ID_INVALID ||
+        !prepared.context.scene.get_camera(prepared.context.params.camera)) {
+        error = "no valid camera found";
+        return false;
+    }
+
+    if (request.camera_override.enabled) {
+        prepared.context.transient_camera = clone_override_camera(
+            prepared.context.scene.get_camera(prepared.context.params.camera),
+            request.camera_override,
+            error);
+        if (!prepared.context.transient_camera) return false;
+    }
+
+    prepared.context.params.width = request.width;
+    prepared.context.params.height = request.height;
+    prepared.context.params.threads = request.threads;
+    prepared.context.params.samples = request.samples;
+    prepared.context.params.aa = request.aa;
+    prepared.context.params.rdepth = request.rdepth;
+    prepared.context.params.tile_size = request.tile_size;
+    prepared.context.params.sample_distribution = request.sample_distribution;
+    prepared.context.params.tile_order = request.tile_order;
+    prepared.context.init();
+
+    return true;
+}
+
+bool acquire_prepared_render(const render_request_t &request,
+                             prepared_render_lease_t &lease,
+                             std::string &error)
+{
+    lease.cacheable = can_reuse_cached_scene(request) && resolve_scene_cache_key(request, lease.cache_key);
+    if (lease.cacheable) {
+        prepared_scene_cache_t::handle().checkout(lease.cache_key, lease.prepared);
+    }
+
+    if (!lease.prepared) {
+        lease.prepared.reset(new prepared_render_t());
+        if (!load_scene_into_prepared(request, *lease.prepared, error)) {
+            lease.prepared.reset();
+            return false;
+        }
+    }
+
+    if (!configure_prepared_render(request, *lease.prepared, error)) {
+        lease.prepared.reset();
+        return false;
+    }
+    return true;
+}
+
+void collect_photon_debug_points(xtcore::render::IIntegrator *integrator,
+                                 render_result_t &result)
+{
+    xtcore::integrator::photon_mapping::Integrator *pm =
+        dynamic_cast<xtcore::integrator::photon_mapping::Integrator *>(integrator);
+    if (!pm) return;
+
+    const std::vector<nmath::Vector3f> &diffuse = pm->debug_global_points();
+    const std::vector<nmath::Vector3f> &caustic = pm->debug_caustic_points();
+    result.photon_diffuse_points.reserve(diffuse.size());
+    result.photon_caustic_points.reserve(caustic.size());
+    for (size_t i = 0; i < diffuse.size(); ++i) {
+        common::render_result_t::point3_t p;
+        p.x = (float)diffuse[i].x;
+        p.y = (float)diffuse[i].y;
+        p.z = (float)diffuse[i].z;
+        result.photon_diffuse_points.push_back(p);
+    }
+    for (size_t i = 0; i < caustic.size(); ++i) {
+        common::render_result_t::point3_t p;
+        p.x = (float)caustic[i].x;
+        p.y = (float)caustic[i].y;
+        p.z = (float)caustic[i].z;
+        result.photon_caustic_points.push_back(p);
+    }
+}
+
+render_result_t render_prepared_scene_to_png(const render_request_t &request,
+                                             prepared_render_t &prepared,
+                                             progress_callback_t on_progress,
+                                             const std::atomic<bool> *abort_flag,
+                                             bool encode_output)
+{
+    render_result_t result;
+    xtcore::render::context_t &context = prepared.context;
+    context.params.threads = request.threads;
+    context.params.samples = request.samples;
+    context.params.aa = request.aa;
+    context.params.rdepth = request.rdepth;
+    context.params.sample_distribution = request.sample_distribution;
+    context.params.tile_order = request.tile_order;
+
+    std::unique_ptr<xtcore::render::IIntegrator> integrator = create_integrator(request.integrator);
+    if (!integrator) {
+        result.error = "integrator not supported";
+        return result;
+    }
+
+    result.tiles_total = context.tiles.size();
+    progress_state_t progress_state(result.tiles_total, on_progress);
+    progress_handler_on_init_t handler_on_init(&progress_state);
+    progress_handler_on_done_t handler_on_done(&progress_state);
+    for (auto &tile : context.tiles) {
+        tile.setup_handler_on_init(&handler_on_init);
+        tile.setup_handler_on_done(&handler_on_done);
+    }
+
+    integrator->setup(context);
+    integrator->configure(request.integrator_options);
+    static const std::atomic<bool> never_abort(false);
+    if (!abort_flag) abort_flag = &never_abort;
+    integrator->set_abort_flag(abort_flag);
+    xtcore::render::order(context.tiles, context.params.tile_order);
+
+    auto t0 = std::chrono::steady_clock::now();
+    integrator->render();
+    auto t1 = std::chrono::steady_clock::now();
+    result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    if (abort_flag->load()) {
+        result.tiles_total = context.tiles.size();
+        result.tiles_done = progress_state.done.load();
+        result.aborted = true;
+        result.error = "render aborted";
+        return result;
+    }
+
+    collect_photon_debug_points(integrator.get(), result);
+
+    if (encode_output) {
+        nimg::Pixmap framebuffer;
+        xtcore::render::assemble(framebuffer, context);
+        nimg::Pixmap ldr_framebuffer = framebuffer;
+        xtcore::tonemapping::apply(ldr_framebuffer);
+        if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
+            return result;
+        }
+        result.framebuffer = std::move(framebuffer);
+    }
+
+    result.tiles_done = result.tiles_total;
+    result.ok = true;
+    return result;
+}
+
 } // namespace
 
 render_request_t::render_request_t()
     : scene_path()
+    , scene_cache_key()
     , integrator("pathtracer_mis")
     , camera()
     , variant()
@@ -276,6 +665,8 @@ render_request_t::render_request_t()
     , sample_distribution(xtcore::antialiasing::SAMPLE_DISTRIBUTION_GRID)
     , tile_order(xtcore::render::TILE_ORDER_RANDOM)
     , render_mode(RENDER_MODE_PROGRESSIVE)
+    , scene_cache_enabled(true)
+    , save_to_gallery(true)
 {
     camera_override.enabled = false;
     camera_override.px = 0.0;
@@ -421,6 +812,7 @@ render_result_t render_scene_to_png(const render_request_t &request,
                                     const std::atomic<bool> *abort_flag)
 {
     render_result_t result;
+    openmp_thread_limit_guard_t thread_limit_guard(request.threads);
     if (request.render_mode == render_request_t::RENDER_MODE_PROGRESSIVE ||
         request.render_mode == render_request_t::RENDER_MODE_INCREMENTAL) {
         const size_t total_samples = (request.samples > 0) ? request.samples : 1;
@@ -447,6 +839,10 @@ render_result_t render_scene_to_png(const render_request_t &request,
         std::mutex accum_mut;
         size_t global_tiles_total = 0;
         size_t global_tiles_done = 0;
+        prepared_render_lease_t prepared;
+        if (!acquire_prepared_render(request, prepared, result.error)) {
+            return result;
+        }
 
         for (size_t pass_index = 0; pass_index < pass_samples.size(); ++pass_index) {
             if (abort_flag && abort_flag->load()) {
@@ -461,8 +857,9 @@ render_result_t render_scene_to_png(const render_request_t &request,
             pass_request.render_mode = render_request_t::RENDER_MODE_DIRECT;
             pass_request.samples = pass_samples[pass_index];
             const float pass_weight = static_cast<float>(pass_samples[pass_index]);
-            render_result_t pass_result = render_scene_to_png(
+            render_result_t pass_result = render_prepared_scene_to_png(
                 pass_request,
+                *prepared.prepared,
                 [on_progress, pass_index, pass_weight, &pass_samples, &accum_fb, &accum_weight, &accum_mut](progress_event_t event,
                                                                                                               size_t done,
                                                                                                               size_t total,
@@ -515,7 +912,8 @@ render_result_t render_scene_to_png(const render_request_t &request,
                         on_progress(PROGRESS_EVENT_TILE_FINISHED, mapped_done, mapped_total, nullptr, &upd);
                     }
                 },
-                abort_flag);
+                abort_flag,
+                false);
 
             result.elapsed_ms += pass_result.elapsed_ms;
             global_tiles_total = pass_result.tiles_total * pass_samples.size();
@@ -531,12 +929,6 @@ render_result_t render_scene_to_png(const render_request_t &request,
             }
             if (!pass_result.ok) {
                 result.error = pass_result.error;
-                result.tiles_total = global_tiles_total;
-                result.tiles_done = global_tiles_done;
-                return result;
-            }
-            if (pass_result.framebuffer.width() == 0 || pass_result.framebuffer.height() == 0) {
-                result.error = "empty framebuffer";
                 result.tiles_total = global_tiles_total;
                 result.tiles_done = global_tiles_done;
                 return result;
@@ -570,145 +962,11 @@ render_result_t render_scene_to_png(const render_request_t &request,
         return result;
     }
 
-    xtcore::render::context_t context;
-    openmp_thread_limit_guard_t thread_limit_guard(request.threads);
-
-    if (request.scene_path.empty()) {
-        result.error = "scene path is empty";
+    prepared_render_lease_t prepared;
+    if (!acquire_prepared_render(request, prepared, result.error)) {
         return result;
     }
-
-    const char *variant_name = request.variant.empty() ? nullptr : request.variant.c_str();
-    int load_err = xtcore::io::scn::load(&(context.scene), request.scene_path.c_str(), nullptr, variant_name);
-    if (load_err) {
-        result.error = "failed to load scene";
-        return result;
-    }
-
-    pooled_hash_guard_t camera_guard;
-    if (!request.camera.empty()) {
-        camera_guard.reset(xtcore::pool::str::add(request.camera.c_str()));
-        context.params.camera = camera_guard.value;
-    } else {
-        context.params.camera = find_camera_id_by_name(context.scene, context.scene.m_default_camera);
-        if (context.params.camera == HASH_ID_INVALID) {
-            auto first_cam = context.scene.m_cameras.begin();
-            if (first_cam != context.scene.m_cameras.end()) {
-                context.params.camera = (*first_cam).first;
-            } else {
-                context.params.camera = HASH_ID_INVALID;
-            }
-        }
-    }
-
-    if (context.params.camera == HASH_ID_INVALID || !context.scene.get_camera(context.params.camera)) {
-        result.error = "no valid camera found";
-        return result;
-    }
-    if (request.camera_override.enabled) {
-        xtcore::asset::ICamera *cam = context.scene.get_camera(context.params.camera);
-        xtcore::camera::Perspective *pcam = dynamic_cast<xtcore::camera::Perspective *>(cam);
-        if (!pcam) {
-            result.error = "interactive camera override requires perspective camera";
-            return result;
-        }
-        pcam->position = nmath::Vector3f(
-            static_cast<float>(request.camera_override.px),
-            static_cast<float>(request.camera_override.py),
-            static_cast<float>(request.camera_override.pz));
-        pcam->target = nmath::Vector3f(
-            static_cast<float>(request.camera_override.tx),
-            static_cast<float>(request.camera_override.ty),
-            static_cast<float>(request.camera_override.tz));
-        pcam->up = nmath::Vector3f(
-            static_cast<float>(request.camera_override.upx),
-            static_cast<float>(request.camera_override.upy),
-            static_cast<float>(request.camera_override.upz));
-        if (request.camera_override.hfov > 0.01) {
-            pcam->fov = static_cast<float>(request.camera_override.hfov);
-        }
-    }
-
-    context.params.width = request.width;
-    context.params.height = request.height;
-    context.params.threads = request.threads;
-    context.params.samples = request.samples;
-    context.params.aa = request.aa;
-    context.params.rdepth = request.rdepth;
-    context.params.tile_size = request.tile_size;
-    context.params.sample_distribution = request.sample_distribution;
-    context.params.tile_order = request.tile_order;
-    context.init();
-
-    std::unique_ptr<xtcore::render::IIntegrator> integrator = create_integrator(request.integrator);
-    if (!integrator) {
-        result.error = "integrator not supported";
-        return result;
-    }
-
-    result.tiles_total = context.tiles.size();
-    progress_state_t progress_state(result.tiles_total, on_progress);
-    progress_handler_on_init_t handler_on_init(&progress_state);
-    progress_handler_on_done_t handler_on_done(&progress_state);
-    for (auto &tile : context.tiles) {
-        tile.setup_handler_on_init(&handler_on_init);
-        tile.setup_handler_on_done(&handler_on_done);
-    }
-
-    integrator->setup(context);
-    integrator->configure(request.integrator_options);
-    static const std::atomic<bool> never_abort(false);
-    if (!abort_flag) abort_flag = &never_abort;
-    integrator->set_abort_flag(abort_flag);
-    xtcore::render::order(context.tiles, context.params.tile_order);
-
-    auto t0 = std::chrono::steady_clock::now();
-    integrator->render();
-    auto t1 = std::chrono::steady_clock::now();
-    result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    if (abort_flag->load()) {
-        result.tiles_total = context.tiles.size();
-        result.tiles_done = progress_state.done.load();
-        result.aborted = true;
-        result.error = "render aborted";
-        return result;
-    }
-
-    xtcore::integrator::photon_mapping::Integrator *pm =
-        dynamic_cast<xtcore::integrator::photon_mapping::Integrator *>(integrator.get());
-    if (pm) {
-        const std::vector<nmath::Vector3f> &diffuse = pm->debug_global_points();
-        const std::vector<nmath::Vector3f> &caustic = pm->debug_caustic_points();
-        result.photon_diffuse_points.reserve(diffuse.size());
-        result.photon_caustic_points.reserve(caustic.size());
-        for (size_t i = 0; i < diffuse.size(); ++i) {
-            common::render_result_t::point3_t p;
-            p.x = (float)diffuse[i].x;
-            p.y = (float)diffuse[i].y;
-            p.z = (float)diffuse[i].z;
-            result.photon_diffuse_points.push_back(p);
-        }
-        for (size_t i = 0; i < caustic.size(); ++i) {
-            common::render_result_t::point3_t p;
-            p.x = (float)caustic[i].x;
-            p.y = (float)caustic[i].y;
-            p.z = (float)caustic[i].z;
-            result.photon_caustic_points.push_back(p);
-        }
-    }
-
-    nimg::Pixmap framebuffer;
-    xtcore::render::assemble(framebuffer, context);
-    nimg::Pixmap ldr_framebuffer = framebuffer;
-    xtcore::tonemapping::apply(ldr_framebuffer);
-    if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
-        return result;
-    }
-    result.framebuffer = std::move(framebuffer);
-
-    result.tiles_done = result.tiles_total;
-    result.ok = true;
-    return result;
+    return render_prepared_scene_to_png(request, *prepared.prepared, on_progress, abort_flag, true);
 }
 
 } /* namespace common */

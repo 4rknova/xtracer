@@ -68,6 +68,7 @@ struct render_request_t
     };
 
     std::string scene_path;
+    std::string scene_cache_key;
     std::string integrator;
     std::string camera;
     std::string variant;
@@ -85,6 +86,8 @@ struct render_request_t
 
     xtcore::render::TILE_ORDER tile_order;
     render_mode_t render_mode;
+    bool scene_cache_enabled;
+    bool save_to_gallery;
 
     render_request_t();
 };
