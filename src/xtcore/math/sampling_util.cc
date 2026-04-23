@@ -273,6 +273,80 @@ nmath::Vector3f sample_ggx_half_vector(const nmath::Vector3f &normal,
     return h;
 }
 
+nmath::Vector3f sample_ggx_vndf_half_vector(const nmath::Vector3f &normal,
+                                            const nmath::Vector3f &wo,
+                                            nmath::scalar_t roughness,
+                                            nmath::scalar_t &out_pdf_wi)
+{
+    const nmath::scalar_t alpha = clamp_roughness(roughness);
+    const nmath::Vector3f n = normal.normalized();
+    const nmath::Vector3f t = build_tangent(n);
+    const nmath::Vector3f b = nmath::cross(n, t).normalized();
+    const nmath::Vector3f wo_n = wo.normalized();
+
+    // Project wo into local frame (t=x, b=y, n=z) and stretch by alpha
+    const nmath::scalar_t wo_x = nmath::dot(wo_n, t);
+    const nmath::scalar_t wo_y = nmath::dot(wo_n, b);
+    const nmath::scalar_t wo_z = nmath::dot(wo_n, n);
+    nmath::Vector3f Vh(alpha * wo_x, alpha * wo_y, wo_z);
+    const nmath::scalar_t Vh_len = Vh.length();
+    if (Vh_len <= (nmath::scalar_t)EPSILON) {
+        out_pdf_wi = ggx_ndf(n, n, roughness) * smith_ggx_g1(n, wo_n, roughness)
+                   / ((nmath::scalar_t)4.0 * std::max((nmath::scalar_t)EPSILON, nmath_abs(wo_z)));
+        return n;
+    }
+    Vh = Vh / Vh_len;
+
+    // Build tangent frame in stretched space
+    const nmath::scalar_t lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    nmath::Vector3f T1, T2;
+    if (lensq > (nmath::scalar_t)EPSILON) {
+        const nmath::scalar_t inv_len = (nmath::scalar_t)1.0 / nmath_sqrt(lensq);
+        T1 = nmath::Vector3f(-Vh.y * inv_len, Vh.x * inv_len, (nmath::scalar_t)0.0);
+    } else {
+        T1 = nmath::Vector3f((nmath::scalar_t)1.0, (nmath::scalar_t)0.0, (nmath::scalar_t)0.0);
+    }
+    T2 = nmath::Vector3f(Vh.y * T1.z - Vh.z * T1.y,
+                         Vh.z * T1.x - Vh.x * T1.z,
+                         Vh.x * T1.y - Vh.y * T1.x);
+
+    // Sample point on projected disk (Heitz 2018)
+    const nmath::scalar_t u1 = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t u2 = nmath::prng_c(0.0, 1.0);
+    const nmath::scalar_t r = nmath_sqrt(u1);
+    const nmath::scalar_t phi = (nmath::scalar_t)(2.0 * nmath::PI) * u2;
+    nmath::scalar_t a = r * nmath_cos(phi);
+    nmath::scalar_t bv = r * nmath_sin(phi);
+    const nmath::scalar_t s = (nmath::scalar_t)0.5 * ((nmath::scalar_t)1.0 + Vh.z);
+    bv = ((nmath::scalar_t)1.0 - s) * nmath_sqrt(std::max((nmath::scalar_t)0.0, (nmath::scalar_t)1.0 - a * a)) + s * bv;
+
+    const nmath::scalar_t cv = nmath_sqrt(std::max((nmath::scalar_t)0.0, (nmath::scalar_t)1.0 - a * a - bv * bv));
+    nmath::Vector3f Nh(T1.x * a + T2.x * bv + Vh.x * cv,
+                       T1.y * a + T2.y * bv + Vh.y * cv,
+                       T1.z * a + T2.z * bv + Vh.z * cv);
+
+    // Unstretch and convert to world space
+    const nmath::scalar_t h_lx = alpha * Nh.x;
+    const nmath::scalar_t h_ly = alpha * Nh.y;
+    const nmath::scalar_t h_lz = std::max((nmath::scalar_t)0.0, Nh.z);
+    const nmath::scalar_t h_len = nmath_sqrt(h_lx * h_lx + h_ly * h_ly + h_lz * h_lz);
+    if (h_len <= (nmath::scalar_t)EPSILON) {
+        out_pdf_wi = ggx_ndf(n, n, roughness) * smith_ggx_g1(n, wo_n, roughness)
+                   / ((nmath::scalar_t)4.0 * std::max((nmath::scalar_t)EPSILON, nmath_abs(wo_z)));
+        return n;
+    }
+    nmath::Vector3f h_world = t * (h_lx / h_len) + b * (h_ly / h_len) + n * (h_lz / h_len);
+    h_world.normalize();
+
+    // pdf over reflected direction wi: p(wi) = D * G1(wo) / (4 * cos_o)
+    const nmath::scalar_t D = ggx_ndf(n, h_world, roughness);
+    const nmath::scalar_t G1 = smith_ggx_g1(n, wo_n, roughness);
+    const nmath::scalar_t cos_o = std::max((nmath::scalar_t)EPSILON, nmath_abs(nmath::dot(n, wo_n)));
+    out_pdf_wi = D * G1 / ((nmath::scalar_t)4.0 * cos_o);
+
+    return h_world;
+}
+
 nmath::Vector3f sample_ggx_half_vector_anisotropic(const nmath::Vector3f &normal,
                                                    const nmath::Vector3f &tangent,
                                                    const nmath::Vector3f &bitangent,

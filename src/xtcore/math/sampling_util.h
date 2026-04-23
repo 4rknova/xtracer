@@ -27,6 +27,10 @@ nmath::scalar_t power_cosine_lobe_pdf(const nmath::Vector3f &axis,
 nmath::Vector3f sample_ggx_half_vector(const nmath::Vector3f &normal,
                                        nmath::scalar_t roughness,
                                        nmath::scalar_t &out_pdf);
+nmath::Vector3f sample_ggx_vndf_half_vector(const nmath::Vector3f &normal,
+                                            const nmath::Vector3f &wo,
+                                            nmath::scalar_t roughness,
+                                            nmath::scalar_t &out_pdf_wi);
 nmath::Vector3f sample_ggx_half_vector_anisotropic(const nmath::Vector3f &normal,
                                                    const nmath::Vector3f &tangent,
                                                    const nmath::Vector3f &bitangent,
