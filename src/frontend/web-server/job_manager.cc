@@ -466,6 +466,31 @@ void build_preview_pixmap(nimg::Pixmap &pixmap,
     apply_post_filters_for_stage(pixmap, post_filters, false);
 }
 
+void encode_rgba8_srgb(const nimg::Pixmap &pixmap,
+                       std::vector<unsigned char> &out)
+{
+    const size_t width = pixmap.width();
+    const size_t height = pixmap.height();
+    out.resize(width * height * 4);
+
+    auto to_u8_srgb = [](float v) -> unsigned char {
+        const float s = linear_to_srgb(v);
+        const int i = static_cast<int>(s * 255.0f + 0.5f);
+        return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
+    };
+
+    for (size_t py = 0; py < height; ++py) {
+        for (size_t px = 0; px < width; ++px) {
+            const nimg::ColorRGBAf &c = pixmap.pixel_ro(px, py);
+            const size_t off = (py * width + px) * 4;
+            out[off + 0] = to_u8_srgb(c.r());
+            out[off + 1] = to_u8_srgb(c.g());
+            out[off + 2] = to_u8_srgb(c.b());
+            out[off + 3] = 255;
+        }
+    }
+}
+
 void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &fb)
 {
     if (!tile) return;
@@ -1173,7 +1198,9 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             }
             if (event == common::PROGRESS_EVENT_PASS_FINISHED
                 && gm && gm->is_initialized()
-                && upd && upd->source_fb) {
+                && upd && upd->source_fb
+                && job->request.save_to_gallery
+                && job->request.render_mode != common::render_request_t::RENDER_MODE_INTERACTIVE) {
                 const size_t pass_index = done - 1;
                 const auto now = std::chrono::steady_clock::now();
                 const double elapsed_ms = std::chrono::duration<double, std::milli>(
@@ -1248,8 +1275,10 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 << " elapsed_ms=" << std::fixed << std::setprecision(0) << rr.elapsed_ms;
             backend_log_t::handle().add("info", log.str());
 
-            // Save to gallery for direct/interactive mode (no pass events fired)
-            if (gm && gm->is_initialized() && !gallery_entry_created) {
+            // Save to gallery for direct mode (no pass events fired); skip interactive
+            if (gm && gm->is_initialized() && !gallery_entry_created
+                && job->request.save_to_gallery
+                && job->request.render_mode != common::render_request_t::RENDER_MODE_INTERACTIVE) {
                 nimg::Pixmap fb_copy = rr.framebuffer;
                 std::vector<unsigned char> exr;
                 nimg::io::save::exr_memory(fb_copy, exr);
@@ -1345,7 +1374,8 @@ void job_manager_t::cache_evicted_job_locked(const std::shared_ptr<job_t> &job)
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
-        if (job->final_fb.width() > 0 && job->final_fb.height() > 0) {
+        if (job->final_fb.width() > 0 && job->final_fb.height() > 0
+            && job->request.render_mode != common::render_request_t::RENDER_MODE_INTERACTIVE) {
             const std::string exr_path = "/tmp/xtracer_web_job_cache_" + job->id + ".exr";
             nimg::Pixmap fb_copy = job->final_fb;
             std::vector<unsigned char> exr;
@@ -1582,39 +1612,86 @@ bool job_manager_t::image_rgba(const std::string &id,
     std::shared_ptr<job_t> job = get_job(id);
     if (!job) return false;
 
-    nimg::Pixmap fb;
     xtcore::tonemapping::settings_t tm;
     {
         std::lock_guard<std::mutex> lock(job->mut);
-        if (!job->progressive_ready) return false;
-        width_out       = job->request.width;
-        height_out      = job->request.height;
-        tiles_done_out  = job->tiles_done.load();
-        tiles_total_out = job->tiles_total.load();
         tm = job->live_tm_settings;
-        if (!extract_rect_from_framebuffer(job->progressive_fb, 0, 0,
-                                           width_out, height_out, fb)) return false;
     }
+    return image_rgba(id,
+                      rgba_out,
+                      width_out,
+                      height_out,
+                      tiles_done_out,
+                      tiles_total_out,
+                      true,
+                      tm,
+                      false,
+                      "");
+}
 
-    xtcore::tonemapping::apply(fb, tm);
+bool job_manager_t::image_rgba(const std::string &id,
+                               std::vector<unsigned char> &rgba_out,
+                               size_t &width_out,
+                               size_t &height_out,
+                               size_t &tiles_done_out,
+                               size_t &tiles_total_out,
+                               bool allow_partial,
+                               const xtcore::tonemapping::settings_t &tm_settings,
+                               bool post_filters_enabled,
+                               const std::string &post_filters)
+{
+    std::shared_ptr<job_t> job = get_job(id);
+    if (!job) {
+        if (allow_partial) return false;
 
-    const size_t npx = width_out * height_out;
-    rgba_out.resize(npx * 4);
-    auto to_u8_srgb = [](float v) -> unsigned char {
-        const float s = linear_to_srgb(v);
-        const int i = static_cast<int>(s * 255.0f + 0.5f);
-        return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
-    };
-    for (size_t py = 0; py < height_out; ++py) {
-        for (size_t px = 0; px < width_out; ++px) {
-            const nimg::ColorRGBAf &c = fb.pixel_ro(px, py);
-            const size_t off = (py * width_out + px) * 4;
-            rgba_out[off + 0] = to_u8_srgb(c.r());
-            rgba_out[off + 1] = to_u8_srgb(c.g());
-            rgba_out[off + 2] = to_u8_srgb(c.b());
-            rgba_out[off + 3] = 255;
+        std::string exr_path;
+        {
+            std::lock_guard<std::mutex> lock(jobs_mut);
+            auto eit = evicted_jobs.find(id);
+            if (eit == evicted_jobs.end() || eit->second.exr_path.empty()) return false;
+            exr_path = eit->second.exr_path;
         }
+
+        post_filter_chain_t post_chain;
+        std::string post_key_dummy;
+        if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key_dummy)) return false;
+
+        std::vector<unsigned char> exr;
+        if (!read_file_bytes(exr_path.c_str(), exr)) return false;
+
+        nimg::Pixmap fb;
+        if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) return false;
+
+        build_preview_pixmap(fb, tm_settings, post_chain);
+        width_out = fb.width();
+        height_out = fb.height();
+        tiles_done_out = 0;
+        tiles_total_out = 0;
+        encode_rgba8_srgb(fb, rgba_out);
+        return true;
     }
+
+    post_filter_chain_t post_chain;
+    std::string post_key_dummy;
+    if (!parse_post_filter_chain(post_filters_enabled, post_filters, post_chain, post_key_dummy)) return false;
+
+    nimg::Pixmap fb;
+    {
+        std::lock_guard<std::mutex> lock(job->mut);
+        const bool use_final = (job->state == JOB_DONE
+                                && job->final_fb.width() > 0
+                                && job->final_fb.height() > 0);
+        if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
+
+        width_out = job->request.width;
+        height_out = job->request.height;
+        tiles_done_out = use_final ? job->tiles_total.load() : job->tiles_done.load();
+        tiles_total_out = job->tiles_total.load();
+        fb = use_final ? job->final_fb : job->progressive_fb;
+    }
+
+    build_preview_pixmap(fb, tm_settings, post_chain);
+    encode_rgba8_srgb(fb, rgba_out);
     return true;
 }
 

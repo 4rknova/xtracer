@@ -114,6 +114,16 @@ class job_manager_t
                     size_t &height_out,
                     size_t &tiles_done_out,
                     size_t &tiles_total_out);
+    bool image_rgba(const std::string &id,
+                    std::vector<unsigned char> &rgba_out,
+                    size_t &width_out,
+                    size_t &height_out,
+                    size_t &tiles_done_out,
+                    size_t &tiles_total_out,
+                    bool allow_partial,
+                    const xtcore::tonemapping::settings_t &tm_settings,
+                    bool post_filters_enabled,
+                    const std::string &post_filters);
     bool image_delta(const std::string &id,
                      size_t since_done,
                      size_t max_tiles,
