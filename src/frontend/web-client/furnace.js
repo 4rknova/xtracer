@@ -33,6 +33,19 @@
             ],
         },
         {
+            id: 'thin_dielectric',
+            label: 'Thin Dielectric',
+            desc: {
+                expect: 'A thin slab transmits through both surfaces; the result should be near 1.0 because Fresnel reflections at entry and exit are accounted for on both sides.',
+                pitfall: 'Computing only one surface interface, forgetting back-face transmission, or double-applying Fresnel all drive the mean away from 1.0.',
+            },
+            check: checkThinDielectric,
+            cases: [
+                { key: 'clear',   label: 'clear (r=0)' },
+                { key: 'frosted', label: 'frosted (r=0.24)' },
+            ],
+        },
+        {
             id: 'rough_dielectric',
             label: 'Rough Dielectric',
             desc: {
@@ -85,19 +98,6 @@
             ],
         },
         {
-            id: 'thin_dielectric',
-            label: 'Thin Dielectric',
-            desc: {
-                expect: 'A thin slab transmits through both surfaces; the result should be near 1.0 because Fresnel reflections at entry and exit are accounted for on both sides.',
-                pitfall: 'Computing only one surface interface, forgetting back-face transmission, or double-applying Fresnel all drive the mean away from 1.0.',
-            },
-            check: checkThinDielectric,
-            cases: [
-                { key: 'clear',   label: 'clear (r=0)' },
-                { key: 'frosted', label: 'frosted (r=0.24)' },
-            ],
-        },
-        {
             id: 'subsurface',
             label: 'Subsurface Scattering',
             desc: {
@@ -146,10 +146,14 @@
     function fail(reason) { return { pass: false, reason }; }
     function f(v)         { return (v == null) ? '—' : v.toFixed(4); }
     function chSpread(s)  { return Math.max(Math.abs(s.r-s.g), Math.abs(s.r-s.b), Math.abs(s.g-s.b)); }
+    function radialOk(s, minEdgeRatio, maxRadialSpan) {
+        return s && s.edge_ratio >= minEdgeRatio && s.radial_span <= maxRadialSpan;
+    }
 
-    function checkRenderer(d) {
+    function checkRenderer(d, intId) {
         const { white, gray } = d;
         if (!white || !gray) return fail('render failed');
+        if (intId === 'raytracer') return fail('expected — this scene has no explicit lights; energy reaches the sphere only through indirect bounces from the environment. The raytracer only shoots shadow rays toward explicit lights, so every surface hit returns black regardless of albedo. The material is white but the integrator cannot gather any radiance to reflect.');
         if (white.samples < 50 || gray.samples < 50) return fail('insufficient hit samples');
         if (!(white.mean > gray.mean)) return fail(`white not > gray (${f(white.mean)} <= ${f(gray.mean)})`);
         const ratio = gray.mean / Math.max(white.mean, 1e-6);
@@ -162,6 +166,9 @@
     }
 
     function checkRoughDielectric(d) {
+        // Single-scatter GGX energy loss at grazing: clear ~0.83, frosted ~0.76.
+        const minEdgeRatio = 0.72;
+        const maxRadialSpan = 0.28;
         const { clear, frosted } = d;
         if (!clear || !frosted) return fail('render failed');
         if (clear.samples < 50 || frosted.samples < 50) return fail('insufficient hit samples');
@@ -169,6 +176,8 @@
         if (Math.abs(clear.r-clear.g)>0.1 || Math.abs(clear.r-clear.b)>0.1 ||
             Math.abs(frosted.r-frosted.g)>0.1 || Math.abs(frosted.r-frosted.b)>0.1)
             return fail('channel imbalance too high');
+        if (!radialOk(clear, minEdgeRatio, maxRadialSpan) || !radialOk(frosted, minEdgeRatio, maxRadialSpan))
+            return fail(`radial bias too high (clear ratio=${f(clear.edge_ratio)} span=${f(clear.radial_span)}; frosted ratio=${f(frosted.edge_ratio)} span=${f(frosted.radial_span)})`);
         return pass();
     }
 
@@ -203,11 +212,15 @@
     }
 
     function checkThinDielectric(d) {
+        const minEdgeRatio = 0.90;
+        const maxRadialSpan = 0.12;
         const { clear, frosted } = d;
         if (!clear || !frosted) return fail('render failed');
         if (clear.samples < 50 || frosted.samples < 50) return fail('insufficient hit samples');
         if (clear.mean < 0.2 || frosted.mean < 0.18 || clear.mean > 1.1 || frosted.mean > 1.1)
             return fail(`out of range (clear=${f(clear.mean)} frosted=${f(frosted.mean)})`);
+        if (!radialOk(clear, minEdgeRatio, maxRadialSpan) || !radialOk(frosted, minEdgeRatio, maxRadialSpan))
+            return fail(`radial bias too high (clear ratio=${f(clear.edge_ratio)} span=${f(clear.radial_span)}; frosted ratio=${f(frosted.edge_ratio)} span=${f(frosted.radial_span)})`);
         return pass();
     }
 
@@ -391,7 +404,7 @@
         if (!row) return;
 
         const cases = (data && data.cases) ? data.cases : {};
-        const result = group.check(cases);
+        const result = group.check(cases, intId);
         if (result.pass) passedChecks++;
 
         row.className = result.pass ? 'furnace-row--pass' : 'furnace-row--fail';
@@ -418,6 +431,9 @@
                 const stats = document.createElement('div');
                 stats.innerHTML = `<span class="furnace-mean">${f(d.mean)}</span>`
                     + `<span class="furnace-rgb">&nbsp;(r=${f(d.r)}&nbsp;g=${f(d.g)}&nbsp;b=${f(d.b)})</span>`;
+                if (d.edge_ratio != null && d.radial_span != null) {
+                    stats.innerHTML += `<span class="furnace-rgb">&nbsp;edge/center=${f(d.edge_ratio)}&nbsp;span=${f(d.radial_span)}</span>`;
+                }
                 td.appendChild(stats);
             }
             row.appendChild(td);

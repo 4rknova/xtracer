@@ -211,12 +211,11 @@ function parseSceneEditModel(source) {
     });
   });
   splitTopLevelSceneEntries(text, objectGroup).forEach((entry) => {
-    const geometry = readSceneRefProp(entry.body, "geometry");
-    if (!geometry) return;
     objects.set(entry.id, {
       ...entry,
-      geometry,
+      geometry: readSceneRefProp(entry.body, "geometry"),
       material: readSceneRefProp(entry.body, "material"),
+      medium: readSceneRefProp(entry.body, "medium"),
     });
   });
   splitTopLevelSceneEntries(text, materialGroup).forEach((entry) => {
@@ -388,6 +387,42 @@ function uniqueSceneId(existing, base) {
   return id;
 }
 
+function normalizeSceneBlockBody(raw) {
+  const text = String(raw || "").replace(/\r\n?/g, "\n");
+  const lines = text.split("\n");
+  while (lines.length > 0 && !String(lines[0] || "").trim()) lines.shift();
+  while (lines.length > 0 && !String(lines[lines.length - 1] || "").trim()) lines.pop();
+  if (lines.length === 0) return "";
+
+  let minIndent = -1;
+  lines.forEach((line) => {
+    if (!String(line || "").trim()) return;
+    const match = /^([ \t]*)/.exec(line);
+    const indent = match ? match[1].length : 0;
+    if (minIndent < 0 || indent < minIndent) minIndent = indent;
+  });
+  if (minIndent < 0) minIndent = 0;
+
+  return lines.map((line) => line.slice(minIndent)).join("\n");
+}
+
+function addMaterialToSceneSource(source, options) {
+  const model = parseSceneEditModel(source);
+  const materialIds = new Set(Array.from((model.materials || new Map()).keys()));
+  const baseName = sanitizeSceneId(options && (options.materialId || options.baseName), "mat_new");
+  const materialId = uniqueSceneId(materialIds, baseName);
+  const body = normalizeSceneBlockBody(options && options.ncf);
+  if (!body) throw new Error("material definition is empty");
+
+  const entryBody = body.split("\n").map((line) => `\t\t${line}`).join("\n");
+  const materialEntry = `\t${materialId} = {\n${entryBody}\n\t}`;
+  const nextSource = appendEntryToSceneGroup(String(source || ""), "material", materialEntry);
+  return {
+    source: nextSource,
+    materialId,
+  };
+}
+
 function addMeshObjectToSceneSource(source, options) {
   const model = parseSceneEditModel(source);
   const geometryIds = new Set(Array.from(model.geometries.keys()));
@@ -431,6 +466,52 @@ function upsertSceneScalarProp(block, key, value, indent) {
   const suffix = String(block || "").slice(trimmed.length);
   const join = trimmed.length > 0 ? (trimmed.endsWith("\n") ? "" : "\n") : "";
   return `${trimmed}${join}${baseIndent}${key} = ${formatted}${suffix}`;
+}
+
+function updateMaterialScalarInSource(source, materialId, scalarName, value) {
+  const src = String(source || "");
+  const matGroup = findSceneGroupRange(src, "material");
+  if (!matGroup) return src;
+  const entries = splitTopLevelSceneEntries(src, matGroup);
+  const entry = entries.find((e) => e.id === String(materialId || ""));
+  if (!entry) return src;
+  const matBody = src.slice(entry.bodyStart, entry.bodyEnd);
+  const propsRange = findNamedBlockRange(matBody, "properties");
+  if (!propsRange) return src;
+  const scalarsRange = findNamedBlockRange(propsRange.body, "scalars");
+  if (!scalarsRange) return src;
+  const lineIndent = `${geometryEntryIndent(src, entry.entryStart)}\t\t\t`;
+  const newScalarsBody = upsertSceneScalarProp(scalarsRange.body, scalarName, value, lineIndent);
+  const newPropsBody = propsRange.body.slice(0, scalarsRange.bodyStart) + newScalarsBody + propsRange.body.slice(scalarsRange.bodyEnd);
+  const newMatBody = matBody.slice(0, propsRange.bodyStart) + newPropsBody + matBody.slice(propsRange.bodyEnd);
+  return src.slice(0, entry.bodyStart) + newMatBody + src.slice(entry.bodyEnd);
+}
+
+function updateSamplerColorInSource(source, materialId, samplerName, rgb) {
+  const src = String(source || "");
+  const matGroup = findSceneGroupRange(src, "material");
+  if (!matGroup) return src;
+  const entries = splitTopLevelSceneEntries(src, matGroup);
+  const entry = entries.find((e) => e.id === String(materialId || ""));
+  if (!entry) return src;
+  const matBody = src.slice(entry.bodyStart, entry.bodyEnd);
+  const propsRange = findNamedBlockRange(matBody, "properties");
+  if (!propsRange) return src;
+  const samplersRange = findNamedBlockRange(propsRange.body, "samplers");
+  if (!samplersRange) return src;
+  const samplerRange = findNamedBlockRange(samplersRange.body, samplerName);
+  if (!samplerRange) return src;
+  const r = formatSceneNumber(rgb[0], 0);
+  const g = formatSceneNumber(rgb[1], 0);
+  const b = formatSceneNumber(rgb[2], 0);
+  const newCol3 = `col3(${r}, ${g}, ${b})`;
+  const col3Re = /(value\s*=\s*)col3\([^)]*\)/i;
+  if (!col3Re.test(samplerRange.body)) return src;
+  const newSamplerBody = samplerRange.body.replace(col3Re, `$1${newCol3}`);
+  const newSamplersBody = samplersRange.body.slice(0, samplerRange.bodyStart) + newSamplerBody + samplersRange.body.slice(samplerRange.bodyEnd);
+  const newPropsBody = propsRange.body.slice(0, samplersRange.bodyStart) + newSamplersBody + propsRange.body.slice(samplersRange.bodyEnd);
+  const newMatBody = matBody.slice(0, propsRange.bodyStart) + newPropsBody + matBody.slice(propsRange.bodyEnd);
+  return src.slice(0, entry.bodyStart) + newMatBody + src.slice(entry.bodyEnd);
 }
 
 function updateCameraInSource(source, cameraId, params) {
@@ -483,4 +564,60 @@ function addInteractiveCameraToSceneSource(source, options) {
     source: appendEntryToSceneGroup(source, "camera", cameraEntry),
     cameraId,
   };
+}
+
+function setObjectRefInSource(source, objectId, field, targetId) {
+  const model = parseSceneEditModel(source);
+  const obj = model.objects.get(String(objectId || ""));
+  if (!obj) return source;
+  const safeField = String(field || "").replace(/[^a-zA-Z0-9_]/g, "");
+  if (!safeField) return source;
+  const safeTarget = String(targetId || "").replace(/[^A-Za-z0-9_.\-]/g, "");
+  let body = source.slice(obj.bodyStart, obj.bodyEnd);
+  const fieldRe = new RegExp(`\\b${safeField}\\s*=\\s*[A-Za-z0-9_.\\-]+`);
+  if (fieldRe.test(body)) {
+    body = safeTarget
+      ? body.replace(fieldRe, `${safeField} = ${safeTarget}`)
+      : body.replace(fieldRe, "").replace(/  +/g, "  ").trimEnd();
+  } else if (safeTarget) {
+    const trimmed = body.trimEnd();
+    body = trimmed.length > 0 ? `${trimmed}  ${safeField} = ${safeTarget}` : `  ${safeField} = ${safeTarget}`;
+  }
+  return `${source.slice(0, obj.bodyStart)}${body}${source.slice(obj.bodyEnd)}`;
+}
+
+function updateGeometryVec3InSource(source, geoId, prop, vec) {
+  const model = parseSceneEditModel(String(source || ""));
+  const geo = model.geometries.get(String(geoId || ""));
+  if (!geo) return source;
+  const indent = `${geometryEntryIndent(source, geo.entryStart)}\t`;
+  const body = upsertSceneVec3Prop(source.slice(geo.bodyStart, geo.bodyEnd), String(prop || ""), vec, indent);
+  return replaceGeometryBody(source, geo, body);
+}
+
+function updateGeometryScalarInSource(source, geoId, prop, value) {
+  const model = parseSceneEditModel(String(source || ""));
+  const geo = model.geometries.get(String(geoId || ""));
+  if (!geo) return source;
+  const indent = `${geometryEntryIndent(source, geo.entryStart)}\t`;
+  const body = upsertSceneScalarProp(source.slice(geo.bodyStart, geo.bodyEnd), String(prop || ""), value, indent);
+  return replaceGeometryBody(source, geo, body);
+}
+
+function updateCameraVec3InSource(source, cameraId, prop, vec) {
+  const model = parseSceneEditModel(String(source || ""));
+  const cam = (model.cameras || []).find((c) => c.id === String(cameraId || ""));
+  if (!cam) return source;
+  const indent = `${geometryEntryIndent(source, cam.entryStart)}\t`;
+  const body = upsertSceneVec3Prop(source.slice(cam.bodyStart, cam.bodyEnd), String(prop || ""), vec, indent);
+  return `${source.slice(0, cam.bodyStart)}${body}${source.slice(cam.bodyEnd)}`;
+}
+
+function updateCameraScalarInSource(source, cameraId, prop, value) {
+  const model = parseSceneEditModel(String(source || ""));
+  const cam = (model.cameras || []).find((c) => c.id === String(cameraId || ""));
+  if (!cam) return source;
+  const indent = `${geometryEntryIndent(source, cam.entryStart)}\t`;
+  const body = upsertSceneScalarProp(source.slice(cam.bodyStart, cam.bodyEnd), String(prop || ""), value, indent);
+  return `${source.slice(0, cam.bodyStart)}${body}${source.slice(cam.bodyEnd)}`;
 }

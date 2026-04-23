@@ -83,6 +83,13 @@ function sceneDependsOnExternalFiles(source) {
       continue;
     }
 
+    const svgMatch = /^svg_source\s*=\s*(.+)$/i.exec(line);
+    if (svgMatch) {
+      const v = (svgMatch[1] || "").trim();
+      if (v.length > 0) return true;
+      continue;
+    }
+
     // Any non-procedural source assignment is a filesystem dependency.
     const srcMatch = /^source\s*=\s*(.+)$/i.exec(line);
     if (srcMatch) {
@@ -1378,24 +1385,27 @@ async function loadResolutionPresets() {
 }
 
 
-async function loadScenes() {
+async function loadScenes(opts) {
+  const skipStorageRestore = !!(opts && opts.skipStorageRestore);
   const scenes = await api.getScenes();
   const sceneItems = await buildSceneLabels(scenes);
   const prev = el.scene.value;
-  const saved = String(localStorage.getItem(LAST_SCENE_KEY) || "").trim();
+  const saved = skipStorageRestore ? "" : String(localStorage.getItem(LAST_SCENE_KEY) || "").trim();
   el.scene.innerHTML = "";
   sceneCatalog = sceneItems.slice();
   sceneDependencyByFile = new Map(sceneItems.map((item) => [item.sceneFile, !!item.dependsExternal]));
   sceneItems.forEach((item) => addOption(el.scene, item.sceneFile, item.sceneFile));
   const preferred = prev || saved;
   if (preferred) el.scene.value = preferred;
-  if (!el.scene.value && el.scene.options.length > 0) el.scene.selectedIndex = 0;
+  if (!el.scene.value && el.scene.options.length > 0 && !skipStorageRestore) el.scene.selectedIndex = 0;
   if (!sceneCatalogHasFile(sceneBrowserSelectedFile)) {
     sceneBrowserSelectedFile = String(el.scene.value || "").trim();
   }
   updateSceneDependencyPill(el.scene.value);
-  if (el.scene.value) localStorage.setItem(LAST_SCENE_KEY, el.scene.value);
-  else localStorage.removeItem(LAST_SCENE_KEY);
+  if (!skipStorageRestore) {
+    if (el.scene.value) localStorage.setItem(LAST_SCENE_KEY, el.scene.value);
+    else localStorage.removeItem(LAST_SCENE_KEY);
+  }
 }
 
 

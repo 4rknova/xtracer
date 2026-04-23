@@ -714,6 +714,13 @@ function blobUrlForJobImage(jobId, opts) {
   return `/api/jobs/${jobId}/image${qs}`;
 }
 
+function readPositiveIntHeader(headers, name) {
+  const raw = String(headers.get(name) || "").trim();
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.floor(value);
+}
+
 function normalizeVariantName(variant) {
   return String(variant || "").trim();
 }
@@ -883,7 +890,15 @@ function createServerApi() {
     async getJobImage(jobId, opts) {
       const res = await fetch(blobUrlForJobImage(jobId, opts), { cache: "no-store" });
       if (!res.ok) return null;
-      return res.blob();
+      const buffer = await res.arrayBuffer();
+      return {
+        rgba: new Uint8Array(buffer),
+        width: readPositiveIntHeader(res.headers, "X-XTracer-Width"),
+        height: readPositiveIntHeader(res.headers, "X-XTracer-Height"),
+        tilesDone: readPositiveIntHeader(res.headers, "X-XTracer-Tiles-Done"),
+        tilesTotal: readPositiveIntHeader(res.headers, "X-XTracer-Tiles-Total"),
+        pixelFormat: String(res.headers.get("X-XTracer-Pixel-Format") || ""),
+      };
     },
     async putJobLiveTm(jobId, opts) {
       const parts = [];

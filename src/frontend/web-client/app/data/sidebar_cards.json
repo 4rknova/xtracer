@@ -5,8 +5,7 @@
     "frameControlsCard",
     "integratorControlsCard",
     "qualityControlsCard",
-    "toneMappingControlsCard",
-    "postFiltersControlsCard"
+    "toneMappingControlsCard"
   ],
   "visual": {
     "visual": [

@@ -35,6 +35,18 @@ function isPostFilterStackEnabled() {
   return !!postFilterStackEnabled;
 }
 
+function refreshActivePostFilterPreview() {
+  const galleryDetail = document.getElementById("galleryDetail");
+  const galleryPane = document.getElementById("paneGallery");
+  const galleryDetailOpen = !!(galleryDetail
+    && !galleryDetail.hidden
+    && galleryPane
+    && galleryPane.classList.contains("is-detail-open"));
+  if (galleryDetailOpen && typeof reloadGalleryDetailImage === "function") {
+    reloadGalleryDetailImage();
+  }
+}
+
 function normalizePostFilterStage(stage) {
   return String(stage || "").toLowerCase() === "before" ? "before" : "after";
 }
@@ -483,7 +495,7 @@ function finishPostFilterDrag(cancelled) {
       appendLog(`post_filter reorder from_stage=${state.stageName} to_stage=${targetStage} to=${targetPos}`);
       renderPostFilterChain();
       queueWorkspaceSettingsSave();
-      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+      refreshActivePostFilterPreview();
     }
   }
 
@@ -680,7 +692,7 @@ function renderPostFilterChain() {
       postFilterChain.splice(idx, 1);
       renderPostFilterChain();
       appendLog(`post_filter removed idx=${idx}`);
-      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+      refreshActivePostFilterPreview();
       queueWorkspaceSettingsSave();
     });
 
@@ -729,7 +741,7 @@ function renderPostFilterChain() {
       });
       row.classList.toggle("is-disabled", !postFilterChain[idx].enabled);
       appendLog(`post_filter enabled idx=${idx} value=${postFilterChain[idx].enabled ? "1" : "0"}`);
-      if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+      refreshActivePostFilterPreview();
       queueWorkspaceSettingsSave();
     };
 
@@ -845,7 +857,7 @@ function addPostFilterToChain() {
   });
   renderPostFilterChain();
   appendLog(`post_filter add filter=${filterId} stage=after`);
-  if (typeof refreshPreviewForToneMapping === "function") refreshPreviewForToneMapping();
+  refreshActivePostFilterPreview();
   queueWorkspaceSettingsSave();
 }
 

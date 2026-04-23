@@ -145,7 +145,6 @@ async function startRender(extraParams) {
 
   const extra = (extraParams && typeof extraParams === "object") ? { ...extraParams } : {};
   const skipIntegratorOptions = !!extra.__skipIntegratorOptions;
-  const skipPostFilters = !!extra.__skipPostFilters;
   delete extra.__skipIntegratorOptions;
   delete extra.__skipPostFilters;
 
@@ -174,7 +173,6 @@ async function startRender(extraParams) {
     tile_order: el.tileOrder.value,
     threads,
     render_mode: normalizeRenderMode(renderMode),
-    ...(skipPostFilters ? {} : { post_filters: gatherPostFilterParams() }),
     ...(skipIntegratorOptions ? {} : gatherIntegratorOptionParams()),
     ...tmParams,
     ...extra,
@@ -317,7 +315,7 @@ async function watchJobViaWebSocket(jobId, token) {
     // that the server legitimately closing the WebSocket afterwards is not treated as
     // an unexpected disconnect.
     let terminalStateSeen = false;
-    // Serialize all tile draws so concurrent messages don't race on previewObjectUrl.
+    // Serialize tile and final-frame paints so preview canvas updates stay ordered.
     let drawQueue = Promise.resolve();
 
     function finish(result) {
@@ -408,7 +406,7 @@ async function watchJobViaWebSocket(jobId, token) {
           clearActivePreviewTiles();
           resetProgressiveDeltaState("");
           recordFullFrameRenderTime(elapsedMs);
-          const finalBlob = await api.getJobImage(jobId, {
+          const finalFrame = await api.getJobImage(jobId, {
             final: true,
             cacheBust: true,
             toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
@@ -417,12 +415,12 @@ async function watchJobViaWebSocket(jobId, token) {
             toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
             toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
             toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-            postFiltersEnabled: !!postFilterStackEnabled,
-            postFilters: gatherPostFilterParams(),
+            postFiltersEnabled: false,
+            postFilters: "",
           });
-          if (finalBlob && finalBlob.size > 0) {
-            recordPreviewTransfer("full", finalBlob.size || 0);
-            await setPreviewFromBlob(finalBlob);
+          if (finalFrame && finalFrame.rgba && finalFrame.rgba.length > 0) {
+            recordPreviewTransfer("full", finalFrame.rgba.byteLength || finalFrame.rgba.length || 0);
+            await setPreviewFromRawFrame(finalFrame);
           }
           lastCompletedJobId = jobId;
           lastCompletedJobScene = String(snapData.scene || el.scene.value || "");
@@ -773,10 +771,7 @@ async function handleExportClick(event) {
   exportRequestInFlight = true;
   updateDownloadUi();
   try {
-    const blob = await api.getJobExport(lastCompletedJobId, format, {
-      postFiltersEnabled: !!postFilterStackEnabled,
-      postFilters: gatherPostFilterParams(),
-    });
+    const blob = await api.getJobExport(lastCompletedJobId, format);
     if (!blob || blob.size <= 0) {
       throw new Error("empty export payload");
     }
@@ -868,9 +863,15 @@ async function handleRender() {
   previewPinnedBaseBitmapPromise = null;
   if (uiOptions.clearPreviewOnRender) {
     setPreviewEmptyState(true);
-  } else if (!el.previewFrame.classList.contains("is-empty") && (previewObjectUrl || el.preview.getAttribute("src"))) {
+  } else if (!el.previewFrame.classList.contains("is-empty")
+      && ((typeof hasPreviewImage === "function" && hasPreviewImage())
+        || previewObjectUrl
+        || el.preview.getAttribute("src"))) {
     preservePreviewUnderlay = true;
     previewPinnedBaseUrl = previewObjectUrl || el.preview.getAttribute("src") || "";
+    if (typeof captureCurrentPreviewBitmap === "function") {
+      previewPinnedBaseBitmapPromise = captureCurrentPreviewBitmap().catch(() => null);
+    }
   }
   setRenderActive(true);
   updateRenderActionButton();

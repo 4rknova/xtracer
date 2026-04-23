@@ -238,6 +238,7 @@
                 <p id="interactivePreviewHudMode" class="interactive-preview-hud-row">Mode: LOOK</p>
                 <p id="interactivePreviewHudSpeed" class="interactive-preview-hud-row">Speed: 1.0x</p>
                 <p id="interactivePreviewHudQuality" class="interactive-preview-hud-row">Quality: idle</p>
+                <p id="interactivePreviewHudFov" class="interactive-preview-hud-row">FOV: 60.0&deg;</p>
               </div>
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
@@ -262,6 +263,8 @@
                 aria-controls="samplersPanel">Samplers</button>
               <button id="editorViewGeometryBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
                 aria-controls="geometryPanel">Geometry</button>
+              <button id="editorViewMaterialsBtn" class="editor-view-btn" type="button" role="tab" aria-selected="false"
+                aria-controls="materialsPanel">Materials</button>
             </div>
             <div class="editor-view-actions">
               <button id="graphResetLayoutBtn" class="editor-view-icon-btn" type="button"
@@ -452,7 +455,11 @@
                   </tr>
                 </tbody>
               </table>
-              <canvas id="graphCanvas" class="graph-canvas" aria-label="Scene node graph"></canvas>
+              <div id="nodeGraph" class="node-graph" aria-label="Scene node graph">
+                <div id="nodeGraphWorld" class="node-graph-world">
+                  <svg id="nodeGraphLinks" class="node-graph-links" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+              </div>
             </div>
           </section>
           <section class="panel editor-panel" id="textEditorPanel" hidden>
@@ -479,6 +486,9 @@
           </section>
           <section class="panel editor-util-panel" id="geometryPanel" hidden>
             <iframe class="editor-util-frame" title="Geometry Gallery"></iframe>
+          </section>
+          <section class="panel editor-util-panel" id="materialsPanel" hidden>
+            <iframe class="editor-util-frame" title="Material Gallery"></iframe>
           </section>
         </section>
 
@@ -617,6 +627,36 @@
                       </label>
                     </div>
                   </div>
+                  <aside class="gallery-post-filters-panel" aria-labelledby="galleryPostFiltersTitle">
+                    <div class="gallery-post-filters-head">
+                      <div class="gallery-post-filters-heading">
+                        <p class="gallery-post-filters-kicker">Post Filters</p>
+                        <h3 id="galleryPostFiltersTitle" class="gallery-post-filters-title">Individual View Finishing</h3>
+                        <p class="gallery-post-filters-note">Applied to the gallery preview and LDR export from this view.</p>
+                      </div>
+                      <label class="xui-switch gallery-post-filters-switch">
+                        <span class="xui-switch__label">Enable stack</span>
+                        <input id="postFiltersEnabled" type="checkbox" checked>
+                      </label>
+                    </div>
+                    <div class="post-filters-toolbar gallery-post-filters-toolbar">
+                      <select id="postFilterType" class="xui-select" aria-label="Filter to add">
+                        <option value="desaturate">Desaturate</option>
+                        <option value="chromatic_aberration">Chromatic Aberration</option>
+                        <option value="vignette">Vignette</option>
+                        <option value="film_grain">Film Grain</option>
+                        <option value="denoise">Bilateral Denoise</option>
+                        <option value="fxaa">FXAA</option>
+                        <option value="sharpen">Sharpen</option>
+                        <option value="brightness">Brightness</option>
+                        <option value="contrast">Contrast</option>
+                        <option value="raindrops_lens">Raindrops on Lens</option>
+                      </select>
+                      <button id="postFilterAddBtn" class="action-btn xui-button xui-button--primary post-filter-add-btn" type="button" title="Add to chain" aria-label="Add to chain"><span aria-hidden="true">+</span></button>
+                      <button id="postFiltersRecalcBtn" class="action-btn xui-button xui-button--primary post-filter-recalc-btn" type="button" title="Recalculate gallery preview">Recalculate</button>
+                    </div>
+                    <div id="postFiltersChain" class="post-filters-chain gallery-post-filters-chain" aria-live="polite"></div>
+                  </aside>
                 </div>
               </div>
             </div>
@@ -814,6 +854,10 @@
                 <div class="about-meta-row">
                   <span class="about-key">Geometry Gallery</span>
                   <a href="/geometry.html" target="_blank" rel="noopener noreferrer">/geometry.html</a>
+                </div>
+                <div class="about-meta-row">
+                  <span class="about-key">Material Gallery</span>
+                  <a href="/materials.html" target="_blank" rel="noopener noreferrer">/materials.html</a>
                 </div>
                 <div class="about-meta-row">
                   <span class="about-key">UI Showcase</span>

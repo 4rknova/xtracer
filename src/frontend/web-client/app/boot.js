@@ -119,6 +119,47 @@ async function addCameraFromEditorToScene() {
   appendLog(`camera ${next.cameraId} created`);
 }
 
+function replyToEmbeddedMaterialsFrame(sourceWindow, origin, payload) {
+  if (!sourceWindow || typeof sourceWindow.postMessage !== "function") return;
+  const targetOrigin = (origin && origin !== "null") ? origin : window.location.origin;
+  sourceWindow.postMessage(payload, targetOrigin);
+}
+
+async function addMaterialFromGalleryToScene(request) {
+  const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
+  if (!sceneName) throw new Error("no active scene");
+
+  let sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+  if (!sourceText.trim()) {
+    await loadSceneSource(sceneName);
+    sourceText = String(el.sceneSource && el.sceneSource.value ? el.sceneSource.value : "");
+  }
+  if (!sourceText.trim()) throw new Error("scene source is empty");
+
+  const next = addMaterialToSceneSource(sourceText, {
+    materialId: request && request.materialId,
+    ncf: request && request.ncf,
+  });
+
+  updateSceneSourceText(next.source, { history: "visual" });
+  commitHistoryState("text", next.source, el.sceneSource.selectionStart, el.sceneSource.selectionEnd);
+
+  if (workspaceDraftSaveTimer) {
+    clearTimeout(workspaceDraftSaveTimer);
+    workspaceDraftSaveTimer = null;
+  }
+  if (hasBackendMethod(api, "saveWorkspaceSceneDraft")) {
+    await api.saveWorkspaceSceneDraft(sceneName, next.source);
+  }
+
+  setEditorOpStatus("success", `Added material: ${next.materialId}`);
+  appendLog(`material added: ${next.materialId}`);
+  if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") {
+    window.XTracerWidgets.showToast({ message: `Added material "${next.materialId}"`, tone: "success" });
+  }
+  return next.materialId;
+}
+
 function upgradeLegacyStatMarkup() {
   const widgets = window.XTracerWidgets || {};
   if (typeof widgets.renderStatHint !== "function") return;
@@ -201,7 +242,7 @@ async function boot() {
     await trackStartupRequest(refreshWorkspaces());
   }
   await Promise.all([
-    trackStartupRequest(loadScenes()),
+    trackStartupRequest(loadScenes(hasWorkspaceApi ? { skipStorageRestore: true } : undefined)),
     trackStartupRequest(loadIntegrators()),
     trackStartupRequest(loadPostFilters()),
     trackStartupRequest(loadResolutionPresets()),
@@ -344,10 +385,12 @@ async function boot() {
       if (el.visualShowMeshBvh && visualEditor.setMeshBvhVisible) {
         visualEditor.setMeshBvhVisible(el.visualShowMeshBvh.getAttribute("aria-pressed") === "true");
       }
-      try {
-        await loadVisualSceneFromSelected();
-      } catch (err) {
-        appendLog("visual load error: " + err.message);
+      if (loadedStartupScene) {
+        try {
+          await loadVisualSceneFromSelected();
+        } catch (err) {
+          appendLog("visual load error: " + err.message);
+        }
       }
     } else {
       visualEditor = null;
@@ -905,7 +948,7 @@ async function boot() {
       postFilterStackEnabled = !!el.postFiltersEnabled.checked;
       updatePostFilterUiState();
       appendLog(`post_filter stack=${postFilterStackEnabled ? "on" : "off"}`);
-      refreshPreviewForToneMapping();
+      if (typeof refreshActivePostFilterPreview === "function") refreshActivePostFilterPreview();
       queueWorkspaceSettingsSave();
     });
   }
@@ -917,7 +960,7 @@ async function boot() {
   if (el.postFiltersRecalcBtn) {
     el.postFiltersRecalcBtn.addEventListener("click", () => {
       appendLog("post_filter recalculate");
-      refreshPreviewForToneMapping();
+      if (typeof refreshActivePostFilterPreview === "function") refreshActivePostFilterPreview();
     });
   }
 
@@ -1085,15 +1128,52 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
 
   const controlsFlyoutBackdrop = document.getElementById("controlsFlyoutBackdrop");
   const appShell = document.querySelector(".app-shell");
+  const controlsPanel = el.sidebarCards;
+
+  function isDesktopControlsModalViewport() {
+    return !isMobileTabMenuViewport();
+  }
 
   function setControlsPanelOpen(open) {
     if (!appShell) return;
-    appShell.classList.toggle("is-controls-open", open);
-    if (controlsFlyoutBackdrop) controlsFlyoutBackdrop.classList.toggle("is-open", open);
+    const next = !!open;
+    const wasOpen = appShell.classList.contains("is-controls-open");
+    const isDesktop = isDesktopControlsModalViewport();
+    const activeInsidePanel = controlsPanel && controlsPanel.contains(document.activeElement);
+
+    appShell.classList.toggle("is-controls-open", next);
+    if (controlsFlyoutBackdrop) {
+      controlsFlyoutBackdrop.classList.toggle("is-open", next);
+      controlsFlyoutBackdrop.setAttribute("aria-hidden", next ? "false" : "true");
+    }
     if (el.controlsPanelToggle) {
-      el.controlsPanelToggle.setAttribute("aria-expanded", open ? "true" : "false");
-      el.controlsPanelToggle.setAttribute("aria-label", open ? "Close controls" : "Open controls");
-      el.controlsPanelToggle.setAttribute("title", open ? "Close controls" : "Open controls");
+      el.controlsPanelToggle.setAttribute("aria-expanded", next ? "true" : "false");
+      el.controlsPanelToggle.setAttribute("aria-label", next ? "Close controls" : "Open controls");
+      el.controlsPanelToggle.setAttribute("title", next ? "Close controls" : "Open controls");
+    }
+    if (controlsPanel) {
+      controlsPanel.setAttribute("aria-hidden", next ? "false" : "true");
+      if (isDesktop) {
+        controlsPanel.setAttribute("role", "dialog");
+        controlsPanel.setAttribute("aria-modal", "true");
+        controlsPanel.setAttribute("aria-labelledby", "controlsModalTitle");
+        controlsPanel.setAttribute("tabindex", "-1");
+      } else {
+        controlsPanel.removeAttribute("role");
+        controlsPanel.removeAttribute("aria-modal");
+        controlsPanel.removeAttribute("aria-labelledby");
+        controlsPanel.removeAttribute("tabindex");
+      }
+    }
+    if (next && (!wasOpen || isDesktop)) {
+      requestAnimationFrame(() => {
+        const focusTarget = isDesktop && el.controlsModalCloseBtn
+          ? el.controlsModalCloseBtn
+          : controlsPanel;
+        if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus();
+      });
+    } else if (!next && activeInsidePanel && el.controlsPanelToggle) {
+      el.controlsPanelToggle.focus();
     }
   }
 
@@ -1103,6 +1183,9 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
       setControlsPanelOpen(!isOpen);
     });
   }
+  if (el.controlsModalCloseBtn) {
+    el.controlsModalCloseBtn.addEventListener("click", () => setControlsPanelOpen(false));
+  }
 
   if (el.topbarLogsBtn)   el.topbarLogsBtn.addEventListener("click",   () => setActiveTab("logs"));
   if (el.topbarConfigBtn) el.topbarConfigBtn.addEventListener("click", () => setActiveTab("settings"));
@@ -1111,6 +1194,7 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   if (controlsFlyoutBackdrop) {
     controlsFlyoutBackdrop.addEventListener("click", () => setControlsPanelOpen(false));
   }
+  setControlsPanelOpen(false);
 
   const persistentSidebar = document.querySelector(".persistent-sidebar");
   const SHEET_PEEK_PX = 28;
@@ -1150,6 +1234,15 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
     if (event.key !== "Escape") return;
     if (el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) closeControlsSheet();
     if (appShell && appShell.classList.contains("is-controls-open")) setControlsPanelOpen(false);
+  });
+  window.addEventListener("resize", () => {
+    if (isDesktopControlsModalViewport()) {
+      closeControlsSheet();
+      return;
+    }
+    if (appShell && appShell.classList.contains("is-controls-open")) {
+      setControlsPanelOpen(false);
+    }
   });
 
   // Tap the sheet handle to open when closed.
@@ -1280,6 +1373,9 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   }
   if (el.editorViewGeometryBtn) {
     el.editorViewGeometryBtn.addEventListener("click", () => setEditorViewMode("geometry"));
+  }
+  if (el.editorViewMaterialsBtn) {
+    el.editorViewMaterialsBtn.addEventListener("click", () => setEditorViewMode("materials"));
   }
   document.addEventListener("keydown", handleUndoRedoShortcut);
 
@@ -1464,6 +1560,36 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
         widgets.showToast({ message: String(msg), tone: "warning" });
       }
     });
+  });
+
+  window.addEventListener("message", (ev) => {
+    const data = ev && ev.data;
+    if (!data || data.type !== "xtracer-material-add-to-scene") return;
+    if (ev.origin && ev.origin !== window.location.origin) return;
+
+    addMaterialFromGalleryToScene(data)
+      .then((materialId) => {
+        replyToEmbeddedMaterialsFrame(ev.source, ev.origin, {
+          type: "xtracer-material-add-to-scene-result",
+          requestId: data.requestId,
+          ok: true,
+          materialId,
+        });
+      })
+      .catch((err) => {
+        const message = String((err && err.message) || err || "failed to add material");
+        setEditorOpStatus("error", `Add material failed: ${message}`);
+        appendLog(`material add error: ${message}`);
+        if (window.XTracerWidgets && typeof window.XTracerWidgets.showToast === "function") {
+          window.XTracerWidgets.showToast({ message: `Add material failed: ${message}`, tone: "error" });
+        }
+        replyToEmbeddedMaterialsFrame(ev.source, ev.origin, {
+          type: "xtracer-material-add-to-scene-result",
+          requestId: data.requestId,
+          ok: false,
+          error: message,
+        });
+      });
   });
 }
 

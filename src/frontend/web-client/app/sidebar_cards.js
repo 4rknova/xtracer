@@ -1,8 +1,46 @@
 (function (global) {
+  const widgets = window.XTracerWidgets;
+  const dom = widgets.dom;
+
   function htmlToFragment(html) {
     const template = document.createElement("template");
     template.innerHTML = html.trim();
     return template.content;
+  }
+
+  function createSidebarModalHeader() {
+    const closeBtn = widgets.createIconButton({
+      className: "controls-modal-close",
+      variant: "ghost",
+      label: "Close controls",
+      title: "Close controls",
+      icon: dom.svgIcon(
+        "M6 6l12 12M18 6L6 18",
+        "0 0 24 24"
+      ),
+    });
+    closeBtn.id = "controlsModalCloseBtn";
+
+    return dom.el("div", {
+      className: "controls-modal-head",
+      children: [
+        dom.el("div", {
+          className: "controls-modal-heading",
+          children: [
+            dom.el("p", {
+              className: "controls-modal-kicker",
+              text: "Controls",
+            }),
+            dom.el("h2", {
+              className: "controls-modal-title",
+              attrs: { id: "controlsModalTitle" },
+              text: "Render Settings",
+            }),
+          ],
+        }),
+        closeBtn,
+      ],
+    });
   }
 
   function createSidebarCard(config) {
@@ -219,32 +257,6 @@
       `,
     },
     {
-      id: "postFiltersControlsCard",
-      title: "Post Filters",
-      note: "Filter chain order",
-      open: true,
-      bodyHTML: `
-        <label class="xui-switch"><span class="xui-switch__label">Enable Post Filters</span><input id="postFiltersEnabled" type="checkbox" checked></label>
-        <div class="post-filters-toolbar">
-          <select id="postFilterType" class="xui-select" aria-label="Filter to add">
-            <option value="desaturate">Desaturate</option>
-            <option value="chromatic_aberration">Chromatic Aberration</option>
-            <option value="vignette">Vignette</option>
-            <option value="film_grain">Film Grain</option>
-            <option value="denoise">Bilateral Denoise</option>
-            <option value="fxaa">FXAA</option>
-            <option value="sharpen">Sharpen</option>
-            <option value="brightness">Brightness</option>
-            <option value="contrast">Contrast</option>
-            <option value="raindrops_lens">Raindrops on Lens</option>
-          </select>
-          <button id="postFilterAddBtn" class="action-btn xui-button xui-button--primary post-filter-add-btn" type="button" title="Add to chain" aria-label="Add to chain"><span aria-hidden="true">+</span></button>
-          <button id="postFiltersRecalcBtn" class="action-btn xui-button xui-button--primary post-filter-recalc-btn" type="button" title="Recalculate post filters preview">Recalculate</button>
-        </div>
-        <div id="postFiltersChain" class="post-filters-chain" aria-live="polite"></div>
-      `,
-    },
-    {
       id: "exportControlsCard",
       title: "Export",
       note: "Preview and export",
@@ -347,6 +359,7 @@
   function renderSidebarCards(target) {
     if (!(target instanceof HTMLElement)) return;
     target.innerHTML = "";
+    target.appendChild(createSidebarModalHeader());
     CARD_DEFS.forEach((config) => {
       target.appendChild(createSidebarCard(config));
     });

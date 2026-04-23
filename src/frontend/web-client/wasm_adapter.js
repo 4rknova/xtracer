@@ -32,6 +32,7 @@
   const THIRD_PARTY_LICENSES = [
     { name: "cgltf", description: "Single-file glTF 2.0 loader used for importing compact scene assets into the renderer.", used_in: "xtcore", license: "MIT", url: "https://github.com/jkuhlmann/cgltf" },
     { name: "TinyObjLoader", description: "Wavefront OBJ and MTL loader used by the mesh pipeline and scene import path.", used_in: "lib/nmesh, xtcore", license: "MIT", url: "https://github.com/tinyobjloader/tinyobjloader" },
+    { name: "pugixml", description: "XML parser used for Mitsuba scene conversion and SVG silhouette mesh parsing.", used_in: "convertMitsuba, lib/nmesh", license: "MIT", url: "https://pugixml.org/" },
     { name: "STB", description: "Collection of single-header image and utility libraries used for texture IO and image helpers.", used_in: "lib/nimg, xtcore, xtracer-web", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
     { name: "TinyEXR", description: "OpenEXR reader and writer used for high-dynamic-range image support.", used_in: "lib/nimg", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
     { name: "strpool", description: "String interning helper used to keep repeated identifiers compact in runtime data structures.", used_in: "xtcore, frontend/common, xtracer-web, xtracer-wasm", license: "MIT / Public Domain", url: "https://github.com/mattiasgustavsson/libs" },

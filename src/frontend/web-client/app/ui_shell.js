@@ -89,7 +89,7 @@ async function refreshSidebarCardVisibilityConfig(activeMode) {
 function normalizeEditorViewMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "3d") return "visual";
-  if (raw === "visual" || raw === "graph" || raw === "text" || raw === "samplers" || raw === "geometry") return raw;
+  if (raw === "visual" || raw === "graph" || raw === "text" || raw === "samplers" || raw === "geometry" || raw === "materials") return raw;
   return "visual";
 }
 
@@ -120,6 +120,7 @@ function setEditorViewMode(mode, persist) {
   const isText = nextMode === "text";
   const isSamplers = nextMode === "samplers";
   const isGeometry = nextMode === "geometry";
+  const isMaterials = nextMode === "materials";
   editorViewMode = nextMode;
 
   if (el.visualPanel) el.visualPanel.hidden = !isVisual;
@@ -140,6 +141,13 @@ function setEditorViewMode(mode, persist) {
       if (iframe && !iframe.dataset.loaded) { iframe.src = "/geometry.html"; iframe.dataset.loaded = "1"; }
     }
   }
+  if (el.materialsPanel) {
+    el.materialsPanel.hidden = !isMaterials;
+    if (isMaterials) {
+      const iframe = el.materialsPanel.querySelector("iframe");
+      if (iframe && !iframe.dataset.loaded) { iframe.src = "/materials.html"; iframe.dataset.loaded = "1"; }
+    }
+  }
 
   const setActive = (node, state) => {
     if (!node) return;
@@ -152,6 +160,7 @@ function setEditorViewMode(mode, persist) {
   setActive(el.editorViewTextBtn, isText);
   setActive(el.editorViewSamplersBtn, isSamplers);
   setActive(el.editorViewGeometryBtn, isGeometry);
+  setActive(el.editorViewMaterialsBtn, isMaterials);
 
   if (persist !== false) localStorage.setItem(EDITOR_VIEW_MODE_KEY, nextMode);
   if (activeTabMode === "visual") {

@@ -114,6 +114,13 @@ function buildGalleryDetailImageUrl(entryId, passIndex) {
     parts.push(`tm_mantiuk_saturation=${encodeURIComponent(galleryTm.mantiukSaturation)}`);
     parts.push(`tm_mantiuk_detail=${encodeURIComponent(galleryTm.mantiukDetail)}`);
   }
+  if (typeof gatherPostFilterParams === "function" && typeof isPostFilterStackEnabled === "function") {
+    const postFilters = gatherPostFilterParams();
+    if (isPostFilterStackEnabled() && postFilters) {
+      parts.push("post_filters_enabled=1");
+      parts.push(`post_filters=${encodeURIComponent(postFilters)}`);
+    }
+  }
   const qs = `?${parts.join("&")}`;
   if (passIndex >= 0) {
     return `/api/gallery/${encodeURIComponent(entryId)}/pass/${passIndex}/image${qs}`;
@@ -945,6 +952,10 @@ function openGalleryDetail(entry) {
   if (exportFormatSel && window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelect === "function") {
     window.XTracerWidgets.enhanceSelect(exportFormatSel);
   }
+  const postFilterTypeSel = document.getElementById("postFilterType");
+  if (postFilterTypeSel && window.XTracerWidgets && typeof window.XTracerWidgets.enhanceSelect === "function") {
+    window.XTracerWidgets.enhanceSelect(postFilterTypeSel);
+  }
 
   initGalleryTmFromEntry(entry);
   updateGalleryExportUi();
@@ -1027,6 +1038,13 @@ function buildGalleryExportUrl(entryId, passIndex, format) {
       parts.push(`tm_mantiuk_contrast=${encodeURIComponent(galleryTm.mantiukContrast)}`);
       parts.push(`tm_mantiuk_saturation=${encodeURIComponent(galleryTm.mantiukSaturation)}`);
       parts.push(`tm_mantiuk_detail=${encodeURIComponent(galleryTm.mantiukDetail)}`);
+    }
+    if (typeof gatherPostFilterParams === "function" && typeof isPostFilterStackEnabled === "function") {
+      const postFilters = gatherPostFilterParams();
+      if (isPostFilterStackEnabled() && postFilters) {
+        parts.push("post_filters_enabled=1");
+        parts.push(`post_filters=${encodeURIComponent(postFilters)}`);
+      }
     }
   }
   const qs = `?${parts.join("&")}`;

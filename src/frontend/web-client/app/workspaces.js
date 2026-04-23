@@ -1094,7 +1094,7 @@ async function applyActiveWorkspaceState(snapshot, options) {
           loadCameras(wsScene, variantName),
           loadSceneSource(wsScene),
         ]);
-        if (visualEditor && editorViewMode === "visual" && sceneChanged) {
+        if (visualEditor && editorViewMode === "visual") {
           try {
             await loadVisualSceneFromSelected();
           } catch (err) {
