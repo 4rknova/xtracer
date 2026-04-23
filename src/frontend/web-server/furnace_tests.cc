@@ -2,11 +2,13 @@
 
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <vector>
 
 #include <nimg/img.h>
+#include <nimg/luminance.h>
 #include <nimg/pixmap.h>
 
 #include <xtcore/context.h>
@@ -37,8 +39,85 @@ namespace {
 
 struct rgb_stats_t {
     float r, g, b, mean;
+    float center_mean, edge_mean, edge_ratio, radial_span;
     size_t samples;
 };
+
+bool collect_rgb_stats(nimg::Pixmap &frame,
+                       size_t width,
+                       size_t height,
+                       const std::vector<unsigned char> &mask,
+                       rgb_stats_t &out)
+{
+    if (mask.size() != width * height) return false;
+
+    double sr = 0.0, sg = 0.0, sb = 0.0;
+    double sx = 0.0, sy = 0.0;
+    size_t count = 0;
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            if (!mask[y * width + x]) continue;
+            const nimg::ColorRGBAf p = frame.pixel(x, y);
+            if (!std::isfinite(p.r()) || !std::isfinite(p.g()) || !std::isfinite(p.b())) return false;
+            sr += p.r();
+            sg += p.g();
+            sb += p.b();
+            sx += static_cast<double>(x) + 0.5;
+            sy += static_cast<double>(y) + 0.5;
+            ++count;
+        }
+    }
+    if (count == 0) return false;
+
+    const double cx = sx / static_cast<double>(count);
+    const double cy = sy / static_cast<double>(count);
+
+    double rmax = 0.0;
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            if (!mask[y * width + x]) continue;
+            const double dx = (static_cast<double>(x) + 0.5) - cx;
+            const double dy = (static_cast<double>(y) + 0.5) - cy;
+            rmax = std::max(rmax, std::sqrt(dx * dx + dy * dy));
+        }
+    }
+    if (rmax <= 1e-6) return false;
+
+    static const size_t k_bins = 4;
+    double radial_sum[k_bins] = {0.0, 0.0, 0.0, 0.0};
+    size_t radial_count[k_bins] = {0, 0, 0, 0};
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            if (!mask[y * width + x]) continue;
+            const double dx = (static_cast<double>(x) + 0.5) - cx;
+            const double dy = (static_cast<double>(y) + 0.5) - cy;
+            const double rn = std::min(0.999999, std::sqrt(dx * dx + dy * dy) / rmax);
+            const size_t bin = std::min(k_bins - 1, static_cast<size_t>(rn * static_cast<double>(k_bins)));
+            radial_sum[bin] += nimg::eval::luminance(frame.pixel(x, y));
+            radial_count[bin] += 1;
+        }
+    }
+
+    double radial_min = std::numeric_limits<double>::infinity();
+    double radial_max = -std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < k_bins; ++i) {
+        if (radial_count[i] == 0) return false;
+        const double bin_mean = radial_sum[i] / static_cast<double>(radial_count[i]);
+        radial_min = std::min(radial_min, bin_mean);
+        radial_max = std::max(radial_max, bin_mean);
+    }
+
+    out.r = static_cast<float>(sr / static_cast<double>(count));
+    out.g = static_cast<float>(sg / static_cast<double>(count));
+    out.b = static_cast<float>(sb / static_cast<double>(count));
+    out.mean = (out.r + out.g + out.b) / 3.0f;
+    out.center_mean = static_cast<float>(radial_sum[0] / static_cast<double>(radial_count[0]));
+    out.edge_mean = static_cast<float>(radial_sum[k_bins - 1] / static_cast<double>(radial_count[k_bins - 1]));
+    out.edge_ratio = static_cast<float>(out.edge_mean / std::max(1e-6f, out.center_mean));
+    out.radial_span = static_cast<float>(radial_max - radial_min);
+    out.samples = count;
+    return true;
+}
 
 // ---- base64 ----------------------------------------------------------------
 
@@ -167,24 +246,7 @@ bool collect_stats(xtcore::render::context_t &ctx,
 
     nimg::Pixmap frame;
     xtcore::render::assemble(frame, ctx);
-
-    double sr = 0.0, sg = 0.0, sb = 0.0;
-    size_t count = 0;
-    for (size_t y = 0; y < ctx.params.height; ++y) {
-        for (size_t x = 0; x < ctx.params.width; ++x) {
-            if (!mask[y * ctx.params.width + x]) continue;
-            const nimg::ColorRGBAf p = frame.pixel(x, y);
-            if (!std::isfinite(p.r()) || !std::isfinite(p.g()) || !std::isfinite(p.b())) return false;
-            sr += p.r(); sg += p.g(); sb += p.b();
-            ++count;
-        }
-    }
-    if (count == 0) return false;
-    out.r       = static_cast<float>(sr / static_cast<double>(count));
-    out.g       = static_cast<float>(sg / static_cast<double>(count));
-    out.b       = static_cast<float>(sb / static_cast<double>(count));
-    out.mean    = (out.r + out.g + out.b) / 3.0f;
-    out.samples = count;
+    if (!collect_rgb_stats(frame, ctx.params.width, ctx.params.height, mask, out)) return false;
 
     if (img_b64) {
         xtcore::tonemapping::apply(frame);
@@ -204,7 +266,12 @@ std::string emit_stats(bool ok, const rgb_stats_t &s, const std::string &img = "
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(6);
     ss << "{\"r\":" << s.r << ",\"g\":" << s.g << ",\"b\":" << s.b
-       << ",\"mean\":" << s.mean << ",\"samples\":" << s.samples;
+       << ",\"mean\":" << s.mean
+       << ",\"center_mean\":" << s.center_mean
+       << ",\"edge_mean\":" << s.edge_mean
+       << ",\"edge_ratio\":" << s.edge_ratio
+       << ",\"radial_span\":" << s.radial_span
+       << ",\"samples\":" << s.samples;
     if (!img.empty())
         ss << ",\"img\":\"" << img << "\"";
     ss << "}";
@@ -597,16 +664,16 @@ std::string run_furnace_group(const std::string &group, const std::string &integ
     std::ostringstream cases;
     bool known = true;
 
-    if      (group == "renderer")                  run_renderer(integrator, cases);
-    else if (group == "rough_dielectric")          run_rough_dielectric(integrator, cases);
+    if      (group == "renderer")                   run_renderer(integrator, cases);
+    else if (group == "thin_dielectric")            run_thin_dielectric(integrator, cases);
+    else if (group == "rough_dielectric")           run_rough_dielectric(integrator, cases);
     else if (group == "absorbing_rough_dielectric") run_absorbing_rough_dielectric(cases);
-    else if (group == "principled_clearcoat")      run_principled_clearcoat(integrator, cases);
-    else if (group == "principled_anisotropy")     run_principled_anisotropy(integrator, cases);
-    else if (group == "thin_dielectric")           run_thin_dielectric(integrator, cases);
-    else if (group == "subsurface")                run_subsurface(integrator, cases);
-    else if (group == "sheen")                     run_sheen(integrator, cases);
-    else if (group == "thin_translucent")          run_thin_translucent(integrator, cases);
-    else                                           known = false;
+    else if (group == "principled_clearcoat")       run_principled_clearcoat(integrator, cases);
+    else if (group == "principled_anisotropy")      run_principled_anisotropy(integrator, cases);
+    else if (group == "subsurface")                 run_subsurface(integrator, cases);
+    else if (group == "sheen")                      run_sheen(integrator, cases);
+    else if (group == "thin_translucent")           run_thin_translucent(integrator, cases);
+    else                                            known = false;
 
     if (!known)
         return "{\"error\":\"unknown group\"}";
