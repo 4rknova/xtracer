@@ -8,6 +8,13 @@
 // Calls into: syncRenderPreviewAuxPanel, requestInteractivePreviewRender,
 // appendLog, hasBackendMethod, selectedSceneVariantValue, normalizeRenderMode,
 // isInteractiveRenderMode (preview.js).
+//
+// Keyboard shortcuts (when not typing in an input):
+//   W/A/S/D  — fly forward/left/back/right
+//   Q/E      — fly down/up
+//   Shift    — 3x speed multiplier
+//   R        — reset camera to scene default
+//   F        — re-anchor orbit pivot to current look-at target
 
 function interactivePreviewAvailable() {
   return !!interactivePreviewEnabled
@@ -46,6 +53,10 @@ function renderInteractivePreviewHud() {
   }
   if (el.interactivePreviewHudQuality) {
     el.interactivePreviewHudQuality.textContent = `Quality: ${interactivePreviewHudQuality || "idle"}`;
+  }
+  if (el.interactivePreviewHudFov) {
+    const fov = Number(interactivePreviewCamera && interactivePreviewCamera.hfov) || 60;
+    el.interactivePreviewHudFov.textContent = `FOV: ${fov.toFixed(1)}\u00b0`;
   }
 }
 
@@ -185,9 +196,11 @@ function markInteractiveCameraDirty() {
 
 function interactiveLookCamera(dx, dy) {
   if (!interactivePreviewCamera.ready) return;
-  interactivePreviewCamera.orbitYaw = (Number(interactivePreviewCamera.orbitYaw) || 0) - (dx * 0.005);
+  const fov = Number(interactivePreviewCamera.hfov) || 60;
+  const sensitivity = 0.005 * clamp(fov / 60, 0.25, 2.0);
+  interactivePreviewCamera.orbitYaw = (Number(interactivePreviewCamera.orbitYaw) || 0) - (dx * sensitivity);
   interactivePreviewCamera.orbitPitch = clamp(
-    (Number(interactivePreviewCamera.orbitPitch) || 0) - (dy * 0.005),
+    (Number(interactivePreviewCamera.orbitPitch) || 0) - (dy * sensitivity),
     -1.45,
     1.45,
   );
@@ -268,11 +281,21 @@ function bindInteractivePreviewKeyboard() {
     else if (k === "q") interactivePreviewKeyState.q = down;
     else if (k === "e") interactivePreviewKeyState.e = down;
     else if (k === "shift") interactivePreviewKeyState.shift = down;
-    else handled = false;
+    else if (k === "r" && down) {
+      refreshInteractivePreviewCameraFromSelection()
+        .then((ok) => {
+          if (ok && typeof requestInteractivePreviewRender === "function") requestInteractivePreviewRender();
+        }).catch(() => {});
+    } else if (k === "f" && down) {
+      resetInteractiveOrbitFromCamera(false);
+      markInteractiveCameraDirty();
+    } else handled = false;
     if (!handled) return;
     evt.preventDefault();
-    interactivePreviewHudMode = "FLY";
-    renderInteractivePreviewHud();
+    if (k !== "r" && k !== "f") {
+      interactivePreviewHudMode = "FLY";
+      renderInteractivePreviewHud();
+    }
     markInteractiveInputActivity();
   };
   window.addEventListener("keydown", (evt) => applyKey(evt, true));
@@ -315,5 +338,13 @@ function interactiveZoomCamera(deltaY) {
   const nextDist = clamp(dist * amount, 0.02, 1e6);
   interactivePreviewCamera.orbitDistance = nextDist;
   applyInteractiveOrbitCameraState();
+  markInteractiveCameraDirty();
+}
+
+function interactiveAdjustFov(deltaY) {
+  if (!interactivePreviewCamera.ready) return;
+  const fov = Number(interactivePreviewCamera.hfov) || 60;
+  const amount = Math.exp(deltaY * 0.001);
+  interactivePreviewCamera.hfov = clamp(fov * amount, 1, 179);
   markInteractiveCameraDirty();
 }

@@ -764,7 +764,8 @@ function bindPreviewInteraction() {
     if (!interactive && !hasPreviewImage()) return;
     evt.preventDefault();
     if (interactive) {
-      interactiveZoomCamera(evt.deltaY);
+      if (evt.ctrlKey) interactiveAdjustFov(evt.deltaY);
+      else interactiveZoomCamera(evt.deltaY);
       return;
     }
     zoomPreviewAt(evt.clientX, evt.clientY, evt.deltaY);
@@ -808,6 +809,9 @@ function bindPreviewInteraction() {
       previewView.lastX = evt.clientX;
       previewView.lastY = evt.clientY;
       previewView.panMode = (evt.button === 1 || evt.button === 2 || evt.shiftKey) ? "pan" : "orbit";
+      if (previewView.panMode === "orbit" && evt.pointerType !== "touch") {
+        el.previewFrame.requestPointerLock().catch(() => {});
+      }
       interactivePreviewHudMode = previewView.panMode === "pan" ? "PAN" : "LOOK";
       renderInteractivePreviewHud();
       el.previewFrame.setPointerCapture(evt.pointerId);
@@ -869,10 +873,13 @@ function bindPreviewInteraction() {
         }
       }
       if (!(previewView.panning && previewView.pointerId === evt.pointerId)) return;
-      const dx = evt.clientX - previewView.lastX;
-      const dy = evt.clientY - previewView.lastY;
-      previewView.lastX = evt.clientX;
-      previewView.lastY = evt.clientY;
+      const locked = document.pointerLockElement === el.previewFrame;
+      const dx = locked ? evt.movementX : (evt.clientX - previewView.lastX);
+      const dy = locked ? evt.movementY : (evt.clientY - previewView.lastY);
+      if (!locked) {
+        previewView.lastX = evt.clientX;
+        previewView.lastY = evt.clientY;
+      }
       if (previewView.panMode === "pan") interactivePanCamera(-dx, -dy);
       else interactiveLookCamera(dx, dy);
       return;
@@ -938,6 +945,7 @@ function bindPreviewInteraction() {
     previewView.panMode = "";
     interactivePreviewHudMode = "LOOK";
     renderInteractivePreviewHud();
+    if (document.pointerLockElement === el.previewFrame) document.exitPointerLock();
     try {
       el.previewFrame.releasePointerCapture(evt.pointerId);
     } catch (_) {
@@ -952,6 +960,16 @@ function bindPreviewInteraction() {
   el.previewFrame.addEventListener("pointerleave", (evt) => {
     if (!previewView.panning || previewView.pointerId !== evt.pointerId) return;
     endPan(evt);
+  });
+
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement !== el.previewFrame && previewView.panning && previewView.panMode === "orbit") {
+      previewView.panning = false;
+      previewView.pointerId = null;
+      previewView.panMode = "";
+      interactivePreviewHudMode = "LOOK";
+      renderInteractivePreviewHud();
+    }
   });
 
   bindInteractivePreviewKeyboard();
@@ -1027,23 +1045,78 @@ async function setPreviewFromBlob(blob) {
   return true;
 }
 
-// Repaints previewState.tileAccumCanvas from a REST-fetched blob (e.g. partial image with
-// updated TM/post-FX settings) WITHOUT clearing the canvas or disrupting the
-// WS tile accumulation pipeline. Future WS tiles continue to draw on top.
-// Safe to call during active rendering; no-op if previewState.tileAccumCanvas is null.
-async function repaintTileAccumCanvasFromBlob(blob) {
-  if (!previewState.tileAccumCanvas || !previewState.tileAccumCtx) return false;
-  try {
-    const bmp = await createImageBitmap(blob);
-    // Guard against the canvas being cleared while awaiting decode.
-    if (!previewState.tileAccumCanvas || !previewState.tileAccumCtx) { bmp.close(); return false; }
-    previewState.tileAccumCtx.drawImage(bmp, 0, 0, previewState.tileAccumCanvas.width, previewState.tileAccumCanvas.height);
-    bmp.close();
-    applyPreviewTransform();
-    return true;
-  } catch (_) {
-    return false;
+function revokePreviewObjectUrls() {
+  if (previewPinnedBaseUrl && previewPinnedBaseUrl.startsWith("blob:") && previewPinnedBaseUrl !== previewObjectUrl) {
+    URL.revokeObjectURL(previewPinnedBaseUrl);
   }
+  if (previewPendingRevokeUrl && previewPendingRevokeUrl !== previewPinnedBaseUrl) {
+    URL.revokeObjectURL(previewPendingRevokeUrl);
+  }
+  previewPendingRevokeUrl = "";
+  if (previewObjectUrl) {
+    URL.revokeObjectURL(previewObjectUrl);
+    previewObjectUrl = "";
+  }
+}
+
+function frameBytesToImageData(frame) {
+  const width = Math.max(0, Number((frame && frame.width) || 0));
+  const height = Math.max(0, Number((frame && frame.height) || 0));
+  const rgba = frame && frame.rgba ? frame.rgba : null;
+  if (!width || !height || !rgba || !rgba.length) return null;
+  if (rgba.length !== width * height * 4) return null;
+  const clamped = new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  return new ImageData(clamped, width, height);
+}
+
+async function drawRawFrameToPreviewCanvas(frame, opts) {
+  const imageData = frameBytesToImageData(frame);
+  if (!imageData) return false;
+
+  const width = imageData.width;
+  const height = imageData.height;
+  const compositePinnedBase = !!(opts && opts.compositePinnedBase);
+  const ctx = ensureTileAccumCanvas(width, height);
+  if (!ctx) return false;
+
+  if (compositePinnedBase) {
+    const baseBitmap = await getPinnedBaseBitmap();
+    if (baseBitmap) {
+      const overlayCanvas = document.createElement("canvas");
+      overlayCanvas.width = width;
+      overlayCanvas.height = height;
+      const overlayCtx = overlayCanvas.getContext("2d");
+      if (!overlayCtx) return false;
+      overlayCtx.putImageData(imageData, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(baseBitmap, 0, 0, width, height);
+      ctx.drawImage(overlayCanvas, 0, 0, width, height);
+    } else {
+      ctx.putImageData(imageData, 0, 0);
+    }
+  } else {
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  const nearest = isNearestPreviewSampling();
+  el.previewFrame.classList.toggle("sampling-nearest", nearest);
+  setPreviewEmptyState(false);
+  applyPreviewTransform();
+  return true;
+}
+
+async function setPreviewFromRawFrame(frame, opts) {
+  previewSwapToken += 1;
+  revokePreviewObjectUrls();
+  el.preview.removeAttribute("src");
+  return drawRawFrameToPreviewCanvas(frame, opts);
+}
+
+// Repaints previewState.tileAccumCanvas from REST-fetched raw RGBA WITHOUT
+// clearing the canvas lifecycle or disrupting the WS tile accumulation path.
+async function repaintTileAccumCanvasFromRawFrame(frame) {
+  if (!previewState.tileAccumCanvas || !previewState.tileAccumCtx) return false;
+  return drawRawFrameToPreviewCanvas(frame, { compositePinnedBase: false });
 }
 
 function applyPreviewSampling() {
@@ -1054,7 +1127,9 @@ function applyPreviewSampling() {
 }
 
 async function getPinnedBaseBitmap() {
-  if (!preservePreviewUnderlay || !previewPinnedBaseUrl) return null;
+  if (!preservePreviewUnderlay) return null;
+  if (previewPinnedBaseBitmapPromise) return previewPinnedBaseBitmapPromise;
+  if (!previewPinnedBaseUrl) return null;
   if (!previewPinnedBaseBitmapPromise) {
     previewPinnedBaseBitmapPromise = (async () => {
       const res = await fetch(previewPinnedBaseUrl);
@@ -1064,6 +1139,16 @@ async function getPinnedBaseBitmap() {
     })();
   }
   return previewPinnedBaseBitmapPromise;
+}
+
+async function captureCurrentPreviewBitmap() {
+  if (previewState.tileAccumCanvas && previewState.tileAccumCanvas.width > 0 && previewState.tileAccumCanvas.height > 0) {
+    return createImageBitmap(previewState.tileAccumCanvas);
+  }
+  if (el.preview && el.preview.naturalWidth > 0 && el.preview.naturalHeight > 0) {
+    return createImageBitmap(el.preview);
+  }
+  return null;
 }
 
 async function composeWithPinnedPreview(overlayBlob) {
@@ -1263,15 +1348,15 @@ function previewToneMappingParamsForJob(jobId) {
     toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
     toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
     toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-    postFiltersEnabled: !!postFilterStackEnabled,
-    postFilters: gatherPostFilterParams(),
+    postFiltersEnabled: false,
+    postFilters: "",
   };
 }
 
 async function refreshProgressivePreview(jobId) {
   const id = String(jobId || "").trim();
   const tm = previewToneMappingParamsForJob(id);
-  const blob = await api.getJobImage(jobId, {
+  const frame = await api.getJobImage(jobId, {
     partial: true,
     cacheBust: true,
     toneMapping: tm.toneMapping,
@@ -1283,16 +1368,13 @@ async function refreshProgressivePreview(jobId) {
     postFiltersEnabled: tm.postFiltersEnabled,
     postFilters: tm.postFilters,
   });
-  if (!blob || blob.size === 0) return false;
+  if (!frame || !frame.rgba || frame.rgba.length === 0) return false;
   if (renderActive && activeJobId && id === String(activeJobId)) {
-    recordPreviewTransfer("full", blob.size || 0);
+    recordPreviewTransfer("full", frame.rgba.byteLength || frame.rgba.length || 0);
   }
-
-  const imageBlob = preservePreviewUnderlay
-    ? await composeWithPinnedPreview(blob)
-    : blob;
-
-  return setPreviewFromBlob(imageBlob);
+  return setPreviewFromRawFrame(frame, {
+    compositePinnedBase: preservePreviewUnderlay,
+  });
 }
 
 async function refreshPreviewForToneMapping() {
@@ -1312,7 +1394,7 @@ async function refreshPreviewForToneMapping() {
         const tm = previewToneMappingParamsForJob(id);
         // Push live TM settings to server so incoming WS tiles match the canvas.
         if (typeof api.putJobLiveTm === "function") api.putJobLiveTm(id, tm);
-        const blob = await api.getJobImage(id, {
+        const frame = await api.getJobImage(id, {
           partial: true,
           cacheBust: true,
           toneMapping: tm.toneMapping,
@@ -1324,14 +1406,14 @@ async function refreshPreviewForToneMapping() {
           postFiltersEnabled: tm.postFiltersEnabled,
           postFilters: tm.postFilters,
         });
-        if (blob && blob.size > 0 && renderActive && activeJobId) {
-          await repaintTileAccumCanvasFromBlob(blob);
+        if (frame && frame.rgba && frame.rgba.length > 0 && renderActive && activeJobId) {
+          await repaintTileAccumCanvasFromRawFrame(frame);
         }
       } else {
         await refreshProgressivePreview(activeJobId);
       }
     } else if (lastCompletedJobId) {
-      const finalBlob = await api.getJobImage(lastCompletedJobId, {
+      const finalFrame = await api.getJobImage(lastCompletedJobId, {
         final: true,
         cacheBust: true,
         toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
@@ -1340,10 +1422,10 @@ async function refreshPreviewForToneMapping() {
         toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
         toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
         toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-        postFiltersEnabled: !!postFilterStackEnabled,
-        postFilters: gatherPostFilterParams(),
+        postFiltersEnabled: false,
+        postFilters: "",
       });
-      if (finalBlob && finalBlob.size > 0) await setPreviewFromBlob(finalBlob);
+      if (finalFrame && finalFrame.rgba && finalFrame.rgba.length > 0) await setPreviewFromRawFrame(finalFrame);
     }
   } catch (err) {
     appendLog(`tone mapping preview refresh failed: ${err.message}`);
@@ -1423,7 +1505,7 @@ async function restorePreviewForActiveWorkspace() {
     return;
   }
   try {
-    const finalBlob = await api.getJobImage(lastCompletedJobId, {
+    const finalFrame = await api.getJobImage(lastCompletedJobId, {
       final: true,
       cacheBust: true,
       toneMapping: el.toneMapping ? el.toneMapping.value : "aces",
@@ -1432,14 +1514,14 @@ async function restorePreviewForActiveWorkspace() {
       toneMappingMantiukContrast: el.toneMappingMantiukContrast ? el.toneMappingMantiukContrast.value : "0.1",
       toneMappingMantiukSaturation: el.toneMappingMantiukSaturation ? el.toneMappingMantiukSaturation.value : "0.8",
       toneMappingMantiukDetail: el.toneMappingMantiukDetail ? el.toneMappingMantiukDetail.value : "1.0",
-      postFiltersEnabled: !!postFilterStackEnabled,
-      postFilters: gatherPostFilterParams(),
+      postFiltersEnabled: false,
+      postFilters: "",
     });
     // A new render may have started while the image fetch was in flight.
     // Don't overwrite a freshly cleared preview.
     if (renderActive) return;
-    if (finalBlob && finalBlob.size > 0) {
-      await setPreviewFromBlob(finalBlob);
+    if (finalFrame && finalFrame.rgba && finalFrame.rgba.length > 0) {
+      await setPreviewFromRawFrame(finalFrame);
       updateDownloadUi();
       return;
     }
