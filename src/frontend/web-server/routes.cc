@@ -24,6 +24,7 @@
 #endif
 
 #include "ws_hub.h"
+#include "material_catalog.h"
 #include <xtcore/camera.h>
 #include <xtcore/math/plane.h>
 #include <xtcore/math/sphere.h>
@@ -47,6 +48,8 @@
 #include <xtcore/sampler/sampler_weave.h>
 #include <xtcore/scene.h>
 #include <xtcore/strpool.h>
+#include <xtcore/filter/desaturate.h>
+#include <xtcore/filter/postfx.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include <xtcore/xtcore.h>
 #include <xtcore/math/sampling_util.h>
@@ -280,6 +283,23 @@ bool parse_f64_param(const params_view &params, const char *key, double min_v, d
     if (v < min_v || v > max_v) return false;
     out = v;
     return true;
+}
+
+bool parse_bool_param(const params_view &params, const char *key, bool &out)
+{
+    if (!params.has(key)) return false;
+    std::string s = params.str(key);
+    std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char c) { return (char)std::tolower(c); });
+    if (s == "1" || s == "true") {
+        out = true;
+        return true;
+    }
+    if (s == "0" || s == "false") {
+        out = false;
+        return true;
+    }
+    return false;
 }
 
 bool parse_tile_order_param(const params_view &params, const char *key, xtcore::render::TILE_ORDER &out)
@@ -897,6 +917,53 @@ bool file_mtime(const std::string &path, std::uint64_t &out)
     const std::uint64_t size = (st.st_size >= 0) ? (std::uint64_t)st.st_size : 0ULL;
     out = ((sec & 0xffffffffULL) << 32) ^ (nsec & 0xffffffffULL) ^ (size * 0x9e3779b97f4a7c15ULL);
     return true;
+}
+
+std::string hex_u64(std::uint64_t value)
+{
+    std::ostringstream ss;
+    ss << std::hex << value;
+    return ss.str();
+}
+
+std::string render_scene_cache_key_for_saved_scene(const std::string &scene_path,
+                                                   const std::string &variant)
+{
+    std::uint64_t stamp = 0ULL;
+    if (!file_mtime(scene_path, stamp)) return std::string();
+
+    std::ostringstream ss;
+    ss << "file\n"
+       << scene_path << "\n"
+       << variant << "\n"
+       << hex_u64(stamp);
+    return ss.str();
+}
+
+std::string render_scene_cache_key_for_draft_scene(const std::string &scene_path,
+                                                   const std::string &variant,
+                                                   const std::string &source)
+{
+    const std::uint64_t source_hash = (std::uint64_t)std::hash<std::string>()(source);
+    std::ostringstream ss;
+    ss << "draft\n"
+       << scene_path << "\n"
+       << variant << "\n"
+       << hex_u64(source_hash);
+    return ss.str();
+}
+
+std::string render_scene_cache_key_for_inline_scene(const std::string &scene_name,
+                                                    const std::string &variant,
+                                                    const std::string &source)
+{
+    const std::uint64_t source_hash = (std::uint64_t)std::hash<std::string>()(source);
+    std::ostringstream ss;
+    ss << "inline\n"
+       << scene_name << "\n"
+       << variant << "\n"
+       << hex_u64(source_hash);
+    return ss.str();
 }
 
 HASH_ID find_camera_id_by_name(const xtcore::Scene &scene, const std::string &name)
@@ -1859,6 +1926,316 @@ bool scene_runtime_texture_png(const std::string &scene_path,
     return true;
 }
 
+struct gallery_post_filter_entry_t
+{
+    bool before_tm;
+    std::string id;
+    float ca_amount;
+    float ca_center_x;
+    float ca_center_y;
+    float ca_falloff;
+    float vignette_strength;
+    float vignette_radius;
+    float vignette_softness;
+    float vignette_center_x;
+    float vignette_center_y;
+    float grain_amount;
+    float grain_size;
+    float grain_seed;
+    float grain_luma_weighted;
+    float denoise_strength;
+    float denoise_radius;
+    float denoise_sigma;
+    float fxaa_subpix;
+    float fxaa_edge_threshold;
+    float fxaa_edge_threshold_min;
+    float sharpen_amount;
+    float sharpen_radius;
+    float sharpen_threshold;
+    float brightness_amount;
+    float contrast_amount;
+    float contrast_pivot;
+    float raindrops_density;
+    float raindrops_size;
+    float raindrops_distortion;
+    float raindrops_seed;
+};
+
+typedef std::vector<gallery_post_filter_entry_t> gallery_post_filter_chain_t;
+
+std::string trim_ascii_copy(const std::string &s)
+{
+    size_t b = 0;
+    size_t e = s.size();
+    while (b < e && std::isspace((unsigned char)s[b])) ++b;
+    while (e > b && std::isspace((unsigned char)s[e - 1])) --e;
+    return s.substr(b, e - b);
+}
+
+bool parse_gallery_post_filter_chain(bool enabled,
+                                     const std::string &raw,
+                                     gallery_post_filter_chain_t &out_chain)
+{
+    out_chain.clear();
+    if (!enabled) return true;
+
+    const std::string trimmed_all = trim_ascii_copy(raw);
+    if (trimmed_all.empty()) return true;
+
+    size_t start = 0;
+    while (start <= trimmed_all.size()) {
+        const size_t comma = trimmed_all.find(',', start);
+        const std::string part = (comma == std::string::npos)
+            ? trimmed_all.substr(start)
+            : trimmed_all.substr(start, comma - start);
+        const std::string token = lower_ascii(trim_ascii_copy(part));
+        if (!token.empty()) {
+            std::vector<std::string> tokens;
+            size_t tstart = 0;
+            while (tstart <= token.size()) {
+                const size_t tsep = token.find(':', tstart);
+                if (tsep == std::string::npos) {
+                    tokens.push_back(token.substr(tstart));
+                    break;
+                }
+                tokens.push_back(token.substr(tstart, tsep - tstart));
+                tstart = tsep + 1;
+            }
+            if (tokens.empty()) return false;
+
+            size_t idx = 0;
+            bool before_tm = false;
+            if (tokens[0] == "before" || tokens[0] == "after") {
+                before_tm = (tokens[0] == "before");
+                idx = 1;
+            }
+            if (idx >= tokens.size()) return false;
+
+            const std::string filter_id = trim_ascii_copy(tokens[idx]);
+            idx += 1;
+            const post_filter_info_t *filter_info = find_post_filter_info(filter_id);
+            if (!filter_info) return false;
+            if ((before_tm && !filter_info->allow_before_tm) || (!before_tm && !filter_info->allow_after_tm)) {
+                return false;
+            }
+
+            gallery_post_filter_entry_t entry;
+            entry.before_tm = before_tm;
+            entry.id = filter_id;
+            entry.ca_amount = 1.5f;
+            entry.ca_center_x = 0.5f;
+            entry.ca_center_y = 0.5f;
+            entry.ca_falloff = 1.0f;
+            entry.vignette_strength = 0.35f;
+            entry.vignette_radius = 0.5f;
+            entry.vignette_softness = 0.35f;
+            entry.vignette_center_x = 0.5f;
+            entry.vignette_center_y = 0.5f;
+            entry.grain_amount = 0.06f;
+            entry.grain_size = 1.0f;
+            entry.grain_seed = 1.0f;
+            entry.grain_luma_weighted = 1.0f;
+            entry.denoise_strength = 0.65f;
+            entry.denoise_radius = 2.0f;
+            entry.denoise_sigma = 0.12f;
+            entry.fxaa_subpix = 0.75f;
+            entry.fxaa_edge_threshold = 0.125f;
+            entry.fxaa_edge_threshold_min = 0.0312f;
+            entry.sharpen_amount = 0.8f;
+            entry.sharpen_radius = 1.0f;
+            entry.sharpen_threshold = 0.02f;
+            entry.brightness_amount = 0.0f;
+            entry.contrast_amount = 1.0f;
+            entry.contrast_pivot = 0.5f;
+            entry.raindrops_density = 0.35f;
+            entry.raindrops_size = 0.45f;
+            entry.raindrops_distortion = 12.0f;
+            entry.raindrops_seed = 1.0f;
+
+            for (; idx < tokens.size(); ++idx) {
+                const std::string kv = trim_ascii_copy(tokens[idx]);
+                if (kv.empty()) continue;
+                const size_t eq = kv.find('=');
+                if (eq == std::string::npos) return false;
+                const std::string key = trim_ascii_copy(kv.substr(0, eq));
+                const std::string val = trim_ascii_copy(kv.substr(eq + 1));
+                if (key.empty() || val.empty()) return false;
+
+                std::istringstream vs(val);
+                float f = 0.0f;
+                vs >> f;
+                if (vs.fail()) return false;
+
+                if (filter_id == "chromatic_aberration") {
+                    if (key == "amount") entry.ca_amount = std::max(0.0f, std::min(64.0f, f));
+                    else if (key == "center_x") entry.ca_center_x = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "center_y") entry.ca_center_y = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "falloff") entry.ca_falloff = std::max(0.0f, std::min(8.0f, f));
+                    else return false;
+                } else if (filter_id == "vignette") {
+                    if (key == "strength") entry.vignette_strength = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "radius") entry.vignette_radius = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "softness") entry.vignette_softness = std::max(0.001f, std::min(1.0f, f));
+                    else if (key == "center_x") entry.vignette_center_x = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "center_y") entry.vignette_center_y = std::max(0.0f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "film_grain") {
+                    if (key == "amount") entry.grain_amount = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "size") entry.grain_size = std::max(1.0f, std::min(16.0f, f));
+                    else if (key == "seed") entry.grain_seed = std::max(0.0f, std::min(1000000.0f, std::floor(f)));
+                    else if (key == "luma_weighted") entry.grain_luma_weighted = (f >= 0.5f) ? 1.0f : 0.0f;
+                    else return false;
+                } else if (filter_id == "denoise") {
+                    if (key == "strength") entry.denoise_strength = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "radius") entry.denoise_radius = std::max(1.0f, std::min(6.0f, std::round(f)));
+                    else if (key == "sigma") entry.denoise_sigma = std::max(0.001f, std::min(2.0f, f));
+                    else return false;
+                } else if (filter_id == "fxaa") {
+                    if (key == "subpix") entry.fxaa_subpix = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "edge_threshold") entry.fxaa_edge_threshold = std::max(0.001f, std::min(1.0f, f));
+                    else if (key == "edge_threshold_min") entry.fxaa_edge_threshold_min = std::max(0.0001f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "sharpen") {
+                    if (key == "amount") entry.sharpen_amount = std::max(0.0f, std::min(4.0f, f));
+                    else if (key == "radius") entry.sharpen_radius = std::max(1.0f, std::min(4.0f, std::round(f)));
+                    else if (key == "threshold") entry.sharpen_threshold = std::max(0.0f, std::min(1.0f, f));
+                    else return false;
+                } else if (filter_id == "brightness") {
+                    if (key == "amount") entry.brightness_amount = std::max(-4.0f, std::min(4.0f, f));
+                    else return false;
+                } else if (filter_id == "contrast") {
+                    if (key == "amount") entry.contrast_amount = std::max(0.0f, std::min(4.0f, f));
+                    else if (key == "pivot") entry.contrast_pivot = std::max(0.0f, std::min(4.0f, f));
+                    else return false;
+                } else if (filter_id == "raindrops_lens") {
+                    if (key == "density") entry.raindrops_density = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "size") entry.raindrops_size = std::max(0.0f, std::min(1.0f, f));
+                    else if (key == "distortion") entry.raindrops_distortion = std::max(0.0f, std::min(64.0f, f));
+                    else if (key == "seed") entry.raindrops_seed = std::max(0.0f, std::min(1000000.0f, std::floor(f)));
+                    else return false;
+                } else if (filter_id == "desaturate") {
+                    return false;
+                } else {
+                    return false;
+                }
+            }
+
+            if (filter_id != "desaturate"
+                && filter_id != "chromatic_aberration"
+                && filter_id != "vignette"
+                && filter_id != "film_grain"
+                && filter_id != "denoise"
+                && filter_id != "fxaa"
+                && filter_id != "sharpen"
+                && filter_id != "brightness"
+                && filter_id != "contrast"
+                && filter_id != "raindrops_lens") {
+                return false;
+            }
+
+            out_chain.push_back(entry);
+        }
+
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+
+    return true;
+}
+
+void apply_gallery_post_filters_for_stage(nimg::Pixmap &pixmap,
+                                          const gallery_post_filter_chain_t &chain,
+                                          bool before_tm)
+{
+    for (size_t i = 0; i < chain.size(); ++i) {
+        const gallery_post_filter_entry_t &entry = chain[i];
+        if (entry.before_tm != before_tm) continue;
+        if (entry.id == "desaturate") {
+            xtcore::filter::Desaturate op;
+            op.render(&pixmap);
+        } else if (entry.id == "chromatic_aberration") {
+            xtcore::filter::ChromaticAberration op;
+            op.amount = entry.ca_amount;
+            op.center_x = entry.ca_center_x;
+            op.center_y = entry.ca_center_y;
+            op.falloff = entry.ca_falloff;
+            op.render(&pixmap);
+        } else if (entry.id == "vignette") {
+            xtcore::filter::Vignette op;
+            op.strength = entry.vignette_strength;
+            op.radius = entry.vignette_radius;
+            op.softness = entry.vignette_softness;
+            op.center_x = entry.vignette_center_x;
+            op.center_y = entry.vignette_center_y;
+            op.render(&pixmap);
+        } else if (entry.id == "film_grain") {
+            xtcore::filter::FilmGrain op;
+            op.amount = entry.grain_amount;
+            op.size = entry.grain_size;
+            op.seed = entry.grain_seed;
+            op.luma_weighted = entry.grain_luma_weighted;
+            op.render(&pixmap);
+        } else if (entry.id == "denoise") {
+            xtcore::filter::Denoise op;
+            op.strength = entry.denoise_strength;
+            op.radius = entry.denoise_radius;
+            op.sigma = entry.denoise_sigma;
+            op.render(&pixmap);
+        } else if (entry.id == "fxaa") {
+            xtcore::filter::FXAA op;
+            op.subpix = entry.fxaa_subpix;
+            op.edge_threshold = entry.fxaa_edge_threshold;
+            op.edge_threshold_min = entry.fxaa_edge_threshold_min;
+            op.render(&pixmap);
+        } else if (entry.id == "sharpen") {
+            xtcore::filter::Sharpen op;
+            op.amount = entry.sharpen_amount;
+            op.radius = entry.sharpen_radius;
+            op.threshold = entry.sharpen_threshold;
+            op.render(&pixmap);
+        } else if (entry.id == "brightness") {
+            xtcore::filter::Brightness op;
+            op.amount = entry.brightness_amount;
+            op.render(&pixmap);
+        } else if (entry.id == "contrast") {
+            xtcore::filter::Contrast op;
+            op.amount = entry.contrast_amount;
+            op.pivot = entry.contrast_pivot;
+            op.render(&pixmap);
+        } else if (entry.id == "raindrops_lens") {
+            xtcore::filter::RaindropsLens op;
+            op.density = entry.raindrops_density;
+            op.size = entry.raindrops_size;
+            op.distortion = entry.raindrops_distortion;
+            op.seed = entry.raindrops_seed;
+            op.render(&pixmap);
+        }
+    }
+}
+
+bool parse_gallery_post_filters(const params_view &params,
+                                gallery_post_filter_chain_t &out_chain,
+                                std::string &error_json)
+{
+    bool enabled = false;
+    std::string post_filters;
+    if (!parse_post_filter_settings(params, enabled, post_filters, error_json)) return false;
+    if (!parse_gallery_post_filter_chain(enabled, post_filters, out_chain)) {
+        error_json = "{\"error\":\"invalid post_filters\"}";
+        return false;
+    }
+    return true;
+}
+
+void apply_gallery_preview_pipeline(nimg::Pixmap &pixmap,
+                                    const xtcore::tonemapping::settings_t &tm_settings,
+                                    const gallery_post_filter_chain_t &post_filters)
+{
+    apply_gallery_post_filters_for_stage(pixmap, post_filters, true);
+    xtcore::tonemapping::apply(pixmap, tm_settings);
+    apply_gallery_post_filters_for_stage(pixmap, post_filters, false);
+}
+
 void send_scene_loading(crow::response &res, unsigned long long load_job_id)
 {
     std::ostringstream ss;
@@ -2767,6 +3144,122 @@ void setup_routes(WebApp &app,
         send_json(res, ss.str());
     });
 
+    CROW_ROUTE(app, "/api/materials")
+    ([](const crow::request &, crow::response &res) {
+        size_t count = 0;
+        const material_entry_t *entries = material_catalog_entries(count);
+        std::ostringstream ss;
+        ss << "{\"materials\":[";
+        for (size_t i = 0; i < count; ++i) {
+            if (i) ss << ',';
+            ss << "{"
+               << "\"id\":\""            << json_escape(entries[i].id)            << "\","
+               << "\"name\":\""          << json_escape(entries[i].name)          << "\","
+               << "\"category\":\""      << json_escape(entries[i].category)      << "\","
+               << "\"description\":\""   << json_escape(entries[i].description)   << "\","
+               << "\"preview_color\":\"" << json_escape(entries[i].preview_color) << "\","
+               << "\"ncf\":\""           << json_escape(entries[i].ncf)           << "\""
+               << "}";
+        }
+        ss << "]}";
+        send_json(res, ss.str());
+    });
+
+    CROW_ROUTE(app, "/api/materials/<string>/preview").methods(crow::HTTPMethod::Post)
+    ([&](const crow::request &req, crow::response &res, std::string material_id) {
+        const material_entry_t *entry = material_catalog_find(material_id);
+        if (!entry) {
+            send_json(res, "{\"error\":\"material not found\"}", 404);
+            return;
+        }
+
+        const params_view params(req);
+        common::render_request_t rr;
+        rr.integrator = "pathtracer_mis";
+        rr.render_mode = common::render_request_t::RENDER_MODE_DIRECT;
+        rr.save_to_gallery = false;
+
+        size_t v = 0;
+        if (parse_u64_param(params, "width", 8, 4096, v)) rr.width = v;
+        else if (params.has("width")) {
+            send_json(res, "{\"error\":\"invalid width\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "height", 8, 4096, v)) rr.height = v;
+        else if (params.has("height")) {
+            send_json(res, "{\"error\":\"invalid height\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "samples", 1, 1024, v)) rr.samples = v;
+        else if (params.has("samples")) {
+            send_json(res, "{\"error\":\"invalid samples\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "aa", 1, 16, v)) rr.aa = v;
+        else if (params.has("aa")) {
+            send_json(res, "{\"error\":\"invalid aa\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "rdepth", 1, 4096, v)) rr.rdepth = v;
+        else if (params.has("rdepth")) {
+            send_json(res, "{\"error\":\"invalid rdepth\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "tile_size", 8, 1024, v)) rr.tile_size = v;
+        else if (params.has("tile_size")) {
+            send_json(res, "{\"error\":\"invalid tile_size\"}", 400);
+            return;
+        }
+        if (parse_u64_param(params, "threads", 0, 256, v)) rr.threads = v;
+        else if (params.has("threads")) {
+            send_json(res, "{\"error\":\"invalid threads\"}", 400);
+            return;
+        }
+        if (!parse_tile_order_param(params, "tile_order", rr.tile_order) && params.has("tile_order")) {
+            send_json(res, "{\"error\":\"invalid tile_order\"}", 400);
+            return;
+        }
+
+        const size_t max_render_threads = (thread_policy.max_render_threads > 0)
+            ? thread_policy.max_render_threads
+            : compute_auto_render_threads(thread_policy.reserve_threads);
+        if (rr.threads > 0 && rr.threads > max_render_threads) {
+            rr.threads = max_render_threads;
+        }
+
+        const std::string scene_name = "material-preview-" + material_id + ".scn";
+        const std::string scene_source = material_catalog_build_preview_scene(*entry);
+        std::string staged_scene_path;
+        if (!write_workspace_temp_scene("material_preview", scene_name, scene_source, staged_scene_path, scene_dir)) {
+            send_json(res, "{\"error\":\"failed to stage material preview scene\"}", 500);
+            return;
+        }
+
+        rr.scene_path = staged_scene_path;
+        rr.scene_cache_key = render_scene_cache_key_for_inline_scene(scene_name, "", scene_source);
+
+        xtcore::tonemapping::settings_t initial_tm;
+        std::string tm_error_json;
+        parse_tonemapping_settings(params, initial_tm, tm_error_json); // best-effort; ignore errors
+
+        const std::string requester_client_id = read_client_id(params);
+        const std::string workspace_id = "__material_preview__";
+        const std::string job_id = jobs.create(rr, scene_name, workspace_id, requester_client_id, staged_scene_path, initial_tm);
+        if (job_id.empty()) {
+            unlink(staged_scene_path.c_str());
+            send_json(res, "{\"error\":\"render queue is full\"}", 503);
+            return;
+        }
+
+        broadcast_jobs_changed(jobs);
+        std::ostringstream ss;
+        ss << "{"
+           << "\"job_id\":\"" << json_escape(job_id) << "\","
+           << "\"material_id\":\"" << json_escape(material_id) << "\""
+           << "}";
+        send_json(res, ss.str(), 202);
+    });
+
     CROW_ROUTE(app, "/api/resolutions")
     ([](const crow::request &, crow::response &res) {
         size_t count = 0;
@@ -2799,37 +3292,57 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
             return;
         }
+        const std::string inline_scene_source = params.str("scene_source");
+        const bool has_inline_scene_source = !inline_scene_source.empty();
 
         common::render_request_t rr;
         rr.scene_path = join_path(scene_dir, scene);
+        const std::string saved_scene_path = rr.scene_path;
         std::string variant_error;
         if (!read_variant_name(params, rr.variant, variant_error)) {
             backend_log_t::handle().add("warn", "render rejected: invalid variant");
             send_json(res, "{\"error\":\"invalid variant\"}", 400);
             return;
         }
+        rr.scene_cache_key = render_scene_cache_key_for_saved_scene(saved_scene_path, rr.variant);
 
         const std::string requester_client_id = read_client_id(params);
 
         std::string workspace_id;
-        if (params.has("workspace_id")) workspace_id = params.str("workspace_id");
-        if (workspace_id.empty() && !requester_client_id.empty()) {
-            workspaces.get_active(requester_client_id, workspace_id);
+        if (!has_inline_scene_source) {
+            if (params.has("workspace_id")) workspace_id = params.str("workspace_id");
+            if (workspace_id.empty() && !requester_client_id.empty()) {
+                workspaces.get_active(requester_client_id, workspace_id);
+            }
+            if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
+            workspaces.set_active_scene(workspace_id, scene);
         }
-        if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
-        workspaces.set_active_scene(workspace_id, scene);
 
         std::string cleanup_scene_path;
-        std::string draft_source;
-        if (workspaces.get_scene_draft(workspace_id, scene, draft_source) && !draft_source.empty()) {
+        if (has_inline_scene_source) {
             std::string tmp_scene_path;
-            // Write the temp scene into the real scene's directory so that
-            // relative asset paths (geometry/, textures/, etc.) resolve
-            // identically to the saved scene.
-            const std::string real_scene_dir = dirname_path(rr.scene_path);
-            if (write_workspace_temp_scene(workspace_id, scene, draft_source, tmp_scene_path, real_scene_dir)) {
+            if (write_workspace_temp_scene("inline", scene, inline_scene_source, tmp_scene_path, scene_dir)) {
                 rr.scene_path = tmp_scene_path;
                 cleanup_scene_path = tmp_scene_path;
+                rr.scene_cache_key = render_scene_cache_key_for_inline_scene(scene, rr.variant, inline_scene_source);
+            } else {
+                backend_log_t::handle().add("error", "render rejected: failed to stage inline scene source");
+                send_json(res, "{\"error\":\"failed to stage inline scene source\"}", 500);
+                return;
+            }
+        } else {
+            std::string draft_source;
+            if (workspaces.get_scene_draft(workspace_id, scene, draft_source) && !draft_source.empty()) {
+                std::string tmp_scene_path;
+                // Write the temp scene into the real scene's directory so that
+                // relative asset paths (geometry/, textures/, etc.) resolve
+                // identically to the saved scene.
+                const std::string real_scene_dir = dirname_path(rr.scene_path);
+                if (write_workspace_temp_scene(workspace_id, scene, draft_source, tmp_scene_path, real_scene_dir)) {
+                    rr.scene_path = tmp_scene_path;
+                    cleanup_scene_path = tmp_scene_path;
+                    rr.scene_cache_key = render_scene_cache_key_for_draft_scene(saved_scene_path, rr.variant, draft_source);
+                }
             }
         }
 
@@ -2960,6 +3473,13 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"invalid tile_order\"}", 400);
             return;
         }
+        if (parse_bool_param(params, "save_to_gallery", rr.save_to_gallery)) {
+            // Parsed successfully.
+        } else if (params.has("save_to_gallery")) {
+            backend_log_t::handle().add("warn", "render rejected: invalid save_to_gallery");
+            send_json(res, "{\"error\":\"invalid save_to_gallery\"}", 400);
+            return;
+        }
 
         {
             std::ostringstream policy_log;
@@ -3024,14 +3544,33 @@ void setup_routes(WebApp &app,
             send_json(res, post_filter_error_json, 400);
             return;
         }
-        std::vector<unsigned char> image;
-        if (!jobs.image(id, image, !final_only, tm_settings, post_filters_enabled, post_filters)) {
+        std::vector<unsigned char> rgba;
+        size_t width = 0;
+        size_t height = 0;
+        size_t tiles_done = 0;
+        size_t tiles_total = 0;
+        if (!jobs.image_rgba(id,
+                             rgba,
+                             width,
+                             height,
+                             tiles_done,
+                             tiles_total,
+                             !final_only,
+                             tm_settings,
+                             post_filters_enabled,
+                             post_filters)) {
             backend_log_t::handle().add("warn", "job image missing id=" + id);
             send_json(res, "{\"error\":\"image not available\"}", 404);
             return;
         }
-        res.body = std::string(reinterpret_cast<const char *>(image.data()), image.size());
-        res.set_header("Content-Type", "image/png");
+        res.set_header("Cache-Control", "no-store");
+        res.set_header("Content-Type", "application/x-xtracer-rgba");
+        res.set_header("X-XTracer-Pixel-Format", "rgba8-srgb");
+        res.set_header("X-XTracer-Width", std::to_string(width));
+        res.set_header("X-XTracer-Height", std::to_string(height));
+        res.set_header("X-XTracer-Tiles-Done", std::to_string(tiles_done));
+        res.set_header("X-XTracer-Tiles-Total", std::to_string(tiles_total));
+        res.body = std::string(reinterpret_cast<const char *>(rgba.data()), rgba.size());
         res.end();
     });
 
@@ -3296,7 +3835,13 @@ void setup_routes(WebApp &app,
             send_json(res, tm_error_json, 400);
             return;
         }
-        xtcore::tonemapping::apply(fb, tm_settings);
+        gallery_post_filter_chain_t post_filters;
+        std::string post_filter_error_json;
+        if (!parse_gallery_post_filters(params, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
+        apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
         std::vector<unsigned char> png;
         if (nimg::io::save::png_memory(fb, png) != 0) {
             res.code = 500;
@@ -3343,7 +3888,13 @@ void setup_routes(WebApp &app,
             send_json(res, tm_error_json, 400);
             return;
         }
-        xtcore::tonemapping::apply(fb, tm_settings);
+        gallery_post_filter_chain_t post_filters;
+        std::string post_filter_error_json;
+        if (!parse_gallery_post_filters(params, post_filters, post_filter_error_json)) {
+            send_json(res, post_filter_error_json, 400);
+            return;
+        }
+        apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
         std::vector<unsigned char> png;
         if (nimg::io::save::png_memory(fb, png) != 0) {
             res.code = 500;
@@ -3400,7 +3951,13 @@ void setup_routes(WebApp &app,
                 send_json(res, tm_error_json, 400);
                 return;
             }
-            xtcore::tonemapping::apply(fb, tm_settings);
+            gallery_post_filter_chain_t post_filters;
+            std::string post_filter_error_json;
+            if (!parse_gallery_post_filters(params, post_filters, post_filter_error_json)) {
+                send_json(res, post_filter_error_json, 400);
+                return;
+            }
+            apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
         }
         std::vector<unsigned char> image;
         std::string mime_type;
@@ -3490,7 +4047,13 @@ void setup_routes(WebApp &app,
                 send_json(res, tm_error_json, 400);
                 return;
             }
-            xtcore::tonemapping::apply(fb, tm_settings);
+            gallery_post_filter_chain_t post_filters;
+            std::string post_filter_error_json;
+            if (!parse_gallery_post_filters(params, post_filters, post_filter_error_json)) {
+                send_json(res, post_filter_error_json, 400);
+                return;
+            }
+            apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
         }
         std::vector<unsigned char> image;
         std::string mime_type;
@@ -3599,6 +4162,17 @@ void setup_routes(WebApp &app,
         serve_static_file(join_path(web_root, "geometry.js"), "application/javascript", res);
     });
 
+    CROW_ROUTE(app, "/materials.html")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "materials.html"), "text/html", res);
+    });
+
+    CROW_ROUTE(app, "/materials.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "materials.js"), "application/javascript", res);
+    });
+
+
     CROW_ROUTE(app, "/app.js")
     ([web_root](const crow::request &, crow::response &res) {
         serve_static_file(join_path(web_root, "app.js"), "application/javascript", res);
@@ -3684,7 +4258,7 @@ void setup_routes(WebApp &app,
         serve_static_file(join_path(web_root, "logo.svg"), "image/svg+xml", res);
     });
 
-    CROW_ROUTE(app, "/res/<string>")
+    CROW_ROUTE(app, "/res/<path>")
     ([web_root](const crow::request &, crow::response &res, std::string name) {
         const std::string direct_path = join_path("res", name);
         if (file_exists(direct_path)) {

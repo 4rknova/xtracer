@@ -21,6 +21,13 @@
     "url": "https://github.com/tinyobjloader/tinyobjloader"
   },
   {
+    "name": "pugixml",
+    "description": "XML parser used for Mitsuba scene conversion and SVG silhouette mesh parsing.",
+    "used_in": "convertMitsuba, lib/nmesh",
+    "license": "MIT",
+    "url": "https://pugixml.org/"
+  },
+  {
     "name": "STB",
     "description": "Collection of single-header image and utility libraries used for texture IO and image helpers.",
     "used_in": "lib/nimg",
