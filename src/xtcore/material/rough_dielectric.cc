@@ -117,9 +117,9 @@ inline nmath::scalar_t lobe_exponent_from_roughness(nmath::scalar_t roughness)
     return std::max((nmath::scalar_t)2.0, ((nmath::scalar_t)2.0 / (r * r)) - (nmath::scalar_t)2.0);
 }
 
-inline bool use_pragmatic_frosted_lobes(nmath::scalar_t roughness)
+inline bool use_pragmatic_frosted_lobes(nmath::scalar_t /*roughness*/)
 {
-    return roughness >= (nmath::scalar_t)0.12;
+    return false;
 }
 
 inline nmath::scalar_t reflection_pdf(const nmath::Vector3f &n,
@@ -243,10 +243,12 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
         const nmath::scalar_t F = xtcore::math::sampling::fresnel_dielectric(nmath_abs(nmath::dot(wo_n, h)), eta_i, eta_t);
         const nmath::scalar_t D = xtcore::math::sampling::ggx_ndf(n, h, roughness);
         const nmath::scalar_t G = xtcore::math::sampling::smith_ggx_g(n, wo_n, wi_n, roughness);
-        const nmath::scalar_t pr = reflection_pdf(n, wo_n, wi_n, roughness);
+        const nmath::scalar_t G1_wo = xtcore::math::sampling::smith_ggx_g1(n, wo_n, roughness);
+        const nmath::scalar_t p_reflect = clamp_scalar(F, (nmath::scalar_t)0.02, (nmath::scalar_t)0.98);
 
         f = nimg::ColorRGBf((float)F, (float)F, (float)F) * (D * G / std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)4.0 * cos_i * cos_o));
-        pdf = std::max((nmath::scalar_t)EPSILON, F) * pr;
+        // VNDF pdf (matches bsdf_sample's VNDF sampling): D * G1(wo) / (4 * cos_o), weighted by p_reflect
+        pdf = p_reflect * D * G1_wo / std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)4.0 * cos_o);
         return safe_luma(f) > (nmath::scalar_t)EPSILON;
     }
 
@@ -270,8 +272,9 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
     const nmath::scalar_t F = xtcore::math::sampling::fresnel_dielectric(nmath_abs(wo_h), eta_i, eta_t);
     const nmath::scalar_t D = xtcore::math::sampling::ggx_ndf(n, h, roughness);
     // For BTDF, wi is on the opposite side of n — use |dot(n,wi)| via -wi_n to avoid G1=0.
-    const nmath::scalar_t G = xtcore::math::sampling::smith_ggx_g1(n, wo_n, roughness)
-                            * xtcore::math::sampling::smith_ggx_g1(n, -wi_n, roughness);
+    const nmath::scalar_t G1_wo = xtcore::math::sampling::smith_ggx_g1(n, wo_n, roughness);
+    const nmath::scalar_t G1_wi = xtcore::math::sampling::smith_ggx_g1(n, -wi_n, roughness);
+    const nmath::scalar_t G = G1_wo * G1_wi;
     const nmath::scalar_t denom = wo_h + eta * wi_h;
     const nmath::scalar_t denom2 = denom * denom;
     if (denom2 <= (nmath::scalar_t)EPSILON) {
@@ -282,10 +285,11 @@ inline bool rough_dielectric_eval_impl(const xtcore::asset::IMaterial *mat,
 
     const nmath::scalar_t factor = nmath_abs((wi_h * wo_h) / std::max((nmath::scalar_t)EPSILON, cos_i * cos_o * denom2));
     const nmath::scalar_t dwm_dwi = nmath_abs((eta * eta * wi_h) / denom2);
-    const nmath::scalar_t p_h = D * std::max((nmath::scalar_t)0.0, nmath::dot(n, h));
+    const nmath::scalar_t p_transmit = std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)1.0 - clamp_scalar(F, (nmath::scalar_t)0.02, (nmath::scalar_t)0.98));
 
     f = trans * (((nmath::scalar_t)1.0 - F) * D * G * factor * eta * eta);
-    pdf = std::max((nmath::scalar_t)EPSILON, ((nmath::scalar_t)1.0 - F)) * p_h * dwm_dwi;
+    // VNDF pdf (matches bsdf_sample's VNDF sampling): G1(wo)*D*|wo_h|/cos_o * |eta^2*wi_h/denom^2|
+    pdf = p_transmit * G1_wo * D * nmath_abs(wo_h) / std::max((nmath::scalar_t)EPSILON, cos_o) * nmath_abs(dwm_dwi);
     return safe_luma(f) > (nmath::scalar_t)EPSILON;
 }
 
@@ -362,43 +366,49 @@ bool RoughDielectric::sample_path(
         return true;
     }
 
-    nmath::scalar_t h_pdf = 0.0;
-    nmath::Vector3f h = xtcore::math::sampling::sample_ggx_half_vector(n, roughness, h_pdf);
-    if (nmath::dot(wo, h) < (nmath::scalar_t)0.0) h = -h;
+    // VNDF sampling: guarantees dot(ng, wi) > 0 for reflection, eliminating hemisphere kill.
+    nmath::scalar_t vndf_pdf_wi = 0.0;
+    nmath::Vector3f h = xtcore::math::sampling::sample_ggx_vndf_half_vector(n, wo, roughness, vndf_pdf_wi);
 
     const nmath::scalar_t F = xtcore::math::sampling::fresnel_dielectric(nmath_abs(nmath::dot(wo, h)), eta_i, eta_t);
     const nmath::scalar_t p_reflect = std::max((nmath::scalar_t)0.02, std::min((nmath::scalar_t)0.98, F));
+    const nmath::scalar_t p_transmit = std::max((nmath::scalar_t)EPSILON, (nmath::scalar_t)1.0 - p_reflect);
 
     nmath::Vector3f wi;
     nmath::scalar_t sampled_ior;
+    nimg::ColorRGBf weight;
     if (nmath::prng_c(0.0, 1.0) < p_reflect) {
         wi = wo.reflected(h).normalized();
+        // VNDF guarantees dot(wo,h)>0 but not always dot(ng,wi)>0; check horizon.
         if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
+        const nmath::scalar_t G1_wi = xtcore::math::sampling::smith_ggx_g1(n, wi, roughness);
         sampled_ior = eta_i;
+        weight = nimg::ColorRGBf((float)(F * G1_wi / p_reflect),
+                                 (float)(F * G1_wi / p_reflect),
+                                 (float)(F * G1_wi / p_reflect));
     } else {
         wi = (-wo).refracted(h, eta_i, eta_t).normalized();
         if (wi.length() <= (nmath::scalar_t)EPSILON) {
-            // TIR fallback
+            // TIR: treat as reflection with F=1
             wi = wo.reflected(h).normalized();
-            if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
+            const nmath::scalar_t G1_wi = xtcore::math::sampling::smith_ggx_g1(n, wi, roughness);
             sampled_ior = eta_i;
+            weight = nimg::ColorRGBf((float)(G1_wi / p_reflect),
+                                     (float)(G1_wi / p_reflect),
+                                     (float)(G1_wi / p_reflect));
         } else {
             if ((nmath::dot(ng, wo) * nmath::dot(ng, wi)) > (nmath::scalar_t)0.0) return false;
+            const nmath::scalar_t G1_wi = xtcore::math::sampling::smith_ggx_g1(n, -wi, roughness);
+            const nimg::ColorRGBf trans = apply_exit_absorption(this, hit_record, n, wi, base_trans);
             sampled_ior = eta_t;
+            weight = trans * (((nmath::scalar_t)1.0 - F) * G1_wi / p_transmit);
         }
     }
 
-    // Compute correct f*cos/pdf via eval — avoids manually re-deriving GGX geometry terms.
-    nimg::ColorRGBf f;
-    nmath::scalar_t pdf = 0.0;
-    if (!rough_dielectric_eval_impl(this, hit_record, wo, wi, f, pdf)) return false;
-    if (pdf <= (nmath::scalar_t)EPSILON) return false;
-
-    const nmath::scalar_t cos_i = nmath_abs(nmath::dot(n, wi));
     hit_result.ray.origin = hit_record.point + wi * EPSILON;
     hit_result.ray.direction = wi;
     hit_result.ior = sampled_ior;
-    hit_result.intensity = f * (cos_i / pdf);
+    hit_result.intensity = weight;
     return true;
 }
 
@@ -456,22 +466,27 @@ bool RoughDielectric::bsdf_sample(
         return rough_dielectric_eval_impl(this, hit_record, wo_n, wi, f, pdf);
     }
 
-    nmath::scalar_t h_pdf = 0.0;
-    nmath::Vector3f h = xtcore::math::sampling::sample_ggx_half_vector(n, roughness, h_pdf);
-    if (nmath::dot(wo_n, h) < (nmath::scalar_t)0.0) h = -h;
+    // VNDF sampling: guarantees dot(wo,h)>0, avoiding below-horizon reflected directions.
+    // bsdf_eval uses the same VNDF pdf formula so bsdf_sample and bsdf_eval are consistent for MIS.
+    nmath::scalar_t vndf_pdf_unused = 0.0;
+    nmath::Vector3f h_vndf = xtcore::math::sampling::sample_ggx_vndf_half_vector(n, wo_n, roughness, vndf_pdf_unused);
 
-    const nmath::scalar_t F = xtcore::math::sampling::fresnel_dielectric(nmath_abs(nmath::dot(wo_n, h)), eta_i, eta_t);
-    if (nmath::prng_c(0.0, 1.0) < F) {
-        wi = wo_n.reflected(h).normalized();
+    const nmath::scalar_t F_vndf = xtcore::math::sampling::fresnel_dielectric(nmath_abs(nmath::dot(wo_n, h_vndf)), eta_i, eta_t);
+    const nmath::scalar_t p_reflect = std::max((nmath::scalar_t)0.02, std::min((nmath::scalar_t)0.98, F_vndf));
+
+    if (nmath::prng_c(0.0, 1.0) < p_reflect) {
+        wi = wo_n.reflected(h_vndf).normalized();
         if ((nmath::dot(ng, wo_n) * nmath::dot(ng, wi)) <= (nmath::scalar_t)0.0) return false;
-    } else {
-        wi = (-wo_n).refracted(h, eta_i, eta_t).normalized();
-        if (wi.length() <= (nmath::scalar_t)EPSILON) {
-            wi = wo_n.reflected(h).normalized();
-        }
-        if ((nmath::dot(ng, wo_n) * nmath::dot(ng, wi)) > (nmath::scalar_t)0.0) return false;
+        // bsdf_eval uses the same VNDF pdf formula: p_reflect * D * G1(wo) / (4 * cos_o)
+        return rough_dielectric_eval_impl(this, hit_record, wo_n, wi, f, pdf);
     }
 
+    // Transmission: use same VNDF h — eval reconstructs the same h from (wo + wi*eta),
+    // keeping (f, pdf) consistent with bsdf_eval's VNDF-based pdf formula.
+    nmath::Vector3f wi_try = (-wo_n).refracted(h_vndf, eta_i, eta_t).normalized();
+    if (wi_try.length() <= (nmath::scalar_t)EPSILON) return false;
+    if ((nmath::dot(ng, wo_n) * nmath::dot(ng, wi_try)) > (nmath::scalar_t)0.0) return false;
+    wi = wi_try;
     return rough_dielectric_eval_impl(this, hit_record, wo_n, wi, f, pdf);
 }
 

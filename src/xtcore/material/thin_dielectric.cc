@@ -171,27 +171,14 @@ bool ThinDielectric::sample_path(
     , const hit_record_t &hit_record
 ) const
 {
-    if (!bsdf_is_delta()) {
-        const nmath::Vector3f wo = (-hit_record.incident_direction).normalized();
-        nmath::Vector3f wi;
-        nimg::ColorRGBf f;
-        nmath::scalar_t pdf = 0.0;
-        if (!bsdf_sample(hit_record, wo, wi, f, pdf)) return false;
-
-        const nmath::Vector3f ng = hit_record.normal.normalized();
-        const nmath::scalar_t cos_theta = nmath_abs(nmath::dot(ng, wi));
-        if (cos_theta <= (nmath::scalar_t)EPSILON || pdf <= (nmath::scalar_t)EPSILON) return false;
-
-        hit_result.ray.origin = hit_record.point + wi * EPSILON;
-        hit_result.ray.direction = wi;
-        hit_result.intensity = f * (cos_theta / pdf);
-        hit_result.ior = hit_record.ior > (nmath::scalar_t)EPSILON ? hit_record.ior : (nmath::scalar_t)1.0;
-        return true;
-    }
+    // Always use the delta-style formula: F/p_reflect or (1-F)/p_transmit weight with direction
+    // perturbation for rough variants. Applying cos_i/pdf degrades to 0 at grazing for a
+    // Phong lobe whose axis is tangential, breaking energy conservation at sphere edges.
 
     const nmath::Vector3f in_dir = hit_record.incident_direction.normalized();
+    const nmath::Vector3f wo = (-in_dir).normalized();
     nmath::Vector3f n = shading_normal(this, hit_record);
-    if (nmath::dot(n, -in_dir) < (nmath::scalar_t)0.0) n = -n;
+    if (nmath::dot(n, wo) < (nmath::scalar_t)0.0) n = -n;
 
     const nmath::scalar_t ior = material_ior(this);
     const nmath::scalar_t roughness = material_roughness(this, hit_record);
@@ -203,7 +190,7 @@ bool ThinDielectric::sample_path(
 
     nmath::Vector3f out_dir;
     if (nmath::prng_c(0.0, 1.0) < p_reflect) {
-        out_dir = in_dir.reflected(n).normalized();
+        out_dir = wo.reflected(n).normalized();
         if (roughness > (nmath::scalar_t)0.02) {
             nmath::scalar_t pdf = 0.0;
             out_dir = xtcore::math::sampling::sample_power_cosine_lobe(out_dir, lobe_exponent_from_roughness(roughness), pdf);
@@ -227,7 +214,9 @@ bool ThinDielectric::sample_path(
 
 bool ThinDielectric::bsdf_is_delta() const
 {
-    return thin_dielectric_is_delta_material(this);
+    // Always treat as quasi-delta: sample_path handles roughness via direction perturbation
+    // with flat F/p_reflect weight that stays energy-conserving at grazing angles.
+    return true;
 }
 
 bool ThinDielectric::bsdf_eval(

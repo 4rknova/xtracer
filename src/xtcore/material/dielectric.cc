@@ -42,6 +42,7 @@ bool Dielectric::sample_path(
 
     nmath::Vector3f n = hit_record.normal.normalized();
     const nmath::Vector3f wi = hit_record.incident_direction.normalized();
+    const nmath::Vector3f wo = (-wi).normalized();
 
     // If the ray is leaving the medium, invert normal and target air IOR.
     if (dot(wi, n) > 0.0f) {
@@ -53,7 +54,7 @@ bool Dielectric::sample_path(
     const float fresnel = (float)xtcore::math::sampling::fresnel_dielectric(cos_i, ior_src, ior_dst);
     const bool choose_reflection = (nmath::prng_c(0.0f, 1.0f) < fresnel);
     if (choose_reflection) {
-        hit_result.ray.direction = wi.reflected(n).normalized();
+        hit_result.ray.direction = wo.reflected(n).normalized();
         hit_result.ior = ior_src;
         hit_result.intensity = ColorRGBf(1.0f, 1.0f, 1.0f);
     } else {
