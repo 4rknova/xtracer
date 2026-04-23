@@ -6,6 +6,7 @@ This registry tracks vendored third-party code and where each dependency is used
 |---|---|---|---|---|---|
 | `cgltf` | `ext/cgltf.h`, `ext/cgltf.c` | `xtcore` | <https://github.com/jkuhlmann/cgltf> | MIT | glTF/GLB parsing for external asset import |
 | `Crow` | `ext/crow/crow_all.h` | `xtracer-web` | <https://github.com/CrowCpp/Crow> | BSD-3-Clause | HTTP/WebSocket server framework used by `xtracer_web` |
+| `pugixml` | `ext/pugixml/pugixml.hpp`, `ext/pugixml/pugixml.cpp` | `convertMitsuba`, `lib/nmesh` | <https://pugixml.org/> | MIT | XML parser used for Mitsuba conversion and SVG mesh parsing |
 | `stb_image` | `ext/stb/stb_image.h` | `lib/nimg`, `xtcore` | <https://github.com/nothings/stb> | Public domain or MIT | Image decoding |
 | `stb_image_write` | `ext/stb/stb_image_write.h` | `lib/nimg`, `xtracer-web` | <https://github.com/nothings/stb> | Public domain or MIT | Image encoding |
 | `strpool` | `ext/strpool/strpool.h` | `xtcore`, `frontend/common`, `xtracer-web`, `xtracer-wasm` | <https://github.com/mattiasgustavsson/libs/blob/main/strpool.h> | MIT or public domain | String pool utility |

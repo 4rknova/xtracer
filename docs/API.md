@@ -32,6 +32,66 @@ Returns server version, hardware info, and third-party licenses.
 
 ---
 
+## Diagnostics
+
+### `GET /api/tests/furnace/<group>/<integrator>`
+
+Run a white-furnace material regression case and return per-case statistics plus an inline preview image.
+
+Supported groups currently include:
+
+- `renderer`
+- `rough_dielectric`
+- `absorbing_rough_dielectric`
+- `principled_clearcoat`
+- `principled_anisotropy`
+- `thin_dielectric`
+- `subsurface`
+- `sheen`
+- `thin_translucent`
+
+Supported integrators depend on the group, but the furnace UI uses `raytracer`, `pathtracer`, `pathtracer_mis`, and `pathtracer_bdpt` where applicable.
+
+**Response shape for rendered cases:**
+
+```json
+{
+  "group": "rough_dielectric",
+  "integrator": "pathtracer_mis",
+  "cases": {
+    "clear": {
+      "r": 0.6864,
+      "g": 0.6864,
+      "b": 0.6864,
+      "mean": 0.6864,
+      "center_mean": 0.9622,
+      "edge_mean": 0.4891,
+      "edge_ratio": 0.5083,
+      "radial_span": 0.4731,
+      "samples": 912,
+      "img": "data:image/png;base64,..."
+    }
+  }
+}
+```
+
+**Rendered-case fields:**
+
+| Field | Notes |
+|-------|-------|
+| `r`, `g`, `b` | Mean linear RGB over the hit mask |
+| `mean` | Average of `r/g/b` |
+| `center_mean` | Mean luminance of the innermost radial bin |
+| `edge_mean` | Mean luminance of the outermost radial bin |
+| `edge_ratio` | `edge_mean / center_mean`; values well below `1.0` indicate a dark rim |
+| `radial_span` | Max-minus-min radial-bin luminance; larger values indicate annular bias |
+| `samples` | Number of hit-mask pixels used for the aggregate |
+| `img` | Tonemapped PNG preview as a data URL |
+
+Color-only diagnostic cases such as `absorbing_rough_dielectric` return RGB triplets without radial fields.
+
+---
+
 ## Workspaces
 
 A workspace is a per-client render session that tracks the active scene, job, and quality settings. Clients identify themselves with an opaque `client_id` string (max 96 chars, alphanumeric + `_-.`).
@@ -214,6 +274,38 @@ Status values: `recommended`, `stable`, `experimental`, `legacy`, `hidden`.
 
 List available post-processing filters with their parameters.
 
+### `GET /api/materials`
+
+List material-gallery entries.
+
+Each entry currently includes:
+- `id`
+- `name`
+- `category`
+- `description`
+- `preview_color`
+- `ncf`
+
+### `POST /api/materials/<id>/preview`
+
+Queue a dedicated material-preview render using a server-owned preview scene. Returns HTTP 202 on success.
+
+```json
+{"job_id":"job_1","material_id":"gold_polished"}
+```
+
+| Parameter | Constraints | Notes |
+|-----------|-------------|-------|
+| `width` | int [8, 4096] | Render width in pixels |
+| `height` | int [8, 4096] | Render height in pixels |
+| `samples` | int [1, 1024] | Samples per pixel |
+| `aa` | int [1, 16] | Antialiasing level |
+| `rdepth` | int [1, 4096] | Ray recursion depth |
+| `tile_size` | int [8, 1024] | Tile side length in pixels |
+| `threads` | int [0, 256] | Render threads; `0` = auto; capped to server thread budget |
+| `tile_order` | `scanline`, `random`, `radial_in`, `radial_out`, `spiral_in`, `spiral_out` | |
+| Tonemapping params | — | See [Tonemapping Parameters](#tonemapping-parameters) below |
+
 ### `GET /api/resolutions`
 
 List built-in resolution presets. Returns `{"resolutions":[{"id":"hd","w":1920,"h":1080},...]}`
@@ -250,12 +342,16 @@ Submit a render job. Returns HTTP 202 on success.
 | `tile_size` | int [8, 1024] | Tile side length in pixels |
 | `threads` | int [0, 256] | Render threads; `0` = auto; capped to server thread budget |
 | `tile_order` | `scanline`, `random`, `radial_in`, `radial_out`, `spiral_in`, `spiral_out` | |
+| `save_to_gallery` | `0`/`1`, `false`/`true` | Whether the completed render should be persisted into the gallery. Defaults to `true`. |
 | `variant` | string | Scene variant name |
+| `scene_source` | string | Optional inline `.scn` source. When provided, the server stages and renders this source directly instead of loading a saved scene file or workspace draft. |
 | `workspace_id` | string | Target workspace; inferred from `client_id` if omitted |
 | `client_id` | string | Caller identifier |
 | Tonemapping params | — | See [Tonemapping Parameters](#tonemapping-parameters) below |
 
 Returns HTTP 503 `{"error":"render queue is full"}` if the job queue is at capacity.
+
+When `scene_source` is omitted, normal workspace behavior is unchanged: saved-scene renders still resolve workspace drafts and infer `workspace_id` from `client_id` when needed. When `scene_source` is provided, no workspace is required.
 
 ---
 
@@ -288,7 +384,19 @@ Get the snapshot for a single job. Returns HTTP 404 if not found.
 
 ### `GET /api/jobs/<id>/image`
 
-Return the current render as a PNG image. Serves a partial/progressive result if the render is still running.
+Return the current render as raw RGBA bytes. Serves a partial/progressive result if the render is still running.
+
+Response:
+- `Content-Type: application/x-xtracer-rgba`
+- `X-XTracer-Pixel-Format: rgba8-srgb`
+- `X-XTracer-Width: <pixels>`
+- `X-XTracer-Height: <pixels>`
+- `X-XTracer-Tiles-Done: <count>`
+- `X-XTracer-Tiles-Total: <count>`
+
+Body format:
+- Raw row-major RGBA, 8 bits per channel, sized exactly `width * height * 4`
+- Matches the WebSocket XTDR tile stream pixel format so clients can paint it directly with `putImageData`
 
 | Parameter | Notes |
 |-----------|-------|
@@ -349,15 +457,15 @@ Return the gallery entry's final image as PNG. Supports tonemapping parameters a
 
 ### `GET /api/gallery/<id>/pass/<n>/image`
 
-Return a specific pass image (0-indexed) for a multi-pass gallery entry.
+Return a specific pass image (0-indexed) for a multi-pass gallery entry. Supports tonemapping parameters and `post_filters_enabled`/`post_filters`.
 
 ### `GET /api/gallery/<id>/export`
 
-Download the gallery entry in the requested format (`format=png|exr|hdr|jpg|bmp|tga`). Returns an attachment.
+Download the gallery entry in the requested format (`format=png|exr|hdr|jpg|bmp|tga`). Returns an attachment. LDR exports (`png|jpg|bmp|tga`) also support tonemapping parameters and `post_filters_enabled`/`post_filters`.
 
 ### `GET /api/gallery/<id>/pass/<n>/export`
 
-Download a specific pass in the requested format.
+Download a specific pass in the requested format. LDR exports (`png|jpg|bmp|tga`) also support tonemapping parameters and `post_filters_enabled`/`post_filters`.
 
 ### `DELETE /api/gallery/<id>`
 

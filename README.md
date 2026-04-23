@@ -16,7 +16,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 - **Web server** (`xtracer_web`) — HTTP API server with a job queue, progressive preview streaming, and a browser-based SPA for scene selection, rendering, log inspection, and image export in multiple formats.
 - **WASM runtime** (`xtracer_wasm`) — WebAssembly build for in-browser rendering without a server.
 
-The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
+The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, SVG-backed silhouette mesh generation, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/src/frontend/web-client/res/ftue.png" alt="preview" width="100%">
@@ -128,7 +128,7 @@ Full format reference: [docs/SCENE_FORMAT.md](docs/SCENE_FORMAT.md)
 | Scene | File-manager-style scene browser plus fixed-size camera/variant cards (with variant name + description metadata), active selection panels, single-click selection, double-click activation, and scene file right-click actions (`Set Active`, `Delete`) |
 | Render | Scene/camera/integrator selection, render settings, a square preview container that fills the render pane as the largest square that fits, tile-size presets (`8`, `32`, `64`, `Auto` where auto derives a square tile from frame size and effective thread count), a preview-toolbar export format dropdown + live format-aware save button, preview sampling toggle, in-flight abort support (render action toggles `Render`/`Abort`), render modes (`Direct`, `Progressive`, `Incremental`, `Interactive`) with `Progressive` as the default frontend mode, interactive camera controls/ramping, plus post-filter stack controls (enable/disable + chain) applied to preview/export |
 | Editor | Switchable `3D View` / `Graph` / `Text Editor` modes, scene source editor, create geometry, mesh translate/rotate/scale controls, 3D scene scale multiplier, click-select + Ctrl-drag move, `F` focus shortcut, visual viewport integration, scene save |
-| Gallery | Cached render browser with card grid, detail view (with tone mapping operator + parameter controls), pass thumbnails for progressive/incremental renders, refresh, and delete. Renders are cached server-side in full-precision EXR format; the server decodes and tonemaps to PNG on each request. |
+| Gallery | Cached render browser with card grid, detail view (with tone mapping operator + parameter controls), pass thumbnails for progressive/incremental renders, refresh, and delete. Renders are cached server-side in full-precision EXR format; the server decodes and tonemaps to PNG on each request. Callers can opt a render out of gallery persistence with `save_to_gallery=0` when using `/api/render`. |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
 | About | Build/backend metadata, project license text, and third-party dependency notices including usage/location |
@@ -239,7 +239,15 @@ Open: `http://127.0.0.1:8080`
 When `/api/render` uses `threads=0`, backend auto mode resolves to `max(1, runtime_threads - reserve_threads)` (single-core hosts still render with `1` thread).
 The web backend also bounds pending render backlog to `32` queued jobs; extra `/api/render` requests return `503` instead of accumulating unbounded queued state.
 Workspace state is also bounded: the backend retains at most `32` workspaces, evicts orphaned idle workspaces after `60` minutes, and returns `409` from `/api/workspaces` if all retained slots are still active.
+Normal scene renders continue to use workspace-backed state, but `/api/render` also accepts an inline `scene_source` override for ad-hoc inline scene renders without creating a workspace.
 Startup prints an ASCII banner with runtime info (host/port, paths, concurrency, and detected core/thread limits).
+Material gallery thumbnails are intended to be pre-rendered into `src/frontend/web-client/res/lib/materials/` rather than generated on each tab visit. Refresh them with:
+
+```bash
+./util/gen_material_thumbnails.sh
+```
+
+The material gallery sidebar reads those static PNGs and only submits render jobs when opening the larger preview via `POST /api/materials/<id>/preview`.
 
 ### Docker Deployment
 

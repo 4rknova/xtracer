@@ -95,8 +95,33 @@ No parameters. Fixed geometry.
 | Generator | Key Params | Notes |
 |-----------|-----------|-------|
 | `icosphere` | `resolution` (≥ 4) | Smooth sphere via icosahedron subdivision |
+| `displaced_sphere` | `resolution` (≥ 4), `radius`, `displacement_scale` (0–1), optional `height_sampler` | Icosphere with radial vertex displacement from a texture or procedural sampler |
 | `geodesic_dome` | `resolution` (≥ 4) | Upper hemisphere, geodesic faces |
 | `hemisphere` | `resolution` (8–512) | Flat-bottomed half-sphere |
+
+**`displaced_sphere` detail** — vertices are displaced radially by `displacement_scale × radius × grayscale(height_sampler(uv))`. UVs use spherical (longitude/latitude) projection. Smooth normals are recomputed after displacement.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `resolution` | int | ≥ 4 | `64` | Icosphere subdivision level (multiples of 16 give subdivision iterations 0–3) |
+| `radius` | float | > 0 | `1.0` | Base sphere radius before displacement |
+| `displacement_scale` | float | 0–1 | `0.05` | Max outward displacement as fraction of radius |
+| `height_sampler` | group | — | none | Any sampler type; grayscale value drives displacement. If absent, no displacement is applied. |
+
+```
+moon_geo = {
+    type               = mesh
+    source             = gen(displaced_sphere)
+    resolution         = 64
+    radius             = 1.0
+    displacement_scale = 0.04
+    height_sampler = {
+        type      = texture
+        source    = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg
+        filtering = bilinear
+    }
+}
+```
 
 ### Cylinders, Cones, Rings
 
@@ -146,6 +171,34 @@ Three approaches for the same fractals — see [Menger Sponge variants](#menger-
 | `tree` | `depth` (1–7), `branch_count` (1–6), `branch_angle`, `trunk_height`, `trunk_radius`, `seed` | Recursive tapered cylinders |
 | `coral` | `depth` (1–7), `branch_count` (1–8), `branch_angle`, `height`, `branch_radius`, `seed` | Wider-branching variant of tree |
 | `crystal` | `count` (1–32), `radius`, `height`, `tip_height`, `seed` | Cluster of tapered prismatic crystals |
+
+### SVG Silhouette Mesh
+
+```
+type = mesh
+source = gen(svg)
+svg_source = assets/svg/badge.svg
+resolution = 128     # raster cells along the longest SVG axis (8–256)
+height = 0.12        # extrusion depth along Z
+```
+
+`gen(svg)` reads a filled SVG file, samples its filled regions into a 2D occupancy grid, and extrudes that silhouette into a watertight mesh on the `XY` plane with depth along `Z`.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `svg_source` | string | required | — | Scene-relative path to the SVG file |
+| `resolution` | int | 8–256 | `128` | Sampling density along the longest SVG axis |
+| `height` | float | > 0 | `0.12` | Extrusion depth |
+
+Supported SVG subset:
+- Filled `path`, `rect`, `circle`, `ellipse`, `polygon`, and filled `polyline` elements
+- `viewBox`, `transform`, and `fill-rule="evenodd"`
+- Path commands `M`, `L`, `H`, `V`, `C`, `S`, `Q`, `T`, `A`, and `Z`
+
+Current limitations:
+- The mesh is voxel-sampled from the SVG fill, not analytically tessellated; increase `resolution` for sharper edges
+- Stroke-only artwork is ignored; the generator uses fill regions only
+- `use`, clipping/masking, filters, and text layout are not supported
 
 ### Mechanical / Industrial
 

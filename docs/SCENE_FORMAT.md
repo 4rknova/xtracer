@@ -104,6 +104,22 @@ geometry = {
 
 See `docs/GEOMETRY.md` for all geometry types, generators, and their parameters.
 
+`gen(svg)` uses one extra geometry property:
+
+```
+geometry = {
+    badge = {
+        type       = mesh
+        source     = gen(svg)
+        svg_source = assets/svg/badge.svg
+        resolution = 128
+        height     = 0.12
+    }
+}
+```
+
+`svg_source` is resolved relative to the scene file, the same way image and mesh asset paths are.
+
 ---
 
 ## `material` Block
