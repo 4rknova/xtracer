@@ -545,7 +545,7 @@ void Integrator::build_photon_map()
 
     const nmath::scalar_t total_cdf = m_lights.back().weight_cdf;
     const nmath::scalar_t inv_emit = 1.0 / (nmath::scalar_t)m_emit_photons;
-    const xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
+    const xtcore::asset::ICamera *cam = ctx->active_camera();
     const nmath::Vector3f cam_pos = cam ? cam->position : nmath::Vector3f(0.0, 0.0, 0.0);
     const bool use_camera_guiding = (cam != nullptr);
     const nmath::scalar_t guide_mix = (nmath::scalar_t)0.6;
@@ -861,7 +861,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
 void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
-    xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
+    xtcore::asset::ICamera *cam = ctx->active_camera();
 
     while (tile->samples.count() > 0) {
         xtcore::antialiasing::sample_rgba_t aa_sample;

@@ -85,7 +85,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     nimg::ColorRGBf color(0, 0, 0);
 
     // Classic Whitted-style direct lighting from visible emissive geometry samples.
-    xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
+    xtcore::asset::ICamera *cam = ctx->active_camera();
     if (cam) {
         for (size_t i = 0; i < m_lights.size(); ++i) {
             const xtcore::light_t &light = m_lights[i];
@@ -134,7 +134,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
 void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
-    xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
+    xtcore::asset::ICamera *cam = ctx->active_camera();
 
     while (tile->samples.count() > 0) {
         xtcore::antialiasing::sample_rgba_t aa_sample;

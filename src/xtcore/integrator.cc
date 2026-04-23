@@ -49,7 +49,7 @@ void IIntegrator::render()
     if (!ctx) return;
 
     xtcore::render::params_t *p = &(ctx->params);
-    xtcore::asset::ICamera *cam = ctx->scene.get_camera(p->camera);
+    xtcore::asset::ICamera *cam = ctx->active_camera();
 
     if (!cam) return;
 

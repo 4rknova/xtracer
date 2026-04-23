@@ -531,7 +531,7 @@ nimg::ColorRGBf Integrator::connect(const std::vector<PathVertex> &cam_path, int
 
 void Integrator::render_tile(xtcore::render::tile_t *tile)
 {
-    xtcore::asset::ICamera *cam = ctx->scene.get_camera(ctx->params.camera);
+    xtcore::asset::ICamera *cam = ctx->active_camera();
     const size_t max_depth = ctx->params.rdepth;
 
     while (tile->samples.count() > 0) {
