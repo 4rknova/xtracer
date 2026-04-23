@@ -542,6 +542,17 @@ geometry = {
             scale = vec3(1.8,1.8,1.8)
         }
     }
+
+    g_svg = {
+        type       = mesh
+        source     = gen(svg)
+        svg_source = assets/svg/badge_cross.svg
+        resolution = 128
+        height     = 0.18
+        modifiers  = {
+            scale = vec3(2.0,2.0,2.0)
+        }
+    }
 }
 
 material = {
@@ -970,6 +981,17 @@ material = {
             scalars = { metallic = 0, roughness = 0.55 }
         }
     }
+
+    # Glossy enamel badge generated from an SVG silhouette
+    mat_badge_enamel = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.88,0.18,0.14) }
+            }
+            scalars = { metallic = 0.0, roughness = 0.16, clearcoat = 0.95, clearcoat_roughness = 0.08 }
+        }
+    }
 }
 
 object = {
@@ -1238,5 +1260,11 @@ variants = {
         name        = Coral
         description = Organic branching coral colony grown with upward-biased recursion.
         set = { object = { subject = { geometry = g_coral, material = mat_coral_pink } } }
+    }
+
+    svg = {
+        name        = SVG Mesh
+        description = Filled SVG shapes sampled into an extruded mesh; best for icons, badges, and logos.
+        set = { object = { subject = { geometry = g_svg, material = mat_badge_enamel } } }
     }
 }

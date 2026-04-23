@@ -1,3 +1,11 @@
+# The moon has surface relief of about ±10 km relative to its 1737 km radius
+# That is roughly ±0.57% of the radius.
+# Given the current displacement_scale of 0.1 and radius of 1.0, the maximum
+# displacement is already 0.1 units.
+
+# The displacement map, at 64, 16, and 4 pixels per degree, centered on 0° longitude. Available as either floating-point TIFFs in kilometers, relative to a radius of 1737.4 km, or unsigned 16-bit TIFFs in half-meters, relative to a radius of 1727400 meters.
+# The 2025 color map, available as a full-size float16 EXR file and as 16-bit TIFFs of various sizes. The EXR file is encoded in linear color with slightly more dynamic range, while the sRGB-encoded TIFFs are more broadly supported. The map is centered on 0° longitude.
+
 title       = Moon Phases
 description = The Moon lit by a single spherical light source against a black void. Eight variants cover the classical phase cycle. Camera is fixed; only the light position changes per variant.
 version     = 1.0
@@ -5,7 +13,7 @@ default_camera = cam
 
 environment = {
     type   = color
-    config = { value = col3(0.02, 0.02, 0.02) }
+    config = { value = col3(0.0, 0.0, 0.0) }
 }
 
 # ---------------------------------------------------------------------
@@ -41,9 +49,18 @@ camera = {
 
 geometry = {
     moon_geo = {
-        type     = sphere
-        position = vec3(0, 0, 0)
-        radius   = 1.0
+        type               = mesh
+        source             = gen(displaced_sphere)
+        resolution         = 7
+        radius             = 1.0
+        displacement_scale = 0.025
+        height_sampler = {
+            type       = texture
+            # source     = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg
+            source     = textures/ldem_16_uint.png
+            filtering  = bilinear
+            multiplier = 1.0
+        }
     }
 
     # Default: full moon position. Variants override position only.
@@ -65,7 +82,8 @@ material = {
             samplers = {
                 base_color = {
                     type      = texture
-                    source    = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+                    # source    = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+                    source    = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color.exr
                     filtering = bilinear
                 }
             }

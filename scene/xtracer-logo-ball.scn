@@ -1,0 +1,163 @@
+title = "Xtracer Logo Ball"
+description = "Debossed xtracer logo projected onto an icosphere-derived sphere."
+version = 1.0
+default_camera = hero
+
+environment = {
+    type = rayleigh_sky
+    config = {
+        sun_direction = vec3(-0.5, 0.85, -0.2)
+        sun_intensity = col3(8.0, 7.0, 6.2)
+        beta_rayleigh = col3(0.02, 0.05, 0.12)
+        ground_color = col3(0.18, 0.17, 0.16)
+        density = 0.9
+        horizon_falloff = 1.4
+        sun_disk_radius = 0.8
+        sun_glow_radius = 6.0
+        sun_glow_intensity = 0.3
+    }
+}
+
+camera = {
+    hero = {
+        type = thin-lens
+        fov = 34
+        position = vec3(0.0, 0.45, -4.8)
+        target = vec3(0.0, -0.05, 0.0)
+        up = vec3(0, 1, 0)
+        flength = 5.0
+        aperture = 0.0
+    }
+}
+
+geometry = {
+    logo_ball = {
+        type = mesh
+        source = resources/generated/xtracer_logo_ball.obj
+        modifiers = {
+            scale = vec3(1.16, 1.16, 1.16)
+            translation = vec3(0.0, 0.08, 0.0)
+        }
+    }
+    seat_ring = {
+        type = mesh
+        source = gen(rounded_ring)
+        resolution = 72
+        radius = 0.90
+        height = 0.12
+        thickness = 0.09
+        profile_resolution = 12
+        modifiers = {
+            translation = vec3(0, -1.08, 0)
+        }
+    }
+    stand_post = {
+        type = mesh
+        source = gen(capped_cylinder)
+        resolution = 48
+        modifiers = {
+            scale = vec3(0.24, 0.82, 0.24)
+            translation = vec3(0, -1.34, 0)
+        }
+    }
+    stand_base = {
+        type = mesh
+        source = gen(capped_cylinder)
+        resolution = 72
+        modifiers = {
+            scale = vec3(1.04, 0.12, 1.04)
+            translation = vec3(0, -1.92, 0)
+        }
+    }
+    floor = {
+        type = mesh
+        source = gen(plane)
+        resolution = 1
+        modifiers = {
+            scale = vec3(12.0, 1.0, 12.0)
+            translation = vec3(0, -2.02, 0)
+        }
+    }
+    key_light = {
+        type = sphere
+        position = vec3(-2.6, 2.9, -2.2)
+        radius = 0.26
+    }
+    rim_light = {
+        type = sphere
+        position = vec3(2.0, 1.0, -1.0)
+        radius = 0.20
+    }
+}
+
+material = {
+    ball_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.84, 0.86, 0.90) }
+            }
+            scalars = {
+                metallic = 1.0
+                roughness = 0.18
+                ior = 1.45
+                clearcoat = 0.06
+                clearcoat_roughness = 0.08
+            }
+        }
+    }
+    stand_mat = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.16, 0.17, 0.19) }
+            }
+            scalars = {
+                metallic = 0.0
+                roughness = 0.52
+                clearcoat = 0.08
+                clearcoat_roughness = 0.28
+            }
+        }
+    }
+    floor_mat = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type = checker
+                    a = col3(0.76, 0.75, 0.72)
+                    b = col3(0.38, 0.37, 0.34)
+                    scale_u = 3.0
+                    scale_v = 3.0
+                }
+            }
+        }
+    }
+    key_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(24.0, 21.0, 16.0) }
+            }
+        }
+    }
+    rim_light_mat = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(7.0, 9.0, 12.0) }
+            }
+        }
+    }
+}
+
+object = {
+    logo_ball = { geometry = logo_ball, material = ball_mat }
+    seat_ring = { geometry = seat_ring, material = stand_mat }
+    stand_post = { geometry = stand_post, material = stand_mat }
+    stand_base = { geometry = stand_base, material = stand_mat }
+    floor = { geometry = floor, material = floor_mat }
+    key_light = { geometry = key_light, material = key_light_mat }
+    rim_light = { geometry = rim_light, material = rim_light_mat }
+}
