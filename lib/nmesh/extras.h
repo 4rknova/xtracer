@@ -40,6 +40,8 @@ void superellipsoid(object_t *obj, size_t resolution = 32, float e1 = 1.0f, floa
 void crystal(object_t *obj, size_t resolution = 32, size_t count = 5, float radius = 0.8f, float height = 1.5f, float tip_height = 0.6f, int seed = 1337);
 void tree(object_t *obj, size_t resolution = 32, int depth = 4, int branch_count = 3, float branch_angle = 0.6f, float trunk_height = 1.2f, float trunk_radius = 0.08f, int seed = 1337);
 void coral(object_t *obj, size_t resolution = 32, int depth = 4, int branch_count = 4, float branch_angle = 0.7f, float height = 1.0f, float branch_radius = 0.05f, int seed = 1337);
+bool svg(object_t *obj, const char *file, size_t resolution = 128, float height = 0.12f);
+void displaced_sphere(object_t *obj, size_t resolution = 64, float radius = 1.0f);
 
     } /* namespace generator */
 } /* namespace nmesh */

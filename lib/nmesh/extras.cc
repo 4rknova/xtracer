@@ -130,7 +130,7 @@ static void build_icosphere_data(std::vector<Vec3> &verts, std::vector<tri_t> &f
         faces.push_back(t);
     }
 
-    iterations = clampi(iterations, 0, 3);
+    iterations = clampi(iterations, 0, 7);
     for (int it = 0; it < iterations; ++it) {
         std::map<std::pair<int, int>, int> edge_mid;
         std::vector<tri_t> next_faces;
@@ -2406,6 +2406,64 @@ void coral(object_t *obj, size_t /*resolution*/, int depth, int branch_count,
         Vec3(0, -height * 0.5f, 0),
         Vec3(0, 1, 0),
         height, branch_radius, depth, params);
+}
+
+void displaced_sphere(object_t *obj, size_t resolution, float radius)
+{
+    if (!obj) return;
+    if (radius <= 0.0f) radius = 1.0f;
+
+    const int iters = (int)(resolution);
+    std::vector<Vec3> verts;
+    std::vector<tri_t> faces;
+    build_icosphere_data(verts, faces, iters);
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    const float inv_pi  = 1.0f / (float)nmath::PI;
+    const float inv_2pi = 1.0f / (2.0f * (float)nmath::PI);
+
+    // Compute spherical (longitude/latitude) UV for every icosphere vertex.
+    std::vector<uv_t> base_uv(verts.size());
+    for (size_t i = 0; i < verts.size(); ++i) {
+        const Vec3 &n = verts[i];
+        base_uv[i].u = (float)nmath_atan2(n.z, n.x) * inv_2pi + 0.5f;
+        base_uv[i].v = (float)nmath_asin(std::max(-1.0f, std::min(1.0f, (float)n.y))) * inv_pi + 0.5f;
+    }
+
+    std::vector<int> remap(verts.size(), -1);
+    for (size_t i = 0; i < verts.size(); ++i)
+        remap[i] = append_vertex(obj, verts[i] * radius, verts[i], &base_uv[i]);
+
+    // Emit triangles; duplicate seam vertices so the UV atlas is contiguous.
+    // A face straddles the seam when its u-range exceeds 0.5 — push the
+    // low-u vertices past 1.0 so bilinear filtering wraps correctly.
+    for (size_t i = 0; i < faces.size(); ++i) {
+        const tri_t &t = faces[i];
+        int ia = remap[t.a], ib = remap[t.b], ic = remap[t.c];
+        const float ua = base_uv[t.a].u, ub = base_uv[t.b].u, uc = base_uv[t.c].u;
+        const float umin = std::min(ua, std::min(ub, uc));
+        const float umax = std::max(ua, std::max(ub, uc));
+
+        if (umax - umin > 0.5f) {
+            if (ua < 0.5f) {
+                uv_t fx = {ua + 1.0f, base_uv[t.a].v};
+                ia = append_vertex(obj, verts[t.a] * radius, verts[t.a], &fx);
+            }
+            if (ub < 0.5f) {
+                uv_t fx = {ub + 1.0f, base_uv[t.b].v};
+                ib = append_vertex(obj, verts[t.b] * radius, verts[t.b], &fx);
+            }
+            if (uc < 0.5f) {
+                uv_t fx = {uc + 1.0f, base_uv[t.c].v};
+                ic = append_vertex(obj, verts[t.c] * radius, verts[t.c], &fx);
+            }
+        }
+
+        append_triangle(out, ia, ib, ic, true);
+    }
 }
 
     } /* namespace generator */

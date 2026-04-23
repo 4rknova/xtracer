@@ -279,6 +279,99 @@ static void apply_heightfield_to_mesh(nmesh::object_t &obj,
     }
 }
 
+static void apply_radial_displacement(nmesh::object_t &obj,
+                                       const xtcore::sampler::ISampler *sampler,
+                                       float displacement_scale,
+                                       float height_multiplier = 1.0f)
+{
+    if (!sampler) return;
+    const size_t vertex_count = obj.attributes.v.size() / 3;
+    if (vertex_count == 0) return;
+
+    const bool has_uv = !obj.attributes.uv.empty();
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        const float vx = obj.attributes.v[i * 3 + 0];
+        const float vy = obj.attributes.v[i * 3 + 1];
+        const float vz = obj.attributes.v[i * 3 + 2];
+        const float r  = std::sqrt(vx * vx + vy * vy + vz * vz);
+        if (r < 1e-8f) continue;
+
+        // Prefer stored UV (already spherically projected by displaced_sphere).
+        // Fall back to computing UV from position when UVs are absent.
+        float su, sv;
+        if (has_uv && (size_t)(i * 2 + 1) < obj.attributes.uv.size()) {
+            su = obj.attributes.uv[i * 2 + 0];
+            sv = obj.attributes.uv[i * 2 + 1];
+            // Wrap seam-duplicate u values (those stored as u+1) back into [0,1].
+            while (su > 1.0f) su -= 1.0f;
+            while (su < 0.0f) su += 1.0f;
+        } else {
+            const float nx = vx / r, ny = vy / r, nz = vz / r;
+            su = (float)nmath_atan2(nz, nx) / (float)nmath::PI_DOUBLE + 0.5f;
+            sv = (float)nmath_asin(std::max(-1.0f, std::min(1.0f, ny))) / (float)nmath::PI + 0.5f;
+        }
+
+        const nimg::ColorRGBf s = sampler->sample(nmath::Vector3f(su, sv, 0.0f));
+        // Textures are loaded sRGB→linear; for a DEM (height data) we want
+        // the raw normalized value, so reverse the gamma here.
+        const float h_lin = (s.r() + s.g() + s.b()) / 3.0f;
+        const float h     = (h_lin <= 0.0031308f)
+            ? h_lin * 12.92f
+            : 1.055f * std::pow(h_lin, 1.0f / 2.4f) - 0.055f;
+        // Displacement is in world-space units; divide by r so the fraction is
+        // radius-independent. height_multiplier amplifies the sampled heights.
+        const float scale = 1.0f + height_multiplier * (displacement_scale / r) * (2.0f * h - 1.0f);
+        obj.attributes.v[i * 3 + 0] = vx * scale;
+        obj.attributes.v[i * 3 + 1] = vy * scale;
+        obj.attributes.v[i * 3 + 2] = vz * scale;
+    }
+
+    // Recompute smooth normals by accumulating area-weighted face normals.
+    std::vector<float> acc(vertex_count * 3, 0.0f);
+    for (const nmesh::shape_t &shape : obj.shapes) {
+        const size_t tri_count = shape.mesh.indices.size() / 3;
+        for (size_t t = 0; t < tri_count; ++t) {
+            const int vi_a = shape.mesh.indices[t * 3 + 0].v;
+            const int vi_b = shape.mesh.indices[t * 3 + 1].v;
+            const int vi_c = shape.mesh.indices[t * 3 + 2].v;
+            if (vi_a < 0 || vi_b < 0 || vi_c < 0) continue;
+            if ((size_t)(vi_a * 3 + 2) >= obj.attributes.v.size()) continue;
+            if ((size_t)(vi_b * 3 + 2) >= obj.attributes.v.size()) continue;
+            if ((size_t)(vi_c * 3 + 2) >= obj.attributes.v.size()) continue;
+
+            const float ax = obj.attributes.v[vi_a * 3],     ay = obj.attributes.v[vi_a * 3 + 1], az = obj.attributes.v[vi_a * 3 + 2];
+            const float bx = obj.attributes.v[vi_b * 3],     by = obj.attributes.v[vi_b * 3 + 1], bz = obj.attributes.v[vi_b * 3 + 2];
+            const float cx = obj.attributes.v[vi_c * 3],     cy = obj.attributes.v[vi_c * 3 + 1], cz = obj.attributes.v[vi_c * 3 + 2];
+            const float ex = bx - ax, ey = by - ay, ez = bz - az;
+            const float fx = cx - ax, fy = cy - ay, fz = cz - az;
+            float nx = ey * fz - ez * fy;
+            float ny = ez * fx - ex * fz;
+            float nz = ex * fy - ey * fx;
+            const float len = std::sqrt(nx * nx + ny * ny + nz * nz);
+            if (len < 1e-8f) continue;
+            nx /= len; ny /= len; nz /= len;
+
+            if ((size_t)(vi_a * 3 + 2) < acc.size()) { acc[vi_a*3] += nx; acc[vi_a*3+1] += ny; acc[vi_a*3+2] += nz; }
+            if ((size_t)(vi_b * 3 + 2) < acc.size()) { acc[vi_b*3] += nx; acc[vi_b*3+1] += ny; acc[vi_b*3+2] += nz; }
+            if ((size_t)(vi_c * 3 + 2) < acc.size()) { acc[vi_c*3] += nx; acc[vi_c*3+1] += ny; acc[vi_c*3+2] += nz; }
+        }
+    }
+
+    if (obj.attributes.n.size() < vertex_count * 3)
+        obj.attributes.n.resize(vertex_count * 3, 0.0f);
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        float nx = acc[i*3], ny = acc[i*3+1], nz = acc[i*3+2];
+        const float len = std::sqrt(nx*nx + ny*ny + nz*nz);
+        if (len > 1e-8f) { nx /= len; ny /= len; nz /= len; }
+        else              { nx = 0.0f; ny = 1.0f; nz = 0.0f; }
+        obj.attributes.n[i*3]   = nx;
+        obj.attributes.n[i*3+1] = ny;
+        obj.attributes.n[i*3+2] = nz;
+    }
+}
+
 static void flatten_mesh_normals(nmesh::object_t &obj)
 {
     std::vector<float> new_v;
@@ -1127,6 +1220,32 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             float pinned = (float)deserialize_numf(p ? p->get_property_by_name("pinned") : 0, 0.55f);
             nmesh::generator::draped_cloth_strip(&obj, (size_t)i, dimensions, folds, edge_lift, curl, taper, sway, asymmetry, pinned);
         }
+        else if (!token.compare(XTPROTO_LTRL_SVG)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 128);
+            i = nmath::clamp(i, 8, 256);
+
+            float height = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_HEIGHT) : 0, 0.12f);
+            if (height <= 0.0f) height = 0.12f;
+
+            std::string svg_source = asset_fetcher::resolve(
+                deserialize_cstr(p ? p->get_property_by_name(XTPROTO_PROP_SVG_SOURCE) : 0));
+            std::string base, file, fsource = source;
+            ncf::util::path_comp(fsource, base, file);
+            if (!svg_source.empty() && !path_is_absolute(svg_source) && !asset_fetcher::is_url(svg_source)) {
+                svg_source = base + svg_source;
+            }
+
+            if (svg_source.empty()) {
+                Log::handle().post_warning("Mesh generator svg requires svg_source [%s]", p ? p->get_name() : "<unnamed>");
+                delete data;
+                return 0;
+            }
+            if (!nmesh::generator::svg(&obj, svg_source.c_str(), (size_t)i, height)) {
+                Log::handle().post_warning("Failed to build svg mesh from %s", svg_source.c_str());
+                delete data;
+                return 0;
+            }
+        }
         else if (!token.compare(XTPROTO_LTRL_CHAIN_LINK)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
             if (i < 12) i = 12;
@@ -1311,6 +1430,27 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             apply_heightfield_to_mesh(obj, height_sampler, dimensions);
             delete height_sampler;
             flatten_mesh_normals(obj);
+        }
+
+        else if (!token.compare(XTPROTO_LTRL_DISPLACED_SPHERE)) {
+            int res = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
+            if (res < 4) res = 4;
+            float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, 1.0f);
+            if (radius <= 0.0f) radius = 1.0f;
+            float disp_scale = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_DISPLACEMENT_SCALE) : 0, 0.05f);
+            nmesh::generator::displaced_sphere(&obj, (size_t)res, radius);
+
+            xtcore::sampler::ISampler *height_sampler = 0;
+            float height_mult = 1.0f;
+            if (p && p->query_group(XTPROTO_PROP_HEIGHT_SAMPLER)) {
+                ncf::NCF *hs_node = p->get_group_by_name(XTPROTO_PROP_HEIGHT_SAMPLER);
+                height_mult = (float)deserialize_numf(hs_node->get_property_by_name(XTPROTO_MULTIPLIER), 1.0f);
+                height_sampler = deserialize_sampler_node(source, hs_node);
+            }
+            if (height_sampler) {
+                apply_radial_displacement(obj, height_sampler, disp_scale, height_mult);
+                delete height_sampler;
+            }
         }
 
         else Log::handle().post_message("Invalid mesh generator: %s (%s)", token.c_str(), f.c_str());
@@ -1583,6 +1723,16 @@ std::string generate_geometry_mesh_json(const std::string &gen_id, const std::ma
         float tube_radius= nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_TUBE_RADIUS),0.14f), 0.001f, 2.0f);
         nmesh::generator::shell_spiral(&obj, (size_t)res, turns, growth, tube_radius);
     }
+    else if (!token.compare(XTPROTO_LTRL_SVG)) {
+        int res = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 128), 8, 256);
+        float height = (float)deserialize_numf(get(XTPROTO_PROP_HEIGHT), 0.12f);
+        if (height <= 0.0f) height = 0.12f;
+        const char *svg_source = get(XTPROTO_PROP_SVG_SOURCE);
+        if (!svg_source || !svg_source[0]) return "{\"error\":\"svg generator requires svg_source\"}";
+        if (!nmesh::generator::svg(&obj, svg_source, (size_t)res, height)) {
+            return "{\"error\":\"failed to load svg source\"}";
+        }
+    }
     else if (!token.compare(XTPROTO_LTRL_ROCK)) {
         int   res      = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 48), 8, 2048);
         int   seed     = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
@@ -1651,6 +1801,12 @@ std::string generate_geometry_mesh_json(const std::string &gen_id, const std::ma
         float branch_radius = (float)deserialize_numf(get(XTPROTO_PROP_BRANCH_RADIUS), 0.05f);
         int   seed          = deserialize_numi(get(XTPROTO_PROP_SEED), 1337);
         nmesh::generator::coral(&obj, (size_t)res, depth, branch_count, branch_angle, height, branch_radius, seed);
+    }
+    else if (!token.compare(XTPROTO_LTRL_DISPLACED_SPHERE)) {
+        int   res    = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 64), 4, 10000);
+        float radius = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS), 1.0f);
+        if (radius <= 0.0f) radius = 1.0f;
+        nmesh::generator::displaced_sphere(&obj, (size_t)res, radius);
     }
     else {
         return "{\"error\":\"unknown generator: " + gen_id + "\"}";
@@ -2405,6 +2561,7 @@ xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::N
 
   	if (      filter.empty()
       	  || !filter.compare(XTPROTO_LTRL_NEAREST )) { data->set_filtering(xtcore::sampler::FILTERING_NEAREST);  }
+	else if (!filter.compare(XTPROTO_LTRL_LINEAR  )) { data->set_filtering(xtcore::sampler::FILTERING_LINEAR);   }
 	else if (!filter.compare(XTPROTO_LTRL_BILINEAR)) { data->set_filtering(xtcore::sampler::FILTERING_BILINEAR); }
 	else {
 		Log::handle().post_warning("Invalid filtering method: %s", filter.c_str());
