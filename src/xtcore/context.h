@@ -2,6 +2,7 @@
 #define XTCORE_CONTEXT_H_INCLUDED
 
 #include "strpool.h"
+#include <memory>
 #include "nimg/pixmap.h"
 #include "scene.h"
 #include "tile.h"
@@ -38,6 +39,7 @@ struct context_t
 	Scene     scene;
 	Tileset   tiles;
     params_t  params;
+    std::unique_ptr<xtcore::asset::ICamera> transient_camera;
 
     /* init: Initialize context buffers
     **       Note that any change to params
@@ -46,6 +48,8 @@ struct context_t
     **       be called again
     */
     void init();
+    xtcore::asset::ICamera *active_camera();
+    const xtcore::asset::ICamera *active_camera() const;
 
     context_t();
 };

@@ -32,6 +32,16 @@ void context_t::init()
     segment_framebuffer(tiles, params.width, params.height, params.tile_size);
 }
 
+xtcore::asset::ICamera *context_t::active_camera()
+{
+    return transient_camera.get() ? transient_camera.get() : scene.get_camera(params.camera);
+}
+
+const xtcore::asset::ICamera *context_t::active_camera() const
+{
+    return transient_camera.get() ? transient_camera.get() : const_cast<Scene &>(scene).get_camera(params.camera);
+}
+
 context_t::context_t()
 {}
 

@@ -67,6 +67,7 @@ nimg::ColorRGBf Texture2D::sample(const nmath::Vector3f &tc) const
 {
     switch (m_filtering) {
         case FILTERING_NEAREST  : return nimg::sample::nearest  (m_map, tc.x, tc.y);
+        case FILTERING_LINEAR   :
         case FILTERING_BILINEAR : return nimg::sample::bilinear (m_map, tc.x, tc.y);
     }
 

@@ -50,6 +50,7 @@
 #define XTPROTO_LTRL_LATHE			"lathe"				/* string     */ /* Lathe */
 #define XTPROTO_LTRL_TERRAIN        "terrain"           /* string     */ /* Terrain */
 #define XTPROTO_LTRL_DRAPED_CLOTH_STRIP "draped_cloth_strip" /* string */ /* Draped cloth strip */
+#define XTPROTO_LTRL_SVG            "svg"               /* string     */ /* SVG silhouette mesh */
 #define XTPROTO_PROP_CRD_X			"x"					/* scalar_t   */ /* Vector's x coordinate */
 #define XTPROTO_PROP_CRD_Y			"y"					/* scalar_t   */ /* Vector's y coordinate */
 #define XTPROTO_PROP_CRD_Z			"z"					/* scalar_t   */ /* Vector's z coordinate */
@@ -76,6 +77,7 @@
 #define XTPROTO_PROP_POSITION		"position"			/* Vector3f   */ /* Translation */
 #define XTPROTO_PROP_TEXCOORD		"texcoord"			/* Vector2f   */ /* Texture coordinates */
 #define XTPROTO_PROP_SOURCE			"source"			/* string     */ /* External source file */
+#define XTPROTO_PROP_SVG_SOURCE     "svg_source"        /* string     */ /* SVG source file for gen(svg) */
 #define XTPROTO_PROP_FOV			"fov"				/* scalar_t   */ /* Field of view */
 #define XTPROTO_PROP_APERTURE		"aperture"			/* scalar_t   */ /* Aperture of the lense */
 #define XTPROTO_PROP_TARGET			"target"			/* Vector3f   */ /* Target position */
@@ -109,6 +111,7 @@
 #define XTPROTO_PROP_IPD			"ipd"				/* scalar_t   */ /* Inter-Pupillary Distance */
 #define XTPROTO_PROP_FILTERING      "filtering"         /* string     */ /* Texture filtering type */
 #define XTPROTO_LTRL_NEAREST        "nearest"           /* string     */ /* Texture filtering, nearest */
+#define XTPROTO_LTRL_LINEAR         "linear"            /* string     */ /* Texture filtering, linear */
 #define XTPROTO_LTRL_BILINEAR       "bilinear"          /* string     */ /* Texture filtering, bilinear */
 #define XTPROTO_LTRL_POSX           "posx"              /* string     */ /* Cubemap face */
 #define XTPROTO_LTRL_POSY           "posy"              /* string     */ /* Cubemap face */
@@ -261,6 +264,7 @@
 #define XTPROTO_LTRL_SUPERELLIPSOID  "superellipsoid"    /* string     */ /* Superellipsoid */
 #define XTPROTO_LTRL_CITY            "city"              /* string     */ /* Procedural city */
 #define XTPROTO_LTRL_LOWPOLY_TERRAIN "lowpoly_terrain"   /* string     */ /* Flat-shaded low-poly terrain */
+#define XTPROTO_LTRL_DISPLACED_SPHERE "displaced_sphere" /* string     */ /* Icosphere with radial texture displacement */
 
 /* New property tokens */
 #define XTPROTO_PROP_TOOTH_COUNT     "tooth_count"       /* integer    */ /* Number of gear teeth */
@@ -296,6 +300,7 @@
 #define XTPROTO_PROP_WINDOW_INSET          "window_inset"          /* scalar_t   */ /* Window recess depth */
 #define XTPROTO_PROP_PAVEMENT_HEIGHT       "pavement_height"       /* scalar_t   */ /* Raised kerb height */
 #define XTPROTO_PROP_PAVEMENT_WIDTH        "pavement_width"        /* scalar_t   */ /* Pavement strip width into road */
+#define XTPROTO_PROP_DISPLACEMENT_SCALE    "displacement_scale"    /* scalar_t   */ /* Max radial displacement in world-space units (radius-independent) */
 
 /* Meshgroup geometry */
 #define XTPROTO_LTRL_MESHGROUP       "meshgroup"         /* string     */ /* Multi-file mesh group */

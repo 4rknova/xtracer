@@ -13,6 +13,7 @@ namespace xtcore {
 enum FILTERING
 {
       FILTERING_NEAREST
+    , FILTERING_LINEAR
     , FILTERING_BILINEAR
 };
 

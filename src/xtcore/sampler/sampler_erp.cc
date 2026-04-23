@@ -21,14 +21,14 @@ inline void direction_to_erp_uv(const nmath::Vector3f &dir_in, nmath::scalar_t &
     const nmath::Vector3f dir = dir_in.normalized();
     const nmath::scalar_t theta = nmath_acos(clamp_scalar(dir.y, (nmath::scalar_t)-1.0, (nmath::scalar_t)1.0));
     const nmath::scalar_t phi = nmath_atan2(dir.x, -dir.z);
-    u = (nmath::scalar_t)0.5 + phi / nmath::PI_DOUBLE;
+    u = (nmath::scalar_t)0.5 + phi / (nmath::PI_DOUBLE * (nmath::scalar_t)2.0);
     v = theta / nmath::PI;
 }
 
 inline nmath::Vector3f erp_uv_to_direction(nmath::scalar_t u, nmath::scalar_t v)
 {
     const nmath::scalar_t theta = clamp_scalar(v, (nmath::scalar_t)0.0, (nmath::scalar_t)1.0) * nmath::PI;
-    const nmath::scalar_t phi = (u - (nmath::scalar_t)0.5) * nmath::PI_DOUBLE;
+    const nmath::scalar_t phi = (u - (nmath::scalar_t)0.5) * nmath::PI_DOUBLE * (nmath::scalar_t)2.0;
     const nmath::scalar_t sin_theta = nmath_sin(theta);
     return nmath::Vector3f(
         sin_theta * nmath_sin(phi),
@@ -50,6 +50,7 @@ int ERP::load(const char *file)
     m_row_cdf.clear();
     m_conditional_cdf.clear();
     m_total_weight = 0.0;
+    m_texture.set_filtering(FILTERING_LINEAR);
     return m_texture.load(file);
 }
 
@@ -176,7 +177,7 @@ nmath::scalar_t ERP::pdf_direction(const nmath::Vector3f &direction) const
     const nmath::scalar_t pmf = texel_pmf(x, y);
     const nmath::scalar_t theta = clamp_scalar(v, (nmath::scalar_t)0.0, (nmath::scalar_t)1.0) * nmath::PI;
     const nmath::scalar_t sin_theta = std::max((nmath::scalar_t)1e-5, nmath_sin(theta));
-    const nmath::scalar_t solid_angle = (nmath::PI_DOUBLE * nmath::PI * sin_theta) / ((nmath::scalar_t)w * (nmath::scalar_t)h);
+    const nmath::scalar_t solid_angle = (nmath::PI_DOUBLE * (nmath::scalar_t)2.0 * nmath::PI * sin_theta) / ((nmath::scalar_t)w * (nmath::scalar_t)h);
     return pmf / std::max((nmath::scalar_t)EPSILON, solid_angle);
 }
 
