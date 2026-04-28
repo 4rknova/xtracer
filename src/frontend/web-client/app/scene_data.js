@@ -1657,12 +1657,10 @@ async function loadAbout() {
   el.aboutWebsite.textContent = repository;
   el.aboutCopyright.textContent = data.copyright || "unknown";
   el.aboutLicense.textContent = data.license || "Unavailable";
-  const backendLabel = data.backend || (backendMode === "wasm" ? "xtracer_wasm_adapter" : "xtracer_web");
-  const isWasmBackend = String(backendLabel).toLowerCase().indexOf("wasm") >= 0;
-  el.aboutBuildPill.hidden = !isWasmBackend;
+  const backendLabel = data.backend || "xtracer_web";
   el.aboutBackend.textContent = backendLabel;
   el.aboutDefaultUrl.textContent = data.default_url || window.location.origin;
-  el.aboutSceneDir.textContent = data.scene_dir || (backendMode === "wasm" ? "scenes/" : "scene/");
+  el.aboutSceneDir.textContent = data.scene_dir || "scene/";
   el.aboutStaticAssets.textContent = data.static_assets || "/";
   updateWorkspaceServerStatsHints(data);
   renderThirdPartyLicenses(data.third_party_licenses);

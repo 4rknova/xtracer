@@ -7,8 +7,6 @@ include(GNUInstallDirs)
 
 option(XTRACER_ENABLE_REMOTE_ASSETS "Enable remote URL asset fetching via curl subprocess" ON)
 option(XTRACER_ENABLE_WEB "Build web frontend" ON)
-option(XTRACER_ENABLE_WASM "Build standalone WASM frontend (Emscripten)" OFF)
-option(XTRACER_ENABLE_WASM_DIST "Build standalone WASM dist into build/wasm-dist during native builds" OFF)
 option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
 option(XTRACER_ENABLE_NMATH_SIMD "Enable SIMD paths in nmath (x86 SSE2, double precision)" ON)
 option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" OFF)
@@ -64,7 +62,7 @@ set(PATH_TEST ${PATH_BIN}/test)
 file(MAKE_DIRECTORY ${PATH_BIN})
 file(MAKE_DIRECTORY ${PATH_TEST})
 
-if (XTRACER_ENABLE_WEB OR XTRACER_ENABLE_WASM OR XTRACER_ENABLE_WASM_DIST)
+if (XTRACER_ENABLE_WEB)
     set(PATH_WEB_LICENSE ${PATH_WEB}/license.txt)
     add_custom_command(
         OUTPUT ${PATH_WEB_LICENSE}
@@ -120,7 +118,6 @@ list(REMOVE_DUPLICATES ext_libs)
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
-set(PATH_SRC_FRONTEND_WASM ${PATH_SRC}/frontend/wasm)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
 set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
@@ -204,12 +201,6 @@ file(GLOB SRC_FRONTEND_WEB
     ${PATH_SRC_FRONTEND_WEB}/*.c
     ${PATH_SRC_FRONTEND_WEB}/*.cc
     ${PATH_SRC_FRONTEND_WEB}/*.cpp
-)
-
-file(GLOB SRC_FRONTEND_WASM
-    ${PATH_SRC_FRONTEND_WASM}/*.c
-    ${PATH_SRC_FRONTEND_WASM}/*.cc
-    ${PATH_SRC_FRONTEND_WASM}/*.cpp
 )
 
 file(GLOB SRC_FRONTEND_COMMON
@@ -609,77 +600,6 @@ if (XTRACER_ENABLE_WEB)
     endif()
 endif()
 
-if (XTRACER_ENABLE_WASM)
-    if (NOT XTRACER_USING_EMSCRIPTEN)
-        message(FATAL_ERROR "XTRACER_ENABLE_WASM requires Emscripten toolchain")
-    endif()
-
-    set(OUT_EXE_WASM xtracer_wasm)
-    add_executable(${OUT_EXE_WASM} ${SRC_FRONTEND_WASM} ${SRC_FRONTEND_COMMON})
-    target_include_directories(${OUT_EXE_WASM} PUBLIC
-        ${PATH_LIB}
-        ${PATH_SRC}
-    )
-    target_include_directories(${OUT_EXE_WASM} SYSTEM PUBLIC
-        ${ext_libs}
-    )
-    target_link_libraries(${OUT_EXE_WASM} PRIVATE xtcore_static)
-    set_target_properties(${OUT_EXE_WASM} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${PATH_WEB}
-    )
-    target_link_options(${OUT_EXE_WASM} PRIVATE
-        "SHELL:-sWASM=1"
-        "SHELL:-sALLOW_MEMORY_GROWTH=1"
-        "SHELL:-sFORCE_FILESYSTEM=1"
-        "SHELL:-sENVIRONMENT=worker,web"
-        "SHELL:-sEXPORTED_FUNCTIONS=['_xtracer_wasm_render_png','_xtracer_wasm_render_begin','_xtracer_wasm_render_step','_xtracer_wasm_render_tiles_done','_xtracer_wasm_render_tiles_total','_xtracer_wasm_render_is_done','_xtracer_wasm_render_snapshot_png','_xtracer_wasm_render_snapshot_exr','_xtracer_wasm_render_snapshot_hdr','_xtracer_wasm_free','_xtracer_wasm_get_last_error','_malloc','_free']"
-        "SHELL:-sEXPORTED_RUNTIME_METHODS=['cwrap','ccall','FS','UTF8ToString']"
-    )
-    set(WASM_SCENE_OUTPUT_DIR ${PATH_BIN}/scenes)
-    set(WASM_SCENE_SYNC_STAMP ${WASM_SCENE_OUTPUT_DIR}/.sync_stamp)
-    file(GLOB WASM_SCENE_SOURCES ${PATH_ROOT}/scene/*.scn)
-    add_custom_command(
-        OUTPUT ${WASM_SCENE_SYNC_STAMP}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${WASM_SCENE_OUTPUT_DIR}
-        COMMAND bash ${PATH_ROOT}/util/sync_wasm_scenes.sh ${WASM_SCENE_OUTPUT_DIR} ${PATH_ROOT}/scene
-        COMMAND ${CMAKE_COMMAND} -E touch ${WASM_SCENE_SYNC_STAMP}
-        DEPENDS ${PATH_ROOT}/util/sync_wasm_scenes.sh ${WASM_SCENE_SOURCES}
-        COMMENT "Syncing self-contained scenes for WASM frontend"
-        VERBATIM
-    )
-    add_custom_target(xtracer_wasm_scenes DEPENDS ${WASM_SCENE_SYNC_STAMP})
-    add_dependencies(${OUT_EXE_WASM} xtracer_wasm_scenes)
-    if (TARGET web_license_asset)
-        add_dependencies(${OUT_EXE_WASM} web_license_asset)
-    endif()
-endif()
-
-if (XTRACER_ENABLE_WASM_DIST)
-    if (XTRACER_USING_EMSCRIPTEN)
-        message(WARNING "XTRACER_ENABLE_WASM_DIST is ignored while building with Emscripten toolchain")
-    else()
-        find_program(EMCMAKE_PROGRAM emcmake)
-        if (NOT EMCMAKE_PROGRAM)
-            message(FATAL_ERROR "XTRACER_ENABLE_WASM_DIST requires emcmake in PATH")
-        endif()
-
-        set(WASM_DIST_BUILD_DIR ${PATH_ROOT}/build/intermediate/build-wasm)
-        set(WASM_DIST_OUTPUT_DIR ${PATH_BIN}/wasm-dist)
-
-        add_custom_target(xtracer_wasm_dist ALL
-            COMMAND ${CMAKE_COMMAND} -E rm -f ${WASM_DIST_BUILD_DIR}/CMakeCache.txt
-            COMMAND ${CMAKE_COMMAND} -E rm -rf ${WASM_DIST_BUILD_DIR}/CMakeFiles
-            COMMAND ${EMCMAKE_PROGRAM} cmake -S ${PATH_ROOT} -B ${WASM_DIST_BUILD_DIR}
-                    -DXTRACER_ENABLE_WEB=OFF
-                    -DXTRACER_ENABLE_WASM=ON
-                    -DXTRACER_ENABLE_WASM_DIST=OFF
-            COMMAND ${CMAKE_COMMAND} --build ${WASM_DIST_BUILD_DIR} -j --target xtracer_wasm
-            COMMAND ${PATH_ROOT}/util/package_wasm_standalone.sh ${WASM_DIST_OUTPUT_DIR}
-            COMMENT "Building and packaging standalone WASM dist into ${WASM_DIST_OUTPUT_DIR}"
-            VERBATIM
-        )
-    endif()
-endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unknown-pragmas")
@@ -690,9 +610,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(DEFS ${DEFS} XTCORE_VERSION="${DEF_VERSION}")
 target_compile_definitions(xtcore_static  PRIVATE ${DEFS})
 target_compile_definitions(xtcore_dynamic PRIVATE ${DEFS})
-if (XTRACER_ENABLE_WASM)
-    target_compile_definitions(${OUT_EXE_WASM} PRIVATE ${DEFS})
-endif()
 target_compile_definitions(${OUT_EXE_COLORSPACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_COLORSPACE_VECTORS_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_TILE_TEST} PRIVATE ${DEFS})

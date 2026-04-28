@@ -516,6 +516,7 @@ function workspaceRuntimeState(workspaceId) {
       lastCompletedJobId: "",
       lastCompletedJobScene: "",
       lastCompletedJobIntegrator: "",
+      activeVariant: "",
     };
     workspaceRuntimeById.set(id, state);
   }
@@ -538,6 +539,7 @@ function syncGlobalsToWorkspaceRuntime() {
   state.lastCompletedJobId = lastCompletedJobId || "";
   state.lastCompletedJobScene = lastCompletedJobScene || "";
   state.lastCompletedJobIntegrator = lastCompletedJobIntegrator || "";
+  state.activeVariant = String((el && el.variant && el.variant.value) || "");
 }
 
 function beginPollSession() {
@@ -988,7 +990,7 @@ function createServerApi() {
       });
       const data = await res.json();
       if (!res.ok) throw createHttpError(res.status, data.error || `HTTP ${res.status}`);
-      return !!data.ok;
+      return (data && data.workspace) ? data.workspace : null;
     },
     async deleteWorkspace(workspaceId) {
       const body = new URLSearchParams();
@@ -1005,7 +1007,8 @@ function createServerApi() {
     },
     async saveWorkspaceSceneDraft(scene, source) {
       const body = new URLSearchParams();
-      body.set("client_id", clientId || ensureClientId());
+      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
+      else body.set("client_id", clientId || ensureClientId());
       body.set("scene", String(scene || ""));
       body.set("source", String(source || ""));
       const res = await fetch("/api/workspaces/scene_draft", {
@@ -1019,7 +1022,8 @@ function createServerApi() {
     },
     async saveWorkspaceSettings(settingsJson) {
       const body = new URLSearchParams();
-      body.set("client_id", clientId || ensureClientId());
+      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
+      else body.set("client_id", clientId || ensureClientId());
       body.set("settings_json", String(settingsJson || "{}"));
       const res = await fetch("/api/workspaces/settings", {
         method: "POST",
@@ -1051,53 +1055,9 @@ function isValidBackendApi(candidate) {
     && hasBackendMethod(candidate, "saveScene");
 }
 
-function createWasmApiOrFallback(serverApi) {
-  const factory = window.XTracerWasmAdapter;
-  if (typeof factory !== "function") {
-    appendLog("wasm backend requested but adapter is not loaded; using server backend");
-    return serverApi;
-  }
-
-  let wasmApi = null;
-  try {
-    wasmApi = factory({ serverApi, appendLog });
-  } catch (err) {
-    appendLog(`wasm backend failed to initialize: ${err.message}`);
-    return serverApi;
-  }
-
-  if (!isValidBackendApi(wasmApi)) {
-    appendLog("wasm backend adapter is invalid; using server backend");
-    return serverApi;
-  }
-
-  return wasmApi;
-}
-
-function detectRequestedBackendMode() {
-  const queryMode = new URLSearchParams(window.location.search).get("backend");
-  if (queryMode === "server" || queryMode === "wasm") {
-    localStorage.setItem(BACKEND_MODE_KEY, queryMode);
-    return queryMode;
-  }
-  // Prefer server by default; only use wasm when explicitly requested.
-  return "server";
-}
-
 function initializeBackendApi() {
-  const serverApi = createServerApi();
-  const requested = detectRequestedBackendMode();
-  if (requested === "wasm") {
-    const resolved = createWasmApiOrFallback(serverApi);
-    if (resolved !== serverApi) {
-      backendMode = "wasm";
-      return resolved;
-    }
-  }
-
   backendMode = "server";
-  localStorage.setItem(BACKEND_MODE_KEY, "server");
-  return serverApi;
+  return createServerApi();
 }
 
 let logWebSocket = null;

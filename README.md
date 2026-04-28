@@ -8,15 +8,14 @@
   <a href="https://github.com/4rknova/xtracer/pkgs/container/xtracer"><img src="https://img.shields.io/badge/ghcr.io-available-blue?logo=github" alt="GitHub Container Registry"></a>
 </p>
 
-Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, Web, WASM runtime).
+Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, Web).
 
-`xtracer` is a physically-based ray/path tracing engine built for exploration and experimentation. The core library (`xtcore`) handles scene parsing, ray-geometry intersection, shading, and tone mapping — and is consumed by three independent frontends:
+`xtracer` is a physically-based ray/path tracing engine built for exploration and experimentation. The core library (`xtcore`) handles scene parsing, ray-geometry intersection, shading, and tone mapping — and is consumed by two independent frontends:
 
 - **CLI** (`xtracer_cli`) — offline renderer that writes images to disk; supports PNG output with full control over integrator, resolution, samples, and anti-aliasing.
 - **Web server** (`xtracer_web`) — HTTP API server with a job queue, progressive preview streaming, and a browser-based SPA for scene selection, rendering, log inspection, and image export in multiple formats.
-- **WASM runtime** (`xtracer_wasm`) — WebAssembly build for in-browser rendering without a server.
 
-The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, SVG-backed silhouette mesh generation, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
+The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, spline-following tube curves, SVG-backed silhouette mesh generation, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/src/frontend/web-client/res/ftue.png" alt="preview" width="100%">
@@ -78,15 +77,15 @@ With scene variant:
 
 ### Frontends
 
-| Capability | CLI (`xtracer_cli`) | Web (`xtracer_web`) | WASM (`xtracer_wasm`) |
-|---|---:|---:|---:|
-| Load `.scn` scenes | Yes | Yes | Yes |
-| Select camera | Yes (`-cam`) | Yes | Yes |
-| Select scene variant | Yes (`-variant`) | Yes (`variant` API param) | Via backend API |
-| Integrator selection | Yes (`-renderer`) | Yes (`/api/integrators`) | Yes (through web app adapter) |
-| Progressive updates | Terminal progress | Job progress + preview API | Progressive snapshots |
-| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) | PNG snapshots (adapter flow) |
-| HTTP API | No | Yes | No |
+| Capability | CLI (`xtracer_cli`) | Web (`xtracer_web`) |
+|---|---:|---:|
+| Load `.scn` scenes | Yes | Yes |
+| Select camera | Yes (`-cam`) | Yes |
+| Select scene variant | Yes (`-variant`) | Yes (`variant` API param) |
+| Integrator selection | Yes (`-renderer`) | Yes (`/api/integrators`) |
+| Progressive updates | Terminal progress | Job progress + preview API |
+| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) |
+| HTTP API | No | Yes |
 
 ### Integrators
 
@@ -113,7 +112,7 @@ Full format reference: [docs/SCENE_FORMAT.md](docs/SCENE_FORMAT.md)
 
 | Asset type | Reference |
 |---|---|
-| Geometry types, analytic primitives, fractals, mesh generators, CSG | [docs/GEOMETRY.md](docs/GEOMETRY.md) |
+$$| Geometry types, analytic primitives, fractals, mesh generators, CSG | [docs/GEOMETRY.md](docs/GEOMETRY.md) |
 | Camera types and parameters | [docs/CAMERAS.md](docs/CAMERAS.md) |
 | Material types, sampler slots, scalar parameters | [docs/MATERIALS.md](docs/MATERIALS.md) |
 | Sampler types (procedural, image, environment) | [docs/SAMPLERS.md](docs/SAMPLERS.md) |
@@ -178,12 +177,6 @@ sudo apt update
 sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
 ```
 
-WASM toolchain (`XTRACER_ENABLE_WASM=ON`):
-
-```bash
-sudo apt install -y emscripten
-```
-
 ### Recommended Native Build (Out-of-Tree)
 
 ```bash
@@ -199,14 +192,11 @@ cmake --build build/intermediate/build -j
 | Option | Default | Description |
 |---|---:|---|
 | `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
-| `XTRACER_ENABLE_WASM` | `OFF` | Build standalone WASM runtime |
-| `XTRACER_ENABLE_WASM_DIST` | `OFF` | Build/package standalone WASM dist during native build |
 | `XTRACER_ENABLE_VIZ` | `OFF` | Build OpenGL sampling visualization tool (`xtracer_viz_sampling`) |
 | `XTRACER_ENABLE_NMATH_SIMD` | `ON` | Enable x86 SSE2 SIMD fast-paths for `nmath` double-precision vector and matrix operations |
 | `XTRACER_ENABLE_NMATH_SIMD_AVX` | `ON` | Use AVX path for `nmath` SIMD (`XTRACER_ENABLE_NMATH_SIMD` must be `ON`) |
 
 Notes:
-- `XTRACER_ENABLE_NMATH_SIMD` currently targets native x86/x86_64 builds and is ignored for Emscripten.
 - SIMD paths are used only when `nmath` is built in double precision (default configuration); scalar fallback remains available.
 - `XTRACER_ENABLE_NMATH_SIMD_AVX` enables AVX codegen and runtime AVX instructions for supported hosts.
 
@@ -311,26 +301,6 @@ Run:
 ./build/intermediate/build-viz/xtracer_viz_sampling
 ```
 
-### WASM Runtime Build
-
-```bash
-emcmake cmake -S . -B build/intermediate/build-wasm \
-  -DXTRACER_ENABLE_WEB=OFF \
-  -DXTRACER_ENABLE_WASM=ON
-cmake --build build/intermediate/build-wasm -j --target xtracer_wasm
-```
-
-Expected output:
-
-- `src/frontend/web-client/xtracer_wasm.js`
-- `src/frontend/web-client/xtracer_wasm.wasm`
-- copied self-contained scenes from `scene/` into build output `<build-dir>/scenes/` (for example `build/intermediate/build-wasm/scenes/`)
-
-Optional static packaging:
-
-```bash
-./util/package_wasm_standalone.sh
-```
 
 ## Test Targets
 

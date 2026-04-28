@@ -60,6 +60,7 @@
 #include "furnace_tests.h"
 #include "gallery_manager.h"
 #include "job_manager.h"
+#include "pixmap_util.h"
 #include "post_filters.h"
 #include "workspace_manager.h"
 
@@ -130,6 +131,30 @@ std::string json_escape(const std::string &s)
         }
     }
     return out.str();
+}
+
+// ---------------------------------------------------------------------------
+// Serialize a workspace snapshot to a JSON object string (no outer braces).
+// Used by both GET /api/workspaces list and POST /api/workspaces/active.
+// ---------------------------------------------------------------------------
+static std::string workspace_snapshot_json(const workspace_snapshot_t &w, bool is_active_for_client)
+{
+    std::ostringstream ss;
+    ss << "{"
+       << "\"id\":\"" << json_escape(w.id) << "\","
+       << "\"name\":\"" << json_escape(w.name) << "\","
+       << "\"is_owned_by_client\":" << (w.is_owned_by_client ? "true" : "false") << ","
+       << "\"is_active_for_client\":" << (is_active_for_client ? "true" : "false") << ","
+       << "\"active_scene\":\"" << json_escape(w.active_scene) << "\","
+       << "\"active_variant\":\"" << json_escape(w.active_variant) << "\","
+       << "\"active_job_id\":\"" << json_escape(w.active_job_id) << "\","
+       << "\"last_job_id\":\"" << json_escape(w.last_job_id) << "\","
+       << "\"draft_count\":" << w.draft_count << ","
+       << "\"client_count\":" << w.client_count << ","
+       << "\"settings_json\":\"" << json_escape(w.settings_json) << "\","
+       << "\"updated_ms\":" << w.updated_ms
+       << "}";
+    return ss.str();
 }
 
 // ---------------------------------------------------------------------------
@@ -1393,8 +1418,27 @@ struct scene_cache_entry_t
     std::uint64_t mtime;
     std::shared_ptr<xtcore::Scene> scene;
     camera_list_info_t cameras;
-    std::string geometry_json;
     std::string runtime_graph_json;
+
+    const std::string &get_geometry_json() const
+    {
+        std::lock_guard<std::mutex> lk(m_geometry_mutex);
+        if (!m_geometry_computed) {
+            m_geometry_json = scene_geometry_json_from_scene(*scene);
+            m_geometry_computed = true;
+        }
+        return m_geometry_json;
+    }
+
+    scene_cache_entry_t()
+        : mtime(0ULL)
+        , m_geometry_computed(false)
+    {}
+
+    private:
+    mutable std::mutex m_geometry_mutex;
+    mutable std::string m_geometry_json;
+    mutable bool m_geometry_computed;
 };
 
 std::string scene_cache_key(const std::string &scene_path, const std::string &variant)
@@ -1460,6 +1504,7 @@ class scene_cache_t
         }
 
         unsigned long long pending_job_id = 0ULL;
+        bool new_load_started = false;
         std::vector<unsigned long long> expired_jobs;
         {
             std::lock_guard<std::mutex> lock(mut);
@@ -1481,26 +1526,30 @@ class scene_cache_t
                         pending.erase(pit);
                     }
                 }
+                if (!pending_job_id) {
+                    // Start the load while holding the lock so no other thread
+                    // can also see "no pending" and start a duplicate load.
+                    const char *variant_name = variant.empty() ? nullptr : variant.c_str();
+                    pending_job_id = xtcore::io::scn::load_async_start(scene_path.c_str(), nullptr, variant_name);
+                    if (pending_job_id) {
+                        scene_pending_load_t p;
+                        p.mtime = mtime;
+                        p.job_id = pending_job_id;
+                        p.completed_ms = 0LL;
+                        pending[key] = p;
+                        new_load_started = true;
+                    }
+                }
             }
         }
         discard_pending_jobs(expired_jobs);
         if (out.entry) return out;
 
         if (!pending_job_id) {
-            const char *variant_name = variant.empty() ? nullptr : variant.c_str();
-            pending_job_id = xtcore::io::scn::load_async_start(scene_path.c_str(), nullptr, variant_name);
-            if (!pending_job_id) {
-                out.error = "failed to start async scene load";
-                return out;
-            }
-            {
-                std::lock_guard<std::mutex> lock(mut);
-                scene_pending_load_t p;
-                p.mtime = mtime;
-                p.job_id = pending_job_id;
-                p.completed_ms = 0LL;
-                pending[key] = p;
-            }
+            out.error = "failed to start async scene load";
+            return out;
+        }
+        if (new_load_started) {
             std::ostringstream log;
             log << "scene async load started path=" << scene_path
                 << " variant=" << variant
@@ -1536,10 +1585,6 @@ class scene_cache_t
             return out;
         }
 
-        {
-            std::lock_guard<std::mutex> lock(mut);
-            mark_pending_completed_locked(key, pending_job_id, now);
-        }
         std::shared_ptr<xtcore::Scene> loaded_scene = xtcore::io::scn::load_async_take_scene(pending_job_id);
         if (!loaded_scene) {
             out.loading = true;
@@ -1556,7 +1601,6 @@ class scene_cache_t
 
         auto t_pack_0 = std::chrono::steady_clock::now();
         entry->cameras = list_cameras_from_scene(*entry->scene);
-        entry->geometry_json = scene_geometry_json_from_scene(*entry->scene);
         entry->runtime_graph_json = scene_runtime_graph_json_from_scene(scene_path, *entry->scene);
         auto t_pack_1 = std::chrono::steady_clock::now();
         const long long pack_ms = (long long)std::chrono::duration_cast<std::chrono::milliseconds>(t_pack_1 - t_pack_0).count();
@@ -1569,13 +1613,13 @@ class scene_cache_t
             auto pit = pending.find(key);
             if (pit != pending.end() && pit->second.job_id == pending_job_id) pending.erase(pit);
         }
+
         xtcore::io::scn::load_async_discard(pending_job_id);
         xtcore::io::scn::load_async_gc_done(128);
 
         std::ostringstream log;
         log << "scene cache miss path=" << scene_path
             << " variant=" << variant
-            << " async_job_id=" << pending_job_id
             << " pack_ms=" << pack_ms;
         backend_log_t::handle().add("debug", log.str());
         out.entry = entry;
@@ -1633,6 +1677,20 @@ class scene_cache_t
         return true;
     }
 
+    std::shared_ptr<xtcore::Scene> get_loaded_scene(const std::string &scene_path, const std::string &variant)
+    {
+        const std::string key = scene_cache_key(scene_path, variant);
+        std::uint64_t mtime = 0ULL;
+        if (!file_mtime(scene_path, mtime)) return nullptr;
+        std::lock_guard<std::mutex> lock(mut);
+        auto it = entries.find(key);
+        if (it != entries.end() && it->second && it->second->mtime == mtime) {
+            touch_entry_locked(key);
+            return it->second->scene;
+        }
+        return nullptr;
+    }
+
     private:
     scene_cache_t()
         : mut()
@@ -1683,17 +1741,6 @@ class scene_cache_t
                 return;
             }
         }
-    }
-
-    void mark_pending_completed_locked(const std::string &key,
-                                       unsigned long long job_id,
-                                       long long completed_ms)
-    {
-        if (!job_id) return;
-        auto pit = pending.find(key);
-        if (pit == pending.end()) return;
-        if (pit->second.job_id != job_id) return;
-        if (pit->second.completed_ms == 0LL) pit->second.completed_ms = completed_ms;
     }
 
     void mark_pending_completed_by_job_locked(unsigned long long job_id, long long completed_ms)
@@ -1775,7 +1822,7 @@ std::string scene_geometry_json(const std::string &scene_path,
     job_id = lookup.load_job_id;
     std::shared_ptr<scene_cache_entry_t> entry = lookup.entry;
     if (!entry) return std::string();
-    return entry->geometry_json;
+    return entry->get_geometry_json();
 }
 
 std::string scene_resolved_camera_json(const std::string &scene_path,
@@ -1856,7 +1903,23 @@ std::string scene_runtime_graph_json(const std::string &scene_path,
     return entry->runtime_graph_json;
 }
 
-bool encode_texture_sampler_png(const xtcore::sampler::Texture2D *tex, std::vector<unsigned char> &out)
+static void send_rgba_pixmap_response(crow::response &res, const nimg::Pixmap &pixmap)
+{
+    std::vector<unsigned char> rgba;
+    encode_rgba8_srgb(pixmap, rgba);
+    res.set_header("Cache-Control", "no-store");
+    res.set_header("Content-Type", "application/x-xtracer-rgba");
+    res.set_header("X-XTracer-Pixel-Format", "rgba8-srgb");
+    res.set_header("X-XTracer-Width", std::to_string(pixmap.width()));
+    res.set_header("X-XTracer-Height", std::to_string(pixmap.height()));
+    res.body = std::string(reinterpret_cast<const char *>(rgba.data()), rgba.size());
+    res.end();
+}
+
+bool encode_texture_sampler_rgba(const xtcore::sampler::Texture2D *tex,
+                                 std::vector<unsigned char> &out,
+                                 size_t &width_out,
+                                 size_t &height_out)
 {
     if (!tex) return false;
     if (tex->width() == 0 || tex->height() == 0) return false;
@@ -1870,17 +1933,22 @@ bool encode_texture_sampler_png(const xtcore::sampler::Texture2D *tex, std::vect
         }
     }
 
-    return nimg::io::save::png_memory(pixmap, out) == 0;
+    encode_rgba8_srgb(pixmap, out);
+    width_out  = pixmap.width();
+    height_out = pixmap.height();
+    return !out.empty();
 }
 
-bool scene_runtime_texture_png(const std::string &scene_path,
-                               const std::string &variant,
-                               const std::string &material_name,
-                               const std::string &sampler_name,
-                               std::vector<unsigned char> &png,
-                               std::string &error,
-                               bool &loading,
-                               unsigned long long &job_id)
+bool scene_runtime_texture_rgba(const std::string &scene_path,
+                                const std::string &variant,
+                                const std::string &material_name,
+                                const std::string &sampler_name,
+                                std::vector<unsigned char> &rgba,
+                                size_t &width_out,
+                                size_t &height_out,
+                                std::string &error,
+                                bool &loading,
+                                unsigned long long &job_id)
 {
     scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
@@ -1918,7 +1986,7 @@ bool scene_runtime_texture_png(const std::string &scene_path,
         return false;
     }
 
-    if (!encode_texture_sampler_png(tex, png)) {
+    if (!encode_texture_sampler_rgba(tex, rgba, width_out, height_out)) {
         error = "failed to encode texture preview";
         return false;
     }
@@ -2491,23 +2559,7 @@ void setup_routes(WebApp &app,
             const workspace_snapshot_t &w = list[i];
             const bool is_active_for_client = !active_workspace.empty() && (w.id == active_workspace);
             if (i) ss << ",";
-            ss << "{"
-               << "\"id\":\"" << json_escape(w.id) << "\","
-               << "\"name\":\"" << json_escape(w.name) << "\","
-               << "\"is_owned_by_client\":" << (w.is_owned_by_client ? "true" : "false") << ","
-               << "\"is_active_for_client\":" << (is_active_for_client ? "true" : "false") << ","
-               << "\"active_scene\":\"" << json_escape(w.active_scene) << "\","
-               << "\"active_job_id\":\"" << json_escape(w.active_job_id) << "\","
-               << "\"last_job_id\":\"" << json_escape(w.last_job_id) << "\","
-               << "\"draft_count\":" << w.draft_count << ","
-               << "\"client_count\":" << w.client_count << ","
-               << "\"quality_samples\":" << w.quality_samples << ","
-               << "\"quality_aa\":" << w.quality_aa << ","
-               << "\"quality_sample_distribution\":\"" << json_escape(w.quality_sample_distribution) << "\","
-               << "\"quality_rdepth\":" << w.quality_rdepth << ","
-               << "\"settings_json\":\"" << json_escape(w.settings_json) << "\","
-               << "\"updated_ms\":" << w.updated_ms
-               << "}";
+            ss << workspace_snapshot_json(w, is_active_for_client);
         }
         ss << "]}";
         send_json(res, ss.str());
@@ -2553,7 +2605,14 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"workspace not found\"}", 404);
             return;
         }
-        send_json(res, "{\"ok\":true}");
+        workspace_snapshot_t snap;
+        if (workspaces.get_snapshot(workspace_id, client_id, snap)) {
+            std::ostringstream ss;
+            ss << "{\"ok\":true,\"workspace\":" << workspace_snapshot_json(snap, true) << "}";
+            send_json(res, ss.str());
+        } else {
+            send_json(res, "{\"ok\":true}");
+        }
     });
 
     CROW_ROUTE(app, "/api/workspaces/delete").methods(crow::HTTPMethod::Post)
@@ -2591,11 +2650,6 @@ void setup_routes(WebApp &app,
     CROW_ROUTE(app, "/api/workspaces/scene_draft").methods(crow::HTTPMethod::Post)
     ([&](const crow::request &req, crow::response &res) {
         const params_view params(req);
-        const std::string client_id = read_client_id(params);
-        if (client_id.empty()) {
-            send_json(res, "{\"error\":\"client_id is required\"}", 400);
-            return;
-        }
         if (!params.has("scene")) {
             send_json(res, "{\"error\":\"scene is required\"}", 400);
             return;
@@ -2604,8 +2658,15 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"source is required\"}", 400);
             return;
         }
-        std::string workspace_id;
-        workspaces.get_active(client_id, workspace_id);
+        std::string workspace_id = params.str("workspace_id");
+        if (workspace_id.empty()) {
+            const std::string client_id = read_client_id(params);
+            if (client_id.empty()) {
+                send_json(res, "{\"error\":\"workspace_id or client_id is required\"}", 400);
+                return;
+            }
+            workspaces.get_active(client_id, workspace_id);
+        }
         const std::string scene = params.str("scene");
         if (!is_scene_name_safe(scene)) {
             send_json(res, "{\"error\":\"invalid scene\"}", 400);
@@ -2627,18 +2688,20 @@ void setup_routes(WebApp &app,
     CROW_ROUTE(app, "/api/workspaces/settings").methods(crow::HTTPMethod::Post)
     ([&](const crow::request &req, crow::response &res) {
         const params_view params(req);
-        const std::string client_id = read_client_id(params);
-        if (client_id.empty()) {
-            send_json(res, "{\"error\":\"client_id is required\"}", 400);
-            return;
-        }
         if (!params.has("settings_json")) {
             send_json(res, "{\"error\":\"settings_json is required\"}", 400);
             return;
         }
 
-        std::string workspace_id;
-        workspaces.get_active(client_id, workspace_id);
+        std::string workspace_id = params.str("workspace_id");
+        if (workspace_id.empty()) {
+            const std::string client_id = read_client_id(params);
+            if (client_id.empty()) {
+                send_json(res, "{\"error\":\"workspace_id or client_id is required\"}", 400);
+                return;
+            }
+            workspaces.get_active(client_id, workspace_id);
+        }
         const std::string settings_json = params.str("settings_json");
         const workspace_manager_t::store_result_t rc =
             workspaces.set_settings_json(workspace_id, settings_json);
@@ -2902,11 +2965,12 @@ void setup_routes(WebApp &app,
 
         const std::string material = params.str("material");
         const std::string sampler = params.str("sampler");
-        std::vector<unsigned char> png;
+        std::vector<unsigned char> rgba;
+        size_t tex_w = 0, tex_h = 0;
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        if (!scene_runtime_texture_png(join_path(scene_dir, scene), variant, material, sampler, png, error, loading, load_job_id)) {
+        if (!scene_runtime_texture_rgba(join_path(scene_dir, scene), variant, material, sampler, rgba, tex_w, tex_h, error, loading, load_job_id)) {
             if (loading) {
                 send_scene_loading(res, load_job_id);
                 return;
@@ -2916,8 +2980,11 @@ void setup_routes(WebApp &app,
         }
 
         res.set_header("Cache-Control", "no-store");
-        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
-        res.set_header("Content-Type", "image/png");
+        res.set_header("Content-Type", "application/x-xtracer-rgba");
+        res.set_header("X-XTracer-Pixel-Format", "rgba8-srgb");
+        res.set_header("X-XTracer-Width", std::to_string(tex_w));
+        res.set_header("X-XTracer-Height", std::to_string(tex_h));
+        res.body = std::string(reinterpret_cast<const char *>(rgba.data()), rgba.size());
         res.end();
     });
 
@@ -3494,6 +3561,9 @@ void setup_routes(WebApp &app,
         xtcore::tonemapping::settings_t initial_tm;
         std::string tm_error_json;
         parse_tonemapping_settings(params, initial_tm, tm_error_json); // best-effort; ignore errors
+        if (cleanup_scene_path.empty()) {
+            rr.preloaded_scene = scene_cache_t::handle().get_loaded_scene(saved_scene_path, rr.variant);
+        }
         std::string job_id = jobs.create(rr, scene, workspace_id, requester_client_id, cleanup_scene_path, initial_tm);
         if (job_id.empty()) {
             if (!cleanup_scene_path.empty()) unlink(cleanup_scene_path.c_str());
@@ -3842,15 +3912,7 @@ void setup_routes(WebApp &app,
             return;
         }
         apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
-        std::vector<unsigned char> png;
-        if (nimg::io::save::png_memory(fb, png) != 0) {
-            res.code = 500;
-            res.end();
-            return;
-        }
-        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
-        res.set_header("Content-Type", "image/png");
-        res.end();
+        send_rgba_pixmap_response(res, fb);
     });
 
     CROW_ROUTE(app, "/api/gallery/<string>/pass/<uint>/image")
@@ -3895,15 +3957,7 @@ void setup_routes(WebApp &app,
             return;
         }
         apply_gallery_preview_pipeline(fb, tm_settings, post_filters);
-        std::vector<unsigned char> png;
-        if (nimg::io::save::png_memory(fb, png) != 0) {
-            res.code = 500;
-            res.end();
-            return;
-        }
-        res.body = std::string(reinterpret_cast<const char *>(png.data()), png.size());
-        res.set_header("Content-Type", "image/png");
-        res.end();
+        send_rgba_pixmap_response(res, fb);
     });
 
     CROW_ROUTE(app, "/api/gallery/<string>/export")
@@ -4203,25 +4257,6 @@ void setup_routes(WebApp &app,
         serve_static_file(join_path(web_root, "vendor/three.min.js"), "application/javascript", res);
     });
 
-    CROW_ROUTE(app, "/wasm_adapter.js")
-    ([web_root](const crow::request &, crow::response &res) {
-        serve_static_file(join_path(web_root, "wasm_adapter.js"), "application/javascript", res);
-    });
-
-    CROW_ROUTE(app, "/wasm_worker.js")
-    ([web_root](const crow::request &, crow::response &res) {
-        serve_static_file(join_path(web_root, "wasm_worker.js"), "application/javascript", res);
-    });
-
-    CROW_ROUTE(app, "/xtracer_wasm.js")
-    ([web_root](const crow::request &, crow::response &res) {
-        serve_static_file(join_path(web_root, "xtracer_wasm.js"), "application/javascript", res);
-    });
-
-    CROW_ROUTE(app, "/xtracer_wasm.wasm")
-    ([web_root](const crow::request &, crow::response &res) {
-        serve_static_file(join_path(web_root, "xtracer_wasm.wasm"), "application/wasm", res);
-    });
 
     CROW_ROUTE(app, "/app/data/<string>")
     ([web_root](const crow::request &, crow::response &res, std::string name) {
@@ -4387,7 +4422,9 @@ void setup_routes(WebApp &app,
                     pkt.insert(pkt.end(), rgba.begin(), rgba.end());
                     // Active tiles section: none (catchup frame, not a live event).
                     push_u32le(pkt, 0u);
-                    conn.send_binary(std::string(reinterpret_cast<const char *>(pkt.data()), pkt.size()));
+                    try {
+                        conn.send_binary(std::string(reinterpret_cast<const char *>(pkt.data()), pkt.size()));
+                    } catch (...) {}
                     has_catchup = true;
                 }
             }
@@ -4395,7 +4432,7 @@ void setup_routes(WebApp &app,
             // with the catchup packet (the earlier snap may predate a few tile completions).
             jobs.snapshot(job_id, snap);
             // Send current status snapshot.
-            conn.send_text(job_snapshot_to_json(snap));
+            try { conn.send_text(job_snapshot_to_json(snap)); } catch (...) {}
             // Log after subscribe + initial send so the annotation is accurate.
             std::string detail = "job=" + job_id;
             if (has_catchup) detail += "  full-frame catchup";
@@ -4460,7 +4497,7 @@ void setup_routes(WebApp &app,
                        << "}";
                 }
                 ss << "]}";
-                conn.send_text(ss.str());
+                try { conn.send_text(ss.str()); } catch (...) {}
             }
             g_log_ws_hub.subscribe(&conn);
             const std::string path = since_id > 0

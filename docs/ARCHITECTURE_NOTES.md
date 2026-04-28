@@ -30,9 +30,6 @@
   - HTTP + WebSocket routing/API: `src/frontend/web-server/routes.cc`
   - Job lifecycle: `src/frontend/web-server/job_manager.cc`
   - WebSocket pub/sub hub: `src/frontend/web-server/ws_hub.h`
-- WASM:
-  - Entrypoint: `src/frontend/wasm/main.cc`
-  - Shared render bridge: `src/frontend/common/render_service.cc`
 
 ## Web Streaming Architecture
 
