@@ -112,7 +112,13 @@ void print_startup_banner(const std::string &host,
     std::printf(" ██╔██╗    ██║   ██╔══██╗██╔══██║██║     ██╔══╝  ██╔══██╗\n");
     std::printf("██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗███████╗██║  ██║\n");
     std::printf("╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝  ╚═╝\n");
+#ifdef NDEBUG
+    const char *k_build_type = "release";
+#else
+    const char *k_build_type = "debug";
+#endif
     std::printf("\n");
+    std::printf("  version:                %s (%s)\n", xtcore::get_version(), k_build_type);
     std::printf("  url:                    http://%s:%d\n", host.c_str(), port);
     std::printf("  host:                   %s\n", host.c_str());
     std::printf("  port:                   %d\n", port);

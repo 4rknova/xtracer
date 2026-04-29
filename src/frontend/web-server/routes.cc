@@ -43,6 +43,9 @@
 #include <xtcore/sampler/sampler_fbm_marble.h>
 #include <xtcore/sampler/sampler_gradient.h>
 #include <xtcore/sampler/sampler_rayleigh_sky.h>
+#include <xtcore/sampler/sampler_preetham_sky.h>
+#include <xtcore/sampler/sampler_hosek_wilkie_sky.h>
+#include <xtcore/sampler/sampler_stars.h>
 #include <xtcore/sampler/sampler_graphpaper.h>
 #include <xtcore/sampler/sampler_tex.h>
 #include <xtcore/sampler/sampler_weave.h>
@@ -1406,6 +1409,76 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
     }
     ss << "]";
 
+    ss << ",\"environment\":";
+    const xtcore::sampler::ISampler *env = scene.m_environment;
+    if (!env) {
+        ss << "null";
+    } else if (const xtcore::sampler::ERP *erp = dynamic_cast<const xtcore::sampler::ERP *>(env)) {
+        const std::string relpath = make_asset_relpath_for_scene(scene_path, erp->source_path());
+        ss << "{\"type\":\"erp\",\"rotation_y\":" << erp->rotation_y;
+        if (!relpath.empty()) ss << ",\"source\":\"" << json_escape(relpath) << "\"";
+        ss << "}";
+    } else if (dynamic_cast<const xtcore::sampler::Cubemap *>(env)) {
+        ss << "{\"type\":\"cubemap\"}";
+    } else if (const xtcore::sampler::RayleighSky *sky = dynamic_cast<const xtcore::sampler::RayleighSky *>(env)) {
+        ss << "{"
+           << "\"type\":\"rayleigh_sky\","
+           << "\"sun_direction\":[" << sky->sun_direction.x << "," << sky->sun_direction.y << "," << sky->sun_direction.z << "],"
+           << "\"sun_intensity\":[" << sky->sun_intensity.r() << "," << sky->sun_intensity.g() << "," << sky->sun_intensity.b() << "],"
+           << "\"beta_rayleigh\":[" << sky->beta_rayleigh.r() << "," << sky->beta_rayleigh.g() << "," << sky->beta_rayleigh.b() << "],"
+           << "\"ground_color\":[" << sky->ground_color.r() << "," << sky->ground_color.g() << "," << sky->ground_color.b() << "],"
+           << "\"density\":" << sky->density << ","
+           << "\"horizon_falloff\":" << sky->horizon_falloff << ","
+           << "\"sun_disk_radius\":" << sky->sun_disk_radius << ","
+           << "\"sun_disk_intensity\":" << sky->sun_disk_intensity << ","
+           << "\"sun_glow_radius\":" << sky->sun_glow_radius << ","
+           << "\"sun_glow_intensity\":" << sky->sun_glow_intensity << ","
+           << "\"sun_glow_falloff\":" << sky->sun_glow_falloff
+           << "}";
+    } else if (const xtcore::sampler::PreethamSky *sky = dynamic_cast<const xtcore::sampler::PreethamSky *>(env)) {
+        ss << "{"
+           << "\"type\":\"preetham_sky\","
+           << "\"sun_direction\":[" << sky->sun_direction.x << "," << sky->sun_direction.y << "," << sky->sun_direction.z << "],"
+           << "\"turbidity\":" << sky->turbidity << ","
+           << "\"exposure\":" << sky->exposure << ","
+           << "\"ground_color\":[" << sky->ground_color.r() << "," << sky->ground_color.g() << "," << sky->ground_color.b() << "]"
+           << "}";
+    } else if (const xtcore::sampler::HosekWilkieSky *sky = dynamic_cast<const xtcore::sampler::HosekWilkieSky *>(env)) {
+        ss << "{"
+           << "\"type\":\"hosek_wilkie_sky\","
+           << "\"sun_direction\":[" << sky->sun_direction.x << "," << sky->sun_direction.y << "," << sky->sun_direction.z << "],"
+           << "\"turbidity\":" << sky->turbidity << ","
+           << "\"ground_albedo\":" << sky->ground_albedo << ","
+           << "\"exposure\":" << sky->exposure << ","
+           << "\"ground_color\":[" << sky->ground_color.r() << "," << sky->ground_color.g() << "," << sky->ground_color.b() << "]"
+           << "}";
+    } else if (const xtcore::sampler::SolidColor *col = dynamic_cast<const xtcore::sampler::SolidColor *>(env)) {
+        nimg::ColorRGBf c;
+        const_cast<xtcore::sampler::SolidColor *>(col)->get(c);
+        ss << "{"
+           << "\"type\":\"color\","
+           << "\"color\":[" << c.r() << "," << c.g() << "," << c.b() << "]"
+           << "}";
+    } else if (const xtcore::sampler::Gradient *grad = dynamic_cast<const xtcore::sampler::Gradient *>(env)) {
+        ss << "{"
+           << "\"type\":\"gradient\","
+           << "\"a\":[" << grad->a.r() << "," << grad->a.g() << "," << grad->a.b() << "],"
+           << "\"b\":[" << grad->b.r() << "," << grad->b.g() << "," << grad->b.b() << "]"
+           << "}";
+    } else if (const xtcore::sampler::Stars *stars = dynamic_cast<const xtcore::sampler::Stars *>(env)) {
+        ss << "{"
+           << "\"type\":\"stars\","
+           << "\"background_color\":[" << stars->background_color.r() << "," << stars->background_color.g() << "," << stars->background_color.b() << "],"
+           << "\"density\":" << stars->density << ","
+           << "\"min_brightness\":" << stars->min_brightness << ","
+           << "\"max_brightness\":" << stars->max_brightness << ","
+           << "\"star_size\":" << stars->star_size << ","
+           << "\"seed\":" << stars->seed
+           << "}";
+    } else {
+        ss << "{\"type\":\"" << json_escape(sampler_type_name(env)) << "\"}";
+    }
+
     ss << "}";
     return ss.str();
 }
@@ -2571,10 +2644,17 @@ void setup_routes(WebApp &app,
         const size_t max_concurrent_renders = jobs.get_max_concurrent_renders();
         const size_t active_renders = jobs.get_active_render_count();
 
+#ifdef NDEBUG
+        const char *k_build_type = "release";
+#else
+        const char *k_build_type = "debug";
+#endif
+
         std::ostringstream ss;
         ss << "{"
            << "\"name\":\"XTRACER WEB\","
            << "\"version\":\"" << json_escape(xtcore::get_version()) << "\","
+           << "\"build_type\":\"" << k_build_type << "\","
            << "\"author_name\":\"Nikolaos Papadopoulos\","
            << "\"author_email\":\"nikpapas@gmail.com\","
            << "\"homepage\":\"https://www.4rknova.com\","
