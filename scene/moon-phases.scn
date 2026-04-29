@@ -64,7 +64,7 @@ sun_Le = $(<emission_multiplier> * <solar_E> * <au_km> * <au_km> / (<sun_r_km> *
 title       = Moon Phases
 description = The Moon lit by a single spherical light source against a black void. Eight variants cover the classical phase cycle. Camera is fixed; only the light position changes per variant.
 version     = 1.0
-default_camera = cam
+default_camera = main
 
 environment = {
     type   = color
@@ -76,7 +76,7 @@ environment = {
 # ---------------------------------------------------------------------
 
 camera = {
-    camera = {
+    main = {
 		type = thin-lens
 		position = vec3(0, 0, 3)
 		target = vec3(0, 0, 0)
