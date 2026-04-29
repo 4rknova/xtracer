@@ -978,19 +978,23 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
     // Procedural meshes
     if (res > 0) {
         if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
-            nmesh::generator::icosahedron(&obj);
+            bool smooth = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_SMOOTH_NORMALS) : 0, false);
+            nmesh::generator::icosahedron(&obj, smooth);
         }
         else if (!token.compare(XTPROTO_LTRL_TETRAHEDRON)) {
-            nmesh::generator::tetrahedron(&obj);
+            bool smooth = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_SMOOTH_NORMALS) : 0, false);
+            nmesh::generator::tetrahedron(&obj, smooth);
         }
         else if (!token.compare(XTPROTO_LTRL_CUBE) || !token.compare(XTPROTO_LTRL_HEXAHEDRON)) {
             nmesh::generator::cube(&obj);
         }
         else if (!token.compare(XTPROTO_LTRL_OCTAHEDRON)) {
-            nmesh::generator::octahedron(&obj);
+            bool smooth = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_SMOOTH_NORMALS) : 0, false);
+            nmesh::generator::octahedron(&obj, smooth);
         }
         else if (!token.compare(XTPROTO_LTRL_DODECAHEDRON)) {
-            nmesh::generator::dodecahedron(&obj);
+            bool smooth = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_SMOOTH_NORMALS) : 0, false);
+            nmesh::generator::dodecahedron(&obj, smooth);
         }
         else if (!token.compare(XTPROTO_LTRL_PYRAMID)) {
             float base_size = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_BASE_SIZE) : 0, 1.0f);
@@ -1696,19 +1700,23 @@ std::string generate_geometry_mesh_json(const std::string &gen_id, const std::ma
     nmesh::object_t obj;
 
     if (!token.compare(XTPROTO_LTRL_ICOSAHEDRON)) {
-        nmesh::generator::icosahedron(&obj);
+        bool smooth = deserialize_bool(get(XTPROTO_PROP_SMOOTH_NORMALS), false);
+        nmesh::generator::icosahedron(&obj, smooth);
     }
     else if (!token.compare(XTPROTO_LTRL_TETRAHEDRON)) {
-        nmesh::generator::tetrahedron(&obj);
+        bool smooth = deserialize_bool(get(XTPROTO_PROP_SMOOTH_NORMALS), false);
+        nmesh::generator::tetrahedron(&obj, smooth);
     }
     else if (!token.compare(XTPROTO_LTRL_CUBE) || !token.compare(XTPROTO_LTRL_HEXAHEDRON)) {
         nmesh::generator::cube(&obj);
     }
     else if (!token.compare(XTPROTO_LTRL_OCTAHEDRON)) {
-        nmesh::generator::octahedron(&obj);
+        bool smooth = deserialize_bool(get(XTPROTO_PROP_SMOOTH_NORMALS), false);
+        nmesh::generator::octahedron(&obj, smooth);
     }
     else if (!token.compare(XTPROTO_LTRL_DODECAHEDRON)) {
-        nmesh::generator::dodecahedron(&obj);
+        bool smooth = deserialize_bool(get(XTPROTO_PROP_SMOOTH_NORMALS), false);
+        nmesh::generator::dodecahedron(&obj, smooth);
     }
     else if (!token.compare(XTPROTO_LTRL_CAPSULE)) {
         int res = deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 32);

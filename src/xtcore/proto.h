@@ -158,6 +158,7 @@
 #define XTPROTO_PROP_RADIUS			"radius"			/* scalar_t   */ /* Radius */
 #define XTPROTO_PROP_WIDTH          "width"             /* scalar_t   */ /* Width */
 #define XTPROTO_PROP_BASE_SIZE      "base_size"         /* scalar_t   */ /* Base size */
+#define XTPROTO_PROP_SMOOTH_NORMALS "smooth_normals"    /* bool       */ /* Use smooth (vertex) normals instead of flat (face) normals */
 #define XTPROTO_PROP_SEED           "seed"              /* integer    */ /* Seed */
 #define XTPROTO_PROP_CELLS          "cells"             /* integer    */ /* Cell count */
 #define XTPROTO_PROP_MAX_DEVIATION  "max_deviation"     /* scalar_t   */ /* Max normal deviation (degrees) */
