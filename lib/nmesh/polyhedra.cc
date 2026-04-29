@@ -65,7 +65,7 @@ static void append_triangle_uv(shape_t &shape, int a, int b, int c)
 
 } /* namespace */
 
-void tetrahedron(object_t *obj)
+void tetrahedron(object_t *obj, bool smooth_normals)
 {
     if (!obj) return;
 
@@ -81,9 +81,6 @@ void tetrahedron(object_t *obj)
         Vec3( s, -s, -s)
     };
 
-    int vi[4];
-    for (int i = 0; i < 4; ++i) vi[i] = append_vertex(obj, vertices[i], vertices[i].normalized());
-
     const int idx[] = {
         0, 1, 2,
         0, 3, 1,
@@ -91,8 +88,23 @@ void tetrahedron(object_t *obj)
         1, 3, 2
     };
 
-    for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
-        append_triangle(out, vi[idx[i]], vi[idx[i + 1]], vi[idx[i + 2]]);
+    if (smooth_normals) {
+        int vi[4];
+        for (int i = 0; i < 4; ++i) vi[i] = append_vertex(obj, vertices[i], vertices[i].normalized());
+        for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
+            append_triangle(out, vi[idx[i]], vi[idx[i + 1]], vi[idx[i + 2]]);
+        }
+    } else {
+        for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
+            const Vec3 &a = vertices[idx[i]];
+            const Vec3 &b = vertices[idx[i + 1]];
+            const Vec3 &c = vertices[idx[i + 2]];
+            Vec3 fn = nmath::cross(c - a, b - a).normalized();
+            const int i0 = append_vertex(obj, a, fn);
+            const int i1 = append_vertex(obj, b, fn);
+            const int i2 = append_vertex(obj, c, fn);
+            append_triangle(out, i0, i1, i2);
+        }
     }
 }
 
@@ -137,7 +149,7 @@ void cube(object_t *obj)
     add_face(Vec3(-1.0f,  0.0f,  0.0f), p000, p001, p011, p010, false); // -X
 }
 
-void octahedron(object_t *obj)
+void octahedron(object_t *obj, bool smooth_normals)
 {
     if (!obj) return;
 
@@ -154,9 +166,6 @@ void octahedron(object_t *obj)
         Vec3( 0.0f,  0.0f, -1.0f)
     };
 
-    int vi[6];
-    for (int i = 0; i < 6; ++i) vi[i] = append_vertex(obj, vertices[i], vertices[i].normalized());
-
     const int idx[] = {
         2, 0, 4,
         2, 4, 1,
@@ -168,12 +177,27 @@ void octahedron(object_t *obj)
         3, 0, 5
     };
 
-    for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
-        append_triangle(out, vi[idx[i]], vi[idx[i + 1]], vi[idx[i + 2]]);
+    if (smooth_normals) {
+        int vi[6];
+        for (int i = 0; i < 6; ++i) vi[i] = append_vertex(obj, vertices[i], vertices[i].normalized());
+        for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
+            append_triangle(out, vi[idx[i]], vi[idx[i + 1]], vi[idx[i + 2]]);
+        }
+    } else {
+        for (size_t i = 0; i < sizeof(idx) / sizeof(idx[0]); i += 3) {
+            const Vec3 &a = vertices[idx[i]];
+            const Vec3 &b = vertices[idx[i + 1]];
+            const Vec3 &c = vertices[idx[i + 2]];
+            Vec3 fn = nmath::cross(c - a, b - a).normalized();
+            const int i0 = append_vertex(obj, a, fn);
+            const int i1 = append_vertex(obj, b, fn);
+            const int i2 = append_vertex(obj, c, fn);
+            append_triangle(out, i0, i1, i2);
+        }
     }
 }
 
-void dodecahedron(object_t *obj)
+void dodecahedron(object_t *obj, bool smooth_normals)
 {
     if (!obj) return;
 
@@ -212,15 +236,17 @@ void dodecahedron(object_t *obj)
         dodeca_vertices.push_back(c.normalized());
     }
 
-    std::vector<int> dv;
-    dv.reserve(dodeca_vertices.size());
-    for (size_t i = 0; i < dodeca_vertices.size(); ++i) {
-        dv.push_back(append_vertex(obj, dodeca_vertices[i], dodeca_vertices[i]));
-    }
-
     std::map<int, std::vector<int> > adjacency;
     for (int face_idx = 0; face_idx < 20; ++face_idx) {
         for (int j = 0; j < 3; ++j) adjacency[ico_faces[face_idx][j]].push_back(face_idx);
+    }
+
+    std::vector<int> dv;
+    if (smooth_normals) {
+        dv.reserve(dodeca_vertices.size());
+        for (size_t i = 0; i < dodeca_vertices.size(); ++i) {
+            dv.push_back(append_vertex(obj, dodeca_vertices[i], dodeca_vertices[i]));
+        }
     }
 
     for (int vi = 0; vi < 12; ++vi) {
@@ -231,7 +257,7 @@ void dodecahedron(object_t *obj)
         Vec3 u = nmath::cross(axis, Vec3(0.0f, 1.0f, 0.0f));
         if (u.length() < 1e-6f) u = nmath::cross(axis, Vec3(1.0f, 0.0f, 0.0f));
         u = u.normalized();
-        const Vec3 v = nmath::cross(axis, u).normalized();
+        const Vec3 vv = nmath::cross(axis, u).normalized();
 
         std::vector<std::pair<float, int> > ordered;
         ordered.reserve(ring.size());
@@ -239,13 +265,27 @@ void dodecahedron(object_t *obj)
             const Vec3 p = dodeca_vertices[ring[i]];
             Vec3 d = p - axis * nmath::dot(p, axis);
             if (d.length() > 1e-6f) d = d.normalized();
-            const float a = nmath_atan2(nmath::dot(d, v), nmath::dot(d, u));
+            const float a = nmath_atan2(nmath::dot(d, vv), nmath::dot(d, u));
             ordered.push_back(std::make_pair(a, ring[i]));
         }
 
         std::sort(ordered.begin(), ordered.end());
-        for (size_t i = 1; i + 1 < ordered.size(); ++i) {
-            append_triangle(out, dv[ordered[0].second], dv[ordered[i].second], dv[ordered[i + 1].second]);
+
+        if (smooth_normals) {
+            for (size_t i = 1; i + 1 < ordered.size(); ++i) {
+                append_triangle(out, dv[ordered[0].second], dv[ordered[i].second], dv[ordered[i + 1].second]);
+            }
+        } else {
+            for (size_t i = 1; i + 1 < ordered.size(); ++i) {
+                const Vec3 &a = dodeca_vertices[ordered[0].second];
+                const Vec3 &b = dodeca_vertices[ordered[i].second];
+                const Vec3 &c = dodeca_vertices[ordered[i + 1].second];
+                Vec3 fn = nmath::cross(b - a, c - a).normalized();
+                const int i0 = append_vertex(obj, a, fn);
+                const int i1 = append_vertex(obj, b, fn);
+                const int i2 = append_vertex(obj, c, fn);
+                append_triangle(out, i0, i1, i2);
+            }
         }
     }
 }

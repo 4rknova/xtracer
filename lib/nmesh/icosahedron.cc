@@ -7,15 +7,13 @@ namespace nmesh {
     namespace generator {
 
 // Ref: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
-void icosahedron(object_t *obj)
+void icosahedron(object_t *obj, bool smooth_normals)
 {
     if (!obj) return;
 
-    // create 12 vertices of a icosahedron
     float k = (1.f + nmath_sqrt(5.f)) / 2.f;
 
     nmath::Vector3f v[12];
-
     v[ 0] = nmath::Vector3f(-1, k, 0).normalized();
     v[ 1] = nmath::Vector3f(1, k, 0).normalized();
     v[ 2] = nmath::Vector3f(-1, -k, 0).normalized();
@@ -28,18 +26,6 @@ void icosahedron(object_t *obj)
     v[ 9] = nmath::Vector3f(k, 0, 1).normalized();
     v[10] = nmath::Vector3f(-k, 0, -1).normalized();
     v[11] = nmath::Vector3f(-k, 0, 1).normalized();
-
-    std::vector<float> *c = &(obj->attributes.v);
-    std::vector<float> *n = &(obj->attributes.n);
-
-    for (size_t i = 0; i < 12; ++i) {
-        c->push_back(v[i].x);
-        c->push_back(v[i].y);
-        c->push_back(v[i].z);
-        n->push_back(v[i].x);
-        n->push_back(v[i].y);
-        n->push_back(v[i].z);
-    }
 
     const size_t idx[] = {
            0, 11,  5
@@ -67,12 +53,39 @@ void icosahedron(object_t *obj)
     nmesh::shape_t shape;
     obj->shapes.push_back(shape);
 
-    for (size_t i = 0; i < 60; ++i) {
-        nmesh::index_t f;
-        f.v  = idx[i];
-        f.n  = idx[i];
-        f.uv = -1;
-        obj->shapes[0].mesh.indices.push_back(f);
+    std::vector<float> *c = &(obj->attributes.v);
+    std::vector<float> *n = &(obj->attributes.n);
+
+    if (smooth_normals) {
+        for (size_t i = 0; i < 12; ++i) {
+            c->push_back(v[i].x); c->push_back(v[i].y); c->push_back(v[i].z);
+            n->push_back(v[i].x); n->push_back(v[i].y); n->push_back(v[i].z);
+        }
+        for (size_t i = 0; i < 60; ++i) {
+            nmesh::index_t f;
+            f.v = idx[i]; f.n = idx[i]; f.uv = -1;
+            obj->shapes[0].mesh.indices.push_back(f);
+        }
+    } else {
+        for (size_t i = 0; i < 60; i += 3) {
+            const nmath::Vector3f &a = v[idx[i]];
+            const nmath::Vector3f &b = v[idx[i + 1]];
+            const nmath::Vector3f &c_v = v[idx[i + 2]];
+            nmath::Vector3f fn = nmath::cross(b - a, c_v - a).normalized();
+            const int base = (int)(c->size() / 3);
+            for (int j = 0; j < 3; ++j) {
+                const nmath::Vector3f &p = v[idx[i + j]];
+                c->push_back(p.x); c->push_back(p.y); c->push_back(p.z);
+                n->push_back(fn.x); n->push_back(fn.y); n->push_back(fn.z);
+            }
+            nmesh::index_t fa, fb, fc;
+            fa.v = base;     fa.n = base;     fa.uv = -1;
+            fb.v = base + 1; fb.n = base + 1; fb.uv = -1;
+            fc.v = base + 2; fc.n = base + 2; fc.uv = -1;
+            obj->shapes[0].mesh.indices.push_back(fa);
+            obj->shapes[0].mesh.indices.push_back(fb);
+            obj->shapes[0].mesh.indices.push_back(fc);
+        }
     }
 }
 
