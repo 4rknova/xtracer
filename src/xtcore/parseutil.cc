@@ -849,6 +849,7 @@ xtcore::sampler::ERP *deserialize_erp(const char *source, const ncf::NCF *p)
 
         std::string erp_path = (src.empty() || path_is_absolute(src) || asset_fetcher::is_url(src)) ? src : base + src;
         data->load(erp_path.c_str());
+        data->rotation_y = (nmath::scalar_t)deserialize_numf(p->get_property_by_name("rotation_y"), 0.0f);
     }
     return data;
 }
@@ -2304,12 +2305,13 @@ xtcore::sampler::ISampler *deserialize_checker(const ncf::NCF *p)
     xtcore::sampler::Checker *sampler = new (std::nothrow) xtcore::sampler::Checker();
     if (!sampler || !p) return sampler;
 
-    sampler->color_a  = deserialize_col3(p, "a", sampler->color_a);
-    sampler->color_b  = deserialize_col3(p, "b", sampler->color_b);
-    sampler->scale_u  = deserialize_numf(p->get_property_by_name("scale_u"), sampler->scale_u);
-    sampler->scale_v  = deserialize_numf(p->get_property_by_name("scale_v"), sampler->scale_v);
-    sampler->offset_u = deserialize_numf(p->get_property_by_name("offset_u"), sampler->offset_u);
-    sampler->offset_v = deserialize_numf(p->get_property_by_name("offset_v"), sampler->offset_v);
+    sampler->color_a    = deserialize_col3(p, "a", sampler->color_a);
+    sampler->color_b    = deserialize_col3(p, "b", sampler->color_b);
+    sampler->scale_u    = deserialize_numf(p->get_property_by_name("scale_u"), sampler->scale_u);
+    sampler->scale_v    = deserialize_numf(p->get_property_by_name("scale_v"), sampler->scale_v);
+    sampler->offset_u   = deserialize_numf(p->get_property_by_name("offset_u"), sampler->offset_u);
+    sampler->offset_v   = deserialize_numf(p->get_property_by_name("offset_v"), sampler->offset_v);
+    sampler->swap_colors = deserialize_bool(p->get_property_by_name("swap"), sampler->swap_colors);
     return sampler;
 }
 
@@ -2911,6 +2913,22 @@ int create_object(Scene *scene,
         scene->set_object_medium(id, it->second->clone());
         if (!scene->has_object_medium(id)) {
             Log::handle().post_error("Failed to allocate medium for object %s", name);
+            return 1;
+        }
+    }
+
+    scene->clear_object_exterior_medium(id);
+    if (p->query_property(XTPROTO_PROP_EXTERIOR_MEDIUM)) {
+        const std::string medium_name = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_EXTERIOR_MEDIUM));
+        const HASH_UINT64 medium_id = xtcore::pool::str::add(medium_name.c_str());
+        auto it = media_defs.find(medium_id);
+        if (it == media_defs.end() || !it->second) {
+            Log::handle().post_error("Object %s references unknown exterior medium '%s'", name, medium_name.c_str());
+            return 1;
+        }
+        scene->set_object_exterior_medium(id, it->second->clone());
+        if (!scene->has_object_exterior_medium(id)) {
+            Log::handle().post_error("Failed to allocate exterior medium for object %s", name);
             return 1;
         }
     }
