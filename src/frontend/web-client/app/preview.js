@@ -449,6 +449,62 @@ function drawPreviewMinimap(ctx, dims, fitted, imageX, imageY, imageW, imageH) {
   ctx.restore();
 }
 
+const PIXEL_VALUE_THRESHOLD = 24; // CSS pixels per source pixel to show RGB labels
+
+function drawPixelValueOverlay(ctx, src, frameW, frameH, x, y, drawW, drawH) {
+  if (!src || !src.width || !src.height) return;
+  const imgW = src.width;
+  const imgH = src.height;
+  const pixW = drawW / imgW;
+  const pixH = drawH / imgH;
+  if (pixW < PIXEL_VALUE_THRESHOLD || pixH < PIXEL_VALUE_THRESHOLD) return;
+
+  const px0 = Math.max(0, Math.floor(-x / pixW));
+  const py0 = Math.max(0, Math.floor(-y / pixH));
+  const px1 = Math.min(imgW - 1, Math.floor((frameW - x) / pixW));
+  const py1 = Math.min(imgH - 1, Math.floor((frameH - y) / pixH));
+  if (px0 > px1 || py0 > py1) return;
+
+  const rw = px1 - px0 + 1;
+  const rh = py1 - py0 + 1;
+  const srcCtx = src.getContext("2d");
+  if (!srcCtx) return;
+  let imageData;
+  try { imageData = srcCtx.getImageData(px0, py0, rw, rh); } catch (_) { return; }
+
+  const fontSize = Math.max(5, Math.min(Math.floor(pixH / 5), 11));
+  const lineH = fontSize + 1;
+
+  ctx.save();
+  ctx.font = `${fontSize}px monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowBlur = 1.5;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  const totalH = lineH * 3;
+  for (let py = py0; py <= py1; py++) {
+    for (let px = px0; px <= px1; px++) {
+      const di = ((py - py0) * rw + (px - px0)) * 4;
+      const r = imageData.data[di];
+      const g = imageData.data[di + 1];
+      const b = imageData.data[di + 2];
+      const cx = x + (px + 0.5) * pixW;
+      const cy = y + (py + 0.5) * pixH;
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      const bright = luma > 128;
+      ctx.fillStyle = bright ? "rgba(0,0,0,0.9)" : "rgba(255,255,255,0.9)";
+      ctx.shadowColor = bright ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.55)";
+      const startY = cy - totalH * 0.5 + lineH * 0.5;
+      ctx.fillText(String(r), cx, startY);
+      ctx.fillText(String(g), cx, startY + lineH);
+      ctx.fillText(String(b), cx, startY + lineH * 2);
+    }
+  }
+  ctx.restore();
+}
+
 function drawPreviewCanvas() {
   if (!el.previewCanvas) return;
   const dims = ensurePreviewCanvasSize();
@@ -476,6 +532,7 @@ function drawPreviewCanvas() {
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(previewState.tileAccumCanvas || el.preview, x, y, drawW, drawH);
   drawActivePreviewTileOverlay(ctx, x, y, drawW, drawH);
+  drawPixelValueOverlay(ctx, previewState.tileAccumCanvas, dims.cssW, dims.cssH, x, y, drawW, drawH);
   drawPreviewMinimap(ctx, dims, fitted, x, y, drawW, drawH);
 }
 

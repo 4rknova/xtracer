@@ -290,7 +290,7 @@ const galleryView = {
   tx: 0,
   ty: 0,
   minScale: 1,
-  maxScale: 12,
+  maxScale: 256,
   panning: false,
   panMode: "",
   pointerId: null,
@@ -480,6 +480,7 @@ function drawGalleryCanvas() {
   ctx.imageSmoothingEnabled = !nearest && !galleryView.panning;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(src, x, y, drawW, drawH);
+  drawPixelValueOverlay(ctx, src, fitted.frameW, fitted.frameH, x, y, drawW, drawH);
   drawGalleryMinimap(ctx, fitted, src, x, y, drawW, drawH);
 }
 

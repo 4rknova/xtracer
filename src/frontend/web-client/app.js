@@ -672,7 +672,7 @@ const previewView = {
   tx: 0,
   ty: 0,
   minScale: 1,
-  maxScale: 12,
+  maxScale: 256,
   panning: false,
   panMode: "",
   pointerId: null,
