@@ -3,7 +3,10 @@
 #include "strpool.h"
 #define STRPOOL_U32 HASH_UINT32
 #define STRPOOL_U64 HASH_UINT64
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
 #include <strpool/strpool.h>
+#pragma GCC diagnostic pop
 #include <mutex>
 #include <string>
 
