@@ -65,7 +65,8 @@
 #define XTPROTO_PROP_VRT_1			"v1"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_VRT_2			"v2"				/* vector     */ /* Vector coordinates */
 #define XTPROTO_PROP_PROPERTIES		"properties"		/* string     */ /* properties */
-#define XTPROTO_PROP_MEDIUM			"medium"			/* string     */ /* medium asset reference */
+#define XTPROTO_PROP_MEDIUM			"medium"			/* string     */ /* interior medium asset reference */
+#define XTPROTO_PROP_EXTERIOR_MEDIUM	"exterior_medium"	/* string     */ /* exterior medium asset reference */
 #define XTPROTO_PROP_RESOLUTION		"resolution"		/* string     */ /* resolution */
 #define XTPROTO_PROP_SCALARS		"scalars"			/* string     */ /* scalar properties */
 #define XTPROTO_PROP_COLORS			"colors"			/* string     */ /* color properties */

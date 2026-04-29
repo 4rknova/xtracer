@@ -80,6 +80,11 @@ class Scene
     void set_object_medium(HASH_UINT64 object_id, xtcore::asset::medium::IMedium *medium);
     void clear_object_medium(HASH_UINT64 object_id);
 
+    const xtcore::asset::medium::IMedium *get_object_exterior_medium(HASH_UINT64 object_id) const;
+    bool has_object_exterior_medium(HASH_UINT64 object_id) const;
+    void set_object_exterior_medium(HASH_UINT64 object_id, xtcore::asset::medium::IMedium *medium);
+    void clear_object_exterior_medium(HASH_UINT64 object_id);
+
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
     bool sample_environment_direction(Vector3f &direction, nmath::scalar_t &pdf, nimg::ColorRGBf &radiance) const;
     nmath::scalar_t sample_environment_pdf(const Vector3f &direction) const;
@@ -99,6 +104,7 @@ class Scene
 	GeoCollection m_surface;
 	ObjCollection m_objects;
     MediumCollection m_media;
+    MediumCollection m_exterior_media;
 
 	// Ambient
 	nimg::ColorRGBf m_ambient;	// intensity

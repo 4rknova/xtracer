@@ -190,6 +190,13 @@ void Scene::release()
         }
         m_media.clear();
     }
+    if (!m_exterior_media.empty()) {
+        for (auto it = m_exterior_media.begin(); it != m_exterior_media.end(); ++it) {
+            delete it->second;
+            it->second = 0;
+        }
+        m_exterior_media.clear();
+    }
 
     m_tlas_items.clear();
     m_tlas_nodes.clear();
@@ -227,6 +234,7 @@ int Scene::destroy_object(HASH_UINT64 id)
 {
     mark_spatial_index_dirty();
     clear_object_medium(id);
+    clear_object_exterior_medium(id);
     return purge(m_objects, id);
 }
 
@@ -382,6 +390,35 @@ void Scene::clear_object_medium(HASH_UINT64 object_id)
         delete it->second;
         it->second = 0;
         m_media.erase(it);
+    }
+}
+
+const xtcore::asset::medium::IMedium *Scene::get_object_exterior_medium(HASH_UINT64 object_id) const
+{
+    auto it = m_exterior_media.find(object_id);
+    if (it == m_exterior_media.end()) return 0;
+    return it->second;
+}
+
+bool Scene::has_object_exterior_medium(HASH_UINT64 object_id) const
+{
+    return m_exterior_media.find(object_id) != m_exterior_media.end();
+}
+
+void Scene::set_object_exterior_medium(HASH_UINT64 object_id, xtcore::asset::medium::IMedium *medium)
+{
+    clear_object_exterior_medium(object_id);
+    if (!medium) return;
+    m_exterior_media[object_id] = medium;
+}
+
+void Scene::clear_object_exterior_medium(HASH_UINT64 object_id)
+{
+    auto it = m_exterior_media.find(object_id);
+    if (it != m_exterior_media.end()) {
+        delete it->second;
+        it->second = 0;
+        m_exterior_media.erase(it);
     }
 }
 

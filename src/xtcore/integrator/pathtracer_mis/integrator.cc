@@ -377,14 +377,10 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         nmath::scalar_t t_exit = INFINITY;
         const xtcore::asset::medium::IMedium *medium = current_medium;
         if (medium) {
-            if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
-                current_medium_object_id = HASH_ID_INVALID;
-                current_medium_exit = INFINITY;
-                current_medium = 0;
-                medium = 0;
-            } else {
+            if (xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
                 current_medium_exit = t_exit;
             }
+            // open mesh: t_exit stays INFINITY; segment_dist = min(t_surface, INFINITY) = t_surface
         }
         if (medium) {
             const nmath::scalar_t segment_dist = std::min(t_surface, t_exit);
@@ -473,8 +469,9 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         hit_record.ior = ior;
         const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object);
         if (!m) break;
-        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene->get_object_medium(hit_record.id_object);
-        const xtcore::asset::material::Boundary *boundary = dynamic_cast<const xtcore::asset::material::Boundary *>(m);
+        const xtcore::asset::medium::IMedium *interior_medium = ctx->scene->get_object_medium(hit_record.id_object);
+        const xtcore::asset::medium::IMedium *exterior_medium = ctx->scene->get_object_exterior_medium(hit_record.id_object);
+        const bool has_boundary_medium = interior_medium || exterior_medium;
 
         if (m->is_emissive()) {
             nimg::ColorRGBf le = m->get_sample(MAT_SAMPLER_EMISSIVE, hit_record.texcoord);
@@ -586,20 +583,35 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             ray = next_hit.ray;
             ior = next_hit.ior;
 
-            if (boundary && boundary_medium) {
+            if (has_boundary_medium) {
                 const nmath::scalar_t medium_side = nmath::dot(hit_record.incident_direction.normalized(), hit_record.normal.normalized());
                 if (medium_side < (nmath::scalar_t)0.0) {
-                    current_medium_object_id = hit_record.id_object;
-                    current_medium = boundary_medium;
-                    if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                    // Entering the surface: activate interior medium
+                    if (interior_medium) {
+                        current_medium_object_id = hit_record.id_object;
+                        current_medium = interior_medium;
+                        if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                            current_medium_exit = INFINITY;  // open mesh: keep medium active
+                        }
+                    } else if (current_medium != nullptr) {
+                        // No interior medium: exiting whatever medium we were in
                         current_medium_object_id = HASH_ID_INVALID;
                         current_medium_exit = INFINITY;
                         current_medium = 0;
                     }
-                } else if (current_medium_object_id == hit_record.id_object) {
-                    current_medium_object_id = HASH_ID_INVALID;
-                    current_medium_exit = INFINITY;
-                    current_medium = 0;
+                } else {
+                    // Exiting the surface: activate exterior medium (or deactivate)
+                    if (exterior_medium) {
+                        current_medium_object_id = hit_record.id_object;
+                        current_medium = exterior_medium;
+                        if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                            current_medium_exit = INFINITY;
+                        }
+                    } else {
+                        current_medium_object_id = HASH_ID_INVALID;
+                        current_medium_exit = INFINITY;
+                        current_medium = 0;
+                    }
                 }
             }
 
