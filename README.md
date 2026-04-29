@@ -40,7 +40,14 @@ cmake --build build/intermediate/build -j
 Run web server:
 
 ```bash
-./build/intermediate/build/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
+./build/intermediate/build/xtracer_web \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --scene-dir scene \
+    --web-root src/frontend/web-client \
+    --max-concurrent-renders 1 \
+    --render-reserve-threads 1 \
+    --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -50,13 +57,24 @@ UI showcase: `http://127.0.0.1:8080/showcase.html`
 Run CLI:
 
 ```bash
-./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli \
+    scene/lab-camera-modes-showcase.scn \
+    -renderer pathtracer_mis \
+    -res 1280x720 \
+    -samples 4 \
+    -aa 2
 ```
 
 With scene variant:
 
 ```bash
-./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -variant night -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli \
+    scene/lab-camera-modes-showcase.scn \
+    -variant night \
+    -renderer pathtracer_mis \
+    -res 1280x720 \
+    -samples 4 \
+    -aa 2
 ```
 
 ## Repository Layout
@@ -92,12 +110,12 @@ With scene variant:
 | Integrator ID | Type | Exposed In `/api/integrators` |
 |---|---|---:|
 | `raytracer` | Whitted-style | Yes |
-| `pathtracer` | Brute-force path tracing | Yes |
 | `pathtracer_mis` | MIS path tracing with emissive-area and environment sampling | Yes |
-| `pathtracer_bdpt` | Experimental bidirectional path tracing with MIS path connection | Yes |
+| `pathtracer` | Brute-force path tracing | Yes |
 | `photon_mapping` | Photon mapping | Yes |
-| `ao` | Ambient occlusion | Yes |
 | `debug_views` | Multi-mode debug integrator | Yes |
+| `ao` | Ambient occlusion | Yes |
+| `pathtracer_bdpt` | Experimental bidirectional path tracing with MIS path connection | Yes |
 | `depth` | Debug depth alias | No (alias accepted in `/api/render`) |
 | `stencil` | Debug stencil alias | No (alias accepted in `/api/render`) |
 | `normal` | Debug normal alias | No (alias accepted in `/api/render`) |
@@ -112,7 +130,7 @@ Full format reference: [docs/SCENE_FORMAT.md](docs/SCENE_FORMAT.md)
 
 | Asset type | Reference |
 |---|---|
-$$| Geometry types, analytic primitives, fractals, mesh generators, CSG | [docs/GEOMETRY.md](docs/GEOMETRY.md) |
+| Geometry types, analytic primitives, fractals, mesh generators, CSG | [docs/GEOMETRY.md](docs/GEOMETRY.md) |
 | Camera types and parameters | [docs/CAMERAS.md](docs/CAMERAS.md) |
 | Material types, sampler slots, scalar parameters | [docs/MATERIALS.md](docs/MATERIALS.md) |
 | Sampler types (procedural, image, environment) | [docs/SAMPLERS.md](docs/SAMPLERS.md) |
@@ -130,7 +148,7 @@ $$| Geometry types, analytic primitives, fractals, mesh generators, CSG | [docs/
 | Gallery | Cached render browser with card grid, detail view (with tone mapping operator + parameter controls), pass thumbnails for progressive/incremental renders, refresh, and delete. Renders are cached server-side in full-precision EXR format; the server decodes and tonemaps to PNG on each request. Callers can opt a render out of gallery persistence with `save_to_gallery=0` when using `/api/render`. |
 | Settings | Theme mode + light/dark palette selection, frontend behavior toggles, render polling controls, and first-time tutorial reset/start controls |
 | Logs | Backend log stream with wait-based incremental updates and level filters |
-| About | Build/backend metadata, project license text, and third-party dependency notices including usage/location |
+| About | Build/backend metadata (including build type), project license text, and third-party dependency notices including usage/location |
 
 Shared sidebar jobs card:
 - Shows a live 1 minute thread-usage graph plus current active/queued jobs, queue ordering controls, and abort actions wherever the card is enabled.
@@ -149,6 +167,7 @@ Render preview interactions:
 - Drag pans the preview while zoomed.
 - Double-click or `Reset View` resets preview pan/zoom.
 - Clicking or dragging on the preview minimap recenters the current zoom on that region.
+- At high zoom levels, per-pixel RGB values are overlaid directly on each source pixel.
 - The preview toolbar includes export format + save controls and a two-icon sampling switch (`Smooth`, `Nearest`).
 
 Interactive preview controls (Render tab, with `Render Mode = Interactive`):
@@ -205,7 +224,12 @@ Notes:
 ### CLI
 
 ```bash
-./build/intermediate/build/xtracer_cli scene/lab-camera-modes-showcase.scn -renderer pathtracer_mis -res 1280x720 -samples 4 -aa 2
+./build/intermediate/build/xtracer_cli \
+    scene/lab-camera-modes-showcase.scn \
+    -renderer pathtracer_mis \
+    -res 1280x720 \
+    -samples 4 \
+    -aa 2
 ```
 
 ### Mitsuba Converter
@@ -218,7 +242,14 @@ Notes:
 ### Web Server
 
 ```bash
-./build/intermediate/build/xtracer_web --host 127.0.0.1 --port 8080 --scene-dir scene --web-root src/frontend/web-client --max-concurrent-renders 1 --render-reserve-threads 1 --verbose
+./build/intermediate/build/xtracer_web \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --scene-dir scene \
+    --web-root src/frontend/web-client \
+    --max-concurrent-renders 1 \
+    --render-reserve-threads 1 \
+    --verbose
 ```
 
 Open: `http://127.0.0.1:8080`
@@ -283,7 +314,11 @@ docker compose down
 Optional tuning:
 
 ```bash
-./build/intermediate/build/bench_mesh_intersection --resolution 128 --width 512 --height 512 --passes 8
+./build/intermediate/build/bench_mesh_intersection \
+    --resolution 128 \
+    --width 512 \
+    --height 512 \
+    --passes 8
 ```
 
 ### Sampling Visualization Tool
@@ -292,7 +327,8 @@ Build with visualization enabled:
 
 ```bash
 cmake -S . -B build/intermediate/build-viz -DXTRACER_ENABLE_VIZ=ON
-cmake --build build/intermediate/build-viz -j --target xtracer_viz_sampling
+cmake --build build/intermediate/build-viz -j \
+    --target xtracer_viz_sampling
 ```
 
 Run:
@@ -313,12 +349,13 @@ Run:
 | `xtcore::sphere` | `<build-dir>/test/test_xtcore_sphere` |
 | `xtcore::triangle` | `<build-dir>/test/test_xtcore_triangle` |
 | `xtcore::csg` | `<build-dir>/test/test_xtcore_csg` |
-| `xtcore::fbx_import` | `<build-dir>/test/test_xtcore_fbx_import` |
-| `xtcore::gltf_import` | `<build-dir>/test/test_xtcore_gltf_import` |
 | `xtcore::boundary_material` | `<build-dir>/test/test_xtcore_boundary_material` |
 | `xtcore::white_furnace` | `<build-dir>/test/test_xtcore_white_furnace` |
 | `xtcore::raytracer_emissive` | `<build-dir>/test/test_xtcore_raytracer_emissive` |
 | `xtcore::object_medium_parse` | `<build-dir>/test/test_xtcore_object_medium_parse` |
+| `xtcore::fbx_import` | `<build-dir>/test/test_xtcore_fbx_import` |
+| `xtcore::gltf_import` | `<build-dir>/test/test_xtcore_gltf_import` |
+| `xtcore::svg_mesh_generator` | `<build-dir>/test/test_xtcore_svg_mesh_generator` |
 | `cli::setup_parse` | `<build-dir>/test/test_xtracer_cli_setup` |
 | `ncf::inline_and_utf8` | `<build-dir>/test/test_ncf_parser` |
 | `scene::validate_all` | `<build-dir>/test/test_xtcore_scene_validator` |
