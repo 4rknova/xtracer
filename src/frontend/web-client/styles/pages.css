@@ -4910,6 +4910,13 @@ textarea {
   flex: 0 0 auto;
 }
 
+.about-version-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .about-pill {
   display: inline-flex;
   align-items: center;
@@ -4926,6 +4933,18 @@ textarea {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+.about-pill[data-build-type="release"] {
+  border-color: color-mix(in srgb, var(--xui-success) 68%, transparent);
+  background: color-mix(in srgb, var(--xui-success) 18%, transparent);
+  color: color-mix(in srgb, var(--xui-success) 90%, var(--ink));
+}
+
+.about-pill[data-build-type="debug"] {
+  border-color: color-mix(in srgb, var(--xui-warning) 68%, transparent);
+  background: color-mix(in srgb, var(--xui-warning) 18%, transparent);
+  color: color-mix(in srgb, var(--xui-warning) 90%, var(--ink));
 }
 
 .about-meta-list {
@@ -6269,6 +6288,10 @@ button:disabled {
   border: 1px solid rgba(165, 182, 198, 0.65);
   border-radius: 3px;
   display: block;
+  cursor: pointer;
+}
+.ng-node-preview-img:hover {
+  border-color: rgba(196, 147, 58, 0.8);
 }
 
 /* ── Editable value inputs in node rows ── */
@@ -6356,6 +6379,10 @@ button:disabled {
   object-fit: cover;
   border: 1px solid rgba(165, 182, 198, 0.55);
   border-radius: 3px;
+  cursor: pointer;
+}
+.ng-node-preview-full:hover {
+  border-color: rgba(196, 147, 58, 0.8);
 }
 
 /* ── Ports ── */

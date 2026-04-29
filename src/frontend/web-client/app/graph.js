@@ -26,6 +26,35 @@ async function mountRgbaPreviewCanvas(url, className, altLabel) {
   return canvas;
 }
 
+function showTexturePreviewModal(url, label) {
+  const w = window.XTracerWidgets;
+  if (!w || typeof w.showModal !== "function") return;
+  const container = document.createElement("div");
+  container.style.cssText = "display:flex;justify-content:center;align-items:center;padding:8px 0;";
+  if (isRgbaPreviewUrl(url)) {
+    mountRgbaPreviewCanvas(url, "", label)
+      .then((canvas) => {
+        canvas.style.cssText = "max-width:100%;max-height:60vh;display:block;image-rendering:pixelated;";
+        container.appendChild(canvas);
+      });
+  } else {
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = label || "texture";
+    img.style.cssText = "max-width:100%;max-height:60vh;display:block;";
+    container.appendChild(img);
+  }
+  w.showModal({ title: label || "Texture Preview", body: [container], confirmLabel: false, cancelLabel: "Close" });
+}
+
+function patchRuntimeCache(mutate) {
+  if (typeof getRuntimeGraphForScene !== "function") return;
+  const sn = String(el.scene   && el.scene.value   ? el.scene.value   : "").trim();
+  const vn = String(el.variant && el.variant.value ? el.variant.value : "").trim();
+  const rt = getRuntimeGraphForScene(sn, vn);
+  if (rt && typeof mutate === "function") mutate(rt);
+}
+
 function formatGraphNumeric(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return String(v ?? "-");
@@ -71,6 +100,8 @@ function getNodePorts(kind) {
       return { inputs: [], outputs: [{ id: "out", type: "scalar",  label: "" }] };
     case "vec3":
       return { inputs: [], outputs: [{ id: "out", type: "vec3",    label: "" }] };
+    case "environment":
+      return { inputs: [], outputs: [] };
     default:
       return { inputs: [], outputs: [] };
   }
@@ -310,11 +341,12 @@ function findGraphNodeData(key) {
 
 function isGraphExpandableNode(key) {
   const raw = String(key || "");
-  return raw.indexOf("camera:")   === 0
-    || raw.indexOf("object:")     === 0
-    || raw.indexOf("geometry:")   === 0
-    || raw.indexOf("material:")   === 0
-    || raw.indexOf("medium:")     === 0;
+  return raw.indexOf("camera:")      === 0
+    || raw.indexOf("object:")        === 0
+    || raw.indexOf("geometry:")      === 0
+    || raw.indexOf("material:")      === 0
+    || raw.indexOf("medium:")        === 0
+    || raw.indexOf("environment:")   === 0;
 }
 
 function fitGraphToViewport() {
@@ -462,6 +494,8 @@ function buildNodeElement(n) {
         inp.dataset.updateKind     = n.updateInfo.kind;
         inp.dataset.updateParentId = n.updateInfo.parentId;
         inp.dataset.updateProp     = n.updateInfo.prop;
+      } else {
+        inp.readOnly = true;
       }
       inp.addEventListener("change", (e) => {
         e.stopPropagation();
@@ -477,6 +511,11 @@ function buildNodeElement(n) {
         allCh.forEach((ci) => {
           const c = Number(ci.dataset.channel);
           if (c >= 0 && c <= 2) vec[c] = (ci === e.target) ? v : Number(ci.value);
+        });
+        patchRuntimeCache((rt) => {
+          const list = kind === "camera_vec3" ? (rt.cameras || []) : (rt.surfaces || []);
+          const entry = list.find((x) => String(x.id) === parentId);
+          if (entry) entry[prop] = vec.slice();
         });
         const src = el.sceneSource ? String(el.sceneSource.value || "") : "";
         let next = src;
@@ -504,6 +543,8 @@ function buildNodeElement(n) {
       inp.dataset.updateKind     = n.updateInfo.kind;
       inp.dataset.updateParentId = n.updateInfo.parentId;
       inp.dataset.updateProp     = n.updateInfo.prop;
+    } else {
+      inp.readOnly = true;
     }
     inp.addEventListener("change", (e) => {
       e.stopPropagation();
@@ -513,10 +554,26 @@ function buildNodeElement(n) {
       if (!kind || !parentId || !prop) return;
       const v = Number(e.target.value);
       if (!Number.isFinite(v)) return;
+      patchRuntimeCache((rt) => {
+        if (kind === "camera_scalar") {
+          const cam = (rt.cameras || []).find((x) => String(x.id) === parentId);
+          if (cam) cam[prop] = v;
+        } else if (kind === "geometry_scalar") {
+          const surf = (rt.surfaces || []).find((x) => String(x.id) === parentId);
+          if (surf) surf[prop] = v;
+        } else if (kind === "material_scalar") {
+          const mat = (rt.materials || []).find((x) => String(x.id) === parentId);
+          if (mat && Array.isArray(mat.scalars)) {
+            const sc = mat.scalars.find((s) => String(s.name) === prop);
+            if (sc) sc.value = v;
+          }
+        }
+      });
       const src = el.sceneSource ? String(el.sceneSource.value || "") : "";
       let next = src;
       if (kind === "camera_scalar")   next = updateCameraScalarInSource(src, parentId, prop, v);
       if (kind === "geometry_scalar") next = updateGeometryScalarInSource(src, parentId, prop, v);
+      if (kind === "material_scalar") next = updateMaterialScalarInSource(src, parentId, prop, v);
       if (next !== src) updateSceneSourceText(next, { history: "visual" });
     });
     inp.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -567,6 +624,13 @@ function buildNodeElement(n) {
               const c = Number(ci.dataset.channel);
               if (c >= 0 && c <= 2) rgb[c] = (ci === e.target) ? v : Number(ci.value);
             });
+            patchRuntimeCache((rt) => {
+              const mat = (rt.materials || []).find((x) => String(x.id) === mId);
+              if (mat && Array.isArray(mat.samplers)) {
+                const sam = mat.samplers.find((s) => String(s.name) === sName);
+                if (sam) sam.color = rgb.slice();
+              }
+            });
             const src  = el.sceneSource ? String(el.sceneSource.value || "") : "";
             const next = updateSamplerColorInSource(src, mId, sName, rgb);
             if (next !== src) updateSceneSourceText(next, { history: "visual" });
@@ -578,15 +642,23 @@ function buildNodeElement(n) {
         div.appendChild(rgbRow);
       }
     } else if (n.samplerPreviewUrl) {
-      if (isRgbaPreviewUrl(n.samplerPreviewUrl)) {
-        mountRgbaPreviewCanvas(n.samplerPreviewUrl, "ng-node-preview-img ng-node-preview-full", n.label || n.id)
-          .then((canvas) => div.appendChild(canvas));
+      const _spUrl   = n.samplerPreviewUrl;
+      const _spLabel = n.label || n.id;
+      if (isRgbaPreviewUrl(_spUrl)) {
+        mountRgbaPreviewCanvas(_spUrl, "ng-node-preview-img ng-node-preview-full", _spLabel)
+          .then((canvas) => {
+            canvas.dataset.previewUrl   = _spUrl;
+            canvas.dataset.previewLabel = _spLabel;
+            div.appendChild(canvas);
+          });
       } else {
         const img = document.createElement("img");
         img.className = "ng-node-preview-img ng-node-preview-full";
-        img.src     = n.samplerPreviewUrl;
-        img.alt     = n.label || n.id;
+        img.src     = _spUrl;
+        img.alt     = _spLabel;
         img.loading = "lazy";
+        img.dataset.previewUrl   = _spUrl;
+        img.dataset.previewLabel = _spLabel;
         div.appendChild(img);
       }
     }
@@ -608,26 +680,7 @@ function buildNodeElement(n) {
 
         const valSpan = document.createElement("span");
         valSpan.className = "ng-node-row-val";
-        if (row && row.scalarKey !== undefined && row.materialId) {
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.className = "ng-node-row-input";
-          inp.value = Number.isFinite(Number(row.scalar)) ? Number(row.scalar) : 0;
-          inp.step = "any";
-          inp.dataset.materialId = row.materialId;
-          inp.dataset.scalarKey  = row.scalarKey;
-          inp.addEventListener("change", (e) => {
-            e.stopPropagation();
-            const v = Number(e.target.value);
-            if (!Number.isFinite(v)) return;
-            const src = el.sceneSource ? String(el.sceneSource.value || "") : "";
-            const next = updateMaterialScalarInSource(src, e.target.dataset.materialId, e.target.dataset.scalarKey, v);
-            if (next !== src) updateSceneSourceText(next, { history: "visual" });
-          });
-          inp.addEventListener("mousedown", (e) => e.stopPropagation());
-          inp.addEventListener("click",     (e) => e.stopPropagation());
-          valSpan.appendChild(inp);
-        } else if (row && Array.isArray(row.color) && row.color.length >= 3) {
+        if (row && Array.isArray(row.color) && row.color.length >= 3) {
           const r = Math.round(clamp(Number(row.color[0]) || 0, 0, 1) * 255);
           const g = Math.round(clamp(Number(row.color[1]) || 0, 0, 1) * 255);
           const b = Math.round(clamp(Number(row.color[2]) || 0, 0, 1) * 255);
@@ -650,15 +703,23 @@ function buildNodeElement(n) {
       const previewsDiv = document.createElement("div");
       previewsDiv.className = "ng-node-previews";
       previews.forEach((p) => {
-        if (isRgbaPreviewUrl(p.url)) {
-          mountRgbaPreviewCanvas(p.url, "ng-node-preview-img", p.name || "texture")
-            .then((canvas) => previewsDiv.appendChild(canvas));
+        const _pUrl   = p.url  || "";
+        const _pLabel = p.name || "texture";
+        if (isRgbaPreviewUrl(_pUrl)) {
+          mountRgbaPreviewCanvas(_pUrl, "ng-node-preview-img", _pLabel)
+            .then((canvas) => {
+              canvas.dataset.previewUrl   = _pUrl;
+              canvas.dataset.previewLabel = _pLabel;
+              previewsDiv.appendChild(canvas);
+            });
         } else {
           const img = document.createElement("img");
           img.className = "ng-node-preview-img";
-          img.src     = p.url  || "";
-          img.alt     = p.name || "texture";
+          img.src     = _pUrl;
+          img.alt     = _pLabel;
           img.loading = "lazy";
+          img.dataset.previewUrl   = _pUrl;
+          img.dataset.previewLabel = _pLabel;
           previewsDiv.appendChild(img);
         }
       });
@@ -842,6 +903,13 @@ function bindGraphInteraction() {
 
     if (evt.type === "pointerup" && evt.button === 0) {
       const upTarget   = document.elementFromPoint(evt.clientX, evt.clientY);
+      if (!moved) {
+        const previewEl = upTarget && upTarget.closest ? upTarget.closest("[data-preview-url]") : null;
+        if (previewEl) {
+          showTexturePreviewModal(previewEl.dataset.previewUrl, previewEl.dataset.previewLabel);
+          return true;
+        }
+      }
       const onHeader   = !!(upTarget && upTarget.closest && upTarget.closest(".ng-node-header"));
       const upNodeKey  = onHeader ? findGraphNodeAt(evt.clientX, evt.clientY) : "";
       if (onHeader && upNodeKey && upNodeKey === downNodeKey && isGraphExpandableNode(upNodeKey)
@@ -1061,7 +1129,7 @@ function renderSceneGraphView() {
       : runtimeGraphByScene.get(sceneName))
     : null;
 
-  let cameras = [], objects = [], geometries = [], materials = [], media = [];
+  let cameras = [], objects = [], geometries = [], materials = [], media = [], environment = null;
 
   if (runtime) {
     cameras = (runtime.cameras || [])
@@ -1153,6 +1221,37 @@ function renderSceneGraphView() {
       }))
       .filter((m) => m.id).sort((a, b) => a.id.localeCompare(b.id));
 
+    if (runtime.environment && typeof runtime.environment === "object") {
+      const e = runtime.environment;
+      environment = {
+        type:             String(e.type || "").trim(),
+        source:           String(e.source || "").trim(),
+        rotation_y:       Number.isFinite(Number(e.rotation_y)) ? Number(e.rotation_y) : null,
+        sun_direction:    Array.isArray(e.sun_direction)    ? e.sun_direction.slice(0,3).map(Number)    : null,
+        sun_intensity:    Array.isArray(e.sun_intensity)    ? e.sun_intensity.slice(0,3).map(Number)    : null,
+        beta_rayleigh:    Array.isArray(e.beta_rayleigh)    ? e.beta_rayleigh.slice(0,3).map(Number)    : null,
+        ground_color:     Array.isArray(e.ground_color)     ? e.ground_color.slice(0,3).map(Number)     : null,
+        color:            Array.isArray(e.color)            ? e.color.slice(0,3).map(Number)            : null,
+        a:                Array.isArray(e.a)                ? e.a.slice(0,3).map(Number)                : null,
+        b:                Array.isArray(e.b)                ? e.b.slice(0,3).map(Number)                : null,
+        background_color: Array.isArray(e.background_color) ? e.background_color.slice(0,3).map(Number) : null,
+        turbidity:        Number.isFinite(Number(e.turbidity))        ? Number(e.turbidity)        : null,
+        exposure:         Number.isFinite(Number(e.exposure))         ? Number(e.exposure)         : null,
+        ground_albedo:    Number.isFinite(Number(e.ground_albedo))    ? Number(e.ground_albedo)    : null,
+        density:          Number.isFinite(Number(e.density))          ? Number(e.density)          : null,
+        horizon_falloff:  Number.isFinite(Number(e.horizon_falloff))  ? Number(e.horizon_falloff)  : null,
+        sun_disk_radius:      Number.isFinite(Number(e.sun_disk_radius))      ? Number(e.sun_disk_radius)      : null,
+        sun_disk_intensity:   Number.isFinite(Number(e.sun_disk_intensity))   ? Number(e.sun_disk_intensity)   : null,
+        sun_glow_radius:      Number.isFinite(Number(e.sun_glow_radius))      ? Number(e.sun_glow_radius)      : null,
+        sun_glow_intensity:   Number.isFinite(Number(e.sun_glow_intensity))   ? Number(e.sun_glow_intensity)   : null,
+        sun_glow_falloff:     Number.isFinite(Number(e.sun_glow_falloff))     ? Number(e.sun_glow_falloff)     : null,
+        min_brightness:   Number.isFinite(Number(e.min_brightness))   ? Number(e.min_brightness)   : null,
+        max_brightness:   Number.isFinite(Number(e.max_brightness))   ? Number(e.max_brightness)   : null,
+        star_size:        Number.isFinite(Number(e.star_size))        ? Number(e.star_size)        : null,
+        seed:             Number.isFinite(Number(e.seed))             ? Number(e.seed)             : null,
+      };
+    }
+
   } else {
     const source = el.sceneSource ? String(el.sceneSource.value || "") : "";
     const model  = parseSceneEditModel(source);
@@ -1216,7 +1315,11 @@ function renderSceneGraphView() {
     + cameras.reduce((s, c) => s + [c.position, c.target, c.up].filter(Array.isArray).length, 0);
   const totalScalarCount = geometries.reduce((s, g) => s + [g.radius, g.distance].filter(Number.isFinite).length, 0)
     + cameras.reduce((s, c) => s + [c.fov, c.aperture, c.flength].filter(Number.isFinite).length, 0);
-  const totalValueCount = totalSamplerCount + totalVec3Count + totalScalarCount;
+  const matScalarCount = materials.reduce((s, m) => s + (Array.isArray(m.scalars) ? m.scalars.length : 0), 0);
+  const medValueCount  = media.reduce((s, m) =>
+    s + [m.sigma_a, m.sigma_s, m.emission].filter(Array.isArray).length + (Number.isFinite(m.g) ? 1 : 0), 0);
+  const envValueCount  = environment ? 8 : 0;
+  const totalValueCount = totalSamplerCount + totalVec3Count + totalScalarCount + matScalarCount + medValueCount + envValueCount;
 
   // Data-flow column order: value nodes on far left, then components, then aggregates
   const kinds = [
@@ -1225,7 +1328,8 @@ function renderSceneGraphView() {
     { key: "material", title: "Material", color: "#5a9a4f", count: materials.length  },
     { key: "medium",   title: "Medium",   color: "#7d66b4", count: media.length      },
     { key: "object",   title: "Object",   color: "#9a6846", count: objects.length    },
-    { key: "camera",   title: "Camera",   color: "#5a88cf", count: cameras.length    },
+    { key: "camera",      title: "Camera",      color: "#5a88cf", count: cameras.length      },
+    { key: "environment", title: "Environment", color: "#c4933a", count: environment ? 1 : 0 },
   ];
   let xCursor = 40;
   kinds.forEach((k) => {
@@ -1304,7 +1408,7 @@ function renderSceneGraphView() {
         columnKey: "sampler", w: 220, h: nodeH + 30, label: prop,
         ports: { inputs: [], outputs: [{ id: "out", type: "vec3", label: "" }] },
         valueVec3: vec.slice(),
-        updateInfo: runtime ? null : { kind: "camera_vec3", parentId: c.id, prop },
+        updateInfo: { kind: "camera_vec3", parentId: c.id, prop },
       });
     };
     const addCamScalar = (prop, val) => {
@@ -1316,7 +1420,7 @@ function renderSceneGraphView() {
         columnKey: "sampler", w: 220, h: nodeH + 26, label: prop,
         ports: { inputs: [], outputs: [{ id: "out", type: "scalar", label: "" }] },
         valueNum: val,
-        updateInfo: runtime ? null : { kind: "camera_scalar", parentId: c.id, prop },
+        updateInfo: { kind: "camera_scalar", parentId: c.id, prop },
       });
     };
 
@@ -1370,7 +1474,7 @@ function renderSceneGraphView() {
         columnKey: "sampler", w: 220, h: nodeH + 30, label: prop,
         ports: { inputs: [], outputs: [{ id: "out", type: "vec3", label: "" }] },
         valueVec3: vec.slice(),
-        updateInfo: runtime ? null : { kind: "geometry_vec3", parentId: g.id, prop },
+        updateInfo: { kind: "geometry_vec3", parentId: g.id, prop },
       });
     };
     const addGeoScalar = (prop, val) => {
@@ -1382,7 +1486,7 @@ function renderSceneGraphView() {
         columnKey: "sampler", w: 220, h: nodeH + 26, label: prop,
         ports: { inputs: [], outputs: [{ id: "out", type: "scalar", label: "" }] },
         valueNum: val,
-        updateInfo: runtime ? null : { kind: "geometry_scalar", parentId: g.id, prop },
+        updateInfo: { kind: "geometry_scalar", parentId: g.id, prop },
       });
     };
 
@@ -1418,6 +1522,24 @@ function renderSceneGraphView() {
     const scalars   = Array.isArray(m && m.scalars)  ? m.scalars  : [];
     const mSamplers = Array.isArray(m && m.samplers) ? m.samplers : [];
 
+    // Push one scalar child node per material scalar — feeds into material input ports
+    const matScalarInputPorts = [];
+    const matScalarConnections = {};
+    scalars.forEach((s, i) => {
+      const sName = String(s && s.name || "");
+      if (!sName || !Number.isFinite(Number(s && s.value))) return;
+      const val = Number(s.value);
+      const rowIndex = 1 + i; // after "type" row
+      matScalarInputPorts.push({ id: sName, type: "scalar", label: sName, rowIndex });
+      matScalarConnections[sName] = `scalar:${m.id}:${sName}`;
+      pushNode("scalar", `${m.id}:${sName}`, formatGraphNumeric(val), {
+        columnKey: "sampler", w: 220, h: nodeH + 26, label: sName,
+        ports: { inputs: [], outputs: [{ id: "out", type: "scalar", label: "" }] },
+        valueNum: val,
+        updateInfo: { kind: "material_scalar", parentId: m.id, prop: sName },
+      });
+    });
+
     // Push one sampler node per slot — these feed into the material's input ports
     mSamplers.forEach((s) => {
       const sName   = String(s && s.name || "");
@@ -1446,10 +1568,9 @@ function renderSceneGraphView() {
       });
     });
 
-    // Build per-node input ports for the material (one per sampler slot).
-    // rowIndex skips the "type" row (1) and any scalar rows so the port dot
-    // aligns with the correct property row in the expanded body.
-    const matInputPorts = mSamplers.map((s, i) => {
+    // Build per-node input ports for the material (scalars first, then samplers).
+    // rowIndex aligns each port dot with its property row in the expanded body.
+    const matSamplerInputPorts = mSamplers.map((s, i) => {
       const sType = String(s && s.type || "sampler");
       return {
         id:       `sampler:${String(s && s.name || "")}`,
@@ -1458,7 +1579,8 @@ function renderSceneGraphView() {
         rowIndex: 1 + scalars.length + i,
       };
     });
-    const matConnections = {};
+    const matInputPorts = [...matScalarInputPorts, ...matSamplerInputPorts];
+    const matConnections = { ...matScalarConnections };
     mSamplers.forEach((s) => {
       const sName = String(s && s.name || "");
       if (sName) matConnections[`sampler:${sName}`] = `${m.id}:${sName}`;
@@ -1466,10 +1588,8 @@ function renderSceneGraphView() {
 
     const propertyRows = [{ key: "type", value: String(m && m.type ? m.type : "material") }];
     scalars.forEach((s) => propertyRows.push({
-      key:       String(s && s.name  ? s.name  : "scalar"),
-      scalar:    (s && s.value !== undefined) ? s.value : 0,
-      scalarKey: String(s && s.name  ? s.name  : ""),
-      materialId: m.id,
+      key:   String(s && s.name  ? s.name  : "scalar"),
+      value: Number.isFinite(Number(s && s.value)) ? formatGraphNumeric(Number(s.value)) : String(s && s.value !== undefined ? s.value : "-"),
     }));
     mSamplers.forEach((s) => {
       const row = { key: String(s && s.name ? s.name : "sampler"), value: String(s && s.type ? s.type : "sampler") };
@@ -1491,16 +1611,146 @@ function renderSceneGraphView() {
   media.forEach((m) => {
     const nodeKey  = `medium:${String(m.id || "")}`;
     const expanded = graphView.expandedNodeKeys.has(nodeKey);
-    const propertyRows = [{ key: "type", value: String(m && m.type ? m.type : "medium") }];
-    if (Array.isArray(m.sigma_a))  propertyRows.push({ key: "sigma_a",  value: graphColorLabel(m.sigma_a),  color: m.sigma_a.slice(0,3)  });
-    if (Array.isArray(m.sigma_s))  propertyRows.push({ key: "sigma_s",  value: graphColorLabel(m.sigma_s),  color: m.sigma_s.slice(0,3)  });
-    if (Array.isArray(m.emission)) propertyRows.push({ key: "emission", value: graphColorLabel(m.emission), color: m.emission.slice(0,3) });
-    if (Number.isFinite(m.g))      propertyRows.push({ key: "g",        value: formatGraphNumeric(m.g)                                   });
+    const propertyRows   = [{ key: "type", value: String(m && m.type ? m.type : "medium") }];
+    const medInputPorts  = [];
+    const medConnections = {};
+
+    const addMediumColor = (prop, color) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: graphColorLabel(color), color: color.slice(0,3) });
+      medInputPorts.push({ id: prop, type: "color", label: prop, rowIndex });
+      medConnections[prop] = `sampler:medium:${m.id}:${prop}`;
+      pushNode("sampler", `medium:${m.id}:${prop}`, graphColorLabel(color), {
+        columnKey: "sampler", w: 220, h: nodeH + 46, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "color", label: "" }] },
+        samplerColor: color.slice(0, 3),
+      });
+    };
+    const addMediumScalar = (prop, val) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: formatGraphNumeric(val) });
+      medInputPorts.push({ id: prop, type: "scalar", label: prop, rowIndex });
+      medConnections[prop] = `scalar:medium:${m.id}:${prop}`;
+      pushNode("scalar", `medium:${m.id}:${prop}`, formatGraphNumeric(val), {
+        columnKey: "sampler", w: 220, h: nodeH + 26, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "scalar", label: "" }] },
+        valueNum: val,
+      });
+    };
+
+    if (Array.isArray(m.sigma_a))  addMediumColor("sigma_a",  m.sigma_a);
+    if (Array.isArray(m.sigma_s))  addMediumColor("sigma_s",  m.sigma_s);
+    if (Array.isArray(m.emission)) addMediumColor("emission", m.emission);
+    if (Number.isFinite(m.g))      addMediumScalar("g",       m.g);
+
     pushNode("medium", m.id, m.type || "medium", {
       h: detailsNodeHeight(expanded, propertyRows.length, 0),
       expanded, propertyRows, texturePreviews: [],
+      ports: { inputs: medInputPorts, outputs: [{ id: "out", type: "medium", label: "" }] },
+      connections: medConnections,
     });
   });
+
+  if (environment) {
+    const envKey     = "environment:scene";
+    const expanded   = graphView.expandedNodeKeys.has(envKey);
+    const envType    = environment.type || "unknown";
+    const propertyRows   = [{ key: "type", value: envType }];
+    const envInputPorts  = [];
+    const envConnections = {};
+
+    const addEnvVec3 = (prop, vec) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: graphVec3Label(vec) });
+      envInputPorts.push({ id: prop, type: "vec3", label: prop, rowIndex });
+      envConnections[prop] = `vec3:env:${prop}`;
+      pushNode("vec3", `env:${prop}`, graphVec3Label(vec), {
+        columnKey: "sampler", w: 220, h: nodeH + 30, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "vec3", label: "" }] },
+        valueVec3: vec.slice(),
+      });
+    };
+    const addEnvColor = (prop, color) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: graphColorLabel(color), color: color.slice(0,3) });
+      envInputPorts.push({ id: prop, type: "color", label: prop, rowIndex });
+      envConnections[prop] = `sampler:env:${prop}`;
+      pushNode("sampler", `env:${prop}`, graphColorLabel(color), {
+        columnKey: "sampler", w: 220, h: nodeH + 46, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "color", label: "" }] },
+        samplerColor: color.slice(0, 3),
+      });
+    };
+    const addEnvScalar = (prop, val) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: formatGraphNumeric(val) });
+      envInputPorts.push({ id: prop, type: "scalar", label: prop, rowIndex });
+      envConnections[prop] = `scalar:env:${prop}`;
+      pushNode("scalar", `env:${prop}`, formatGraphNumeric(val), {
+        columnKey: "sampler", w: 220, h: nodeH + 26, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "scalar", label: "" }] },
+        valueNum: val,
+      });
+    };
+    const addEnvTexture = (prop, previewUrl, label) => {
+      const rowIndex = propertyRows.length;
+      propertyRows.push({ key: prop, value: label });
+      envInputPorts.push({ id: prop, type: "texture", label: prop, rowIndex });
+      envConnections[prop] = `sampler:env:${prop}`;
+      pushNode("sampler", `env:${prop}`, label, {
+        columnKey: "sampler", w: 220, h: nodeH + 56, label: prop,
+        ports: { inputs: [], outputs: [{ id: "out", type: "texture", label: "" }] },
+        samplerPreviewUrl: previewUrl,
+      });
+    };
+
+    if (envType === "erp") {
+      if (environment.source) {
+        const previewUrl = `/api/scenes/${encodeURIComponent(sceneName)}/asset?path=${encodeURIComponent(environment.source)}`;
+        addEnvTexture("source", previewUrl, environment.source.split("/").pop() || environment.source);
+      }
+      if (environment.rotation_y !== null) addEnvScalar("rotation_y", environment.rotation_y);
+    } else if (envType === "cubemap") {
+      propertyRows.push({ key: "faces", value: "6" });
+    } else if (envType === "rayleigh_sky") {
+      if (Array.isArray(environment.sun_direction)) addEnvVec3("sun_dir",    environment.sun_direction);
+      if (Array.isArray(environment.sun_intensity)) addEnvColor("sun_int",   environment.sun_intensity);
+      if (Array.isArray(environment.beta_rayleigh)) addEnvColor("beta_ray",  environment.beta_rayleigh);
+      if (Array.isArray(environment.ground_color))  addEnvColor("ground",    environment.ground_color);
+      if (environment.density            !== null) addEnvScalar("density",          environment.density);
+      if (environment.horizon_falloff    !== null) addEnvScalar("horizon_falloff",  environment.horizon_falloff);
+      if (environment.sun_disk_radius    !== null) addEnvScalar("disk_radius",      environment.sun_disk_radius);
+      if (environment.sun_disk_intensity !== null) addEnvScalar("disk_intensity",   environment.sun_disk_intensity);
+      if (environment.sun_glow_radius    !== null) addEnvScalar("glow_radius",      environment.sun_glow_radius);
+      if (environment.sun_glow_intensity !== null) addEnvScalar("glow_intensity",   environment.sun_glow_intensity);
+      if (environment.sun_glow_falloff   !== null) addEnvScalar("glow_falloff",     environment.sun_glow_falloff);
+    } else if (envType === "preetham_sky" || envType === "hosek_wilkie_sky") {
+      if (Array.isArray(environment.sun_direction)) addEnvVec3("sun_dir",    environment.sun_direction);
+      if (environment.turbidity     !== null) addEnvScalar("turbidity",     environment.turbidity);
+      if (environment.exposure      !== null) addEnvScalar("exposure",      environment.exposure);
+      if (environment.ground_albedo !== null) addEnvScalar("ground_albedo", environment.ground_albedo);
+      if (Array.isArray(environment.ground_color)) addEnvColor("ground",    environment.ground_color);
+    } else if (envType === "color") {
+      if (Array.isArray(environment.color)) addEnvColor("color", environment.color);
+    } else if (envType === "gradient") {
+      if (Array.isArray(environment.a)) addEnvColor("a", environment.a);
+      if (Array.isArray(environment.b)) addEnvColor("b", environment.b);
+    } else if (envType === "stars") {
+      if (Array.isArray(environment.background_color)) addEnvColor("background",   environment.background_color);
+      if (environment.density        !== null) addEnvScalar("density",        environment.density);
+      if (environment.min_brightness !== null) addEnvScalar("min_bright",     environment.min_brightness);
+      if (environment.max_brightness !== null) addEnvScalar("max_bright",     environment.max_brightness);
+      if (environment.star_size      !== null) addEnvScalar("star_size",      environment.star_size);
+      if (environment.seed           !== null) addEnvScalar("seed",           environment.seed);
+    }
+
+    pushNode("environment", "scene", envType, {
+      h: detailsNodeHeight(expanded, propertyRows.length, 0),
+      expanded, propertyRows, texturePreviews: [],
+      ports: { inputs: envInputPorts, outputs: [] },
+      connections: envConnections,
+    });
+  }
 
   // Links flow left→right: component → Object
   const links = [];
@@ -1512,6 +1762,18 @@ function renderSceneGraphView() {
     if (obj && geo) links.push({ from: geo, to: obj, field: "geometry" });
     if (obj && mat) links.push({ from: mat, to: obj, field: "material" });
     if (obj && med) links.push({ from: med, to: obj, field: "medium"   });
+  });
+
+  // Scalar → Material links (fixed — material scalar child nodes)
+  materials.forEach((m) => {
+    const matNode = pos.get(`material:${m.id}`);
+    if (!matNode) return;
+    (Array.isArray(m.scalars) ? m.scalars : []).forEach((s) => {
+      const sName = String(s && s.name || "");
+      if (!sName) return;
+      const scalarNode = pos.get(`scalar:${m.id}:${sName}`);
+      if (scalarNode) links.push({ from: scalarNode, to: matNode, field: sName, fixed: true });
+    });
   });
 
   // Sampler → Material links (fixed — always connected, not user-removable)
@@ -1560,6 +1822,27 @@ function renderSceneGraphView() {
     if (Number.isFinite(c.flength)) addLink("flength");
   });
 
+  // Base node → Medium links (fixed)
+  media.forEach((m) => {
+    const medNode = pos.get(`medium:${m.id}`);
+    if (!medNode) return;
+    Object.entries(medNode.connections || {}).forEach(([field, targetKey]) => {
+      const valueNode = pos.get(targetKey);
+      if (valueNode) links.push({ from: valueNode, to: medNode, field, fixed: true });
+    });
+  });
+
+  // Base node → Environment links (fixed)
+  if (environment) {
+    const envNode = pos.get("environment:scene");
+    if (envNode) {
+      Object.entries(envNode.connections || {}).forEach(([field, targetKey]) => {
+        const valueNode = pos.get(targetKey);
+        if (valueNode) links.push({ from: valueNode, to: envNode, field, fixed: true });
+      });
+    }
+  }
+
   const viewH = Math.max(
     topPad + rowGap + bottomPad,
     ...Array.from(kindLayout.values()).map((layout) =>
@@ -1581,7 +1864,8 @@ function renderSceneGraphView() {
       [["Camera", cameras.length], ["Object", objects.length],
        ["Surface", geometries.length], ["Material", materials.length],
        ["Sampler", totalSamplerCount], ["Vec3", totalVec3Count],
-       ["Scalar", totalScalarCount], ["Medium", media.length]]
+       ["Scalar", totalScalarCount], ["Medium", media.length],
+       ["Environment", environment ? 1 : 0]]
         .forEach(([label, count]) => {
           const tr = document.createElement("tr");
           const td1 = document.createElement("td"); td1.textContent = String(label);

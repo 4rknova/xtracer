@@ -794,6 +794,7 @@ function createServerApi() {
         surfaces: Array.isArray(data && data.surfaces) ? data.surfaces : [],
         materials: Array.isArray(data && data.materials) ? data.materials : [],
         media: Array.isArray(data && data.media) ? data.media : [],
+        environment: (data && data.environment && typeof data.environment === "object") ? data.environment : null,
       };
     },
     async getSceneResolvedCamera(scene, variant, camera) {

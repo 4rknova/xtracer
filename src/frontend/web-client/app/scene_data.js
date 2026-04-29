@@ -1666,6 +1666,14 @@ async function loadAbout() {
   const version = hideStandaloneVersion ? "" : rawVersion;
   el.aboutVersion.textContent = version;
   el.aboutVersionRow.hidden = hideStandaloneVersion;
+  if (el.aboutBuildPill) {
+    const bt = (data.build_type || "").toLowerCase();
+    if (bt) {
+      el.aboutBuildPill.textContent = bt;
+      el.aboutBuildPill.dataset.buildType = bt;
+      el.aboutBuildPill.hidden = false;
+    }
+  }
   const homepage = data.homepage || "https://www.4rknova.com";
   el.aboutHomepage.href = homepage;
   el.aboutHomepage.textContent = homepage;
