@@ -19,6 +19,10 @@ class ERP : public ISampler
     bool sample_direction(nmath::Vector3f &direction, nmath::scalar_t &pdf, nimg::ColorRGBf &radiance) const;
     nmath::scalar_t pdf_direction(const nmath::Vector3f &direction) const;
 
+    nmath::scalar_t rotation_y;  // Y-axis rotation applied to incoming directions (radians)
+
+    const std::string &source_path() const;
+
     private:
     void build_distribution() const;
     bool sample_texel(size_t &x, size_t &y, nmath::scalar_t &pmf) const;

@@ -16,33 +16,57 @@ inline nmath::scalar_t clamp_scalar(nmath::scalar_t v, nmath::scalar_t lo, nmath
     return std::max(lo, std::min(v, hi));
 }
 
-inline void direction_to_erp_uv(const nmath::Vector3f &dir_in, nmath::scalar_t &u, nmath::scalar_t &v)
+// Mitsuba 3 ERP convention: phi = atan2(x, -z), center of map at local -Z direction.
+// rotation_y rotates the envmap around the Y axis (matches Mitsuba's to_world Y rotation).
+//
+// Mitsuba samples the envmap using si.wi = -ray.direction (direction toward sensor, not toward env).
+// Both conversion functions mirror this by negating the direction on entry/exit so that
+// callers can work with the natural outgoing ray direction in both directions.
+
+inline void direction_to_erp_uv(const nmath::Vector3f &dir_in, nmath::scalar_t rotation_y,
+                                  nmath::scalar_t &u, nmath::scalar_t &v)
 {
-    const nmath::Vector3f dir = dir_in.normalized();
+    // Negate: Mitsuba indexes the map with si.wi = -ray_direction
+    const nmath::Vector3f dir = -dir_in.normalized();
+    // Transform to local envmap frame (inverse Y rotation)
+    const nmath::scalar_t cr = nmath_cos(rotation_y);
+    const nmath::scalar_t sr = nmath_sin(rotation_y);
+    const nmath::scalar_t lx =  cr * dir.x - sr * dir.z;
+    const nmath::scalar_t lz =  sr * dir.x + cr * dir.z;
     const nmath::scalar_t theta = nmath_acos(clamp_scalar(dir.y, (nmath::scalar_t)-1.0, (nmath::scalar_t)1.0));
-    const nmath::scalar_t phi = nmath_atan2(dir.x, -dir.z);
-    u = (nmath::scalar_t)0.5 + phi / (nmath::PI_DOUBLE * (nmath::scalar_t)2.0);
+    const nmath::scalar_t phi = nmath_atan2(lx, -lz);
+    u = (nmath::scalar_t)0.5 + phi / nmath::PI_DOUBLE;
     v = theta / nmath::PI;
 }
 
-inline nmath::Vector3f erp_uv_to_direction(nmath::scalar_t u, nmath::scalar_t v)
+inline nmath::Vector3f erp_uv_to_direction(nmath::scalar_t u, nmath::scalar_t v, nmath::scalar_t rotation_y)
 {
     const nmath::scalar_t theta = clamp_scalar(v, (nmath::scalar_t)0.0, (nmath::scalar_t)1.0) * nmath::PI;
-    const nmath::scalar_t phi = (u - (nmath::scalar_t)0.5) * nmath::PI_DOUBLE * (nmath::scalar_t)2.0;
+    const nmath::scalar_t phi = (u - (nmath::scalar_t)0.5) * nmath::PI_DOUBLE;
     const nmath::scalar_t sin_theta = nmath_sin(theta);
-    return nmath::Vector3f(
-        sin_theta * nmath_sin(phi),
-        nmath_cos(theta),
-        -sin_theta * nmath_cos(phi)
+    // Local direction from UV (inverse of atan2(x,-z))
+    const nmath::scalar_t lx =  sin_theta * nmath_sin(phi);
+    const nmath::scalar_t ly =  nmath_cos(theta);
+    const nmath::scalar_t lz = -sin_theta * nmath_cos(phi);
+    // Apply forward Y rotation (local → world), then negate to get outgoing ray direction
+    const nmath::scalar_t cr = nmath_cos(rotation_y);
+    const nmath::scalar_t sr = nmath_sin(rotation_y);
+    return -nmath::Vector3f(
+         cr * lx + sr * lz,
+         ly,
+        -sr * lx + cr * lz
     ).normalized();
 }
 
 } // namespace
 
 ERP::ERP()
-    : m_distribution_ready(false)
+    : rotation_y(0.0)
+    , m_distribution_ready(false)
     , m_total_weight(0.0)
 {}
+
+const std::string &ERP::source_path() const { return m_texture.source_path(); }
 
 int ERP::load(const char *file)
 {
@@ -58,7 +82,7 @@ nimg::ColorRGBf ERP::sample(const nmath::Vector3f &tc) const
 {
     nmath::scalar_t u = 0.0;
     nmath::scalar_t v = 0.0;
-    direction_to_erp_uv(tc, u, v);
+    direction_to_erp_uv(tc, rotation_y, u, v);
     nmath::Vector3f coords((float)u, (float)v, 0);
     return m_texture.sample(coords);
 }
@@ -155,7 +179,7 @@ bool ERP::sample_direction(nmath::Vector3f &direction, nmath::scalar_t &pdf, nim
     const nmath::scalar_t h = (nmath::scalar_t)m_texture.height();
     const nmath::scalar_t u = (((nmath::scalar_t)x + nmath::prng_c(0.0, 1.0)) / w);
     const nmath::scalar_t v = (((nmath::scalar_t)y + nmath::prng_c(0.0, 1.0)) / h);
-    direction = erp_uv_to_direction(u, v);
+    direction = erp_uv_to_direction(u, v, rotation_y);
     pdf = pdf_direction(direction);
     radiance = sample(direction);
     return pdf > (nmath::scalar_t)EPSILON;
@@ -170,7 +194,7 @@ nmath::scalar_t ERP::pdf_direction(const nmath::Vector3f &direction) const
 
     nmath::scalar_t u = 0.0;
     nmath::scalar_t v = 0.0;
-    direction_to_erp_uv(direction, u, v);
+    direction_to_erp_uv(direction, rotation_y, u, v);
     const size_t x = std::min((size_t)std::floor((double)(clamp_scalar(u, (nmath::scalar_t)0.0, (nmath::scalar_t)0.999999) * (nmath::scalar_t)w)), w - 1);
     const size_t y = std::min((size_t)std::floor((double)(clamp_scalar(v, (nmath::scalar_t)0.0, (nmath::scalar_t)0.999999) * (nmath::scalar_t)h)), h - 1);
 
