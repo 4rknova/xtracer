@@ -1174,15 +1174,13 @@ async function composeWithPinnedPreview(overlayBlob) {
   return composedBlob || overlayBlob;
 }
 
-// parseImageDeltaPacket — decode an XTDR or XTD1 binary tile-data packet.
+// parseImageDeltaPacket — decode an XTDR binary tile-data packet.
 //
 // XTDR — xtracer tile-data raw  (WebSocket push, server → client)
-// XTD1 — xtracer tile-data v1   (WebSocket catchup on /ws/jobs/<id>, PNG-encoded tiles)
 //
 // All integers are unsigned 32-bit little-endian.
 //
-// Header
-//   XTDR (32 bytes):
+// Header (32 bytes total)
 //   [0:4]   magic        "XTDR" (0x58 54 44 52)
 //   [4:8]   width        image width in pixels
 //   [8:12]  height       image height in pixels
@@ -1192,19 +1190,14 @@ async function composeWithPinnedPreview(overlayBlob) {
 //   [24:28] tile_count   number of tile records that follow
 //   [28:32] elapsed_ms   server-authoritative render time in milliseconds (u32)
 //
-//   XTD1 (28 bytes):
-//   [0:4]   magic        "XTD1" (0x58 54 44 31)
-//   [4:28]  same as XTDR [4:28] — no elapsed_ms field
-//
 // Tile record (24 + data_size bytes, repeated tile_count times)
 //   x0, y0             top-left corner, 0-based inclusive
 //   x1, y1             bottom-right corner, exclusive
 //   done_index         tiles_done value when this tile finished
 //   data_size          byte count of pixel data
-//   data               XTDR: raw RGBA row-major 8bpc (alpha=255 always)
-//                      XTD1: PNG-encoded image
+//   data               raw RGBA row-major 8bpc sRGB (alpha=255 always)
 //
-// Active-tile section — XTDR only, follows tile records (absent in XTD1)
+// Active-tile section — follows tile records
 //   active_count       tiles currently in progress
 //   per entry: x0 y0 x1 y1 (4 bytes each)
 //
@@ -1219,12 +1212,8 @@ function parseImageDeltaPacket(buffer) {
   if (!(buffer instanceof ArrayBuffer)) return null;
   if (buffer.byteLength < 28) return null;
   const bytes = new Uint8Array(buffer);
-  // Accept "XTD1" (PNG tiles) or "XTDR" (raw RGBA tiles)
-  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44) return null;
-  const isRawRgba = bytes[3] === 0x52; // 'R'
-  if (bytes[3] !== 0x31 && bytes[3] !== 0x52) return null; // must be '1' or 'R'
-  // XTDR header is 32 bytes (includes elapsed_ms); XTD1 header is 28 bytes.
-  if (isRawRgba && buffer.byteLength < 32) return null;
+  if (bytes[0] !== 0x58 || bytes[1] !== 0x54 || bytes[2] !== 0x44 || bytes[3] !== 0x52) return null; // "XTDR"
+  if (buffer.byteLength < 32) return null;
 
   const view = new DataView(buffer);
   let off = 4;
@@ -1245,13 +1234,8 @@ function parseImageDeltaPacket(buffer) {
     return null;
   }
 
-  // XTDR carries server-authoritative elapsed_ms at [28:32]; XTD1 does not.
-  let elapsedMs = 0;
-  if (isRawRgba) {
-    const v = readU32();
-    if (v === null) return null;
-    elapsedMs = v;
-  }
+  const elapsedMs = readU32();
+  if (elapsedMs === null) return null;
 
   const tiles = [];
   for (let i = 0; i < tileCount; i += 1) {
@@ -1263,9 +1247,9 @@ function parseImageDeltaPacket(buffer) {
     const size = readU32();
     if (x0 === null || y0 === null || x1 === null || y1 === null || doneIndex === null || size === null) return null;
     if (off + size > buffer.byteLength) return null;
-    const pngBytes = bytes.slice(off, off + size);
+    const rgba = bytes.slice(off, off + size);
     off += size;
-    tiles.push({ x0, y0, x1, y1, doneIndex, pngBytes, isRaw: isRawRgba });
+    tiles.push({ x0, y0, x1, y1, doneIndex, rgba });
   }
 
   // Active tile section (appended after all finished tiles).
@@ -1297,23 +1281,14 @@ async function drawDeltaTilesToPreviewCanvas(delta) {
 
   for (let i = 0; i < delta.tiles.length; i += 1) {
     const t = delta.tiles[i];
-    if (!t || !t.pngBytes || !t.pngBytes.length) continue;
+    if (!t || !t.rgba || !t.rgba.length) continue;
     const x0 = Number(t.x0);
     const y0 = Number(t.y0);
     const w = Math.max(1, Number(t.x1) - x0);
     const h = Math.max(1, Number(t.y1) - y0);
-    if (t.isRaw) {
-      // Raw RGBA — synchronous putImageData, no decode cost
-      if (t.pngBytes.length === w * h * 4) {
-        const clamped = new Uint8ClampedArray(t.pngBytes.buffer, t.pngBytes.byteOffset, t.pngBytes.length);
-        ctx.putImageData(new ImageData(clamped, w, h), x0, y0);
-      }
-    } else {
-      // PNG-encoded tile (from WS catchup)
-      const tileBlob = new Blob([t.pngBytes], { type: "image/png" });
-      const tileImage = await createImageBitmap(tileBlob);
-      ctx.drawImage(tileImage, x0, y0, w, h);
-      tileImage.close();
+    if (t.rgba.length === w * h * 4) {
+      const clamped = new Uint8ClampedArray(t.rgba.buffer, t.rgba.byteOffset, t.rgba.length);
+      ctx.putImageData(new ImageData(clamped, w, h), x0, y0);
     }
   }
 

@@ -576,6 +576,28 @@ function initSidebarAccordion() {
   });
 }
 
+function getOrCreateVisualLoadingOverlay() {
+  const viewport = el.visualViewport;
+  if (!viewport) return null;
+  let overlay = viewport.querySelector(".visual-loading-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "visual-loading-overlay";
+    overlay.setAttribute("role", "status");
+    overlay.setAttribute("aria-label", "Loading 3D scene");
+    const spinner = document.createElement("div");
+    spinner.className = "visual-loading-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.className = "visual-loading-label";
+    overlay.appendChild(spinner);
+    overlay.appendChild(label);
+    overlay.hidden = true;
+    viewport.appendChild(overlay);
+  }
+  return overlay;
+}
+
 async function loadVisualSceneFromSelected() {
   if (!visualEditor) return;
   const sceneName = String(el.scene && el.scene.value ? el.scene.value : "").trim();
@@ -585,29 +607,39 @@ async function loadVisualSceneFromSelected() {
     return;
   }
 
-  visualEditor.setStatus("Loading " + sceneName + (variantName ? " (" + variantName + ")" : "") + " ...");
-  const pair = await Promise.all([
-    api.getSceneGeometry(sceneName, variantName),
-    hasBackendMethod(api, "getSceneRuntimeGraph")
-      ? loadSceneRuntimeGraph(sceneName, variantName).catch(() => null)
-      : Promise.resolve(null),
-  ]);
-  const geometryData = pair[0] || { meshes: {} };
-  const runtimeData = pair[1] || null;
-  await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
-  const baseRadius = Number(visualEditor.sceneBaseRadius);
-  if (Number.isFinite(baseRadius) && baseRadius > 1e-6 && visualEditor.setSceneScaleMultiplier) {
-    const autoScale = clampVisualSceneScale(5.0 / baseRadius);
-    visualEditor.setSceneScaleMultiplier(autoScale, false);
-    uiOptions.visualSceneScale = autoScale;
-    if (el.visualSceneScale) el.visualSceneScale.value = String(autoScale);
+  const overlay = getOrCreateVisualLoadingOverlay();
+  if (overlay) {
+    const label = overlay.querySelector(".visual-loading-label");
+    if (label) label.textContent = sceneName + (variantName ? " (" + variantName + ")" : "");
+    overlay.hidden = false;
   }
-  visualLoadedSceneName = sceneName;
-  refreshVisualCameraOptions();
-  syncVisualCameraFromRenderSelection();
-  if (typeof refreshVisualCameraEditorPanel === "function") refreshVisualCameraEditorPanel();
-  refreshVisualPhotonOverlay().catch(() => {});
-  appendLog("visual loaded: " + sceneName + (variantName ? " (" + variantName + ")" : ""));
+  visualEditor.setStatus("Loading " + sceneName + (variantName ? " (" + variantName + ")" : "") + " ...");
+  try {
+    const pair = await Promise.all([
+      api.getSceneGeometry(sceneName, variantName),
+      hasBackendMethod(api, "getSceneRuntimeGraph")
+        ? loadSceneRuntimeGraph(sceneName, variantName).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    const geometryData = pair[0] || { meshes: {} };
+    const runtimeData = pair[1] || null;
+    await visualEditor.buildScene(sceneName, "", geometryData, runtimeData);
+    const baseRadius = Number(visualEditor.sceneBaseRadius);
+    if (Number.isFinite(baseRadius) && baseRadius > 1e-6 && visualEditor.setSceneScaleMultiplier) {
+      const autoScale = clampVisualSceneScale(5.0 / baseRadius);
+      visualEditor.setSceneScaleMultiplier(autoScale, false);
+      uiOptions.visualSceneScale = autoScale;
+      if (el.visualSceneScale) el.visualSceneScale.value = String(autoScale);
+    }
+    visualLoadedSceneName = sceneName;
+    refreshVisualCameraOptions();
+    syncVisualCameraFromRenderSelection();
+    if (typeof refreshVisualCameraEditorPanel === "function") refreshVisualCameraEditorPanel();
+    refreshVisualPhotonOverlay().catch(() => {});
+    appendLog("visual loaded: " + sceneName + (variantName ? " (" + variantName + ")" : ""));
+  } finally {
+    if (overlay) overlay.hidden = true;
+  }
 }
 
 function refreshVisualCameraOptions() {

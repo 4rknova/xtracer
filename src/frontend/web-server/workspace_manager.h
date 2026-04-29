@@ -16,14 +16,11 @@ struct workspace_snapshot_t
     std::string id;
     std::string name;
     std::string active_scene;
+    std::string active_variant;
     std::string active_job_id;
     std::string last_job_id;
     size_t draft_count;
     size_t client_count;
-    size_t quality_samples;
-    size_t quality_aa;
-    std::string quality_sample_distribution;
-    size_t quality_rdepth;
     std::string settings_json;
     bool is_owned_by_client;
     long long updated_ms;
@@ -59,20 +56,12 @@ class workspace_manager_t
     bool get_scene_draft(const std::string &workspace_id,
                          const std::string &scene_name,
                          std::string &source_out);
-    bool set_quality_settings(const std::string &workspace_id,
-                              size_t samples,
-                              size_t aa,
-                              const std::string &sample_distribution,
-                              size_t rdepth);
-    bool get_quality_settings(const std::string &workspace_id,
-                              size_t &samples_out,
-                              size_t &aa_out,
-                              std::string &sample_distribution_out,
-                              size_t &rdepth_out);
     store_result_t set_settings_json(const std::string &workspace_id, const std::string &settings_json);
     bool get_settings_json(const std::string &workspace_id, std::string &settings_json_out);
 
     void set_active_scene(const std::string &workspace_id, const std::string &scene_name);
+    void set_active_variant(const std::string &workspace_id, const std::string &variant_name);
+    bool get_snapshot(const std::string &workspace_id, const std::string &client_id, workspace_snapshot_t &out);
     void mark_job_started(const std::string &workspace_id, const std::string &job_id);
     void mark_job_finished(const std::string &workspace_id, const std::string &job_id);
 
@@ -81,14 +70,11 @@ class workspace_manager_t
         std::string id;
         std::string name;
         std::string active_scene;
+        std::string active_variant;
         std::string active_job_id;
         std::string last_job_id;
         std::map<std::string, std::string> scene_drafts;
         std::deque<std::string> scene_draft_order;
-        size_t quality_samples;
-        size_t quality_aa;
-        std::string quality_sample_distribution;
-        size_t quality_rdepth;
         std::string settings_json;
         std::string owner_client_id;
         long long updated_ms;

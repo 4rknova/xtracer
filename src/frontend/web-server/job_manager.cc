@@ -19,6 +19,7 @@
 #include <xtcore/tonemapping/tonemapping.h>
 
 #include "backend_log.h"
+#include "pixmap_util.h"
 #include "post_filters.h"
 
 namespace xtracer {
@@ -434,16 +435,17 @@ void apply_post_filters_for_stage(nimg::Pixmap &pixmap,
     }
 }
 
-bool encode_png_memory(nimg::Pixmap &pixmap,
-                       const xtcore::tonemapping::settings_t &tm_settings,
-                       const post_filter_chain_t &post_filters,
-                       std::vector<unsigned char> &out)
+bool encode_rgba_memory(nimg::Pixmap &pixmap,
+                        const xtcore::tonemapping::settings_t &tm_settings,
+                        const post_filter_chain_t &post_filters,
+                        std::vector<unsigned char> &out)
 {
     nimg::Pixmap work = pixmap;
     apply_post_filters_for_stage(work, post_filters, true);
     xtcore::tonemapping::apply(work, tm_settings);
     apply_post_filters_for_stage(work, post_filters, false);
-    return nimg::io::save::png_memory(work, out) == 0;
+    encode_rgba8_srgb(work, out);
+    return !out.empty();
 }
 
 bool encode_jpg_memory(nimg::Pixmap &pixmap,
@@ -464,31 +466,6 @@ void build_preview_pixmap(nimg::Pixmap &pixmap,
     apply_post_filters_for_stage(pixmap, post_filters, true);
     xtcore::tonemapping::apply(pixmap, tm_settings);
     apply_post_filters_for_stage(pixmap, post_filters, false);
-}
-
-void encode_rgba8_srgb(const nimg::Pixmap &pixmap,
-                       std::vector<unsigned char> &out)
-{
-    const size_t width = pixmap.width();
-    const size_t height = pixmap.height();
-    out.resize(width * height * 4);
-
-    auto to_u8_srgb = [](float v) -> unsigned char {
-        const float s = linear_to_srgb(v);
-        const int i = static_cast<int>(s * 255.0f + 0.5f);
-        return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
-    };
-
-    for (size_t py = 0; py < height; ++py) {
-        for (size_t px = 0; px < width; ++px) {
-            const nimg::ColorRGBAf &c = pixmap.pixel_ro(px, py);
-            const size_t off = (py * width + px) * 4;
-            out[off + 0] = to_u8_srgb(c.r());
-            out[off + 1] = to_u8_srgb(c.g());
-            out[off + 2] = to_u8_srgb(c.b());
-            out[off + 3] = 255;
-        }
-    }
 }
 
 void copy_tile_to_framebuffer(const xtcore::render::tile_t *tile, nimg::Pixmap &fb)
@@ -686,7 +663,6 @@ job_manager_t::job_t::job_t()
     , elapsed_ms(0.0)
     , started_at()
     , has_started(false)
-    , image_png()
     , final_fb()
     , image_exr()
     , image_hdr()
@@ -709,7 +685,7 @@ job_manager_t::job_t::job_t()
     , preview_last_tm_mantiuk_detail(1.0f)
     , preview_last_post_filters_enabled(false)
     , preview_last_post_filters()
-    , preview_png_cache()
+    , preview_rgba_cache()
     , effective_threads(0)
     , request()
     , cleanup_scene_path()
@@ -738,14 +714,31 @@ job_manager_t::job_manager_t()
 
 job_manager_t::~job_manager_t()
 {
-    stopping_.store(true);
+    shutdown();
+}
 
-    // Signal all active/queued jobs to cancel so render threads exit promptly.
+void job_manager_t::shutdown()
+{
+    if (stopping_.exchange(true)) return;
+
+    size_t n_running = 0;
+    size_t n_queued  = 0;
     {
         std::lock_guard<std::mutex> lock(jobs_mut);
         for (auto &kv : jobs) {
+            const job_state_t s = kv.second->state.load();
+            if (s == JOB_RUNNING)                    ++n_running;
+            else if (s == JOB_QUEUED || s == JOB_PREPARING) ++n_queued;
             kv.second->cancel_requested.store(true);
         }
+    }
+
+    if (n_running > 0 || n_queued > 0) {
+        backend_log_t::handle().add("info",
+            "shutdown: cancelling " + std::to_string(n_running) + " running, "
+            + std::to_string(n_queued) + " queued job(s)");
+    } else {
+        backend_log_t::handle().add("info", "shutdown: no active jobs");
     }
 
     // Wait for every detached render thread to finish.  Each thread
@@ -755,6 +748,8 @@ job_manager_t::~job_manager_t()
         std::unique_lock<std::mutex> lock(render_slots_mut);
         render_slots_cv.wait(lock, [this]() { return active_renders == 0; });
     }
+
+    backend_log_t::handle().add("info", "shutdown: all render threads stopped");
 }
 
 void job_manager_t::set_gallery_manager(gallery_manager_t *gm)
@@ -1096,24 +1091,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                     }
                     if (extracted) {
                         xtcore::tonemapping::apply(tile_fb, tm);
-                        const size_t tile_w = tx1 - tx0;
-                        const size_t tile_h = ty1 - ty0;
-                        tile_rgba.resize(tile_w * tile_h * 4);
-                        for (size_t py = 0; py < tile_h; ++py) {
-                            for (size_t px = 0; px < tile_w; ++px) {
-                                const nimg::ColorRGBAf &c = tile_fb.pixel_ro(px, py);
-                                const size_t off = (py * tile_w + px) * 4;
-                                auto to_u8_srgb = [](float v) -> unsigned char {
-                                    const float s = linear_to_srgb(v);
-                                    const int i = static_cast<int>(s * 255.0f + 0.5f);
-                                    return static_cast<unsigned char>(i < 0 ? 0 : i > 255 ? 255 : i);
-                                };
-                                tile_rgba[off + 0] = to_u8_srgb(c.r());
-                                tile_rgba[off + 1] = to_u8_srgb(c.g());
-                                tile_rgba[off + 2] = to_u8_srgb(c.b());
-                                tile_rgba[off + 3] = 255;
-                            }
-                        }
+                        encode_rgba8_srgb(tile_fb, tile_rgba);
                     }
                 }
 
@@ -1128,7 +1106,6 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 // ============================================================
                 // Header (32 bytes)
                 //   [0:4]   magic        "XTDR" (0x58 54 44 52) — raw RGBA variant
-                //                        cf. REST /image_delta which uses PNG per tile
                 //   [4:8]   width        image width in pixels
                 //   [8:12]  height       image height in pixels
                 //   [12:16] tiles_done   cumulative finished-tile count
@@ -1244,7 +1221,6 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             job->state = JOB_ABORTED;
             backend_log_t::handle().add("info", "job aborted id=" + job->id);
         } else if (rr.ok) {
-            job->image_png.swap(rr.image_png);
             job->final_fb = rr.framebuffer;
             job->image_exr.clear();
             job->image_hdr.clear();
@@ -1255,7 +1231,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             job->photon_caustic_points = rr.photon_caustic_points;
             job->tiles_done = rr.tiles_done;
             job->tiles_total = rr.tiles_total;
-            job->preview_png_cache.clear();
+            job->preview_rgba_cache.clear();
             job->preview_last_encoded_done = 0;
             job->preview_last_from_final = false;
             job->preview_last_tm_op = xtcore::tonemapping::OP_ACES_FITTED;
@@ -1461,7 +1437,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         out.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - job->started_at).count();
     }
-    out.has_image = !job->image_png.empty();
+    out.has_image = (job->final_fb.width() > 0 || job->progressive_ready);
     out.width = job->request.width;
     out.height = job->request.height;
     out.threads = (job->effective_threads > 0) ? job->effective_threads : job->request.threads;
@@ -1531,7 +1507,8 @@ bool job_manager_t::image(const std::string &id,
         nimg::Pixmap fb;
         if (nimg::io::load::exr_memory(exr.data(), exr.size(), fb) != 0) return false;
         xtcore::tonemapping::apply(fb, tm_settings);
-        return nimg::io::save::png_memory(fb, out) == 0;
+        encode_rgba8_srgb(fb, out);
+        return !out.empty();
     }
 
     post_filter_chain_t post_chain;
@@ -1552,7 +1529,7 @@ bool job_manager_t::image(const std::string &id,
         if (!use_final && (!allow_partial || !job->progressive_ready)) return false;
 
         done = use_final ? job->tiles_total.load() : job->tiles_done.load();
-        cache_invalid = job->preview_png_cache.empty()
+        cache_invalid = job->preview_rgba_cache.empty()
                      || job->preview_last_encoded_done != done
                      || job->preview_last_from_final != use_final
                      || job->preview_last_tm_op != tm_settings.op
@@ -1565,7 +1542,7 @@ bool job_manager_t::image(const std::string &id,
                      || job->preview_last_post_filters != post_key;
 
         if (!cache_invalid) {
-            out = job->preview_png_cache;
+            out = job->preview_rgba_cache;
             return true;
         }
 
@@ -1573,7 +1550,7 @@ bool job_manager_t::image(const std::string &id,
     }
 
     std::vector<unsigned char> encoded;
-    if (!encode_png_memory(work, tm_settings, post_chain, encoded)) return false;
+    if (!encode_rgba_memory(work, tm_settings, post_chain, encoded)) return false;
 
     {
         std::lock_guard<std::mutex> lock(job->mut);
@@ -1582,7 +1559,7 @@ bool job_manager_t::image(const std::string &id,
                                       && job->final_fb.height() > 0);
         const size_t still_done = still_use_final ? job->tiles_total.load() : job->tiles_done.load();
         if (still_use_final == use_final && still_done == done) {
-            job->preview_png_cache = encoded;
+            job->preview_rgba_cache = encoded;
             job->preview_last_encoded_done = done;
             job->preview_last_from_final = use_final;
             job->preview_last_tm_op = tm_settings.op;
@@ -1593,7 +1570,7 @@ bool job_manager_t::image(const std::string &id,
             job->preview_last_tm_mantiuk_detail = tm_settings.mantiuk_detail;
             job->preview_last_post_filters_enabled = post_filters_enabled;
             job->preview_last_post_filters = post_key;
-            out = job->preview_png_cache;
+            out = job->preview_rgba_cache;
             return true;
         }
     }
@@ -1811,7 +1788,8 @@ bool job_manager_t::image_delta(const std::string &id,
             }
         }
         std::vector<unsigned char> encoded;
-        if (nimg::io::save::png_memory(tile_fb, encoded) != 0) continue;
+        encode_rgba8_srgb(tile_fb, encoded);
+        if (encoded.empty()) continue;
 
         job_image_delta_t::tile_t tile;
         tile.x0 = pending[i].x0;
@@ -1819,7 +1797,7 @@ bool job_manager_t::image_delta(const std::string &id,
         tile.x1 = pending[i].x1;
         tile.y1 = pending[i].y1;
         tile.done_index = pending[i].done_index;
-        tile.png.swap(encoded);
+        tile.rgba.swap(encoded);
         out.tiles.push_back(tile);
     }
 
@@ -1874,7 +1852,10 @@ bool job_manager_t::image_export(const std::string &id,
         if (job->final_fb.width() == 0 || job->final_fb.height() == 0) return false;
         nimg::Pixmap work = job->final_fb;
         xtcore::tonemapping::settings_t tm_settings;
-        if (!encode_png_memory(work, tm_settings, post_chain, out)) return false;
+        apply_post_filters_for_stage(work, post_chain, true);
+        xtcore::tonemapping::apply(work, tm_settings);
+        apply_post_filters_for_stage(work, post_chain, false);
+        if (nimg::io::save::png_memory(work, out) != 0) return false;
         mime_type = "image/png";
         extension = "png";
         return true;
@@ -2117,6 +2098,17 @@ bool job_manager_t::list_active(std::vector<job_snapshot_t> &out)
         }
     }
     return !out.empty();
+}
+
+bool job_manager_t::has_active_jobs()
+{
+    std::lock_guard<std::mutex> lock(jobs_mut);
+    for (auto it = jobs.begin(); it != jobs.end(); ++it) {
+        if (!it->second) continue;
+        const job_state_t st = it->second->state.load();
+        if (st == JOB_RUNNING || st == JOB_PREPARING || st == JOB_QUEUED) return true;
+    }
+    return false;
 }
 
 } /* namespace web */

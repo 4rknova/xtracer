@@ -6,9 +6,11 @@
 #include <functional>
 #include <map>
 #include <atomic>
+#include <memory>
 
 #include <xtcore/context.h>
 #include <xtcore/integrator.h>
+#include <xtcore/scene.h>
 #include <nimg/pixmap.h>
 
 namespace xtracer {
@@ -88,6 +90,7 @@ struct render_request_t
     render_mode_t render_mode;
     bool scene_cache_enabled;
     bool save_to_gallery;
+    std::shared_ptr<xtcore::Scene> preloaded_scene;
 
     render_request_t();
 };
@@ -104,7 +107,6 @@ struct render_result_t
     bool aborted;
     std::string error;
     nimg::Pixmap framebuffer;
-    std::vector<unsigned char> image_png;
     std::vector<point3_t> photon_diffuse_points;
     std::vector<point3_t> photon_caustic_points;
     size_t tiles_done;

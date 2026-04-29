@@ -300,6 +300,35 @@ function bindInteractivePreviewKeyboard() {
   };
   window.addEventListener("keydown", (evt) => applyKey(evt, true));
   window.addEventListener("keyup", (evt) => applyKey(evt, false));
+  window.addEventListener("keydown", (evt) => {
+    if (!(evt.ctrlKey || evt.metaKey)) return;
+    if (String(evt.key || "").toLowerCase() !== "c") return;
+    if (isTypingTarget(evt.target)) return;
+    if (activeTabMode !== "render") return;
+
+    if (el.previewFrame && document.pointerLockElement === el.previewFrame) {
+      evt.preventDefault();
+      appendLog("ctrl+c: pointer lock released");
+      document.exitPointerLock();
+      return;
+    }
+
+    if (interactivePreviewEnabled) {
+      evt.preventDefault();
+      appendLog("ctrl+c: stopping interactive preview");
+      if (typeof setInteractivePreviewEnabled === "function") setInteractivePreviewEnabled(false).catch(() => {});
+      return;
+    }
+
+    if (renderActive) {
+      evt.preventDefault();
+      appendLog("render abort: ctrl+c");
+      if (typeof handleRender === "function") handleRender().catch(() => {});
+      return;
+    }
+
+    appendLog("ctrl+c: no active render");
+  });
   window.addEventListener("blur", () => {
     interactivePreviewKeyState.w = false;
     interactivePreviewKeyState.a = false;

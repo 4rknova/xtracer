@@ -109,46 +109,43 @@ function countTopLevelSceneEntries(source, groupName) {
   return splitTopLevelSceneEntries(text, groupRange).length;
 }
 
-async function buildSceneLabels(sceneFiles) {
-  const items = await Promise.all((sceneFiles || []).map(async (sceneFile) => {
-    try {
-      const data = await api.getSceneSource(sceneFile);
-      const source = (data && data.source) || "";
-      const sourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
-      const title = extractSceneTitle(source);
-      const description = extractSceneDescription(source);
-      const dependsExternal = sceneDependsOnExternalFiles(source);
-      const variantMeta = extractSceneVariantNames(source);
-      const variantCount = Array.isArray(variantMeta && variantMeta.variants) ? variantMeta.variants.length : 0;
-      const cameraCount = countTopLevelSceneEntries(source, "camera");
-      const hasVariants = variantCount > 0;
-      return {
-        sceneFile,
-        label: title || sceneFile,
-        title,
-        description,
-        sourceOrigin,
-        dependsExternal,
-        variantCount,
-        cameraCount,
-        hasVariants,
-      };
-    } catch (_) {
-      return {
-        sceneFile,
-        label: sceneFile,
-        title: "",
-        description: "",
-        sourceOrigin: "disk",
-        dependsExternal: false,
-        variantCount: 0,
-        cameraCount: 0,
-        hasVariants: false,
-      };
-    }
+function buildSceneLabels(sceneFiles) {
+  return (sceneFiles || []).map((sceneFile) => ({
+    sceneFile,
+    label: sceneFile,
+    title: "",
+    description: "",
+    sourceOrigin: "disk",
+    dependsExternal: false,
+    variantCount: 0,
+    cameraCount: 0,
+    hasVariants: false,
   }));
+}
 
-  return items;
+async function enrichSceneCatalogEntry(sceneFile) {
+  const name = String(sceneFile || "").trim();
+  if (!name) return;
+  try {
+    const data = await api.getSceneSource(name);
+    const source = (data && data.source) || "";
+    const sourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
+    const title = extractSceneTitle(source);
+    const description = extractSceneDescription(source);
+    const dependsExternal = sceneDependsOnExternalFiles(source);
+    const variantMeta = extractSceneVariantNames(source);
+    const variantCount = Array.isArray(variantMeta && variantMeta.variants) ? variantMeta.variants.length : 0;
+    const cameraCount = countTopLevelSceneEntries(source, "camera");
+    const hasVariants = variantCount > 0;
+    for (let i = 0; i < sceneCatalog.length; i += 1) {
+      if (String(sceneCatalog[i] && sceneCatalog[i].sceneFile ? sceneCatalog[i].sceneFile : "") !== name) continue;
+      sceneCatalog[i] = { ...sceneCatalog[i], label: title || name, title, description, sourceOrigin, dependsExternal, variantCount, cameraCount, hasVariants };
+      break;
+    }
+    renderSceneFileBrowser();
+  } catch (_) {
+    // enrichment is best-effort
+  }
 }
 
 function sceneCatalogHasFile(sceneFile) {
@@ -1457,7 +1454,7 @@ async function loadCameras(scene, variant) {
   syncVisualCameraFromRenderSelection();
 }
 
-async function loadVariants(scene, preferredVariant) {
+async function loadVariants(scene, preferredVariant, preloadedSource) {
   if (!el.variant) return;
   el.variant.innerHTML = "";
   const sceneName = String(scene || "").trim();
@@ -1469,8 +1466,12 @@ async function loadVariants(scene, preferredVariant) {
 
   if (sceneName) {
     try {
-      const data = await api.getSceneSource(sceneName);
-      parsed = extractSceneVariantNames(data && data.source ? data.source : "");
+      if (preloadedSource !== undefined) {
+        parsed = extractSceneVariantNames(String(preloadedSource || ""));
+      } else {
+        const data = await api.getSceneSource(sceneName);
+        parsed = extractSceneVariantNames(data && data.source ? data.source : "");
+      }
     } catch (_) {
       // keep base-only when source is unavailable
     }
@@ -1528,7 +1529,7 @@ async function loadIntegrators() {
   renderIntegratorControls();
 }
 
-async function loadSceneSource(scene) {
+async function loadSceneSource(scene, preloadedData) {
   if (!scene) {
     currentSceneSourceOrigin = "";
     el.sceneSource.value = "";
@@ -1538,7 +1539,9 @@ async function loadSceneSource(scene) {
     updateActiveSceneSidebarCard();
     return;
   }
-  const data = await api.getSceneSource(scene);
+  const data = (preloadedData !== undefined && preloadedData !== null)
+    ? preloadedData
+    : await api.getSceneSource(scene);
   const newSource = String(data.source || "");
   const sourceChanged = newSource !== String(el.sceneSource.value || "");
   currentSceneSourceOrigin = normalizeSceneSourceOrigin(data && data.source_origin ? data.source_origin : "");
@@ -1549,6 +1552,20 @@ async function loadSceneSource(scene) {
   renderSceneGraphView();
   if (sourceChanged) resetSceneHistoriesFromCurrentSource();
   updateActiveSceneSidebarCard();
+  // Enrich the catalog entry now that we have the source, avoiding a separate fetch.
+  const loadedSceneName = String(scene || "").trim();
+  for (let ci = 0; ci < sceneCatalog.length; ci += 1) {
+    if (String(sceneCatalog[ci] && sceneCatalog[ci].sceneFile ? sceneCatalog[ci].sceneFile : "") !== loadedSceneName) continue;
+    const eTitle = extractSceneTitle(newSource);
+    const eDesc = extractSceneDescription(newSource);
+    const eDepExt = sceneDependsOnExternalFiles(newSource);
+    const eVarMeta = extractSceneVariantNames(newSource);
+    const eVarCount = Array.isArray(eVarMeta && eVarMeta.variants) ? eVarMeta.variants.length : 0;
+    const eCamCount = countTopLevelSceneEntries(newSource, "camera");
+    sceneCatalog[ci] = { ...sceneCatalog[ci], label: eTitle || loadedSceneName, title: eTitle, description: eDesc, sourceOrigin: currentSceneSourceOrigin, dependsExternal: eDepExt, variantCount: eVarCount, cameraCount: eCamCount, hasVariants: eVarCount > 0 };
+    renderSceneFileBrowser();
+    break;
+  }
 }
 
 async function loadSceneRuntimeGraph(scene, variant) {
@@ -1809,15 +1826,6 @@ function showSceneSelectModal(options) {
 
   async function advanceFromStep1() {
     if (!selectedScene) return;
-    const entry = sceneCatalog.find((s) => s.sceneFile === selectedScene);
-    const hasVariants = entry && entry.hasVariants;
-
-    if (!hasVariants) {
-      selectedVariant = null;
-      applySelection();
-      return;
-    }
-
     try {
       const data = await api.getSceneSource(selectedScene);
       const parsed = extractSceneVariantNames(data && data.source ? data.source : "");

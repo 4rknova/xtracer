@@ -242,7 +242,12 @@ async function boot() {
     await trackStartupRequest(refreshWorkspaces());
   }
   await Promise.all([
-    trackStartupRequest(loadScenes(hasWorkspaceApi ? { skipStorageRestore: true } : undefined)),
+    // Skip scene catalog fetch when workspace mode is active but no workspace exists yet.
+    // The catalog is only needed when the user creates a workspace; it will be lazily
+    // loaded then. When a workspace already exists we need it to restore the scene.
+    (hasWorkspaceApi && !activeWorkspaceId)
+      ? Promise.resolve()
+      : trackStartupRequest(loadScenes(hasWorkspaceApi ? { skipStorageRestore: true } : undefined)),
     trackStartupRequest(loadIntegrators()),
     trackStartupRequest(loadPostFilters()),
     trackStartupRequest(loadResolutionPresets()),
@@ -250,11 +255,12 @@ async function boot() {
   const tryLoadSceneBundle = async (sceneName) => {
     const name = String(sceneName || "").trim();
     if (!name) return false;
-    await loadVariants(name);
+    const sourceData = await api.getSceneSource(name);
+    await loadVariants(name, undefined, sourceData && sourceData.source ? sourceData.source : "");
     const variantName = selectedSceneVariantValue();
     const tasks = [
       loadCameras(name, variantName),
-      loadSceneSource(name),
+      loadSceneSource(name, sourceData),
       loadSceneRuntimeGraph(name, variantName).catch(() => null),
     ];
     await Promise.all(tasks);
@@ -680,6 +686,7 @@ async function boot() {
         lastStableSelection.variant = selectedSceneVariantValue();
         lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
         setSceneLoadStatus("idle", `Loaded ${el.scene.value || "scene"}.`, "");
+        if (typeof queueWorkspaceSettingsSave === "function") queueWorkspaceSettingsSave();
         if (typeof syncRenderTabEnabled === "function") syncRenderTabEnabled();
         if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
           refreshInteractivePreviewCameraFromSelection()
@@ -719,6 +726,7 @@ async function boot() {
           lastStableSelection.scene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
           lastStableSelection.variant = selectedSceneVariantValue();
           lastStableSelection.camera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
+          if (typeof queueWorkspaceSettingsSave === "function") queueWorkspaceSettingsSave();
           if (interactivePreviewEnabled && typeof refreshInteractivePreviewCameraFromSelection === "function") {
             refreshInteractivePreviewCameraFromSelection()
               .then((ok) => {
@@ -1421,9 +1429,12 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
     });
   }
   if (el.workspaceCreateBtn) {
-    el.workspaceCreateBtn.addEventListener("click", () => {
+    el.workspaceCreateBtn.addEventListener("click", async () => {
       if (!hasBackendMethod(api, "createWorkspace")) return;
       if (typeof showSceneSelectModal !== "function") return;
+      if (!sceneCatalog.length) {
+        await loadScenes({ skipStorageRestore: true }).catch((err) => appendLog(`scene load error: ${err.message}`));
+      }
       const rawName = el.workspaceCreateName ? String(el.workspaceCreateName.value || "").trim() : "";
       showSceneSelectModal({
         onConfirm: (sceneName, variantName) => {
@@ -1435,7 +1446,6 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
               return switchActiveWorkspace(id).then(() => {
                 if (variantName !== null) pendingVariantForNextSceneLoad = variantName;
                 activateSceneFile(sceneName);
-                if (typeof queueWorkspaceDraftSave === "function") queueWorkspaceDraftSave();
               });
             })
             .catch((err) => appendLog(`workspace create error: ${err.message}`));

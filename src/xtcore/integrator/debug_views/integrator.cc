@@ -28,7 +28,7 @@ inline nmath::Vector3f resolve_shading_normal(
     nmath::Vector3f n = hit_record.normal.normalized();
     if (!ctx) return n;
 
-    const xtcore::asset::IMaterial *mat = ctx->scene.get_material(hit_record.id_object);
+    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object);
     if (!mat || !mat->has_sampler(MAT_SAMPLER_NORMAL)) return n;
 
     const nimg::ColorRGBf tex = mat->get_sample(MAT_SAMPLER_NORMAL, hit_record.texcoord);
@@ -173,7 +173,7 @@ void Integrator::setup_auxiliary()
 {
     m_mask_ids.clear();
     if (m_mode != VIEW_OBJECT_MASK || !ctx) return;
-    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
+    for (auto it = ctx->scene->m_objects.begin(); it != ctx->scene->m_objects.end(); ++it) {
         const char *name = xtcore::pool::str::get(it->first);
         if (!name) continue;
         for (const auto &mask_name : m_mask_names) {
@@ -202,7 +202,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             , (float)(ctx->params.height));
 
         xtcore::hit_record_t hit_record;
-        const bool found_hit = ctx->scene.intersection(ray, hit_record);
+        const bool found_hit = ctx->scene->intersection(ray, hit_record);
 
         switch (m_mode) {
             case VIEW_DEPTH: {
@@ -293,8 +293,8 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             case VIEW_EMISSION: {
                 nimg::ColorRGBf acc_emission = nimg::ColorRGBf(color_pixel.r(), color_pixel.g(), color_pixel.b());
                 if (found_hit) {
-                    HASH_UINT64 matid = ctx->scene.m_objects[hit_record.id_object]->material;
-                    xtcore::asset::IMaterial *mat = ctx->scene.m_materials[matid];
+                    HASH_UINT64 matid = ctx->scene->m_objects[hit_record.id_object]->material;
+                    xtcore::asset::IMaterial *mat = ctx->scene->m_materials[matid];
                     if (mat) acc_emission += mat->get_sample("emissive", hit_record.texcoord) * sample.weight;
                 }
                 color_pixel = acc_emission;
@@ -310,7 +310,7 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
             case VIEW_ENVIRONMENT: {
                 nimg::ColorRGBf env(0, 0, 0);
                 if (!found_hit || m_ignore_geometry)
-                    env = ctx->scene.sample_environment(ray.direction);
+                    env = ctx->scene->sample_environment(ray.direction);
                 nimg::ColorRGBf acc(color_pixel.r(), color_pixel.g(), color_pixel.b());
                 acc += env * sample.weight;
                 color_pixel = nimg::ColorRGBAf(acc.r(), acc.g(), acc.b(), 1.0f);

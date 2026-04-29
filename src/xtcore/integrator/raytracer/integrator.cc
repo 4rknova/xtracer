@@ -52,7 +52,7 @@ void Integrator::setup_auxiliary()
 {
     m_lights.clear();
     if (!ctx) return;
-    ctx->scene.get_light_sources(m_lights);
+    ctx->scene->get_light_sources(m_lights);
 }
 
 void Integrator::clean_auxiliary()
@@ -65,14 +65,14 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     if (depth == 0) return nimg::ColorRGBf(0, 0, 0);
 
     xtcore::hit_record_t hit_record;
-    bool hit = ctx->scene.intersection(in.ray, hit_record);
+    bool hit = ctx->scene->intersection(in.ray, hit_record);
     hit_record.ior = in.ior;
 
     if (!hit) {
-        return ctx->scene.sample_environment(in.ray.direction);
+        return ctx->scene->sample_environment(in.ray.direction);
     }
 
-    const xtcore::asset::IMaterial *mat = ctx->scene.get_material(hit_record.id_object);
+    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object);
     if (!mat) return nimg::ColorRGBf(0, 0, 0);
 
     // If we directly hit an emissive surface, return its emission immediately.
@@ -92,7 +92,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             if (!light.light || !light.material) continue;
 
             xtcore::asset::emitter_t emitter;
-            if (!visible_light_sample(ctx->scene, hit_record, light, emitter)) continue;
+            if (!visible_light_sample(*ctx->scene, hit_record, light, emitter)) continue;
 
             nimg::ColorRGBf direct(0, 0, 0);
             mat->shade(direct, cam, &emitter, hit_record);

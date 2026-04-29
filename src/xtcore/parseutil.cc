@@ -282,7 +282,8 @@ static void apply_heightfield_to_mesh(nmesh::object_t &obj,
 static void apply_radial_displacement(nmesh::object_t &obj,
                                        const xtcore::sampler::ISampler *sampler,
                                        float displacement_scale,
-                                       float height_multiplier = 1.0f)
+                                       float height_multiplier = 1.0f,
+                                       int smooth_passes = 0)
 {
     if (!sampler) return;
     const size_t vertex_count = obj.attributes.v.size() / 3;
@@ -290,6 +291,8 @@ static void apply_radial_displacement(nmesh::object_t &obj,
 
     const bool has_uv = !obj.attributes.uv.empty();
 
+    // Pass 1: sample the DEM height for every vertex.
+    std::vector<float> h_vals(vertex_count, 0.5f);
     for (size_t i = 0; i < vertex_count; ++i) {
         const float vx = obj.attributes.v[i * 3 + 0];
         const float vy = obj.attributes.v[i * 3 + 1];
@@ -316,12 +319,55 @@ static void apply_radial_displacement(nmesh::object_t &obj,
         // Textures are loaded sRGB→linear; for a DEM (height data) we want
         // the raw normalized value, so reverse the gamma here.
         const float h_lin = (s.r() + s.g() + s.b()) / 3.0f;
-        const float h     = (h_lin <= 0.0031308f)
+        h_vals[i] = (h_lin <= 0.0031308f)
             ? h_lin * 12.92f
             : 1.055f * std::pow(h_lin, 1.0f / 2.4f) - 0.055f;
+    }
+
+    // Pass 2: Laplacian smoothing over mesh topology.
+    // Reduces steep height gradients between adjacent vertices that would create
+    // geometric cliffs and hard polygon shadow edges in the ray tracer.
+    if (smooth_passes > 0) {
+        std::vector<std::vector<int>> adj(vertex_count);
+        for (const nmesh::shape_t &shape : obj.shapes) {
+            const size_t tri_count = shape.mesh.indices.size() / 3;
+            for (size_t t = 0; t < tri_count; ++t) {
+                const int a = shape.mesh.indices[t * 3 + 0].v;
+                const int b = shape.mesh.indices[t * 3 + 1].v;
+                const int c = shape.mesh.indices[t * 3 + 2].v;
+                if (a >= 0 && b >= 0) { adj[a].push_back(b); adj[b].push_back(a); }
+                if (b >= 0 && c >= 0) { adj[b].push_back(c); adj[c].push_back(b); }
+                if (a >= 0 && c >= 0) { adj[a].push_back(c); adj[c].push_back(a); }
+            }
+        }
+        for (auto &neighbors : adj) {
+            std::sort(neighbors.begin(), neighbors.end());
+            neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+        }
+
+        std::vector<float> tmp(vertex_count);
+        for (int pass = 0; pass < smooth_passes; ++pass) {
+            for (size_t i = 0; i < vertex_count; ++i) {
+                if (adj[i].empty()) { tmp[i] = h_vals[i]; continue; }
+                float sum = h_vals[i];
+                for (int nb : adj[i]) sum += h_vals[nb];
+                tmp[i] = sum / (float)(1 + (int)adj[i].size());
+            }
+            h_vals = tmp;
+        }
+    }
+
+    // Pass 3: apply displacement using the (optionally smoothed) heights.
+    for (size_t i = 0; i < vertex_count; ++i) {
+        const float vx = obj.attributes.v[i * 3 + 0];
+        const float vy = obj.attributes.v[i * 3 + 1];
+        const float vz = obj.attributes.v[i * 3 + 2];
+        const float r  = std::sqrt(vx * vx + vy * vy + vz * vz);
+        if (r < 1e-8f) continue;
+
         // Displacement is in world-space units; divide by r so the fraction is
         // radius-independent. height_multiplier amplifies the sampled heights.
-        const float scale = 1.0f + height_multiplier * (displacement_scale / r) * (2.0f * h - 1.0f);
+        const float scale = 1.0f + height_multiplier * (displacement_scale / r) * (2.0f * h_vals[i] - 1.0f);
         obj.attributes.v[i * 3 + 0] = vx * scale;
         obj.attributes.v[i * 3 + 1] = vy * scale;
         obj.attributes.v[i * 3 + 2] = vz * scale;
@@ -1272,6 +1318,30 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
 
             nmesh::generator::chain_link(&obj, (size_t)i, (size_t)count_i, major_radius, minor_radius, spacing, spline);
         }
+        else if (!token.compare(XTPROTO_LTRL_TUBE_CURVE)) {
+            int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 96);
+            if (i < 2) i = 2;
+            if (i > 4096) i = 4096;
+
+            int pres = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_PROFILE_RESOLUTION) : 0, 16);
+            if (pres < 6) pres = 6;
+            if (pres > 256) pres = 256;
+
+            float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, -1.0f);
+            if (radius <= 0.0f) radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_TUBE_RADIUS) : 0, 0.08f);
+            if (radius <= 0.0f) radius = 0.08f;
+            if (radius > 10.0f) radius = 10.0f;
+
+            bool closed = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_CLOSED) : 0, false);
+            bool cap_ends = deserialize_bool(p ? p->get_property_by_name(XTPROTO_PROP_CAP_ENDS) : 0, true);
+
+            std::vector<nmath::Vector3f> spline;
+            if (p && p->query_group(XTPROTO_PROP_SPLINE)) {
+                spline = deserialize_spline_points(p->get_group_by_name(XTPROTO_PROP_SPLINE));
+            }
+
+            nmesh::generator::tube_curve(&obj, spline, (size_t)i, (size_t)pres, radius, closed, cap_ends);
+        }
         else if (!token.compare(XTPROTO_LTRL_LATHE)) {
             int i = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_RESOLUTION) : 0, 64);
             if (i < 12) i = 12;
@@ -1438,6 +1508,8 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
             float radius = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_RADIUS) : 0, 1.0f);
             if (radius <= 0.0f) radius = 1.0f;
             float disp_scale = (float)deserialize_numf(p ? p->get_property_by_name(XTPROTO_PROP_DISPLACEMENT_SCALE) : 0, 0.05f);
+            int smooth_passes = deserialize_numi(p ? p->get_property_by_name(XTPROTO_PROP_DISPLACEMENT_SMOOTH) : 0, 0);
+            if (smooth_passes < 0) smooth_passes = 0;
             nmesh::generator::displaced_sphere(&obj, (size_t)res, radius);
 
             xtcore::sampler::ISampler *height_sampler = 0;
@@ -1448,7 +1520,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
                 height_sampler = deserialize_sampler_node(source, hs_node);
             }
             if (height_sampler) {
-                apply_radial_displacement(obj, height_sampler, disp_scale, height_mult);
+                apply_radial_displacement(obj, height_sampler, disp_scale, height_mult, smooth_passes);
                 delete height_sampler;
             }
         }
@@ -1722,6 +1794,16 @@ std::string generate_geometry_mesh_json(const std::string &gen_id, const std::ma
         float growth     = nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_GROWTH),     0.22f), 0.01f, 1.0f);
         float tube_radius= nmath::clamp((float)deserialize_numf(get(XTPROTO_PROP_TUBE_RADIUS),0.14f), 0.001f, 2.0f);
         nmesh::generator::shell_spiral(&obj, (size_t)res, turns, growth, tube_radius);
+    }
+    else if (!token.compare(XTPROTO_LTRL_TUBE_CURVE)) {
+        int res = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 96), 2, 4096);
+        int pres = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_PROFILE_RESOLUTION), 16), 6, 256);
+        float radius = (float)deserialize_numf(get(XTPROTO_PROP_RADIUS), -1.0f);
+        if (radius <= 0.0f) radius = (float)deserialize_numf(get(XTPROTO_PROP_TUBE_RADIUS), 0.08f);
+        radius = nmath::clamp(radius, 0.001f, 10.0f);
+        bool closed = deserialize_bool(get(XTPROTO_PROP_CLOSED), false);
+        bool cap_ends = deserialize_bool(get(XTPROTO_PROP_CAP_ENDS), true);
+        nmesh::generator::tube_curve(&obj, std::vector<nmath::Vector3f>(), (size_t)res, (size_t)pres, radius, closed, cap_ends);
     }
     else if (!token.compare(XTPROTO_LTRL_SVG)) {
         int res = nmath::clamp(deserialize_numi(get(XTPROTO_PROP_RESOLUTION), 128), 8, 256);
@@ -2552,7 +2634,6 @@ xtcore::sampler::Texture2D *deserialize_texture(const char *source, const ncf::N
 	std::string filter = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_FILTERING));
 	std::string path = (fname.empty() || path_is_absolute(fname) || asset_fetcher::is_url(fname)) ? fname : script_base + fname;
 
-	Log::handle().post_message("Loading texture: %s", path.c_str());
 	if (data->load(path.c_str())) {
 	    Log::handle().post_error("Failed to load texture: %s", path.c_str());
         delete data;

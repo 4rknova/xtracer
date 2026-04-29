@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include "math/hitrecord.h"
+#include "log.h"
 #include "mesh.h"
 
 namespace xtcore {
@@ -353,6 +354,8 @@ void Mesh::build_bvh(shape_t &shape, attrib_t &attributes)
         m_triangles.push_back(p);
     }
 
+    Log::handle().post_message("Mesh: %zu vertices, %zu triangles",
+        attributes.v.size() / 3, m_triangles.size());
     build_bvh();
 }
 
@@ -413,6 +416,9 @@ void Mesh::build_bvh(object_t &object)
             m_triangles.push_back(p);
         }
     }
+
+    Log::handle().post_message("Mesh: %zu vertices, %zu triangles",
+        object.attributes.v.size() / 3, m_triangles.size());
     build_bvh();
 }
 

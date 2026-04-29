@@ -265,6 +265,28 @@ geometry = {
         }
     }
 
+    g_tube_curve = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 128
+        profile_resolution = 16
+        radius             = 0.08
+        closed             = true
+        cap_ends           = false
+        spline = {
+            p0 = vec3(-1.10,0.78,-0.24)
+            p1 = vec3(-0.42,1.64,-0.50)
+            p2 = vec3(0.58,1.52,-0.12)
+            p3 = vec3(1.02,0.72,0.38)
+            p4 = vec3(0.18,0.18,0.62)
+            p5 = vec3(-0.88,0.38,0.18)
+        }
+        modifiers = {
+            translation = vec3(0,0.08,0)
+            rotation    = vec3(0,18,0)
+        }
+    }
+
     g_hairball = {
         type       = mesh
         source     = gen(hairball)
@@ -789,6 +811,17 @@ material = {
         }
     }
 
+    # Glossy white tube — tube_curve
+    mat_tube_curve = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.92,0.92,0.88) }
+            }
+            scalars = { metallic = 0, roughness = 0.22, clearcoat = 0.35, clearcoat_roughness = 0.10 }
+        }
+    }
+
     # Warm matte auburn — hairball
     mat_auburn = {
         type = principled
@@ -1118,6 +1151,12 @@ variants = {
         name        = Chain Link
         description = Interlocking chain of toroidal links.
         set = { object = { subject = { geometry = g_chain_link, material = mat_iron } } }
+    }
+
+    tube_curve = {
+        name        = Tube Curve
+        description = Circular tube swept along Catmull-Rom spline control points.
+        set = { object = { subject = { geometry = g_tube_curve, material = mat_tube_curve } } }
     }
 
     hairball = {

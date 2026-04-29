@@ -92,12 +92,12 @@ inline bool visible_to_light(xtcore::render::context_t *ctx,
 
     for (size_t step = 0; step < 16; ++step) {
         xtcore::hit_record_t occ;
-        if (!ctx->scene.intersection(shadow_ray, occ)) return false;
+        if (!ctx->scene->intersection(shadow_ray, occ)) return false;
 
         if (occ.t >= dist - (nmath::scalar_t)1e-4) return occ.id_object == light_object_id;
         if (occ.id_object == light_object_id) return true;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(occ.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object);
         if (!mat) return false;
         if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
 
@@ -117,9 +117,9 @@ inline bool visible_to_environment(xtcore::render::context_t *ctx,
 
     for (size_t step = 0; step < 16; ++step) {
         xtcore::hit_record_t occ;
-        if (!ctx->scene.intersection(shadow_ray, occ)) return true;
+        if (!ctx->scene->intersection(shadow_ray, occ)) return true;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(occ.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object);
         if (!mat) return false;
         if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
 
@@ -266,13 +266,13 @@ inline void collect_area_lights(xtcore::render::context_t *ctx, std::vector<area
     lights.clear();
     if (!ctx) return;
 
-    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
+    for (auto it = ctx->scene->m_objects.begin(); it != ctx->scene->m_objects.end(); ++it) {
         const HASH_ID obj_id = (*it).first;
         const xtcore::asset::Object *obj = (*it).second;
         if (!obj) continue;
 
-        const xtcore::asset::ISurface *surface = ctx->scene.get_surface(obj_id);
-        const xtcore::asset::IMaterial *material = ctx->scene.get_material(obj_id);
+        const xtcore::asset::ISurface *surface = ctx->scene->get_surface(obj_id);
+        const xtcore::asset::IMaterial *material = ctx->scene->get_material(obj_id);
         if (!surface || !material || !material->is_emissive()) continue;
 
         const nmath::scalar_t area = light_area(surface);
@@ -367,17 +367,17 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     HASH_ID current_medium_object_id = HASH_ID_INVALID;
     nmath::scalar_t current_medium_exit = INFINITY;
     const xtcore::asset::medium::IMedium *current_medium =
-        xtcore::medium::find_containing_medium(ctx->scene, ray.origin, current_medium_object_id, current_medium_exit, ray.direction);
+        xtcore::medium::find_containing_medium(*ctx->scene, ray.origin, current_medium_object_id, current_medium_exit, ray.direction);
 
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit_record;
-        const bool hit = ctx->scene.intersection(ray, hit_record);
+        const bool hit = ctx->scene->intersection(ray, hit_record);
         const nmath::scalar_t t_surface = hit ? hit_record.t : INFINITY;
 
         nmath::scalar_t t_exit = INFINITY;
         const xtcore::asset::medium::IMedium *medium = current_medium;
         if (medium) {
-            if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
+            if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
                 current_medium_object_id = HASH_ID_INVALID;
                 current_medium_exit = INFINITY;
                 current_medium = 0;
@@ -458,10 +458,10 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         if (!hit) {
-            nimg::ColorRGBf le = ctx->scene.sample_environment(ray.direction);
+            nimg::ColorRGBf le = ctx->scene->sample_environment(ray.direction);
             nmath::scalar_t mis_w = 1.0;
             if (bounce > 0 && !prev_bsdf_delta) {
-                const nmath::scalar_t p_env = ctx->scene.sample_environment_pdf(ray.direction);
+                const nmath::scalar_t p_env = ctx->scene->sample_environment_pdf(ray.direction);
                 if (p_env > (nmath::scalar_t)EPSILON) {
                     mis_w = power_heuristic(prev_bsdf_pdf, p_env);
                 }
@@ -471,9 +471,9 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         hit_record.ior = ior;
-        const xtcore::asset::IMaterial *m = ctx->scene.get_material(hit_record.id_object);
+        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object);
         if (!m) break;
-        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene.get_object_medium(hit_record.id_object);
+        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene->get_object_medium(hit_record.id_object);
         const xtcore::asset::material::Boundary *boundary = dynamic_cast<const xtcore::asset::material::Boundary *>(m);
 
         if (m->is_emissive()) {
@@ -522,7 +522,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
                         if (cos_s > (nmath::scalar_t)EPSILON &&
                             cos_l > (nmath::scalar_t)EPSILON &&
-                            visible_to_light(ctx, hit_record.point + wi * EPSILON, lp, light.object_id)) {
+                            visible_to_light(ctx, hit_record.point + hit_record.normal * EPSILON, lp, light.object_id)) {
                             nimg::ColorRGBf f;
                             nmath::scalar_t p_bsdf = 0.0;
                             if (m->bsdf_eval(hit_record, wo, wi, f, p_bsdf)) {
@@ -543,9 +543,9 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             nmath::Vector3f env_dir;
             nmath::scalar_t p_env = 0.0;
             nimg::ColorRGBf le_env;
-            if (ctx->scene.sample_environment_direction(env_dir, p_env, le_env) &&
+            if (ctx->scene->sample_environment_direction(env_dir, p_env, le_env) &&
                 p_env > (nmath::scalar_t)EPSILON &&
-                visible_to_environment(ctx, hit_record.point + env_dir * EPSILON, env_dir)) {
+                visible_to_environment(ctx, hit_record.point + hit_record.normal * EPSILON, env_dir)) {
                 nmath::Vector3f shading_n = hit_record.normal.normalized();
                 if (nmath::dot(shading_n, wo) < (nmath::scalar_t)0.0) shading_n = -shading_n;
                 const nmath::scalar_t cos_s = std::max((nmath::scalar_t)0.0, nmath::dot(shading_n, env_dir));
@@ -572,7 +572,10 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             prev_bsdf_pdf = bsdf_pdf;
             prev_point = hit_record.point;
 
-            ray.origin = hit_record.point + wi * EPSILON;
+            // Offset along the smooth normal to avoid self-intersection through
+            // displaced-geometry gaps, then nudge further in the ray direction.
+            const nmath::scalar_t normal_side = nmath::dot(hit_record.normal, wi) >= 0 ? 1.0f : -1.0f;
+            ray.origin = hit_record.point + hit_record.normal * (normal_side * EPSILON);
             ray.direction = wi;
         } else {
             xtcore::hit_result_t next_hit;
@@ -588,7 +591,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
                 if (medium_side < (nmath::scalar_t)0.0) {
                     current_medium_object_id = hit_record.id_object;
                     current_medium = boundary_medium;
-                    if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                    if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
                         current_medium_object_id = HASH_ID_INVALID;
                         current_medium_exit = INFINITY;
                         current_medium = 0;

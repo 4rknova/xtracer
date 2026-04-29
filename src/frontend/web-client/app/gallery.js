@@ -3,6 +3,28 @@
 let galleryEntries = [];
 let galleryDetailId = null;
 let galleryCurrentPassIndex = -1; // -1 = main render, >=0 = pass index
+let galleryDetailOffCanvas = null; // offscreen canvas holding decoded RGBA for detail view
+
+// ── Raw RGBA helpers ───────────────────────────────────────────────────────
+
+function readRgbaHeader(headers, name) {
+  return parseInt(headers.get(name) || "0", 10);
+}
+
+async function fetchRgbaToCanvas(url, canvas) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return false;
+  const buffer = await res.arrayBuffer();
+  const w = readRgbaHeader(res.headers, "X-XTracer-Width");
+  const h = readRgbaHeader(res.headers, "X-XTracer-Height");
+  if (!w || !h || buffer.byteLength !== w * h * 4) return false;
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(buffer), w, h), 0, 0);
+  return true;
+}
 
 // ── Multi-select state ─────────────────────────────────────────────────────
 
@@ -289,7 +311,6 @@ function getGalleryViewEls() {
   if (!galleryViewElsCache) {
     galleryViewElsCache = {
       canvas: document.getElementById("galleryDetailCanvas"),
-      img:    document.getElementById("galleryDetailImage"),
       wrap:   document.querySelector(".gallery-detail-image-wrap"),
       btn:    document.getElementById("galleryResetViewBtn"),
     };
@@ -328,22 +349,23 @@ function isGalleryNearestSampling() {
   return galleryViewSampling === "nearest";
 }
 
-function getGalleryFittedSize(canvas, img) {
+function getGalleryFittedSize(canvas) {
   const frameW = canvas.width;
   const frameH = canvas.height;
-  if (!frameW || !frameH || !img.naturalWidth || !img.naturalHeight) return null;
-  const fit = Math.min(frameW / img.naturalWidth, frameH / img.naturalHeight);
+  const src = galleryDetailOffCanvas;
+  if (!frameW || !frameH || !src || !src.width || !src.height) return null;
+  const fit = Math.min(frameW / src.width, frameH / src.height);
   galleryFittedCache.frameW = frameW;
   galleryFittedCache.frameH = frameH;
-  galleryFittedCache.width  = img.naturalWidth  * fit;
-  galleryFittedCache.height = img.naturalHeight * fit;
+  galleryFittedCache.width  = src.width  * fit;
+  galleryFittedCache.height = src.height * fit;
   return galleryFittedCache;
 }
 
 function clampGalleryPan() {
-  const { canvas, img } = getGalleryViewEls();
-  if (!canvas || !img || !img.naturalWidth) return;
-  const fitted = getGalleryFittedSize(canvas, img);
+  const { canvas } = getGalleryViewEls();
+  if (!canvas || !galleryDetailOffCanvas || !galleryDetailOffCanvas.width) return;
+  const fitted = getGalleryFittedSize(canvas);
   if (!fitted) return;
   const scaledW = fitted.width  * galleryView.scale;
   const scaledH = fitted.height * galleryView.scale;
@@ -374,7 +396,7 @@ function recenterGalleryFromMinimap(canvas, clientX, clientY, clampToBounds, rec
   return true;
 }
 
-function drawGalleryMinimap(ctx, fitted, img, imageX, imageY, imageW, imageH) {
+function drawGalleryMinimap(ctx, fitted, src, imageX, imageY, imageW, imageH) {
   galleryMinimapActive = false;
   const isZoomed = galleryView.scale > 1.001 || Math.abs(galleryView.tx) > 0.5 || Math.abs(galleryView.ty) > 0.5;
   if (!fitted || !isZoomed) return;
@@ -409,7 +431,7 @@ function drawGalleryMinimap(ctx, fitted, img, imageX, imageY, imageW, imageH) {
   ctx.rect(mapX, mapY, mapW, mapH);
   ctx.clip();
   ctx.imageSmoothingEnabled = !isGalleryNearestSampling();
-  ctx.drawImage(img, mapX, mapY, mapW, mapH);
+  ctx.drawImage(src, mapX, mapY, mapW, mapH);
   ctx.restore();
 
   const imgToMapX = mapW / Math.max(1e-6, imageW);
@@ -439,12 +461,13 @@ function drawGalleryMinimap(ctx, fitted, img, imageX, imageY, imageW, imageH) {
 // ── Canvas draw ────────────────────────────────────────────────────────────
 
 function drawGalleryCanvas() {
-  const { canvas, img } = getGalleryViewEls();
-  if (!canvas || !img || !img.naturalWidth) return;
+  const { canvas } = getGalleryViewEls();
+  const src = galleryDetailOffCanvas;
+  if (!canvas || !src || !src.width) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const nearest = isGalleryNearestSampling();
-  const fitted  = getGalleryFittedSize(canvas, img);
+  const fitted  = getGalleryFittedSize(canvas);
   if (!fitted) return;
   const scale = nearest ? Math.max(1, Math.round(galleryView.scale)) : galleryView.scale;
   const tx    = nearest ? Math.round(galleryView.tx) : galleryView.tx;
@@ -456,8 +479,8 @@ function drawGalleryCanvas() {
   ctx.clearRect(0, 0, fitted.frameW, fitted.frameH);
   ctx.imageSmoothingEnabled = !nearest && !galleryView.panning;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(img, x, y, drawW, drawH);
-  drawGalleryMinimap(ctx, fitted, img, x, y, drawW, drawH);
+  ctx.drawImage(src, x, y, drawW, drawH);
+  drawGalleryMinimap(ctx, fitted, src, x, y, drawW, drawH);
 }
 
 function syncGalleryCanvasSize() {
@@ -517,29 +540,30 @@ function applyGalleryViewState(viewState) {
 }
 
 function loadGalleryDetailImage(entryId, passIndex, options) {
-  const img = document.getElementById("galleryDetailImage");
-  if (!img) return;
-  const wrap = img.parentElement;
+  const { wrap } = getGalleryViewEls();
+  if (!wrap) return;
   const preserveView = !!(options && options.preserveView);
   const nextViewState = preserveView ? snapshotGalleryView() : null;
   const loading = mountGalleryLoadingSpinner(wrap, {
     label: "Loading render image",
     spinnerClass: "gallery-detail-image-loading",
   });
-  img.onload = () => {
+  const url = buildGalleryDetailImageUrl(entryId, passIndex);
+  if (!galleryDetailOffCanvas) galleryDetailOffCanvas = document.createElement("canvas");
+  fetchRgbaToCanvas(url, galleryDetailOffCanvas).then((ok) => {
     loading.clear();
-    applyGalleryViewState(nextViewState);
-    syncGalleryCanvasSize();
-  };
-  img.onerror = () => {
+    if (ok) {
+      applyGalleryViewState(nextViewState);
+      syncGalleryCanvasSize();
+    }
+  }).catch(() => {
     loading.clear();
-  };
-  img.src = buildGalleryDetailImageUrl(entryId, passIndex);
+  });
 }
 
 function zoomGalleryAt(clientX, clientY, wheelDeltaY) {
-  const { canvas, img } = getGalleryViewEls();
-  if (!canvas || !img || !img.naturalWidth) return;
+  const { canvas } = getGalleryViewEls();
+  if (!canvas || !canvas.width) return;
   const rect = canvas.getBoundingClientRect();
   const cx = clientX - rect.left - rect.width  * 0.5;
   const cy = clientY - rect.top  - rect.height * 0.5;
@@ -816,6 +840,27 @@ function galleryPassThumbUrl(id, passIndex) {
   return `/api/gallery/${encodeURIComponent(id)}/pass/${passIndex}/image?t=${Date.now()}`;
 }
 
+function createGalleryThumbCanvas(label) {
+  const canvas = document.createElement("canvas");
+  canvas.className = "gallery-card-thumb";
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", label);
+  return canvas;
+}
+
+function loadGalleryThumb(url, container, spinnerLabel) {
+  const canvas = createGalleryThumbCanvas(spinnerLabel || "render preview");
+  const loading = mountGalleryLoadingSpinner(container, { label: spinnerLabel || "Loading render preview" });
+  fetchRgbaToCanvas(url, canvas).then((ok) => {
+    loading.clear();
+    if (!ok) canvas.remove();
+  }).catch(() => {
+    loading.clear();
+    canvas.remove();
+  });
+  return canvas;
+}
+
 function createGalleryLoadingSpinner(label, extraClass) {
   const loading = document.createElement("div");
   loading.className = `workspace-item-preview-loading gallery-image-loading${extraClass ? ` ${extraClass}` : ""}`;
@@ -870,15 +915,7 @@ function renderGalleryGrid(entries) {
     const thumbWrap = document.createElement("div");
     thumbWrap.className = "gallery-card-thumb-wrap";
 
-    const thumb = document.createElement("img");
-    thumb.className = "gallery-card-thumb";
-    thumb.alt = entry.scene || entry.id;
-    thumb.loading = "lazy";
-    thumb.decoding = "async";
-    const thumbLoading = mountGalleryLoadingSpinner(thumbWrap, { label: "Loading render preview" });
-    thumb.addEventListener("load", () => thumbLoading.clear(), { once: true });
-    thumb.addEventListener("error", () => thumbLoading.clear(), { once: true });
-    thumb.src = galleryThumbUrl(entry.id);
+    const thumb = loadGalleryThumb(galleryThumbUrl(entry.id), thumbWrap, "Loading render preview");
 
     const check = document.createElement("div");
     check.className = "gallery-card-check";
@@ -937,7 +974,6 @@ function openGalleryDetail(entry) {
 
   const panel = document.getElementById("galleryDetail");
   const grid = document.querySelector(".gallery-panel");
-  const img = document.getElementById("galleryDetailImage");
   const title = document.getElementById("galleryDetailTitle");
   const metaDiv = document.getElementById("galleryDetailMeta");
   const passStrip = document.getElementById("galleryPassStrip");
@@ -961,12 +997,9 @@ function openGalleryDetail(entry) {
   updateGalleryExportUi();
 
   if (title) title.textContent = entry.scene || entry.id;
-  if (img) {
-    resetGalleryView();
-    loadGalleryDetailImage(entry.id, -1);
-    img.alt = entry.scene || entry.id;
-    if (img.complete && img.naturalWidth) syncGalleryCanvasSize();
-  }
+  galleryDetailOffCanvas = null;
+  resetGalleryView();
+  loadGalleryDetailImage(entry.id, -1);
 
   renderGalleryDetailMeta(metaDiv, entry);
 
@@ -978,15 +1011,9 @@ function openGalleryDetail(entry) {
         btn.type = "button";
         btn.className = "gallery-pass-thumb-btn";
         btn.setAttribute("aria-label", `View pass ${i + 1}`);
-        const t = document.createElement("img");
+        const t = loadGalleryThumb(galleryPassThumbUrl(entry.id, i), btn, `Loading pass ${i + 1} preview`);
         t.className = "gallery-pass-thumb";
-        const thumbLoading = mountGalleryLoadingSpinner(btn, { label: `Loading pass ${i + 1} preview` });
-        t.loading = "lazy";
-        t.decoding = "async";
-        t.alt = `Pass ${i + 1}`;
-        t.addEventListener("load", () => thumbLoading.clear(), { once: true });
-        t.addEventListener("error", () => thumbLoading.clear(), { once: true });
-        t.src = galleryPassThumbUrl(entry.id, i);
+        t.setAttribute("aria-label", `Pass ${i + 1}`);
         btn.appendChild(t);
         const dot = document.createElement("span");
         dot.className = "gallery-pass-thumb-dot";
@@ -999,9 +1026,7 @@ function openGalleryDetail(entry) {
         btn.addEventListener("click", () => {
           if (passThumbs._passStripDragged && passThumbs._passStripDragged()) return;
           galleryCurrentPassIndex = i;
-          if (img) {
-            loadGalleryDetailImage(entry.id, i, { preserveView: true });
-          }
+          loadGalleryDetailImage(entry.id, i, { preserveView: true });
           passThumbs.querySelectorAll(".gallery-pass-thumb-btn").forEach((b) => b.classList.remove("is-active"));
           btn.classList.add("is-active");
         });

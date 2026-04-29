@@ -1,10 +1,65 @@
-# The moon has surface relief of about ±10 km relative to its 1737 km radius
-# That is roughly ±0.57% of the radius.
-# Given the current displacement_scale of 0.1 and radius of 1.0, the maximum
-# displacement is already 0.1 units.
+# ---------------------------------------------------------------------
+# Physical scale
+# ---------------------------------------------------------------------
+#
+# 1 scene unit = 1 mean lunar radius = 1,737.4 km
+#
+# Moon surface relief: ±10 km relative to the 1,737.4 km radius (~±0.57%).
+# With displacement_scale = 0.008 and radius = 1.0, the maximum radial
+# displacement applied by the renderer is 0.008 scene units (≈ 13.9 km).
+#
+# Displacement map source:  NASA/GSFC LRO LOLA DEM
+# Color map source:         NASA/GSFC LRO WAC Global Mosaic (2025)
+# Both maps are centered on 0° longitude.
 
-# The displacement map, at 64, 16, and 4 pixels per degree, centered on 0° longitude. Available as either floating-point TIFFs in kilometers, relative to a radius of 1737.4 km, or unsigned 16-bit TIFFs in half-meters, relative to a radius of 1727400 meters.
-# The 2025 color map, available as a full-size float16 EXR file and as 16-bit TIFFs of various sizes. The EXR file is encoded in linear color with slightly more dynamic range, while the sRGB-encoded TIFFs are more broadly supported. The map is centered on 0° longitude.
+# ---------------------------------------------------------------------
+# Physical constants  (all in km)
+# ---------------------------------------------------------------------
+
+pi         = 3.14159265     # mathematical constant π
+moon_r_km  = 1737.4         # mean lunar radius — defines the scene unit
+sun_r_km   = 696000.0       # solar mean radius
+au_km      = 149600000.0    # mean Earth–Sun distance  (1 AU)
+solar_E    = 1361.0         # solar irradiance at 1 AU  (W/m²) — the solar constant
+inv_sqrt2  = 0.70710678     # cos 45° = 1/√2  — used for the ±45° phase angles
+
+# ---------------------------------------------------------------------
+# Derived scene-unit values  (1 scene unit = moon_r_km)
+# ---------------------------------------------------------------------
+#
+# moon_radius  =  1 (by definition)
+# sun_radius   =  sun_r_km  / moon_r_km  =  696,000   / 1,737.4  ≈    400.6 units
+# sun_d        =  au_km     / moon_r_km  =  149,600,000 / 1,737.4  ≈ 86,111 units
+# sun_d_diag   =  sun_d · cos 45°  ≈  86,111 · 0.70711  ≈  60,877 units
+#
+# The Sun's angular diameter as seen from the Moon: ≈ 0.53°, matching the
+# real value (and Earth's view — the reason total solar eclipses are possible).
+
+moon_radius = 1.0
+sun_radius  = $(<sun_r_km>  / <moon_r_km>)  # ≈  400.6 units
+sun_d       = $(<au_km>     / <moon_r_km>)  # ≈  86,111 units
+sun_d_diag  = $(<sun_d>     * <inv_sqrt2>)  # ≈  60,877 units
+
+# ---------------------------------------------------------------------
+# Sun emissive luminance
+# ---------------------------------------------------------------------
+#
+# Irradiance from a uniform spherical emitter of radiance Le, radius r,
+# distance d  (d ≫ r):
+#
+#   E = π · Le · (r / d)²
+#
+# Invert the irradiance formula  E = π · Le · (r/d)²  to solve for Le:
+#
+#   Le = E · (d/r)² / π
+#      = solar_E · (au_km / sun_r_km)² / π
+#      = 1361 · (149,600,000 / 696,000)² / π
+#      = 1361 · 214.94² / π
+#      ≈ 20,022,000  W/m²/sr
+#
+# This is the actual solar radiance value.
+emission_multiplier = 0.001 # Reduce the emission intensity to allow for practical tone mapping
+sun_Le = $(<emission_multiplier> * <solar_E> * <au_km> * <au_km> / (<sun_r_km> * <sun_r_km> * <pi>))
 
 title       = Moon Phases
 description = The Moon lit by a single spherical light source against a black void. Eight variants cover the classical phase cycle. Camera is fixed; only the light position changes per variant.
@@ -13,7 +68,7 @@ default_camera = cam
 
 environment = {
     type   = color
-    config = { value = col3(0.0, 0.0, 0.0) }
+    config = { value = col3(0.001, 0.001, 0.001) }
 }
 
 # ---------------------------------------------------------------------
@@ -21,13 +76,15 @@ environment = {
 # ---------------------------------------------------------------------
 
 camera = {
-    cam = {
-        type     = thin-lens
-        position = vec3(0, 0, 3)
-        target   = vec3(0, 0, 0)
-        up       = vec3(0, 1, 0)
-        fov      = 42
-    }
+    camera = {
+		type = thin-lens
+		position = vec3(0, 0, 3)
+		target = vec3(0, 0, 0)
+		up = vec3(0, 1, 0)
+		fov = 42
+		flength = 0
+		aperture = 0.0
+	}
 }
 
 # ---------------------------------------------------------------------
@@ -37,23 +94,24 @@ camera = {
 # sun_geo is a single sphere; each variant overrides its position.
 # Phase angle is measured from the camera direction (+Z):
 #
-#   0°   full          (0,  0,  50)  sun behind camera → full disc lit
-#   45°  waxing gibb.  (35, 0,  35)
-#   90°  first quarter (50, 0,   0)  right half lit
-#   135° waxing cres.  (35, 0, -35)
-#   180° new           (0,  0, -50)  sun behind moon → dark disc
-#   225° waning cres. (-35, 0, -35)
-#   270° last quarter (-50, 0,   0)  left half lit
-#   315° waning gibb. (-35, 0,  35)
+#   0°   full          (0,        0, <sun_d>)       sun behind camera → full disc lit
+#   45°  waxing gibb.  (<sun_d_diag>, 0, <sun_d_diag>)
+#   90°  first quarter (<sun_d>,  0,  0)            right half lit
+#   135° waxing cres.  (<sun_d_diag>, 0, -<sun_d_diag>)
+#   180° new           (0,        0, -<sun_d>)      sun behind moon → dark disc
+#   225° waning cres.  (-<sun_d_diag>, 0, -<sun_d_diag>)
+#   270° last quarter  (-<sun_d>, 0,  0)            left half lit
+#   315° waning gibb.  (-<sun_d_diag>, 0, <sun_d_diag>)
 # ---------------------------------------------------------------------
 
 geometry = {
     moon_geo = {
         type               = mesh
         source             = gen(displaced_sphere)
-        resolution         = 7
-        radius             = 1.0
-        displacement_scale = 0.025
+        resolution         = 8
+        radius             = <moon_radius>
+        displacement_scale  = 0.008
+        displacement_smooth = 0
         height_sampler = {
             type       = texture
             # source     = https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg
@@ -66,8 +124,8 @@ geometry = {
     # Default: full moon position. Variants override position only.
     sun_geo = {
         type     = sphere
-        position = vec3(0, 0, 50)
-        radius   = 5.0
+        position = vec3(0, 0, <sun_d>)
+        radius   = <sun_radius>
     }
 }
 
@@ -94,15 +152,13 @@ material = {
         }
     }
 
-    # Sun at distance 50, radius 5 → solid angle Ω ≈ π*(5/50)² ≈ 0.031 sr.
-    # Emissive ~40 → irradiance ~1.3 at the lit hemisphere.
     sun_mat = {
         type = emissive
         properties = {
             samplers = {
                 emissive = {
                     type  = color
-                    value = col3(40, 40, 40)
+                    value = col3(<sun_Le>, <sun_Le>, <sun_Le>)
                 }
             }
         }
@@ -134,7 +190,7 @@ variants = {
         description = Sun at 45° (front-right). Most of the disc lit, terminator on the left third.
         set = {
             geometry = {
-                sun_geo = { position = vec3(35, 0, 35) }
+                sun_geo = { position = vec3(<sun_d_diag>, 0, <sun_d_diag>) }
             }
         }
     }
@@ -144,7 +200,7 @@ variants = {
         description = Sun at 90° (right). Clean vertical terminator — right half lit, left half dark.
         set = {
             geometry = {
-                sun_geo = { position = vec3(50, 0, 0) }
+                sun_geo = { position = vec3(<sun_d>, 0, 0) }
             }
         }
     }
@@ -154,7 +210,7 @@ variants = {
         description = Sun at 135° (back-right). Thin crescent on the right limb.
         set = {
             geometry = {
-                sun_geo = { position = vec3(35, 0, -35) }
+                sun_geo = { position = vec3(<sun_d_diag>, 0, -<sun_d_diag>) }
             }
         }
     }
@@ -164,7 +220,7 @@ variants = {
         description = Sun at 180° (behind moon). Dark disc — lit hemisphere faces away from camera.
         set = {
             geometry = {
-                sun_geo = { position = vec3(0, 0, -50) }
+                sun_geo = { position = vec3(0, 0, -<sun_d>) }
             }
         }
     }
@@ -174,7 +230,7 @@ variants = {
         description = Sun at 225° (back-left). Thin crescent on the left limb.
         set = {
             geometry = {
-                sun_geo = { position = vec3(-35, 0, -35) }
+                sun_geo = { position = vec3(-<sun_d_diag>, 0, -<sun_d_diag>) }
             }
         }
     }
@@ -184,7 +240,7 @@ variants = {
         description = Sun at 270° (left). Mirror of first quarter — left half lit, right half dark.
         set = {
             geometry = {
-                sun_geo = { position = vec3(-50, 0, 0) }
+                sun_geo = { position = vec3(-<sun_d>, 0, 0) }
             }
         }
     }
@@ -194,7 +250,7 @@ variants = {
         description = Sun at 315° (front-left). Most of the disc lit, terminator on the right third.
         set = {
             geometry = {
-                sun_geo = { position = vec3(-35, 0, 35) }
+                sun_geo = { position = vec3(-<sun_d_diag>, 0, <sun_d_diag>) }
             }
         }
     }

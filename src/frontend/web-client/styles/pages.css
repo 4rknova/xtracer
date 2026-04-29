@@ -4487,7 +4487,8 @@ textarea {
   position: relative;
 }
 
-.workspace-item-preview img {
+.workspace-item-preview img,
+.workspace-item-preview canvas {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -7793,6 +7794,50 @@ button:disabled {
   width: 100%;
   height: 100%;
   touch-action: none;
+}
+
+/* ── 3D viewport loading overlay ── */
+
+.visual-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: color-mix(in srgb, #121820 60%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.visual-loading-overlay[hidden] {
+  display: none;
+}
+
+.visual-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, #ffffff 20%, transparent);
+  border-top-color: color-mix(in srgb, #ffffff 90%, transparent);
+  animation: visual-spinner-spin 0.72s linear infinite;
+}
+
+@keyframes visual-spinner-spin {
+  to { transform: rotate(360deg); }
+}
+
+.visual-loading-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: color-mix(in srgb, #ffffff 65%, transparent);
+  letter-spacing: 0.02em;
+  max-width: 260px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── 3D viewport overlay buttons ── */

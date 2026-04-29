@@ -69,7 +69,7 @@ struct job_image_delta_t
         size_t x1;
         size_t y1;
         size_t done_index;
-        std::vector<unsigned char> png;
+        std::vector<unsigned char> rgba;
     };
 
     job_state_t state;
@@ -85,6 +85,7 @@ class job_manager_t
     public:
     job_manager_t();
     ~job_manager_t();
+    void shutdown();
     void set_gallery_manager(gallery_manager_t *gm);
     void set_max_concurrent_renders(size_t max_concurrent);
     void set_render_thread_budget(size_t max_threads);
@@ -148,6 +149,7 @@ class job_manager_t
     bool move_queue_up(const std::string &id);
     bool move_queue_down(const std::string &id);
     bool list_active(std::vector<job_snapshot_t> &out);
+    bool has_active_jobs();
 
     void set_push_callback(
         std::function<void(const std::string &job_id,
@@ -171,7 +173,6 @@ class job_manager_t
         double elapsed_ms;
         std::chrono::steady_clock::time_point started_at;
         bool has_started;
-        std::vector<unsigned char> image_png;
         nimg::Pixmap final_fb;
         std::vector<unsigned char> image_exr;
         std::vector<unsigned char> image_hdr;
@@ -213,7 +214,7 @@ class job_manager_t
         float preview_last_tm_mantiuk_detail;
         bool preview_last_post_filters_enabled;
         std::string preview_last_post_filters;
-        std::vector<unsigned char> preview_png_cache;
+        std::vector<unsigned char> preview_rgba_cache;
         xtcore::tonemapping::settings_t live_tm_settings;
         size_t effective_threads;
         common::render_request_t request;

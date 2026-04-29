@@ -1916,26 +1916,85 @@ static void send_rgba_pixmap_response(crow::response &res, const nimg::Pixmap &p
     res.end();
 }
 
+// Precomputed 4096-entry LUT: linear float [0,1] -> uint8 sRGB.
+// Built once on first use; avoids per-pixel powf() calls.
+static uint8_t s_linear_to_u8_srgb_lut[4096];
+static bool    s_srgb_lut_ready = false;
+
+static void ensure_srgb_lut()
+{
+    if (s_srgb_lut_ready) return;
+    for (int i = 0; i < 4096; ++i) {
+        float v = i / 4095.0f;
+        float s;
+        if (v <= 0.0031308f) s = v * 12.92f;
+        else s = 1.055f * powf(v, 1.0f / 2.4f) - 0.055f;
+        int q = static_cast<int>(s * 255.0f + 0.5f);
+        s_linear_to_u8_srgb_lut[i] = static_cast<uint8_t>(q < 0 ? 0 : q > 255 ? 255 : q);
+    }
+    s_srgb_lut_ready = true;
+}
+
+static inline uint8_t lut_u8_srgb(float v)
+{
+    if (v <= 0.0f) return 0;
+    if (v >= 1.0f) return 255;
+    return s_linear_to_u8_srgb_lut[static_cast<int>(v * 4095.0f + 0.5f)];
+}
+
 bool encode_texture_sampler_rgba(const xtcore::sampler::Texture2D *tex,
                                  std::vector<unsigned char> &out,
                                  size_t &width_out,
-                                 size_t &height_out)
+                                 size_t &height_out,
+                                 size_t max_dim)
 {
     if (!tex) return false;
-    if (tex->width() == 0 || tex->height() == 0) return false;
+    const size_t src_w = tex->width();
+    const size_t src_h = tex->height();
+    if (!src_w || !src_h) return false;
 
-    nimg::Pixmap pixmap;
-    if (pixmap.init(tex->width(), tex->height()) != 0) return false;
+    ensure_srgb_lut();
 
-    for (size_t y = 0; y < tex->height(); ++y) {
-        for (size_t x = 0; x < tex->width(); ++x) {
-            pixmap.pixel(x, y) = tex->pixel_ro(x, y);
+    // Compute output dimensions: fit within max_dim x max_dim (0 = unlimited).
+    size_t out_w = src_w;
+    size_t out_h = src_h;
+    if (max_dim > 0 && (src_w > max_dim || src_h > max_dim)) {
+        if (src_w >= src_h) {
+            out_w = max_dim;
+            out_h = std::max(size_t(1), static_cast<size_t>(std::round(static_cast<double>(src_h) * max_dim / src_w)));
+        } else {
+            out_h = max_dim;
+            out_w = std::max(size_t(1), static_cast<size_t>(std::round(static_cast<double>(src_w) * max_dim / src_h)));
+        }
+    }
+    width_out  = out_w;
+    height_out = out_h;
+    out.resize(out_w * out_h * 4);
+
+    for (size_t dy = 0; dy < out_h; ++dy) {
+        const size_t sy0 = (dy * src_h) / out_h;
+        const size_t sy1 = std::min(src_h, ((dy + 1) * src_h + out_h - 1) / out_h);
+        for (size_t dx = 0; dx < out_w; ++dx) {
+            const size_t sx0 = (dx * src_w) / out_w;
+            const size_t sx1 = std::min(src_w, ((dx + 1) * src_w + out_w - 1) / out_w);
+            float r = 0.0f, g = 0.0f, b = 0.0f;
+            size_t n = 0;
+            for (size_t sy = sy0; sy < sy1; ++sy) {
+                for (size_t sx = sx0; sx < sx1; ++sx) {
+                    const nimg::ColorRGBAf &c = tex->pixel_ro(sx, sy);
+                    r += c.r(); g += c.g(); b += c.b();
+                    ++n;
+                }
+            }
+            if (n > 1) { const float inv = 1.0f / n; r *= inv; g *= inv; b *= inv; }
+            const size_t off = (dy * out_w + dx) * 4;
+            out[off + 0] = lut_u8_srgb(r);
+            out[off + 1] = lut_u8_srgb(g);
+            out[off + 2] = lut_u8_srgb(b);
+            out[off + 3] = 255;
         }
     }
 
-    encode_rgba8_srgb(pixmap, out);
-    width_out  = pixmap.width();
-    height_out = pixmap.height();
     return !out.empty();
 }
 
@@ -1948,7 +2007,8 @@ bool scene_runtime_texture_rgba(const std::string &scene_path,
                                 size_t &height_out,
                                 std::string &error,
                                 bool &loading,
-                                unsigned long long &job_id)
+                                unsigned long long &job_id,
+                                size_t max_dim = 512)
 {
     scene_cache_lookup_t lookup = scene_cache_t::handle().get_or_load(scene_path, variant);
     error = lookup.error;
@@ -1986,7 +2046,7 @@ bool scene_runtime_texture_rgba(const std::string &scene_path,
         return false;
     }
 
-    if (!encode_texture_sampler_rgba(tex, rgba, width_out, height_out)) {
+    if (!encode_texture_sampler_rgba(tex, rgba, width_out, height_out, max_dim)) {
         error = "failed to encode texture preview";
         return false;
     }
@@ -2965,12 +3025,17 @@ void setup_routes(WebApp &app,
 
         const std::string material = params.str("material");
         const std::string sampler = params.str("sampler");
+        size_t max_dim = 512;
+        if (params.has("max_dim")) {
+            const int v = std::atoi(params.str("max_dim").c_str());
+            max_dim = (v > 0) ? static_cast<size_t>(v) : 0;
+        }
         std::vector<unsigned char> rgba;
         size_t tex_w = 0, tex_h = 0;
         std::string error;
         bool loading = false;
         unsigned long long load_job_id = 0ULL;
-        if (!scene_runtime_texture_rgba(join_path(scene_dir, scene), variant, material, sampler, rgba, tex_w, tex_h, error, loading, load_job_id)) {
+        if (!scene_runtime_texture_rgba(join_path(scene_dir, scene), variant, material, sampler, rgba, tex_w, tex_h, error, loading, load_job_id, max_dim)) {
             if (loading) {
                 send_scene_loading(res, load_job_id);
                 return;
@@ -4451,7 +4516,7 @@ void setup_routes(WebApp &app,
             auto *d = static_cast<ws_job_conn_data_t *>(conn.userdata());
             if (d) {
                 rlm_ws_log(d->client_tag, "CLOSE", "/ws/jobs/" + d->job_id,
-                           reason.empty() ? "" : "reason=" + reason);
+                           rlm_ws_close_reason(reason));
                 g_job_ws_hub.unsubscribe(&conn);
                 delete d;
                 conn.userdata(nullptr);
@@ -4510,7 +4575,7 @@ void setup_routes(WebApp &app,
         .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
             auto *d = static_cast<ws_logs_conn_data_t *>(conn.userdata());
             rlm_ws_log(d ? d->client_tag : "", "CLOSE", "/ws/logs",
-                       reason.empty() ? "" : "reason=" + reason);
+                       rlm_ws_close_reason(reason));
             g_log_ws_hub.unsubscribe(&conn);
             if (d) { delete d; conn.userdata(nullptr); }
         });
@@ -4555,7 +4620,7 @@ void setup_routes(WebApp &app,
     std::thread([&jobs]() {
         for (;;) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            broadcast_jobs_changed(jobs);
+            if (jobs.has_active_jobs()) broadcast_jobs_changed(jobs);
         }
     }).detach();
 }

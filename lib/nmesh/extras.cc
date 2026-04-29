@@ -76,6 +76,16 @@ static int append_vertex(object_t *obj, const Vec3 &p, const Vec3 &n, const uv_t
     return idx;
 }
 
+static Vec3 catmull_rom_point(const Vec3 &p0, const Vec3 &p1, const Vec3 &p2, const Vec3 &p3, float t)
+{
+    const float t2 = t * t;
+    const float t3 = t2 * t;
+    return (p1 * 2.0f
+          + (p2 - p0) * t
+          + (p0 * 2.0f - p1 * 5.0f + p2 * 4.0f - p3) * t2
+          + (p3 - p0 + (p1 - p2) * 3.0f) * t3) * 0.5f;
+}
+
 static void append_triangle(shape_t &shape, int a, int b, int c, bool has_uv = false)
 {
     index_t ia;
@@ -130,7 +140,7 @@ static void build_icosphere_data(std::vector<Vec3> &verts, std::vector<tri_t> &f
         faces.push_back(t);
     }
 
-    iterations = clampi(iterations, 0, 7);
+    iterations = clampi(iterations, 0, 25);
     for (int it = 0; it < iterations; ++it) {
         std::map<std::pair<int, int>, int> edge_mid;
         std::vector<tri_t> next_faces;
@@ -1738,6 +1748,104 @@ void chain_link(object_t *obj, size_t resolution, size_t count, float major_radi
         const Vec3 center(x, 0.0f, 0.0f);
         const Vec3 axis = (i % 2 == 0) ? Vec3(0, 1, 0) : Vec3(0, 0, 1);
         append_torus_link(obj, out, center, axis, major_radius, minor_radius, seg_u, seg_v);
+    }
+}
+
+void tube_curve(object_t *obj, const std::vector<Vec3> &spline, size_t resolution,
+                size_t profile_resolution, float radius, bool closed, bool cap_ends)
+{
+    if (!obj) return;
+
+    std::vector<Vec3> control;
+    if (spline.size() >= 2) {
+        control.reserve(spline.size());
+        for (size_t i = 0; i < spline.size(); ++i) control.push_back(Vec3(spline[i].x, spline[i].y, spline[i].z));
+    } else {
+        control.push_back(Vec3(-0.75f, 0.0f, 0.0f));
+        control.push_back(Vec3(-0.25f, 0.35f, 0.15f));
+        control.push_back(Vec3(0.35f, -0.2f, -0.10f));
+        control.push_back(Vec3(0.75f, 0.1f, 0.0f));
+    }
+
+    radius = std::max(0.001f, radius);
+    const size_t ring_count = std::max((size_t)2, resolution);
+    const size_t seg_v = std::max((size_t)6, profile_resolution);
+    const size_t surface_segments = closed ? ring_count : ring_count - 1;
+    const size_t curve_segments = closed ? control.size() : control.size() - 1;
+
+    std::vector<Vec3> centers(ring_count);
+    for (size_t i = 0; i < ring_count; ++i) {
+        const float u = closed ? (float)i / (float)ring_count : (float)i / (float)(ring_count - 1);
+        const float s = u * (float)curve_segments;
+        size_t seg = (size_t)std::floor(s);
+        float local_t = s - (float)seg;
+        if (!closed && seg >= curve_segments) {
+            seg = curve_segments - 1;
+            local_t = 1.0f;
+        }
+
+        const size_t n = control.size();
+        const size_t i1 = closed ? (seg % n) : seg;
+        const size_t i2 = closed ? ((seg + 1) % n) : std::min(seg + 1, n - 1);
+        const size_t i0 = closed ? ((seg + n - 1) % n) : (i1 > 0 ? i1 - 1 : i1);
+        const size_t i3 = closed ? ((seg + 2) % n) : std::min(seg + 2, n - 1);
+        centers[i] = catmull_rom_point(control[i0], control[i1], control[i2], control[i3], local_t);
+    }
+
+    std::vector<Vec3> tangents(ring_count);
+    std::vector<Vec3> normals_fr(ring_count);
+    std::vector<Vec3> binormals_fr(ring_count);
+
+    for (size_t i = 0; i < ring_count; ++i) {
+        const size_t ip = closed ? ((i + 1) % ring_count) : std::min(i + 1, ring_count - 1);
+        const size_t im = closed ? ((i + ring_count - 1) % ring_count) : (i > 0 ? i - 1 : 0);
+        tangents[i] = safe_normalized(centers[ip] - centers[im], Vec3(1, 0, 0));
+    }
+
+    Vec3 reference(0, 1, 0);
+    if (std::fabs(nmath::dot(reference, tangents[0])) > 0.92f) reference = Vec3(1, 0, 0);
+    Vec3 prev_n = safe_normalized(nmath::cross(reference, tangents[0]), Vec3(0, 0, 1));
+
+    for (size_t i = 0; i < ring_count; ++i) {
+        Vec3 b = safe_normalized(nmath::cross(tangents[i], prev_n), nmath::cross(tangents[i], Vec3(0, 0, 1)));
+        if (b.length() <= 1e-8f) b = safe_normalized(nmath::cross(tangents[i], Vec3(1, 0, 0)), Vec3(0, 1, 0));
+        Vec3 n = safe_normalized(nmath::cross(b, tangents[i]), prev_n);
+        normals_fr[i] = n;
+        binormals_fr[i] = b;
+        prev_n = n;
+    }
+
+    shape_t shape;
+    obj->shapes.push_back(shape);
+    shape_t &out = obj->shapes.back();
+
+    std::vector<std::vector<int> > rings(ring_count, std::vector<int>(seg_v + 1, -1));
+    for (size_t i = 0; i < ring_count; ++i) {
+        const float u = closed ? (float)i / (float)ring_count : (float)i / (float)(ring_count - 1);
+        for (size_t j = 0; j <= seg_v; ++j) {
+            const float v = (float)j / (float)seg_v;
+            const float a = (float)(nmath::PI_DOUBLE * 2.0) * v;
+            Vec3 dir = normals_fr[i] * nmath_cos(a) + binormals_fr[i] * nmath_sin(a);
+            dir = safe_normalized(dir, normals_fr[i]);
+            uv_t uv = {u, v};
+            rings[i][j] = append_vertex(obj, centers[i] + dir * radius, dir, &uv);
+        }
+    }
+
+    for (size_t i = 0; i < surface_segments; ++i) {
+        const size_t ni = (i + 1) % ring_count;
+        for (size_t j = 0; j < seg_v; ++j) {
+            append_quad(out, rings[i][j], rings[ni][j], rings[ni][j + 1], rings[i][j + 1], true);
+        }
+    }
+
+    if (!closed && cap_ends) {
+        const int c0 = append_vertex(obj, centers.front(), tangents.front() * -1.0f, 0);
+        const int c1 = append_vertex(obj, centers.back(), tangents.back(), 0);
+        for (size_t j = 0; j < seg_v; ++j) {
+            append_triangle(out, c0, rings[0][j + 1], rings[0][j], false);
+            append_triangle(out, c1, rings[ring_count - 1][j], rings[ring_count - 1][j + 1], false);
+        }
     }
 }
 

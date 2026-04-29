@@ -149,13 +149,13 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
     cam->fov = 45.0f;
 
     const HASH_UINT64 cam_id = add("wf_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f, 0.0f, 3.0f), 1.0f);
     sphere->calc_aabb();
     const HASH_UINT64 geo_id = add("wf_sphere");
-    ctx.scene.m_surface[geo_id] = sphere;
+    ctx.scene->m_surface[geo_id] = sphere;
 
     xtcore::asset::material::Lambert *mat = new xtcore::asset::material::Lambert();
     xtcore::sampler::SolidColor *diffuse = new xtcore::sampler::SolidColor();
@@ -163,18 +163,18 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
     diffuse->set(kd);
     mat->add_sampler("diffuse", diffuse);
     const HASH_UINT64 mat_id = add("wf_lambert");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface = geo_id;
     obj->material = mat_id;
     const HASH_UINT64 obj_id = add("wf_obj");
-    ctx.scene.m_objects[obj_id] = obj;
+    ctx.scene->m_objects[obj_id] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf white(1.0f, 1.0f, 1.0f);
     env->set(white);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
 }
@@ -182,7 +182,7 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
 std::vector<unsigned char> build_hit_mask(xtcore::render::context_t &ctx)
 {
     std::vector<unsigned char> mask(ctx.params.width * ctx.params.height, 0);
-    xtcore::asset::ICamera *cam = ctx.scene.get_camera(ctx.params.camera);
+    xtcore::asset::ICamera *cam = ctx.scene->get_camera(ctx.params.camera);
     if (!cam) return mask;
 
     for (size_t y = 0; y < ctx.params.height; ++y) {
@@ -194,7 +194,7 @@ std::vector<unsigned char> build_hit_mask(xtcore::render::context_t &ctx)
                 static_cast<float>(ctx.params.height));
 
             xtcore::hit_record_t hr;
-            if (ctx.scene.intersection(ray, hr)) {
+            if (ctx.scene->intersection(ray, hr)) {
                 mask[y * ctx.params.width + x] = 1;
             }
         }
@@ -245,30 +245,30 @@ bool run_dielectric_case(bool use_importance_sampling, rgb_stats_t &out)
     cam->up = nmath::Vector3f(0.0f, 1.0f, 0.0f);
     cam->fov = 45.0f;
     const HASH_UINT64 cam_id = add("wf_d_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f, 0.0f, 3.0f), 1.0f);
     sphere->calc_aabb();
     const HASH_UINT64 geo_id = add("wf_d_sphere");
-    ctx.scene.m_surface[geo_id] = sphere;
+    ctx.scene->m_surface[geo_id] = sphere;
 
     xtcore::asset::material::Dielectric *mat = new xtcore::asset::material::Dielectric();
     mat->add_scalar("ior", 1.5f);
     mat->add_scalar("transparency", 1.0f);
     const HASH_UINT64 mat_id = add("wf_d_mat");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface = geo_id;
     obj->material = mat_id;
     const HASH_UINT64 obj_id = add("wf_d_obj");
-    ctx.scene.m_objects[obj_id] = obj;
+    ctx.scene->m_objects[obj_id] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf white_env(1.0f, 1.0f, 1.0f);
     env->set(white_env);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -308,13 +308,13 @@ bool run_rough_dielectric_case(bool use_importance_sampling, float roughness, rg
     cam->up = nmath::Vector3f(0.0f, 1.0f, 0.0f);
     cam->fov = 45.0f;
     const HASH_UINT64 cam_id = add("wf_rd_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f, 0.0f, 3.0f), 1.0f);
     sphere->calc_aabb();
     const HASH_UINT64 geo_id = add("wf_rd_sphere");
-    ctx.scene.m_surface[geo_id] = sphere;
+    ctx.scene->m_surface[geo_id] = sphere;
 
     xtcore::asset::material::RoughDielectric *mat = new xtcore::asset::material::RoughDielectric();
     xtcore::sampler::SolidColor *transmission = new xtcore::sampler::SolidColor();
@@ -325,18 +325,18 @@ bool run_rough_dielectric_case(bool use_importance_sampling, float roughness, rg
     mat->add_scalar("ior", 1.5f);
     mat->add_scalar("transparency", 0.98f);
     const HASH_UINT64 mat_id = add("wf_rough_dielectric");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface = geo_id;
     obj->material = mat_id;
     const HASH_UINT64 obj_id = add("wf_rd_obj");
-    ctx.scene.m_objects[obj_id] = obj;
+    ctx.scene->m_objects[obj_id] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf white_env(1.0f, 1.0f, 1.0f);
     env->set(white_env);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -459,8 +459,8 @@ bool run_principled_clearcoat_case(bool use_importance_sampling, float clearcoat
     mat->add_scalar("ior", 1.5f);
     mat->add_scalar("clearcoat", clearcoat);
     mat->add_scalar("clearcoat_roughness", 0.06f);
-    delete ctx.scene.m_materials[mat_id];
-    ctx.scene.m_materials[mat_id] = mat;
+    delete ctx.scene->m_materials[mat_id];
+    ctx.scene->m_materials[mat_id] = mat;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -497,8 +497,8 @@ bool run_principled_anisotropy_case(bool use_importance_sampling, float anisotro
     mat->add_scalar("roughness", 0.24f);
     mat->add_scalar("anisotropy", anisotropy);
     mat->add_scalar("ior", 1.5f);
-    delete ctx.scene.m_materials[mat_id];
-    ctx.scene.m_materials[mat_id] = mat;
+    delete ctx.scene->m_materials[mat_id];
+    ctx.scene->m_materials[mat_id] = mat;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -538,13 +538,13 @@ bool run_thin_dielectric_case(bool use_importance_sampling, float roughness, rgb
     cam->up = nmath::Vector3f(0.0f, 1.0f, 0.0f);
     cam->fov = 45.0f;
     const HASH_UINT64 cam_id = add("wf_td_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f, 0.0f, 3.0f), 1.0f);
     sphere->calc_aabb();
     const HASH_UINT64 geo_id = add("wf_td_sphere");
-    ctx.scene.m_surface[geo_id] = sphere;
+    ctx.scene->m_surface[geo_id] = sphere;
 
     xtcore::asset::material::ThinDielectric *mat = new xtcore::asset::material::ThinDielectric();
     xtcore::sampler::SolidColor *transmission = new xtcore::sampler::SolidColor();
@@ -555,18 +555,18 @@ bool run_thin_dielectric_case(bool use_importance_sampling, float roughness, rgb
     mat->add_scalar("ior", 1.45f);
     mat->add_scalar("transparency", 0.98f);
     const HASH_UINT64 mat_id = add("wf_thin_dielectric");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface = geo_id;
     obj->material = mat_id;
     const HASH_UINT64 obj_id = add("wf_td_obj");
-    ctx.scene.m_objects[obj_id] = obj;
+    ctx.scene->m_objects[obj_id] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf white_env(1.0f, 1.0f, 1.0f);
     env->set(white_env);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -613,8 +613,8 @@ bool run_subsurface_case(bool use_importance_sampling,
     mat->add_sampler("subsurface_radius", radius_color);
     mat->add_scalar("subsurface", subsurface);
     mat->add_scalar("thickness", thickness);
-    delete ctx.scene.m_materials[mat_id];
-    ctx.scene.m_materials[mat_id] = mat;
+    delete ctx.scene->m_materials[mat_id];
+    ctx.scene->m_materials[mat_id] = mat;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -652,8 +652,8 @@ bool run_sheen_case(bool use_importance_sampling, float sheen, rgb_stats_t &out)
     mat->add_sampler("base_color", base_color);
     mat->add_sampler("sheen_color", sheen_color);
     mat->add_scalar("sheen", sheen);
-    delete ctx.scene.m_materials[mat_id];
-    ctx.scene.m_materials[mat_id] = mat;
+    delete ctx.scene->m_materials[mat_id];
+    ctx.scene->m_materials[mat_id] = mat;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);
@@ -696,8 +696,8 @@ bool run_thin_translucent_case(bool use_importance_sampling,
     mat->add_sampler("translucency_color", trans_color);
     mat->add_scalar("translucency", translucency);
     mat->add_scalar("thickness", thickness);
-    delete ctx.scene.m_materials[mat_id];
-    ctx.scene.m_materials[mat_id] = mat;
+    delete ctx.scene->m_materials[mat_id];
+    ctx.scene->m_materials[mat_id] = mat;
 
     ctx.init();
     std::vector<unsigned char> mask = build_hit_mask(ctx);

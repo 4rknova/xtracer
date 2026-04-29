@@ -47,14 +47,14 @@ void Integrator::render_tile(xtcore::render::tile_t *tile)
 
         float w = 1.0f;
 
-        if (ctx->scene.intersection(ray, hit_record)) {
+        if (ctx->scene->intersection(ray, hit_record)) {
             Ray ao_ray;
             ao_ray.direction = nmath::sample::hemisphere(hit_record.normal, hit_record.normal);
             ao_ray.origin    = hit_record.point + hit_record.normal * EPSILON;
 
             xtcore::hit_record_t ao_hit_record;
 
-            if (ctx->scene.intersection(ao_ray, ao_hit_record)) {
+            if (ctx->scene->intersection(ao_ray, ao_hit_record)) {
                 float dist = (ao_hit_record.point - ao_ray.origin).length();
                 w = nmath::min((nmath::scalar_t)dist, m_max_distance) / m_max_distance;
             }

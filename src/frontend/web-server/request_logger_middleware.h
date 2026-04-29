@@ -152,6 +152,37 @@ static inline std::string rlm_now_timestamp()
     return buf;
 }
 
+// Decode a WebSocket close reason into a human-readable string.
+// WebSocket close frames carry an optional 2-byte big-endian status code
+// followed by optional UTF-8 reason text.  Crow passes the raw bytes as-is,
+// which renders as garbled output when printed.  This function extracts the
+// numeric code and sanitises the text so the log stays readable.
+static inline std::string rlm_ws_close_reason(const std::string &reason)
+{
+    if (reason.empty()) return "";
+    if (reason.size() >= 2) {
+        const uint16_t code = (static_cast<uint8_t>(reason[0]) << 8)
+                            | static_cast<uint8_t>(reason[1]);
+        if (code >= 1000 && code <= 4999) {
+            std::string out = "code=" + std::to_string(code);
+            if (reason.size() > 2) {
+                out += " ";
+                for (size_t i = 2; i < reason.size(); ++i) {
+                    unsigned char c = static_cast<unsigned char>(reason[i]);
+                    out += (c >= 0x20 && c < 0x7F) ? static_cast<char>(c) : '?';
+                }
+            }
+            return out;
+        }
+    }
+    // No valid status code prefix — sanitise whatever is there.
+    std::string out;
+    out.reserve(reason.size());
+    for (unsigned char c : reason)
+        out += (c >= 0x20 && c < 0x7F) ? static_cast<char>(c) : '?';
+    return out;
+}
+
 // Log a WebSocket lifecycle event in a format consistent with HTTP request logs.
 // event: short uppercase label, e.g. "OPEN", "CLOSE", "ABORT"
 // path:  full URL path including any relevant query params, e.g. "/ws/jobs/abc"

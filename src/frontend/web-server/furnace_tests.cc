@@ -185,13 +185,13 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
     cam->up       = nmath::Vector3f(0.0f, 1.0f, 0.0f);
     cam->fov      = 45.0f;
     const HASH_UINT64 cam_id = add("wf_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f, 0.0f, 3.0f), 1.0f);
     sphere->calc_aabb();
     const HASH_UINT64 geo_id = add("wf_sphere");
-    ctx.scene.m_surface[geo_id] = sphere;
+    ctx.scene->m_surface[geo_id] = sphere;
 
     xtcore::asset::material::Lambert *mat = new xtcore::asset::material::Lambert();
     xtcore::sampler::SolidColor *diffuse = new xtcore::sampler::SolidColor();
@@ -199,17 +199,17 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
     diffuse->set(kd);
     mat->add_sampler("diffuse", diffuse);
     const HASH_UINT64 mat_id = add("wf_lambert");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface  = geo_id;
     obj->material = mat_id;
-    ctx.scene.m_objects[add("wf_obj")] = obj;
+    ctx.scene->m_objects[add("wf_obj")] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf env_white(1.0f, 1.0f, 1.0f);
     env->set(env_white);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
 }
@@ -217,7 +217,7 @@ void setup_scene(xtcore::render::context_t &ctx, float albedo)
 std::vector<unsigned char> build_hit_mask(xtcore::render::context_t &ctx)
 {
     std::vector<unsigned char> mask(ctx.params.width * ctx.params.height, 0);
-    xtcore::asset::ICamera *cam = ctx.scene.get_camera(ctx.params.camera);
+    xtcore::asset::ICamera *cam = ctx.scene->get_camera(ctx.params.camera);
     if (!cam) return mask;
     for (size_t y = 0; y < ctx.params.height; ++y) {
         for (size_t x = 0; x < ctx.params.width; ++x) {
@@ -225,7 +225,7 @@ std::vector<unsigned char> build_hit_mask(xtcore::render::context_t &ctx)
                 static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f,
                 static_cast<float>(ctx.params.width), static_cast<float>(ctx.params.height));
             xtcore::hit_record_t hr;
-            if (ctx.scene.intersection(ray, hr))
+            if (ctx.scene->intersection(ray, hr))
                 mask[y * ctx.params.width + x] = 1;
         }
     }
@@ -323,12 +323,12 @@ void run_rough_dielectric(const std::string &integrator_id, std::ostringstream &
         cam->target   = nmath::Vector3f(0.0f,0.0f,1.0f);
         cam->up       = nmath::Vector3f(0.0f,1.0f,0.0f);
         cam->fov      = 45.0f;
-        ctx.scene.m_cameras[add("wf_rd_cam")] = cam;
+        ctx.scene->m_cameras[add("wf_rd_cam")] = cam;
         ctx.params.camera = add("wf_rd_cam");
 
         xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f,0.0f,3.0f), 1.0f);
         sphere->calc_aabb();
-        ctx.scene.m_surface[add("wf_rd_sphere")] = sphere;
+        ctx.scene->m_surface[add("wf_rd_sphere")] = sphere;
 
         xtcore::asset::material::RoughDielectric *mat = new xtcore::asset::material::RoughDielectric();
         xtcore::sampler::SolidColor *trans = new xtcore::sampler::SolidColor();
@@ -338,16 +338,16 @@ void run_rough_dielectric(const std::string &integrator_id, std::ostringstream &
         mat->add_scalar("roughness", roughness);
         mat->add_scalar("ior", 1.5f);
         mat->add_scalar("transparency", 0.98f);
-        ctx.scene.m_materials[add("wf_rough_dielectric")] = mat;
+        ctx.scene->m_materials[add("wf_rough_dielectric")] = mat;
 
         xtcore::asset::Object *obj = new xtcore::asset::Object();
         obj->surface = add("wf_rd_sphere"); obj->material = add("wf_rough_dielectric");
-        ctx.scene.m_objects[add("wf_rd_obj")] = obj;
+        ctx.scene->m_objects[add("wf_rd_obj")] = obj;
 
         xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
         nimg::ColorRGBf rd_env(1.0f,1.0f,1.0f);
         env->set(rd_env);
-        ctx.scene.m_environment = env;
+        ctx.scene->m_environment = env;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -418,8 +418,8 @@ void run_principled_clearcoat(const std::string &integrator_id, std::ostringstre
         mat->add_scalar("ior", 1.5f);
         mat->add_scalar("clearcoat", clearcoat);
         mat->add_scalar("clearcoat_roughness", 0.06f);
-        delete ctx.scene.m_materials[mat_id];
-        ctx.scene.m_materials[mat_id] = mat;
+        delete ctx.scene->m_materials[mat_id];
+        ctx.scene->m_materials[mat_id] = mat;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -454,8 +454,8 @@ void run_principled_anisotropy(const std::string &integrator_id, std::ostringstr
         mat->add_scalar("roughness", 0.24f);
         mat->add_scalar("anisotropy", anisotropy);
         mat->add_scalar("ior", 1.5f);
-        delete ctx.scene.m_materials[mat_id];
-        ctx.scene.m_materials[mat_id] = mat;
+        delete ctx.scene->m_materials[mat_id];
+        ctx.scene->m_materials[mat_id] = mat;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -487,12 +487,12 @@ void run_thin_dielectric(const std::string &integrator_id, std::ostringstream &j
         cam->target   = nmath::Vector3f(0.0f,0.0f,1.0f);
         cam->up       = nmath::Vector3f(0.0f,1.0f,0.0f);
         cam->fov      = 45.0f;
-        ctx.scene.m_cameras[add("wf_td_cam")] = cam;
+        ctx.scene->m_cameras[add("wf_td_cam")] = cam;
         ctx.params.camera = add("wf_td_cam");
 
         xtcore::surface::Sphere *sphere = new xtcore::surface::Sphere(nmath::Vector3f(0.0f,0.0f,3.0f), 1.0f);
         sphere->calc_aabb();
-        ctx.scene.m_surface[add("wf_td_sphere")] = sphere;
+        ctx.scene->m_surface[add("wf_td_sphere")] = sphere;
 
         xtcore::asset::material::ThinDielectric *mat = new xtcore::asset::material::ThinDielectric();
         xtcore::sampler::SolidColor *trans = new xtcore::sampler::SolidColor();
@@ -502,16 +502,16 @@ void run_thin_dielectric(const std::string &integrator_id, std::ostringstream &j
         mat->add_scalar("roughness", roughness);
         mat->add_scalar("ior", 1.45f);
         mat->add_scalar("transparency", 0.98f);
-        ctx.scene.m_materials[add("wf_thin_dielectric")] = mat;
+        ctx.scene->m_materials[add("wf_thin_dielectric")] = mat;
 
         xtcore::asset::Object *obj = new xtcore::asset::Object();
         obj->surface = add("wf_td_sphere"); obj->material = add("wf_thin_dielectric");
-        ctx.scene.m_objects[add("wf_td_obj")] = obj;
+        ctx.scene->m_objects[add("wf_td_obj")] = obj;
 
         xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
         nimg::ColorRGBf td_env(1.0f,1.0f,1.0f);
         env->set(td_env);
-        ctx.scene.m_environment = env;
+        ctx.scene->m_environment = env;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -552,8 +552,8 @@ void run_subsurface(const std::string &integrator_id, std::ostringstream &json)
         mat->add_sampler("subsurface_radius", radius_c);
         mat->add_scalar("subsurface", subsurface);
         mat->add_scalar("thickness",  thickness);
-        delete ctx.scene.m_materials[mat_id];
-        ctx.scene.m_materials[mat_id] = mat;
+        delete ctx.scene->m_materials[mat_id];
+        ctx.scene->m_materials[mat_id] = mat;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -592,8 +592,8 @@ void run_sheen(const std::string &integrator_id, std::ostringstream &json)
         mat->add_sampler("base_color",  base_c);
         mat->add_sampler("sheen_color", sheen_c);
         mat->add_scalar("sheen", sheen);
-        delete ctx.scene.m_materials[mat_id];
-        ctx.scene.m_materials[mat_id] = mat;
+        delete ctx.scene->m_materials[mat_id];
+        ctx.scene->m_materials[mat_id] = mat;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);
@@ -631,8 +631,8 @@ void run_thin_translucent(const std::string &integrator_id, std::ostringstream &
         mat->add_sampler("translucency_color", trans_c);
         mat->add_scalar("translucency", translucency);
         mat->add_scalar("thickness",    thickness);
-        delete ctx.scene.m_materials[mat_id];
-        ctx.scene.m_materials[mat_id] = mat;
+        delete ctx.scene->m_materials[mat_id];
+        ctx.scene->m_materials[mat_id] = mat;
         ctx.init();
 
         auto mask = build_hit_mask(ctx);

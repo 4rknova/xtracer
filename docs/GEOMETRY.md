@@ -167,10 +167,31 @@ Three approaches for the same fractals — see [Menger Sponge variants](#menger-
 |-----------|-----------|-------|
 | `rock` | `seed`, `radius`, `roughness` (0–2), `octaves` (1–8), `resolution` | Icosphere perturbed by fBm |
 | `shell_spiral` | `turns` (0.5–24), `growth` (0.01–1), `tube_radius`, `resolution` (16–4096) | Nautilus-like logarithmic spiral |
+| `tube_curve` | `spline`, `radius`/`tube_radius`, `profile_resolution`, `closed`, `cap_ends`, `resolution` (2–4096) | Circular tube swept along Catmull-Rom curve |
 | `hairball` | `seed`, `radius`, `resolution` (8–2048), `fibers` | Radial fiber strands from sphere |
 | `tree` | `depth` (1–7), `branch_count` (1–6), `branch_angle`, `trunk_height`, `trunk_radius`, `seed` | Recursive tapered cylinders |
 | `coral` | `depth` (1–7), `branch_count` (1–8), `branch_angle`, `height`, `branch_radius`, `seed` | Wider-branching variant of tree |
 | `crystal` | `count` (1–32), `radius`, `height`, `tip_height`, `seed` | Cluster of tapered prismatic crystals |
+
+#### `tube_curve` Spline Syntax
+
+```
+type = mesh
+source = gen(tube_curve)
+resolution = 128             # rings along the curve
+profile_resolution = 16      # segments around the tube
+radius = 0.08                # tube radius; tube_radius is also accepted
+closed = true                # connect final control point back to first
+cap_ends = false             # only used for open curves
+spline = {
+    p0 = vec3(-1.0,0.5,0.0)
+    p1 = vec3(-0.3,1.4,-0.4)
+    p2 = vec3(0.8,1.2,0.2)
+    p3 = vec3(1.0,0.4,0.5)
+}
+```
+
+Spline point keys are sorted by trailing index (`p0`, `p1`, `p2`, ...). At least two points are required; otherwise a default sample curve is generated.
 
 ### SVG Silhouette Mesh
 

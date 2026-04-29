@@ -346,7 +346,10 @@ function bindSettingsJobsCardLifecycle() {
 
 function notifyActiveJobsChanged() {
   if (activeTabMode === "workspaces" && hasBackendMethod(api, "getWorkspaces")) {
-    refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
+    const activeJobs = getActiveJobsFromCache();
+    const cached = Array.from(workspaceSnapshotById.values());
+    const items = sortWorkspaceItems(overlayWorkspaceActiveJobs(cached, activeJobs));
+    renderWorkspaceList(items);
   }
   if (typeof refreshSettingsJobsCard === "function" && el.settingsJobsList) {
     refreshSettingsJobsCard();
@@ -797,6 +800,48 @@ function buildWorkspacePreviewUrl(lastJobId) {
   return `/api/jobs/${encodeURIComponent(jobId)}/image?final=1&tm=aces`;
 }
 
+const workspaceThumbCache = new Map(); // url → blob URL
+const WORKSPACE_THUMB_CACHE_MAX = 20;
+
+async function loadWorkspacePreviewCanvas(url, _container, altLabel) {
+  const makeImg = (blobUrl) => {
+    const img = document.createElement("img");
+    img.alt = altLabel || "render preview";
+    img.src = blobUrl;
+    return img;
+  };
+
+  if (workspaceThumbCache.has(url)) return makeImg(workspaceThumbCache.get(url));
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const w = parseInt(res.headers.get("X-XTracer-Width") || "0", 10);
+    const h = parseInt(res.headers.get("X-XTracer-Height") || "0", 10);
+    if (!w || !h || buf.byteLength !== w * h * 4) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(buf), w, h), 0, 0);
+    const blobUrl = await new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : null), "image/png");
+    });
+    if (!blobUrl) return null;
+    if (workspaceThumbCache.size >= WORKSPACE_THUMB_CACHE_MAX) {
+      const firstKey = workspaceThumbCache.keys().next().value;
+      URL.revokeObjectURL(workspaceThumbCache.get(firstKey));
+      workspaceThumbCache.delete(firstKey);
+    }
+    workspaceThumbCache.set(url, blobUrl);
+    return makeImg(blobUrl);
+  } catch (_) {
+    return null;
+  }
+}
+
 function workspaceStateLabel(workspace) {
   const id = String((workspace && workspace.id) || "");
   const activeJob = String((workspace && workspace.active_job_id) || "");
@@ -856,6 +901,8 @@ function workspaceSettingsPayload() {
         .filter((entry) => !!entry && !!entry.filter)
       : [],
     post_filters_enabled: !!postFilterStackEnabled,
+    scene: String(el.scene && el.scene.value ? el.scene.value : ""),
+    scene_variant: String(el.variant && el.variant.value !== undefined ? el.variant.value : ""),
   };
 }
 
@@ -970,6 +1017,11 @@ function applyWorkspaceSettings(settings) {
     }
     if (el.postFiltersEnabled) el.postFiltersEnabled.checked = !!postFilterStackEnabled;
     updatePostFilterUiState();
+
+    if (cfg.scene_variant !== undefined) {
+      const wsRuntime = workspaceRuntimeState(activeWorkspaceId);
+      if (wsRuntime) wsRuntime.activeVariant = String(cfg.scene_variant || "").trim();
+    }
   } finally {
     suppressWorkspaceSettingsSave = false;
   }
@@ -977,24 +1029,7 @@ function applyWorkspaceSettings(settings) {
 
 function parseWorkspaceSettingsFromSnapshot(workspace) {
   const raw = String((workspace && workspace.settings_json) || "").trim();
-  if (!raw) {
-    if (!workspace) return null;
-    const hasLegacyQuality = workspace.quality_samples !== undefined
-      || workspace.quality_aa !== undefined
-      || workspace.quality_sample_distribution !== undefined
-      || workspace.quality_rdepth !== undefined;
-    if (!hasLegacyQuality) return null;
-    return {
-      quality: {
-        samples: workspace.quality_samples !== undefined ? String(workspace.quality_samples) : undefined,
-        aa: workspace.quality_aa !== undefined ? String(workspace.quality_aa) : undefined,
-        sample_distribution: workspace.quality_sample_distribution !== undefined
-          ? String(workspace.quality_sample_distribution)
-          : undefined,
-        rdepth: workspace.quality_rdepth !== undefined ? String(workspace.quality_rdepth) : undefined,
-      },
-    };
-  }
+  if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
@@ -1072,39 +1107,40 @@ async function applyActiveWorkspaceState(snapshot, options) {
   if (settings) applyWorkspaceSettings(settings);
 
   const wsScene = String((ws && ws.active_scene) || "").trim();
-  if (wsScene && hasSceneOption(wsScene)) {
+  const sceneFromSettings = settings ? String(settings.scene || "").trim() : "";
+  const effectiveScene = wsScene || (hasSceneOption(sceneFromSettings) ? sceneFromSettings : "");
+  if (effectiveScene && hasSceneOption(effectiveScene)) {
     const currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
-    const skipSceneReload = currentScene === wsScene
-      && String(opts.skipSceneReloadIfCurrent || "").trim() === wsScene;
-    const sceneChanged = currentScene !== wsScene;
+    const sceneChanged = currentScene !== effectiveScene;
+    const skipSceneReload = !sceneChanged
+      && String(opts.skipSceneReloadIfCurrent || "").trim() === effectiveScene;
     const previousScene = currentScene;
     const previousVariant = selectedSceneVariantValue();
     const previousCamera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
     try {
       if (sceneChanged) {
-        el.scene.value = wsScene;
-        setSceneBrowserSelectedFile(wsScene);
-        localStorage.setItem(LAST_SCENE_KEY, wsScene);
-        updateSceneDependencyPill(wsScene);
+        el.scene.value = effectiveScene;
+        setSceneBrowserSelectedFile(effectiveScene);
+        localStorage.setItem(LAST_SCENE_KEY, effectiveScene);
+        updateSceneDependencyPill(effectiveScene);
       }
       if (!skipSceneReload) {
-        await loadVariants(wsScene);
+        const wsVariant = String((ws && ws.active_variant) || "").trim()
+          || String(((workspaceRuntimeState(activeWorkspaceId)) || {}).activeVariant || "").trim();
+        const sourceData = await api.getSceneSource(effectiveScene);
+        await loadVariants(effectiveScene, wsVariant || undefined, sourceData && sourceData.source ? sourceData.source : "");
         const variantName = selectedSceneVariantValue();
         await Promise.all([
-          loadCameras(wsScene, variantName),
-          loadSceneSource(wsScene),
+          loadCameras(effectiveScene, variantName),
+          loadSceneSource(effectiveScene, sourceData),
         ]);
         if (visualEditor && editorViewMode === "visual") {
-          try {
-            await loadVisualSceneFromSelected();
-          } catch (err) {
-            appendLog(`visual load error: ${err.message}`);
-          }
+          loadVisualSceneFromSelected().catch((err) => appendLog(`visual load error: ${err.message}`));
         }
       }
       if (editorViewMode === "graph") renderSceneGraphView();
     } catch (err) {
-      appendLog(`workspace scene load error (${wsScene}): ${err.message}`);
+      appendLog(`workspace scene load error (${effectiveScene}): ${err.message}`);
       if (previousScene && hasSceneOption(previousScene)) {
         el.scene.value = previousScene;
         setSceneBrowserSelectedFile(previousScene);
@@ -1241,19 +1277,15 @@ function renderWorkspaceList(items) {
     const previewJob = lastJob;
     const previewUrl = buildWorkspacePreviewUrl(previewJob);
     if (previewUrl) {
-      const img = document.createElement("img");
-      img.loading = "lazy";
-      img.decoding = "async";
-      img.alt = `${title.textContent} render preview`;
-      img.onerror = () => {
-        img.remove();
-        if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
-          const emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
-          previewWrap.appendChild(emptyPreview);
-        }
-      };
-      img.src = previewUrl;
-      previewWrap.appendChild(img);
+      loadWorkspacePreviewCanvas(previewUrl, previewWrap, `${title.textContent} render preview`)
+        .then((canvas) => {
+          if (canvas) {
+            previewWrap.appendChild(canvas);
+          } else if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
+            const emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
+            previewWrap.appendChild(emptyPreview);
+          }
+        });
     } else if (!isRendering) {
       const emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
       previewWrap.appendChild(emptyPreview);
@@ -1380,6 +1412,7 @@ function renderWorkspaceList(items) {
 
 async function refreshWorkspaces() {
   if (!hasBackendMethod(api, "getWorkspaces")) return;
+  const genBeforeFetch = workspaceSwitchGen;
   const [payload, activeJobs] = await Promise.all([
     api.getWorkspaces(),
     Promise.resolve(getActiveJobsFromCache()),
@@ -1392,11 +1425,14 @@ async function refreshWorkspaces() {
   cacheWorkspaceSnapshots(sortedWorkspaceItems);
   const nextActive = String((payload && payload.active_workspace) || "").trim();
   let activeChanged = false;
-  if (nextActive && nextActive !== activeWorkspaceId) {
+  // Skip server-reported active workspace if an explicit switch happened during fetch —
+  // the server response is stale relative to what the client just requested.
+  if (nextActive && nextActive !== activeWorkspaceId && genBeforeFetch === workspaceSwitchGen) {
+    const wasEmpty = !activeWorkspaceId;
     syncGlobalsToWorkspaceRuntime();
     activeWorkspaceId = nextActive;
     syncWorkspaceRuntimeToGlobals();
-    activeChanged = true;
+    if (!wasEmpty) activeChanged = true;
   }
   updateWorkspaceActiveHint();
   updateWorkspaceCountHint(Array.isArray(sortedWorkspaceItems) ? sortedWorkspaceItems.length : 0);
@@ -1430,7 +1466,18 @@ async function switchActiveWorkspace(workspaceId) {
   const nextId = String(workspaceId || "").trim();
   if (!nextId || nextId === activeWorkspaceId) return;
   if (!hasBackendMethod(api, "setActiveWorkspace")) return;
-  await api.setActiveWorkspace(nextId);
-  await refreshWorkspaces();
+  const switchGen = ++workspaceSwitchGen;
+  const snapshot = await api.setActiveWorkspace(nextId);
+  if (switchGen !== workspaceSwitchGen) return; // superseded by a newer switch
+  syncGlobalsToWorkspaceRuntime();
+  activeWorkspaceId = nextId;
+  syncWorkspaceRuntimeToGlobals();
+  if (snapshot && snapshot.id) {
+    workspaceSnapshotById.set(nextId, snapshot);
+  }
+  updateWorkspaceActiveHint();
+  await applyActiveWorkspaceState(snapshot || workspaceSnapshotById.get(nextId) || null);
+  if (typeof syncRenderTabEnabled === "function") syncRenderTabEnabled();
+  refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
   appendLog(`workspace active=${nextId}`);
 }

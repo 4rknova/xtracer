@@ -90,15 +90,15 @@ int main(int argc, char **argv)
 		xtcore::render::context_t context;
         context.params = params;
         const char *variant_name = variant.empty() ? nullptr : variant.c_str();
-        if (!xtcore::io::scn::load(&(context.scene), scene_path.c_str(), &modifiers, variant_name)) {
-            if (context.scene.m_cameras.size() == 0) {
+        if (!xtcore::io::scn::load(context.scene.get(), scene_path.c_str(), &modifiers, variant_name)) {
+            if (context.scene->m_cameras.size() == 0) {
                 xtcore::Log::handle().post_error("no cameras found");
                 exit_code = 2;
             } else {
                 if (camera == HASH_ID_INVALID) {
-                    camera = context.scene.m_cameras.begin()->first;
+                    camera = context.scene->m_cameras.begin()->first;
                 }
-                if (!context.scene.get_camera(camera)) {
+                if (!context.scene->get_camera(camera)) {
                     xtcore::Log::handle().post_error("invalid active camera");
                     exit_code = 2;
                 } else {

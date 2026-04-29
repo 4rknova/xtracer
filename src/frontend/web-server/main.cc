@@ -22,6 +22,30 @@
 // Defined here; declared extern in request_logger_middleware.h
 bool g_web_verbose = false;
 
+// Custom Crow log handler: suppresses expected ECONNRESET/EPIPE noise that
+// Crow emits when a client disconnects abruptly mid-send.  These are normal
+// TCP events (browser tab closed, network drop) and do not indicate bugs.
+// All other messages pass through to Crow's default stderr handler.
+namespace {
+class filtered_log_handler_t : public crow::ILogHandler
+{
+public:
+    void log(std::string message, crow::LogLevel level) override
+    {
+        if (level == crow::LogLevel::Error) {
+            // "happened while sending buffers" — from do_write_sync on ECONNRESET.
+            // "Connection reset by peer" / "Broken pipe" — async send to dead socket.
+            if (message.find("happened while sending buffers") != std::string::npos) return;
+            if (message.find("Connection reset by peer")       != std::string::npos) return;
+            if (message.find("Broken pipe")                    != std::string::npos) return;
+        }
+        default_.log(std::move(message), level);
+    }
+private:
+    crow::CerrLogHandler default_;
+};
+} // namespace
+
 namespace {
 
 bool arg_eq(const char *arg, const char *name)
@@ -89,7 +113,6 @@ void print_startup_banner(const std::string &host,
     std::printf("██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗███████╗██║  ██║\n");
     std::printf("╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝  ╚═╝\n");
     std::printf("\n");
-    std::printf("[xtracer_web] startup\n");
     std::printf("  url:                    http://%s:%d\n", host.c_str(), port);
     std::printf("  host:                   %s\n", host.c_str());
     std::printf("  port:                   %d\n", port);
@@ -204,6 +227,8 @@ int main(int argc, char **argv)
     thread_policy.max_render_threads = render_thread_budget;
 
     WebApp app;
+    static filtered_log_handler_t filtered_log_handler;
+    crow::logger::setHandler(&filtered_log_handler);
     crow::logger::setLogLevel(crow::LogLevel::Warning);
 
     xtracer::frontend::web::setup_routes(app, jobs, workspaces, &gallery, scene_dir, web_root, thread_policy);
@@ -219,7 +244,18 @@ int main(int argc, char **argv)
 
     app.bindaddr(host).port(port).multithreaded().run();
 
+    std::printf("\nShutting down..\n");
     xtracer::frontend::web::backend_log_t::handle().add("info", "listen stopped");
+
+    {
+        const size_t active = jobs.get_active_render_count();
+        if (active > 0) {
+            std::printf("Stopping %zu active render(s)..\n", active);
+        }
+    }
+    jobs.shutdown();
+    std::printf("Shutdown complete..\n");
+
     xtcore::Log::handle().callback(nullptr, nullptr);
     xtcore::deinit();
     return 0;

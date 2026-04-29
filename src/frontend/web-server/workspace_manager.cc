@@ -54,14 +54,11 @@ std::string workspace_manager_t::create_locked(const std::string &name,
     ws.id = ss.str();
     ws.name = trimmed_or_default_name(name, "Workspace " + std::to_string(id));
     ws.active_scene.clear();
+    ws.active_variant.clear();
     ws.active_job_id.clear();
     ws.last_job_id.clear();
     ws.scene_drafts.clear();
     ws.scene_draft_order.clear();
-    ws.quality_samples = 1;
-    ws.quality_aa = 1;
-    ws.quality_sample_distribution = "grid";
-    ws.quality_rdepth = 15;
     ws.settings_json = "{}";
     ws.owner_client_id = owner_client_id;
     ws.updated_ms = now_ms();
@@ -271,14 +268,11 @@ bool workspace_manager_t::list(const std::string &client_id,
         snap.id = ws.id;
         snap.name = ws.name;
         snap.active_scene = ws.active_scene;
+        snap.active_variant = ws.active_variant;
         snap.active_job_id = ws.active_job_id;
         snap.last_job_id = ws.last_job_id;
         snap.draft_count = ws.scene_drafts.size();
         snap.client_count = client_counts[ws.id];
-        snap.quality_samples = ws.quality_samples;
-        snap.quality_aa = ws.quality_aa;
-        snap.quality_sample_distribution = ws.quality_sample_distribution;
-        snap.quality_rdepth = ws.quality_rdepth;
         snap.settings_json = ws.settings_json;
         snap.is_owned_by_client = !client_id.empty() && (ws.owner_client_id == client_id);
         snap.updated_ms = ws.updated_ms;
@@ -336,39 +330,6 @@ bool workspace_manager_t::get_scene_draft(const std::string &workspace_id,
     return true;
 }
 
-bool workspace_manager_t::set_quality_settings(const std::string &workspace_id,
-                                               size_t samples,
-                                               size_t aa,
-                                               const std::string &sample_distribution,
-                                               size_t rdepth)
-{
-    std::lock_guard<std::mutex> lock(mut_);
-    auto it = workspaces_.find(workspace_id);
-    if (it == workspaces_.end()) return false;
-    it->second.quality_samples = samples;
-    it->second.quality_aa = aa;
-    it->second.quality_sample_distribution = sample_distribution;
-    it->second.quality_rdepth = rdepth;
-    it->second.updated_ms = now_ms();
-    return true;
-}
-
-bool workspace_manager_t::get_quality_settings(const std::string &workspace_id,
-                                               size_t &samples_out,
-                                               size_t &aa_out,
-                                               std::string &sample_distribution_out,
-                                               size_t &rdepth_out)
-{
-    std::lock_guard<std::mutex> lock(mut_);
-    auto it = workspaces_.find(workspace_id);
-    if (it == workspaces_.end()) return false;
-    samples_out = it->second.quality_samples;
-    aa_out = it->second.quality_aa;
-    sample_distribution_out = it->second.quality_sample_distribution;
-    rdepth_out = it->second.quality_rdepth;
-    return true;
-}
-
 workspace_manager_t::store_result_t workspace_manager_t::set_settings_json(const std::string &workspace_id,
                                                                            const std::string &settings_json)
 {
@@ -397,6 +358,42 @@ void workspace_manager_t::set_active_scene(const std::string &workspace_id, cons
     if (it == workspaces_.end()) return;
     it->second.active_scene = scene_name;
     it->second.updated_ms = now_ms();
+}
+
+void workspace_manager_t::set_active_variant(const std::string &workspace_id, const std::string &variant_name)
+{
+    std::lock_guard<std::mutex> lock(mut_);
+    auto it = workspaces_.find(workspace_id);
+    if (it == workspaces_.end()) return;
+    it->second.active_variant = variant_name;
+    it->second.updated_ms = now_ms();
+}
+
+bool workspace_manager_t::get_snapshot(const std::string &workspace_id,
+                                       const std::string &client_id,
+                                       workspace_snapshot_t &out)
+{
+    std::lock_guard<std::mutex> lock(mut_);
+    auto it = workspaces_.find(workspace_id);
+    if (it == workspaces_.end()) return false;
+    const workspace_t &ws = it->second;
+    out.id = ws.id;
+    out.name = ws.name;
+    out.active_scene = ws.active_scene;
+    out.active_variant = ws.active_variant;
+    out.active_job_id = ws.active_job_id;
+    out.last_job_id = ws.last_job_id;
+    out.draft_count = ws.scene_drafts.size();
+    out.settings_json = ws.settings_json;
+    out.is_owned_by_client = !client_id.empty() && (ws.owner_client_id == client_id);
+    out.updated_ms = ws.updated_ms;
+
+    size_t client_count = 0;
+    for (auto cit = clients_.begin(); cit != clients_.end(); ++cit) {
+        if (cit->second.workspace_id == workspace_id) ++client_count;
+    }
+    out.client_count = client_count;
+    return true;
 }
 
 void workspace_manager_t::mark_job_started(const std::string &workspace_id, const std::string &job_id)

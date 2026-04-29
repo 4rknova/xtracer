@@ -223,15 +223,6 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }
 
-bool encode_png_memory(nimg::Pixmap &pixmap, std::vector<unsigned char> &out, std::string &error)
-{
-    if (nimg::io::save::png_memory(pixmap, out) != 0) {
-        error = "failed to encode png";
-        return false;
-    }
-    return true;
-}
-
 size_t progressive_pass_sample_step(size_t total_samples)
 {
     if (total_samples <= 4) return 1;
@@ -465,13 +456,18 @@ bool load_scene_into_prepared(const render_request_t &request,
                               prepared_render_t &prepared,
                               std::string &error)
 {
+    if (request.preloaded_scene) {
+        prepared.context.scene = request.preloaded_scene;
+        return true;
+    }
+
     if (request.scene_path.empty()) {
         error = "scene path is empty";
         return false;
     }
 
     const char *variant_name = request.variant.empty() ? nullptr : request.variant.c_str();
-    int load_err = xtcore::io::scn::load(&(prepared.context.scene), request.scene_path.c_str(), nullptr, variant_name);
+    int load_err = xtcore::io::scn::load(prepared.context.scene.get(), request.scene_path.c_str(), nullptr, variant_name);
     if (load_err) {
         error = "failed to load scene";
         return false;
@@ -489,10 +485,10 @@ bool configure_prepared_render(const render_request_t &request,
         prepared.camera_guard.reset(xtcore::pool::str::add(request.camera.c_str()));
         prepared.context.params.camera = prepared.camera_guard.value;
     } else {
-        prepared.context.params.camera = find_camera_id_by_name(prepared.context.scene, prepared.context.scene.m_default_camera);
+        prepared.context.params.camera = find_camera_id_by_name(*prepared.context.scene, prepared.context.scene->m_default_camera);
         if (prepared.context.params.camera == HASH_ID_INVALID) {
-            auto first_cam = prepared.context.scene.m_cameras.begin();
-            if (first_cam != prepared.context.scene.m_cameras.end()) {
+            auto first_cam = prepared.context.scene->m_cameras.begin();
+            if (first_cam != prepared.context.scene->m_cameras.end()) {
                 prepared.context.params.camera = (*first_cam).first;
             } else {
                 prepared.context.params.camera = HASH_ID_INVALID;
@@ -501,14 +497,14 @@ bool configure_prepared_render(const render_request_t &request,
     }
 
     if (prepared.context.params.camera == HASH_ID_INVALID ||
-        !prepared.context.scene.get_camera(prepared.context.params.camera)) {
+        !prepared.context.scene->get_camera(prepared.context.params.camera)) {
         error = "no valid camera found";
         return false;
     }
 
     if (request.camera_override.enabled) {
         prepared.context.transient_camera = clone_override_camera(
-            prepared.context.scene.get_camera(prepared.context.params.camera),
+            prepared.context.scene->get_camera(prepared.context.params.camera),
             request.camera_override,
             error);
         if (!prepared.context.transient_camera) return false;
@@ -633,11 +629,6 @@ render_result_t render_prepared_scene_to_png(const render_request_t &request,
     if (encode_output) {
         nimg::Pixmap framebuffer;
         xtcore::render::assemble(framebuffer, context);
-        nimg::Pixmap ldr_framebuffer = framebuffer;
-        xtcore::tonemapping::apply(ldr_framebuffer);
-        if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
-            return result;
-        }
         result.framebuffer = std::move(framebuffer);
     }
 
@@ -686,7 +677,6 @@ render_result_t::render_result_t()
     , aborted(false)
     , error()
     , framebuffer()
-    , image_png()
     , tiles_done(0)
     , tiles_total(0)
     , elapsed_ms(0.0)
@@ -950,11 +940,6 @@ render_result_t render_scene_to_png(const render_request_t &request,
             }
         }
 
-        nimg::Pixmap ldr_framebuffer = accum_fb;
-        xtcore::tonemapping::apply(ldr_framebuffer);
-        if (!encode_png_memory(ldr_framebuffer, result.image_png, result.error)) {
-            return result;
-        }
         result.framebuffer = std::move(accum_fb);
         result.tiles_total = global_tiles_total;
         result.tiles_done = global_tiles_total;

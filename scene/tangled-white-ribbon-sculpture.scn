@@ -1,0 +1,283 @@
+title       = Tangled White Ribbon Sculpture
+description = White studio sculpture built from custom spline-following tube curves.
+version     = 1.1
+default_camera = hero
+
+environment = {
+    type = color
+    config = { value = col3(0.0,0.0,0.0) }
+}
+
+camera = {
+    hero = {
+        type     = thin-lens
+        fov      = 38
+        position = vec3(3.7,2.35,-5.3)
+        target   = vec3(0.2,1.15,0.25)
+        up       = vec3(0,1,0)
+        flength  = 5.6
+        aperture = 0.015
+    }
+
+    close = {
+        type     = thin-lens
+        fov      = 32
+        position = vec3(2.4,1.9,-3.8)
+        target   = vec3(0.0,1.25,0.05)
+        up       = vec3(0,1,0)
+        flength  = 4.1
+        aperture = 0.02
+    }
+}
+
+geometry = {
+    floor_panel = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers  = {
+            scale       = vec3(7.2,1.0,4.4)
+            translation = vec3(0.0,0.0,0.2)
+        }
+    }
+
+    back_panel = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers  = {
+            scale       = vec3(7.2,1.0,3.2)
+            rotation    = vec3(90,0,0)
+            translation = vec3(0.0,1.6,2.45)
+        }
+    }
+
+    crown_sweep = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 170
+        profile_resolution = 18
+        radius             = 0.075
+        closed             = true
+        cap_ends           = false
+        spline = {
+            p0 = vec3(-0.85,1.46,-0.18)
+            p1 = vec3(-0.30,1.92,-0.42)
+            p2 = vec3(0.72,1.75,-0.08)
+            p3 = vec3(1.03,1.28,0.36)
+            p4 = vec3(0.43,0.92,0.68)
+            p5 = vec3(-0.54,0.88,0.32)
+            p6 = vec3(-1.02,1.14,-0.16)
+        }
+    }
+
+    front_orbit = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 180
+        profile_resolution = 18
+        radius             = 0.085
+        closed             = true
+        cap_ends           = false
+        spline = {
+            p0 = vec3(-1.34,0.90,-0.62)
+            p1 = vec3(-0.64,1.25,-0.82)
+            p2 = vec3(0.40,1.43,-0.66)
+            p3 = vec3(1.18,1.33,-0.18)
+            p4 = vec3(0.84,1.02,0.34)
+            p5 = vec3(-0.20,0.78,0.38)
+            p6 = vec3(-1.08,0.72,-0.12)
+        }
+    }
+
+    high_loop = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 150
+        profile_resolution = 16
+        radius             = 0.065
+        closed             = true
+        cap_ends           = false
+        spline = {
+            p0 = vec3(-0.26,1.22,-0.16)
+            p1 = vec3(-0.58,1.90,0.06)
+            p2 = vec3(0.18,2.18,0.34)
+            p3 = vec3(0.77,1.82,0.18)
+            p4 = vec3(0.56,1.18,-0.12)
+            p5 = vec3(0.05,0.98,-0.28)
+        }
+    }
+
+    right_wrap = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 155
+        profile_resolution = 16
+        radius             = 0.07
+        closed             = false
+        spline = {
+            p0 = vec3(0.86,0.42,0.02)
+            p1 = vec3(0.78,0.90,0.06)
+            p2 = vec3(1.18,1.22,-0.24)
+            p3 = vec3(0.86,1.62,-0.42)
+            p4 = vec3(0.12,1.78,-0.22)
+            p5 = vec3(-0.40,1.48,0.15)
+            p6 = vec3(0.12,1.14,0.58)
+        }
+    }
+
+    left_nest = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 135
+        profile_resolution = 14
+        radius             = 0.052
+        closed             = true
+        cap_ends           = false
+        spline = {
+            p0 = vec3(-0.90,1.06,-0.38)
+            p1 = vec3(-0.78,1.44,-0.48)
+            p2 = vec3(-0.26,1.58,-0.28)
+            p3 = vec3(0.06,1.36,0.10)
+            p4 = vec3(-0.26,1.02,0.26)
+            p5 = vec3(-0.78,0.86,0.02)
+        }
+    }
+
+    lower_tangle = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 130
+        profile_resolution = 14
+        radius             = 0.058
+        closed             = false
+        spline = {
+            p0 = vec3(-0.56,0.58,-0.18)
+            p1 = vec3(-0.78,0.86,-0.48)
+            p2 = vec3(-0.26,1.02,-0.50)
+            p3 = vec3(0.36,0.90,-0.22)
+            p4 = vec3(0.72,0.62,0.14)
+            p5 = vec3(0.58,0.34,0.22)
+        }
+    }
+
+    vertical_strand_a = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 80
+        profile_resolution = 12
+        radius             = 0.06
+        spline = {
+            p0 = vec3(-0.16,0.03,0.02)
+            p1 = vec3(-0.20,0.46,0.06)
+            p2 = vec3(-0.10,0.92,0.10)
+            p3 = vec3(0.02,1.34,0.04)
+            p4 = vec3(-0.08,1.70,-0.18)
+        }
+    }
+
+    vertical_strand_b = {
+        type               = mesh
+        source             = gen(tube_curve)
+        resolution         = 80
+        profile_resolution = 12
+        radius             = 0.055
+        spline = {
+            p0 = vec3(0.18,0.02,0.14)
+            p1 = vec3(0.22,0.48,0.18)
+            p2 = vec3(0.12,0.84,0.18)
+            p3 = vec3(0.34,1.22,0.04)
+            p4 = vec3(0.26,1.66,-0.12)
+        }
+    }
+
+    core_mass = {
+        type       = mesh
+        source     = gen(hairball)
+        resolution = 48
+        seed       = 8042
+        radius     = 0.78
+        fibers     = 900
+        modifiers  = {
+            scale       = vec3(1.08,0.72,0.82)
+            rotation    = vec3(8,25,-4)
+            translation = vec3(0.0,1.18,0.05)
+        }
+    }
+
+    key_light_geo  = { type = sphere, position = vec3(-1.8,4.1,-2.8), radius = 0.85 }
+    fill_light_geo = { type = sphere, position = vec3(3.8,2.7,-1.3),  radius = 1.7 }
+    rim_light_geo  = { type = sphere, position = vec3(0.2,3.8,2.2),   radius = 0.65 }
+}
+
+material = {
+    panel_gray = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.56,0.56,0.52) } }
+            scalars  = { metallic = 0.0 roughness = 0.62 }
+        }
+    }
+
+    ribbon_white = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.93,0.93,0.88) } }
+            scalars  = { metallic = 0.0 roughness = 0.24 clearcoat = 0.20 clearcoat_roughness = 0.12 }
+        }
+    }
+
+    inner_warm_white = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.82,0.81,0.72) } }
+            scalars  = { metallic = 0.0 roughness = 0.38 }
+        }
+    }
+
+    key_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(24.0,22.0,18.5) }
+            }
+        }
+    }
+
+    fill_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(4.0,4.4,5.2) }
+            }
+        }
+    }
+
+    rim_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(8.0,7.4,6.4) }
+            }
+        }
+    }
+}
+
+object = {
+    floor_panel = { geometry = floor_panel, material = panel_gray }
+    back_panel  = { geometry = back_panel,  material = panel_gray }
+
+    core_mass         = { geometry = core_mass,         material = inner_warm_white }
+    crown_sweep       = { geometry = crown_sweep,       material = ribbon_white }
+    front_orbit       = { geometry = front_orbit,       material = ribbon_white }
+    high_loop         = { geometry = high_loop,         material = ribbon_white }
+    right_wrap        = { geometry = right_wrap,        material = ribbon_white }
+    left_nest         = { geometry = left_nest,         material = ribbon_white }
+    lower_tangle      = { geometry = lower_tangle,      material = ribbon_white }
+    vertical_strand_a = { geometry = vertical_strand_a, material = ribbon_white }
+    vertical_strand_b = { geometry = vertical_strand_b, material = ribbon_white }
+
+    key_light  = { geometry = key_light_geo,  material = key_light }
+    fill_light = { geometry = fill_light_geo, material = fill_light }
+    rim_light  = { geometry = rim_light_geo,  material = rim_light }
+}

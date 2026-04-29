@@ -377,10 +377,10 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray,
         }
 
         xtcore::hit_record_t hit;
-        if (!ctx->scene.intersection(ray, hit)) return;
+        if (!ctx->scene->intersection(ray, hit)) return;
         hit.ior = ior;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(hit.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object);
         if (!mat) return;
 
         if (mat->is_emissive()) return;
@@ -450,14 +450,14 @@ void Integrator::build_photon_map()
 
     nmath::scalar_t cdf = 0.0;
     nmath::scalar_t guide_cdf = 0.0;
-    for (auto it = ctx->scene.m_objects.begin(); it != ctx->scene.m_objects.end(); ++it) {
+    for (auto it = ctx->scene->m_objects.begin(); it != ctx->scene->m_objects.end(); ++it) {
         const HASH_ID obj_id = (*it).first;
         const xtcore::asset::Object *obj = (*it).second;
         if (!obj) continue;
 
-        auto sit = ctx->scene.m_surface.find(obj->surface);
-        auto mit = ctx->scene.m_materials.find(obj->material);
-        if (sit == ctx->scene.m_surface.end() || mit == ctx->scene.m_materials.end()) continue;
+        auto sit = ctx->scene->m_surface.find(obj->surface);
+        auto mit = ctx->scene->m_materials.find(obj->material);
+        if (sit == ctx->scene->m_surface.end() || mit == ctx->scene->m_materials.end()) continue;
 
         const xtcore::asset::ISurface *surface = (*sit).second;
         const xtcore::asset::IMaterial *material = (*mit).second;
@@ -814,13 +814,13 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
 
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit;
-        if (!ctx->scene.intersection(ray, hit)) {
-            radiance += throughput * ctx->scene.sample_environment(ray.direction);
+        if (!ctx->scene->intersection(ray, hit)) {
+            radiance += throughput * ctx->scene->sample_environment(ray.direction);
             break;
         }
 
         hit.ior = ior;
-        const xtcore::asset::IMaterial *mat = ctx->scene.get_material(hit.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object);
         if (!mat) break;
 
         if (mat->is_emissive()) {

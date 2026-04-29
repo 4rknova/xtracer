@@ -1,9 +1,12 @@
 #include <cstdio>
+#include <cstring>
 #include <deque>
 #include <fstream>
 #include <list>
+#include <vector>
 #include "util.h"
 #include "ncf.h"
+#include "expreval.h"
 
 namespace ncf {
 
@@ -149,6 +152,39 @@ void NCF::release()
 	m_p_symbols.clear();
 }
 
+static void expand_math(std::string &s)
+{
+    for (;;) {
+        const size_t open = s.find("$(");
+        if (open == std::string::npos) break;
+
+        // Find the matching closing ')' respecting nested parentheses.
+        size_t depth = 1;
+        size_t pos   = open + 2;
+        for (; pos < s.size() && depth > 0; ++pos) {
+            if      (s[pos] == '(') ++depth;
+            else if (s[pos] == ')') --depth;
+        }
+        if (depth != 0) break; // unmatched — leave as-is
+
+        const size_t close = pos - 1; // index of the matching ')'
+        std::string inner  = s.substr(open + 2, close - open - 2);
+
+        // Evaluate the inner expression.
+        std::vector<char> buf(inner.size() + 1);
+        std::memcpy(buf.data(), inner.c_str(), buf.size());
+        const result_t res = eval(buf.data());
+
+        char formatted[64];
+        if (res.status == STATUS_OK)
+            std::snprintf(formatted, sizeof(formatted), "%.10g", res.number);
+        else
+            std::snprintf(formatted, sizeof(formatted), "0"); // warn silently
+
+        s.replace(open, close - open + 1, formatted);
+    }
+}
+
 int NCF::parse(error_t *error)
 {
 	// Stack of groups for parsing.
@@ -278,6 +314,7 @@ int NCF::parse(error_t *error)
                     for (std::list<NCF*>::reverse_iterator it = group_stack.rbegin(); it != end; ++it) {
                         (*it)->expand_symbol(m_p_symbols, value);
                     }
+                    expand_math(value);
 
                     if (group_stack.front()->query_group(name.c_str())) return err(error, ERROR_CODE_AMBIGUOUS_PROPERTY, current.first);
                     group_stack.front()->m_p_symbols[name] = value;

@@ -31,17 +31,17 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
     HASH_ID current_medium_object_id = HASH_ID_INVALID;
     nmath::scalar_t current_medium_exit = INFINITY;
     const xtcore::asset::medium::IMedium *current_medium =
-        xtcore::medium::find_containing_medium(ctx->scene, ray.origin, current_medium_object_id, current_medium_exit, ray.direction);
+        xtcore::medium::find_containing_medium(*ctx->scene, ray.origin, current_medium_object_id, current_medium_exit, ray.direction);
 
     for (size_t bounce = 0; bounce < depth; ++bounce) {
         xtcore::hit_record_t hit_record;
-        const bool hit = ctx->scene.intersection(ray, hit_record);
+        const bool hit = ctx->scene->intersection(ray, hit_record);
         const nmath::scalar_t t_surface = hit ? hit_record.t : INFINITY;
 
         nmath::scalar_t t_exit = INFINITY;
         const xtcore::asset::medium::IMedium *medium = current_medium;
         if (medium) {
-            if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
+            if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, t_exit)) {
                 current_medium_object_id = HASH_ID_INVALID;
                 current_medium_exit = INFINITY;
                 medium = 0;
@@ -81,14 +81,14 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         if (!hit) {
-            radiance += throughput * ctx->scene.sample_environment(ray.direction);
+            radiance += throughput * ctx->scene->sample_environment(ray.direction);
             break;
         }
 
         hit_record.ior = ior;
-        const xtcore::asset::IMaterial *m = ctx->scene.get_material(hit_record.id_object);
+        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object);
         if (!m) break;
-        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene.get_object_medium(hit_record.id_object);
+        const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene->get_object_medium(hit_record.id_object);
         const xtcore::asset::material::Boundary *boundary = dynamic_cast<const xtcore::asset::material::Boundary *>(m);
 
         xtcore::hit_result_t next_hit;
@@ -103,7 +103,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
             if (medium_side < (nmath::scalar_t)0.0) {
                 current_medium_object_id = hit_record.id_object;
                 current_medium = boundary_medium;
-                if (!xtcore::medium::distance_to_medium_boundary(ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
+                if (!xtcore::medium::distance_to_medium_boundary(*ctx->scene, current_medium_object_id, ray.origin, ray.direction, current_medium_exit)) {
                     current_medium_object_id = HASH_ID_INVALID;
                     current_medium_exit = INFINITY;
                     current_medium = 0;

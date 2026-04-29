@@ -36,7 +36,7 @@ struct params_t
 
 struct context_t
 {
-	Scene     scene;
+	std::shared_ptr<Scene> scene;
 	Tileset   tiles;
     params_t  params;
     std::unique_ptr<xtcore::asset::ICamera> transient_camera;

@@ -47,6 +47,7 @@
 #define XTPROTO_LTRL_SHELL_SPIRAL	"shell_spiral"		/* string     */ /* Shell spiral */
 #define XTPROTO_LTRL_ROCK			"rock"				/* string     */ /* Rock */
 #define XTPROTO_LTRL_CHAIN_LINK		"chain_link"		/* string     */ /* Chain links */
+#define XTPROTO_LTRL_TUBE_CURVE     "tube_curve"        /* string     */ /* Tube swept along a curve */
 #define XTPROTO_LTRL_LATHE			"lathe"				/* string     */ /* Lathe */
 #define XTPROTO_LTRL_TERRAIN        "terrain"           /* string     */ /* Terrain */
 #define XTPROTO_LTRL_DRAPED_CLOTH_STRIP "draped_cloth_strip" /* string */ /* Draped cloth strip */
@@ -182,6 +183,7 @@
 #define XTPROTO_PROP_PROFILE        "profile"           /* group      */ /* Lathe profile */
 #define XTPROTO_PROP_CAP_ENDS       "cap_ends"          /* bool       */ /* Cap ends */
 #define XTPROTO_PROP_SPLINE         "spline"            /* group      */ /* Spline */
+#define XTPROTO_PROP_CLOSED         "closed"            /* bool       */ /* Closed curve */
 #define XTPROTO_PROP_END_A			"end_a"				/* scalar_t   */ /* End a */
 #define XTPROTO_PROP_END_B			"end_b"				/* scalar_t   */ /* End b */
 #define XTPROTO_LTRL_FLAT           "flat"              /* string     */ /* Flat profile */
@@ -301,6 +303,7 @@
 #define XTPROTO_PROP_PAVEMENT_HEIGHT       "pavement_height"       /* scalar_t   */ /* Raised kerb height */
 #define XTPROTO_PROP_PAVEMENT_WIDTH        "pavement_width"        /* scalar_t   */ /* Pavement strip width into road */
 #define XTPROTO_PROP_DISPLACEMENT_SCALE    "displacement_scale"    /* scalar_t   */ /* Max radial displacement in world-space units (radius-independent) */
+#define XTPROTO_PROP_DISPLACEMENT_SMOOTH   "displacement_smooth"   /* int        */ /* Laplacian smoothing passes on sampled heights before displacement */
 
 /* Meshgroup geometry */
 #define XTPROTO_LTRL_MESHGROUP       "meshgroup"         /* string     */ /* Multi-file mesh group */

@@ -1,5 +1,31 @@
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
+function isRgbaPreviewUrl(url) {
+  return String(url || "").includes("/runtime_texture");
+}
+
+async function mountRgbaPreviewCanvas(url, className, altLabel) {
+  const canvas = document.createElement("canvas");
+  if (className) canvas.className = className;
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", altLabel || "texture preview");
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      const w = parseInt(res.headers.get("X-XTracer-Width") || "0", 10);
+      const h = parseInt(res.headers.get("X-XTracer-Height") || "0", 10);
+      if (w && h && buf.byteLength === w * h * 4) {
+        canvas.width  = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.putImageData(new ImageData(new Uint8ClampedArray(buf), w, h), 0, 0);
+      }
+    }
+  } catch (_) { /* leave canvas blank on error */ }
+  return canvas;
+}
+
 function formatGraphNumeric(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return String(v ?? "-");
@@ -552,12 +578,17 @@ function buildNodeElement(n) {
         div.appendChild(rgbRow);
       }
     } else if (n.samplerPreviewUrl) {
-      const img = document.createElement("img");
-      img.className = "ng-node-preview-img ng-node-preview-full";
-      img.src     = n.samplerPreviewUrl;
-      img.alt     = n.label || n.id;
-      img.loading = "lazy";
-      div.appendChild(img);
+      if (isRgbaPreviewUrl(n.samplerPreviewUrl)) {
+        mountRgbaPreviewCanvas(n.samplerPreviewUrl, "ng-node-preview-img ng-node-preview-full", n.label || n.id)
+          .then((canvas) => div.appendChild(canvas));
+      } else {
+        const img = document.createElement("img");
+        img.className = "ng-node-preview-img ng-node-preview-full";
+        img.src     = n.samplerPreviewUrl;
+        img.alt     = n.label || n.id;
+        img.loading = "lazy";
+        div.appendChild(img);
+      }
     }
   }
 
@@ -619,12 +650,17 @@ function buildNodeElement(n) {
       const previewsDiv = document.createElement("div");
       previewsDiv.className = "ng-node-previews";
       previews.forEach((p) => {
-        const img = document.createElement("img");
-        img.className = "ng-node-preview-img";
-        img.src     = p.url  || "";
-        img.alt     = p.name || "texture";
-        img.loading = "lazy";
-        previewsDiv.appendChild(img);
+        if (isRgbaPreviewUrl(p.url)) {
+          mountRgbaPreviewCanvas(p.url, "ng-node-preview-img", p.name || "texture")
+            .then((canvas) => previewsDiv.appendChild(canvas));
+        } else {
+          const img = document.createElement("img");
+          img.className = "ng-node-preview-img";
+          img.src     = p.url  || "";
+          img.alt     = p.name || "texture";
+          img.loading = "lazy";
+          previewsDiv.appendChild(img);
+        }
       });
       div.appendChild(previewsDiv);
     }

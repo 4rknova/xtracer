@@ -52,7 +52,7 @@ int main()
     cam->up = nmath::Vector3f(0.0f, 1.0f, 0.0f);
     cam->fov = 45.0f;
     const HASH_UINT64 cam_id = add("rt_emissive_cam");
-    ctx.scene.m_cameras[cam_id] = cam;
+    ctx.scene->m_cameras[cam_id] = cam;
     ctx.params.camera = cam_id;
 
     xtcore::surface::Triangle *tri = new xtcore::surface::Triangle();
@@ -61,7 +61,7 @@ int main()
     tri->v[2] = nmath::Vector3f(0.0f, 1.2f, 3.0f);
     tri->calc_aabb();
     const HASH_UINT64 geo_id = add("rt_emissive_tri");
-    ctx.scene.m_surface[geo_id] = tri;
+    ctx.scene->m_surface[geo_id] = tri;
 
     xtcore::asset::material::Emissive *mat = new xtcore::asset::material::Emissive();
     xtcore::sampler::SolidColor *emissive = new xtcore::sampler::SolidColor();
@@ -69,18 +69,18 @@ int main()
     emissive->set(white);
     mat->add_sampler("emissive", emissive);
     const HASH_UINT64 mat_id = add("rt_emissive_mat");
-    ctx.scene.m_materials[mat_id] = mat;
+    ctx.scene->m_materials[mat_id] = mat;
 
     xtcore::asset::Object *obj = new xtcore::asset::Object();
     obj->surface = geo_id;
     obj->material = mat_id;
     const HASH_UINT64 obj_id = add("rt_emissive_obj");
-    ctx.scene.m_objects[obj_id] = obj;
+    ctx.scene->m_objects[obj_id] = obj;
 
     xtcore::sampler::SolidColor *env = new xtcore::sampler::SolidColor();
     nimg::ColorRGBf black(0.0f, 0.0f, 0.0f);
     env->set(black);
-    ctx.scene.m_environment = env;
+    ctx.scene->m_environment = env;
 
     ctx.init();
 

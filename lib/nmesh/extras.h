@@ -30,6 +30,7 @@ void rock(object_t *obj, size_t resolution = 48, int seed = 1337, float radius =
 void terrain(object_t *obj, size_t resolution = 128, int seed = 1337, const nmath::Vector3f &dimensions = nmath::Vector3f(8.0f, 1.5f, 8.0f), float noise_scale = 2.0f, size_t octaves = 5, float lacunarity = 2.0f, float gain = 0.5f);
 void draped_cloth_strip(object_t *obj, size_t resolution = 96, const nmath::Vector3f &dimensions = nmath::Vector3f(2.0f, 0.9f, 3.2f), float folds = 3.0f, float edge_lift = 0.18f, float curl = 0.28f, float taper = 0.12f, float sway = 0.20f, float asymmetry = 0.0f, float pinned = 0.55f);
 void chain_link(object_t *obj, size_t resolution = 64, size_t count = 6, float major_radius = 0.55f, float minor_radius = 0.16f, float spacing = 1.05f, const std::vector<nmath::Vector3f> &spline = std::vector<nmath::Vector3f>());
+void tube_curve(object_t *obj, const std::vector<nmath::Vector3f> &spline, size_t resolution = 64, size_t profile_resolution = 12, float radius = 0.08f, bool closed = false, bool cap_ends = true);
 void lathe(object_t *obj, const std::vector<nmath::Vector2f> &profile, size_t resolution = 64, bool cap_ends = true);
 void gear(object_t *obj, size_t resolution = 32, size_t tooth_count = 12, float tooth_depth = 0.1f, float inner_radius = 0.2f, float outer_radius = 0.5f, float height = 0.2f);
 void spring(object_t *obj, size_t resolution = 32, float coils = 6.0f, float wire_radius = 0.05f, float spring_radius = 0.3f, float height = 1.2f);
