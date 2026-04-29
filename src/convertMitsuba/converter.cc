@@ -179,6 +179,7 @@ class Converter {
     int shape_count_ = 0;
     int mat_count_   = 0;
     std::unordered_set<std::string> emitted_mats_;
+    std::unordered_set<std::string> emitted_media_;
     std::vector<ResourceEntry>* resources_ = nullptr;
 
     // ── defaults & ref resolution ─────────────────────────────────────────────
@@ -469,12 +470,39 @@ class Converter {
                 }
 
                 if (ttype == "checkerboard") {
-                    Vec3 a = get_color(node, "color0", {0.4f,0.4f,0.4f});
-                    Vec3 b = get_color(node, "color1", {0.2f,0.2f,0.2f});
+                    // colors are swapped due to different convention between Mitsuba 3 and xtracer
+                    // so swap them here to produce the same visible result with the same default colors.
+                    Vec3 a = get_color(node, "color1", {0.4f,0.4f,0.4f});
+                    Vec3 b = get_color(node, "color0", {0.2f,0.2f,0.2f});
+                    float uscale = 1.0f, vscale = 1.0f;
+                    // Mitsuba 3: <transform name="to_uv"><scale x="N" y="N"/></transform>
+                    // Mitsuba 3 rectangle UV is [0,1], so scale maps directly.
+                    auto to_uv = named(node, "to_uv");
+                    if (to_uv) {
+                        for (auto c : to_uv.children()) {
+                            if (strcmp(c.name(), "scale") != 0) continue;
+                            std::string sv = c.attribute("value").value();
+                            if (!sv.empty()) {
+                                float v = 1.f;
+                                if (std::sscanf(sv.c_str(), "%f", &v) == 1) uscale = vscale = v;
+                            } else {
+                                if (c.attribute("x")) uscale = std::stof(c.attribute("x").value()) * 2.0;
+                                if (c.attribute("y")) vscale = std::stof(c.attribute("y").value()) * 2.0f;
+                            }
+                        }
+                    } else {
+                        // Mitsuba 0.5/0.6: uscale / vscale float params.
+                        // Rectangle UV in Mitsuba 0.5 spans [-1,1], xtracer gen(plane) spans [0,1],
+                        // so multiply by 2 to produce the same visible tile count.
+                        uscale = get_float(node, "uscale", 1.0f) * 1.0f;
+                        vscale = get_float(node, "vscale", 1.0f) * 1.0f;
+                    }
                     w.begin(key);
                     w.kv("type", "checker");
-                    w.inline_block("a", {{"type","color"}, {"value", col3(a.x, a.y, a.z)}});
-                    w.inline_block("b", {{"type","color"}, {"value", col3(b.x, b.y, b.z)}});
+                    w.kv("a", col3(a.x, a.y, a.z));
+                    w.kv("b", col3(b.x, b.y, b.z));
+                    if (uscale != 1.0f) w.kv("scale_u", ff(uscale));
+                    if (vscale != 1.0f) w.kv("scale_v", ff(vscale));
                     w.end();
                     return true;
                 }
@@ -773,9 +801,9 @@ class Converter {
 
     // ── shape → geometry + material ──────────────────────────────────────────
 
-    struct ShapeOut { std::string geo_name, mat_name; };
+    struct ShapeOut { std::string geo_name, mat_name, med_name, ext_med_name; };
 
-    ShapeOut emit_shape(NCFWriter& geo_w, NCFWriter& mat_w, pugi::xml_node shape) {
+    ShapeOut emit_shape(NCFWriter& geo_w, NCFWriter& mat_w, NCFWriter& med_w, pugi::xml_node shape) {
         std::string type = shape.attribute("type").value();
         std::string id   = shape.attribute("id").value();
         std::string geo_name = id.empty() ? ("shape_" + std::to_string(shape_count_)) : sanitize(id);
@@ -839,6 +867,46 @@ class Converter {
             mat_w.begin("properties"); mat_w.begin("samplers");
             mat_w.inline_block("diffuse", {{"type","color"}, {"value","col3(0.8, 0.8, 0.8)"}});
             mat_w.end(); mat_w.end(); mat_w.end();
+        }
+
+        // Parse and emit interior/exterior media
+        std::string med_name, ext_med_name;
+        auto emit_medium = [&](pugi::xml_node c, const std::string& fallback_id) -> std::string {
+            std::string mtype = c.attribute("type").value();
+            if (mtype != "homogeneous") return {};
+            Vec3 sigma_a{0,0,0}, sigma_s{0,0,0};
+            if (has_param(c, "sigmaA") || has_param(c, "sigmaS")) {
+                sigma_a = get_color(c, "sigmaA", {0,0,0});
+                sigma_s = get_color(c, "sigmaS", {0,0,0});
+            } else if (has_param(c, "sigma_t")) {
+                Vec3 sigma_t = get_color(c, "sigma_t", {0,0,0});
+                Vec3 albedo  = get_color(c, "albedo",  {0,0,0});
+                sigma_s = {sigma_t.x * albedo.x, sigma_t.y * albedo.y, sigma_t.z * albedo.z};
+                sigma_a = {sigma_t.x - sigma_s.x, sigma_t.y - sigma_s.y, sigma_t.z - sigma_s.z};
+            } else return {};
+            std::string mid = c.attribute("id").value();
+            if (mid.empty()) mid = fallback_id;
+            std::string mname = sanitize(mid);
+            if (emitted_media_.find(mname) == emitted_media_.end()) {
+                med_w.begin(mname);
+                med_w.kv("type", "homogeneous");
+                med_w.kv("sigma_a", col3(sigma_a.x, sigma_a.y, sigma_a.z));
+                med_w.kv("sigma_s", col3(sigma_s.x, sigma_s.y, sigma_s.z));
+                med_w.end();
+                emitted_media_.insert(mname);
+            }
+            return mname;
+        };
+        for (auto c : shape.children()) {
+            if (strcmp(c.name(), "medium") != 0) continue;
+            const char* mside = c.attribute("name").value();
+            bool is_interior = strcmp(mside, "interior") == 0 || strcmp(mside, "inside") == 0;
+            bool is_exterior = strcmp(mside, "exterior") == 0 || strcmp(mside, "outside") == 0;
+            if (!is_interior && !is_exterior) continue;
+            if (is_interior && med_name.empty())
+                med_name = emit_medium(c, geo_name + "_medium");
+            else if (is_exterior && ext_med_name.empty())
+                ext_med_name = emit_medium(c, geo_name + "_ext_medium");
         }
 
         // Emit geometry block
@@ -963,7 +1031,7 @@ class Converter {
         }
 
         geo_w.end();
-        return { geo_name, mat_name };
+        return { geo_name, mat_name, med_name, ext_med_name };
     }
 
     // ── environment emitter ───────────────────────────────────────────────────
@@ -977,6 +1045,16 @@ class Converter {
             w.kv("type", "erp");
             w.begin("config");
             w.kv("source", src);
+            // Extract Y-axis rotation from to_world transform
+            Transform et = parse_transform(emitter);
+            if (et.has_rot3) {
+                // For a pure Y rotation: sin(r) = rot3[0][2], cos(r) = rot3[0][0]
+                float ry = std::atan2(et.rot3[2], et.rot3[0]);  // rot3 stored row-major: [row*3+col]
+                if (std::fabs(ry) > 1e-4f)
+                    w.kv("rotation_y", ff(ry));
+            } else if (et.has_rotate && std::fabs(et.rotate.y) > 1e-4f) {
+                w.kv("rotation_y", ff(et.rotate.y));
+            }
             w.end();
         }
         else if (type == "constant") {
@@ -1034,8 +1112,8 @@ public:
         collect_ids(scene);
 
         // Inner buffers — depth 1 so content is indented inside the section block
-        std::ostringstream cam_buf, mat_buf, geo_buf, obj_buf;
-        NCFWriter cam_w(cam_buf, 1), mat_w(mat_buf, 1), geo_w(geo_buf, 1), obj_w(obj_buf, 1);
+        std::ostringstream cam_buf, mat_buf, med_buf, geo_buf, obj_buf;
+        NCFWriter cam_w(cam_buf, 1), mat_w(mat_buf, 1), med_w(med_buf, 1), geo_w(geo_buf, 1), obj_w(obj_buf, 1);
 
         // --- sensors → cameras ---
         for (auto n : scene.children("sensor"))
@@ -1052,12 +1130,14 @@ public:
         // --- shapes → geometry + objects ---
         std::vector<ShapeOut> objects;
         for (auto n : scene.children("shape"))
-            objects.push_back(emit_shape(geo_w, mat_w, n));
+            objects.push_back(emit_shape(geo_w, mat_w, med_w, n));
 
-        for (auto& [geo, mat] : objects) {
+        for (auto& [geo, mat, med, ext_med] : objects) {
             obj_w.begin(geo);
             obj_w.kv("geometry", geo);
             obj_w.kv("material", mat);
+            if (!med.empty())     obj_w.kv("medium", med);
+            if (!ext_med.empty()) obj_w.kv("exterior_medium", ext_med);
             obj_w.end();
         }
 
@@ -1110,6 +1190,7 @@ public:
 
         write_section("camera",   cam_buf);
         write_section("material", mat_buf);
+        write_section("medium",   med_buf);
         write_section("geometry", geo_buf);
         write_section("object",   obj_buf);
 

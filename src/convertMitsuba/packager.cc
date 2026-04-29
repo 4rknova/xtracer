@@ -1,6 +1,10 @@
 #include "packager.h"
 #include "converter.h"
 
+#define MINIZ_IMPLEMENTATION
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#include "../../ext/miniz/miniz.h"
+
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <algorithm>
 #include <vector>
 
 // ─── path helpers ─────────────────────────────────────────────────────────────
@@ -120,57 +125,73 @@ static bool extract_zip(const std::string& zip_path, const std::string& dest,
                         bool verbose, std::ostream& err) {
     if (!make_dirs(dest, err)) return false;
 
-    // Shell out to unzip. Quote paths to handle spaces.
-    std::string cmd = "unzip -o";
-    if (!verbose) cmd += " -q";
-    cmd += " \"" + zip_path + "\" -d \"" + dest + "\" 2>&1";
+    mz_zip_archive zip;
+    mz_zip_zero_struct(&zip);
 
-    FILE* fp = popen(cmd.c_str(), "r");
-    if (!fp) {
-        err << "Error: failed to run unzip\n";
+    if (!mz_zip_reader_init_file(&zip, zip_path.c_str(), 0)) {
+        err << "Error: cannot open zip '" << zip_path << "'\n";
         return false;
     }
-    char buf[256];
-    while (fgets(buf, sizeof(buf), fp))
-        if (verbose) err << buf;
-    int rc = pclose(fp);
-    if (rc != 0) {
-        err << "Error: unzip failed (exit " << rc
-            << "). Is 'unzip' installed?\n";
-        return false;
+
+    mz_uint num = mz_zip_reader_get_num_files(&zip);
+    bool ok = true;
+
+    for (mz_uint i = 0; i < num; ++i) {
+        mz_zip_archive_file_stat st;
+        if (!mz_zip_reader_file_stat(&zip, i, &st)) {
+            err << "Warning: cannot stat zip entry " << i << ", skipping\n";
+            continue;
+        }
+        if (st.m_is_directory) continue;
+
+        std::string dst = pb_join(dest, st.m_filename);
+        std::string parent = pb_dirname(dst);
+        if (!make_dirs(parent, err)) { ok = false; continue; }
+
+        if (verbose) err << "  extracting " << st.m_filename << "\n";
+
+        if (!mz_zip_reader_extract_to_file(&zip, i, dst.c_str(), 0)) {
+            err << "Warning: failed to extract '" << st.m_filename << "'\n";
+            ok = false;
+        }
     }
-    return true;
+
+    mz_zip_reader_end(&zip);
+    return ok;
 }
 
 // ─── scene XML discovery ──────────────────────────────────────────────────────
 
-// Returns the "best" XML path inside dir: prefers an XML with <scene> root.
-static std::string find_scene_xml(const std::string& dir, std::ostream& err) {
+// Returns all Mitsuba scene XML paths inside dir (those with a <scene> root).
+static std::vector<std::string> find_scene_xmls(const std::string& dir, std::ostream& err) {
     std::vector<std::string> xmls;
     find_files(dir, ".xml", xmls);
+    std::sort(xmls.begin(), xmls.end());
 
-    if (xmls.empty()) {
-        err << "Error: no .xml file found inside archive\n";
-        return "";
-    }
-    if (xmls.size() == 1) return xmls[0];
-
-    // Multiple XMLs — prefer one whose root element is <scene>
+    std::vector<std::string> result;
     for (auto& p : xmls) {
         std::ifstream f(p);
         std::string line;
         int checked = 0;
         while (std::getline(f, line) && checked < 20) {
-            if (line.find("<scene") != std::string::npos) return p;
+            if (line.find("<scene") != std::string::npos) { result.push_back(p); break; }
             ++checked;
         }
     }
-    // Fallback: shortest path (usually the root-level one)
-    std::string best = xmls[0];
-    for (auto& p : xmls)
-        if (p.size() < best.size()) best = p;
-    err << "Warning: multiple XMLs found, using '" << best << "'\n";
-    return best;
+
+    if (result.empty())
+        err << "Error: no Mitsuba scene XML found inside archive\n";
+    return result;
+}
+
+// Derive a short version tag from an XML filename for use as a .scn suffix.
+// scene_v3.xml -> "v3", scene_v0.6.xml -> "v0.6", foo.xml -> "foo"
+static std::string xml_version_tag(const std::string& xml_path) {
+    std::string stem = pb_stem(pb_basename(xml_path));
+    // strip leading "scene_" or "scene" prefix
+    if (stem.size() > 6 && stem.substr(0, 6) == "scene_") return stem.substr(6);
+    if (stem == "scene") return "";
+    return stem;
 }
 
 // ─── asset copying ────────────────────────────────────────────────────────────
@@ -213,10 +234,10 @@ bool run_packager(const PackageOptions& popts, std::ostream& err) {
     std::string input  = popts.input_path;
     std::string dest   = popts.dest_dir.empty() ? "./scene" : popts.dest_dir;
 
-    std::string tmp_dir;   // non-empty when we extracted a zip
-    std::string xml_path;
+    std::string tmp_dir;
+    std::vector<std::string> xml_paths;
 
-    // ── 1. Resolve input XML ──────────────────────────────────────────────────
+    // ── 1. Resolve input XMLs ─────────────────────────────────────────────────
     std::string ext = pb_ext(input);
     for (char& c : ext) c = (char)tolower((unsigned char)c);
 
@@ -231,64 +252,81 @@ bool run_packager(const PackageOptions& popts, std::ostream& err) {
             rmdir(tmp_dir.c_str());
             return false;
         }
-        xml_path = find_scene_xml(tmp_dir, err);
-        if (xml_path.empty()) {
+        xml_paths = find_scene_xmls(tmp_dir, err);
+        if (xml_paths.empty()) {
             std::string cmd = "rm -rf \"" + tmp_dir + "\"";
             system(cmd.c_str());
             return false;
         }
-        if (popts.verbose) err << "Found scene XML: " << xml_path << "\n";
+        if (popts.verbose) {
+            for (auto& p : xml_paths) err << "Found scene XML: " << p << "\n";
+        }
     } else {
-        xml_path = input;
+        xml_paths.push_back(input);
     }
 
-    // ── 2. Determine scene name ───────────────────────────────────────────────
-    std::string name = popts.scene_name.empty()
-                     ? pb_stem(ext == ".zip" ? input : xml_path)
-                     : popts.scene_name;
+    // ── 2. Determine base scene name (used for resource directory) ────────────
+    std::string base_name = popts.scene_name.empty()
+                          ? pb_stem(ext == ".zip" ? input : xml_paths[0])
+                          : popts.scene_name;
 
     // ── 3. Create output directory ────────────────────────────────────────────
     if (!make_dirs(dest, err)) return false;
 
-    // ── 4. Convert ────────────────────────────────────────────────────────────
-    ConvertOptions copts;
-    copts.input_path  = xml_path;
-    copts.xml_dir     = pb_dirname(xml_path);
-    copts.dest_dir    = dest;
-    copts.scene_name  = name;
-    copts.source_path = popts.input_path;  // original zip path for title derivation
-    copts.comment     = popts.comment;
-    copts.verbose     = popts.verbose;
+    // ── 4. Convert each XML ───────────────────────────────────────────────────
+    std::vector<ResourceEntry> all_resources;
+    bool any_ok = false;
 
-    std::vector<ResourceEntry> resources;
-    std::ostringstream scene_buf;
+    for (const auto& xml_path : xml_paths) {
+        // Derive per-file suffix when multiple XMLs are present
+        std::string tag = (xml_paths.size() > 1) ? xml_version_tag(xml_path) : "";
+        std::string out_name = tag.empty() ? base_name : (base_name + "-" + tag);
 
-    if (popts.verbose) err << "Converting scene...\n";
-    bool ok = convert_mitsuba(copts, scene_buf, err,
-                              popts.copy_assets ? &resources : nullptr);
-    if (!ok) {
-        if (!tmp_dir.empty()) {
-            std::string cmd = "rm -rf \"" + tmp_dir + "\"";
-            system(cmd.c_str());
+        ConvertOptions copts;
+        copts.input_path  = xml_path;
+        copts.xml_dir     = pb_dirname(xml_path);
+        copts.dest_dir    = dest;
+        copts.scene_name  = base_name;   // resource dir always uses base name
+        copts.source_path = popts.input_path;
+        copts.comment     = popts.comment;
+        copts.verbose     = popts.verbose;
+
+        std::vector<ResourceEntry> resources;
+        std::ostringstream scene_buf;
+
+        if (popts.verbose) err << "Converting " << pb_basename(xml_path) << "...\n";
+        bool ok = convert_mitsuba(copts, scene_buf, err,
+                                  popts.copy_assets ? &resources : nullptr);
+        if (!ok) {
+            err << "Warning: conversion failed for " << pb_basename(xml_path) << ", skipping\n";
+            continue;
         }
-        return false;
+
+        // ── 5. Write .scn ─────────────────────────────────────────────────────
+        std::string scn_path = pb_join(dest, "mitsuba-" + out_name + ".scn");
+        std::ofstream scn(scn_path);
+        if (!scn) {
+            err << "Error: cannot write '" << scn_path << "': " << strerror(errno) << "\n";
+            continue;
+        }
+        scn << scene_buf.str();
+        scn.close();
+        err << "Wrote " << scn_path << "\n";
+        any_ok = true;
+
+        // Accumulate resources, deduplicating by src_path
+        for (auto& r : resources) {
+            bool dup = false;
+            for (auto& ar : all_resources)
+                if (ar.src_path == r.src_path && ar.type == r.type) { dup = true; break; }
+            if (!dup) all_resources.push_back(r);
+        }
     }
 
-    // ── 5. Write .scn ─────────────────────────────────────────────────────────
-    std::string scn_path = pb_join(dest, "mitsuba-" + name + ".scn");
-    std::ofstream scn(scn_path);
-    if (!scn) {
-        err << "Error: cannot write '" << scn_path << "': " << strerror(errno) << "\n";
-        return false;
-    }
-    scn << scene_buf.str();
-    scn.close();
-    err << "Wrote " << scn_path << "\n";
-
-    // ── 6. Copy assets ────────────────────────────────────────────────────────
-    if (popts.copy_assets && !resources.empty()) {
-        if (popts.verbose) err << "Copying " << resources.size() << " asset(s)...\n";
-        copy_assets(resources, dest, name, popts.verbose, err);
+    // ── 6. Copy assets once for all conversions ───────────────────────────────
+    if (popts.copy_assets && !all_resources.empty()) {
+        if (popts.verbose) err << "Copying " << all_resources.size() << " asset(s)...\n";
+        copy_assets(all_resources, dest, base_name, popts.verbose, err);
     }
 
     // ── 7. Cleanup temp dir ───────────────────────────────────────────────────
@@ -297,5 +335,5 @@ bool run_packager(const PackageOptions& popts, std::ostream& err) {
         system(cmd.c_str());
     }
 
-    return true;
+    return any_ok;
 }
