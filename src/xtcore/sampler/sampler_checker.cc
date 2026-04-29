@@ -15,6 +15,7 @@ Checker::Checker()
     , scale_v(XTCORE_CHECKER_DEFAULT_SCALE_V)
     , offset_u((nmath::scalar_t)0.0)
     , offset_v((nmath::scalar_t)0.0)
+    , swap_colors(false)
 {}
 
 Checker::~Checker()
@@ -41,7 +42,7 @@ nimg::ColorRGBf Checker::sample(const nmath::Vector3f &uvw) const
     // Classic checker parity test:
     // even (iu + iv) -> color_a, odd -> color_b.
     // Bitwise AND with 1 is a fast odd/even check.
-    const bool odd = (((iu + iv) & 1) != 0);
+    const bool odd = (((iu + iv) & 1) != 0) ^ swap_colors;
     return odd ? color_b : color_a;
 }
 

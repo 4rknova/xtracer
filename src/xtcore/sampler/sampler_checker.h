@@ -20,6 +20,7 @@ class Checker : public ISampler
     nmath::scalar_t scale_v;
     nmath::scalar_t offset_u;
     nmath::scalar_t offset_v;
+    bool            swap_colors;
 };
 
     } /* namespace sampler */
