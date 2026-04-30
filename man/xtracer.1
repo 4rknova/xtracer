@@ -1,8 +1,8 @@
-.TH XTRACER_WEB 1 "March 2026" UNIX "User Manuals"
+.TH XTRACER 1 "March 2026" UNIX "User Manuals"
 .SH NAME
-xtracer_web \- HTTP web server frontend for XTRACER
+xtracer \- HTTP web server frontend for XTRACER
 .SH SYNOPSIS
-.B xtracer_web
+.B xtracer
 [
 .B --host
 .I ip
@@ -34,7 +34,7 @@ xtracer_web \- HTTP web server frontend for XTRACER
 .B --help
 ]
 .SH DESCRIPTION
-.B xtracer_web
+.B xtracer
 runs the HTTP backend and serves the web client assets.
 It exposes scene, render, jobs, logs, and metadata API endpoints used by the browser UI.
 .SH OPTIONS
@@ -64,7 +64,7 @@ Enable per-request HTTP logging to stdout.
 Print usage and exit.
 .SH SCENE AUTHORING GUIDE
 The web frontend loads \fB.scn\fR files from \fB--scene-dir\fR.
-Scene structure follows the same schema used by \fBxtracer_cli\fR.
+Scene structure follows the same schema following the xtracer \fB.scn\fR format.
 .PP
 Typical top-level sections:
 .IP "\(bu"
@@ -137,13 +137,13 @@ variants = {
 Start server with defaults:
 .PP
 .EX
-\&./build/release/xtracer_web
+\&./build/release/xtracer
 .EE
 .PP
 Start server with explicit host/port and paths:
 .PP
 .EX
-\&./build/release/xtracer_web \\
+\&./build/release/xtracer \\
   --host 127.0.0.1 \\
   --port 8080 \\
   --scene-dir scene \\

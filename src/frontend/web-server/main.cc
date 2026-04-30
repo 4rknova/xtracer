@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     xtcore::Log::handle().callback(&forward_xtcore_log, nullptr);
     xtcore::init();
     xtcore::Log::handle().echo(false);
-    xtracer::frontend::web::backend_log_t::handle().add("info", "xtracer_web boot");
+    xtracer::frontend::web::backend_log_t::handle().add("info", "xtracer boot");
 
     xtracer::frontend::web::gallery_manager_t gallery;
     if (!gallery.init(gallery_dir)) {

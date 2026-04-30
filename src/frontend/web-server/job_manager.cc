@@ -1352,7 +1352,7 @@ void job_manager_t::cache_evicted_job_locked(const std::shared_ptr<job_t> &job)
         std::lock_guard<std::mutex> lock(job->mut);
         if (job->final_fb.width() > 0 && job->final_fb.height() > 0
             && job->request.render_mode != common::render_request_t::RENDER_MODE_INTERACTIVE) {
-            const std::string exr_path = "/tmp/xtracer_web_job_cache_" + job->id + ".exr";
+            const std::string exr_path = "/tmp/xtracer_job_cache_" + job->id + ".exr";
             nimg::Pixmap fb_copy = job->final_fb;
             std::vector<unsigned char> exr;
             if (nimg::io::save::exr_memory(fb_copy, exr) == 0) {

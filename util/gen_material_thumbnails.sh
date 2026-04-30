@@ -3,9 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEFAULT_SERVER_BINARIES=(
-  "$ROOT_DIR/build/intermediate/build/xtracer_web"
-  "$ROOT_DIR/build/xtracer_web"
-  "$ROOT_DIR/build/intermediate/build-release/xtracer_web"
+  "$ROOT_DIR/build/intermediate/build/xtracer"
+  "$ROOT_DIR/build/xtracer"
+  "$ROOT_DIR/build/intermediate/build-release/xtracer"
 )
 
 SERVER_BIN=""
@@ -33,8 +33,8 @@ usage() {
 Usage: $0 [options]
 
 Options:
-  --server-bin <path>   xtracer_web binary to launch
-  --base-url <url>      Use an already-running xtracer_web instead of launching one
+  --server-bin <path>   xtracer binary to launch
+  --base-url <url>      Use an already-running xtracer instead of launching one
   --port <n>            Local port for the managed server (default: $PORT)
   --width <px>          Thumbnail width  (default: $WIDTH)
   --height <px>         Thumbnail height (default: $HEIGHT)
@@ -139,7 +139,7 @@ if [[ -z "$BASE_URL" ]]; then
   fi
 
   if [[ -z "$SERVER_BIN" ]]; then
-    echo "Could not find xtracer_web. Pass --server-bin or build one first." >&2
+    echo "Could not find xtracer. Pass --server-bin or build one first." >&2
     exit 1
   fi
 
@@ -148,7 +148,7 @@ fi
 
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/xtracer-material-thumbs.XXXXXX")"
 SERVER_PID=""
-SERVER_LOG="$TMP_DIR/xtracer_web.log"
+SERVER_LOG="$TMP_DIR/xtracer.log"
 
 cleanup() {
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" >/dev/null 2>&1; then
@@ -161,7 +161,7 @@ trap cleanup EXIT
 
 show_server_log() {
   if [[ -f "$SERVER_LOG" ]]; then
-    echo "--- xtracer_web log ---" >&2
+    echo "--- xtracer log ---" >&2
     tail -n 80 "$SERVER_LOG" >&2 || true
   fi
 }
@@ -171,7 +171,7 @@ wait_for_server() {
   local attempt
   for attempt in $(seq 1 80); do
     if [[ "$MANAGE_SERVER" -eq 1 ]] && [[ -n "$SERVER_PID" ]] && ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then
-      echo "xtracer_web exited during startup for $url" >&2
+      echo "xtracer exited during startup for $url" >&2
       show_server_log
       exit 1
     fi
@@ -180,7 +180,7 @@ wait_for_server() {
     fi
     sleep 0.25
   done
-  echo "Timed out waiting for xtracer_web at $url" >&2
+  echo "Timed out waiting for xtracer at $url" >&2
   show_server_log
   exit 1
 }
@@ -188,7 +188,7 @@ wait_for_server() {
 launch_managed_server() {
   local port_candidate="$1"
   : > "$SERVER_LOG"
-  echo "Launching xtracer_web from $SERVER_BIN on port $port_candidate"
+  echo "Launching xtracer from $SERVER_BIN on port $port_candidate"
   "$SERVER_BIN" \
     --host 127.0.0.1 \
     --port "$port_candidate" \
@@ -213,7 +213,7 @@ launch_managed_server() {
 if [[ "$MANAGE_SERVER" -eq 1 ]] && [[ -z "$SERVER_PID" ]] && [[ -n "$SERVER_BIN" ]]; then
   if [[ "$PORT_EXPLICIT" -eq 1 ]]; then
     if ! launch_managed_server "$PORT"; then
-      echo "Failed to launch xtracer_web on port $PORT" >&2
+      echo "Failed to launch xtracer on port $PORT" >&2
       show_server_log
       exit 1
     fi
@@ -227,7 +227,7 @@ if [[ "$MANAGE_SERVER" -eq 1 ]] && [[ -z "$SERVER_PID" ]] && [[ -n "$SERVER_BIN"
       fi
     done
     if [[ "$launched" -ne 1 ]]; then
-      echo "Failed to launch xtracer_web on ports $PORT-$((PORT + 9))" >&2
+      echo "Failed to launch xtracer on ports $PORT-$((PORT + 9))" >&2
       show_server_log
       exit 1
     fi

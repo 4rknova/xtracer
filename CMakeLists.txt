@@ -6,7 +6,6 @@ project(xtracer)
 include(GNUInstallDirs)
 
 option(XTRACER_ENABLE_REMOTE_ASSETS "Enable remote URL asset fetching via curl subprocess" ON)
-option(XTRACER_ENABLE_WEB "Build web frontend" ON)
 option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
 option(XTRACER_ENABLE_NMATH_SIMD "Enable SIMD paths in nmath (x86 SSE2, double precision)" ON)
 option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" OFF)
@@ -62,18 +61,16 @@ set(PATH_TEST ${PATH_BIN}/test)
 file(MAKE_DIRECTORY ${PATH_BIN})
 file(MAKE_DIRECTORY ${PATH_TEST})
 
-if (XTRACER_ENABLE_WEB)
-    set(PATH_WEB_LICENSE ${PATH_WEB}/license.txt)
-    add_custom_command(
-        OUTPUT ${PATH_WEB_LICENSE}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${PATH_WEB}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PATH_ROOT}/LICENSE ${PATH_WEB_LICENSE}
-        DEPENDS ${PATH_ROOT}/LICENSE
-        COMMENT "Generating ${PATH_WEB_LICENSE} from root LICENSE"
-        VERBATIM
-    )
-    add_custom_target(web_license_asset DEPENDS ${PATH_WEB_LICENSE})
-endif()
+set(PATH_WEB_LICENSE ${PATH_WEB}/license.txt)
+add_custom_command(
+    OUTPUT ${PATH_WEB_LICENSE}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PATH_WEB}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PATH_ROOT}/LICENSE ${PATH_WEB_LICENSE}
+    DEPENDS ${PATH_ROOT}/LICENSE
+    COMMENT "Generating ${PATH_WEB_LICENSE} from root LICENSE"
+    VERBATIM
+)
+add_custom_target(web_license_asset DEPENDS ${PATH_WEB_LICENSE})
 
 MACRO(SCAN_DIRS return_list)
     FILE(GLOB_RECURSE new_list *.h)
@@ -116,19 +113,15 @@ list(APPEND ext_libs
 list(REMOVE_DUPLICATES ext_libs)
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
-set(PATH_SRC_FRONTEND_CLI ${PATH_SRC}/frontend/cli)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/frontend/web-server)
 set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/frontend/common)
 set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
-set(IN_MAN_CLI  xtracer_cli.1)
-set(IN_MAN_WEB  xtracer_web.1)
+set(IN_MAN  xtracer.1)
 
-set(OUT_MAN_CLI xtracer_cli.1.gz)
-set(OUT_MAN_WEB xtracer_web.1.gz)
+set(OUT_MAN xtracer.1.gz)
 set(OUT_LIB     xtcore)
-set(OUT_EXE_CLI xtracer_cli)
 set(OUT_EXE_COLORSPACE_TEST test_nimg_colorspace)
 set(OUT_EXE_COLORSPACE_VECTORS_TEST test_nimg_colorspace_vectors)
 set(OUT_EXE_TILE_TEST test_xtcore_tile)
@@ -143,7 +136,6 @@ set(OUT_EXE_OBJECT_MEDIUM_PARSE_TEST test_xtcore_object_medium_parse)
 set(OUT_EXE_FBX_IMPORT_TEST test_xtcore_fbx_import)
 set(OUT_EXE_GLTF_IMPORT_TEST test_xtcore_gltf_import)
 set(OUT_EXE_SVG_MESH_GENERATOR_TEST test_xtcore_svg_mesh_generator)
-set(OUT_EXE_CLI_SETUP_TEST test_xtracer_cli_setup)
 set(OUT_EXE_NCF_PARSER_TEST test_ncf_parser)
 set(OUT_EXE_SCENE_VALIDATOR_TEST test_xtcore_scene_validator)
 set(OUT_EXE_SAMPLING_TEST test_nmath_sampling)
@@ -191,12 +183,6 @@ file(GLOB SRC_XTCORE
     ${PATH_SRC_XTCORE}/*/*/*.cpp
 )
 
-file(GLOB SRC_FRONTEND_CLI
-    ${PATH_SRC_FRONTEND_CLI}/*.c
-    ${PATH_SRC_FRONTEND_CLI}/*.cc
-    ${PATH_SRC_FRONTEND_CLI}/*.cpp
-)
-
 file(GLOB SRC_FRONTEND_WEB
     ${PATH_SRC_FRONTEND_WEB}/*.c
     ${PATH_SRC_FRONTEND_WEB}/*.cc
@@ -209,9 +195,8 @@ file(GLOB SRC_FRONTEND_COMMON
     ${PATH_SRC_FRONTEND_COMMON}/*.cpp
 )
 
-add_custom_target(manpages_cli
-    COMMAND gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN_CLI} > ${PATH_BIN}/${OUT_MAN_CLI}
-    COMMAND gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN_WEB} > ${PATH_BIN}/${OUT_MAN_WEB}
+add_custom_target(manpages
+    COMMAND gzip -c ${CMAKE_SOURCE_DIR}/man/${IN_MAN} > ${PATH_BIN}/${OUT_MAN}
     VERBATIM
 )
 
@@ -237,7 +222,6 @@ target_include_directories(xtcore_dynamic SYSTEM PUBLIC
     ${ext_libs}
 )
 
-add_executable(${OUT_EXE_CLI} ${SRC_FRONTEND_CLI})
 add_executable(${OUT_EXE_CONVERT_MITSUBA}
     ${PATH_SRC}/convertMitsuba/main.cc
     ${PATH_SRC}/convertMitsuba/converter.cc
@@ -257,7 +241,6 @@ add_executable(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} ${PATH_SRC_TESTS}/object_medi
 add_executable(${OUT_EXE_FBX_IMPORT_TEST} ${PATH_SRC_TESTS}/fbx_import_test.cc)
 add_executable(${OUT_EXE_GLTF_IMPORT_TEST} ${PATH_SRC_TESTS}/gltf_import_test.cc)
 add_executable(${OUT_EXE_SVG_MESH_GENERATOR_TEST} ${PATH_SRC_TESTS}/svg_mesh_generator_test.cc)
-add_executable(${OUT_EXE_CLI_SETUP_TEST} ${PATH_SRC_TESTS}/cli_setup_test.cc ${PATH_SRC_FRONTEND_CLI}/argparse.cc)
 add_executable(${OUT_EXE_NCF_PARSER_TEST} ${PATH_SRC_TESTS}/ncf_parser_test.cc)
 add_executable(${OUT_EXE_SCENE_VALIDATOR_TEST} ${PATH_SRC_TESTS}/scene_validator_test.cc)
 add_executable(${OUT_EXE_SAMPLING_TEST} ${PATH_SRC_TESTS}/sampling_test.cc)
@@ -310,9 +293,6 @@ set_target_properties(${OUT_EXE_GLTF_IMPORT_TEST} PROPERTIES
 set_target_properties(${OUT_EXE_SVG_MESH_GENERATOR_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
-set_target_properties(${OUT_EXE_CLI_SETUP_TEST} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
-)
 set_target_properties(${OUT_EXE_NCF_PARSER_TEST} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
@@ -344,13 +324,6 @@ set_target_properties(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PATH_TEST}
 )
 
-target_include_directories(${OUT_EXE_CLI} PUBLIC
-    ${PATH_LIB}
-    ${PATH_SRC}
-)
-target_include_directories(${OUT_EXE_CLI} SYSTEM PUBLIC
-    ${ext_libs}
-)
 target_include_directories(${OUT_EXE_CONVERT_MITSUBA} PRIVATE
     ${PATH_SRC}
 )
@@ -459,13 +432,6 @@ target_include_directories(${OUT_EXE_SVG_MESH_GENERATOR_TEST} PUBLIC
 target_include_directories(${OUT_EXE_SVG_MESH_GENERATOR_TEST} SYSTEM PUBLIC
     ${ext_libs}
 )
-target_include_directories(${OUT_EXE_CLI_SETUP_TEST} PUBLIC
-    ${PATH_LIB}
-    ${PATH_SRC}
-)
-target_include_directories(${OUT_EXE_CLI_SETUP_TEST} SYSTEM PUBLIC
-    ${ext_libs}
-)
 target_include_directories(${OUT_EXE_NCF_PARSER_TEST} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}
@@ -537,7 +503,6 @@ target_include_directories(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} SYSTEM PUBLIC
     ${ext_libs}
 )
 
-target_link_libraries(${OUT_EXE_CLI} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_COLORSPACE_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_COLORSPACE_VECTORS_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_TILE_TEST} PRIVATE xtcore_static pthread)
@@ -552,7 +517,6 @@ target_link_libraries(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PRIVATE xtcore_static 
 target_link_libraries(${OUT_EXE_FBX_IMPORT_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_GLTF_IMPORT_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SVG_MESH_GENERATOR_TEST} PRIVATE xtcore_static pthread)
-target_link_libraries(${OUT_EXE_CLI_SETUP_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_NCF_PARSER_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE xtcore_static pthread)
 target_link_libraries(${OUT_EXE_SAMPLING_TEST} PRIVATE xtcore_static pthread)
@@ -578,27 +542,23 @@ else()
 endif()
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE NMATH_BENCH_FORCE_SCALAR=1)
 
-if (XTRACER_ENABLE_WEB)
-    set(OUT_EXE_WEB xtracer_web)
-    add_executable(${OUT_EXE_WEB} ${SRC_FRONTEND_WEB} ${SRC_FRONTEND_COMMON})
-    target_include_directories(${OUT_EXE_WEB} PUBLIC
-        ${PATH_LIB}
-        ${PATH_SRC}
-    )
-    target_include_directories(${OUT_EXE_WEB} SYSTEM PUBLIC
-        ${ext_libs}
-    )
-    # Asio is provided by libasio-dev (system package).
-    # Do NOT define CROW_USE_BOOST — crow checks #ifdef CROW_USE_BOOST, so any
-    # definition (including =0) triggers Boost. Just define ASIO_STANDALONE.
-    target_compile_definitions(${OUT_EXE_WEB} PRIVATE
-        ASIO_STANDALONE
-    )
-    target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
-    if (TARGET web_license_asset)
-        add_dependencies(${OUT_EXE_WEB} web_license_asset)
-    endif()
-endif()
+set(OUT_EXE_WEB xtracer)
+add_executable(${OUT_EXE_WEB} ${SRC_FRONTEND_WEB} ${SRC_FRONTEND_COMMON})
+target_include_directories(${OUT_EXE_WEB} PUBLIC
+    ${PATH_LIB}
+    ${PATH_SRC}
+)
+target_include_directories(${OUT_EXE_WEB} SYSTEM PUBLIC
+    ${ext_libs}
+)
+# Asio is provided by libasio-dev (system package).
+# Do NOT define CROW_USE_BOOST — crow checks #ifdef CROW_USE_BOOST, so any
+# definition (including =0) triggers Boost. Just define ASIO_STANDALONE.
+target_compile_definitions(${OUT_EXE_WEB} PRIVATE
+    ASIO_STANDALONE
+)
+target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
+add_dependencies(${OUT_EXE_WEB} web_license_asset manpages)
 
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
@@ -622,7 +582,6 @@ target_compile_definitions(${OUT_EXE_WHITE_FURNACE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_RAYTRACER_EMISSIVE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SVG_MESH_GENERATOR_TEST} PRIVATE ${DEFS})
-target_compile_definitions(${OUT_EXE_CLI_SETUP_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NCF_PARSER_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SCENE_VALIDATOR_TEST} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_SAMPLING_TEST} PRIVATE ${DEFS})
@@ -633,7 +592,6 @@ target_compile_definitions(${OUT_EXE_NMATH_BENCH_SIMD} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_AVX} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE ${DEFS})
 target_compile_definitions(${OUT_EXE_NMATH_SIMD_PERF_COMPARE} PRIVATE ${DEFS})
-add_dependencies (${OUT_EXE_CLI} xtcore_static xtcore_dynamic manpages_cli)
 add_dependencies (${OUT_EXE_COLORSPACE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_COLORSPACE_VECTORS_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_TILE_TEST} xtcore_static)
@@ -648,7 +606,6 @@ add_dependencies (${OUT_EXE_OBJECT_MEDIUM_PARSE_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_FBX_IMPORT_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_GLTF_IMPORT_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SVG_MESH_GENERATOR_TEST} xtcore_static)
-add_dependencies (${OUT_EXE_CLI_SETUP_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_NCF_PARSER_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SCENE_VALIDATOR_TEST} xtcore_static)
 add_dependencies (${OUT_EXE_SAMPLING_TEST} xtcore_static)
@@ -675,13 +632,11 @@ add_custom_target(check
         ${OUT_EXE_FBX_IMPORT_TEST}
         ${OUT_EXE_GLTF_IMPORT_TEST}
         ${OUT_EXE_SVG_MESH_GENERATOR_TEST}
-        ${OUT_EXE_CLI_SETUP_TEST}
         ${OUT_EXE_NCF_PARSER_TEST}
         ${OUT_EXE_SCENE_VALIDATOR_TEST}
         ${OUT_EXE_SAMPLING_TEST}
         ${OUT_EXE_NMATH_SIMD_TEST}
         ${OUT_EXE_NMATH_SIMD_PERF_COMPARE}
-        ${OUT_EXE_CLI}
 )
 
 add_custom_target(nmath_perf_check
@@ -754,10 +709,6 @@ add_test(
     COMMAND ${PATH_TEST}/${OUT_EXE_SVG_MESH_GENERATOR_TEST}
 )
 add_test(
-    NAME cli::setup_parse
-    COMMAND ${PATH_TEST}/${OUT_EXE_CLI_SETUP_TEST}
-)
-add_test(
     NAME ncf::inline_and_utf8
     COMMAND ${PATH_TEST}/${OUT_EXE_NCF_PARSER_TEST}
 )
@@ -777,35 +728,24 @@ add_test(
     NAME nmath::simd_perf_compare
     COMMAND ${PATH_TEST}/${OUT_EXE_NMATH_SIMD_PERF_COMPARE} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_SIMD} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_AVX} ${PATH_BIN}/${OUT_EXE_NMATH_BENCH_SCALAR} --iters 1200000 --repeats ${XTRACER_NMATH_PERF_REPEATS}
 )
-add_test(
-    NAME cli::stencil_smoke
-    COMMAND ${PATH_BIN}/${OUT_EXE_CLI} ${PATH_ROOT}/scene/lab-camera-modes-showcase.scn -renderer stencil -res 32x32 -aa 2 -samples 1 -rdepth 1 -outdir ${PATH_TEST}
-)
-
-
 install (TARGETS xtcore_static xtcore_dynamic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
 
-install (TARGETS ${OUT_EXE_CLI}
+install (TARGETS ${OUT_EXE_WEB}
     RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
 )
 
 install (TARGETS ${OUT_EXE_CONVERT_MITSUBA}
     RUNTIME DESTINATION bin
 )
 
-install (FILES ${PATH_BIN}/${OUT_MAN_CLI} ${PATH_BIN}/${OUT_MAN_WEB} DESTINATION man/man1)
+install (FILES ${PATH_BIN}/${OUT_MAN} DESTINATION man/man1)
 
 if (UNIX)
     install (FILES ${PATH_ROOT}/src/util/bash/autocomplete/xtcli
         DESTINATION ${CMAKE_INSTALL_DATADIR}/bash-completion/completions
-        RENAME xtracer_cli)
-    install (FILES ${PATH_ROOT}/src/util/bash/autocomplete/xtcli
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/bash-completion/completions
-        RENAME xtracer_web)
+        RENAME xtracer)
 endif()

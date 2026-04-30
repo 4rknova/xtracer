@@ -27,15 +27,13 @@ This file is the orientation and operating guide for coding agents working in th
   - `./configure`
   - `make`
 - Practical modern flow is CMake-driven.
-- Web build is optional (see `XTRACER_ENABLE_WEB` usage in `CMakeLists.txt`).
 - In this workspace, in-source CMake artifacts exist (`CMakeCache.txt`, `CMakeFiles/`, etc.). Prefer out-of-tree builds for new runs.
 
 ## Known Current State (Develop)
 
 - Integrator implementations exist under `src/xtcore/integrator/`.
 - Integrator metadata exposed by the web frontend is defined in `src/frontend/common/render_service.*`.
-- CLI integrator selection code in `src/frontend/cli/xtracer.cc` is currently commented out; treat CLI rendering path as needing repair before relying on it.
-- Web frontend is implemented as `xtracer_web`:
+- The frontend is implemented as `xtracer`:
   - HTTP + WebSocket server via `ext/crow/crow_all.h` (crow framework) + standalone Asio (`ext/asio/`)
   - Async render jobs managed in `src/frontend/web-server/job_manager.*`
   - Shared render pipeline in `src/frontend/common/render_service.*`

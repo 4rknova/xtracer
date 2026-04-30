@@ -8,12 +8,9 @@
   <a href="https://github.com/4rknova/xtracer/pkgs/container/xtracer"><img src="https://img.shields.io/badge/ghcr.io-available-blue?logo=github" alt="GitHub Container Registry"></a>
 </p>
 
-Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and multiple frontends (CLI, Web).
+Experimental rendering framework written in C/C++ with a shared core (`xtcore`) and a web frontend.
 
-`xtracer` is a physically-based ray/path tracing engine built for exploration and experimentation. The core library (`xtcore`) handles scene parsing, ray-geometry intersection, shading, and tone mapping — and is consumed by two independent frontends:
-
-- **CLI** (`xtracer_cli`) — offline renderer that writes images to disk; supports PNG output with full control over integrator, resolution, samples, and anti-aliasing.
-- **Web server** (`xtracer_web`) — HTTP API server with a job queue, progressive preview streaming, and a browser-based SPA for scene selection, rendering, log inspection, and image export in multiple formats.
+`xtracer` is a physically-based ray/path tracing engine built for exploration and experimentation. The core library (`xtcore`) handles scene parsing, ray-geometry intersection, shading, and tone mapping — consumed by the web frontend (`xtracer`): an HTTP API server with a job queue, progressive preview streaming, and a browser-based SPA for scene selection, rendering, log inspection, and image export in multiple formats.
 
 The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, spline-following tube curves, SVG-backed silhouette mesh generation, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
 
@@ -33,14 +30,14 @@ sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
 Configure + build:
 
 ```bash
-cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON
+cmake -S . -B build/intermediate/build
 cmake --build build/intermediate/build -j
 ```
 
-Run web server:
+Run:
 
 ```bash
-./build/intermediate/build/xtracer_web \
+./build/intermediate/build/xtracer \
     --host 127.0.0.1 \
     --port 8080 \
     --scene-dir scene \
@@ -54,35 +51,11 @@ Open: `http://127.0.0.1:8080`
 
 UI showcase: `http://127.0.0.1:8080/showcase.html`
 
-Run CLI:
-
-```bash
-./build/intermediate/build/xtracer_cli \
-    scene/lab-camera-modes-showcase.scn \
-    -renderer pathtracer_mis \
-    -res 1280x720 \
-    -samples 4 \
-    -aa 2
-```
-
-With scene variant:
-
-```bash
-./build/intermediate/build/xtracer_cli \
-    scene/lab-camera-modes-showcase.scn \
-    -variant night \
-    -renderer pathtracer_mis \
-    -res 1280x720 \
-    -samples 4 \
-    -aa 2
-```
-
 ## Repository Layout
 
 | Area | Path | Purpose |
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
-| CLI frontend | `src/frontend/cli/` | Command-line scene rendering |
 | Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
 | Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
 | Web static app | `src/frontend/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
@@ -95,15 +68,15 @@ With scene variant:
 
 ### Frontends
 
-| Capability | CLI (`xtracer_cli`) | Web (`xtracer_web`) |
-|---|---:|---:|
-| Load `.scn` scenes | Yes | Yes |
-| Select camera | Yes (`-cam`) | Yes |
-| Select scene variant | Yes (`-variant`) | Yes (`variant` API param) |
-| Integrator selection | Yes (`-renderer`) | Yes (`/api/integrators`) |
-| Progressive updates | Terminal progress | Job progress + preview API |
-| Image export | PNG | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) |
-| HTTP API | No | Yes |
+| Capability | `xtracer` |
+|---|---:|
+| Load `.scn` scenes | Yes |
+| Select camera | Yes |
+| Select scene variant | Yes (`variant` API param) |
+| Integrator selection | Yes (`/api/integrators`) |
+| Progressive updates | Job progress + preview API |
+| Image export | PNG/JPG/BMP/TGA/HDR/EXR + Raygraph PLY (`/api/jobs/{id}/export`) |
+| HTTP API | Yes |
 
 ### Integrators
 
@@ -199,7 +172,7 @@ sudo apt install -y build-essential cmake pkg-config libomp-dev zlib1g-dev
 ### Recommended Native Build (Out-of-Tree)
 
 ```bash
-cmake -S . -B build/intermediate/build -DXTRACER_ENABLE_WEB=ON
+cmake -S . -B build/intermediate/build
 cmake --build build/intermediate/build -j
 ```
 
@@ -210,7 +183,6 @@ cmake --build build/intermediate/build -j
 
 | Option | Default | Description |
 |---|---:|---|
-| `XTRACER_ENABLE_WEB` | `ON` | Build HTTP web frontend |
 | `XTRACER_ENABLE_VIZ` | `OFF` | Build OpenGL sampling visualization tool (`xtracer_viz_sampling`) |
 | `XTRACER_ENABLE_NMATH_SIMD` | `ON` | Enable x86 SSE2 SIMD fast-paths for `nmath` double-precision vector and matrix operations |
 | `XTRACER_ENABLE_NMATH_SIMD_AVX` | `ON` | Use AVX path for `nmath` SIMD (`XTRACER_ENABLE_NMATH_SIMD` must be `ON`) |
@@ -221,17 +193,6 @@ Notes:
 
 ## Run
 
-### CLI
-
-```bash
-./build/intermediate/build/xtracer_cli \
-    scene/lab-camera-modes-showcase.scn \
-    -renderer pathtracer_mis \
-    -res 1280x720 \
-    -samples 4 \
-    -aa 2
-```
-
 ### Mitsuba Converter
 
 ```bash
@@ -239,10 +200,10 @@ Notes:
 ./build/intermediate/build/convertMitsuba path/to/archive.zip -d scene
 ```
 
-### Web Server
+### Server
 
 ```bash
-./build/intermediate/build/xtracer_web \
+./build/intermediate/build/xtracer \
     --host 127.0.0.1 \
     --port 8080 \
     --scene-dir scene \
@@ -356,13 +317,11 @@ Run:
 | `xtcore::fbx_import` | `<build-dir>/test/test_xtcore_fbx_import` |
 | `xtcore::gltf_import` | `<build-dir>/test/test_xtcore_gltf_import` |
 | `xtcore::svg_mesh_generator` | `<build-dir>/test/test_xtcore_svg_mesh_generator` |
-| `cli::setup_parse` | `<build-dir>/test/test_xtracer_cli_setup` |
 | `ncf::inline_and_utf8` | `<build-dir>/test/test_ncf_parser` |
 | `scene::validate_all` | `<build-dir>/test/test_xtcore_scene_validator` |
 | `nmath::sampling` | `<build-dir>/test/test_nmath_sampling` |
 | `nmath::simd` | `<build-dir>/test/test_nmath_simd` |
 | `nmath::simd_perf_compare` | `<build-dir>/test/test_nmath_simd_perf_compare` |
-| `cli::stencil_smoke` | `<build-dir>/xtracer_cli` smoke render |
 
 Run all tests:
 
