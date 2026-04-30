@@ -134,6 +134,72 @@ function sampleGraphpaper(u, v, p) {
     return p.base;
 }
 
+// Seven-segment digit table (a=1 b=2 c=4 d=8 e=16 f=32 g=64), index 10 = minus
+const SEG7 = [63,6,91,79,102,109,125,7,127,111,64];
+
+// Returns smooth coverage [0,1]: SDF-style rect blend so edges are anti-aliased.
+function seg7Coverage(digit, u, v) {
+    if (digit < 0 || digit > 10) return 0;
+    const segs = SEG7[digit];
+    const s = 0.20, ms = 0.5 - s * 0.5, Mt = 0.5 + s * 0.5;
+    const aa = 0.05;
+    function rc(u0, u1, v0, v1) {
+        return clamp01(0.5 + Math.min(Math.min(u - u0, u1 - u), Math.min(v - v0, v1 - v)) / aa);
+    }
+    let c = 0;
+    if (segs &  1) c = Math.max(c, rc(s,   1-s, 1-s, 1  )); // a top
+    if (segs &  2) c = Math.max(c, rc(1-s, 1,   Mt,  1-s)); // b top-right
+    if (segs &  4) c = Math.max(c, rc(1-s, 1,   s,   ms )); // c bot-right
+    if (segs &  8) c = Math.max(c, rc(s,   1-s, 0,   s  )); // d bottom
+    if (segs & 16) c = Math.max(c, rc(0,   s,   s,   ms )); // e bot-left
+    if (segs & 32) c = Math.max(c, rc(0,   s,   Mt,  1-s)); // f top-left
+    if (segs & 64) c = Math.max(c, rc(s,   1-s, ms,  Mt )); // g middle
+    return c;
+}
+
+function renderIntLabel(fu, fv, ox, oy, ts, val, negative) {
+    const charW = ts * 0.60, charGap = charW * 0.20, charStep = charW + charGap;
+    let ndigits = 0, tmp = val;
+    do { ndigits++; tmp = Math.floor(tmp / 10); } while (tmp > 0);
+    const nchars = ndigits + (negative ? 1 : 0);
+    const lu = fu - ox, lv = fv - oy;
+    if (lu < 0 || lv < 0 || lv > ts) return 0;
+    const cidx = Math.floor(lu / charStep);
+    if (cidx >= nchars) return 0;
+    const cu = (lu - cidx * charStep) / charW, cv = lv / ts;
+    if (cu < 0 || cu > 1) return 0;
+    let digit;
+    if (negative && cidx === 0) {
+        digit = 10;
+    } else {
+        const d = cidx - (negative ? 1 : 0);
+        let power = 1;
+        for (let i = 0; i < ndigits - 1 - d; i++) power *= 10;
+        digit = Math.floor(val / power) % 10;
+    }
+    return seg7Coverage(digit, cu, cv);
+}
+
+function sampleScaleGrid(u, v, p) {
+    const s  = p.scale > 1e-6 ? p.scale : 4;
+    const su = u * s, sv = v * s;
+    const iu = Math.floor(su), iv = Math.floor(sv);
+    const fu = su - iu, fv = sv - iv;
+    const hw = Math.max(0.005, Math.min(0.45, p.line_width)) * 0.5;
+    if (fu < hw || fu > 1 - hw || fv < hw || fv > 1 - hw) return p.line;
+    const ts     = Math.max(0.05, Math.min(0.40, p.text_size));
+    const margin = hw * 2 + 0.025;
+    let cov = 0;
+    cov = Math.max(cov, renderIntLabel(fu, fv, margin, margin,           ts, Math.abs(iu), iu < 0));
+    cov = Math.max(cov, renderIntLabel(fu, fv, margin, 1 - margin - ts, ts, Math.abs(iv), iv < 0));
+    if (cov <= 0) return p.base;
+    return [
+        p.base[0] + cov * (p.text[0] - p.base[0]),
+        p.base[1] + cov * (p.text[1] - p.base[1]),
+        p.base[2] + cov * (p.text[2] - p.base[2]),
+    ];
+}
+
 function sampleWeave(u, v, p) {
     const s  = p.scale > 1e-6 ? p.scale : 12;
     const bw = Math.max(0.02, Math.min(0.98, p.band_width));
@@ -554,6 +620,18 @@ const SAMPLERS = [
       { name: 'major_every', label: 'Major every',  type: 'int',   min: 2,     max: 20,  step: 1,     def: 5 },
     ],
     render: sampleGraphpaper,
+  },
+  {
+    id: 'scalegrid', label: 'scalegrid', group: 'Pattern',
+    params: [
+      { name: 'base', label: 'Background', type: 'color', def: [0.93,0.93,0.93] },
+      { name: 'line', label: 'Grid line',  type: 'color', def: [0.50,0.60,0.70] },
+      { name: 'text', label: 'Text',       type: 'color', def: [0.18,0.18,0.18] },
+      { name: 'scale',      label: 'Scale',      type: 'float', min: 1, max: 32, step: 1,     def: 4 },
+      { name: 'line_width', label: 'Line width', type: 'float', min: 0.005, max: 0.2, step: 0.005, def: 0.040 },
+      { name: 'text_size',  label: 'Text size',  type: 'float', min: 0.05, max: 0.40, step: 0.01, def: 0.28 },
+    ],
+    render: sampleScaleGrid,
   },
   {
     id: 'weave', label: 'weave', group: 'Pattern',

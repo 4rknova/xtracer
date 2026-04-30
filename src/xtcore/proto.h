@@ -227,6 +227,7 @@
 #define XTPROTO_COLOR               "color"
 #define XTPROTO_RAYLEIGH_SKY        "rayleigh_sky"
 #define XTPROTO_GRAPHPAPER          "graphpaper"
+#define XTPROTO_SCALEGRID           "scalegrid"
 #define XTPROTO_CHECKER             "checker"
 #define XTPROTO_WEAVE               "weave"
 #define XTPROTO_FBM_MARBLE          "fbm_marble"

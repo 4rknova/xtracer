@@ -1530,6 +1530,25 @@ static const material_entry_t CATALOG[] = {
     })"
 },
 {
+    "scalegrid", "Scale Grid", "Procedural",
+    "Measurement grid with 7-segment digit labels showing U/V cell coordinates per square.",
+    "#EDEDED",
+    R"(type = lambert
+    properties = {
+        samplers = {
+            diffuse = {
+                type = scalegrid
+                base = col3(0.93, 0.93, 0.93)
+                line = col3(0.50, 0.60, 0.70)
+                text = col3(0.18, 0.18, 0.18)
+                scale = 8
+                line_width = 0.040
+                text_size = 0.22
+            }
+        }
+    })"
+},
+{
     "carbon_fiber", "Carbon Fiber", "Procedural",
     "Woven carbon fiber with glossy resin coat.",
     "#1A1E22",

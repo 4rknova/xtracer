@@ -45,6 +45,7 @@
 #include "import_asset.h"
 #include "sampler/sampler_erp.h"
 #include "sampler/sampler_graphpaper.h"
+#include "sampler/sampler_scalegrid.h"
 #include "sampler/sampler_checker.h"
 #include "sampler/sampler_weave.h"
 #include "sampler/sampler_fbm_marble.h"
@@ -196,6 +197,7 @@ xtcore::sampler::Gradient *deserialize_gradient(const ncf::NCF *p);
 xtcore::sampler::RayleighSky *deserialize_rayleigh_sky(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_rgba(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_graphpaper(const ncf::NCF *p);
+xtcore::sampler::ISampler *deserialize_scalegrid(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_checker(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_weave(const ncf::NCF *p);
 xtcore::sampler::ISampler *deserialize_fbm_marble(const ncf::NCF *p);
@@ -2308,6 +2310,20 @@ xtcore::sampler::ISampler *deserialize_graphpaper(const ncf::NCF *p)
     return sampler;
 }
 
+xtcore::sampler::ISampler *deserialize_scalegrid(const ncf::NCF *p)
+{
+    xtcore::sampler::ScaleGrid *sampler = new (std::nothrow) xtcore::sampler::ScaleGrid();
+    if (!sampler || !p) return sampler;
+
+    sampler->base_color = deserialize_col3(p, "base",  sampler->base_color);
+    sampler->line_color = deserialize_col3(p, "line",  sampler->line_color);
+    sampler->text_color = deserialize_col3(p, "text",  sampler->text_color);
+    sampler->scale      = deserialize_numf(p->get_property_by_name("scale"),      sampler->scale);
+    sampler->line_width = deserialize_numf(p->get_property_by_name("line_width"), sampler->line_width);
+    sampler->text_size  = deserialize_numf(p->get_property_by_name("text_size"),  sampler->text_size);
+    return sampler;
+}
+
 xtcore::sampler::ISampler *deserialize_checker(const ncf::NCF *p)
 {
     xtcore::sampler::Checker *sampler = new (std::nothrow) xtcore::sampler::Checker();
@@ -2557,6 +2573,7 @@ xtcore::sampler::ISampler *deserialize_sampler_node(const char *source, const nc
     else if (!type.compare(XTPROTO_GRADIENT)) return deserialize_gradient(entry);
     else if (!type.compare(XTPROTO_RAYLEIGH_SKY)) return deserialize_rayleigh_sky(entry);
     else if (!type.compare(XTPROTO_GRAPHPAPER)) return deserialize_graphpaper(entry);
+    else if (!type.compare(XTPROTO_SCALEGRID))  return deserialize_scalegrid(entry);
     else if (!type.compare(XTPROTO_CHECKER)) return deserialize_checker(entry);
     else if (!type.compare(XTPROTO_WEAVE)) return deserialize_weave(entry);
     else if (!type.compare(XTPROTO_FBM_MARBLE)) return deserialize_fbm_marble(entry);
