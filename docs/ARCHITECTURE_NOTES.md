@@ -23,13 +23,13 @@
 ## Frontends
 
 - CLI:
-  - Entrypoint: `src/frontend/cli/xtracer.cc`
-  - Arg parsing: `src/frontend/cli/argparse.cc`
+  - Entrypoint: `/xtracer.cc`
+  - Arg parsing: `/argparse.cc`
 - Web:
-  - Entrypoint: `src/frontend/web-server/main.cc`
-  - HTTP + WebSocket routing/API: `src/frontend/web-server/routes.cc`
-  - Job lifecycle: `src/frontend/web-server/job_manager.cc`
-  - WebSocket pub/sub hub: `src/frontend/web-server/ws_hub.h`
+  - Entrypoint: `src/apps/xtracer/main.cc`
+  - HTTP + WebSocket routing/API: `src/apps/xtracer/routes.cc`
+  - Job lifecycle: `src/apps/xtracer/job_manager.cc`
+  - WebSocket pub/sub hub: `src/apps/xtracer/ws_hub.h`
 
 ## Web Streaming Architecture
 
@@ -69,5 +69,5 @@ Log streaming follows a similar pattern via `log_ws_hub_t` on `/ws/logs`.
 - Crow void-return route handlers must call `res.end()` explicitly (return-type handlers do not need it).
 
 **XTDR packet format** is documented in full in `AGENTS.md § WebSocket Protocol` and inline in:
-- `src/frontend/web-server/job_manager.cc` (builder)
-- `src/frontend/web-client/app/preview.js` (`parseImageDeltaPacket`)
+- `src/apps/xtracer/job_manager.cc` (builder)
+- `src/apps/web-client/app/preview.js` (`parseImageDeltaPacket`)

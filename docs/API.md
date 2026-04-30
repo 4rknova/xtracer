@@ -2,7 +2,7 @@
 
 REST and WebSocket API served by `xtracer`. All API paths are prefixed with `/api/`. Parameters are accepted as URL query strings or POST body (`application/x-www-form-urlencoded`). Responses are JSON with `Content-Type: application/json` unless noted.
 
-Source: `src/frontend/web-server/routes.cc`.
+Source: `src/apps/xtracer/routes.cc`.
 
 ---
 

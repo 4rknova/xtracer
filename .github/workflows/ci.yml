@@ -66,7 +66,7 @@ jobs:
           ARCHIVE="xtracer-${VERSION}-linux-x86_64.tar.gz"
           mkdir -p "${STAGE}/bin" "${STAGE}/web-client"
           cp "${BUILD_DIR}/xtracer" "${STAGE}/bin/"
-          cp -r src/frontend/web-client "${STAGE}/"
+          cp -r src/apps/web-client "${STAGE}/"
           cp -r scene "${STAGE}/"
           cp LICENSE README.md "${STAGE}/"
           tar -C "${STAGE}" -czf "${ARCHIVE}" .

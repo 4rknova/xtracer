@@ -15,7 +15,7 @@ Experimental rendering framework written in C/C++ with a shared core (`xtcore`) 
 The engine supports a range of integrators from simple Whitted-style ray tracing to MIS path tracing with area-light and environment sampling, plus photon mapping, ambient occlusion, and several debug views. Scenes are described in a custom `.scn` format covering procedural and mesh geometry, spline-following tube curves, SVG-backed silhouette mesh generation, analytic cameras (thin-lens with polygonal bokeh, ODS, ERP, cubemap), and environment types including Rayleigh sky.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/src/frontend/web-client/res/ftue.png" alt="preview" width="100%">
+<img src="https://raw.githubusercontent.com/4rknova/xtracer/develop/src/apps/web-client/res/ftue.png" alt="preview" width="100%">
 </p>
 
 ## Quick Start (Install + Run)
@@ -41,7 +41,7 @@ Run:
     --host 127.0.0.1 \
     --port 8080 \
     --scene-dir scene \
-    --web-root src/frontend/web-client \
+    --web-root src/apps/web-client \
     --max-concurrent-renders 1 \
     --render-reserve-threads 1 \
     --verbose
@@ -56,9 +56,9 @@ UI showcase: `http://127.0.0.1:8080/showcase.html`
 | Area | Path | Purpose |
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
-| Web frontend backend | `src/frontend/web-server/` | HTTP API, job manager, log stream |
-| Frontend shared code | `src/frontend/common/` | Shared render service + integrator metadata |
-| Web static app | `src/frontend/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
+| Web frontend backend | `src/apps/xtracer/` | HTTP API, job manager, log stream |
+| Frontend shared code | `src/apps/common/` | Shared render service + integrator metadata |
+| Web static app | `src/apps/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
 | Mitsuba scene converter | `src/convertMitsuba/` | Standalone `convertMitsuba` tool for converting Mitsuba XML/zip scenes into `.scn` scenes plus packaged assets |
 | Scenes | `scene/` | Example scene files (`.scn`) |
 | Supporting libs | `lib/` | Internal libraries (`nimg`, `nmesh`, `nmath`, etc.) |
@@ -130,7 +130,7 @@ First-time use tutorial (FTUE):
 - On first launch, the web app opens a guided tutorial for scene selection, rendering, and scene editing flow.
 - In `Settings`, enable `Show tutorial on next launch` to reset onboarding state for the next app start.
 - In `Settings`, use `Start Tutorial Now` to reopen the tutorial immediately.
-- Tutorial steps are config-driven via `src/frontend/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
+- Tutorial steps are config-driven via `src/apps/web-client/app/data/ftue_steps.json` (`steps[]` entries support `title`, `body`, `target_selector`, `placement`, `tab`, `editor_view`, `open_cards`, and optional `focus_selector`).
 
 Post-filter stack:
 - Current filters: `desaturate`; `chromatic_aberration` (`amount`, `center_x`, `center_y`, `falloff`); `vignette` (`strength`, `radius`, `softness`, `center_x`, `center_y`); `film_grain` (`amount`, `size`, `seed`, `luma_weighted`); `denoise` (bilateral: `strength`, `radius`, `sigma`); `fxaa` (`subpix`, `edge_threshold`, `edge_threshold_min`); `sharpen` (`amount`, `radius`, `threshold`); `brightness` (`amount`); `contrast` (`amount`, `pivot`); `raindrops_lens` (`density`, `size`, `distortion`, `seed`).
@@ -207,7 +207,7 @@ Notes:
     --host 127.0.0.1 \
     --port 8080 \
     --scene-dir scene \
-    --web-root src/frontend/web-client \
+    --web-root src/apps/web-client \
     --max-concurrent-renders 1 \
     --render-reserve-threads 1 \
     --verbose
@@ -223,7 +223,7 @@ The web backend also bounds pending render backlog to `32` queued jobs; extra `/
 Workspace state is also bounded: the backend retains at most `32` workspaces, evicts orphaned idle workspaces after `60` minutes, and returns `409` from `/api/workspaces` if all retained slots are still active.
 Normal scene renders continue to use workspace-backed state, but `/api/render` also accepts an inline `scene_source` override for ad-hoc inline scene renders without creating a workspace.
 Startup prints an ASCII banner with runtime info (host/port, paths, concurrency, and detected core/thread limits).
-Material gallery thumbnails are intended to be pre-rendered into `src/frontend/web-client/res/lib/materials/` rather than generated on each tab visit. Refresh them with:
+Material gallery thumbnails are intended to be pre-rendered into `src/apps/web-client/res/lib/materials/` rather than generated on each tab visit. Refresh them with:
 
 ```bash
 ./util/gen_material_thumbnails.sh

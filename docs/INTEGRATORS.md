@@ -25,7 +25,7 @@ The `debug_views` integrator subsumes what were previously standalone integrator
 
 ## Exposed Via Web API
 
-Registered in `k_integrator_ids` / `create_integrator()` in `src/frontend/common/render_service.cc`:
+Registered in `k_integrator_ids` / `create_integrator()` in `src/apps/common/render_service.cc`:
 
 | Name | Notes |
 |---|---|
@@ -39,4 +39,4 @@ Registered in `k_integrator_ids` / `create_integrator()` in `src/frontend/common
 
 ## Notes
 
-- CLI integrator switch logic currently commented in `src/frontend/cli/xtracer.cc`.
+- CLI integrator switch logic currently commented in `/xtracer.cc`.

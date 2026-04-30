@@ -7,15 +7,14 @@ This file is the orientation and operating guide for coding agents working in th
 - Name: `xtracer`
 - Language: C/C++ (CMake)
 - Branch context: this workspace is currently on `develop`.
-- Core purpose: experimental rendering framework with a shared rendering core and multiple frontends (CLI, Web).
+- Core purpose: experimental rendering framework with a shared rendering core and web app.
 
 ## Repository Map
 
 - Core renderer and scene system: `src/xtcore/`
-- CLI frontend: `src/frontend/cli/`
-- Web frontend backend: `src/frontend/web-server/`
-- Frontend shared helpers: `src/frontend/common/`
-- Web static assets: `src/frontend/web-client/`
+- App backend: `src/apps/xtracer/`
+- Shared render helpers: `src/apps/common/`
+- Web static assets: `src/apps/web-client/`
 - Supporting libraries: `lib/`
 - Third-party dependencies: `ext/`
 - Scene examples: `scene/`
@@ -32,15 +31,15 @@ This file is the orientation and operating guide for coding agents working in th
 ## Known Current State (Develop)
 
 - Integrator implementations exist under `src/xtcore/integrator/`.
-- Integrator metadata exposed by the web frontend is defined in `src/frontend/common/render_service.*`.
+- Integrator metadata exposed by the web frontend is defined in `src/apps/common/render_service.*`.
 - The frontend is implemented as `xtracer`:
   - HTTP + WebSocket server via `ext/crow/crow_all.h` (crow framework) + standalone Asio (`ext/asio/`)
-  - Async render jobs managed in `src/frontend/web-server/job_manager.*`
-  - Shared render pipeline in `src/frontend/common/render_service.*`
-  - Backend log stream in `src/frontend/web-server/backend_log.*`
-  - Request logger middleware in `src/frontend/web-server/request_logger_middleware.h`
-  - WebSocket pub/sub hub in `src/frontend/web-server/ws_hub.h`
-  - Static SPA in `src/frontend/web-client/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
+  - Async render jobs managed in `src/apps/xtracer/job_manager.*`
+  - Shared render pipeline in `src/apps/common/render_service.*`
+  - Backend log stream in `src/apps/xtracer/backend_log.*`
+  - Request logger middleware in `src/apps/xtracer/request_logger_middleware.h`
+  - WebSocket pub/sub hub in `src/apps/xtracer/ws_hub.h`
+  - Static SPA in `src/apps/web-client/` with tabs: `Render`, `Editor`, `Settings`, `Logs`, `About`
 
 ### Web API Surface (Current)
 
@@ -49,7 +48,7 @@ Full REST and WebSocket API reference: `docs/API.md`.
 **Key implementation notes:**
 - Crow's void-return route handlers **must** call `res.end()` explicitly — crow does not call it automatically for void handlers (only for return-value handlers). Missing `res.end()` produces "Empty reply from server".
 - Per-tile push sends binary only (no redundant text snapshot per tile). The binary header carries `tiles_done`/`tiles_total`/`elapsed_ms` so the client can update progress bars with server-authoritative time without a separate text message.
-- XTDR packet builder: `src/frontend/web-server/job_manager.cc`; client parser: `src/frontend/web-client/app/preview.js` (`parseImageDeltaPacket`); push hub: `src/frontend/web-server/ws_hub.h`.
+- XTDR packet builder: `src/apps/xtracer/job_manager.cc`; client parser: `src/apps/web-client/app/preview.js` (`parseImageDeltaPacket`); push hub: `src/apps/xtracer/ws_hub.h`.
 
 ## Branch Relationship Reminder
 
@@ -68,9 +67,9 @@ Short version:
 - Geometry type reference: `docs/GEOMETRY.md`
 - Web API and WebSocket reference: `docs/API.md`
 - CLI switch reference: `docs/CLI.md`
-- Web UI/feature behavior: `src/frontend/web-client/index.html`, `src/frontend/web-client/app.js`, `src/frontend/web-client/styles.css`
-- Web widget library: `src/frontend/web-client/app/widgets/`
-- Widget showcase (live reference): `src/frontend/web-client/showcase.js`
+- Web UI/feature behavior: `src/apps/web-client/index.html`, `src/apps/web-client/app.js`, `src/apps/web-client/styles.css`
+- Web widget library: `src/apps/web-client/app/widgets/`
+- Widget showcase (live reference): `src/apps/web-client/showcase.js`
 
 ## Scene Format Reference (Parser-Backed)
 
@@ -331,7 +330,7 @@ The web client uses a **widget-based UI architecture**. All dynamic DOM construc
 
 ### Widget Library
 
-All widgets are defined in `src/frontend/web-client/app/widgets/` and exposed on the global `window.XTracerWidgets` object. The library is always fully loaded before any app code runs — no availability checks are needed.
+All widgets are defined in `src/apps/web-client/app/widgets/` and exposed on the global `window.XTracerWidgets` object. The library is always fully loaded before any app code runs — no availability checks are needed.
 
 | Module | Exports |
 |--------|---------|
@@ -356,7 +355,7 @@ All widgets are defined in `src/frontend/web-client/app/widgets/` and exposed on
 | `scene_card.js` | `createSceneCard`, `createCameraCard`, `createVariantCard` |
 | `dependencies.js` | `createDependencyItem`, `renderDependencyList` |
 
-The showcase page (`src/frontend/web-client/showcase.js`, served at `/showcase.html`) renders a live demo of every widget and must be kept in sync whenever widgets are added or changed.
+The showcase page (`src/apps/web-client/showcase.js`, served at `/showcase.html`) renders a live demo of every widget and must be kept in sync whenever widgets are added or changed.
 
 ### Rules For UI Work
 
@@ -380,13 +379,13 @@ If a pattern genuinely has no widget equivalent (complex stateful components, da
 
 **When to create a new widget.**
 A new widget is justified when the same structural pattern appears in three or more independent call sites. Below that threshold, inline `dom.el` composition is preferred. When adding a widget:
-1. Create it in `src/frontend/web-client/app/widgets/<name>.js` following the existing IIFE pattern, exporting onto `window.XTracerWidgets`.
+1. Create it in `src/apps/web-client/app/widgets/<name>.js` following the existing IIFE pattern, exporting onto `window.XTracerWidgets`.
 2. Add a demo card for it in the `buildWidgets()` function in `showcase.js`.
 3. Update the widget table in this file.
 
 ### Known Structural Gap
 
-`src/frontend/web-client/app/sidebar_cards.js` defines sidebar card bodies as raw HTML template strings processed by `htmlToFragment()`. Widget calls cannot reach elements inside these strings. Post-render upgrade functions (`renderStatHint`, `enhanceSelects`) compensate for the stat hints and dropdowns, but buttons, pills, and checkboxes inside the bodies are static HTML. Converting these bodies from HTML strings to `dom.el`-based builders is the remaining step to full widget coverage of the sidebar.
+`src/apps/web-client/app/sidebar_cards.js` defines sidebar card bodies as raw HTML template strings processed by `htmlToFragment()`. Widget calls cannot reach elements inside these strings. Post-render upgrade functions (`renderStatHint`, `enhanceSelects`) compensate for the stat hints and dropdowns, but buttons, pills, and checkboxes inside the bodies are static HTML. Converting these bodies from HTML strings to `dom.el`-based builders is the remaining step to full widget coverage of the sidebar.
 
 ## Working Conventions For Agents
 
@@ -396,19 +395,19 @@ A new widget is justified when the same structural pattern appears in three or m
 - When adding or modifying a camera type — new type, renamed parameters, new parameters, or changed defaults — update `docs/CAMERAS.md` in the same task. The file is the canonical reference for all types registered in `src/xtcore/parseutil.cc` via the `XTPROTO_LTRL_CAM_*` constants.
 - When adding, renaming, or removing a top-level NCF scene block, or changing how `variants` / `object` / `medium` are parsed, update `docs/SCENE_FORMAT.md` in the same task.
 - When adding a new procedural geometry generator, add a corresponding variant to `scene/lab-procedural-geometry-showcase.scn`. The file covers all supported generators exhaustively — one variant per type, with a matching geometry block, a principled material, and an entry in the `variants` section. Follow the existing naming convention (`g_<name>` for geometry, `mat_<name>` for material).
-- When adding or modifying a REST or WebSocket endpoint in `src/frontend/web-server/routes.cc` — new endpoint, changed parameters, changed response shape, new error codes — update `docs/API.md` in the same task. The file is the canonical API reference for external callers.
-- When adding, removing, or changing CLI flags in `src/frontend/cli/argdefs.h` / `src/frontend/cli/argparse.cc`, or startup flags in `src/frontend/web-server/main.cc`, update `docs/CLI.md` in the same task.
+- When adding or modifying a REST or WebSocket endpoint in `src/apps/xtracer/routes.cc` — new endpoint, changed parameters, changed response shape, new error codes — update `docs/API.md` in the same task. The file is the canonical API reference for external callers.
+- When adding, removing, or changing CLI flags in `/argdefs.h` / `/argparse.cc`, or startup flags in `src/apps/xtracer/main.cc`, update `docs/CLI.md` in the same task.
 - Prefer minimal, surgical changes.
 - Do not revert unrelated working tree changes.
 - Keep tile-based architecture unless intentionally redesigning it.
 - When a code/config/API/feature change affects documented behavior, update `README.md` in the same task so it reflects the current repository state.
 - When changing rendering flow, validate worker-thread behavior in the web frontend.
 - When changing web API responses, update both:
-  - backend route handlers in `src/frontend/web-server/routes.cc`
-  - frontend consumers in `src/frontend/web-client/app.js`
+  - backend route handlers in `src/apps/xtracer/routes.cc`
+  - frontend consumers in `src/apps/web-client/app.js`
 - If adding new integrators, update both:
   - `src/xtcore/integrator.h`
-  - Integrator registry in `src/frontend/common/render_service.cc`
+  - Integrator registry in `src/apps/common/render_service.cc`
 
 ## Commit Message Format
 

@@ -18,7 +18,7 @@ All flags use double dash (`--`).
 | `--port <n>` | `8080` | TCP port. Must be in range 1–65535. |
 | `--scene-dir <path>` | `scene` | Directory scanned for `.scn` scene files. |
 | `--gallery-dir <path>` | `gallery` | Directory used to persist completed render gallery entries. |
-| `--web-root <path>` | `src/frontend/web-client` | Root directory served as the web client UI. |
+| `--web-root <path>` | `src/apps/web-client` | Root directory served as the web client UI. |
 | `--max-concurrent-renders <n>` | `999` | Maximum number of renders that may run simultaneously. Must be ≥ 1. |
 | `--render-reserve-threads <n>` | `1` | Number of CPU threads to keep free for server tasks. Reduces the thread budget allocated to renders. |
 | `--verbose` / `-v` | off | Log every HTTP request. |
