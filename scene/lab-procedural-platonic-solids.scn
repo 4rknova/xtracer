@@ -1,5 +1,5 @@
 title = Procedural Platonic Solids Test
-description = Test scene for all Platonic solids generated in-scene via gen(...).
+description = Platonic solids generated in-scene via gen(). Each variant isolates one solid with a distinct material.
 version = 1.0
 
 environment = {
@@ -13,9 +13,9 @@ environment = {
 camera = {
     default = {
         type     = thin-lens
-        fov      = 44
-        position = vec3(0.0,2.8,-18.0)
-        target   = vec3(0.0,0.9,2.4)
+        fov      = 38
+        position = vec3(0.0,5.5,-1.5)
+        target   = vec3(0.0,1.25,2.7)
         up       = vec3(0,1,0)
     }
 }
@@ -89,7 +89,16 @@ material = {
         type = lambert
         properties = {
             samplers = {
-                diffuse = { type = color, value = col3(0.58,0.60,0.64) }
+                diffuse = {
+                    type        = graphpaper
+                    base        = col3(0.62,0.64,0.68)
+                    minor       = col3(0.50,0.52,0.56)
+                    major       = col3(0.36,0.38,0.42)
+                    scale       = 4
+                    major_every = 4
+                    minor_width = 0.025
+                    major_width = 0.055
+                }
             }
         }
     }
@@ -157,14 +166,614 @@ material = {
             }
         }
     }
+
+    mat_matte = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = { type = color, value = col3(0.72,0.72,0.72) }
+            }
+        }
+    }
+
+    mat_ceramic = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.90,0.88,0.85) }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.46
+                ior                 = 1.55
+                clearcoat           = 0.0
+                clearcoat_roughness = 0.1
+            }
+        }
+    }
+
+    mat_gloss = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.12,0.28,0.82) }
+            }
+            scalars = {
+                metallic            = 0.0
+                roughness           = 0.06
+                ior                 = 1.5
+                clearcoat           = 0.9
+                clearcoat_roughness = 0.04
+            }
+        }
+    }
+
+    mat_metal = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.95,0.76,0.22) }
+            }
+            scalars = {
+                metallic            = 1.0
+                roughness           = 0.10
+                ior                 = 1.5
+                clearcoat           = 0.0
+                clearcoat_roughness = 0.08
+            }
+        }
+    }
+
+    mat_glass = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission = { type = color, value = col3(1.0,1.0,1.0) }
+            }
+            scalars = {
+                roughness    = 0.04
+                ior          = 1.5
+                transparency = 0.98
+            }
+        }
+    }
 }
 
 object = {
-    floor = { geometry = floor, material = floor_matte }
-    g_tetrahedron = { geometry = g_tetrahedron, material = m_tetra }
-    g_cube = { geometry = g_cube, material = m_cube }
-    g_octahedron = { geometry = g_octahedron, material = m_octa }
-    g_dodecahedron = { geometry = g_dodecahedron, material = m_dodeca }
-    g_icosahedron = { geometry = g_icosahedron, material = m_icosa }
-    key_light = { geometry = key_light, material = emissive_key }
+    floor         = { geometry = floor,         material = floor_matte  }
+    g_tetrahedron = { geometry = g_tetrahedron, material = m_tetra      }
+    g_cube        = { geometry = g_cube,        material = m_cube       }
+    g_octahedron  = { geometry = g_octahedron,  material = m_octa      }
+    g_dodecahedron = { geometry = g_dodecahedron, material = m_dodeca  }
+    g_icosahedron = { geometry = g_icosahedron, material = m_icosa      }
+    key_light     = { geometry = key_light,     material = emissive_key }
+}
+
+variants = {
+    hide_base = true
+
+    base = {
+        name        = All Solids
+        description = All five Platonic solids arranged side by side.
+    }
+
+    # ── Tetrahedron ──────────────────────────────────────────────────────────
+
+    tetrahedron_matte = {
+        name        = Tetrahedron · Matte
+        description = Tetrahedron with flat Lambert diffuse in neutral gray.
+        remove = {
+            object = {
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_tetrahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_tetrahedron = { material = mat_matte }
+            }
+        }
+    }
+
+    tetrahedron_ceramic = {
+        name        = Tetrahedron · Ceramic
+        description = Tetrahedron as principled rough dielectric in warm white.
+        remove = {
+            object = {
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_tetrahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_tetrahedron = { material = mat_ceramic }
+            }
+        }
+    }
+
+    tetrahedron_gloss = {
+        name        = Tetrahedron · Gloss
+        description = Tetrahedron as clearcoat-finished principled in deep blue.
+        remove = {
+            object = {
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_tetrahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_tetrahedron = { material = mat_gloss }
+            }
+        }
+    }
+
+    tetrahedron_metal = {
+        name        = Tetrahedron · Metal
+        description = Tetrahedron as polished gold principled conductor.
+        remove = {
+            object = {
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_tetrahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_tetrahedron = { material = mat_metal }
+            }
+        }
+    }
+
+    tetrahedron_glass = {
+        name        = Tetrahedron · Glass
+        description = Tetrahedron as smooth rough-dielectric clear glass.
+        remove = {
+            object = {
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_tetrahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_tetrahedron = { material = mat_glass }
+            }
+        }
+    }
+
+    # ── Cube ─────────────────────────────────────────────────────────────────
+
+    cube_matte = {
+        name        = Cube · Matte
+        description = Cube with flat Lambert diffuse in neutral gray.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_cube = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_cube = { material = mat_matte }
+            }
+        }
+    }
+
+    cube_ceramic = {
+        name        = Cube · Ceramic
+        description = Cube as principled rough dielectric in warm white.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_cube = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_cube = { material = mat_ceramic }
+            }
+        }
+    }
+
+    cube_gloss = {
+        name        = Cube · Gloss
+        description = Cube as clearcoat-finished principled in deep blue.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_cube = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_cube = { material = mat_gloss }
+            }
+        }
+    }
+
+    cube_metal = {
+        name        = Cube · Metal
+        description = Cube as polished gold principled conductor.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_cube = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_cube = { material = mat_metal }
+            }
+        }
+    }
+
+    cube_glass = {
+        name        = Cube · Glass
+        description = Cube as smooth rough-dielectric clear glass.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_cube = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_cube = { material = mat_glass }
+            }
+        }
+    }
+
+    # ── Octahedron ───────────────────────────────────────────────────────────
+
+    octahedron_matte = {
+        name        = Octahedron · Matte
+        description = Octahedron with flat Lambert diffuse in neutral gray.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            object = {
+                g_octahedron = { material = mat_matte }
+            }
+        }
+    }
+
+    octahedron_ceramic = {
+        name        = Octahedron · Ceramic
+        description = Octahedron as principled rough dielectric in warm white.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            object = {
+                g_octahedron = { material = mat_ceramic }
+            }
+        }
+    }
+
+    octahedron_gloss = {
+        name        = Octahedron · Gloss
+        description = Octahedron as clearcoat-finished principled in deep blue.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            object = {
+                g_octahedron = { material = mat_gloss }
+            }
+        }
+    }
+
+    octahedron_metal = {
+        name        = Octahedron · Metal
+        description = Octahedron as polished gold principled conductor.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            object = {
+                g_octahedron = { material = mat_metal }
+            }
+        }
+    }
+
+    octahedron_glass = {
+        name        = Octahedron · Glass
+        description = Octahedron as smooth rough-dielectric clear glass.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_dodecahedron = {}
+                g_icosahedron  = {}
+            }
+        }
+        set = {
+            object = {
+                g_octahedron = { material = mat_glass }
+            }
+        }
+    }
+
+    # ── Dodecahedron ─────────────────────────────────────────────────────────
+
+    dodecahedron_matte = {
+        name        = Dodecahedron · Matte
+        description = Dodecahedron with flat Lambert diffuse in neutral gray.
+        remove = {
+            object = {
+                g_tetrahedron = {}
+                g_cube        = {}
+                g_octahedron  = {}
+                g_icosahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_dodecahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_dodecahedron = { material = mat_matte }
+            }
+        }
+    }
+
+    dodecahedron_ceramic = {
+        name        = Dodecahedron · Ceramic
+        description = Dodecahedron as principled rough dielectric in warm white.
+        remove = {
+            object = {
+                g_tetrahedron = {}
+                g_cube        = {}
+                g_octahedron  = {}
+                g_icosahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_dodecahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_dodecahedron = { material = mat_ceramic }
+            }
+        }
+    }
+
+    dodecahedron_gloss = {
+        name        = Dodecahedron · Gloss
+        description = Dodecahedron as clearcoat-finished principled in deep blue.
+        remove = {
+            object = {
+                g_tetrahedron = {}
+                g_cube        = {}
+                g_octahedron  = {}
+                g_icosahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_dodecahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_dodecahedron = { material = mat_gloss }
+            }
+        }
+    }
+
+    dodecahedron_metal = {
+        name        = Dodecahedron · Metal
+        description = Dodecahedron as polished gold principled conductor.
+        remove = {
+            object = {
+                g_tetrahedron = {}
+                g_cube        = {}
+                g_octahedron  = {}
+                g_icosahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_dodecahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_dodecahedron = { material = mat_metal }
+            }
+        }
+    }
+
+    dodecahedron_glass = {
+        name        = Dodecahedron · Glass
+        description = Dodecahedron as smooth rough-dielectric clear glass.
+        remove = {
+            object = {
+                g_tetrahedron = {}
+                g_cube        = {}
+                g_octahedron  = {}
+                g_icosahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_dodecahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_dodecahedron = { material = mat_glass }
+            }
+        }
+    }
+
+    # ── Icosahedron ──────────────────────────────────────────────────────────
+
+    icosahedron_matte = {
+        name        = Icosahedron · Matte
+        description = Icosahedron with flat Lambert diffuse in neutral gray.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_icosahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_icosahedron = { material = mat_matte }
+            }
+        }
+    }
+
+    icosahedron_ceramic = {
+        name        = Icosahedron · Ceramic
+        description = Icosahedron as principled rough dielectric in warm white.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_icosahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_icosahedron = { material = mat_ceramic }
+            }
+        }
+    }
+
+    icosahedron_gloss = {
+        name        = Icosahedron · Gloss
+        description = Icosahedron as clearcoat-finished principled in deep blue.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_icosahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_icosahedron = { material = mat_gloss }
+            }
+        }
+    }
+
+    icosahedron_metal = {
+        name        = Icosahedron · Metal
+        description = Icosahedron as polished gold principled conductor.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_icosahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_icosahedron = { material = mat_metal }
+            }
+        }
+    }
+
+    icosahedron_glass = {
+        name        = Icosahedron · Glass
+        description = Icosahedron as smooth rough-dielectric clear glass.
+        remove = {
+            object = {
+                g_tetrahedron  = {}
+                g_cube         = {}
+                g_octahedron   = {}
+                g_dodecahedron = {}
+            }
+        }
+        set = {
+            geometry = {
+                g_icosahedron = { modifiers = { translation = vec3(0,1.25,2.7) } }
+            }
+            object = {
+                g_icosahedron = { material = mat_glass }
+            }
+        }
+    }
 }
