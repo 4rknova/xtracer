@@ -910,12 +910,14 @@ function queueWorkspaceSettingsSave() {
   if (suppressWorkspaceSettingsSave) return;
   if (!activeWorkspaceId) return;
   if (!hasBackendMethod(api, "saveWorkspaceSettings")) return;
+  const savedForWorkspace = activeWorkspaceId;
   if (workspaceSettingsSaveTimer) {
     clearTimeout(workspaceSettingsSaveTimer);
     workspaceSettingsSaveTimer = null;
   }
   workspaceSettingsSaveTimer = setTimeout(() => {
     workspaceSettingsSaveTimer = null;
+    if (savedForWorkspace !== activeWorkspaceId) return;
     let json = "{}";
     try {
       json = JSON.stringify(workspaceSettingsPayload());
@@ -1128,7 +1130,7 @@ async function applyActiveWorkspaceState(snapshot, options) {
         const wsVariant = String((ws && ws.active_variant) || "").trim()
           || String(((workspaceRuntimeState(activeWorkspaceId)) || {}).activeVariant || "").trim();
         const sourceData = await api.getSceneSource(effectiveScene);
-        await loadVariants(effectiveScene, wsVariant || undefined, sourceData && sourceData.source ? sourceData.source : "");
+        await loadVariants(effectiveScene, wsVariant, sourceData && sourceData.source ? sourceData.source : "");
         const variantName = selectedSceneVariantValue();
         await Promise.all([
           loadCameras(effectiveScene, variantName),
@@ -1155,6 +1157,23 @@ async function applyActiveWorkspaceState(snapshot, options) {
           appendLog(`workspace rollback error: ${rollbackErr.message}`);
         }
       }
+    }
+  } else if (el.scene && el.scene.value) {
+    // No saved scene for this workspace yet; the picker still shows a scene from the previous
+    // workspace. Reload variants using this workspace's saved variant (usually "" for a new
+    // workspace) so the variant picker is never left showing a stale value from another workspace.
+    const wsVariant = String((ws && ws.active_variant) || "").trim()
+      || String(((workspaceRuntimeState(activeWorkspaceId)) || {}).activeVariant || "").trim();
+    try {
+      const currentScene = String(el.scene.value).trim();
+      if (currentScene && hasSceneOption(currentScene)) {
+        const sourceData = await api.getSceneSource(currentScene);
+        await loadVariants(currentScene, wsVariant, sourceData && sourceData.source ? sourceData.source : "");
+        const variantName = selectedSceneVariantValue();
+        await loadCameras(currentScene, variantName);
+      }
+    } catch (err) {
+      appendLog(`workspace variant reset error: ${err.message}`);
     }
   }
 

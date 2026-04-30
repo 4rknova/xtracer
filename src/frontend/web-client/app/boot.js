@@ -252,11 +252,11 @@ async function boot() {
     trackStartupRequest(loadPostFilters()),
     trackStartupRequest(loadResolutionPresets()),
   ]);
-  const tryLoadSceneBundle = async (sceneName) => {
+  const tryLoadSceneBundle = async (sceneName, preferredVariant) => {
     const name = String(sceneName || "").trim();
     if (!name) return false;
     const sourceData = await api.getSceneSource(name);
-    await loadVariants(name, undefined, sourceData && sourceData.source ? sourceData.source : "");
+    await loadVariants(name, preferredVariant, sourceData && sourceData.source ? sourceData.source : "");
     const variantName = selectedSceneVariantValue();
     const tasks = [
       loadCameras(name, variantName),
@@ -265,6 +265,18 @@ async function boot() {
     ];
     await Promise.all(tasks);
     return true;
+  };
+
+  const resolveWorkspacePreferredVariant = () => {
+    if (!hasWorkspaceApi || !activeWorkspaceId) return undefined;
+    const snap = workspaceSnapshotById.get(activeWorkspaceId);
+    if (!snap) return undefined;
+    const av = String((snap && snap.active_variant) || "").trim();
+    if (av) return av;
+    try {
+      const cfg = JSON.parse(String((snap && snap.settings_json) || "{}"));
+      return String(cfg && cfg.scene_variant !== undefined ? cfg.scene_variant : "").trim();
+    } catch (_) { return ""; }
   };
 
   const activeWorkspaceScene = () => {
@@ -304,7 +316,7 @@ async function boot() {
           localStorage.setItem(LAST_SCENE_KEY, candidate);
           updateSceneDependencyPill(candidate);
         }
-        await tryLoadSceneBundle(candidate);
+        await tryLoadSceneBundle(candidate, resolveWorkspacePreferredVariant());
         loadedStartupScene = candidate;
         loaded = true;
         break;
@@ -1444,8 +1456,17 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
               if (el.workspaceCreateName) el.workspaceCreateName.value = "";
               if (!id) return refreshWorkspaces();
               return switchActiveWorkspace(id).then(() => {
+                const sceneAlreadyActive = el.scene
+                  && String(el.scene.value || "").trim() === sceneName;
                 if (variantName !== null) pendingVariantForNextSceneLoad = variantName;
                 activateSceneFile(sceneName);
+                // activateSceneFile returns early (no change event) when the scene is already
+                // showing; pendingVariantForNextSceneLoad would then never be consumed.
+                // Apply the variant directly in that case.
+                if (sceneAlreadyActive && variantName !== null) {
+                  pendingVariantForNextSceneLoad = null;
+                  if (typeof activateVariant === "function") activateVariant(variantName);
+                }
               });
             })
             .catch((err) => appendLog(`workspace create error: ${err.message}`));
