@@ -13,7 +13,6 @@ This file is the orientation and operating guide for coding agents working in th
 
 - Core renderer and scene system: `src/xtcore/`
 - App backend: `src/apps/xtracer/`
-- Shared render helpers: `src/apps/common/`
 - Web static assets: `src/apps/web-client/`
 - Supporting libraries: `lib/`
 - Third-party dependencies: `ext/`
@@ -31,11 +30,11 @@ This file is the orientation and operating guide for coding agents working in th
 ## Known Current State (Develop)
 
 - Integrator implementations exist under `src/xtcore/integrator/`.
-- Integrator metadata exposed by the web frontend is defined in `src/apps/common/render_service.*`.
+- Integrator metadata exposed by the web frontend is defined in `src/apps/xtracer/render_service.*`.
 - The frontend is implemented as `xtracer`:
   - HTTP + WebSocket server via `ext/crow/crow_all.h` (crow framework) + standalone Asio (`ext/asio/`)
   - Async render jobs managed in `src/apps/xtracer/job_manager.*`
-  - Shared render pipeline in `src/apps/common/render_service.*`
+  - Shared render pipeline in `src/apps/xtracer/render_service.*`
   - Backend log stream in `src/apps/xtracer/backend_log.*`
   - Request logger middleware in `src/apps/xtracer/request_logger_middleware.h`
   - WebSocket pub/sub hub in `src/apps/xtracer/ws_hub.h`
@@ -407,7 +406,7 @@ A new widget is justified when the same structural pattern appears in three or m
   - frontend consumers in `src/apps/web-client/app.js`
 - If adding new integrators, update both:
   - `src/xtcore/integrator.h`
-  - Integrator registry in `src/apps/common/render_service.cc`
+  - Integrator registry in `src/apps/xtracer/render_service.cc`
 
 ## Commit Message Format
 

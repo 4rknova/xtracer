@@ -56,8 +56,7 @@ UI showcase: `http://127.0.0.1:8080/showcase.html`
 | Area | Path | Purpose |
 |---|---|---|
 | Core renderer | `src/xtcore/` | Scene parsing, render context, integrators, tone mapping |
-| Web frontend backend | `src/apps/xtracer/` | HTTP API, job manager, log stream |
-| Frontend shared code | `src/apps/common/` | Shared render service + integrator metadata |
+| App backend | `src/apps/xtracer/` | HTTP API, job manager, render service, log stream |
 | Web static app | `src/apps/web-client/` | SPA for Scene / Render / Editor / Workspaces / Gallery / Settings / Logs / About, including runtime JSON config in `app/data/` |
 | Mitsuba scene converter | `src/convertMitsuba/` | Standalone `convertMitsuba` tool for converting Mitsuba XML/zip scenes into `.scn` scenes plus packaged assets |
 | Scenes | `scene/` | Example scene files (`.scn`) |

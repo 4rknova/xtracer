@@ -25,7 +25,7 @@ The `debug_views` integrator subsumes what were previously standalone integrator
 
 ## Exposed Via Web API
 
-Registered in `k_integrator_ids` / `create_integrator()` in `src/apps/common/render_service.cc`:
+Registered in `k_integrator_ids` / `create_integrator()` in `src/apps/xtracer/render_service.cc`:
 
 | Name | Notes |
 |---|---|

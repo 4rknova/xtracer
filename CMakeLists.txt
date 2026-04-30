@@ -114,7 +114,6 @@ list(REMOVE_DUPLICATES ext_libs)
 
 set(PATH_SRC_XTCORE       ${PATH_SRC}/xtcore)
 set(PATH_SRC_FRONTEND_WEB ${PATH_SRC}/apps/xtracer)
-set(PATH_SRC_FRONTEND_COMMON ${PATH_SRC}/apps/common)
 set(PATH_SRC_BENCH        ${PATH_SRC}/bench)
 set(PATH_SRC_TESTS        ${PATH_SRC}/tests)
 
@@ -187,12 +186,6 @@ file(GLOB SRC_FRONTEND_WEB
     ${PATH_SRC_FRONTEND_WEB}/*.c
     ${PATH_SRC_FRONTEND_WEB}/*.cc
     ${PATH_SRC_FRONTEND_WEB}/*.cpp
-)
-
-file(GLOB SRC_FRONTEND_COMMON
-    ${PATH_SRC_FRONTEND_COMMON}/*.c
-    ${PATH_SRC_FRONTEND_COMMON}/*.cc
-    ${PATH_SRC_FRONTEND_COMMON}/*.cpp
 )
 
 add_custom_target(manpages
@@ -543,7 +536,7 @@ endif()
 target_compile_definitions(${OUT_EXE_NMATH_BENCH_SCALAR} PRIVATE NMATH_BENCH_FORCE_SCALAR=1)
 
 set(OUT_EXE_WEB xtracer)
-add_executable(${OUT_EXE_WEB} ${SRC_FRONTEND_WEB} ${SRC_FRONTEND_COMMON})
+add_executable(${OUT_EXE_WEB} ${SRC_FRONTEND_WEB})
 target_include_directories(${OUT_EXE_WEB} PUBLIC
     ${PATH_LIB}
     ${PATH_SRC}

@@ -12,7 +12,7 @@
 #include <condition_variable>
 #include <chrono>
 
-#include <frontend/common/render_service.h>
+#include "render_service.h"
 #include <nimg/pixmap.h>
 #include <xtcore/tonemapping/tonemapping.h>
 #include "gallery_manager.h"
