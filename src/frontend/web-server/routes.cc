@@ -3528,6 +3528,7 @@ void setup_routes(WebApp &app,
             }
             if (workspace_id.empty()) workspace_id = workspaces.ensure_client("");
             workspaces.set_active_scene(workspace_id, scene);
+            workspaces.set_active_variant(workspace_id, rr.variant);
         }
 
         std::string cleanup_scene_path;
