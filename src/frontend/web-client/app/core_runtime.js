@@ -841,11 +841,12 @@ function createServerApi() {
     async getJob(jobId) {
       return getJSON(`/api/jobs/${jobId}`);
     },
-    async abortJob(jobId) {
+    async abortJob(jobId, workspaceId) {
       const encoded = encodeURIComponent(jobId);
       const body = new URLSearchParams();
       body.set("client_id", clientId || ensureClientId());
-      if (activeWorkspaceId) body.set("workspace_id", activeWorkspaceId);
+      const wsId = String(workspaceId || activeWorkspaceId || "").trim();
+      if (wsId) body.set("workspace_id", wsId);
       const res = await fetch(`/api/jobs/abort/${encoded}`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },

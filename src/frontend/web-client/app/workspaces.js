@@ -589,7 +589,7 @@ function renderSettingsJobsList(activeJobs) {
         title: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort",
         disabled: settingsJobsAbortInFlight.has(id),
         onClick: () => {
-          abortSettingsJob(id).catch((err) => appendLog(`settings abort error: ${err.message}`));
+          abortSettingsJob(id, workspaceId).catch((err) => appendLog(`settings abort error: ${err.message}`));
         },
       });
       controlNodes.push(abortBtn);
@@ -674,14 +674,14 @@ async function moveSettingsJobQueue(jobId, direction) {
   }
 }
 
-async function abortSettingsJob(jobId) {
+async function abortSettingsJob(jobId, jobWorkspaceId) {
   const id = String(jobId || "").trim();
   if (!id || !hasBackendMethod(api, "abortJob")) return;
   if (settingsJobsAbortInFlight.has(id)) return;
   settingsJobsAbortInFlight.add(id);
   try {
     appendLog(`settings abort requested for ${id}`);
-    await api.abortJob(id);
+    await api.abortJob(id, jobWorkspaceId);
     appendLog(`settings abort accepted for ${id}`);
   } catch (err) {
     appendLog(`settings abort failed for ${id}: ${err.message}`);
