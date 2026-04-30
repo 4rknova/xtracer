@@ -1201,6 +1201,7 @@ function renderWorkspaceList(items) {
     const hasOwned = !!(ws && Object.prototype.hasOwnProperty.call(ws, "is_owned_by_client"));
     const isMine = hasOwned ? !!ws.is_owned_by_client : !!(ws && ws.is_active_for_client);
     const scene = String((ws && ws.active_scene) || "").trim();
+    const variant = String((ws && ws.active_variant) || "").trim();
     const activeJob = String((ws && ws.active_job_id) || "").trim();
     const lastJob = String((ws && ws.last_job_id) || "").trim();
     const clients = Number((ws && ws.client_count) || 0);
@@ -1334,6 +1335,7 @@ function renderWorkspaceList(items) {
     addMeta("ID", id || "-");
     addMeta("This Client", isMine ? "Yes" : "No");
     addMeta("Scene", scene || "-");
+    addMeta("Variant", variant || "-");
     addMeta("Clients", String(clients));
     addMeta("Drafts", String(drafts));
     addMeta("Job", activeJob || lastJob || "-");
@@ -1351,7 +1353,7 @@ function renderWorkspaceList(items) {
       main.className = "workspace-item-list-main";
       const sceneLine = document.createElement("p");
       sceneLine.className = "workspace-item-list-scene";
-      sceneLine.textContent = scene || "-";
+      sceneLine.textContent = variant ? `${scene || "-"} / ${variant}` : (scene || "-");
 
       const metaStrip = document.createElement("div");
       metaStrip.className = "workspace-item-meta-strip";
