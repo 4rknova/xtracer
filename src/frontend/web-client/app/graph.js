@@ -594,6 +594,46 @@ function buildNodeElement(n) {
       div.appendChild(bar);
       // Editable RGB channel inputs (only for pure color samplers, not textures)
       if (n.materialId && n.samplerName) {
+        const toHex2 = (v) => Math.round(clamp(v, 0, 1) * 255).toString(16).padStart(2, "0");
+        const colorPicker = document.createElement("input");
+        colorPicker.type  = "color";
+        colorPicker.style.cssText = "position:absolute;width:0;height:0;opacity:0;pointer-events:none;";
+        colorPicker.value = `#${toHex2(n.samplerColor[0])}${toHex2(n.samplerColor[1])}${toHex2(n.samplerColor[2])}`;
+        bar.appendChild(colorPicker);
+        bar.classList.add("ng-node-swatch-bar--clickable");
+        bar.addEventListener("pointerdown", (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+          colorPicker.click();
+        });
+        const applyPickerColor = (hex, commit) => {
+          const rgb = [
+            parseInt(hex.slice(1, 3), 16) / 255,
+            parseInt(hex.slice(3, 5), 16) / 255,
+            parseInt(hex.slice(5, 7), 16) / 255,
+          ];
+          bar.style.background = hex;
+          const nodeEl = bar.closest(".ng-node");
+          (nodeEl ? nodeEl.querySelectorAll(".ng-node-color-channel") : []).forEach((ci) => {
+            const ch = Number(ci.dataset.channel);
+            if (ch >= 0 && ch <= 2) ci.value = formatSceneNumber(rgb[ch], 0);
+          });
+          if (commit) {
+            patchRuntimeCache((rt) => {
+              const mat = (rt.materials || []).find((x) => String(x.id) === n.materialId);
+              if (mat && Array.isArray(mat.samplers)) {
+                const sam = mat.samplers.find((s) => String(s.name) === n.samplerName);
+                if (sam) sam.color = rgb.slice();
+              }
+            });
+            const src  = el.sceneSource ? String(el.sceneSource.value || "") : "";
+            const next = updateSamplerColorInSource(src, n.materialId, n.samplerName, rgb);
+            if (next !== src) updateSceneSourceText(next, { history: "visual" });
+          }
+        };
+        colorPicker.addEventListener("input",  (e) => applyPickerColor(e.target.value, false));
+        colorPicker.addEventListener("change", (e) => applyPickerColor(e.target.value, true));
+        colorPicker.addEventListener("mousedown", (e) => e.stopPropagation());
         const rgbRow = document.createElement("div");
         rgbRow.className = "ng-node-color-inputs";
         ["R", "G", "B"].forEach((ch, idx) => {
