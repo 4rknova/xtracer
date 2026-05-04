@@ -287,6 +287,8 @@ class Converter {
     Transform parse_transform(pugi::xml_node parent, const char* param = "to_world") const {
         Transform t;
         auto tf = named(parent, param);
+        // Mitsuba 0.6 uses camelCase: toWorld, toUV, etc.
+        if (!tf && strcmp(param, "to_world") == 0) tf = named(parent, "toWorld");
         if (!tf) return t;
 
         for (auto c : tf.children()) {
@@ -978,27 +980,26 @@ class Converter {
                     r[6], -r[8],  r[7]    // row 2
                 };
                 Vec3 euler_rect = mat3_to_euler_zyx(rc);
-                // Scale: map each gen(plane) tangent axis to its dominant world axis after rc.
-                // col0 of rc = world dir of gen X, col2 = world dir of gen Z; col1(normal) = 1.
-                Vec3 s = {1.f, 1.f, 1.f};
-                {   float ax=std::abs(rc[0]), ay=std::abs(rc[3]), az=std::abs(rc[6]);
-                    if (ax >= ay && ax >= az)      s.x = t.scale.x * 2.f;
-                    else if (ay >= ax && ay >= az) s.y = t.scale.x * 2.f;
-                    else                           s.z = t.scale.x * 2.f;
-                }
-                {   float ax=std::abs(rc[2]), ay=std::abs(rc[5]), az=std::abs(rc[8]);
-                    if (ax >= ay && ax >= az)      s.x = t.scale.y * 2.f;
-                    else if (ay >= ax && ay >= az) s.y = t.scale.y * 2.f;
-                    else                           s.z = t.scale.y * 2.f;
-                }
-                bool any = t.has_translate || t.has_scale || t.has_rotate;
+                // rc maps gen(plane) local X → Mitsuba rect local X (scale sx),
+                // and gen(plane) local Z → Mitsuba rect local Y (scale sy).
+                // Multiply by 2: gen(plane) spans [-0.5,0.5], Mitsuba rect spans [-1,1].
+                Vec3 s = {t.scale.x * 2.f, 1.f, t.scale.y * 2.f};
+                // rc construction negates Mitsuba's normal (r_col2) so xtracer's +Y normal
+                // ends up pointing opposite to Mitsuba's normal.  For twosided BSDFs the
+                // normal direction is irrelevant in Mitsuba; rc already orients xtracer's
+                // normal toward the viewer.  For one-sided BSDFs Mitsuba's normal faces the
+                // scene, so after negation it faces away — flip_normals restores it.
+                bool src_twosided = bsdf &&
+                    strcmp(bsdf.attribute("type").value(), "twosided") == 0;
+                bool add_flip = (!src_twosided) || flip;
+                bool any = t.has_translate || t.has_scale || t.has_rotate || add_flip;
                 if (any) {
                     geo_w.begin("modifiers");
                     if (euler_rect.x != 0 || euler_rect.y != 0 || euler_rect.z != 0)
                         geo_w.kv("rotation",    vec3(euler_rect));
                     if (t.has_scale) geo_w.kv("scale",       vec3(s));
                     if (t.has_translate) geo_w.kv("translation", vec3(t.translate));
-                    geo_w.kv("flip_normals", "true");
+                    if (add_flip) geo_w.kv("flip_normals", "true");
                     geo_w.end();
                 }
             } else {
