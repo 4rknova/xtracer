@@ -1,0 +1,190 @@
+title = Scale Grid Demo
+description = Measurement floor with the scalegrid sampler (1 cell = 1 world unit, labels 0-11). Three spheres of radius 0.5, 1.0, and 2.0 let you read sizes directly off the grid.
+version = 1.0
+
+environment = {
+    type = gradient
+    config = {
+        a = col3(0.82,0.86,0.92)
+        b = col3(0.28,0.38,0.56)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 46
+        position = vec3(2,14,0)
+        target   = vec3(6,0,6)
+        up       = vec3(0,1,0)
+        flength  = 45
+        aperture = 0
+    }
+
+    overhead = {
+        type     = thin-lens
+        fov      = 55
+        position = vec3(6,16,6)
+        target   = vec3(6,0,6)
+        up       = vec3(0,0,1)
+    }
+}
+
+geometry = {
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        u_scale    = 12
+        v_scale    = 12
+        modifiers = {
+            scale       = vec3(12,1,12)
+            translation = vec3(6,0,6)
+            rotation    = vec3(0,0,0)
+        }
+    }
+
+    sphere_half = {
+        type     = sphere
+        position = vec3(2.5,0.5,2.5)
+        radius   = 0.5
+    }
+
+    sphere_unit = {
+        type     = sphere
+        position = vec3(6,1,7)
+        radius   = 1.0
+    }
+
+    sphere_double = {
+        type     = sphere
+        position = vec3(9.5,2,3.5)
+        radius   = 2.0
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(6,20,0)
+        radius   = 2.5
+    }
+}
+
+material = {
+    floor = {
+        type = lambert
+        properties = {
+            samplers = {
+                diffuse = {
+                    type       = scalegrid
+                    base       = col3(0.93,0.93,0.93)
+                    line       = col3(0.50,0.60,0.70)
+                    text       = col3(0.18,0.18,0.18)
+                    scale      = 1
+                    line_width = 0.025
+                    text_size  = 0.28
+                }
+            }
+            scalars = {}
+        }
+    }
+
+    sphere_half = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.80,0.30,0.22)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.55,0.55,0.55)
+                }
+            }
+            scalars = {
+                exponent    = 120
+                reflectance = 0.12
+            }
+        }
+    }
+
+    sphere_unit = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.26,0.54,0.72)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.55,0.55,0.55)
+                }
+            }
+            scalars = {
+                exponent    = 120
+                reflectance = 0.14
+            }
+        }
+    }
+
+    sphere_double = {
+        type = blinn_phong
+        properties = {
+            samplers = {
+                diffuse = {
+                    type  = color
+                    value = col3(0.30,0.66,0.48)
+                }
+                specular = {
+                    type  = color
+                    value = col3(0.55,0.55,0.55)
+                }
+            }
+            scalars = {
+                exponent    = 120
+                reflectance = 0.14
+            }
+        }
+    }
+
+    key_light = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = {
+                    type  = color
+                    value = col3(110,110,110)
+                }
+            }
+            scalars = {}
+        }
+    }
+}
+
+object = {
+    floor = {
+        geometry = floor
+        material = floor
+    }
+
+    sphere_half = {
+        geometry = sphere_half
+        material = sphere_half
+    }
+
+    sphere_unit = {
+        geometry = sphere_unit
+        material = sphere_unit
+    }
+
+    sphere_double = {
+        geometry = sphere_double
+        material = sphere_double
+    }
+
+    key_light = {
+        geometry = key_light
+        material = key_light
+    }
+}
