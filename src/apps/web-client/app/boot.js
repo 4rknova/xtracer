@@ -851,18 +851,16 @@ async function boot() {
       queueWorkspaceSettingsSave();
     });
   }
-  if (el.samplesPills && el.samplesPills.length > 0) {
-    el.samplesPills.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const value = String(btn.getAttribute("data-samples") || "");
-        if (!el.samples || !value) return;
-        el.samples.value = value;
-        syncSamplesPresetUi();
-        appendLog(`samples=${el.samples.value}`);
-        queueWorkspaceSettingsSave();
-      });
-    });
-  }
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".samples-pill");
+    if (!btn) return;
+    const value = String(btn.getAttribute("data-samples") || "");
+    if (!el.samples || !value) return;
+    el.samples.value = value;
+    syncSamplesPresetUi();
+    appendLog(`samples=${el.samples.value}`);
+    queueWorkspaceSettingsSave();
+  });
   if (el.rdepth) {
     el.rdepth.addEventListener("change", () => {
       appendLog(`rdepth=${el.rdepth.value}`);
@@ -875,18 +873,16 @@ async function boot() {
       queueWorkspaceSettingsSave();
     });
   }
-  if (el.aaPills && el.aaPills.length > 0) {
-    el.aaPills.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const value = String(btn.getAttribute("data-aa") || "");
-        if (!el.aa || !value) return;
-        el.aa.value = value;
-        syncAaPresetUi();
-        appendLog(`aa=${el.aa.value}`);
-        queueWorkspaceSettingsSave();
-      });
-    });
-  }
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".aa-pill[data-aa]");
+    if (!btn) return;
+    const value = String(btn.getAttribute("data-aa") || "");
+    if (!el.aa || !value) return;
+    el.aa.value = value;
+    syncAaPresetUi();
+    appendLog(`aa=${el.aa.value}`);
+    queueWorkspaceSettingsSave();
+  });
   if (el.aa) {
     el.aa.addEventListener("input", () => {
       syncAaPresetUi();
@@ -1031,11 +1027,6 @@ async function boot() {
       if (!graphView.userAdjusted) fitGraphToViewport();
       applyGraphTransform();
     }
-    if (typeof syncMobileLogsViewport === "function") {
-      requestAnimationFrame(() => {
-        syncMobileLogsViewport();
-      });
-    }
     if (persistentSidebar && !isMobileTabMenuViewport()) {
       persistentSidebar.style.transform = "";
       persistentSidebar.style.transition = "";
@@ -1136,13 +1127,15 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   if (el.tabGallery) el.tabGallery.addEventListener("click", () => setActiveTab("gallery"));
   if (el.tabSettings) el.tabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.tabAbout) el.tabAbout.addEventListener("click", () => setActiveTab("about"));
-  if (el.tabLogs) el.tabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.tabLogs) el.tabLogs.addEventListener("click", () => el.logsModal && !el.logsModal.hidden ? closeLogsModal() : openLogsModal());
+  if (el.tabJobs) el.tabJobs.addEventListener("click", () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
   if (el.bnTabScene) el.bnTabScene.addEventListener("click", () => setActiveTab("scene"));
   if (el.bnTabRender) el.bnTabRender.addEventListener("click", () => setActiveTab("render"));
   if (el.bnTabWorkspaces) el.bnTabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   if (el.bnTabVisual) el.bnTabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.bnTabGallery) el.bnTabGallery.addEventListener("click", () => setActiveTab("gallery"));
-  if (el.bnTabLogs) el.bnTabLogs.addEventListener("click", () => setActiveTab("logs"));
+  if (el.bnTabJobs) el.bnTabJobs.addEventListener("click", () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
+  if (el.bnTabLogs) el.bnTabLogs.addEventListener("click", () => el.logsModal && !el.logsModal.hidden ? closeLogsModal() : openLogsModal());
   if (el.bnTabSettings) el.bnTabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.bnTabAbout) el.bnTabAbout.addEventListener("click", () => setActiveTab("about"));
 
@@ -1207,7 +1200,20 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
     el.controlsModalCloseBtn.addEventListener("click", () => setControlsPanelOpen(false));
   }
 
-  if (el.topbarLogsBtn)   el.topbarLogsBtn.addEventListener("click",   () => setActiveTab("logs"));
+  if (el.topbarJobsBtn)     el.topbarJobsBtn.addEventListener("click",     () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
+  if (el.closeJobsModalBtn) el.closeJobsModalBtn.addEventListener("click", () => closeJobsModal());
+  if (el.jobsModal) {
+    el.jobsModal.addEventListener("click", (e) => {
+      if (e.target === el.jobsModal || e.target.classList.contains("jobs-modal-backdrop")) closeJobsModal();
+    });
+  }
+  if (el.topbarLogsBtn)   el.topbarLogsBtn.addEventListener("click",   () => el.logsModal && !el.logsModal.hidden ? closeLogsModal() : openLogsModal());
+  if (el.closeLogsModalBtn) el.closeLogsModalBtn.addEventListener("click", () => closeLogsModal());
+  if (el.logsModal) {
+    el.logsModal.addEventListener("click", (e) => {
+      if (e.target === el.logsModal || e.target.classList.contains("log-modal-backdrop")) closeLogsModal();
+    });
+  }
   if (el.topbarConfigBtn) el.topbarConfigBtn.addEventListener("click", () => setActiveTab("settings"));
   if (el.topbarAboutBtn)  el.topbarAboutBtn.addEventListener("click",  () => setActiveTab("about"));
 
@@ -1362,14 +1368,13 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
         fitAboutLicenseText();
       });
     }
-    if (typeof syncMobileLogsViewport === "function") {
-      requestAnimationFrame(() => {
-        syncMobileLogsViewport();
-      });
-    }
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") setMainMenuOpen(false);
+    if (event.key === "Escape") {
+      if (el.jobsModal && !el.jobsModal.hidden) { closeJobsModal(); return; }
+      if (el.logsModal && !el.logsModal.hidden) { closeLogsModal(); return; }
+      setMainMenuOpen(false);
+    }
   });
   if (el.editorView3dBtn) {
     el.editorView3dBtn.addEventListener("click", () => setEditorViewMode("visual"));
@@ -1550,6 +1555,16 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   el.clearLogsBtn.addEventListener("click", () => {
     logEntries.length = 0;
     renderLogOutput();
+  });
+
+  el.logOutput.addEventListener("click", (e) => {
+    const line = e.target.closest(".log-line");
+    if (!line) return;
+    const text = line.textContent.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      line.classList.add("log-line-copied");
+      setTimeout(() => line.classList.remove("log-line-copied"), 600);
+    });
   });
 
   const bindLogFilter = (node, key) => {

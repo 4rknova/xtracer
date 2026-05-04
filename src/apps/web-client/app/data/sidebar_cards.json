@@ -1,6 +1,5 @@
 {
   "render": [
-    "JobsControlsCard",
     "activeSceneControlsCard",
     "frameControlsCard",
     "integratorControlsCard",
@@ -9,32 +8,17 @@
   ],
   "visual": {
     "visual": [
-      "JobsControlsCard",
       "activeSceneControlsCard",
       "frameControlsCard"
     ],
     "graph": [
-      "JobsControlsCard",
       "activeSceneControlsCard",
       "frameControlsCard"
     ],
     "text": [
-      "JobsControlsCard",
       "activeSceneControlsCard",
       "frameControlsCard",
       "textEditorControlsCard"
     ]
-  },
-  "logs": [
-    "JobsControlsCard",
-    "logsControlsCard"
-  ],
-  "workspaces": [
-    "JobsControlsCard",
-    "activeSceneControlsCard",
-    "workspaceControlsCard",
-    "JobsControlsCard"
-  ],
-  "settings": [],
-  "about": []
+  }
 }

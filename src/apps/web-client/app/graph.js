@@ -1354,7 +1354,7 @@ function renderSceneGraphView() {
   const totalVec3Count = geometries.reduce((s, g) => s + [g.position, g.normal, g.v0, g.v1, g.v2].filter(Array.isArray).length, 0)
     + cameras.reduce((s, c) => s + [c.position, c.target, c.up].filter(Array.isArray).length, 0);
   const totalScalarCount = geometries.reduce((s, g) => s + [g.radius, g.distance].filter(Number.isFinite).length, 0)
-    + cameras.reduce((s, c) => s + [c.fov, c.aperture, c.flength].filter(Number.isFinite).length, 0);
+    + cameras.reduce((s, c) => s + [c.fov, c.aperture, c.flength, c.ortho_scale].filter(Number.isFinite).length, 0);
   const matScalarCount = materials.reduce((s, m) => s + (Array.isArray(m.scalars) ? m.scalars.length : 0), 0);
   const medValueCount  = media.reduce((s, m) =>
     s + [m.sigma_a, m.sigma_s, m.emission].filter(Array.isArray).length + (Number.isFinite(m.g) ? 1 : 0), 0);
@@ -1471,7 +1471,8 @@ function renderSceneGraphView() {
     if (Number.isFinite(c.fov))       addCamScalar("fov",      c.fov);
     if (Number.isFinite(c.aperture))  addCamScalar("aperture", c.aperture);
     if (Number.isFinite(c.flength))   addCamScalar("flength",  c.flength);
-    if (Number.isFinite(c.ipd))       propertyRows.push({ key: "ipd", value: formatGraphNumeric(c.ipd) });
+    if (Number.isFinite(c.ipd))        propertyRows.push({ key: "ipd", value: formatGraphNumeric(c.ipd) });
+    if (Number.isFinite(c.ortho_scale)) addCamScalar("ortho_scale", c.ortho_scale);
 
     pushNode("camera", c.id, c.type || "camera", {
       h: detailsNodeHeight(expanded, propertyRows.length, 0),

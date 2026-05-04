@@ -1,3 +1,4 @@
+const APP_CONFIG_URL = "/app/data/config.json";
 let appConfigLoadPromise = null;
 let sceneSearchQuery = "";
 let pendingVariantForNextSceneLoad = null;

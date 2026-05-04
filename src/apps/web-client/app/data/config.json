@@ -1,5 +1,9 @@
 {
   "defaults": {
     "integrator": "pathtracer_mis"
+  },
+  "presets": {
+    "samples": [2, 4, 10, 100, 250, 500, 1000],
+    "aa": [2, 3, 4, 5, 10]
   }
 }

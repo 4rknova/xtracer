@@ -291,69 +291,6 @@
         </div>
       `,
     },
-    {
-      id: "logsControlsCard",
-      title: "Log Filters",
-      note: "Live log filters",
-      open: true,
-      hidden: true,
-      bodyHTML: `
-        <section class="log-filter-list" aria-labelledby="logFilterHeading">
-          <div class="log-filter-list-head">
-            <h3 id="logFilterHeading">Message Types</h3>
-            <span class="log-filter-list-note">Live visibility</span>
-          </div>
-          <div class="log-filter-list-grid" aria-label="Log message type filters">
-            <label class="log-filter-item log-filter-item-debug"><span class="log-filter-item-main"><span class="log-filter-item-dot" aria-hidden="true"></span><span class="log-filter-item-label">Debug</span></span><input id="logFilterDebug" type="checkbox"></label>
-            <label class="log-filter-item log-filter-item-message"><span class="log-filter-item-main"><span class="log-filter-item-dot" aria-hidden="true"></span><span class="log-filter-item-label">Message</span></span><input id="logFilterMessage" type="checkbox" checked></label>
-            <label class="log-filter-item log-filter-item-warning"><span class="log-filter-item-main"><span class="log-filter-item-dot" aria-hidden="true"></span><span class="log-filter-item-label">Warning</span></span><input id="logFilterWarning" type="checkbox" checked></label>
-            <label class="log-filter-item log-filter-item-error"><span class="log-filter-item-main"><span class="log-filter-item-dot" aria-hidden="true"></span><span class="log-filter-item-label">Error</span></span><input id="logFilterError" type="checkbox" checked></label>
-            <label class="log-filter-item log-filter-item-ui"><span class="log-filter-item-main"><span class="log-filter-item-dot" aria-hidden="true"></span><span class="log-filter-item-label">UI</span></span><input id="logFilterUi" type="checkbox" checked></label>
-          </div>
-        </section>
-      `,
-    },
-    {
-      id: "workspaceControlsCard",
-      title: "Workspace",
-      note: "Workspace status",
-      open: true,
-      hidden: true,
-      bodyHTML: `
-        <section class="settings-section workspace-info-section">
-          <div class="workspace-info-group">
-            <p id="workspaceActiveHint" class="workspace-active-hint">Active workspace: -</p>
-            <p id="workspaceCountHint" class="workspace-active-hint">Workspaces: 0</p>
-          </div>
-        </section>
-      `,
-    },
-    {
-      id: "JobsControlsCard",
-      title: "Jobs",
-      note: "Server active/queued jobs",
-      open: true,
-      hidden: true,
-      bodyHTML: `
-        <section class="settings-section workspace-info-section settings-jobs-section">
-          <div
-            id="settingsJobsThreadGraph"
-            class="settings-jobs-graph"
-            role="img"
-            aria-label="Threads in use over the last minute"
-          ></div>
-          <p id="settingsJobsUpdated" class="workspace-active-hint">
-            <span class="workspace-active-label">Updated</span>
-            <code class="workspace-active-value">-</code>
-          </p>
-          <p id="settingsJobsThreadsUsage" class="workspace-active-hint">
-            <span class="workspace-active-label">Threads In Use</span>
-            <code class="workspace-active-value">-</code>
-          </p>
-          <div id="settingsJobsList" class="settings-jobs-list" aria-live="polite"></div>
-        </section>
-      `,
-    },
   ];
 
   function renderSidebarCards(target) {
@@ -365,7 +302,27 @@
     });
   }
 
+  function upgradePillRows(presets) {
+    const samplePresets = (presets && presets.samples) || [2, 4, 10, 100];
+    const aaPresets = (presets && presets.aa) || [2, 4, 10, 25];
+
+    const sampleRow = document.querySelector('.aa-pill-row[aria-label="Sample presets"]');
+    if (sampleRow) {
+      sampleRow.innerHTML = samplePresets.map(v =>
+        `<button class="aa-pill xui-pill samples-pill" type="button" data-samples="${v}">${v}x</button>`
+      ).join("");
+    }
+
+    const aaRow = document.querySelector('.aa-pill-row[aria-label="AA presets"]');
+    if (aaRow) {
+      aaRow.innerHTML = aaPresets.map(v =>
+        `<button class="aa-pill xui-pill" type="button" data-aa="${v}">${v}x</button>`
+      ).join("");
+    }
+  }
+
   global.XTracerSidebarCards = {
     renderSidebarCards,
+    upgradePillRows,
   };
 })(window);

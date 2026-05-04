@@ -1263,7 +1263,7 @@ async function composeWithPinnedPreview(overlayBlob) {
 //   TILE_FINISHED: tile_count=1; active section already excludes the finished tile
 //   Terminal state (done/aborted/error): text JSON only, no binary frame
 //
-// Server builder: src/frontend/web-server/job_manager.cc (PROGRESS_EVENT_TILE_*)
+// Server builder: src/apps/web-server/job_manager.cc (PROGRESS_EVENT_TILE_*)
 // Protocol doc:   AGENTS.md § WebSocket Protocol
 function parseImageDeltaPacket(buffer) {
   if (!(buffer instanceof ArrayBuffer)) return null;

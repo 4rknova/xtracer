@@ -28,6 +28,11 @@
     return t === "tilt-shift" || t === "tiltshift";
   }
 
+  function isOrthographicCameraType(type) {
+    var t = String(type || "").toLowerCase();
+    return t === "orthographic";
+  }
+
   function clamp01(v) {
     return clamp(Number(v) || 0, 0, 1);
   }
@@ -415,6 +420,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
         tilt: Number.isFinite(Number(cam.tilt)) ? Number(cam.tilt) : 0,
         shift_x: Number.isFinite(Number(cam.shift_x)) ? Number(cam.shift_x) : 0,
         shift_y: Number.isFinite(Number(cam.shift_y)) ? Number(cam.shift_y) : 0,
+        ortho_scale: Number.isFinite(Number(cam.ortho_scale)) ? Number(cam.ortho_scale) : 1.0,
       });
     });
 
@@ -596,6 +602,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraTilt = 0;
     this.selectedCameraShiftX = 0;
     this.selectedCameraShiftY = 0;
+    this.selectedCameraOrthoScale = 1.0;
     this.onSelectionChanged = null;
     this.selectedMesh = null;
     this.parsedScene = null;
@@ -1774,6 +1781,43 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     return g;
   };
 
+  SceneVisualEditor.prototype.buildOrthoCameraWidgetGeometry = function (orthoScale, aspect, span) {
+    var a = Math.max(1e-6, Number(aspect) || 1);
+    var depth = Math.max(0.2, Number(span) || 1.2);
+    var near = depth * 0.24;
+    var far = depth;
+    var halfW = clamp(Math.max(0.001, Number(orthoScale) || 1.0) * 0.5, depth * 0.1, depth * 2.0);
+    var halfH = halfW / a;
+
+    var n0 = vec3(-halfW, -halfH, near);
+    var n1 = vec3( halfW, -halfH, near);
+    var n2 = vec3( halfW,  halfH, near);
+    var n3 = vec3(-halfW,  halfH, near);
+    var f0 = vec3(-halfW, -halfH, far);
+    var f1 = vec3( halfW, -halfH, far);
+    var f2 = vec3( halfW,  halfH, far);
+    var f3 = vec3(-halfW,  halfH, far);
+    var o  = vec3(0, 0, 0);
+    var up = vec3(0, depth * 0.2, 0);
+    var fw = vec3(0, 0, depth * 0.34);
+
+    var seg = [
+      n0, n1, n1, n2, n2, n3, n3, n0,
+      f0, f1, f1, f2, f2, f3, f3, f0,
+      n0, f0, n1, f1, n2, f2, n3, f3,
+      o, up, o, fw,
+    ];
+    var p = new Float32Array(seg.length * 3);
+    for (var i = 0; i < seg.length; i += 1) {
+      p[i * 3 + 0] = seg[i].x;
+      p[i * 3 + 1] = seg[i].y;
+      p[i * 3 + 2] = seg[i].z;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+    return g;
+  };
+
   SceneVisualEditor.prototype.buildApertureOutlineGeometry = function (radius, blades, rotationDeg) {
     var r = Math.max(1e-5, Number(radius) || 0.1);
     var b = Math.floor(Number(blades) || 0);
@@ -1822,7 +1866,9 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       ? this.frameAspect
       : (this.camera && this.camera.aspect ? this.camera.aspect : 1);
     var span = clamp((this.sceneBaseRadius || this.sceneRadius || 2.0) * 0.6, 0.8, 16.0);
-    var g = this.buildCameraWidgetGeometry(this.selectedCameraHFov, aspect, span);
+    var g = isOrthographicCameraType(this.selectedCameraType)
+      ? this.buildOrthoCameraWidgetGeometry(this.selectedCameraOrthoScale, aspect, span)
+      : this.buildCameraWidgetGeometry(this.selectedCameraHFov, aspect, span);
     var m = new THREE.LineBasicMaterial({ color: 0x55d3ff });
     this.cameraWidget = new THREE.Group();
     this.cameraWidget.add(new THREE.LineSegments(g, m));
@@ -2554,6 +2600,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
       this.selectedCameraTilt = 0;
       this.selectedCameraShiftX = 0;
       this.selectedCameraShiftY = 0;
+      this.selectedCameraOrthoScale = 1.0;
       this.updateCameraWidget();
       return;
     }
@@ -2584,6 +2631,7 @@ async function materialForDefAsync(ctx, sceneName, matDef) {
     this.selectedCameraTilt = Number(c.tilt) || 0;
     this.selectedCameraShiftX = Number(c.shift_x) || 0;
     this.selectedCameraShiftY = Number(c.shift_y) || 0;
+    this.selectedCameraOrthoScale = Math.max(0.001, Number(c.ortho_scale) || 1.0);
     this.selectedCameraPose = {
       position: pos.clone(),
       target: target.clone(),

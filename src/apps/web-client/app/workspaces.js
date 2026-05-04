@@ -328,20 +328,23 @@ function renderSettingsJobsThreadGraph() {
 }
 
 function bindSettingsJobsCardLifecycle() {
-  const card = document.getElementById("JobsControlsCard");
-  if (!card || card._settingsJobsLifecycleBound) return;
-  card._settingsJobsLifecycleBound = true;
+  // Jobs panel is now a standalone modal; lifecycle handled by openJobsModal/closeJobsModal
+}
 
-  card.addEventListener("toggle", () => {
-    if (card.open) {
-      refreshSettingsJobsCard();
+function updateJobsBadge() {
+  const jobs = getActiveJobsFromCache();
+  const count = jobs.length;
+  [el.topbarJobsBtn, el.bnTabJobs].filter(Boolean).forEach((btn) => {
+    const badge = btn.querySelector(".topbar-btn-badge");
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.hidden = false;
     } else {
-      resetSettingsJobsThreadGraph();
+      badge.textContent = "";
+      badge.hidden = true;
     }
   });
-  if (card.open) {
-    refreshSettingsJobsCard();
-  }
 }
 
 function notifyActiveJobsChanged() {
@@ -354,6 +357,7 @@ function notifyActiveJobsChanged() {
   if (typeof refreshSettingsJobsCard === "function" && el.settingsJobsList) {
     refreshSettingsJobsCard();
   }
+  updateJobsBadge();
 }
 
 function parseJobSequence(jobId) {
@@ -643,11 +647,8 @@ function refreshSettingsJobsCard() {
 }
 
 function isJobsControlsCardVisible() {
-  const card = document.getElementById("JobsControlsCard");
-  if (!card) return false;
-  if (card.hidden) return false;
-  if (!card.open) return false;
-  return true;
+  const modal = document.getElementById("jobsModal");
+  return !!(modal && !modal.hidden);
 }
 
 async function moveSettingsJobQueue(jobId, direction) {

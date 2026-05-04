@@ -6,6 +6,13 @@ if (window.XTracerWidgets && typeof window.XTracerWidgets.upgradePanelHeaders ==
 }
 if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSidebarCards === "function") {
   window.XTracerSidebarCards.renderSidebarCards(document.getElementById("sidebarCards"));
+  if (typeof loadAppConfig === "function") {
+    loadAppConfig().then(cfg => {
+      if (cfg && cfg.presets && typeof window.XTracerSidebarCards.upgradePillRows === "function") {
+        window.XTracerSidebarCards.upgradePillRows(cfg.presets);
+      }
+    });
+  }
 }
 if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer === "function") {
   const aboutPanel = document.querySelector("#paneAbout .about-panel");
@@ -248,6 +255,7 @@ const el = {
   tabSettings: $("tabSettings"),
   tabAbout: $("tabAbout"),
   tabLogs: $("tabLogs"),
+  tabJobs: $("tabJobs"),
   controlsPanelToggle: $("controlsPanelToggle"),
   controlsModalCloseBtn: $("controlsModalCloseBtn"),
   topbarLogsBtn: $("topbarLogsBtn"),
@@ -259,6 +267,7 @@ const el = {
   bnTabWorkspaces: $("bnTabWorkspaces"),
   bnTabVisual: $("bnTabVisual"),
   bnTabGallery: $("bnTabGallery"),
+  bnTabJobs: $("bnTabJobs"),
   bnTabLogs: $("bnTabLogs"),
   bnTabSettings: $("bnTabSettings"),
   bnTabAbout: $("bnTabAbout"),
@@ -268,7 +277,8 @@ const el = {
   paneGallery: $("paneGallery"),
   paneSettings: $("paneSettings"),
   paneAbout: $("paneAbout"),
-  paneLogs: $("paneLogs"),
+  logsModal: $("logsModal"),
+  closeLogsModalBtn: $("closeLogsModalBtn"),
   qualityControlsCard: $("qualityControlsCard"),
   exportControlsCard: $("exportControlsCard"),
   theme: $("theme"),
@@ -319,6 +329,9 @@ const el = {
   settingsJobsUpdated: $("settingsJobsUpdated"),
   settingsJobsThreadsUsage: $("settingsJobsThreadsUsage"),
   settingsJobsList: $("settingsJobsList"),
+  topbarJobsBtn: $("topbarJobsBtn"),
+  jobsModal: $("jobsModal"),
+  closeJobsModalBtn: $("closeJobsModalBtn"),
   activeSceneCardScene: $("activeSceneCardScene"),
   activeSceneCardDescription: $("activeSceneCardDescription"),
   activeSceneCardSource: $("activeSceneCardSource"),
@@ -354,9 +367,7 @@ const el = {
   height: $("height"),
   samples: $("samples"),
   aa: $("aa"),
-  samplesPills: Array.from(document.querySelectorAll(".samples-pill")),
   sampleDistribution: $("sample_distribution"),
-  aaPills: Array.from(document.querySelectorAll(".aa-pill[data-aa]")),
   rdepth: $("rdepth"),
   tileSize: $("tile_size"),
   tileOrder: $("tile_order"),
@@ -609,8 +620,7 @@ const FTUE_STATE_VERSION_KEY = "xtracer-ftue-version";
 const FTUE_FORCE_NEXT_KEY = "xtracer-ftue-force-next";
 const FTUE_VERSION = 1;
 const SIDEBAR_VISIBILITY_CONFIG_URL = "/app/data/sidebar_cards.json";
-const APP_CONFIG_URL = "/app/data/config.json";
-const TAB_MODES = ["workspaces", "render", "visual", "gallery", "logs", "settings", "about"];
+const TAB_MODES = ["workspaces", "render", "visual", "gallery", "settings", "about"];
 let sidebarCardVisibility = null;
 let sidebarCardVisibilityRaw = "";
 let api = null;

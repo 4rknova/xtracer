@@ -53,7 +53,7 @@ function scrollLogToBottom(force) {
   if (!el.logOutput) return;
   if (!uiOptions.autoScrollLogs && !force) return;
 
-  const logsVisible = el.paneLogs && el.paneLogs.classList.contains("active");
+  const logsVisible = el.logsModal && !el.logsModal.hidden;
   if (!logsVisible && !force) {
     pendingLogScroll = true;
     return;
@@ -94,6 +94,12 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;");
 }
 
+const LOG_LEVEL_ICONS = {
+  warning: `<svg class="log-level-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`,
+  error:   `<svg class="log-level-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>`,
+  debug:   `<svg class="log-level-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>`,
+};
+
 function renderLogLineHtml(entry) {
   const line = String((entry && entry.line) || "");
   const level = normalizeLogLevel(entry && entry.level);
@@ -101,16 +107,15 @@ function renderLogLineHtml(entry) {
   // Standard format: #<id-or-type> <iso-ts> <LEVEL> <message...>
   const backendMatch = line.match(/^#([A-Za-z0-9_-]+)\s+(\S+)\s+([A-Z_]+)\s*(.*)$/);
   if (backendMatch) {
-    const id = backendMatch[1];
     const tsRaw = backendMatch[2];
-    const ts = tsRaw.replace("T", " ").replace(/Z$/, "");
+    const timePart = (tsRaw.split("T")[1] || tsRaw).replace(/Z$/, "");
+    const ts = timePart.substring(0, 8);
     const lvl = backendMatch[3];
     const msg = backendMatch[4] || "";
-    const idClass = id.toUpperCase() === "UI" ? "log-token-ui" : "log-token-id";
+    const icon = LOG_LEVEL_ICONS[level] || "";
     return `<span class="log-line log-line-backend log-level-${level}">`
-      + `<span class="${idClass}">#${escapeHtml(id)}</span>`
       + `<span class="log-token-ts">${escapeHtml(ts)}</span>`
-      + `<span class="log-token-level">${escapeHtml(lvl)}</span>`
+      + `<span class="log-token-level">${icon}</span>`
       + `<span class="log-token-msg">${escapeHtml(msg)}</span>`
       + `</span>`;
   }
@@ -131,6 +136,15 @@ function renderLogOutput() {
   scrollLogToBottom(false);
 }
 
+function setLogsUnseenBadge(visible) {
+  const elRef = typeof el !== "undefined" ? el : null;
+  if (!elRef) return;
+  [elRef.topbarLogsBtn, elRef.bnTabLogs].filter(Boolean).forEach((btn) => {
+    const badge = btn.querySelector(".topbar-btn-badge");
+    if (badge) badge.hidden = !visible;
+  });
+}
+
 function appendLogEntry(level, line, source) {
   if (!line) return;
   logEntries.push({
@@ -142,6 +156,9 @@ function appendLogEntry(level, line, source) {
     logEntries.splice(0, logEntries.length - LOG_HISTORY_LIMIT);
   }
   renderLogOutput();
+  const elRef = typeof el !== "undefined" ? el : null;
+  const logsOpen = elRef && elRef.logsModal && !elRef.logsModal.hidden;
+  if (!logsOpen) setLogsUnseenBadge(true);
 }
 
 function appendLog(message) {

@@ -160,17 +160,14 @@
       "body": "Filter log levels to focus on warnings/errors or include debug details when troubleshooting.",
       "target_selector": "#logFilterWarning",
       "placement": "right",
-      "tab": "logs",
-      "open_cards": [
-        "logsControlsCard"
-      ]
+      "open_logs_modal": true
     },
     {
       "title": "Open Settings",
       "body": "Settings controls theme, UI behavior, and runtime polling preferences.",
       "target_selector": "#tabSettings",
       "placement": "bottom",
-      "tab": "logs"
+      "tab": "settings"
     },
     {
       "title": "Theme and Palette",

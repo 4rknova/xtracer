@@ -2,7 +2,7 @@ function normalizeTabMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "editor") return "visual";
   if (raw === "workspace" || raw === "scene" || raw === "scene_setup" || raw === "scenesetup") return "workspaces";
-  if (raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "logs" || raw === "about") {
+  if (raw === "render" || raw === "visual" || raw === "workspaces" || raw === "gallery" || raw === "settings" || raw === "about") {
     return raw;
   }
   return "workspaces";
@@ -94,19 +94,16 @@ function normalizeEditorViewMode(mode) {
 }
 
 function syncAaPresetUi() {
-  if (!el.aaPills || el.aaPills.length === 0) return;
   const current = String(el.aa && el.aa.value ? el.aa.value : "");
-  el.aaPills.forEach((btn) => {
-    if (btn.classList.contains("samples-pill")) return;
+  document.querySelectorAll(".aa-pill[data-aa]").forEach((btn) => {
     const value = String(btn.getAttribute("data-aa") || "");
     btn.classList.toggle("active", value === current);
   });
 }
 
 function syncSamplesPresetUi() {
-  if (!el.samplesPills || el.samplesPills.length === 0) return;
   const current = String(el.samples && el.samples.value ? el.samples.value : "");
-  el.samplesPills.forEach((btn) => {
+  document.querySelectorAll(".samples-pill").forEach((btn) => {
     const value = String(btn.getAttribute("data-samples") || "");
     btn.classList.toggle("active", value === current);
   });
@@ -216,26 +213,65 @@ function getSidebarCardTitle(card) {
   return String(raw || "").trim();
 }
 
-function scheduleMobileLogsViewportSync() {
-  if (scheduleMobileLogsViewportSync._rafId) {
-    cancelAnimationFrame(scheduleMobileLogsViewportSync._rafId);
-    scheduleMobileLogsViewportSync._rafId = 0;
-  }
-  if (scheduleMobileLogsViewportSync._timerId) {
-    clearTimeout(scheduleMobileLogsViewportSync._timerId);
-    scheduleMobileLogsViewportSync._timerId = 0;
-  }
+function openJobsModal() {
+  if (!el.jobsModal) return;
+  el.jobsModal.classList.remove("jobs-modal-closing");
+  el.jobsModal.hidden = false;
+  document.body.classList.add("jobs-modal-open");
+  if (el.topbarJobsBtn) el.topbarJobsBtn.setAttribute("aria-pressed", "true");
+  if (el.bnTabJobs) { el.bnTabJobs.setAttribute("aria-pressed", "true"); el.bnTabJobs.classList.add("active"); }
+  if (el.tabJobs) { el.tabJobs.setAttribute("aria-pressed", "true"); el.tabJobs.classList.add("active"); }
+  if (typeof refreshSettingsJobsCard === "function") refreshSettingsJobsCard();
+}
 
-  scheduleMobileLogsViewportSync._rafId = requestAnimationFrame(() => {
-    scheduleMobileLogsViewportSync._rafId = 0;
-    syncMobileLogsViewport();
-  });
+function closeJobsModal() {
+  if (!el.jobsModal || el.jobsModal.hidden) return;
+  el.jobsModal.classList.add("jobs-modal-closing");
+  const panel = el.jobsModal.querySelector(".jobs-modal-panel");
+  const done = () => {
+    el.jobsModal.hidden = true;
+    el.jobsModal.classList.remove("jobs-modal-closing");
+    document.body.classList.remove("jobs-modal-open");
+    if (el.topbarJobsBtn) el.topbarJobsBtn.setAttribute("aria-pressed", "false");
+    if (el.bnTabJobs) { el.bnTabJobs.setAttribute("aria-pressed", "false"); el.bnTabJobs.classList.remove("active"); }
+    if (el.tabJobs) { el.tabJobs.setAttribute("aria-pressed", "false"); el.tabJobs.classList.remove("active"); }
+  };
+  if (panel) {
+    panel.addEventListener("animationend", done, { once: true });
+  } else {
+    done();
+  }
+}
 
-  // Re-sync after accordion/card visibility animations settle.
-  scheduleMobileLogsViewportSync._timerId = setTimeout(() => {
-    scheduleMobileLogsViewportSync._timerId = 0;
-    syncMobileLogsViewport();
-  }, 260);
+function openLogsModal() {
+  if (!el.logsModal) return;
+  el.logsModal.classList.remove("log-modal-closing");
+  el.logsModal.hidden = false;
+  document.body.classList.add("log-modal-open");
+  if (el.topbarLogsBtn) el.topbarLogsBtn.setAttribute("aria-pressed", "true");
+  if (el.bnTabLogs) { el.bnTabLogs.setAttribute("aria-pressed", "true"); el.bnTabLogs.classList.add("active"); }
+  if (el.tabLogs) { el.tabLogs.setAttribute("aria-pressed", "true"); el.tabLogs.classList.add("active"); }
+  if (typeof setLogsUnseenBadge === "function") setLogsUnseenBadge(false);
+  if (uiOptions.autoScrollLogs || pendingLogScroll) scrollLogToBottom(true);
+}
+
+function closeLogsModal() {
+  if (!el.logsModal || el.logsModal.hidden) return;
+  el.logsModal.classList.add("log-modal-closing");
+  const panel = el.logsModal.querySelector(".log-modal-panel");
+  const done = () => {
+    el.logsModal.hidden = true;
+    el.logsModal.classList.remove("log-modal-closing");
+    document.body.classList.remove("log-modal-open");
+    if (el.topbarLogsBtn) el.topbarLogsBtn.setAttribute("aria-pressed", "false");
+    if (el.bnTabLogs) { el.bnTabLogs.setAttribute("aria-pressed", "false"); el.bnTabLogs.classList.remove("active"); }
+    if (el.tabLogs) { el.tabLogs.setAttribute("aria-pressed", "false"); el.tabLogs.classList.remove("active"); }
+  };
+  if (panel) {
+    panel.addEventListener("animationend", done, { once: true });
+  } else {
+    done();
+  }
 }
 
 function refreshMobileCardSwitcher() {
@@ -348,31 +384,6 @@ function isMobileTabMenuViewport() {
   return !!(window.matchMedia && window.matchMedia("(max-width: 1099px)").matches);
 }
 
-function syncMobileLogsViewport() {
-  const pane = el && el.paneLogs;
-  if (!pane) return;
-  const panel = pane.querySelector(".log-panel");
-  if (!panel) return;
-
-  const isMobile = isMobileTabMenuViewport();
-  const isActive = pane.classList.contains("active");
-  // On phone (<= 767px) the sidebar is hidden; the log height calc needs a visible sidebar.
-  const isNarrowMobile = !!(window.matchMedia && window.matchMedia("(max-width: 767px)").matches);
-  if (!isMobile || !isActive || !el.mainTabs || isNarrowMobile) {
-    panel.style.height = "";
-    panel.style.maxHeight = "";
-    return;
-  }
-
-  const panelRect = panel.getBoundingClientRect();
-  const tabsRect = el.mainTabs.getBoundingClientRect();
-  const gapPx = 8;
-  const minHeightPx = 160;
-  const available = Math.floor(tabsRect.top - panelRect.top - gapPx);
-  const target = Math.max(minHeightPx, available);
-  panel.style.height = `${target}px`;
-  panel.style.maxHeight = `${target}px`;
-}
 
 function setMainMenuOpen(open) {
   const topbar = document.querySelector(".topbar");
@@ -413,7 +424,6 @@ function setActiveTab(mode) {
   const isWorkspaces = nextMode === "workspaces";
   const isGallery = nextMode === "gallery";
   const isSettings = nextMode === "settings";
-  const isLogs = nextMode === "logs";
   const isAbout = nextMode === "about";
   const setActive = (node, state) => { if (node) node.classList.toggle("active", state); };
   setActive(el.tabRender, isRender);
@@ -422,11 +432,9 @@ function setActiveTab(mode) {
   setActive(el.tabGallery, isGallery);
   setActive(el.tabSettings, isSettings);
   setActive(el.tabAbout, isAbout);
-  setActive(el.tabLogs, isLogs);
-  setActive(el.topbarLogsBtn,   isLogs);
   setActive(el.topbarConfigBtn, isSettings);
   setActive(el.topbarAboutBtn,  isAbout);
-  ["bnTabWorkspaces", "bnTabRender", "bnTabVisual", "bnTabGallery", "bnTabLogs", "bnTabSettings", "bnTabAbout"].forEach((id) => {
+  ["bnTabWorkspaces", "bnTabRender", "bnTabVisual", "bnTabGallery", "bnTabSettings", "bnTabAbout"].forEach((id) => {
     const btn = el[id];
     if (!btn) return;
     const isBtn = btn.dataset.mode === nextMode;
@@ -439,15 +447,11 @@ function setActiveTab(mode) {
   setActive(el.paneGallery, isGallery);
   setActive(el.paneSettings, isSettings);
   setActive(el.paneAbout, isAbout);
-  setActive(el.paneLogs, isLogs);
   applySidebarCardLayout(nextMode);
   void refreshSidebarCardVisibilityConfig(nextMode);
   localStorage.setItem(ACTIVE_TAB_KEY, nextMode);
   if (isVisual && editorViewMode === "visual" && visualEditor) visualEditor.onShow();
   if (isVisual && editorViewMode === "graph") scheduleGraphRender();
-  if (isLogs && (uiOptions.autoScrollLogs || pendingLogScroll)) {
-    scrollLogToBottom(true);
-  }
   if (isWorkspaces && hasBackendMethod(api, "getWorkspaces")) {
     refreshWorkspaces().catch((err) => appendLog(`workspace refresh error: ${err.message}`));
   }
