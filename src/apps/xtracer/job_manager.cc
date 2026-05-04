@@ -1133,7 +1133,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
                 //   TILE_FINISHED: tile_count=1; active section already excludes it
                 //   Terminal:      text JSON snapshot only, no binary frame
                 //
-                // Client parser: src/frontend/web-client/app/preview.js parseImageDeltaPacket()
+                // Client parser: src/apps/web-client/app/preview.js parseImageDeltaPacket()
                 // Protocol doc:  AGENTS.md § WebSocket Protocol
                 std::vector<unsigned char> xtdr;
                 xtdr.reserve(32 + 24 + tile_rgba.size() + 4 + snap.active_tiles.size() * 16);

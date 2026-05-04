@@ -49,7 +49,7 @@ Directory containing \fB.scn\fR files served by scene APIs.
 Default: \fBscene\fR.
 .IP "\fB--web-root\fR \fIpath\fR"
 Directory containing static web client assets.
-Default: \fBsrc/frontend/web-client\fR.
+Default: \fBsrc/apps/web-client\fR.
 .IP "\fB--max-concurrent-renders\fR \fInum\fR"
 Maximum number of queued render jobs allowed to execute concurrently.
 Must be 1 or greater.
@@ -147,7 +147,7 @@ Start server with explicit host/port and paths:
   --host 127.0.0.1 \\
   --port 8080 \\
   --scene-dir scene \\
-  --web-root src/frontend/web-client \\
+  --web-root src/apps/web-client \\
   --verbose
 .EE
 .SH API OVERVIEW

@@ -9,7 +9,7 @@ from PIL import Image, ImageFilter, ImageOps
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SVG_PATH = ROOT / "src/frontend/web-client/logo.svg"
+SVG_PATH = ROOT / "src/apps/web-client/logo.svg"
 OUT_DIR = ROOT / "scene/resources/generated"
 OBJ_PATH = OUT_DIR / "xtracer_logo_ball.obj"
 MASK_PATH = OUT_DIR / "xtracer_logo_ball_mask.png"

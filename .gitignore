@@ -14,8 +14,8 @@ temp/
 *.pc
 *.ppm
 *.png
-!src/frontend/web-client/res/ftue.png
-!src/frontend/web-client/res/lib/materials/*.png
+!src/apps/web-client/res/ftue.png
+!src/apps/web-client/res/lib/materials/*.png
 *.jpg
 *.hdr
 *.swp
@@ -63,5 +63,6 @@ res/web/*.symbols
 gallery/
 .vscode/settings.json
 .claude/settings.json
-src/frontend/web-client/dist/
+src/apps/web-client/dist/
+src/apps/web-client/app/dist/
 __pycache__/

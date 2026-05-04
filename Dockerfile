@@ -37,7 +37,7 @@ WORKDIR /app
 
 COPY --from=builder /src/build/intermediate/build/xtracer_web /usr/local/bin/xtracer_web
 COPY --from=builder /src/scene /app/scene
-COPY --from=builder /src/src/frontend/web-client /app/web-client
+COPY --from=builder /src/src/apps/web-client /app/web-client
 
 EXPOSE 8080
 

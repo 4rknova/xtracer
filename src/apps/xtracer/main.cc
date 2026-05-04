@@ -118,7 +118,7 @@ void print_startup_banner(const std::string &host,
     const char *k_build_type = "debug";
 #endif
     std::printf("\n");
-    std::printf("  version:                %s (%s)\n", xtcore::get_version(), k_build_type);
+    std::printf("  version:                %s %s\n", xtcore::get_version(), k_build_type);
     std::printf("  url:                    http://%s:%d\n", host.c_str(), port);
     std::printf("  host:                   %s\n", host.c_str());
     std::printf("  port:                   %d\n", port);
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
     int port = 8080;
     std::string scene_dir = "scene";
     std::string gallery_dir = "gallery";
-    std::string web_root = "src/frontend/web-client";
+    std::string web_root = "src/apps/web-client";
     size_t max_concurrent_renders = 999;
     size_t render_reserve_threads = 1;
 
