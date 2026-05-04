@@ -218,6 +218,8 @@
 #define XTPROTO_LTRL_CAM_ERP		"erp"				/* string     */ /* Equirectangular camera */
 #define XTPROTO_LTRL_CAM_CUBEMAP    "cubemap"           /* string     */ /* Cubemap camera */
 #define XTPROTO_LTRL_CAM_TILTSHIFT  "tilt-shift"        /* string     */ /* Tilt-shift camera */
+#define XTPROTO_LTRL_CAM_ORTHOGRAPHIC "orthographic"    /* string     */ /* Orthographic camera */
+#define XTPROTO_PROP_ORTHO_SCALE    "ortho_scale"       /* scalar_t   */ /* Orthographic view volume width in world units */
 #define XTPROTO_PROP_TILT           "tilt"              /* scalar_t   */ /* Focal-plane tilt angle in degrees */
 #define XTPROTO_PROP_SHIFT_X        "shift_x"           /* scalar_t   */ /* Horizontal lens shift (normalised sensor units) */
 #define XTPROTO_PROP_SHIFT_Y        "shift_y"           /* scalar_t   */ /* Vertical lens shift (normalised sensor units) */

@@ -554,7 +554,7 @@ std::string trim_ascii(const std::string &s)
 std::string third_party_licenses_data_path(const std::string &web_root)
 {
     if (web_root.empty()) {
-        return "src/frontend/web-server/app/data/third_party_licenses.json";
+        return "src/apps/web-server/app/data/third_party_licenses.json";
     }
 
     std::string path = web_root;
@@ -1209,10 +1209,11 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         const char *name = xtcore::pool::str::get((*it).first);
         if (!name || !*name) continue;
         const xtcore::asset::ICamera *cam = (*it).second;
-        const xtcore::camera::Perspective *pcam  = dynamic_cast<const xtcore::camera::Perspective *>(cam);
-        const xtcore::camera::TiltShift   *tscam = dynamic_cast<const xtcore::camera::TiltShift *>(cam);
-        const xtcore::camera::ERP         *ecam  = dynamic_cast<const xtcore::camera::ERP *>(cam);
-        const xtcore::camera::ODS         *ocam  = dynamic_cast<const xtcore::camera::ODS *>(cam);
+        const xtcore::camera::Perspective   *pcam  = dynamic_cast<const xtcore::camera::Perspective *>(cam);
+        const xtcore::camera::TiltShift     *tscam = dynamic_cast<const xtcore::camera::TiltShift *>(cam);
+        const xtcore::camera::ERP           *ecam  = dynamic_cast<const xtcore::camera::ERP *>(cam);
+        const xtcore::camera::ODS           *ocam  = dynamic_cast<const xtcore::camera::ODS *>(cam);
+        const xtcore::camera::Orthographic  *orthcam = dynamic_cast<const xtcore::camera::Orthographic *>(cam);
         if (!first) ss << ",";
         first = false;
         ss << "{"
@@ -1245,6 +1246,10 @@ std::string scene_runtime_graph_json_from_scene(const std::string &scene_path, c
         } else if (ocam) {
             ss << ",\"orientation\":[" << ocam->orientation.x << "," << ocam->orientation.y << "," << ocam->orientation.z << "]";
             ss << ",\"ipd\":" << ocam->ipd;
+        } else if (orthcam) {
+            ss << ",\"target\":[" << orthcam->target.x << "," << orthcam->target.y << "," << orthcam->target.z << "]";
+            ss << ",\"up\":[" << orthcam->up.x << "," << orthcam->up.y << "," << orthcam->up.z << "]";
+            ss << ",\"ortho_scale\":" << orthcam->ortho_scale;
         }
         ss << "}";
     }

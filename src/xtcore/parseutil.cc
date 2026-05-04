@@ -936,6 +936,21 @@ xtcore::asset::ICamera *deserialize_camera_tls(const ncf::NCF *p)
     return data;
 }
 
+xtcore::asset::ICamera *deserialize_camera_ortho(const ncf::NCF *p)
+{
+    if (!p) return 0;
+
+    asset::ICamera *data = new (std::nothrow) xtcore::camera::Orthographic();
+
+    xtcore::camera::Orthographic *cam = (xtcore::camera::Orthographic *)data;
+    cam->position    = deserialize_vec3(p, XTPROTO_PROP_POSITION);
+    cam->target      = deserialize_vec3(p, XTPROTO_PROP_TARGET);
+    cam->up          = deserialize_vec3(p, XTPROTO_PROP_UP);
+    cam->ortho_scale = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_ORTHO_SCALE), cam->ortho_scale);
+
+    return data;
+}
+
 xtcore::asset::ICamera *deserialize_camera(const ncf::NCF *p)
 {
     if (!p) return 0;
@@ -948,7 +963,8 @@ xtcore::asset::ICamera *deserialize_camera(const ncf::NCF *p)
     else if (!type.compare(XTPROTO_LTRL_CAM_ODS)      ) data = deserialize_camera_ods(p);
     else if (!type.compare(XTPROTO_LTRL_CAM_ERP)      ) data = deserialize_camera_erp(p);
     else if (!type.compare(XTPROTO_LTRL_CAM_CUBEMAP)  ) data = deserialize_camera_cbm(p);
-    else if (!type.compare(XTPROTO_LTRL_CAM_TILTSHIFT)) data = deserialize_camera_tls(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_TILTSHIFT))     data = deserialize_camera_tls(p);
+    else if (!type.compare(XTPROTO_LTRL_CAM_ORTHOGRAPHIC)) data = deserialize_camera_ortho(p);
     else Log::handle().post_warning("Unsupported camera type %s [%s]. Skipping..", p->get_name(), type.c_str());
 
 	return data;

@@ -26,5 +26,6 @@ class ICamera
 #include "camera/ods.h"
 #include "camera/cubemap.h"
 #include "camera/tiltshift.h"
+#include "camera/orthographic.h"
 
 #endif /* XTCORE_CAMERA_H_INCLUDED */

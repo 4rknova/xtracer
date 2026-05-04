@@ -138,6 +138,33 @@ cubecam = {
 
 ---
 
+---
+
+## `orthographic`
+
+Parallel-projection camera — all rays travel in the same direction with no perspective foreshortening. Useful for technical/architectural renders, reference sheets, and any scene where scale consistency across depth matters.
+
+| Parameter | Type | Default | Notes |
+|-----------|------|---------|-------|
+| `position` | vec3 | — | Camera position in world space |
+| `target` | vec3 | — | Look-at point |
+| `up` | vec3 | `vec3(0,1,0)` | Up direction |
+| `ortho_scale` | float | `1.0` | World-space width of the view volume; height is derived from the output aspect ratio |
+
+No DOF support.
+
+```
+top = {
+    type        = orthographic
+    position    = vec3(0, 10, 0)
+    target      = vec3(0, 0, 0)
+    up          = vec3(0, 0, 1)
+    ortho_scale = 8.0
+}
+```
+
+---
+
 ## Summary
 
 | Type | DOF | Notes |
@@ -147,3 +174,4 @@ cubecam = {
 | `erp` | No | 360° mono panorama; aspect ratio ≥ 2:1 recommended |
 | `ods` | No | 360° stereo panorama; output height must be even |
 | `cubemap` | No | Six-face vertical strip; output height must be divisible by 6 |
+| `orthographic` | No | Parallel projection; `ortho_scale` controls world-space view width |
