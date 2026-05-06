@@ -145,61 +145,6 @@
         </section>
 
         <section class="tab-pane" id="paneRender">
-          <section class="panel render-stats-panel">
-            <div id="previewTransferStats" class="render-stats-grid preview-transfer-stats-card">
-              <section class="render-stats-group workspace-info-group">
-                <h4>Preview Transfer</h4>
-                <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame
-                    Render</span><code class="workspace-active-value">-</code></p>
-                <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta
-                    Bytes</span><code class="workspace-active-value">-</code></p>
-                <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta
-                    Requests</span><code class="workspace-active-value">-</code></p>
-                <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full
-                    Bytes</span><code class="workspace-active-value">-</code></p>
-                <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full
-                    Requests</span><code class="workspace-active-value">-</code></p>
-            </section>
-              <section class="render-stats-group workspace-info-group">
-                <h4>Tile Heatmap</h4>
-                <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap
-                    overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
-                <p id="tileHeatmapBuckets" class="workspace-active-hint"><span
-                    class="workspace-active-label">Buckets</span><code
-                    class="workspace-active-value">fast - | mid - | slow -</code></p>
-                <p id="tileHeatmapThroughput" class="workspace-active-hint"><span
-                    class="workspace-active-label">Throughput</span><code
-                    class="workspace-active-value">- tiles/s</code></p>
-                <p id="tileHeatmapEta" class="workspace-active-hint"><span
-                    class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
-                <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA
-                    Confidence</span><code class="workspace-active-value">-</code></p>
-                <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span
-                    class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code>
-                </p>
-            </section>
-            </div>
-            <div class="render-action-row">
-              <div id="previewHeadline" class="preview-headline is-idle">
-                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn"
-                  type="button">Render</button>
-                <p id="status" class="status-chip">Idle</p>
-                <div id="progressBar" class="bar">
-                  <div id="progress"></div>
-              </div>
-              </div>
-              <section id="renderStatusGroup" class="render-stats-group render-status-stats-group">
-                <p class="workspace-active-hint"><span class="workspace-active-label">Threads</span><code
-                    id="statusThreads" class="workspace-active-value status-threads">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Pass</span><code id="statusPass"
-                    class="workspace-active-value status-pass">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Progress</span><code
-                    id="statusPercent" class="workspace-active-value status-percent">-</code></p>
-                <p class="workspace-active-hint"><span class="workspace-active-label">Elapsed</span><code
-                    id="renderTimer" class="workspace-active-value status-timer">-</code></p>
-            </section>
-            </div>
-          </section>
           <section class="panel panel-preview">
             <div class="preview-toolbar">
               <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls"
@@ -210,6 +155,12 @@
                   aria-label="Reset preview view" aria-disabled="true" title="Reset preview view">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 5a7 7 0 0 1 5.43 2.58V5h2v6h-6v-2h2.67A5 5 0 1 0 17 14h2a7 7 0 1 1-7-9z"></path>
+                  </svg>
+                </button>
+                <button id="renderStatsToggleBtn" class="render-hud-stats-btn preview-toolbar-reset-btn" type="button"
+                  aria-label="Toggle render stats" title="Stats" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M3 3v18h18v-2H5V3H3zm4 9h2v7H7v-7zm4-4h2v11h-2V8zm4 2h2v9h-2v-9z"/>
                   </svg>
                 </button>
               </div>
@@ -224,6 +175,61 @@
               </div>
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
+              <div class="render-hud-stats" id="renderHudStats" hidden>
+                <div id="previewTransferStats" class="render-stats-grid preview-transfer-stats-card">
+                  <section class="render-stats-group workspace-info-group">
+                    <h4>Preview Transfer</h4>
+                    <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code></p>
+                    <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code></p>
+                  </section>
+                  <section class="render-stats-group workspace-info-group">
+                    <h4>Tile Heatmap</h4>
+                    <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
+                    <p id="tileHeatmapBuckets" class="workspace-active-hint"><span class="workspace-active-label">Buckets</span><code class="workspace-active-value">fast - | mid - | slow -</code></p>
+                    <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
+                    <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
+                    <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
+                    <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
+                  </section>
+                </div>
+                <section id="renderStatusGroup" class="render-status-stats-group">
+                  <div class="render-stat-pill" title="Threads">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <path d="M4 4h2v2h1V4h2v2h1V4h2v2h1V4h2v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1v2h-2v-2h-1v2h-2v-2h-1v2H9v-2H8v2H6v-2H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1V4H4zm1 3v10h14V7H5zm2 2h10v6H7V9z"/>
+                    </svg>
+                    <code id="statusThreads" class="status-threads">-</code>
+                  </div>
+                  <div class="render-stat-pill" title="Pass">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <path d="M12 4l-8 4 8 4 8-4-8-4zm-6.4 7.2L12 14l6.4-2.8.8 1.6-7.2 3.2-7.2-3.2.8-1.6zm0 4L12 18l6.4-2.8.8 1.6L12 20l-7.2-3.2.8-1.6z"/>
+                    </svg>
+                    <code id="statusPass" class="status-pass">-</code>
+                  </div>
+                  <div class="render-stat-pill" title="Progress">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14v6l4 2-1 1.73-5-2.5V6z"/>
+                    </svg>
+                    <code id="statusPercent" class="status-percent">-</code>
+                  </div>
+                  <div class="render-stat-pill" title="Elapsed">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <path d="M11 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm0 16a7 7 0 1 1 7-7 7 7 0 0 1-7 7zm.5-11.5h-1.5v5.25l4.5 2.7.75-1.23-3.75-2.22z"/>
+                    </svg>
+                    <code id="renderTimer" class="status-timer">-</code>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <div class="render-hud-bar">
+              <div id="previewHeadline" class="preview-headline is-idle">
+                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn"
+                  type="button">Render</button>
+                <p id="status" class="status-chip">Idle</p>
+                <div id="progressBar" class="bar"><div id="progress"></div></div>
+              </div>
             </div>
             <section id="renderPreviewAuxPanel" class="render-preview-aux-panel"
               aria-label="Interactive preview controls" hidden>

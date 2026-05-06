@@ -1182,7 +1182,7 @@ h2 {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-inline-end: 10px;
+  overflow: hidden;
 }
 
 #paneRender.active::-webkit-scrollbar-track {
@@ -7957,6 +7957,119 @@ button:disabled {
   pointer-events: auto;
 }
 
+/* ─── Render HUD overlay ──────────────────────────────────────────────────── */
+
+.render-hud-stats {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 8;
+  display: flex;
+  gap: 0;
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.render-hud-stats .render-stats-grid {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.render-hud-stats .render-status-stats-group {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 0 0 20px;
+  border-left: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
+}
+
+.render-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 55%, transparent);
+  white-space: nowrap;
+}
+
+.render-stat-pill svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  opacity: 0.55;
+}
+
+.render-stat-pill code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.render-hud-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  
+}
+
+.render-hud-bar .preview-headline {
+  flex: 1 1 auto;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.render-hud-stats-btn {
+  flex: 0 0 auto;
+  appearance: none;
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+  color: color-mix(in srgb, var(--muted) 90%, var(--ink));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.render-hud-stats-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.render-hud-stats-btn:hover {
+  background: color-mix(in srgb, var(--field-bg) 95%, transparent);
+  color: var(--ink);
+}
+
+.render-hud-stats-btn.is-active,
+.render-hud-stats-btn[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 15%, var(--field-bg));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 .render-toolbar-btn {
   grid-column: 1;
   grid-row: 1;
@@ -8081,10 +8194,13 @@ button:disabled {
 }
 
 #paneRender .preview-frame {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  width: 100%;
   max-width: 100%;
   min-height: 0;
   max-height: none;
+  aspect-ratio: unset;
+  align-self: stretch;
 }
 
 .preview-toolbar-reset-btn {
@@ -10198,21 +10314,15 @@ button:disabled {
     gap: 0;
   }
 
-  /* Render headline overlay: revert to two-column so it stays compact */
   #previewFrame .preview-headline {
     grid-template-columns: auto minmax(0, 1fr);
-    padding: 18px 12px 12px;
+    padding: 0;
   }
 
   #previewFrame .render-toolbar-btn {
     grid-column: 1;
     grid-row: 1;
     width: auto;
-  }
-
-  #previewFrame .preview-status-row {
-    grid-column: 2;
-    grid-row: 1;
   }
 
   #previewFrame .preview-headline .bar {
