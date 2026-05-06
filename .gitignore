@@ -65,4 +65,6 @@ gallery/
 .claude/settings.json
 src/apps/web-client/dist/
 src/apps/web-client/app/dist/
+src/apps/web-client/index.bundle.html
+src/apps/web-client/node_modules/
 __pycache__/

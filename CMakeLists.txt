@@ -72,6 +72,12 @@ add_custom_command(
 )
 add_custom_target(web_license_asset DEPENDS ${PATH_WEB_LICENSE})
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(XTRACER_ENABLE_WEB_BUNDLE ON)
+elseif (NOT DEFINED XTRACER_ENABLE_WEB_BUNDLE)
+    set(XTRACER_ENABLE_WEB_BUNDLE OFF)
+endif()
+
 MACRO(SCAN_DIRS return_list)
     FILE(GLOB_RECURSE new_list *.h)
     SET(dir_list ${PATH_EXT})
@@ -553,6 +559,20 @@ target_compile_definitions(${OUT_EXE_WEB} PRIVATE
 target_link_libraries(${OUT_EXE_WEB} PRIVATE xtcore_static pthread)
 add_dependencies(${OUT_EXE_WEB} web_license_asset manpages)
 
+if (XTRACER_ENABLE_WEB_BUNDLE)
+    find_program(NODE_EXECUTABLE node REQUIRED)
+    add_custom_target(web_bundle
+        COMMAND ${NODE_EXECUTABLE} ${PATH_WEB}/build.mjs --web-root ${PATH_WEB}
+        WORKING_DIRECTORY ${PATH_WEB}
+        COMMENT "Bundling web-client assets"
+        VERBATIM
+    )
+    add_dependencies(${OUT_EXE_WEB} web_bundle)
+    target_compile_definitions(${OUT_EXE_WEB} PRIVATE XTRACER_WEB_BUNDLE=1)
+    message(STATUS "Web client bundle: ON")
+else()
+    message(STATUS "Web client bundle: OFF (XTRACER_ENABLE_WEB_BUNDLE=ON to enable)")
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unknown-pragmas")

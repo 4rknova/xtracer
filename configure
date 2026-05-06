@@ -19,7 +19,7 @@ BEGIN { updated = 0 }
 }
 ' ./LICENSE > "$TMP_LICENSE_TEXT"
 xxd -i -n __LICENSE "$TMP_LICENSE_TEXT" | sed 's/unsigned char/const char/g' | sed 's/\([0-9a-f]\)$/\0, 0x00/' > $OUT_LICENSE
-BUILD=${BUILD:-Debug}
+BUILD=${BUILD:-${BUILD_TYPE:-Debug}}
 BUILD_DIR=${BUILD_DIR:-build/intermediate/build}
 if [ -d ./automation ]; then
     make -C ./automation
