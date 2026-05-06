@@ -24,8 +24,6 @@ function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.
 
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
-UI_REFRESH_INTERVAL_MS_JOBS = 500;
-
 function updateWorkspaceActiveHint() {
   if (!el.workspaceActiveHint) return;
   var id = String(activeWorkspaceId || "").trim();
@@ -89,11 +87,8 @@ function updateWorkspaceServerStatsHints(data) {
 }
 
 var settingsJobsTotalRenderThreads = 0;
-var settingsJobsTickInterval = null;
 var settingsJobsAbortInFlight = new Set();
 var settingsJobsMoveInFlight = new Set();
-var sidebarJobSockets = new Map(); // jobId → WebSocket
-
 var SETTINGS_JOBS_GRAPH_WINDOW_MS = 60 * 1000;
 var settingsJobsThreadSamples = [];
 
@@ -133,7 +128,7 @@ function getSettingsJobsOccupiedThreads(activeJobs) {
   var jobs = Array.isArray(activeJobs) ? activeJobs : [];
   return jobs.reduce(function (sum, job) {
     var state = String(job && job.state || "").toLowerCase();
-    if (state !== "running") return sum;
+    if (state !== "running" && state !== "preparing") return sum;
     var threads = Math.max(0, Number(job && job.threads || 0));
     return sum + (Number.isFinite(threads) ? Math.floor(threads) : 0);
   }, 0);
@@ -341,49 +336,39 @@ function renderSettingsJobsThreadGraph() {
   el.settingsJobsThreadGraph.appendChild(footer);
 }
 
-function bindSettingsJobsCardLifecycle() {
-  var card = document.getElementById("JobsControlsCard");
-  if (!card || card._settingsJobsLifecycleBound) return;
-  card._settingsJobsLifecycleBound = true;
+function bindSettingsJobsCardLifecycle() {// Jobs panel is now a standalone modal; lifecycle handled by openJobsModal/closeJobsModal
+}
 
-  function startTick() {
-    if (settingsJobsTickInterval) return;
-    settingsJobsTickInterval = setInterval(refreshSettingsJobsCard, UI_REFRESH_INTERVAL_MS_JOBS);
-  }
+function updateJobsBadge() {
+  var jobs = getActiveJobsFromCache();
+  var count = jobs.length;
+  [el.topbarJobsBtn, el.bnTabJobs].filter(Boolean).forEach(function (btn) {
+    var badge = btn.querySelector(".topbar-btn-badge");
+    if (!badge) return;
 
-  function stopTick() {
-    if (settingsJobsTickInterval) {
-      clearInterval(settingsJobsTickInterval);
-      settingsJobsTickInterval = null;
-    }
-  }
-
-  card.addEventListener("toggle", function () {
-    if (card.open) {
-      refreshSettingsJobsCard();
-      startTick();
+    if (count > 0) {
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.hidden = false;
     } else {
-      stopTick();
-      resetSettingsJobsThreadGraph();
+      badge.textContent = "";
+      badge.hidden = true;
     }
   });
-
-  if (card.open) {
-    refreshSettingsJobsCard();
-    startTick();
-  }
 }
 
 function notifyActiveJobsChanged() {
   if (activeTabMode === "workspaces" && hasBackendMethod(api, "getWorkspaces")) {
-    refreshWorkspaces()["catch"](function (err) {
-      return appendLog("workspace refresh error: ".concat(err.message));
-    });
+    var activeJobs = getActiveJobsFromCache();
+    var cached = Array.from(workspaceSnapshotById.values());
+    var items = sortWorkspaceItems(overlayWorkspaceActiveJobs(cached, activeJobs));
+    renderWorkspaceList(items);
   }
 
   if (typeof refreshSettingsJobsCard === "function" && el.settingsJobsList) {
     refreshSettingsJobsCard();
   }
+
+  updateJobsBadge();
 }
 
 function parseJobSequence(jobId) {
@@ -398,8 +383,10 @@ function compareActiveJobsForSettings(a, b) {
 
   var priority = function priority(state) {
     if (state === "running") return 0;
-    if (state === "queued") return 1;
-    return 2;
+    if (state === "aborting") return 1;
+    if (state === "preparing") return 2;
+    if (state === "queued") return 3;
+    return 4;
   };
 
   var pa = priority(stateA);
@@ -442,7 +429,7 @@ function createSettingsJobActionIcon(kind) {
 
 function createSettingsJobStateTag(state) {
   if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
-    var tone = state === "running" ? "success" : state === "queued" ? "warning" : "neutral";
+    var tone = state === "running" ? "success" : state === "aborting" ? "warning" : state === "preparing" ? "info" : state === "queued" ? "warning" : "neutral";
     return window.XTracerWidgets.createTag({
       label: state,
       tone: tone,
@@ -622,14 +609,14 @@ function renderSettingsJobsList(activeJobs) {
       controlNodes.push(queueControls);
     }
 
-    if (state === "running" || state === "queued") {
+    if (state === "running" || state === "preparing" || state === "queued") {
       var abortBtn = createSettingsJobActionButton("abort", {
         className: "settings-job-abort-btn",
         ariaLabel: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort job",
         title: settingsJobsAbortInFlight.has(id) ? "Aborting" : "Abort",
         disabled: settingsJobsAbortInFlight.has(id),
         onClick: function onClick() {
-          abortSettingsJob(id)["catch"](function (err) {
+          abortSettingsJob(id, workspaceId)["catch"](function (err) {
             return appendLog("settings abort error: ".concat(err.message));
           });
         }
@@ -660,147 +647,6 @@ function renderSettingsJobsList(activeJobs) {
     item.dataset.jobId = id;
     el.settingsJobsList.appendChild(item);
   });
-  syncSidebarJobSockets(jobs);
-} // Open a lightweight per-job WS subscription for the sidebar.
-// Patches progress/elapsed in-place on every tile/pass; does a full REST
-// refresh only when the job reaches a terminal state.
-
-
-function openSidebarJobSocket(jobId) {
-  if (!jobId || sidebarJobSockets.has(jobId)) return;
-  if (typeof WebSocket === "undefined") return;
-  var ws;
-
-  try {
-    ws = new WebSocket("ws://".concat(location.host, "/ws/jobs/").concat(encodeURIComponent(jobId)));
-  } catch (_) {
-    return;
-  }
-
-  ws.binaryType = "arraybuffer";
-  sidebarJobSockets.set(jobId, ws);
-
-  ws.onmessage = function (event) {
-    if (event.data instanceof ArrayBuffer) {
-      // Binary XTDR packet — extract tiles_done / tiles_total / elapsed_ms from header.
-      // Header layout (32 bytes): magic(4) width(4) height(4) tiles_done(4)
-      //   tiles_total(4) state(4) tile_count(4) elapsed_ms(4)
-      var view = new DataView(event.data);
-      if (event.data.byteLength < 32) return;
-      if (view.getUint8(3) !== 0x52) return; // must be XTDR ('R'), not XTD1
-
-      var tilesDone = view.getUint32(12, true);
-      var tilesTotal = view.getUint32(16, true);
-      var elapsedMs = view.getUint32(28, true);
-      var pct = tilesTotal > 0 ? tilesDone / tilesTotal : 0;
-      patchSettingsJobProgress(jobId, pct, elapsedMs);
-    } else {
-      var data;
-
-      try {
-        data = JSON.parse(event.data);
-      } catch (_) {
-        return;
-      }
-
-      var state = String(data.state || "").toLowerCase();
-
-      if (state === "running" || state === "queued") {
-        patchSettingsJobFromSnapshot(jobId, data);
-      } else {
-        // Terminal state — close and do a full list refresh.
-        ws.close();
-        refreshSettingsJobsCard();
-      }
-    }
-  };
-
-  ws.onclose = function () {
-    if (sidebarJobSockets.get(jobId) === ws) sidebarJobSockets["delete"](jobId);
-  };
-
-  ws.onerror = function () {
-    try {
-      ws.close();
-    } catch (_) {}
-  };
-}
-
-function closeSidebarJobSocket(jobId) {
-  var ws = sidebarJobSockets.get(jobId);
-  if (!ws) return;
-  sidebarJobSockets["delete"](jobId);
-
-  try {
-    ws.close();
-  } catch (_) {}
-} // Keep sidebar subscriptions in sync with the displayed job list.
-
-
-function syncSidebarJobSockets(jobs) {
-  var activeIds = new Set((Array.isArray(jobs) ? jobs : []).filter(function (j) {
-    var s = String(j && j.state || "").toLowerCase();
-    return s === "running" || s === "queued";
-  }).map(function (j) {
-    return String(j && j.id || "").trim();
-  }).filter(Boolean)); // Close sockets for jobs no longer in the list.
-
-  sidebarJobSockets.forEach(function (_, id) {
-    if (!activeIds.has(id)) closeSidebarJobSocket(id);
-  }); // Open sockets for new running/queued jobs.
-
-  activeIds.forEach(function (id) {
-    return openSidebarJobSocket(id);
-  });
-} // Patch a job row's progress bar and % pill in-place from WS binary tile data.
-// Avoids a REST round-trip — called on every tile finish for real-time updates.
-
-
-function patchSettingsJobProgress(jobId, progress, elapsedMs) {
-  if (!el.settingsJobsList || !jobId) return;
-  var row = el.settingsJobsList.querySelector("[data-job-id=\"".concat(CSS.escape(String(jobId)), "\"]"));
-  if (!row) return;
-  var pct = Math.max(0, Math.min(1, Number(progress) || 0));
-  var pctText = "".concat((pct * 100).toFixed(1), "%");
-  var fill = row.querySelector(".xui-progress__fill, .settings-job-progress > span");
-  if (fill) fill.style.width = pctText;
-  var pills = row.querySelectorAll(".settings-job-meta-pill");
-  if (pills[2]) pills[2].textContent = pctText;
-  if (pills[1] && elapsedMs > 0) pills[1].textContent = formatJobElapsedMs(elapsedMs);
-
-  if (el.settingsJobsUpdated) {
-    var ts = new Date();
-    var hh = String(ts.getHours()).padStart(2, "0");
-    var mm = String(ts.getMinutes()).padStart(2, "0");
-    var ss = String(ts.getSeconds()).padStart(2, "0");
-    updateWorkspaceServerStatHint(el.settingsJobsUpdated, "Updated", "".concat(hh, ":").concat(mm, ":").concat(ss));
-  }
-} // Patch all live fields (progress, elapsed, threads) from a WS JSON snapshot.
-// Called on PASS_FINISHED broadcasts — richer than binary but still no REST call.
-
-
-function patchSettingsJobFromSnapshot(jobId, data) {
-  if (!el.settingsJobsList || !jobId || !data) return;
-  var row = el.settingsJobsList.querySelector("[data-job-id=\"".concat(CSS.escape(String(jobId)), "\"]"));
-  if (!row) return;
-  var pct = Math.max(0, Math.min(1, Number(data.progress) || 0));
-  var pctText = "".concat((pct * 100).toFixed(1), "%");
-  var fill = row.querySelector(".xui-progress__fill, .settings-job-progress > span");
-  if (fill) fill.style.width = pctText;
-  var pills = row.querySelectorAll(".settings-job-meta-pill");
-  if (pills[2]) pills[2].textContent = pctText;
-  if (pills[1]) pills[1].textContent = formatJobElapsedMs(data.elapsed_ms);
-  var threads = Math.max(0, Number(data.threads) || 0);
-  if (pills[0] && threads > 0) pills[0].textContent = threads === 1 ? "1 thread" : "".concat(threads, " threads"); // Keep the thread-usage graph up to date without a REST call.
-
-  recordSettingsJobsThreadUsage(threads);
-  renderSettingsJobsThreadGraph();
-
-  if (el.settingsJobsThreadsUsage) {
-    var total = Math.max(0, Number(settingsJobsTotalRenderThreads) || 0);
-    var value = total > 0 ? "".concat(threads, " / ").concat(total) : "".concat(threads, " / -");
-    updateWorkspaceServerStatHint(el.settingsJobsThreadsUsage, "Threads In Use", value);
-  }
 }
 
 function refreshSettingsJobsCard() {
@@ -829,11 +675,8 @@ function refreshSettingsJobsCard() {
 }
 
 function isJobsControlsCardVisible() {
-  var card = document.getElementById("JobsControlsCard");
-  if (!card) return false;
-  if (card.hidden) return false;
-  if (!card.open) return false;
-  return true;
+  var modal = document.getElementById("jobsModal");
+  return !!(modal && !modal.hidden);
 }
 
 function moveSettingsJobQueue(jobId, direction) {
@@ -926,7 +769,7 @@ function moveSettingsJobQueue(jobId, direction) {
   }, null, null, [[14, 25, 28, 33]]);
 }
 
-function abortSettingsJob(jobId) {
+function abortSettingsJob(jobId, jobWorkspaceId) {
   var id;
   return regeneratorRuntime.async(function abortSettingsJob$(_context2) {
     while (1) {
@@ -954,7 +797,7 @@ function abortSettingsJob(jobId) {
           _context2.prev = 6;
           appendLog("settings abort requested for ".concat(id));
           _context2.next = 10;
-          return regeneratorRuntime.awrap(api.abortJob(id));
+          return regeneratorRuntime.awrap(api.abortJob(id, jobWorkspaceId));
 
         case 10:
           appendLog("settings abort accepted for ".concat(id));
@@ -1103,6 +946,118 @@ function buildWorkspacePreviewUrl(lastJobId) {
   return "/api/jobs/".concat(encodeURIComponent(jobId), "/image?final=1&tm=aces");
 }
 
+var workspaceThumbCache = new Map(); // url → blob URL
+
+var WORKSPACE_THUMB_CACHE_MAX = 20;
+
+function loadWorkspacePreviewCanvas(url, _container, altLabel) {
+  var makeImg, res, buf, w, h, canvas, ctx, blobUrl, firstKey;
+  return regeneratorRuntime.async(function loadWorkspacePreviewCanvas$(_context3) {
+    while (1) {
+      switch (_context3.prev = _context3.next) {
+        case 0:
+          makeImg = function makeImg(blobUrl) {
+            var img = document.createElement("img");
+            img.alt = altLabel || "render preview";
+            img.src = blobUrl;
+            return img;
+          };
+
+          if (!workspaceThumbCache.has(url)) {
+            _context3.next = 3;
+            break;
+          }
+
+          return _context3.abrupt("return", makeImg(workspaceThumbCache.get(url)));
+
+        case 3:
+          _context3.prev = 3;
+          _context3.next = 6;
+          return regeneratorRuntime.awrap(fetch(url, {
+            cache: "no-store"
+          }));
+
+        case 6:
+          res = _context3.sent;
+
+          if (res.ok) {
+            _context3.next = 9;
+            break;
+          }
+
+          return _context3.abrupt("return", null);
+
+        case 9:
+          _context3.next = 11;
+          return regeneratorRuntime.awrap(res.arrayBuffer());
+
+        case 11:
+          buf = _context3.sent;
+          w = parseInt(res.headers.get("X-XTracer-Width") || "0", 10);
+          h = parseInt(res.headers.get("X-XTracer-Height") || "0", 10);
+
+          if (!(!w || !h || buf.byteLength !== w * h * 4)) {
+            _context3.next = 16;
+            break;
+          }
+
+          return _context3.abrupt("return", null);
+
+        case 16:
+          canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          ctx = canvas.getContext("2d");
+
+          if (ctx) {
+            _context3.next = 22;
+            break;
+          }
+
+          return _context3.abrupt("return", null);
+
+        case 22:
+          ctx.putImageData(new ImageData(new Uint8ClampedArray(buf), w, h), 0, 0);
+          _context3.next = 25;
+          return regeneratorRuntime.awrap(new Promise(function (resolve) {
+            canvas.toBlob(function (blob) {
+              return resolve(blob ? URL.createObjectURL(blob) : null);
+            }, "image/png");
+          }));
+
+        case 25:
+          blobUrl = _context3.sent;
+
+          if (blobUrl) {
+            _context3.next = 28;
+            break;
+          }
+
+          return _context3.abrupt("return", null);
+
+        case 28:
+          if (workspaceThumbCache.size >= WORKSPACE_THUMB_CACHE_MAX) {
+            firstKey = workspaceThumbCache.keys().next().value;
+            URL.revokeObjectURL(workspaceThumbCache.get(firstKey));
+            workspaceThumbCache["delete"](firstKey);
+          }
+
+          workspaceThumbCache.set(url, blobUrl);
+          return _context3.abrupt("return", makeImg(blobUrl));
+
+        case 33:
+          _context3.prev = 33;
+          _context3.t0 = _context3["catch"](3);
+          return _context3.abrupt("return", null);
+
+        case 36:
+        case "end":
+          return _context3.stop();
+      }
+    }
+  }, null, null, [[3, 33]]);
+}
+
 function workspaceStateLabel(workspace) {
   var id = String(workspace && workspace.id || "");
   var activeJob = String(workspace && workspace.active_job_id || "");
@@ -1159,7 +1114,9 @@ function workspaceSettingsPayload() {
     }).filter(function (entry) {
       return !!entry && !!entry.filter;
     }) : [],
-    post_filters_enabled: !!postFilterStackEnabled
+    post_filters_enabled: !!postFilterStackEnabled,
+    scene: String(el.scene && el.scene.value ? el.scene.value : ""),
+    scene_variant: String(el.variant && el.variant.value !== undefined ? el.variant.value : "")
   };
 }
 
@@ -1167,6 +1124,7 @@ function queueWorkspaceSettingsSave() {
   if (suppressWorkspaceSettingsSave) return;
   if (!activeWorkspaceId) return;
   if (!hasBackendMethod(api, "saveWorkspaceSettings")) return;
+  var savedForWorkspace = activeWorkspaceId;
 
   if (workspaceSettingsSaveTimer) {
     clearTimeout(workspaceSettingsSaveTimer);
@@ -1175,6 +1133,7 @@ function queueWorkspaceSettingsSave() {
 
   workspaceSettingsSaveTimer = setTimeout(function () {
     workspaceSettingsSaveTimer = null;
+    if (savedForWorkspace !== activeWorkspaceId) return;
     var json = "{}";
 
     try {
@@ -1293,6 +1252,11 @@ function applyWorkspaceSettings(settings) {
 
     if (el.postFiltersEnabled) el.postFiltersEnabled.checked = !!postFilterStackEnabled;
     updatePostFilterUiState();
+
+    if (cfg.scene_variant !== undefined) {
+      var wsRuntime = workspaceRuntimeState(activeWorkspaceId);
+      if (wsRuntime) wsRuntime.activeVariant = String(cfg.scene_variant || "").trim();
+    }
   } finally {
     suppressWorkspaceSettingsSave = false;
   }
@@ -1300,20 +1264,7 @@ function applyWorkspaceSettings(settings) {
 
 function parseWorkspaceSettingsFromSnapshot(workspace) {
   var raw = String(workspace && workspace.settings_json || "").trim();
-
-  if (!raw) {
-    if (!workspace) return null;
-    var hasLegacyQuality = workspace.quality_samples !== undefined || workspace.quality_aa !== undefined || workspace.quality_sample_distribution !== undefined || workspace.quality_rdepth !== undefined;
-    if (!hasLegacyQuality) return null;
-    return {
-      quality: {
-        samples: workspace.quality_samples !== undefined ? String(workspace.quality_samples) : undefined,
-        aa: workspace.quality_aa !== undefined ? String(workspace.quality_aa) : undefined,
-        sample_distribution: workspace.quality_sample_distribution !== undefined ? String(workspace.quality_sample_distribution) : undefined,
-        rdepth: workspace.quality_rdepth !== undefined ? String(workspace.quality_rdepth) : undefined
-      }
-    };
-  }
+  if (!raw) return null;
 
   try {
     var parsed = JSON.parse(raw);
@@ -1358,7 +1309,7 @@ function mapActiveJobsByWorkspace(activeJobs) {
     var jobId = String(job && job.id || "").trim();
     var state = String(job && job.state || "").toLowerCase();
     if (!workspaceId || !jobId) return;
-    if (state !== "queued" && state !== "running") return;
+    if (state !== "queued" && state !== "preparing" && state !== "running") return;
     if (!byWorkspace.has(workspaceId)) byWorkspace.set(workspaceId, jobId);
   });
   return byWorkspace;
@@ -1381,95 +1332,92 @@ function overlayWorkspaceActiveJobs(workspaces, activeJobs) {
 }
 
 function applyActiveWorkspaceState(snapshot, options) {
-  var opts, ws, settings, wsScene, currentScene, skipSceneReload, sceneChanged, previousScene, previousVariant, previousCamera, variantName, wsActiveJobId;
-  return regeneratorRuntime.async(function applyActiveWorkspaceState$(_context3) {
+  var opts, ws, settings, wsScene, sceneFromSettings, effectiveScene, currentScene, sceneChanged, skipSceneReload, previousScene, previousVariant, previousCamera, wsVariant, sourceData, variantName, _wsVariant, _currentScene, _sourceData, _variantName, wsActiveJobId;
+
+  return regeneratorRuntime.async(function applyActiveWorkspaceState$(_context4) {
     while (1) {
-      switch (_context3.prev = _context3.next) {
+      switch (_context4.prev = _context4.next) {
         case 0:
           opts = options || {};
           cancelActivePollingUi();
           ws = snapshot || workspaceSnapshotById.get(activeWorkspaceId) || null;
 
           if (ws) {
-            _context3.next = 7;
+            _context4.next = 7;
             break;
           }
 
-          _context3.next = 6;
+          _context4.next = 6;
           return regeneratorRuntime.awrap(restorePreviewForActiveWorkspace());
 
         case 6:
-          return _context3.abrupt("return");
+          return _context4.abrupt("return");
 
         case 7:
           settings = parseWorkspaceSettingsFromSnapshot(ws);
           if (settings) applyWorkspaceSettings(settings);
           wsScene = String(ws && ws.active_scene || "").trim();
+          sceneFromSettings = settings ? String(settings.scene || "").trim() : "";
+          effectiveScene = wsScene || (hasSceneOption(sceneFromSettings) ? sceneFromSettings : "");
 
-          if (!(wsScene && hasSceneOption(wsScene))) {
-            _context3.next = 58;
+          if (!(effectiveScene && hasSceneOption(effectiveScene))) {
+            _context4.next = 58;
             break;
           }
 
           currentScene = String(el.scene && el.scene.value ? el.scene.value : "").trim();
-          skipSceneReload = currentScene === wsScene && String(opts.skipSceneReloadIfCurrent || "").trim() === wsScene;
-          sceneChanged = currentScene !== wsScene;
+          sceneChanged = currentScene !== effectiveScene;
+          skipSceneReload = !sceneChanged && String(opts.skipSceneReloadIfCurrent || "").trim() === effectiveScene;
           previousScene = currentScene;
           previousVariant = selectedSceneVariantValue();
           previousCamera = String(el.camera && el.camera.value ? el.camera.value : "").trim();
-          _context3.prev = 17;
+          _context4.prev = 19;
 
           if (sceneChanged) {
-            el.scene.value = wsScene;
-            setSceneBrowserSelectedFile(wsScene);
-            localStorage.setItem(LAST_SCENE_KEY, wsScene);
-            updateSceneDependencyPill(wsScene);
+            el.scene.value = effectiveScene;
+            setSceneBrowserSelectedFile(effectiveScene);
+            localStorage.setItem(LAST_SCENE_KEY, effectiveScene);
+            updateSceneDependencyPill(effectiveScene);
           }
 
           if (skipSceneReload) {
-            _context3.next = 34;
+            _context4.next = 32;
             break;
           }
 
-          _context3.next = 22;
-          return regeneratorRuntime.awrap(loadVariants(wsScene));
-
-        case 22:
-          variantName = selectedSceneVariantValue();
-          _context3.next = 25;
-          return regeneratorRuntime.awrap(Promise.all([loadCameras(wsScene, variantName), loadSceneSource(wsScene)]));
+          wsVariant = String(ws && ws.active_variant || "").trim() || String((workspaceRuntimeState(activeWorkspaceId) || {}).activeVariant || "").trim();
+          _context4.next = 25;
+          return regeneratorRuntime.awrap(api.getSceneSource(effectiveScene));
 
         case 25:
-          if (!(visualEditor && editorViewMode === "visual" && sceneChanged)) {
-            _context3.next = 34;
-            break;
-          }
+          sourceData = _context4.sent;
+          _context4.next = 28;
+          return regeneratorRuntime.awrap(loadVariants(effectiveScene, wsVariant, sourceData && sourceData.source ? sourceData.source : ""));
 
-          _context3.prev = 26;
-          _context3.next = 29;
-          return regeneratorRuntime.awrap(loadVisualSceneFromSelected());
-
-        case 29:
-          _context3.next = 34;
-          break;
+        case 28:
+          variantName = selectedSceneVariantValue();
+          _context4.next = 31;
+          return regeneratorRuntime.awrap(Promise.all([loadCameras(effectiveScene, variantName), loadSceneSource(effectiveScene, sourceData)]));
 
         case 31:
-          _context3.prev = 31;
-          _context3.t0 = _context3["catch"](26);
-          appendLog("visual load error: ".concat(_context3.t0.message));
+          if (visualEditor && editorViewMode === "visual") {
+            loadVisualSceneFromSelected()["catch"](function (err) {
+              return appendLog("visual load error: ".concat(err.message));
+            });
+          }
 
-        case 34:
+        case 32:
           if (editorViewMode === "graph") renderSceneGraphView();
-          _context3.next = 58;
+          _context4.next = 56;
           break;
 
-        case 37:
-          _context3.prev = 37;
-          _context3.t1 = _context3["catch"](17);
-          appendLog("workspace scene load error (".concat(wsScene, "): ").concat(_context3.t1.message));
+        case 35:
+          _context4.prev = 35;
+          _context4.t0 = _context4["catch"](19);
+          appendLog("workspace scene load error (".concat(effectiveScene, "): ").concat(_context4.t0.message));
 
           if (!(previousScene && hasSceneOption(previousScene))) {
-            _context3.next = 58;
+            _context4.next = 56;
             break;
           }
 
@@ -1477,45 +1425,89 @@ function applyActiveWorkspaceState(snapshot, options) {
           setSceneBrowserSelectedFile(previousScene);
           localStorage.setItem(LAST_SCENE_KEY, previousScene);
           updateSceneDependencyPill(previousScene);
-          _context3.prev = 45;
-          _context3.next = 48;
+          _context4.prev = 43;
+          _context4.next = 46;
           return regeneratorRuntime.awrap(loadVariants(previousScene, previousVariant));
 
-        case 48:
-          _context3.next = 50;
+        case 46:
+          _context4.next = 48;
           return regeneratorRuntime.awrap(loadCameras(previousScene, previousVariant));
 
-        case 50:
+        case 48:
           if (previousCamera && cameraCatalogHasName(previousCamera)) el.camera.value = previousCamera;
-          _context3.next = 53;
+          _context4.next = 51;
           return regeneratorRuntime.awrap(loadSceneSource(previousScene));
 
-        case 53:
-          _context3.next = 58;
+        case 51:
+          _context4.next = 56;
           break;
 
-        case 55:
-          _context3.prev = 55;
-          _context3.t2 = _context3["catch"](45);
-          appendLog("workspace rollback error: ".concat(_context3.t2.message));
+        case 53:
+          _context4.prev = 53;
+          _context4.t1 = _context4["catch"](43);
+          appendLog("workspace rollback error: ".concat(_context4.t1.message));
+
+        case 56:
+          _context4.next = 76;
+          break;
 
         case 58:
-          _context3.next = 60;
+          if (!(el.scene && el.scene.value)) {
+            _context4.next = 76;
+            break;
+          }
+
+          // No saved scene for this workspace yet; the picker still shows a scene from the previous
+          // workspace. Reload variants using this workspace's saved variant (usually "" for a new
+          // workspace) so the variant picker is never left showing a stale value from another workspace.
+          _wsVariant = String(ws && ws.active_variant || "").trim() || String((workspaceRuntimeState(activeWorkspaceId) || {}).activeVariant || "").trim();
+          _context4.prev = 60;
+          _currentScene = String(el.scene.value).trim();
+
+          if (!(_currentScene && hasSceneOption(_currentScene))) {
+            _context4.next = 71;
+            break;
+          }
+
+          _context4.next = 65;
+          return regeneratorRuntime.awrap(api.getSceneSource(_currentScene));
+
+        case 65:
+          _sourceData = _context4.sent;
+          _context4.next = 68;
+          return regeneratorRuntime.awrap(loadVariants(_currentScene, _wsVariant, _sourceData && _sourceData.source ? _sourceData.source : ""));
+
+        case 68:
+          _variantName = selectedSceneVariantValue();
+          _context4.next = 71;
+          return regeneratorRuntime.awrap(loadCameras(_currentScene, _variantName));
+
+        case 71:
+          _context4.next = 76;
+          break;
+
+        case 73:
+          _context4.prev = 73;
+          _context4.t2 = _context4["catch"](60);
+          appendLog("workspace variant reset error: ".concat(_context4.t2.message));
+
+        case 76:
+          _context4.next = 78;
           return regeneratorRuntime.awrap(restorePreviewForActiveWorkspace());
 
-        case 60:
+        case 78:
           wsActiveJobId = String(ws && ws.active_job_id || "").trim();
 
           if (wsActiveJobId) {
             resumeWorkspaceJobPolling(wsActiveJobId);
           }
 
-        case 62:
+        case 80:
         case "end":
-          return _context3.stop();
+          return _context4.stop();
       }
     }
-  }, null, null, [[17, 37], [26, 31], [45, 55]]);
+  }, null, null, [[19, 35], [43, 53], [60, 73]]);
 }
 
 function renderWorkspaceList(items) {
@@ -1523,10 +1515,10 @@ function renderWorkspaceList(items) {
   var widgets = window.XTracerWidgets || {};
   el.workspaceList.innerHTML = "";
   var list = Array.isArray(items) ? items : [];
-  var canDeleteAny = list.length > 1;
+  var canDeleteAny = list.length >= 1;
 
   if (list.length === 0) {
-    var empty = createWorkspaceEmptyState("No workspaces", "No workspaces available.", "workspace-empty");
+    var empty = createWorkspaceEmptyState("No workspaces", "Create a new workspace.", "workspace-empty");
     el.workspaceList.appendChild(empty);
     return;
   }
@@ -1536,6 +1528,7 @@ function renderWorkspaceList(items) {
     var hasOwned = !!(ws && Object.prototype.hasOwnProperty.call(ws, "is_owned_by_client"));
     var isMine = hasOwned ? !!ws.is_owned_by_client : !!(ws && ws.is_active_for_client);
     var scene = String(ws && ws.active_scene || "").trim();
+    var variant = String(ws && ws.active_variant || "").trim();
     var activeJob = String(ws && ws.active_job_id || "").trim();
     var lastJob = String(ws && ws.last_job_id || "").trim();
     var clients = Number(ws && ws.client_count || 0);
@@ -1551,9 +1544,7 @@ function renderWorkspaceList(items) {
     var title = document.createElement("h3");
     title.className = "workspace-item-title";
     title.textContent = String(ws && ws.name || id || "Workspace");
-    var state = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-state");
     head.appendChild(title);
-
     var badgesEl = document.createElement("div");
     badgesEl.className = "workspace-item-badges";
 
@@ -1562,7 +1553,6 @@ function renderWorkspaceList(items) {
       badgesEl.appendChild(mineBadge);
     }
 
-    badgesEl.appendChild(state);
     head.appendChild(badgesEl);
     var actions = document.createElement("div");
     actions.className = "workspace-item-actions";
@@ -1631,22 +1621,14 @@ function renderWorkspaceList(items) {
     var previewUrl = buildWorkspacePreviewUrl(previewJob);
 
     if (previewUrl) {
-      var img = document.createElement("img");
-      img.loading = "lazy";
-      img.decoding = "async";
-      img.alt = "".concat(title.textContent, " render preview");
-
-      img.onerror = function () {
-        img.remove();
-
-        if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
+      loadWorkspacePreviewCanvas(previewUrl, previewWrap, "".concat(title.textContent, " render preview")).then(function (canvas) {
+        if (canvas) {
+          previewWrap.appendChild(canvas);
+        } else if (!isRendering && !previewWrap.querySelector(".workspace-item-preview-empty")) {
           var emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
           previewWrap.appendChild(emptyPreview);
         }
-      };
-
-      img.src = previewUrl;
-      previewWrap.appendChild(img);
+      });
     } else if (!isRendering) {
       var emptyPreview = createWorkspaceEmptyState("", "No render yet", "workspace-item-preview-empty");
       previewWrap.appendChild(emptyPreview);
@@ -1679,6 +1661,7 @@ function renderWorkspaceList(items) {
     addMeta("ID", id || "-");
     addMeta("This Client", isMine ? "Yes" : "No");
     addMeta("Scene", scene || "-");
+    addMeta("Variant", variant || "-");
     addMeta("Clients", String(clients));
     addMeta("Drafts", String(drafts));
     addMeta("Job", activeJob || lastJob || "-");
@@ -1690,14 +1673,12 @@ function renderWorkspaceList(items) {
     if (workspaceViewMode === "list") {
       var previewCol = document.createElement("div");
       previewCol.className = "workspace-item-preview-col";
-      var listState = createWorkspaceStateBadge(workspaceStateLabel(ws), "workspace-item-list-state");
       previewCol.appendChild(previewWrap);
-      previewCol.appendChild(listState);
       var main = document.createElement("div");
       main.className = "workspace-item-list-main";
       var sceneLine = document.createElement("p");
       sceneLine.className = "workspace-item-list-scene";
-      sceneLine.textContent = scene || "-";
+      sceneLine.textContent = variant ? "".concat(scene || "-", " / ").concat(variant) : scene || "-";
       var metaStrip = document.createElement("div");
       metaStrip.className = "workspace-item-meta-strip";
 
@@ -1774,25 +1755,26 @@ function renderWorkspaceList(items) {
 }
 
 function refreshWorkspaces() {
-  var _ref, _ref2, payload, activeJobs, workspaceItems, sortedWorkspaceItems, nextActive, activeChanged;
+  var genBeforeFetch, _ref, _ref2, payload, activeJobs, workspaceItems, sortedWorkspaceItems, nextActive, activeChanged, wasEmpty;
 
-  return regeneratorRuntime.async(function refreshWorkspaces$(_context4) {
+  return regeneratorRuntime.async(function refreshWorkspaces$(_context5) {
     while (1) {
-      switch (_context4.prev = _context4.next) {
+      switch (_context5.prev = _context5.next) {
         case 0:
           if (hasBackendMethod(api, "getWorkspaces")) {
-            _context4.next = 2;
+            _context5.next = 2;
             break;
           }
 
-          return _context4.abrupt("return");
+          return _context5.abrupt("return");
 
         case 2:
-          _context4.next = 4;
+          genBeforeFetch = workspaceSwitchGen;
+          _context5.next = 5;
           return regeneratorRuntime.awrap(Promise.all([api.getWorkspaces(), Promise.resolve(getActiveJobsFromCache())]));
 
-        case 4:
-          _ref = _context4.sent;
+        case 5:
+          _ref = _context5.sent;
           _ref2 = _slicedToArray(_ref, 2);
           payload = _ref2[0];
           activeJobs = _ref2[1];
@@ -1801,13 +1783,15 @@ function refreshWorkspaces() {
           sortedWorkspaceItems = sortWorkspaceItems(workspaceItems);
           cacheWorkspaceSnapshots(sortedWorkspaceItems);
           nextActive = String(payload && payload.active_workspace || "").trim();
-          activeChanged = false;
+          activeChanged = false; // Skip server-reported active workspace if an explicit switch happened during fetch —
+          // the server response is stale relative to what the client just requested.
 
-          if (nextActive && nextActive !== activeWorkspaceId) {
+          if (nextActive && nextActive !== activeWorkspaceId && genBeforeFetch === workspaceSwitchGen) {
+            wasEmpty = !activeWorkspaceId;
             syncGlobalsToWorkspaceRuntime();
             activeWorkspaceId = nextActive;
             syncWorkspaceRuntimeToGlobals();
-            activeChanged = true;
+            if (!wasEmpty) activeChanged = true;
           }
 
           updateWorkspaceActiveHint();
@@ -1815,16 +1799,19 @@ function refreshWorkspaces() {
           renderWorkspaceList(sortedWorkspaceItems);
 
           if (!activeChanged) {
-            _context4.next = 21;
+            _context5.next = 23;
             break;
           }
 
-          _context4.next = 21;
+          _context5.next = 22;
           return regeneratorRuntime.awrap(applyActiveWorkspaceState(workspaceSnapshotById.get(activeWorkspaceId) || null));
 
-        case 21:
+        case 22:
+          if (typeof syncRenderTabEnabled === "function") syncRenderTabEnabled();
+
+        case 23:
         case "end":
-          return _context4.stop();
+          return _context5.stop();
       }
     }
   });
@@ -1853,42 +1840,67 @@ function is_scene_name_safe_runtime(scene) {
 }
 
 function switchActiveWorkspace(workspaceId) {
-  var nextId;
-  return regeneratorRuntime.async(function switchActiveWorkspace$(_context5) {
+  var nextId, switchGen, snapshot;
+  return regeneratorRuntime.async(function switchActiveWorkspace$(_context6) {
     while (1) {
-      switch (_context5.prev = _context5.next) {
+      switch (_context6.prev = _context6.next) {
         case 0:
           nextId = String(workspaceId || "").trim();
 
           if (!(!nextId || nextId === activeWorkspaceId)) {
-            _context5.next = 3;
+            _context6.next = 3;
             break;
           }
 
-          return _context5.abrupt("return");
+          return _context6.abrupt("return");
 
         case 3:
           if (hasBackendMethod(api, "setActiveWorkspace")) {
-            _context5.next = 5;
+            _context6.next = 5;
             break;
           }
 
-          return _context5.abrupt("return");
+          return _context6.abrupt("return");
 
         case 5:
-          _context5.next = 7;
+          switchGen = ++workspaceSwitchGen;
+          _context6.next = 8;
           return regeneratorRuntime.awrap(api.setActiveWorkspace(nextId));
 
-        case 7:
-          _context5.next = 9;
-          return regeneratorRuntime.awrap(refreshWorkspaces());
+        case 8:
+          snapshot = _context6.sent;
 
-        case 9:
+          if (!(switchGen !== workspaceSwitchGen)) {
+            _context6.next = 11;
+            break;
+          }
+
+          return _context6.abrupt("return");
+
+        case 11:
+          // superseded by a newer switch
+          syncGlobalsToWorkspaceRuntime();
+          activeWorkspaceId = nextId;
+          syncWorkspaceRuntimeToGlobals();
+
+          if (snapshot && snapshot.id) {
+            workspaceSnapshotById.set(nextId, snapshot);
+          }
+
+          updateWorkspaceActiveHint();
+          _context6.next = 18;
+          return regeneratorRuntime.awrap(applyActiveWorkspaceState(snapshot || workspaceSnapshotById.get(nextId) || null));
+
+        case 18:
+          if (typeof syncRenderTabEnabled === "function") syncRenderTabEnabled();
+          refreshWorkspaces()["catch"](function (err) {
+            return appendLog("workspace refresh error: ".concat(err.message));
+          });
           appendLog("workspace active=".concat(nextId));
 
-        case 10:
+        case 21:
         case "end":
-          return _context5.stop();
+          return _context6.stop();
       }
     }
   });

@@ -371,9 +371,10 @@ function compareActiveJobsForSettings(a, b) {
   const stateB = String((b && b.state) || "").toLowerCase();
   const priority = (state) => {
     if (state === "running") return 0;
-    if (state === "preparing") return 1;
-    if (state === "queued") return 2;
-    return 3;
+    if (state === "aborting") return 1;
+    if (state === "preparing") return 2;
+    if (state === "queued") return 3;
+    return 4;
   };
   const pa = priority(stateA);
   const pb = priority(stateB);
@@ -419,7 +420,7 @@ function createSettingsJobActionIcon(kind) {
 
 function createSettingsJobStateTag(state) {
   if (window.XTracerWidgets && typeof window.XTracerWidgets.createTag === "function") {
-    const tone = state === "running" ? "success" : (state === "preparing" ? "info" : (state === "queued" ? "warning" : "neutral"));
+    const tone = state === "running" ? "success" : (state === "aborting" ? "warning" : (state === "preparing" ? "info" : (state === "queued" ? "warning" : "neutral")));
     return window.XTracerWidgets.createTag({
       label: state,
       tone,
@@ -1192,7 +1193,7 @@ function renderWorkspaceList(items) {
   const list = Array.isArray(items) ? items : [];
   const canDeleteAny = list.length >= 1;
   if (list.length === 0) {
-    const empty = createWorkspaceEmptyState("No workspaces", "No workspaces available.", "workspace-empty");
+    const empty = createWorkspaceEmptyState("No workspaces", "Create a new workspace.", "workspace-empty");
     el.workspaceList.appendChild(empty);
     return;
   }
