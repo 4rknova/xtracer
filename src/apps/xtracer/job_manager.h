@@ -28,7 +28,8 @@ enum job_state_t
     JOB_RUNNING,
     JOB_DONE,
     JOB_ABORTED,
-    JOB_ERROR
+    JOB_ERROR,
+    JOB_ABORTING    // abort requested; render thread still winding down
 };
 
 struct job_snapshot_t

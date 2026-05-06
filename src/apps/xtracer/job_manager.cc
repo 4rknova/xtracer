@@ -727,7 +727,7 @@ void job_manager_t::shutdown()
         std::lock_guard<std::mutex> lock(jobs_mut);
         for (auto &kv : jobs) {
             const job_state_t s = kv.second->state.load();
-            if (s == JOB_RUNNING)                    ++n_running;
+            if (s == JOB_RUNNING || s == JOB_ABORTING) ++n_running;
             else if (s == JOB_QUEUED || s == JOB_PREPARING) ++n_queued;
             kv.second->cancel_requested.store(true);
         }
@@ -746,7 +746,14 @@ void job_manager_t::shutdown()
     // action, so reaching 0 guarantees no thread is still touching *this.
     {
         std::unique_lock<std::mutex> lock(render_slots_mut);
-        render_slots_cv.wait(lock, [this]() { return active_renders == 0; });
+        const bool all_stopped = render_slots_cv.wait_for(
+            lock,
+            std::chrono::seconds(30),
+            [this]() { return active_renders == 0; });
+        if (!all_stopped) {
+            backend_log_t::handle().add("warn",
+                "shutdown: timed out waiting for render threads, exiting anyway");
+        }
     }
 
     backend_log_t::handle().add("info", "shutdown: all render threads stopped");
@@ -1433,7 +1440,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
     out.state = job->state.load();
     out.error = job->error;
     out.elapsed_ms = job->elapsed_ms;
-    if ((out.state == JOB_RUNNING || out.state == JOB_PREPARING || out.state == JOB_QUEUED) && job->has_started) {
+    if ((out.state == JOB_RUNNING || out.state == JOB_ABORTING || out.state == JOB_PREPARING || out.state == JOB_QUEUED) && job->has_started) {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         out.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - job->started_at).count();
     }
@@ -1467,7 +1474,7 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
             const size_t completed_passes = (tiles_per_pass > 0) ? (out.tiles_done / tiles_per_pass) : 0;
             const bool in_pass = (tiles_per_pass > 0) ? ((out.tiles_done % tiles_per_pass) != 0) : false;
             size_t curr = completed_passes + (in_pass ? 1 : 0);
-            if ((out.state == JOB_QUEUED || out.state == JOB_PREPARING || out.state == JOB_RUNNING) && curr == 0) curr = 1;
+            if ((out.state == JOB_QUEUED || out.state == JOB_PREPARING || out.state == JOB_RUNNING || out.state == JOB_ABORTING) && curr == 0) curr = 1;
             if (curr > out.pass_total) curr = out.pass_total;
             out.pass_current = curr;
         }
@@ -1978,6 +1985,21 @@ bool job_manager_t::abort(const std::string &id)
             backend_log_t::handle().add("info", "job aborted id=" + job->id + " state=queued");
             on_job_finished(job->id);
         }
+    } else if (st == JOB_RUNNING || st == JOB_PREPARING) {
+        {
+            std::lock_guard<std::mutex> lock(job->mut);
+            const job_state_t st2 = job->state.load();
+            if (st2 == JOB_RUNNING || st2 == JOB_PREPARING) {
+                job->state = JOB_ABORTING;
+            }
+        }
+        auto push_cb = push_callback_;
+        if (push_cb) {
+            job_snapshot_t snap;
+            snapshot(job->id, snap);
+            push_cb(job->id, snap, {});
+        }
+        backend_log_t::handle().add("info", "job aborting id=" + job->id);
     }
     dispatch_queued_jobs();
     return true;
@@ -2055,7 +2077,7 @@ bool job_manager_t::list_active(std::vector<job_snapshot_t> &out)
             const std::shared_ptr<job_t> &job = it->second;
             if (!job) continue;
             const job_state_t st = job->state.load();
-            if (st == JOB_RUNNING || st == JOB_PREPARING) {
+            if (st == JOB_RUNNING || st == JOB_ABORTING || st == JOB_PREPARING) {
                 running_ids.push_back(job->id);
             } else if (st == JOB_QUEUED) {
                 queued_ids.push_back(job->id);
@@ -2106,7 +2128,7 @@ bool job_manager_t::has_active_jobs()
     for (auto it = jobs.begin(); it != jobs.end(); ++it) {
         if (!it->second) continue;
         const job_state_t st = it->second->state.load();
-        if (st == JOB_RUNNING || st == JOB_PREPARING || st == JOB_QUEUED) return true;
+        if (st == JOB_RUNNING || st == JOB_ABORTING || st == JOB_PREPARING || st == JOB_QUEUED) return true;
     }
     return false;
 }

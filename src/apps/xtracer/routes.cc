@@ -554,7 +554,7 @@ std::string trim_ascii(const std::string &s)
 std::string third_party_licenses_data_path(const std::string &web_root)
 {
     if (web_root.empty()) {
-        return "src/apps/web-server/app/data/third_party_licenses.json";
+        return "src/apps/xtracer/app/data/third_party_licenses.json";
     }
 
     std::string path = web_root;
@@ -564,10 +564,10 @@ std::string third_party_licenses_data_path(const std::string &web_root)
 
     const std::string suffix = "/web-client";
     if (path.size() >= suffix.size() && path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0) {
-        return path.substr(0, path.size() - suffix.size()) + "/web-server/app/data/third_party_licenses.json";
+        return path.substr(0, path.size() - suffix.size()) + "/xtracer/app/data/third_party_licenses.json";
     }
 
-    return path + "/../web-server/app/data/third_party_licenses.json";
+    return path + "/../xtracer/app/data/third_party_licenses.json";
 }
 
 void append_third_party_licenses_json(std::ostringstream &ss, const std::string &web_root)
@@ -2458,6 +2458,7 @@ const char *job_state_name(job_state_t state)
         case JOB_QUEUED:    return "queued";
         case JOB_PREPARING: return "preparing";
         case JOB_RUNNING:   return "running";
+        case JOB_ABORTING:  return "aborting";
         case JOB_DONE:      return "done";
         case JOB_ABORTED:   return "aborted";
         case JOB_ERROR:     return "error";
@@ -3959,7 +3960,12 @@ void setup_routes(WebApp &app,
             "job abort requested id=" + id + " workspace=" + requester_workspace_id
         );
         broadcast_jobs_changed(jobs);
-        send_json(res, "{\"ok\":true}");
+        job_snapshot_t post_snap;
+        if (jobs.snapshot(id, post_snap)) {
+            send_json(res, "{\"ok\":true,\"state\":\"" + std::string(job_state_name(post_snap.state)) + "\"}");
+        } else {
+            send_json(res, "{\"ok\":true}");
+        }
     });
 
     CROW_ROUTE(app, "/api/jobs/queue/up/<string>").methods(crow::HTTPMethod::Post)
@@ -4319,8 +4325,24 @@ void setup_routes(WebApp &app,
     // Static files
     CROW_ROUTE(app, "/")
     ([web_root](const crow::request &, crow::response &res) {
+#ifdef XTRACER_WEB_BUNDLE
+        serve_static_file(join_path(web_root, "index.bundle.html"), "text/html", res);
+#else
         serve_static_file(join_path(web_root, "index.html"), "text/html", res);
+#endif
     });
+
+#ifdef XTRACER_WEB_BUNDLE
+    CROW_ROUTE(app, "/dist/bundle.min.js")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "dist/bundle.min.js"), "application/javascript", res);
+    });
+
+    CROW_ROUTE(app, "/dist/styles.min.css")
+    ([web_root](const crow::request &, crow::response &res) {
+        serve_static_file(join_path(web_root, "dist/styles.min.css"), "text/css", res);
+    });
+#endif
 
     CROW_ROUTE(app, "/showcase.html")
     ([web_root](const crow::request &, crow::response &res) {
@@ -4439,9 +4461,9 @@ void setup_routes(WebApp &app,
         serve_static_file(join_path(web_root, "logo.png"), "image/png", res);
     });
 
-    CROW_ROUTE(app, "/logo.svg")
+    CROW_ROUTE(app, "/res/logo.svg")
     ([web_root](const crow::request &, crow::response &res) {
-        serve_static_file(join_path(web_root, "logo.svg"), "image/svg+xml", res);
+        serve_static_file(join_path(web_root, "res/logo.svg"), "image/svg+xml", res);
     });
 
     CROW_ROUTE(app, "/res/<path>")
