@@ -5219,6 +5219,16 @@ textarea {
   background: var(--bg);
 }
 
+.about-tab-bar {
+  display: flex;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.about-tab-section {
+  display: contents;
+}
+
 .about-grid {
   display: grid;
   gap: 14px;
@@ -6316,7 +6326,7 @@ button:disabled {
   flex: 0 0 auto;
 }
 
-.editor-view-switch {
+.seg-control {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -6332,7 +6342,7 @@ button:disabled {
     0 2px 10px color-mix(in srgb, #000000 16%, transparent);
 }
 
-.editor-view-btn {
+.seg-btn {
   width: auto;
   margin: 0;
   border: 0;
@@ -6353,31 +6363,31 @@ button:disabled {
     transform 0.12s ease;
 }
 
-.editor-view-btn:first-child {
+.seg-btn:first-child {
   border-top-left-radius: 9px;
   border-bottom-left-radius: 9px;
 }
 
-.editor-view-btn:last-child {
+.seg-btn:last-child {
   border-top-right-radius: 9px;
   border-bottom-right-radius: 9px;
 }
 
-.editor-view-btn:hover {
+.seg-btn:hover {
   color: var(--ink);
   background: color-mix(in srgb, var(--field-bg) 86%, var(--accent) 14%);
 }
 
-.editor-view-btn:active {
+.seg-btn:active {
   transform: translateY(1px);
 }
 
-.editor-view-btn:focus-visible {
+.seg-btn:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 76%, #ffffff);
   outline-offset: 1px;
 }
 
-.editor-view-btn.active {
+.seg-btn.active {
   background:
     linear-gradient(180deg,
       color-mix(in srgb, var(--accent) 88%, #ffffff) 0%,
@@ -6388,13 +6398,13 @@ button:disabled {
     0 2px 8px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
-.editor-view-btn--icon {
+.seg-btn--icon {
   padding: 9px;
   display: inline-grid;
   place-items: center;
 }
 
-.editor-view-btn--icon svg {
+.seg-btn--icon svg {
   width: 14px;
   height: 14px;
   fill: currentColor;
@@ -9392,7 +9402,7 @@ button:disabled {
     width: 100%;
   }
 
-  .editor-view-switch {
+  .seg-control {
     width: 100%;
     justify-content: stretch;
   }
@@ -9408,7 +9418,7 @@ button:disabled {
     justify-content: flex-end;
   }
 
-  .editor-view-btn {
+  .seg-btn {
     flex: 1 1 0;
     min-width: 0;
     min-height: 42px;
@@ -9647,9 +9657,22 @@ button:disabled {
   overflow: visible;
 }
 
-/* Hide the logo in rail mode */
 .brand-lockup {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  order: 2;
+  width: 100%;
+  padding: 8px 8px 4px;
+  flex-shrink: 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 54%, transparent);
+  margin-top: 4px;
+}
+
+.brand-logo {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
 }
 
 /* Tabs (primary nav) first, utility icons after */
@@ -9678,9 +9701,7 @@ button:disabled {
   align-items: center;
   gap: 1px;
   width: 100%;
-  padding: 8px 8px 0;
-  margin-top: 4px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 54%, transparent);
+  padding: 4px 8px 0;
   order: 2;
 }
 

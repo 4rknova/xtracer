@@ -147,7 +147,7 @@
           children: [
             dom.el("img", {
               className: "showcase-sidebar-logo",
-              attrs: { src: "/logo.svg", alt: "XTRACER" },
+              attrs: { src: "/res/logo.svg", alt: "XTRACER" },
             }),
             dom.el("p", { className: "showcase-sidebar-kicker", text: "Widget Library Showcase" }),
             dom.el("p", {

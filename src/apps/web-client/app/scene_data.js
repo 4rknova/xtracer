@@ -1586,9 +1586,7 @@ async function loadSceneRuntimeGraph(scene, variant) {
 }
 
 function renderThirdPartyLicenses(rawItems) {
-  const items = Array.isArray(rawItems) && rawItems.length
-    ? rawItems
-    : DEFAULT_THIRD_PARTY_LICENSES;
+  const items = Array.isArray(rawItems) ? rawItems : [];
   if (!el.aboutThirdPartyList) return;
   if (window.XTracerWidgets && typeof window.XTracerWidgets.renderDependencyList === "function") {
     window.XTracerWidgets.renderDependencyList(el.aboutThirdPartyList, items);

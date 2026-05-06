@@ -1410,6 +1410,7 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   if (el.editorViewMaterialsBtn) {
     el.editorViewMaterialsBtn.addEventListener("click", () => setEditorViewMode("materials"));
   }
+
   document.addEventListener("keydown", handleUndoRedoShortcut);
 
   if (el.workspaceRefreshBtn) {

@@ -4,6 +4,24 @@ if (window.XTracerWidgets && typeof window.XTracerWidgets.renderMainTabs === "fu
 if (window.XTracerWidgets && typeof window.XTracerWidgets.upgradePanelHeaders === "function") {
   window.XTracerWidgets.upgradePanelHeaders(document);
 }
+if (window.XTracerWidgets && typeof window.XTracerWidgets.createSegControl === "function") {
+  const aboutPanel = document.querySelector("#paneAbout .about-panel");
+  const sections = aboutPanel
+    ? [...aboutPanel.querySelectorAll(".about-tab-section[data-tab-label]")]
+    : [];
+  if (sections.length) {
+    const items = sections.map((s, i) => ({ id: s.id, label: s.dataset.tabLabel, active: i === 0 }));
+    const seg = window.XTracerWidgets.createSegControl({
+      ariaLabel: "About sections",
+      items,
+      onChange: (id) => sections.forEach((s) => { s.hidden = s.id !== id; }),
+    });
+    const bar = document.createElement("div");
+    bar.className = "about-tab-bar";
+    bar.appendChild(seg);
+    aboutPanel.insertBefore(bar, aboutPanel.firstChild);
+  }
+}
 if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSidebarCards === "function") {
   window.XTracerSidebarCards.renderSidebarCards(document.getElementById("sidebarCards"));
   if (typeof loadAppConfig === "function") {
@@ -14,28 +32,10 @@ if (window.XTracerSidebarCards && typeof window.XTracerSidebarCards.renderSideba
     });
   }
 }
-if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer === "function") {
-  const aboutPanel = document.querySelector("#paneAbout .about-panel");
-  const overviewGrid = aboutPanel && aboutPanel.querySelector(".about-grid");
-  const devtoolsCard = aboutPanel && aboutPanel.querySelector(".about-devtools-card");
-  const licenseCard = aboutPanel && aboutPanel.querySelector(".about-license-card");
-  const thirdPartyCard = aboutPanel && aboutPanel.querySelector(".about-third-party-card");
-  if (aboutPanel && overviewGrid && licenseCard && thirdPartyCard) {
-    if (devtoolsCard) overviewGrid.appendChild(devtoolsCard);
-    const tabs = window.XTracerWidgets.createTabContainer({
-      className: "about-tabs",
-      tabs: [
-        { id: "overview", label: "Overview", content: overviewGrid },
-        { id: "license", label: "License", content: licenseCard },
-        { id: "third-party", label: "Third-Party", content: thirdPartyCard },
-      ],
-    });
-    aboutPanel.replaceChildren(tabs);
-  }
-}
 (function populateClientCard() {
   const browserEl = document.getElementById("aboutClientBrowser");
   const themeEl = document.getElementById("aboutClientTheme");
+  const buildEl = document.getElementById("aboutClientBuild");
   const clientIdEl = document.getElementById("aboutClientId");
 
   if (browserEl) {
@@ -59,6 +59,11 @@ if (window.XTracerWidgets && typeof window.XTracerWidgets.createTabContainer ===
     const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     const palette = isDark ? darkPalette : lightPalette;
     themeEl.textContent = palette ? `${theme} · ${palette}` : theme;
+  }
+
+  if (buildEl) {
+    const isBundled = Array.from(document.scripts).some(s => s.src && s.src.includes("bundle.min.js"));
+    buildEl.textContent = isBundled ? "bundled" : "dev";
   }
 
   if (clientIdEl) {
@@ -505,17 +510,6 @@ const el = {
   ftueSkipBtn: $("ftueSkipBtn"),
 };
 
-const DEFAULT_THIRD_PARTY_LICENSES = [
-  { name: "cgltf", description: "Single-file glTF 2.0 loader used for importing compact scene assets into the renderer.", used_in: "xtcore", license: "MIT", url: "https://github.com/jkuhlmann/cgltf" },
-  { name: "TinyObjLoader", description: "Wavefront OBJ and MTL loader used by the mesh pipeline and scene import path.", used_in: "lib/nmesh, xtcore", license: "MIT", url: "https://github.com/tinyobjloader/tinyobjloader" },
-  { name: "pugixml", description: "XML parser used for Mitsuba scene conversion and SVG silhouette mesh parsing.", used_in: "convertMitsuba, lib/nmesh", license: "MIT", url: "https://pugixml.org/" },
-  { name: "STB", description: "Collection of single-header image and utility libraries used for texture IO and image helpers.", used_in: "lib/nimg, xtcore, xtracer-web", license: "Public Domain / MIT", url: "https://github.com/nothings/stb" },
-  { name: "TinyEXR", description: "OpenEXR reader and writer used for high-dynamic-range image support.", used_in: "lib/nimg", license: "BSD-3-Clause", url: "https://github.com/syoyo/tinyexr" },
-  { name: "strpool", description: "String interning helper used to keep repeated identifiers compact in runtime data structures.", used_in: "xtcore, frontend/common, xtracer-web", license: "MIT / Public Domain", url: "https://github.com/mattiasgustavsson/libs" },
-  { name: "crow", description: "C++ HTTP and WebSocket server framework used by the web backend.", used_in: "xtracer-web", license: "BSD-3-Clause", url: "https://github.com/CrowCpp/Crow" },
-  { name: "Three.js", description: "3D scene graph and rendering toolkit used by the web visualizer and interactive previews.", used_in: "xtracer-web", license: "MIT", url: "https://github.com/mrdoob/three.js" },
-  { name: "ufbx", description: "FBX parser and evaluator used to read production-style geometry, transforms, and animation data.", used_in: "xtcore", license: "MIT", url: "https://github.com/ufbx/ufbx" },
-];
 
 const uiOptions = {
   textHistoryLimit: 200,
