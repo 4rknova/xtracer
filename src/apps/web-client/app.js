@@ -418,6 +418,8 @@ const el = {
   renderTimer: $("renderTimer"),
   progressBar: $("progressBar"),
   progress: $("progress"),
+  renderStatsToggleBtn: $("renderStatsToggleBtn"),
+  renderHudStats: $("renderHudStats"),
   previewFrame: $("previewFrame"),
   previewEmpty: $("previewEmpty"),
   interactivePreviewHud: $("interactivePreviewHud"),

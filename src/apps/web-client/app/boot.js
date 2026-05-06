@@ -415,6 +415,14 @@ async function boot() {
     }
   }
   el.renderBtn.addEventListener("click", handleRender);
+  if (el.renderStatsToggleBtn && el.renderHudStats) {
+    el.renderStatsToggleBtn.addEventListener("click", () => {
+      const open = el.renderHudStats.hidden;
+      el.renderHudStats.hidden = !open;
+      el.renderStatsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
+      el.renderStatsToggleBtn.classList.toggle("is-active", open);
+    });
+  }
   if (el.visualOverlayBtns) {
     el.visualOverlayBtns.addEventListener("pointerdown", (evt) => evt.stopPropagation());
   }
