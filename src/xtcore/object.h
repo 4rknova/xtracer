@@ -1,6 +1,7 @@
 #ifndef XTCORE_OBJECT_H_INCLUDED
 #define XTCORE_OBJECT_H_INCLUDED
 
+#include <vector>
 #include "strpool.h"
 
 namespace xtcore {
@@ -23,6 +24,9 @@ class Object
 	HASH_UINT64 material;
     IMaterial *ptr_material;
     ISurface  *ptr_surface;
+
+    std::vector<HASH_UINT64>  material_array;     // ordered; non-empty overrides single material
+    std::vector<IMaterial *>  ptr_material_array; // cached pointers, parallel to material_array
 };
 
     } /* namespace asset */

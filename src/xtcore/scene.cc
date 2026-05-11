@@ -93,13 +93,24 @@ const xtcore::asset::Object *Scene::get_object(HASH_ID obj_id)
     return (*it).second;
 }
 
-const xtcore::asset::IMaterial *Scene::get_material(HASH_ID obj_id)
+const xtcore::asset::IMaterial *Scene::get_material(HASH_ID obj_id, float selector)
 {
     const xtcore::asset::Object *obj = get_object(obj_id);
     if (!obj) return 0;
-    if (obj->ptr_material) return obj->ptr_material;
 
     xtcore::asset::Object *mutable_obj = m_objects[obj_id];
+
+    if (!obj->material_array.empty()) {
+        const int N   = (int)obj->material_array.size();
+        const int idx = std::min((int)(selector * N), N - 1);
+        if (mutable_obj->ptr_material_array[idx]) return mutable_obj->ptr_material_array[idx];
+        auto it = m_materials.find(obj->material_array[idx]);
+        if (it == m_materials.end()) return 0;
+        mutable_obj->ptr_material_array[idx] = it->second;
+        return it->second;
+    }
+
+    if (obj->ptr_material) return obj->ptr_material;
     auto it = m_materials.find(obj->material);
     if (it == m_materials.end()) return 0;
     mutable_obj->ptr_material = (*it).second;
@@ -215,6 +226,9 @@ int Scene::destroy_material(HASH_UINT64 id)
         xtcore::asset::Object *obj = (*it).second;
         if (!obj) continue;
         if (obj->material == id) obj->ptr_material = 0;
+        for (size_t i = 0; i < obj->material_array.size(); ++i) {
+            if (obj->material_array[i] == id) obj->ptr_material_array[i] = nullptr;
+        }
     }
     return purge(m_materials, id);
 }

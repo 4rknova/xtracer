@@ -34,6 +34,7 @@ struct hit_record_t
     Vector3f incident_direction;
 	scalar_t t;
     scalar_t ior;
+    float    material_selector; // [0,1] — selects from object's material_array; 0 = default material
     HASH_ID  id_object;
 };
 
