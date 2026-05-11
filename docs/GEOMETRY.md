@@ -63,6 +63,68 @@ Recursive tetrahedral subdivision SDF.
 | `power` | float | 2–16 | `8.0` |
 | `bailout` | float | 2–64 | `4.0` |
 
+### `mandelbox`
+Box-fold + ball-fold iterated function system (IFS). Each iteration clamps components to `[-fold_size, fold_size]` (box fold), then inverts the magnitude through a sphere (ball fold), then scales. Produces a spiky box-like fractal with rich interior detail.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `position` | vec3 | — | `(0,0,0)` | Center |
+| `radius` | float | > 0 | `1.0` | World-space scale |
+| `resolution` | int | 1–64 | `16` | Iteration count |
+| `fold_size` | float | > 0 | `1.0` | Box-fold clamp limit |
+| `min_r` | float | > 0 | `0.5` | Ball-fold inner radius |
+| `scale` | float | — | `-2.5` | IFS scale factor; negative values give the canonical MandelBox shape |
+| `bailout` | float | ≥ 2 | `100.0` | Escape radius |
+
+The AABB is `origin ± radius * 3` (conservative — attractor fits within `|scale|-1` normalised units).
+
+### `quaternion_julia`
+4D quaternion Julia set `q → q² + c`, iterated with `q.w` initialised to 0. The 3D surface is the slice at `w = 0`.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `position` | vec3 | — | `(0,0,0)` | Center |
+| `radius` | float | > 0 | `1.0` | Bounding scale |
+| `resolution` | int | 1–64 | `12` | Iteration count |
+| `quat_c` | vec3 | — | `(-0.2, 0.6, 0.2)` | xyz components of the quaternion constant |
+| `quat_cw` | float | — | `-0.1` | w component of the quaternion constant |
+| `bailout` | float | 2–64 | `4.0` | Escape radius |
+
+### `burning_ship_3d`
+Mandelbulb variant where the x and y components are folded through absolute value before computing the spherical-coordinate power. Creates asymmetric, angular geometry with the characteristic "ship" silhouette when viewed from below.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `position` | vec3 | — | `(0,0,0)` | Center |
+| `radius` | float | > 0 | `1.0` | Bounding scale |
+| `resolution` | int | 1–64 | `18` | Iteration count |
+| `power` | float | 2–16 | `2.0` | Power; 2.0 gives the classic Burning Ship character |
+| `bailout` | float | 2–64 | `4.0` | Escape radius |
+
+### `cantor_dust_3d`
+Recursive IFS that keeps only the **8 corner sub-cubes** at each level — the Cartesian product of three 1D Cantor sets. Produces a disconnected cloud of shrinking cubes.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `position` | vec3 | — | `(0,0,0)` | Center |
+| `orientation` | vec3 | — | `(0,0,0)` | Euler angles (radians) |
+| `radius` | float | > 0 | `1.0` | Bounding scale |
+| `resolution` | int | 1–6 | `3` | Recursion depth; 6 → 8⁶ = 262 144 leaf cubes |
+
+Uses recursive AABB descent (same strategy as `menger_sponge`); no geometry stored.
+
+### `icosahedral_ifs`
+Fold-scale IFS using the 6 mirror planes of the icosahedral symmetry group (defined by the dodecahedron face normals `±(1,φ,0)`, `±(0,1,φ)`, `±(φ,0,1)`). Each iteration folds space to the icosahedral fundamental domain, then scales away from the `(1,φ,0)/|…|` vertex.
+
+| Parameter | Type | Range | Default | Notes |
+|-----------|------|-------|---------|-------|
+| `position` | vec3 | — | `(0,0,0)` | Center |
+| `radius` | float | > 0 | `1.0` | Bounding scale |
+| `resolution` | int | 1–32 | `10` | Iteration count |
+| `scale` | float | ±(1.01–8) | `-2.5` | Scale factor per iteration; negative values (like MandelBox) produce richer geometry |
+
+The AABB is `origin ± radius * 3`.
+
 ---
 
 ## Mesh Generators
@@ -300,7 +362,7 @@ glob = "assets/parts/*.obj"
 
 ## CSG (Constructive Solid Geometry)
 
-Recursively combines signed distance fields. Leaf nodes must be `sphere`, `plane`, `point`, or a fractal type.
+Recursively combines signed distance fields. Leaf nodes can be any of: `sphere`, `plane`, `point`, `menger_sponge`, `sierpinski_tetrahedron`, `mandelbulb`, `julia`, `mandelbox`, `quaternion_julia`, `burning_ship_3d`, `cantor_dust_3d`, `icosahedral_ifs`.
 
 ```
 type = csg

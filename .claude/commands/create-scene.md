@@ -28,6 +28,24 @@ object      = { name = { geometry = ..., material = ... }, ... }
 - `vec3(x,y,z)` — 3D vector; coordinate system is right-handed, Y-up
 - `tex2(u,v)` — 2D texture coordinate
 
+**Parser rules — violating these causes silent parse failures:**
+- `#` is the only comment syntax. `//` and `/* */` are **not** supported.
+- Multiple properties on the same line **must** be comma-separated. Without a comma, everything after the `=` until the end of the line is treated as one value:
+  ```
+  # WRONG — parser reads type = "sphere  position = vec3(0,0,0)  radius = 1"
+  key_geo = { type = sphere  position = vec3(0,0,0)  radius = 1 }
+
+  # CORRECT — comma-separated on one line
+  key_geo = { type = sphere, position = vec3(0,0,0), radius = 1 }
+
+  # CORRECT — one property per line (no commas needed)
+  key_geo = {
+      type     = sphere
+      position = vec3(0,0,0)
+      radius   = 1
+  }
+  ```
+
 ---
 
 ## Choosing an environment
@@ -214,3 +232,5 @@ object = {
 - [ ] `emissive` values are bright enough to illuminate (≥ `col3(6,5,4)`)
 - [ ] A floor plane is present unless intentionally floating in space
 - [ ] `resolution` is set on any generator that needs to look smooth (≥ 48 for hero geometry)
+- [ ] No `//` or `/* */` comments — only `#` line comments are valid
+- [ ] Every group where multiple properties share a line uses commas between them
