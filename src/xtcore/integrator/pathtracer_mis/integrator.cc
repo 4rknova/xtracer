@@ -97,7 +97,7 @@ inline bool visible_to_light(xtcore::render::context_t *ctx,
         if (occ.t >= dist - (nmath::scalar_t)1e-4) return occ.id_object == light_object_id;
         if (occ.id_object == light_object_id) return true;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object, occ.material_selector);
         if (!mat) return false;
         if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
 
@@ -119,7 +119,7 @@ inline bool visible_to_environment(xtcore::render::context_t *ctx,
         xtcore::hit_record_t occ;
         if (!ctx->scene->intersection(shadow_ray, occ)) return true;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(occ.id_object, occ.material_selector);
         if (!mat) return false;
         if (dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr) return false;
 
@@ -467,7 +467,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         hit_record.ior = ior;
-        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object);
+        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object, hit_record.material_selector);
         if (!m) break;
         const xtcore::asset::medium::IMedium *interior_medium = ctx->scene->get_object_medium(hit_record.id_object);
         const xtcore::asset::medium::IMedium *exterior_medium = ctx->scene->get_object_exterior_medium(hit_record.id_object);

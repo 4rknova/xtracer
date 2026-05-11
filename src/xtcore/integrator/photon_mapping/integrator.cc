@@ -380,7 +380,7 @@ void Integrator::trace_photon(const xtcore::Ray &in_ray,
         if (!ctx->scene->intersection(ray, hit)) return;
         hit.ior = ior;
 
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object, hit.material_selector);
         if (!mat) return;
 
         if (mat->is_emissive()) return;
@@ -820,7 +820,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         hit.ior = ior;
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit.id_object, hit.material_selector);
         if (!mat) break;
 
         if (mat->is_emissive()) {

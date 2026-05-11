@@ -28,7 +28,7 @@ inline nmath::Vector3f resolve_shading_normal(
     nmath::Vector3f n = hit_record.normal.normalized();
     if (!ctx) return n;
 
-    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object);
+    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object, hit_record.material_selector);
     if (!mat || !mat->has_sampler(MAT_SAMPLER_NORMAL)) return n;
 
     const nimg::ColorRGBf tex = mat->get_sample(MAT_SAMPLER_NORMAL, hit_record.texcoord);

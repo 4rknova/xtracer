@@ -34,7 +34,7 @@ bool visible_light_sample(
     if (!scene.intersection(shadow_ray, occ)) return false;
 
     const xtcore::asset::ISurface *occ_surface = scene.get_surface(occ.id_object);
-    const xtcore::asset::IMaterial *occ_material = scene.get_material(occ.id_object);
+    const xtcore::asset::IMaterial *occ_material = scene.get_material(occ.id_object, occ.material_selector);
     if (occ_surface != light.light || occ_material != light.material) return false;
 
     out_emitter.intensity = light.material->get_sample(MAT_SAMPLER_EMISSIVE, occ.texcoord);
@@ -72,7 +72,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         return ctx->scene->sample_environment(in.ray.direction);
     }
 
-    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object);
+    const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hit_record.id_object, hit_record.material_selector);
     if (!mat) return nimg::ColorRGBf(0, 0, 0);
 
     // If we directly hit an emissive surface, return its emission immediately.

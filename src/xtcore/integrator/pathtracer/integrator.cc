@@ -86,7 +86,7 @@ nimg::ColorRGBf Integrator::eval(size_t depth, hit_result_t &in)
         }
 
         hit_record.ior = ior;
-        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object);
+        const xtcore::asset::IMaterial *m = ctx->scene->get_material(hit_record.id_object, hit_record.material_selector);
         if (!m) break;
         const xtcore::asset::medium::IMedium *boundary_medium = ctx->scene->get_object_medium(hit_record.id_object);
         const xtcore::asset::material::Boundary *boundary = dynamic_cast<const xtcore::asset::material::Boundary *>(m);

@@ -89,7 +89,7 @@ inline bool unoccluded(xtcore::render::context_t *ctx,
             return (light_id == HASH_ID_INVALID) || (rec.id_object == light_id);
         }
         if (rec.id_object == light_id) return true;
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(rec.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(rec.id_object, rec.material_selector);
         if (!mat || dynamic_cast<const xtcore::asset::material::Boundary *>(mat) == nullptr)
             return false;
         ray.origin = rec.point + dir * (nmath::scalar_t)EPSILON;
@@ -266,7 +266,7 @@ int Integrator::trace_camera_path(const xtcore::Ray &primary_ray, size_t max_dep
         }
 
         hr.ior = ior;
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hr.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hr.id_object, hr.material_selector);
         if (!mat) break;
 
         const nmath::Vector3f wo_vertex = (-ray.direction).normalized();
@@ -396,7 +396,7 @@ int Integrator::trace_light_path(size_t max_depth, std::vector<PathVertex> &path
         if (!ctx->scene->intersection(ray, hr)) break;
 
         hr.ior = ior;
-        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hr.id_object);
+        const xtcore::asset::IMaterial *mat = ctx->scene->get_material(hr.id_object, hr.material_selector);
         if (!mat || mat->is_emissive()) break;
 
         const nmath::Vector3f wo_vertex = (-ray.direction).normalized();
