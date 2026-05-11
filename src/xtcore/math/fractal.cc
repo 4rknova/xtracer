@@ -607,6 +607,391 @@ static bool intersect_raymarch(const xtcore::asset::ISurface &surface,
     return false;
 }
 
+// Orbit data for power-law fractals (Mandelbulb, Julia).
+// Returns vec3(smooth_iter, sphere_trap, plane_trap_y), each in [0,1].
+// smooth_iter: continuous escape speed — eliminates iteration-band banding.
+// sphere_trap: minimum |z| across all orbit steps, normalized by bailout.
+// plane_trap_y: minimum |z.y| across all orbit steps, normalized by bailout.
+static Vector3f orbit_power_fractal(const Vector3f &p,
+                                    const Vector3f &c,
+                                    size_t iterations,
+                                    scalar_t power,
+                                    scalar_t bailout,
+                                    bool use_seed_c)
+{
+    Vector3f z = p;
+    scalar_t r = 0;
+    scalar_t min_r  = INFINITY;
+    scalar_t min_py = INFINITY;
+    size_t   i      = 0;
+
+    const size_t iters = std::max((size_t)1, iterations);
+    const scalar_t pw  = std::max((scalar_t)2.0, power);
+    const scalar_t bo  = std::max((scalar_t)2.0, bailout);
+
+    for (i = 0; i < iters; ++i) {
+        r = z.length();
+        if (r > bo) break;
+        if (r < (scalar_t)1e-9) { z = use_seed_c ? c : p; continue; }
+
+        min_r  = std::min(min_r,  r);
+        min_py = std::min(min_py, nmath_abs(z.y));
+
+        const scalar_t theta = (scalar_t)std::acos((double)clamp_signed_unit(z.z / r));
+        const scalar_t phi   = (scalar_t)std::atan2((double)z.y, (double)z.x);
+        const scalar_t zr    = (scalar_t)std::pow((double)r, (double)pw);
+        const scalar_t t     = theta * pw;
+        const scalar_t ph    = phi   * pw;
+        const scalar_t st    = (scalar_t)std::sin((double)t);
+        z = Vector3f(
+            zr * st * (scalar_t)std::cos((double)ph),
+            zr * st * (scalar_t)std::sin((double)ph),
+            zr *      (scalar_t)std::cos((double)t)
+        ) + (use_seed_c ? c : p);
+    }
+
+    // Smooth/continuous escape count: removes hard banding between integer iterations.
+    scalar_t smooth = (scalar_t)i;
+    if (i < iters && std::isfinite((double)r) && r > (scalar_t)1.0) {
+        const double log_r  = std::log((double)r);
+        const double log_bo = std::log((double)bo);
+        if (log_r > 1e-10 && log_bo > 1e-10)
+            smooth = (scalar_t)i + 1.0f - (scalar_t)(std::log2(log_r / log_bo));
+    }
+
+    if (!std::isfinite((double)min_r))  min_r  = bo;
+    if (!std::isfinite((double)min_py)) min_py = bo;
+
+    return Vector3f(
+        clamp_unit(smooth / (scalar_t)iters),
+        clamp_unit(min_r  / bo),
+        clamp_unit(min_py / bo)
+    );
+}
+
+// ---------- MandelBox DE ----------
+static scalar_t mandelbox_de(const Vector3f &p,
+                              scalar_t fold,
+                              scalar_t min_r2,
+                              scalar_t fixed_r2,
+                              scalar_t scale,
+                              size_t   iters,
+                              scalar_t bailout)
+{
+    const scalar_t bo2 = bailout * bailout;
+    Vector3f z = p;
+    scalar_t dr = 1.0f;
+
+    for (size_t i = 0; i < iters; ++i) {
+        // Box fold
+        if      (z.x >  fold) z.x =  2.0f * fold - z.x;
+        else if (z.x < -fold) z.x = -2.0f * fold - z.x;
+        if      (z.y >  fold) z.y =  2.0f * fold - z.y;
+        else if (z.y < -fold) z.y = -2.0f * fold - z.y;
+        if      (z.z >  fold) z.z =  2.0f * fold - z.z;
+        else if (z.z < -fold) z.z = -2.0f * fold - z.z;
+
+        // Ball fold
+        const scalar_t r2 = z.x*z.x + z.y*z.y + z.z*z.z;
+        if (r2 < min_r2) {
+            const scalar_t t = fixed_r2 / min_r2;
+            z = z * t;
+            dr *= t;
+        } else if (r2 < fixed_r2) {
+            const scalar_t t = fixed_r2 / r2;
+            z = z * t;
+            dr *= t;
+        }
+
+        z = z * scale + p;
+        dr = dr * nmath_abs(scale) + 1.0f;
+
+        if (z.x*z.x + z.y*z.y + z.z*z.z > bo2) break;
+    }
+
+    const scalar_t sz = z.length();
+    const scalar_t adr = nmath_abs(dr);
+    if (!std::isfinite((double)sz) || adr <= EPSILON) return 1e6f;
+    const scalar_t border = std::max((scalar_t)0.0, nmath_abs(scale) - 1.0f);
+    return (sz - border) / adr;
+}
+
+// Orbit trap for MandelBox: box-trap + sphere-trap + min-r trap.
+static Vector3f orbit_mandelbox(const Vector3f &p,
+                                 scalar_t fold,
+                                 scalar_t min_r2,
+                                 scalar_t fixed_r2,
+                                 scalar_t scale,
+                                 size_t   iters,
+                                 scalar_t bailout)
+{
+    const scalar_t bo2 = bailout * bailout;
+    Vector3f z = p;
+    scalar_t min_r = INFINITY;
+    scalar_t min_box = INFINITY;
+    size_t escape_i = iters;
+
+    for (size_t i = 0; i < iters; ++i) {
+        if (z.x >  fold) z.x =  2.0f * fold - z.x;
+        else if (z.x < -fold) z.x = -2.0f * fold - z.x;
+        if (z.y >  fold) z.y =  2.0f * fold - z.y;
+        else if (z.y < -fold) z.y = -2.0f * fold - z.y;
+        if (z.z >  fold) z.z =  2.0f * fold - z.z;
+        else if (z.z < -fold) z.z = -2.0f * fold - z.z;
+
+        const scalar_t r2 = z.x*z.x + z.y*z.y + z.z*z.z;
+        min_r = std::min(min_r, nmath_sqrt(r2));
+        const scalar_t bx = std::max({nmath_abs(z.x), nmath_abs(z.y), nmath_abs(z.z)});
+        min_box = std::min(min_box, bx);
+
+        if (r2 < min_r2) {
+            z = z * (fixed_r2 / min_r2);
+        } else if (r2 < fixed_r2) {
+            z = z * (fixed_r2 / r2);
+        }
+
+        z = z * scale + p;
+
+        if (z.x*z.x + z.y*z.y + z.z*z.z > bo2) {
+            escape_i = i;
+            break;
+        }
+    }
+
+    if (!std::isfinite((double)min_r))  min_r  = nmath_sqrt(bo2);
+    if (!std::isfinite((double)min_box)) min_box = fold;
+
+    return Vector3f(
+        clamp_unit((scalar_t)escape_i / (scalar_t)iters),
+        clamp_unit(min_r  / (nmath_sqrt(bo2))),
+        clamp_unit(min_box / fold)
+    );
+}
+
+// ---------- Quaternion Julia DE ----------
+struct Quat { scalar_t w, x, y, z; };
+static Quat quat_sq_add(Quat q, Quat c)
+{
+    return Quat{
+        q.w*q.w - q.x*q.x - q.y*q.y - q.z*q.z + c.w,
+        2.0f*q.w*q.x + c.x,
+        2.0f*q.w*q.y + c.y,
+        2.0f*q.w*q.z + c.z
+    };
+}
+
+static scalar_t quat_julia_de(const Vector3f &p,
+                               const Vector3f &c_xyz,
+                               scalar_t c_w,
+                               size_t iters,
+                               scalar_t bailout)
+{
+    Quat q = {0.0f, p.x, p.y, p.z};
+    const Quat c = {c_w, c_xyz.x, c_xyz.y, c_xyz.z};
+    scalar_t dr = 1.0f;
+    const scalar_t bo2 = bailout * bailout;
+
+    for (size_t i = 0; i < iters; ++i) {
+        const scalar_t r2 = q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z;
+        if (r2 > bo2) {
+            const scalar_t r = nmath_sqrt(r2);
+            if (dr <= EPSILON || r <= 1.0f) return 0.0f;
+            return 0.5f * r * (scalar_t)std::log((double)r) / dr;
+        }
+        dr = 2.0f * nmath_sqrt(r2) * dr;
+        q = quat_sq_add(q, c);
+    }
+    return 0.0f;
+}
+
+static Vector3f orbit_quat_julia(const Vector3f &p,
+                                  const Vector3f &c_xyz,
+                                  scalar_t c_w,
+                                  size_t iters,
+                                  scalar_t bailout)
+{
+    Quat q = {0.0f, p.x, p.y, p.z};
+    const Quat c = {c_w, c_xyz.x, c_xyz.y, c_xyz.z};
+    const scalar_t bo2 = bailout * bailout;
+    scalar_t min_r = INFINITY;
+    scalar_t min_py = INFINITY;
+    size_t escape_i = iters;
+
+    for (size_t i = 0; i < iters; ++i) {
+        const scalar_t r2 = q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z;
+        min_r  = std::min(min_r,  nmath_sqrt(r2));
+        min_py = std::min(min_py, nmath_abs(q.y));
+        if (r2 > bo2) { escape_i = i; break; }
+        q = quat_sq_add(q, c);
+    }
+
+    if (!std::isfinite((double)min_r))  min_r  = bailout;
+    if (!std::isfinite((double)min_py)) min_py = bailout;
+
+    return Vector3f(
+        clamp_unit((scalar_t)escape_i / (scalar_t)iters),
+        clamp_unit(min_r  / bailout),
+        clamp_unit(min_py / bailout)
+    );
+}
+
+// ---------- Burning Ship 3D DE ----------
+static scalar_t burning_ship_3d_de(const Vector3f &p,
+                                    size_t iters,
+                                    scalar_t power,
+                                    scalar_t bailout)
+{
+    Vector3f z = p;
+    scalar_t dr = 1.0f;
+    scalar_t r  = 0.0f;
+    const scalar_t pw = std::max((scalar_t)2.0, power);
+    const scalar_t bo = std::max((scalar_t)2.0, bailout);
+
+    for (size_t i = 0; i < iters; ++i) {
+        r = z.length();
+        if (r > bo) break;
+        if (r < (scalar_t)1e-9) { z = p; continue; }
+
+        // Burning Ship: abs on x and y before computing angle
+        const scalar_t ax = nmath_abs(z.x);
+        const scalar_t ay = nmath_abs(z.y);
+        const scalar_t az = z.z;
+
+        const scalar_t theta = (scalar_t)std::acos((double)clamp_signed_unit(az / r));
+        const scalar_t phi   = (scalar_t)std::atan2((double)ay, (double)ax);
+        const scalar_t zr_pw_1 = (scalar_t)std::pow((double)r, (double)(pw - 1.0f));
+        dr = zr_pw_1 * pw * dr + 1.0f;
+
+        const scalar_t zr = zr_pw_1 * r;
+        const scalar_t t  = theta * pw;
+        const scalar_t ph = phi   * pw;
+        const scalar_t st = (scalar_t)std::sin((double)t);
+        z = Vector3f(
+            zr * st * (scalar_t)std::cos((double)ph),
+            zr * st * (scalar_t)std::sin((double)ph),
+            zr *      (scalar_t)std::cos((double)t)
+        ) + p;
+    }
+
+    r = z.length();
+    if (!std::isfinite((double)r) || !std::isfinite((double)dr) || dr <= EPSILON) return 1e6f;
+    if (r <= EPSILON) return 0.0f;
+    return (scalar_t)(0.5 * std::log((double)r) * (double)r / (double)dr);
+}
+
+// ---------- Cantor Dust 3D recursive ----------
+static void intersect_cantor_recursive(const Ray &ray,
+                                        const Vector3f &center,
+                                        scalar_t half,
+                                        size_t depth,
+                                        fractal_hit_t &best)
+{
+    const Vector3f bmin = center - Vector3f(half, half, half);
+    const Vector3f bmax = center + Vector3f(half, half, half);
+    scalar_t t_near = 0.0f, t_far = 0.0f;
+    if (!ray_aabb_hit(ray, bmin, bmax, &t_near, &t_far)) return;
+    if (t_near > best.t) return;
+
+    if (depth == 0) {
+        scalar_t t = 0.0f;
+        Vector3f n;
+        if (ray_aabb_hit_with_normal(ray, bmin, bmax, t, n) && t < best.t) {
+            best.hit = true;
+            best.t   = t;
+            best.normal = n;
+        }
+        return;
+    }
+
+    // Keep only the 8 corners: skip the middle third on every axis
+    const scalar_t child_half = half / 3.0f;
+    for (int ix = -1; ix <= 1; ix += 2) {
+        for (int iy = -1; iy <= 1; iy += 2) {
+            for (int iz = -1; iz <= 1; iz += 2) {
+                const Vector3f child_center = center + Vector3f(
+                    (scalar_t)ix, (scalar_t)iy, (scalar_t)iz
+                ) * (2.0f * child_half);
+                intersect_cantor_recursive(ray, child_center, child_half, depth - 1, best);
+            }
+        }
+    }
+}
+
+// ---------- Icosahedral IFS DE ----------
+static const scalar_t ICO_PHI = 1.6180339887f;
+
+// Reflect z across each of the 6 icosahedral symmetry planes once.
+// The fold planes are defined by the 6 dodecahedron face normals:
+//   ±(1, phi, 0),  ±(0, 1, phi),  ±(phi, 0, 1)
+// Any point gets pushed toward the positive fundamental domain.
+static void icosa_fold_pass(Vector3f &z)
+{
+    const scalar_t phi = ICO_PHI;
+    // Unnormalized normals — reflect p if dot(p,n) < 0
+    static const Vector3f folds[6] = {
+        Vector3f( 1.0f,  phi,  0.0f),
+        Vector3f(-1.0f,  phi,  0.0f),
+        Vector3f( 0.0f,  1.0f,  phi),
+        Vector3f( 0.0f, -1.0f,  phi),
+        Vector3f( phi,  0.0f,  1.0f),
+        Vector3f(-phi,  0.0f,  1.0f)
+    };
+    static const scalar_t len2[6] = {
+        1.0f + phi*phi, 1.0f + phi*phi,
+        1.0f + phi*phi, 1.0f + phi*phi,
+        phi*phi + 1.0f, phi*phi + 1.0f
+    };
+    for (int i = 0; i < 6; ++i) {
+        const scalar_t t = nmath::dot(z, folds[i]);
+        if (t < 0.0f) z -= folds[i] * (2.0f * t / len2[i]);
+    }
+}
+
+// MandelBox-style escape DE using icosahedral fold planes in place of the box fold.
+// Icosahedral fold (reflection) replaces box-fold clamping; ball fold and +c term are
+// identical to MandelBox so the same escape structure and DE formula apply.
+static scalar_t icosahedral_ifs_de(const Vector3f &pos,
+                                    size_t iters,
+                                    scalar_t scale_param,
+                                    scalar_t radius)
+{
+    Vector3f z = pos / radius;
+    const Vector3f c = z;           // original point added back each step
+    scalar_t dr = 1.0f;
+    const scalar_t s    = scale_param;
+    const scalar_t abs_s = nmath_abs(s);
+
+    for (size_t i = 0; i < iters; ++i) {
+        // Icosahedral fold (4 passes per iteration for symmetry convergence)
+        icosa_fold_pass(z);
+        icosa_fold_pass(z);
+        icosa_fold_pass(z);
+        icosa_fold_pass(z);
+
+        // Ball fold: fixed_r=1, min_r=0.5 (same as default MandelBox)
+        const scalar_t r2 = z.x*z.x + z.y*z.y + z.z*z.z;
+        if (r2 < 0.25f) {           // inner sphere: scale up by fixed_r^2/min_r^2 = 4
+            z  = z * 4.0f;
+            dr *= 4.0f;
+        } else if (r2 < 1.0f) {     // annular region: invert magnitude
+            z  = z / r2;
+            dr /= r2;
+        }
+
+        // Scale and add original point (MandelBox escape formula)
+        z  = z * s + c;
+        dr = dr * abs_s + 1.0f;
+
+        if (z.x*z.x + z.y*z.y + z.z*z.z > 1024.0f) break;
+    }
+
+    const scalar_t sz  = z.length();
+    const scalar_t adr = nmath_abs(dr);
+    if (!std::isfinite((double)sz) || adr <= EPSILON) return 1e6f;
+    const scalar_t border = std::max((scalar_t)0.0, abs_s - 1.0f);
+    return (sz - border) / adr * radius;
+}
+
 } /* namespace */
 
 MengerSponge::MengerSponge()
@@ -774,11 +1159,20 @@ Mandelbulb::Mandelbulb()
     , iterations(18)
     , power(8.0f)
     , bailout(4.0f)
+    , orbit_trap_channel(1)
 {}
 
 bool Mandelbulb::intersection(const Ray &ray, hit_record_t *i_hit_record) const
 {
-    return intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0012, 220, i_hit_record);
+    const bool hit = intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0012, 220, i_hit_record);
+    if (hit && i_hit_record) {
+        const scalar_t r = std::max((scalar_t)EPSILON, radius);
+        const Vector3f lp = (i_hit_record->point - origin) / r;
+        const Vector3f trap = orbit_power_fractal(lp, Vector3f(0,0,0), iterations, power, bailout, false);
+        i_hit_record->texcoord = trap;
+        i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
+    }
+    return hit;
 }
 
 nmath::scalar_t Mandelbulb::distance(nmath::Vector3f p) const
@@ -820,11 +1214,20 @@ JuliaFractal::JuliaFractal()
     , iterations(18)
     , power(8.0f)
     , bailout(4.0f)
+    , orbit_trap_channel(1)
 {}
 
 bool JuliaFractal::intersection(const Ray &ray, hit_record_t *i_hit_record) const
 {
-    return intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0010, 240, i_hit_record);
+    const bool hit = intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0010, 240, i_hit_record);
+    if (hit && i_hit_record) {
+        const scalar_t r = std::max((scalar_t)EPSILON, radius);
+        const Vector3f lp = (i_hit_record->point - origin) / r;
+        const Vector3f trap = orbit_power_fractal(lp, julia_c, iterations, power, bailout, true);
+        i_hit_record->texcoord = trap;
+        i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
+    }
+    return hit;
 }
 
 nmath::scalar_t JuliaFractal::distance(nmath::Vector3f p) const
@@ -858,6 +1261,291 @@ Vector3f JuliaFractal::emitter_position() const
 {
     return origin;
 }
+
+// ============================================================
+// MandelBox
+// ============================================================
+MandelBox::MandelBox()
+    : origin(0.0f, 0.0f, 0.0f)
+    , radius(1.0f)
+    , iterations(16)
+    , fold_size(1.0f)
+    , min_r(0.5f)
+    , scale(-2.5f)
+    , bailout(100.0f)
+    , orbit_trap_channel(1)
+{}
+
+bool MandelBox::intersection(const Ray &ray, hit_record_t *i_hit_record) const
+{
+    const bool hit = intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0015, 180, i_hit_record);
+    if (hit && i_hit_record) {
+        const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+        const Vector3f lp = (i_hit_record->point - origin) / r;
+        const scalar_t fixed_r2 = 1.0f;
+        const scalar_t min_r2   = min_r * min_r;
+        const Vector3f trap = orbit_mandelbox(lp, fold_size, min_r2, fixed_r2, scale, iterations, bailout);
+        i_hit_record->texcoord = trap;
+        i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
+    }
+    return hit;
+}
+
+nmath::scalar_t MandelBox::distance(nmath::Vector3f p) const
+{
+    const scalar_t r      = std::max((scalar_t)EPSILON, radius);
+    const Vector3f lp     = (p - origin) / r;
+    const scalar_t fixed_r2 = 1.0f;
+    const scalar_t min_r2   = min_r * min_r;
+    return mandelbox_de(lp, fold_size, min_r2, fixed_r2, scale, iterations, bailout) * r;
+}
+
+void MandelBox::calc_aabb()
+{
+    const scalar_t r = std::max((scalar_t)EPSILON, radius);
+    // MandelBox attractor fits within roughly 3 world-units at scale -2.5
+    const scalar_t pad = r * 3.0f;
+    aabb.min = origin - Vector3f(pad, pad, pad);
+    aabb.max = origin + Vector3f(pad, pad, pad);
+}
+
+Vector3f MandelBox::point_sample() const { return origin; }
+
+Ray MandelBox::ray_sample() const
+{
+    Ray ray;
+    ray.origin    = origin;
+    ray.direction = Vector3f(0.0f, 1.0f, 0.0f);
+    return ray;
+}
+
+Vector3f MandelBox::emitter_position() const { return origin; }
+
+// ============================================================
+// QuaternionJulia
+// ============================================================
+QuaternionJulia::QuaternionJulia()
+    : origin(0.0f, 0.0f, 0.0f)
+    , quat_c(-0.2f, 0.6f, 0.2f)
+    , quat_cw(-0.1f)
+    , radius(1.0f)
+    , iterations(12)
+    , bailout(4.0f)
+    , orbit_trap_channel(1)
+{}
+
+bool QuaternionJulia::intersection(const Ray &ray, hit_record_t *i_hit_record) const
+{
+    const bool hit = intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0010, 240, i_hit_record);
+    if (hit && i_hit_record) {
+        const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+        const Vector3f lp = (i_hit_record->point - origin) / r;
+        const Vector3f trap = orbit_quat_julia(lp, quat_c, quat_cw, iterations, bailout);
+        i_hit_record->texcoord = trap;
+        i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
+    }
+    return hit;
+}
+
+nmath::scalar_t QuaternionJulia::distance(nmath::Vector3f p) const
+{
+    const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+    const Vector3f lp = (p - origin) / r;
+    return quat_julia_de(lp, quat_c, quat_cw, iterations, bailout) * r;
+}
+
+void QuaternionJulia::calc_aabb()
+{
+    const scalar_t r = std::max((scalar_t)EPSILON, radius);
+    aabb.min = origin - Vector3f(r, r, r);
+    aabb.max = origin + Vector3f(r, r, r);
+}
+
+Vector3f QuaternionJulia::point_sample() const { return origin; }
+
+Ray QuaternionJulia::ray_sample() const
+{
+    Ray ray;
+    ray.origin    = origin;
+    ray.direction = Vector3f(0.0f, 1.0f, 0.0f);
+    return ray;
+}
+
+Vector3f QuaternionJulia::emitter_position() const { return origin; }
+
+// ============================================================
+// BurningShip3D
+// ============================================================
+BurningShip3D::BurningShip3D()
+    : origin(0.0f, 0.0f, 0.0f)
+    , radius(1.0f)
+    , iterations(18)
+    , power(2.0f)
+    , bailout(4.0f)
+    , orbit_trap_channel(1)
+{}
+
+bool BurningShip3D::intersection(const Ray &ray, hit_record_t *i_hit_record) const
+{
+    const bool hit = intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius), (scalar_t)0.0012, 220, i_hit_record);
+    if (hit && i_hit_record) {
+        const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+        const Vector3f lp = (i_hit_record->point - origin) / r;
+        // Reuse power-fractal orbit: abs folds make the orbit statistics similar
+        const Vector3f trap = orbit_power_fractal(lp, Vector3f(0,0,0), iterations, power, bailout, false);
+        i_hit_record->texcoord = trap;
+        i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
+    }
+    return hit;
+}
+
+nmath::scalar_t BurningShip3D::distance(nmath::Vector3f p) const
+{
+    const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+    const Vector3f lp = (p - origin) / r;
+    return burning_ship_3d_de(lp, iterations, power, bailout) * r;
+}
+
+void BurningShip3D::calc_aabb()
+{
+    const scalar_t r = std::max((scalar_t)EPSILON, radius);
+    aabb.min = origin - Vector3f(r, r, r);
+    aabb.max = origin + Vector3f(r, r, r);
+}
+
+Vector3f BurningShip3D::point_sample() const { return origin; }
+
+Ray BurningShip3D::ray_sample() const
+{
+    Ray ray;
+    ray.origin    = origin;
+    ray.direction = Vector3f(0.0f, 1.0f, 0.0f);
+    return ray;
+}
+
+Vector3f BurningShip3D::emitter_position() const { return origin; }
+
+// ============================================================
+// CantorDust3D
+// ============================================================
+CantorDust3D::CantorDust3D()
+    : origin(0.0f, 0.0f, 0.0f)
+    , orientation(0.0f, 0.0f, 0.0f)
+    , radius(1.0f)
+    , iterations(3)
+{}
+
+bool CantorDust3D::intersection(const Ray &ray, hit_record_t *i_hit_record) const
+{
+    Ray local_ray;
+    local_ray.origin    = inverse_rotate_euler_xyz(ray.origin    - origin, orientation);
+    local_ray.direction = inverse_rotate_euler_xyz(ray.direction,          orientation).normalized();
+
+    fractal_hit_t hit;
+    const size_t depth = std::max((size_t)1, std::min((size_t)6, iterations));
+    intersect_cantor_recursive(local_ray, Vector3f(0.0f, 0.0f, 0.0f),
+                               std::max((scalar_t)EPSILON, radius), depth, hit);
+    if (!hit.hit || hit.t <= EPSILON) return false;
+
+    if (i_hit_record) {
+        i_hit_record->t = hit.t;
+        const Vector3f local_point  = local_ray.origin + local_ray.direction * hit.t;
+        const Vector3f world_point  = rotate_euler_xyz(local_point, orientation) + origin;
+        Vector3f world_normal = rotate_euler_xyz(hit.normal, orientation).normalized();
+        if (nmath::dot(world_normal, ray.direction) > 0.0f) world_normal = -world_normal;
+        i_hit_record->point   = world_point;
+        i_hit_record->normal  = world_normal;
+        const Vector3f lp = local_point / std::max((scalar_t)EPSILON, radius);
+        i_hit_record->texcoord = Vector3f(lp.x * 0.5f + 0.5f, lp.y * 0.5f + 0.5f, 0.0f);
+        i_hit_record->incident_direction = ray.direction;
+    }
+    return true;
+}
+
+nmath::scalar_t CantorDust3D::distance(nmath::Vector3f p) const
+{
+    const scalar_t r  = std::max((scalar_t)EPSILON, radius);
+    const Vector3f lp = inverse_rotate_euler_xyz(p - origin, orientation) / r;
+    return sd_box_unit(lp) * r;
+}
+
+void CantorDust3D::calc_aabb()
+{
+    const scalar_t r = std::max((scalar_t)EPSILON, radius);
+    const Vector3f corners[8] = {
+        Vector3f(-r,-r,-r), Vector3f(-r,-r, r),
+        Vector3f(-r, r,-r), Vector3f(-r, r, r),
+        Vector3f( r,-r,-r), Vector3f( r,-r, r),
+        Vector3f( r, r,-r), Vector3f( r, r, r)
+    };
+    Vector3f bmin( INFINITY,  INFINITY,  INFINITY);
+    Vector3f bmax(-INFINITY, -INFINITY, -INFINITY);
+    for (size_t i = 0; i < 8; ++i) {
+        const Vector3f p = rotate_euler_xyz(corners[i], orientation) + origin;
+        if (p.x < bmin.x) bmin.x = p.x;
+        if (p.y < bmin.y) bmin.y = p.y;
+        if (p.z < bmin.z) bmin.z = p.z;
+        if (p.x > bmax.x) bmax.x = p.x;
+        if (p.y > bmax.y) bmax.y = p.y;
+        if (p.z > bmax.z) bmax.z = p.z;
+    }
+    aabb.min = bmin;
+    aabb.max = bmax;
+}
+
+Vector3f CantorDust3D::point_sample() const { return origin; }
+
+Ray CantorDust3D::ray_sample() const
+{
+    Ray ray;
+    ray.origin    = origin;
+    ray.direction = Vector3f(0.0f, 1.0f, 0.0f);
+    return ray;
+}
+
+Vector3f CantorDust3D::emitter_position() const { return origin; }
+
+// ============================================================
+// IcosahedralIFS
+// ============================================================
+IcosahedralIFS::IcosahedralIFS()
+    : origin(0.0f, 0.0f, 0.0f)
+    , radius(1.0f)
+    , iterations(10)
+    , scale(-2.5f)
+{}
+
+bool IcosahedralIFS::intersection(const Ray &ray, hit_record_t *i_hit_record) const
+{
+    return intersect_raymarch(*this, ray, std::max((scalar_t)EPSILON, radius) * 3.0f,
+                              (scalar_t)0.0015, 200, i_hit_record);
+}
+
+nmath::scalar_t IcosahedralIFS::distance(nmath::Vector3f p) const
+{
+    const scalar_t r = std::max((scalar_t)EPSILON, radius);
+    return icosahedral_ifs_de(p - origin, iterations, scale, r);
+}
+
+void IcosahedralIFS::calc_aabb()
+{
+    const scalar_t r   = std::max((scalar_t)EPSILON, radius);
+    const scalar_t pad = r * 3.0f;
+    aabb.min = origin - Vector3f(pad, pad, pad);
+    aabb.max = origin + Vector3f(pad, pad, pad);
+}
+
+Vector3f IcosahedralIFS::point_sample() const { return origin; }
+
+Ray IcosahedralIFS::ray_sample() const
+{
+    Ray ray;
+    ray.origin    = origin;
+    ray.direction = Vector3f(0.0f, 1.0f, 0.0f);
+    return ray;
+}
+
+Vector3f IcosahedralIFS::emitter_position() const { return origin; }
 
 } /* namespace surface */
 } /* namespace xtcore */

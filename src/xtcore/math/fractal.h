@@ -69,6 +69,7 @@ public:
     size_t iterations;
     scalar_t power;
     scalar_t bailout;
+    int orbit_trap_channel; // 0=smooth_iter  1=sphere  2=plane_y
 };
 
 class JuliaFractal : public xtcore::asset::ISurface
@@ -90,6 +91,112 @@ public:
     size_t iterations;
     scalar_t power;
     scalar_t bailout;
+    int orbit_trap_channel; // 0=smooth_iter  1=sphere  2=plane_y
+};
+
+
+class MandelBox : public xtcore::asset::ISurface
+{
+public:
+    MandelBox();
+
+    bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
+    void calc_aabb();
+
+    Vector3f point_sample() const;
+    Ray ray_sample() const;
+    Vector3f emitter_position() const;
+
+    Vector3f origin;
+    scalar_t radius;
+    size_t   iterations;
+    scalar_t fold_size;
+    scalar_t min_r;
+    scalar_t scale;
+    scalar_t bailout;
+    int orbit_trap_channel; // 0=escape_iter  1=sphere  2=box
+};
+
+class QuaternionJulia : public xtcore::asset::ISurface
+{
+public:
+    QuaternionJulia();
+
+    bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
+    void calc_aabb();
+
+    Vector3f point_sample() const;
+    Ray ray_sample() const;
+    Vector3f emitter_position() const;
+
+    Vector3f origin;
+    Vector3f quat_c;   /* xyz components of quaternion constant */
+    scalar_t quat_cw;  /* w component of quaternion constant */
+    scalar_t radius;
+    size_t   iterations;
+    scalar_t bailout;
+    int orbit_trap_channel; // 0=escape_iter  1=sphere  2=plane_y
+};
+
+class BurningShip3D : public xtcore::asset::ISurface
+{
+public:
+    BurningShip3D();
+
+    bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
+    void calc_aabb();
+
+    Vector3f point_sample() const;
+    Ray ray_sample() const;
+    Vector3f emitter_position() const;
+
+    Vector3f origin;
+    scalar_t radius;
+    size_t   iterations;
+    scalar_t power;
+    scalar_t bailout;
+    int orbit_trap_channel; // 0=smooth_iter  1=sphere  2=plane_y
+};
+
+class CantorDust3D : public xtcore::asset::ISurface
+{
+public:
+    CantorDust3D();
+
+    bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
+    void calc_aabb();
+
+    Vector3f point_sample() const;
+    Ray ray_sample() const;
+    Vector3f emitter_position() const;
+
+    Vector3f origin;
+    Vector3f orientation;
+    scalar_t radius;
+    size_t   iterations;
+};
+
+class IcosahedralIFS : public xtcore::asset::ISurface
+{
+public:
+    IcosahedralIFS();
+
+    bool intersection(const Ray &ray, hit_record_t *i_hit_record) const;
+    nmath::scalar_t distance(nmath::Vector3f p) const;
+    void calc_aabb();
+
+    Vector3f point_sample() const;
+    Ray ray_sample() const;
+    Vector3f emitter_position() const;
+
+    Vector3f origin;
+    scalar_t radius;
+    size_t   iterations;
+    scalar_t scale;
 };
 
 } /* namespace surface */
