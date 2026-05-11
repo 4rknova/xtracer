@@ -39,7 +39,12 @@ int             deserialize_numi(const char *val, const int             def = DE
 nmath::scalar_t deserialize_numf(const char *val, const nmath::scalar_t def = DEFVAL_NUMF);
 std::string     deserialize_cstr(const char *val, const char*           def = DEFVAL_CSTR);
 nmath::Vector2f deserialize_tex2(const ncf::NCF *node, const char *name, const nmath::Vector2f def = DEFVAL_TEX2);
-nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const nmath::Vector3f def = DEFVAL_VEC3);
+nmath::Vector3f deserialize_vec3     (const ncf::NCF *node, const char *name, const nmath::Vector3f def = DEFVAL_VEC3);
+nmath::Vector3f deserialize_euler    (const ncf::NCF *node, const char *name, const nmath::Vector3f def = DEFVAL_VEC3);
+nmath::Vector3f deserialize_radians  (const ncf::NCF *node, const char *name, const nmath::Vector3f def = DEFVAL_VEC3);
+// Use this for all rotation properties — accepts vec3(rad), euler(deg), radians(rad).
+// TODO: migrate remaining deserialize_vec3(... ROTATION ...) call sites to this.
+nmath::Vector3f deserialize_rotation (const ncf::NCF *node, const char *name, const nmath::Vector3f def = DEFVAL_VEC3);
 nimg::ColorRGBf deserialize_col3(const ncf::NCF *node, const char *name, const nimg::ColorRGBf def = DEFVAL_COL3);
 
 xtcore::asset::ICamera      *deserialize_camera   (const char *source, const ncf::NCF *p);

@@ -186,6 +186,58 @@ nmath::Vector3f deserialize_vec3(const ncf::NCF *node, const char *name, const n
 	return res;
 }
 
+nmath::Vector3f deserialize_euler(const ncf::NCF *node, const char *name, const nmath::Vector3f def)
+{
+    nmath::Vector3f res = def;
+    if (node && node->query_property(name)) {
+        float x, y, z;
+        std::string val = node->get_property_by_name(name);
+        if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_EULER, &x, &y, &z)) {
+            const float deg2rad = (float)M_PI / 180.f;
+            res = nmath::Vector3f(x * deg2rad, y * deg2rad, z * deg2rad);
+        }
+    }
+    return res;
+}
+
+nmath::Vector3f deserialize_radians(const ncf::NCF *node, const char *name, const nmath::Vector3f def)
+{
+    nmath::Vector3f res = def;
+    if (node && node->query_property(name)) {
+        float x, y, z;
+        std::string val = node->get_property_by_name(name);
+        if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_RADIANS, &x, &y, &z)) {
+            res = nmath::Vector3f(x, y, z);
+        }
+    }
+    return res;
+}
+
+// Use for all rotation properties. Accepts vec3(rad), euler(deg), or radians(rad).
+// TODO: migrate remaining deserialize_vec3(... ROTATION ...) call sites to this.
+nmath::Vector3f deserialize_rotation(const ncf::NCF *node, const char *name, const nmath::Vector3f def)
+{
+    if (!node) return def;
+
+    if (node->query_group(name))
+        return deserialize_vec3(node, name, def);
+
+    if (node->query_property(name)) {
+        float x, y, z;
+        std::string val = node->get_property_by_name(name);
+        if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_VEC3, &x, &y, &z))
+            return nmath::Vector3f(x, y, z);
+        if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_EULER, &x, &y, &z)) {
+            const float deg2rad = (float)M_PI / 180.f;
+            return nmath::Vector3f(x * deg2rad, y * deg2rad, z * deg2rad);
+        }
+        if (3 == sscanf(val.c_str(), XTPROTO_FORMAT_RADIANS, &x, &y, &z))
+            return nmath::Vector3f(x, y, z);
+    }
+
+    return def;
+}
+
 xtcore::sampler::ISampler *create_sampler(const char *base,
                                           const char *texture,
                                           float value[3],
@@ -1581,7 +1633,7 @@ xtcore::asset::ISurface *deserialize_geometry_mesh(const char *source, const ncf
         auto t_mod_0 = std::chrono::steady_clock::now();
         ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
 
-    	nmath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION    , nmath::Vector3f(0, 0, 0));
+    	nmath::Vector3f xform_rot = deserialize_rotation(mods, XTPROTO_PROP_ROTATION , nmath::Vector3f(0, 0, 0));
     	nmath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE       , nmath::Vector3f(1, 1, 1));
     	nmath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION , nmath::Vector3f(0, 0, 0));
     	nmesh::mutator::rotate   (obj, xform_rot.x, xform_rot.y, xform_rot.z);
@@ -1932,7 +1984,12 @@ bool csg_supports_leaf_type(const std::string &type_lc)
         || !type_lc.compare(XTPROTO_LTRL_MENGER_SPONGE)
         || !type_lc.compare(XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON)
         || !type_lc.compare(XTPROTO_LTRL_MANDELBULB)
-        || !type_lc.compare(XTPROTO_LTRL_JULIA);
+        || !type_lc.compare(XTPROTO_LTRL_JULIA)
+        || !type_lc.compare(XTPROTO_LTRL_MANDELBOX)
+        || !type_lc.compare(XTPROTO_LTRL_QUATERNION_JULIA)
+        || !type_lc.compare(XTPROTO_LTRL_BURNING_SHIP_3D)
+        || !type_lc.compare(XTPROTO_LTRL_CANTOR_DUST_3D)
+        || !type_lc.compare(XTPROTO_LTRL_ICOSAHEDRAL_IFS);
 }
 
 xtcore::surface::CSG::op_t csg_parse_op(const std::string &token, bool &ok)
@@ -2139,7 +2196,7 @@ xtcore::asset::ISurface *deserialize_geometry_meshgroup(const char *source, cons
         auto t_mod_0 = std::chrono::steady_clock::now();
         ncf::NCF *mods = p->get_group_by_name(XTPROTO_MODIFIERS);
 
-        nmath::Vector3f xform_rot = deserialize_vec3(mods, XTPROTO_PROP_ROTATION,    nmath::Vector3f(0, 0, 0));
+        nmath::Vector3f xform_rot = deserialize_rotation(mods, XTPROTO_PROP_ROTATION, nmath::Vector3f(0, 0, 0));
         nmath::Vector3f xform_scl = deserialize_vec3(mods, XTPROTO_PROP_SCALE,       nmath::Vector3f(1, 1, 1));
         nmath::Vector3f xform_tsl = deserialize_vec3(mods, XTPROTO_PROP_TRANSLATION, nmath::Vector3f(0, 0, 0));
         nmesh::mutator::rotate   (merged, xform_rot.x, xform_rot.y, xform_rot.z);
@@ -2260,6 +2317,12 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
         f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
         if (f->bailout < 2.0f) f->bailout = 2.0f;
         if (f->bailout > 64.0f) f->bailout = 64.0f;
+        {
+            const std::string trap = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_ORBIT_TRAP), XTPROTO_LTRL_ORBIT_SPHERE);
+            if      (!trap.compare(XTPROTO_LTRL_ORBIT_SMOOTH_ITER)) f->orbit_trap_channel = 0;
+            else if (!trap.compare(XTPROTO_LTRL_ORBIT_PLANE_Y))     f->orbit_trap_channel = 2;
+            else                                                      f->orbit_trap_channel = 1;
+        }
     }
     else if (!type.compare(XTPROTO_LTRL_JULIA)) {
         data = new (std::nothrow) xtcore::surface::JuliaFractal;
@@ -2278,6 +2341,108 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
         f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
         if (f->bailout < 2.0f) f->bailout = 2.0f;
         if (f->bailout > 64.0f) f->bailout = 64.0f;
+        {
+            const std::string trap = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_ORBIT_TRAP), XTPROTO_LTRL_ORBIT_SPHERE);
+            if      (!trap.compare(XTPROTO_LTRL_ORBIT_SMOOTH_ITER)) f->orbit_trap_channel = 0;
+            else if (!trap.compare(XTPROTO_LTRL_ORBIT_PLANE_Y))     f->orbit_trap_channel = 2;
+            else                                                      f->orbit_trap_channel = 1;
+        }
+    }
+    else if (!type.compare(XTPROTO_LTRL_MANDELBOX)) {
+        data = new (std::nothrow) xtcore::surface::MandelBox;
+        xtcore::surface::MandelBox *f = (xtcore::surface::MandelBox *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 16);
+        if (i < 1) i = 1;
+        if (i > 64) i = 64;
+        f->iterations = (size_t)i;
+        f->fold_size = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_FOLD_SIZE), 1.0f);
+        if (f->fold_size <= 0.0f) f->fold_size = 1.0f;
+        f->min_r = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_MIN_R), 0.5f);
+        if (f->min_r <= 0.0f) f->min_r = 0.5f;
+        f->scale = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_SCALE), -2.5f);
+        f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 100.0f);
+        if (f->bailout < 2.0f) f->bailout = 2.0f;
+        {
+            const std::string trap = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_ORBIT_TRAP), XTPROTO_LTRL_ORBIT_SPHERE);
+            if      (!trap.compare(XTPROTO_LTRL_ORBIT_SMOOTH_ITER)) f->orbit_trap_channel = 0;
+            else if (!trap.compare(XTPROTO_LTRL_ORBIT_PLANE_Y))     f->orbit_trap_channel = 2;
+            else                                                      f->orbit_trap_channel = 1;
+        }
+    }
+    else if (!type.compare(XTPROTO_LTRL_QUATERNION_JULIA)) {
+        data = new (std::nothrow) xtcore::surface::QuaternionJulia;
+        xtcore::surface::QuaternionJulia *f = (xtcore::surface::QuaternionJulia *)data;
+        f->origin  = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->quat_c  = deserialize_vec3(p, XTPROTO_PROP_QUAT_C, nmath::Vector3f(-0.2f, 0.6f, 0.2f));
+        f->quat_cw = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_QUAT_CW), -0.1f);
+        f->radius  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 12);
+        if (i < 1) i = 1;
+        if (i > 64) i = 64;
+        f->iterations = (size_t)i;
+        f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
+        if (f->bailout < 2.0f) f->bailout = 2.0f;
+        if (f->bailout > 64.0f) f->bailout = 64.0f;
+        {
+            const std::string trap = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_ORBIT_TRAP), XTPROTO_LTRL_ORBIT_SPHERE);
+            if      (!trap.compare(XTPROTO_LTRL_ORBIT_SMOOTH_ITER)) f->orbit_trap_channel = 0;
+            else if (!trap.compare(XTPROTO_LTRL_ORBIT_PLANE_Y))     f->orbit_trap_channel = 2;
+            else                                                      f->orbit_trap_channel = 1;
+        }
+    }
+    else if (!type.compare(XTPROTO_LTRL_BURNING_SHIP_3D)) {
+        data = new (std::nothrow) xtcore::surface::BurningShip3D;
+        xtcore::surface::BurningShip3D *f = (xtcore::surface::BurningShip3D *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 18);
+        if (i < 1) i = 1;
+        if (i > 64) i = 64;
+        f->iterations = (size_t)i;
+        f->power = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_POWER), 2.0f);
+        if (f->power < 2.0f) f->power = 2.0f;
+        if (f->power > 16.0f) f->power = 16.0f;
+        f->bailout = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_BAILOUT), 4.0f);
+        if (f->bailout < 2.0f) f->bailout = 2.0f;
+        if (f->bailout > 64.0f) f->bailout = 64.0f;
+        {
+            const std::string trap = deserialize_cstr(p->get_property_by_name(XTPROTO_PROP_ORBIT_TRAP), XTPROTO_LTRL_ORBIT_SPHERE);
+            if      (!trap.compare(XTPROTO_LTRL_ORBIT_SMOOTH_ITER)) f->orbit_trap_channel = 0;
+            else if (!trap.compare(XTPROTO_LTRL_ORBIT_PLANE_Y))     f->orbit_trap_channel = 2;
+            else                                                      f->orbit_trap_channel = 1;
+        }
+    }
+    else if (!type.compare(XTPROTO_LTRL_CANTOR_DUST_3D)) {
+        data = new (std::nothrow) xtcore::surface::CantorDust3D;
+        xtcore::surface::CantorDust3D *f = (xtcore::surface::CantorDust3D *)data;
+        f->origin      = deserialize_vec3(p, XTPROTO_PROP_POSITION,    nmath::Vector3f(0, 0, 0));
+        f->orientation = deserialize_vec3(p, XTPROTO_PROP_ORIENTATION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 3);
+        if (i < 1) i = 1;
+        if (i > 6) i = 6;
+        f->iterations = (size_t)i;
+    }
+    else if (!type.compare(XTPROTO_LTRL_ICOSAHEDRAL_IFS)) {
+        data = new (std::nothrow) xtcore::surface::IcosahedralIFS;
+        xtcore::surface::IcosahedralIFS *f = (xtcore::surface::IcosahedralIFS *)data;
+        f->origin = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
+        f->radius = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
+        if (f->radius <= 0.0f) f->radius = 1.0f;
+        int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 10);
+        if (i < 1) i = 1;
+        if (i > 32) i = 32;
+        f->iterations = (size_t)i;
+        f->scale = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_SCALE), -2.5f);
+        if (f->scale > -1.01f && f->scale < 1.01f) f->scale = -2.5f;
+        if (f->scale > 8.0f)  f->scale =  8.0f;
+        if (f->scale < -8.0f) f->scale = -8.0f;
     }
     else if (!type.compare(XTPROTO_LTRL_CSG)) {
         data = deserialize_geometry_csg(source, p);
@@ -2710,6 +2875,18 @@ xtcore::asset::Object *deserialize_object(const ncf::NCF *p)
 
    	data->surface  = xtcore::pool::str::add(surface_name.c_str());
    	data->material = xtcore::pool::str::add(material_name.c_str());
+
+    if (p->query_group(XTPROTO_PROP_OBJ_MATS)) {
+        const ncf::NCF *mats = p->get_group_by_name(XTPROTO_PROP_OBJ_MATS);
+        const size_t n = mats->count_properties();
+        data->material_array.reserve(n);
+        data->ptr_material_array.resize(n, nullptr);
+        for (size_t i = 0; i < n; ++i) {
+            const char *val = mats->get_property_by_index(i);
+            const std::string name = val ? val : "";
+            data->material_array.push_back(xtcore::pool::str::add(name.c_str()));
+        }
+    }
 
    	return data;
 }

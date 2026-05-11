@@ -6,6 +6,8 @@
 **      ----------------------------------------------------------------------------------------------------
 */
 #define XTPROTO_FORMAT_VEC3         "vec3(%f,%f,%f)"    /* string     */ /* Format for vec3 */
+#define XTPROTO_FORMAT_EULER        "euler(%f,%f,%f)"   /* string     */ /* Format for euler angles (degrees -> radians) */
+#define XTPROTO_FORMAT_RADIANS      "radians(%f,%f,%f)" /* string     */ /* Format for angles already in radians (alias for vec3) */
 #define XTPROTO_FORMAT_COL3         "col3(%f,%f,%f)"    /* string     */ /* Format for col3 */
 #define XTPROTO_FORMAT_TEX2         "tex2(%f,%f)"       /* string     */ /* Format for tex2 */
 #define XTPROTO_FORMAT_EXTERNAL     "ext(%[a-zA-Z)"     /* string     */ /* format for external file */
@@ -41,6 +43,11 @@
 #define XTPROTO_LTRL_SIERPINSKI_TETRAHEDRON_IMPLICIT "sierpinski_tetrahedron_implicit" /* string */ /* Implicit Sierpinski tetrahedron */
 #define XTPROTO_LTRL_MANDELBULB		"mandelbulb"		/* string     */ /* Mandelbulb fractal */
 #define XTPROTO_LTRL_JULIA			"julia"				/* string     */ /* Julia 3D fractal */
+#define XTPROTO_LTRL_MANDELBOX		"mandelbox"			/* string     */ /* MandelBox fractal */
+#define XTPROTO_LTRL_QUATERNION_JULIA "quaternion_julia"  /* string     */ /* Quaternion Julia fractal */
+#define XTPROTO_LTRL_BURNING_SHIP_3D "burning_ship_3d"  /* string     */ /* Burning Ship 3D fractal */
+#define XTPROTO_LTRL_CANTOR_DUST_3D  "cantor_dust_3d"   /* string     */ /* Cantor Dust 3D fractal */
+#define XTPROTO_LTRL_ICOSAHEDRAL_IFS "icosahedral_ifs"  /* string     */ /* Icosahedral IFS fractal */
 #define XTPROTO_LTRL_MOBIUS_STRIP	"mobius_strip"		/* string     */ /* Mobius strip */
 #define XTPROTO_LTRL_KLEIN_BOTTLE	"klein_bottle"		/* string     */ /* Klein bottle */
 #define XTPROTO_LTRL_HAIRBALL		"hairball"			/* string     */ /* Hairball */
@@ -170,6 +177,10 @@
 #define XTPROTO_PROP_POWER          "power"             /* scalar_t   */ /* Fractal power */
 #define XTPROTO_PROP_BAILOUT        "bailout"           /* scalar_t   */ /* Fractal bailout */
 #define XTPROTO_PROP_JULIA_C        "julia_c"           /* Vector3f   */ /* Julia constant */
+#define XTPROTO_PROP_FOLD_SIZE      "fold_size"         /* scalar_t   */ /* MandelBox box-fold size */
+#define XTPROTO_PROP_MIN_R          "min_r"             /* scalar_t   */ /* MandelBox ball-fold minimum radius */
+#define XTPROTO_PROP_QUAT_C         "quat_c"            /* Vector3f   */ /* Quaternion Julia xyz constant */
+#define XTPROTO_PROP_QUAT_CW        "quat_cw"           /* scalar_t   */ /* Quaternion Julia w constant */
 #define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
 #define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
 #define XTPROTO_PROP_PROFILE_RESOLUTION "profile_resolution" /* integer */ /* Profile resolution */
@@ -201,6 +212,11 @@
 #define XTPROTO_LTRL_DIFFERENCE		"difference"		/* string     */ /* CSG difference operator */
 #define XTPROTO_PROP_OBJ_GEO		"geometry"			/* asset_id_t */ /* Geometry id */
 #define XTPROTO_PROP_OBJ_MAT		"material"			/* asset_id_t */ /* Material id */
+#define XTPROTO_PROP_OBJ_MATS		"materials"			/* group      */ /* Ordered material array; property values are material names, keys ignored */
+#define XTPROTO_PROP_ORBIT_TRAP		"orbit_trap"		/* string     */ /* Which orbit trap channel drives material_selector: "smooth_iter"|"sphere"|"plane_y" */
+#define XTPROTO_LTRL_ORBIT_SMOOTH_ITER "smooth_iter"    /* string     */ /* Orbit trap: normalised iteration count */
+#define XTPROTO_LTRL_ORBIT_SPHERE   "sphere"            /* string     */ /* Orbit trap: minimum |z| sphere distance */
+#define XTPROTO_LTRL_ORBIT_PLANE_Y  "plane_y"           /* string     */ /* Orbit trap: minimum |z.y| plane distance */
 #define XTPROTO_LTRL_TEXTURE  		"texture"			/* asset_id_t */ /* Texture id */
 #define XTPROTO_NODE_ENVIRONMENT	"environment"		/* N/A        */ /* Environment */
 #define XTPROTO_GRADIENT			"gradient"			/* N/A        */ /* Gradient */
