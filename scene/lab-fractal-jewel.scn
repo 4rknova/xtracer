@@ -1,0 +1,305 @@
+title       = Fractal Jewel Ring
+description = CSG mandelbulb crown intersected with a procedural rounded ring — approximating a 3D-printed gold fractal jewel ring.
+version     = 2.0
+
+default_camera = hero
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.04,0.03,0.02)
+        b = col3(0.09,0.07,0.05)
+    }
+}
+
+camera = {
+    hero = {
+        type            = thin-lens
+        position        = vec3(2.4,1.55,-3.0)
+        target          = vec3(0.0,0.26,0.0)
+        up              = vec3(0,1,0)
+        fov             = 36
+        flength         = 4.5
+        aperture        = 0.03
+        aperture_blades = 6
+    }
+
+    front = {
+        type     = thin-lens
+        position = vec3(0.0,0.85,-3.8)
+        target   = vec3(0.0,0.26,0.0)
+        up       = vec3(0,1,0)
+        fov      = 36
+    }
+
+    top = {
+        type     = thin-lens
+        position = vec3(0.0,4.8,-0.1)
+        target   = vec3(0.0,0.0,0.0)
+        up       = vec3(0,0,-1)
+        fov      = 38
+    }
+}
+
+geometry = {
+    floor = {
+        type   = mesh
+        source = gen(plane)
+        resolution = 1
+        modifiers = {
+            scale       = vec3(50,1,50)
+            translation = vec3(0,0,0)
+        }
+    }
+
+    ring_band = {
+        type               = mesh
+        source             = gen(rounded_ring)
+        resolution         = 128
+        radius             = 0.82
+        height             = 0.58
+        thickness          = 0.30
+        profile_resolution = 22
+        modifiers = {
+            translation = vec3(0,0.29,0)
+        }
+    }
+
+    fractal_crown = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type       = mandelbulb
+                position   = vec3(0.0,0.20,0.0)
+                radius     = 1.30
+                resolution = 20
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.0,0.20,0.0)
+                radius   = 1.25
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,0.26,0.0)
+            radius   = 0.78
+        }
+    }
+
+    fractal_crown_p12 = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type       = mandelbulb
+                position   = vec3(0.0,0.20,0.0)
+                radius     = 1.30
+                resolution = 20
+                power      = 12.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.0,0.20,0.0)
+                radius   = 1.25
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,0.26,0.0)
+            radius   = 0.78
+        }
+    }
+
+    fractal_crown_julia = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type       = julia
+                position   = vec3(0.0,0.20,0.0)
+                julia_c    = vec3(-0.12,0.74,0.28)
+                radius     = 1.30
+                resolution = 18
+                power      = 8.0
+                bailout    = 4.0
+            }
+            right = {
+                type     = sphere
+                position = vec3(0.0,0.20,0.0)
+                radius   = 1.25
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,0.26,0.0)
+            radius   = 0.78
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(2.8,5.2,-1.8)
+        radius   = 0.55
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-3.8,2.2,1.6)
+        radius   = 1.10
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.4,4.0,4.0)
+        radius   = 0.40
+    }
+}
+
+material = {
+    gold_polished = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.00,0.76,0.33) }
+            }
+            scalars = {
+                metallic            = 1
+                roughness           = 0.07
+                clearcoat           = 0.35
+                clearcoat_roughness = 0.06
+            }
+        }
+    }
+
+    gold_rough = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.00,0.68,0.26) }
+            }
+            scalars = {
+                metallic  = 1
+                roughness = 0.24
+            }
+        }
+    }
+
+    floor_dark = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.03,0.03,0.03) }
+            }
+            scalars = {
+                metallic  = 0
+                roughness = 0.06
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(9.0,7.2,5.0) }
+            }
+        }
+    }
+
+    emissive_fill = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(1.0,1.5,3.0) }
+            }
+        }
+    }
+
+    emissive_rim = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(5.0,4.4,3.5) }
+            }
+        }
+    }
+}
+
+object = {
+    floor      = { geometry = floor,          material = floor_dark    }
+    ring_band  = { geometry = ring_band,      material = gold_polished }
+    crown      = { geometry = fractal_crown,  material = gold_rough    }
+    key_light  = { geometry = key_light,      material = emissive_key  }
+    fill_light = { geometry = fill_light,     material = emissive_fill }
+    rim_light  = { geometry = rim_light,      material = emissive_rim  }
+}
+
+variants = {
+    hide_base = true
+
+    hero_view = {
+        name        = Hero — 3/4 View
+        description = 3/4 elevated view with warm key light and subtle DOF matching a macro jewellery photograph.
+        set = {
+            default_camera = hero
+            object = {
+                crown = { geometry = fractal_crown, material = gold_rough }
+            }
+        }
+    }
+
+    front_view = {
+        name        = Front View
+        description = Straight-on front camera showing the ring silhouette and bore.
+        set = {
+            default_camera = front
+            object = {
+                crown = { geometry = fractal_crown, material = gold_rough }
+            }
+        }
+    }
+
+    top_view = {
+        name        = Top View
+        description = Top-down overhead camera revealing the full mandelbulb crown pattern.
+        set = {
+            default_camera = top
+            object = {
+                crown = { geometry = fractal_crown, material = gold_rough }
+            }
+        }
+    }
+
+    high_power = {
+        name        = Hero — Power 12
+        description = Same hero view but mandelbulb power=12 for tighter, spikier fractal detail.
+        set = {
+            default_camera = hero
+            object = {
+                crown = { geometry = fractal_crown_p12, material = gold_rough }
+            }
+        }
+    }
+
+    julia_crown = {
+        name        = Julia Crown
+        description = Julia set (c=(-0.12, 0.74, 0.28)) replacing the mandelbulb for a different fractal character.
+        set = {
+            default_camera = hero
+            object = {
+                crown = { geometry = fractal_crown_julia, material = gold_rough }
+            }
+        }
+    }
+}

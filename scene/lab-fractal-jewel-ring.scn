@@ -1,0 +1,411 @@
+title       = Fractal Jewel Ring
+description = Mandelbulb crown plane-slabbed in Z, Y-clipped to the upper half, bore-punched with a sphere difference, sitting atop a procedural rounded ring.
+version     = 2.0
+
+default_camera = hero
+
+# Plane SDF in xtracer:  SDF(p) = dot(p, normal) + distance
+#   solid (inside) where SDF < 0  →  dot(p,n) < -distance
+#
+# Ring is upright: bore along Z, center at (0, 1.12, 0).
+#   outer_radius = bore_radius + thickness = 0.82 + 0.30 = 1.12
+#   band half-width in Z = height/2 = 0.58/2 = 0.29
+#
+# Slab planes (restrict fractal to band width in Z):
+#   keep z > -0.29:  n=(0,0,-1), d=-0.29  →  SDF = -z-0.29 < 0  →  z > -0.29 ✓
+#   keep z <  0.29:  n=(0,0, 1), d=-0.29  →  SDF =  z-0.29 < 0  →  z <  0.29 ✓
+#
+# Y angular cutoff (restrict fractal to upper portion of ring):
+#   keep y >  1.00:  n=(0,-1,0), d=1.00   →  SDF = -y+1.00 < 0  →  y >  1.00 ✓
+#
+# Bore sphere (r=0.80) is soft_union'd into the fractal instead of differenced,
+# so the inner boundary blends organically rather than cutting hard.
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.04,0.03,0.02)
+        b = col3(0.09,0.07,0.05)
+    }
+}
+
+camera = {
+    hero = {
+        type            = thin-lens
+        position        = vec3(2.6,2.4,-3.2)
+        target          = vec3(0.0,1.12,0.0)
+        up              = vec3(0,1,0)
+        fov             = 38
+        flength         = 4.2
+        aperture        = 0.03
+        aperture_blades = 6
+    }
+
+    bore = {
+        type     = thin-lens
+        position = vec3(0.0,1.5,-3.6)
+        target   = vec3(0.0,1.12,0.0)
+        up       = vec3(0,1,0)
+        fov      = 36
+    }
+
+    side = {
+        type     = thin-lens
+        position = vec3(3.8,1.6,0.1)
+        target   = vec3(0.0,1.12,0.0)
+        up       = vec3(0,1,0)
+        fov      = 36
+    }
+
+    top = {
+        type     = thin-lens
+        position = vec3(0.0,5.0,-0.1)
+        target   = vec3(0.0,1.12,0.0)
+        up       = vec3(0,0,-1)
+        fov      = 38
+    }
+}
+
+geometry = {
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers  = {
+            scale       = vec3(50,1,50)
+            translation = vec3(0,0,0)
+        }
+    }
+
+    # Upright ring: bore along Z.  Outer radius 1.12 → lift by 1.12 to sit on floor.
+    ring_band = {
+        type               = mesh
+        source             = gen(rounded_ring)
+        resolution         = 128
+        radius             = 0.82
+        height             = 0.58
+        thickness          = 0.30
+        profile_resolution = 22
+        modifiers = {
+            rotation    = euler(90,0,0)
+            translation = vec3(0,1.12,0)
+        }
+    }
+
+    # Fractal crown:
+    #   soft_union of
+    #     (mandelbulb ∩ Z-slab ∩ Y-upper-half)   ← fractal crown, upper half only
+    #   with
+    #     bore_sphere (r=0.80)                    ← smooth inner bore, blended organically
+    #
+    # The ring_band mesh (r=0.82, polished gold) sits just outside the bore sphere,
+    # providing the smooth cylindrical bore seen when looking through the ring.
+    fractal_crown = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type = csg
+                op   = intersection
+                left = {
+                    type = csg
+                    op   = intersection
+                    left = {
+                        type       = mandelbulb
+                        position   = vec3(0.0,1.12,0.0)
+                        radius     = 1.25
+                        resolution = 20
+                        power      = 8.0
+                        bailout    = 4.0
+                    }
+                    right = {
+                        type     = plane
+                        normal   = vec3(0,0,-1)
+                        distance = -0.29
+                    }
+                }
+                right = {
+                    type     = plane
+                    normal   = vec3(0,0,1)
+                    distance = -0.29
+                }
+            }
+            right = {
+                # Conical crown cut: dome sphere centred at ring top (0, outer_radius*2, 0).
+                # At the ring equator (x=1.12, y=1.12) the distance to dome centre is
+                # 1.12*sqrt(2) ≈ 1.584 — larger than 1.35 — so the outer sides fall outside
+                # the dome and carry no fractal.  At the very top (0,2.24,0) distance = 0,
+                # so the crown is fully fractal.  The result tapers like a cone following
+                # the ring arc rather than a flat horizontal cut.
+                type     = sphere
+                position = vec3(0.0,2.24,0.0)
+                radius   = 1.35
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,1.12,0.0)
+            radius   = 0.80
+        }
+    }
+
+    fractal_crown_p12 = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type = csg
+                op   = intersection
+                left = {
+                    type = csg
+                    op   = intersection
+                    left = {
+                        type       = mandelbulb
+                        position   = vec3(0.0,1.12,0.0)
+                        radius     = 1.25
+                        resolution = 20
+                        power      = 12.0
+                        bailout    = 4.0
+                    }
+                    right = {
+                        type     = plane
+                        normal   = vec3(0,0,-1)
+                        distance = -0.29
+                    }
+                }
+                right = {
+                    type     = plane
+                    normal   = vec3(0,0,1)
+                    distance = -0.29
+                }
+            }
+            right = {
+                # Conical crown cut: dome sphere centred at ring top (0, outer_radius*2, 0).
+                # At the ring equator (x=1.12, y=1.12) the distance to dome centre is
+                # 1.12*sqrt(2) ≈ 1.584 — larger than 1.35 — so the outer sides fall outside
+                # the dome and carry no fractal.  At the very top (0,2.24,0) distance = 0,
+                # so the crown is fully fractal.  The result tapers like a cone following
+                # the ring arc rather than a flat horizontal cut.
+                type     = sphere
+                position = vec3(0.0,2.24,0.0)
+                radius   = 1.35
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,1.12,0.0)
+            radius   = 0.80
+        }
+    }
+
+    fractal_crown_julia = {
+        type = csg
+        op   = difference
+        left = {
+            type = csg
+            op   = intersection
+            left = {
+                type = csg
+                op   = intersection
+                left = {
+                    type = csg
+                    op   = intersection
+                    left = {
+                        type       = julia
+                        position   = vec3(0.0,1.12,0.0)
+                        julia_c    = vec3(-0.12,0.74,0.28)
+                        radius     = 1.25
+                        resolution = 18
+                        power      = 8.0
+                        bailout    = 4.0
+                    }
+                    right = {
+                        type     = plane
+                        normal   = vec3(0,0,-1)
+                        distance = -0.29
+                    }
+                }
+                right = {
+                    type     = plane
+                    normal   = vec3(0,0,1)
+                    distance = -0.29
+                }
+            }
+            right = {
+                # Conical crown cut: dome sphere centred at ring top (0, outer_radius*2, 0).
+                # At the ring equator (x=1.12, y=1.12) the distance to dome centre is
+                # 1.12*sqrt(2) ≈ 1.584 — larger than 1.35 — so the outer sides fall outside
+                # the dome and carry no fractal.  At the very top (0,2.24,0) distance = 0,
+                # so the crown is fully fractal.  The result tapers like a cone following
+                # the ring arc rather than a flat horizontal cut.
+                type     = sphere
+                position = vec3(0.0,2.24,0.0)
+                radius   = 1.35
+            }
+        }
+        right = {
+            type     = sphere
+            position = vec3(0.0,1.12,0.0)
+            radius   = 0.80
+        }
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(3.0,5.0,-1.5)
+        radius   = 0.55
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-4.0,2.5,-2.0)
+        radius   = 1.10
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.2,3.5,3.5)
+        radius   = 0.40
+    }
+}
+
+material = {
+    gold_polished = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.00,0.76,0.33) }
+            }
+            scalars = {
+                metallic            = 1
+                roughness           = 0.07
+                clearcoat           = 0.35
+                clearcoat_roughness = 0.06
+            }
+        }
+    }
+
+    gold_rough = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(1.00,0.68,0.26) }
+            }
+            scalars = {
+                metallic  = 1
+                roughness = 0.24
+            }
+        }
+    }
+
+    floor_dark = {
+        type = principled
+        properties = {
+            samplers = {
+                base_color = { type = color, value = col3(0.03,0.03,0.03) }
+            }
+            scalars = {
+                metallic  = 0
+                roughness = 0.06
+            }
+        }
+    }
+
+    emissive_key = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(9.0,7.2,5.0) }
+            }
+        }
+    }
+
+    emissive_fill = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(1.0,1.5,3.0) }
+            }
+        }
+    }
+
+    emissive_rim = {
+        type = emissive
+        properties = {
+            samplers = {
+                emissive = { type = color, value = col3(5.0,4.4,3.5) }
+            }
+        }
+    }
+}
+
+object = {
+    floor      = { geometry = floor,          material = floor_dark    }
+    ring_band  = { geometry = ring_band,      material = gold_polished }
+    crown      = { geometry = fractal_crown,  material = gold_rough    }
+    key_light  = { geometry = key_light,      material = emissive_key  }
+    fill_light = { geometry = fill_light,     material = emissive_fill }
+    rim_light  = { geometry = rim_light,      material = emissive_rim  }
+}
+
+variants = {
+    hide_base = true
+
+    hero_view = {
+        name        = Hero — 3/4 View
+        description = 3/4 elevated view, upright ring, fractal crown upper half only, bore sphere soft-blended.
+        set = {
+            default_camera = hero
+            object = { crown = { geometry = fractal_crown, material = gold_rough } }
+        }
+    }
+
+    bore_view = {
+        name        = Bore View
+        description = Looking straight into the bore — smooth polished interior below, fractal crown above.
+        set = {
+            default_camera = bore
+            object = { crown = { geometry = fractal_crown, material = gold_rough } }
+        }
+    }
+
+    side_view = {
+        name        = Side View
+        description = Profile showing band width; fractal only above equator.
+        set = {
+            default_camera = side
+            object = { crown = { geometry = fractal_crown, material = gold_rough } }
+        }
+    }
+
+    top_view = {
+        name        = Top View
+        description = Top-down view of mandelbulb crown.
+        set = {
+            default_camera = top
+            object = { crown = { geometry = fractal_crown, material = gold_rough } }
+        }
+    }
+
+    high_power = {
+        name        = Hero — Power 12
+        description = Spikier fractal detail with power=12.
+        set = {
+            default_camera = hero
+            object = { crown = { geometry = fractal_crown_p12, material = gold_rough } }
+        }
+    }
+
+    julia_crown = {
+        name        = Julia Crown
+        description = Julia set (c=(-0.12, 0.74, 0.28)) replacing the mandelbulb.
+        set = {
+            default_camera = hero
+            object = { crown = { geometry = fractal_crown_julia, material = gold_rough } }
+        }
+    }
+}

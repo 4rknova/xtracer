@@ -1,0 +1,203 @@
+title       = New Fractal Types Showcase
+description = MandelBox, Quaternion Julia, Burning Ship 3D, Cantor Dust 3D, Icosahedral IFS
+version     = 2.0
+
+default_camera = hero
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.02,0.02,0.04)
+        b = col3(0.06,0.05,0.08)
+    }
+}
+
+camera = {
+    # 45-degree downward angle: (Y - target_Y) == horizontal distance
+    # target=(0,0.7,0), camera=(0,3.7,-3.0) → dir=(0,-3,3) → 45° ✓
+    hero = {
+        type     = thin-lens
+        position = vec3(0.0,3.7,-3.0)
+        target   = vec3(0.0,0.7,0.0)
+        up       = vec3(0,1,0)
+        fov      = 42
+    }
+}
+
+geometry = {
+    floor = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers  = { scale = vec3(20,1,20) }
+    }
+
+    geo_mandelbox = {
+        type       = mandelbox
+        position   = vec3(0.0,0.7,0.0)
+        radius     = 0.7
+        resolution = 14
+        fold_size  = 1.0
+        min_r      = 0.5
+        scale      = -2.5
+        bailout    = 100.0
+    }
+
+    geo_quat_julia = {
+        type       = quaternion_julia
+        position   = vec3(0.0,0.7,0.0)
+        radius     = 0.7
+        resolution = 10
+        quat_c     = vec3(-0.2,0.6,0.2)
+        quat_cw    = -0.1
+        bailout    = 4.0
+    }
+
+    geo_burning_ship = {
+        type       = burning_ship_3d
+        position   = vec3(0.0,0.7,0.0)
+        radius     = 0.7
+        resolution = 16
+        power      = 2.0
+        bailout    = 4.0
+    }
+
+    geo_cantor = {
+        type       = cantor_dust_3d
+        position   = vec3(0.0,0.7,0.0)
+        radius     = 0.7
+        resolution = 3
+    }
+
+    geo_icosa_ifs = {
+        type       = icosahedral_ifs
+        position   = vec3(0.0,0.7,0.0)
+        radius     = 0.7
+        resolution = 10
+        scale      = -2.5
+    }
+
+    key_light = {
+        type     = sphere
+        position = vec3(2.5,5.0,-2.0)
+        radius   = 0.6
+    }
+
+    fill_light = {
+        type     = sphere
+        position = vec3(-3.5,2.5,-1.5)
+        radius   = 1.2
+    }
+
+    rim_light = {
+        type     = sphere
+        position = vec3(0.0,3.0,3.0)
+        radius   = 0.5
+    }
+}
+
+material = {
+    mat_mandelbox = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.20,0.50,0.90) } }
+            scalars  = { metallic = 0.0, roughness = 0.30 }
+        }
+    }
+
+    mat_quat_julia = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.85,0.25,0.55) } }
+            scalars  = { metallic = 0.0, roughness = 0.25 }
+        }
+    }
+
+    mat_burning_ship = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.90,0.45,0.10) } }
+            scalars  = { metallic = 0.1, roughness = 0.35 }
+        }
+    }
+
+    mat_cantor = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.35,0.85,0.40) } }
+            scalars  = { metallic = 0.0, roughness = 0.40 }
+        }
+    }
+
+    mat_icosa_ifs = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.75,0.65,1.00) } }
+            scalars  = { metallic = 0.2, roughness = 0.20 }
+        }
+    }
+
+    floor_dark = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.03,0.03,0.04) } }
+            scalars  = { metallic = 0.0, roughness = 0.05 }
+        }
+    }
+
+    emissive_key  = { type = emissive, properties = { samplers = { emissive = { type = color, value = col3(8.0,6.5,4.5) } } } }
+    emissive_fill = { type = emissive, properties = { samplers = { emissive = { type = color, value = col3(1.0,1.5,3.5) } } } }
+    emissive_rim  = { type = emissive, properties = { samplers = { emissive = { type = color, value = col3(4.0,3.5,3.0) } } } }
+}
+
+object = {
+    floor      = { geometry = floor,         material = floor_dark    }
+    subject    = { geometry = geo_mandelbox, material = mat_mandelbox }
+    key_light  = { geometry = key_light,     material = emissive_key  }
+    fill_light = { geometry = fill_light,    material = emissive_fill }
+    rim_light  = { geometry = rim_light,     material = emissive_rim  }
+}
+
+variants = {
+    hide_base = true
+
+    mandelbox = {
+        name        = MandelBox
+        description = Box-fold + ball-fold IFS. scale=-2.5, fold=1.0, min_r=0.5.
+        set = {
+            object = { subject = { geometry = geo_mandelbox, material = mat_mandelbox } }
+        }
+    }
+
+    quaternion_julia = {
+        name        = Quaternion Julia
+        description = 4D quaternion iteration z→z²+c sliced at w=0. c=(-0.2,0.6,0.2,-0.1).
+        set = {
+            object = { subject = { geometry = geo_quat_julia, material = mat_quat_julia } }
+        }
+    }
+
+    burning_ship_3d = {
+        name        = Burning Ship 3D
+        description = Mandelbulb variant with abs fold on x and y before raising to power.
+        set = {
+            object = { subject = { geometry = geo_burning_ship, material = mat_burning_ship } }
+        }
+    }
+
+    cantor_dust_3d = {
+        name        = Cantor Dust 3D
+        description = Recursive IFS keeping only the 8 corner sub-cubes. 3 levels deep.
+        set = {
+            object = { subject = { geometry = geo_cantor, material = mat_cantor } }
+        }
+    }
+
+    icosahedral_ifs = {
+        name        = Icosahedral IFS
+        description = Fold-scale IFS using the 6 icosahedral symmetry planes. scale=2.0.
+        set = {
+            object = { subject = { geometry = geo_icosa_ifs, material = mat_icosa_ifs } }
+        }
+    }
+}

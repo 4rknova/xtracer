@@ -28,6 +28,15 @@ camera = {
 	flength  = 1.0
 	aperture = 0.0
     }
+	interactive_default = {
+		type = thin-lens
+		position = vec3(1.513241, 0.132951, 0.654257)
+		target = vec3(0, 0, 0)
+		up = vec3(-0.073782, 0.996764, -0.0319)
+		fov = 42
+		flength = 1.0
+		aperture = 0.0
+	}
 }
 
 geometry = {
@@ -41,20 +50,12 @@ geometry = {
         }
     }
 
-    bulb_mandel = {
-        type       = mandelbulb
-        radius     = 1
-        resolution = 20
-        power      = 8.0
-        bailout    = 4.0
-    }
-
     bulb_julia = {
         type       = julia
 	resolution = 32
 	power      = 2.0
 	bailout    = 8.0
-	julia_c    = vec3(-0.12, 0.74, 0.28)
+	julia_c    = vec3(-0.72, 0.24, 0.28)
     }
 
     key_light = {
@@ -193,7 +194,7 @@ material = {
 
 object = {
     floor     = { geometry = floor,      material = floor_matte  }
-    bulb      = { geometry = bulb_mandel, material = bulb_surface }
+    bulb      = { geometry = bulb_julia, material = bulb_surface }
     key_light = { geometry = key_light,  material = emissive_key  }
     fill_light = { geometry = fill_light, material = emissive_fill }
     rim_light  = { geometry = rim_light,  material = emissive_rim  }
@@ -202,32 +203,12 @@ object = {
 variants = {
     hide_base = true
 
-    mandelbulb = {
-        name        = Mandelbulb
-        description = Native analytic mandelbulb fractal geometry.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = bulb_surface }
-            }
-        }
-    }
-
     julia = {
         name        = Julia
         description = Native analytic julia fractal geometry.
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = bulb_surface }
-            }
-        }
-    }
-
-    mandelbulb_bronze = {
-        name        = Mandelbulb — Bronze
-        description = Mandelbulb with warm patinated bronze.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = bronze }
             }
         }
     }
@@ -242,32 +223,12 @@ variants = {
         }
     }
 
-    mandelbulb_ice = {
-        name        = Mandelbulb — Ice
-        description = Mandelbulb with glacial ice — high clearcoat, near-zero roughness.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = ice }
-            }
-        }
-    }
-
     julia_ice = {
         name        = Julia — Ice
         description = Julia fractal with glacial ice — high clearcoat, near-zero roughness.
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = ice }
-            }
-        }
-    }
-
-    mandelbulb_aniso = {
-        name        = Mandelbulb — Anisotropic Metal
-        description = Mandelbulb with brushed titanium-like anisotropic metal.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = aniso_metal }
             }
         }
     }
@@ -282,16 +243,6 @@ variants = {
         }
     }
 
-    mandelbulb_verdigris = {
-        name        = Mandelbulb — Verdigris Copper
-        description = Mandelbulb with oxidized copper using procedural marble veining.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = verdigris }
-            }
-        }
-    }
-
     julia_verdigris = {
         name        = Julia — Verdigris Copper
         description = Julia fractal with oxidized copper using procedural marble veining.
@@ -302,32 +253,12 @@ variants = {
         }
     }
 
-    mandelbulb_gold = {
-        name        = Mandelbulb — Gold
-        description = Mandelbulb with polished gold.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = gold }
-            }
-        }
-    }
-
     julia_gold = {
         name        = Julia — Gold
         description = Julia fractal with polished gold.
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = gold }
-            }
-        }
-    }
-
-    mandelbulb_obsidian = {
-        name        = Mandelbulb — Obsidian
-        description = Mandelbulb with dark volcanic glass — deep black with sharp highlights.
-        set = {
-            object = {
-                bulb = { geometry = bulb_mandel, material = obsidian }
             }
         }
     }

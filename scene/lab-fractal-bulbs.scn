@@ -51,10 +51,10 @@ geometry = {
 
     bulb_julia = {
         type       = julia
-	resolution = 32
-	power      = 2.0
-	bailout    = 8.0
-	julia_c    = vec3(-0.12, 0.74, 0.28)
+        resolution = 32
+        power      = 2.0
+        bailout    = 8.0
+        julia_c    = vec3(-0.12, 0.74, 0.28)
     }
 
     key_light = {

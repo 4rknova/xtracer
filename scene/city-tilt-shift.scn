@@ -37,6 +37,33 @@ camera = {
         flength  = 10
         aperture = 0
     }
+	camera = {
+		type = thin-lens
+		position = vec3(3.078427, 0.605674, -3.215443)
+		target = vec3(-0.244467, -0.40677, -0.411871)
+		up = vec3(0, 1, 0)
+		fov = 60
+		flength = 4
+		aperture = 0.0
+	}
+	camera_1 = {
+		type = thin-lens
+		position = vec3(0.802762, 2.860658, -3.866946)
+		target = vec3(0.535964, 1.873911, -2.74749)
+		up = vec3(0, 1, 0)
+		fov = 60
+		flength = 4
+		aperture = 0.0
+	}
+	camera_2 = {
+		type = thin-lens
+		position = vec3(3.078427, 0.605674, -3.215443)
+		target = vec3(-0.244467, -0.40677, -0.411871)
+		up = vec3(0, 1, 0)
+		fov = 60
+		flength = 4
+		aperture = 0.0
+	}
 }
 
 geometry = {
