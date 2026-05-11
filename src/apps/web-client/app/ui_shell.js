@@ -1,3 +1,184 @@
+let activeCardPanelId = null;
+
+function updateTabCardsBarState() {
+  document.querySelectorAll(".tab-card-btn").forEach((btn) => {
+    const cardId = btn.dataset.cardId;
+    const isActive = cardId === activeCardPanelId;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function returnModalBodyToSource(container) {
+  const modalBody = container && container.querySelector(".controls-modal-body");
+  if (!modalBody || !activeCardPanelId) return;
+  const portedBody = modalBody.firstElementChild;
+  if (portedBody) {
+    const sourceCard = container.querySelector(`#${activeCardPanelId}`);
+    if (sourceCard) sourceCard.appendChild(portedBody);
+  }
+  modalBody.hidden = true;
+}
+
+function openCardPanel(cardId) {
+  const container = document.querySelector(".panel-controls");
+  returnModalBodyToSource(container);
+  activeCardPanelId = cardId;
+  if (container) {
+    container.querySelectorAll("details.control-section").forEach((c) => { c.hidden = true; });
+    const sourceCard = container.querySelector(`#${cardId}`);
+    const modalBody = container.querySelector(".controls-modal-body");
+    if (sourceCard && modalBody) {
+      const cardBody = sourceCard.querySelector(".xui-card__body");
+      if (cardBody) {
+        modalBody.appendChild(cardBody);
+        modalBody.hidden = false;
+      }
+    }
+  }
+  const defs = window.XTracerSidebarCards && typeof window.XTracerSidebarCards.getCardDefs === "function"
+    ? window.XTracerSidebarCards.getCardDefs()
+    : [];
+  const def = defs.find((d) => d.id === cardId);
+  const titleEl = document.getElementById("controlsModalTitle");
+  if (titleEl && def) titleEl.textContent = def.title;
+  updateTabCardsBarState();
+  document.dispatchEvent(new CustomEvent("controls-panel-request", { detail: { open: true } }));
+}
+
+function closeCardPanel() {
+  const container = document.querySelector(".panel-controls");
+  returnModalBodyToSource(container);
+  activeCardPanelId = null;
+  updateTabCardsBarState();
+  document.dispatchEvent(new CustomEvent("controls-panel-request", { detail: { open: false } }));
+  applySidebarCardLayout(activeTabMode);
+}
+
+function clearActiveCardPanel() {
+  if (activeCardPanelId === null) return;
+  const container = document.querySelector(".panel-controls");
+  returnModalBodyToSource(container);
+  activeCardPanelId = null;
+  updateTabCardsBarState();
+  applySidebarCardLayout(activeTabMode);
+}
+
+document.addEventListener("card-panel-closed", clearActiveCardPanel);
+
+function buildTabCardIconSvg(pathData) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.75");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  const segments = String(pathData || "").split(/\s+(?=[A-Z])/);
+  segments.forEach((seg) => {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", seg.trim());
+    svg.appendChild(path);
+  });
+  return svg;
+}
+
+function renderTabCardsBar() {
+  const mode = activeTabMode;
+  if (!sidebarCardVisibility) return;
+
+  let visibleIds = sidebarCardVisibility[mode] || [];
+  if (mode === "visual" && sidebarCardVisibility.visual_by_editor) {
+    const byEditor = sidebarCardVisibility.visual_by_editor;
+    visibleIds = byEditor[editorViewMode] || byEditor.visual || visibleIds;
+  }
+
+  const defs = window.XTracerSidebarCards && typeof window.XTracerSidebarCards.getCardDefs === "function"
+    ? window.XTracerSidebarCards.getCardDefs()
+    : [];
+
+  const paneId = `pane${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
+  const pane = document.getElementById(paneId);
+  if (!pane) return;
+
+  pane.querySelectorAll(".tab-cards-bar").forEach((bar) => bar.remove());
+
+  if (!visibleIds.length) return;
+
+  const bar = document.createElement("div");
+  bar.className = "tab-cards-bar";
+  bar.setAttribute("role", "toolbar");
+  bar.setAttribute("aria-label", "Control panels");
+
+  visibleIds.forEach((cardId) => {
+    const def = defs.find((d) => d.id === cardId);
+    if (!def) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-card-btn";
+    btn.dataset.cardId = cardId;
+    btn.title = def.title;
+    btn.setAttribute("aria-label", def.title);
+    btn.setAttribute("aria-pressed", cardId === activeCardPanelId ? "true" : "false");
+    if (cardId === activeCardPanelId) btn.classList.add("is-active");
+    btn.appendChild(buildTabCardIconSvg(def.icon || "M4 6h16M4 12h16M4 18h16"));
+    btn.addEventListener("click", () => {
+      if (activeCardPanelId === cardId) closeCardPanel();
+      else openCardPanel(cardId);
+    });
+    bar.appendChild(btn);
+  });
+
+  if (mode === "visual") {
+    const actions = pane.querySelector(".editor-view-actions");
+    if (actions) {
+      bar.classList.add("tab-cards-bar--inline");
+      actions.insertBefore(bar, actions.firstChild);
+      return;
+    }
+  }
+
+  if (mode === "render") {
+    const toolbarControls = pane.querySelector("#renderPreviewToolbarControls");
+    if (toolbarControls) {
+      bar.classList.add("tab-cards-bar--inline", "tab-cards-bar--flush-right");
+      toolbarControls.appendChild(bar);
+      return;
+    }
+  }
+
+  pane.insertBefore(bar, pane.firstChild);
+}
+
+function mountTabUtilActions() {
+  const bar = document.getElementById("tabUtilActions");
+  if (!bar) return;
+  const mode = activeTabMode;
+  let target = null;
+  if (mode === "render") {
+    target = document.getElementById("renderPreviewToolbarControls");
+  } else if (mode === "visual") {
+    const pane = document.getElementById("paneVisual");
+    target = pane && pane.querySelector(".editor-view-actions");
+  } else if (mode === "workspaces") {
+    const pane = document.getElementById("paneWorkspaces");
+    target = pane && pane.querySelector(".workspace-toolbar-actions");
+  } else if (mode === "gallery") {
+    const pane = document.getElementById("paneGallery");
+    target = pane && pane.querySelector(".gallery-toolbar");
+  } else if (mode === "settings") {
+    target = document.getElementById("paneSettingsHead");
+  } else if (mode === "about") {
+    const pane = document.getElementById("paneAbout");
+    target = pane && pane.querySelector(".about-tab-bar");
+  }
+  if (!target) return;
+  if (bar.parentNode !== target) target.appendChild(bar);
+  bar.hidden = false;
+}
+
 function normalizeTabMode(mode) {
   const raw = String(mode || "").toLowerCase();
   if (raw === "editor") return "visual";
@@ -161,7 +342,9 @@ function setEditorViewMode(mode, persist) {
 
   if (persist !== false) localStorage.setItem(EDITOR_VIEW_MODE_KEY, nextMode);
   if (activeTabMode === "visual") {
+    closeCardPanel();
     applySidebarCardLayout("visual");
+    requestAnimationFrame(renderTabCardsBar);
   }
   if (isVisual && visualEditor) {
     if (visualEditor.onShow) visualEditor.onShow();
@@ -213,8 +396,17 @@ function getSidebarCardTitle(card) {
   return String(raw || "").trim();
 }
 
+let _jobsModalCloseListener = null;
+let _jobsModalCloseTimer = null;
+
 function openJobsModal() {
   if (!el.jobsModal) return;
+  const panel = el.jobsModal.querySelector(".jobs-modal-panel");
+  if (_jobsModalCloseListener && panel) {
+    panel.removeEventListener("animationend", _jobsModalCloseListener);
+    _jobsModalCloseListener = null;
+  }
+  if (_jobsModalCloseTimer) { clearTimeout(_jobsModalCloseTimer); _jobsModalCloseTimer = null; }
   el.jobsModal.classList.remove("jobs-modal-closing");
   el.jobsModal.hidden = false;
   document.body.classList.add("jobs-modal-open");
@@ -229,6 +421,8 @@ function closeJobsModal() {
   el.jobsModal.classList.add("jobs-modal-closing");
   const panel = el.jobsModal.querySelector(".jobs-modal-panel");
   const done = () => {
+    _jobsModalCloseListener = null;
+    if (_jobsModalCloseTimer) { clearTimeout(_jobsModalCloseTimer); _jobsModalCloseTimer = null; }
     el.jobsModal.hidden = true;
     el.jobsModal.classList.remove("jobs-modal-closing");
     document.body.classList.remove("jobs-modal-open");
@@ -237,14 +431,25 @@ function closeJobsModal() {
     if (el.tabJobs) { el.tabJobs.setAttribute("aria-pressed", "false"); el.tabJobs.classList.remove("active"); }
   };
   if (panel) {
+    _jobsModalCloseListener = done;
     panel.addEventListener("animationend", done, { once: true });
+    _jobsModalCloseTimer = setTimeout(done, 300);
   } else {
     done();
   }
 }
 
+let _logsModalCloseListener = null;
+let _logsModalCloseTimer = null;
+
 function openLogsModal() {
   if (!el.logsModal) return;
+  const panel = el.logsModal.querySelector(".log-modal-panel");
+  if (_logsModalCloseListener && panel) {
+    panel.removeEventListener("animationend", _logsModalCloseListener);
+    _logsModalCloseListener = null;
+  }
+  if (_logsModalCloseTimer) { clearTimeout(_logsModalCloseTimer); _logsModalCloseTimer = null; }
   el.logsModal.classList.remove("log-modal-closing");
   el.logsModal.hidden = false;
   document.body.classList.add("log-modal-open");
@@ -260,12 +465,41 @@ function closeLogsModal() {
   el.logsModal.classList.add("log-modal-closing");
   const panel = el.logsModal.querySelector(".log-modal-panel");
   const done = () => {
+    _logsModalCloseListener = null;
+    if (_logsModalCloseTimer) { clearTimeout(_logsModalCloseTimer); _logsModalCloseTimer = null; }
     el.logsModal.hidden = true;
     el.logsModal.classList.remove("log-modal-closing");
     document.body.classList.remove("log-modal-open");
     if (el.topbarLogsBtn) el.topbarLogsBtn.setAttribute("aria-pressed", "false");
     if (el.bnTabLogs) { el.bnTabLogs.setAttribute("aria-pressed", "false"); el.bnTabLogs.classList.remove("active"); }
     if (el.tabLogs) { el.tabLogs.setAttribute("aria-pressed", "false"); el.tabLogs.classList.remove("active"); }
+  };
+  if (panel) {
+    _logsModalCloseListener = done;
+    panel.addEventListener("animationend", done, { once: true });
+    _logsModalCloseTimer = setTimeout(done, 300);
+  } else {
+    done();
+  }
+}
+
+function openRenderStatsModal() {
+  if (!el.renderStatsModal) return;
+  el.renderStatsModal.classList.remove("render-stats-modal-closing");
+  el.renderStatsModal.hidden = false;
+  if (el.renderStatsToggleBtn) el.renderStatsToggleBtn.setAttribute("aria-pressed", "true");
+  if (el.renderStatsToggleBtn) el.renderStatsToggleBtn.classList.add("is-active");
+}
+
+function closeRenderStatsModal() {
+  if (!el.renderStatsModal || el.renderStatsModal.hidden) return;
+  el.renderStatsModal.classList.add("render-stats-modal-closing");
+  const panel = el.renderStatsModal.querySelector(".render-stats-modal-panel");
+  const done = () => {
+    el.renderStatsModal.hidden = true;
+    el.renderStatsModal.classList.remove("render-stats-modal-closing");
+    if (el.renderStatsToggleBtn) el.renderStatsToggleBtn.setAttribute("aria-pressed", "false");
+    if (el.renderStatsToggleBtn) el.renderStatsToggleBtn.classList.remove("is-active");
   };
   if (panel) {
     panel.addEventListener("animationend", done, { once: true });
@@ -342,6 +576,7 @@ function refreshMobileCardSwitcher() {
 
 function applySidebarCardLayout(mode) {
   if (!sidebarCardVisibility || typeof sidebarCardVisibility !== "object") return;
+  if (activeCardPanelId !== null) return;
   const container = document.querySelector(".panel-controls");
   if (!container) return;
 
@@ -447,9 +682,12 @@ function setActiveTab(mode) {
   setActive(el.paneGallery, isGallery);
   setActive(el.paneSettings, isSettings);
   setActive(el.paneAbout, isAbout);
+  closeCardPanel();
   applySidebarCardLayout(nextMode);
   void refreshSidebarCardVisibilityConfig(nextMode);
   localStorage.setItem(ACTIVE_TAB_KEY, nextMode);
+  requestAnimationFrame(renderTabCardsBar);
+  requestAnimationFrame(mountTabUtilActions);
   if (isVisual && editorViewMode === "visual" && visualEditor) visualEditor.onShow();
   if (isVisual && editorViewMode === "graph") scheduleGraphRender();
   if (isWorkspaces && hasBackendMethod(api, "getWorkspaces")) {
@@ -783,6 +1021,7 @@ function loadUIOptions() {
   uiOptions.autoLoadEditor = localStorage.getItem("xtracer-auto-load-editor") !== "0";
   uiOptions.autoScrollLogs = localStorage.getItem("xtracer-auto-scroll-logs") !== "0";
   uiOptions.clearPreviewOnRender = localStorage.getItem("xtracer-clear-preview-on-render") === "1";
+  uiOptions.draftMode = localStorage.getItem("xtracer-draft-mode") === "1";
   uiOptions.tileHeatmapEnabled = localStorage.getItem("xtracer-tile-heatmap-enabled") !== "0";
   uiOptions.fontScale = 1.0;
   const previewSamplingRaw = String(localStorage.getItem("xtracer-preview-sampling") || "smooth").toLowerCase();
@@ -800,6 +1039,7 @@ function loadUIOptions() {
   el.autoLoadEditor.checked = uiOptions.autoLoadEditor;
   el.autoScrollLogs.checked = uiOptions.autoScrollLogs;
   el.clearPreviewOnRender.checked = uiOptions.clearPreviewOnRender;
+  if (el.draftMode) el.draftMode.checked = uiOptions.draftMode;
   if (el.tileHeatmapEnabled) el.tileHeatmapEnabled.checked = !!uiOptions.tileHeatmapEnabled;
   if (el.previewSampling) el.previewSampling.value = uiOptions.previewSampling;
   if (typeof syncRenderPreviewSamplingSwitch === "function") syncRenderPreviewSamplingSwitch();
@@ -832,6 +1072,7 @@ function persistUIOptions() {
   localStorage.setItem("xtracer-auto-load-editor", uiOptions.autoLoadEditor ? "1" : "0");
   localStorage.setItem("xtracer-auto-scroll-logs", uiOptions.autoScrollLogs ? "1" : "0");
   localStorage.setItem("xtracer-clear-preview-on-render", uiOptions.clearPreviewOnRender ? "1" : "0");
+  localStorage.setItem("xtracer-draft-mode", uiOptions.draftMode ? "1" : "0");
   localStorage.setItem("xtracer-tile-heatmap-enabled", uiOptions.tileHeatmapEnabled ? "1" : "0");
   localStorage.setItem("xtracer-preview-sampling", uiOptions.previewSampling);
   localStorage.setItem("xtracer-dark-palette", uiOptions.darkPalette);

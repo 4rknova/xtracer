@@ -3739,20 +3739,16 @@ textarea {
 .log-chip-ui      { --log-chip-accent: #45b89c; }
 
 @media (max-width: 540px) {
-  .log-modal-head {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 10px 12px;
-  }
-
-  .log-modal-head .log-actions {
-    margin-left: 0;
-    justify-content: flex-end;
-  }
-
   .log-filter-chips {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+  }
+
+  .log-chip-label {
+    display: none;
+  }
+
+  .log-chip {
+    padding: 0 8px;
   }
 
 }
@@ -6455,6 +6451,80 @@ button:disabled {
   transform: translateY(1px);
 }
 
+.tab-cards-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  flex: 0 0 auto;
+}
+
+.tab-cards-bar--inline {
+  padding: 0;
+  margin-right: 6px;
+}
+
+.tab-cards-bar--flush-right {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.tab-card-btn {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--field-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--panel) 90%, transparent) 100%);
+  color: color-mix(in srgb, var(--ink) 72%, var(--muted));
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent),
+    0 2px 10px color-mix(in srgb, #000000 16%, transparent);
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.1s ease;
+}
+
+.tab-card-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+}
+
+.tab-card-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field-bg) 84%, var(--accent) 16%);
+}
+
+.tab-card-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 78%, #ffffff);
+  outline-offset: 1px;
+}
+
+.tab-card-btn:active {
+  transform: translateY(1px);
+}
+
+.tab-card-btn.is-active {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--accent) 78%, #ffffff) 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 28%, transparent),
+    0 2px 8px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
 .graph-panel {
   display: flex;
   flex: 1 1 auto;
@@ -7900,7 +7970,7 @@ button:disabled {
 }
 
 .preview-headline > .status-chip {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 1;
   min-width: 0;
   justify-content: flex-start;
@@ -7911,7 +7981,6 @@ button:disabled {
   gap: 5px;
   min-width: 0;
   padding: 0 0 0 20px;
-  border-left: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
 }
 
 .render-status-stats-group .workspace-active-hint {
@@ -7969,43 +8038,243 @@ button:disabled {
 
 /* ─── Render HUD overlay ──────────────────────────────────────────────────── */
 
-.render-hud-stats {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 8;
+.render-stats-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
   display: flex;
-  gap: 0;
-  padding: 14px 18px;
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  align-items: stretch;
+  justify-content: flex-end;
 }
 
-.render-hud-stats .render-stats-grid {
+.render-stats-modal[hidden] {
+  display: none;
+}
+
+.render-stats-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: log-backdrop-in 0.2s ease;
+}
+
+.render-stats-modal-closing .render-stats-modal-backdrop {
+  animation: log-backdrop-out 0.18s ease forwards;
+}
+
+.render-stats-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(380px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: -4px 0 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  animation: log-modal-in 0.2s ease;
+}
+
+.render-stats-modal-closing .render-stats-modal-panel {
+  animation: log-modal-out 0.18s ease forwards;
+}
+
+.render-stats-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  flex-shrink: 0;
+}
+
+.render-stats-modal-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.render-stats-modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin-left: auto;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.render-stats-modal-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.render-stats-modal-close-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  color: var(--ink);
+}
+
+.render-stats-modal-close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 75%, white);
+  outline-offset: 1px;
+}
+
+.render-stats-modal-body {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.render-stats-modal-body .render-stats-grid {
   margin: 0;
 }
 
-.render-hud-stats .render-status-stats-group {
+.render-stats-modal-body .render-stats-group + .render-stats-group {
+  padding-left: 0;
+  padding-right: 0;
+  border-left: none;
+}
+
+.render-stats-modal-body .render-stats-group.workspace-info-group {
+  gap: 0;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--field-bg) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  border-radius: 12px;
+}
+
+.render-stats-modal-body .workspace-info-group + .workspace-info-group {
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: none;
+}
+
+.render-stats-modal-body .workspace-info-group h4 {
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--muted) 70%, var(--ink));
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+}
+
+.render-stats-modal-body .render-stats-toggle {
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+.render-stats-modal-body .workspace-active-hint {
+  padding: 5px 0;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  align-items: baseline;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+.render-stats-modal-body .workspace-active-label {
   flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.render-stats-modal-body .workspace-active-value {
+  flex: 1 1 0;
   min-width: 0;
+  text-align: right;
+  overflow-wrap: break-word;
+}
+
+.render-stats-modal-body .workspace-active-hint:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.heatmap-buckets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+.heatmap-bucket {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 0 0 0 20px;
-  border-left: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 7px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 50%, transparent);
+  text-align: center;
+}
+
+.heatmap-bucket__label {
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.heatmap-bucket__value {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.heatmap-bucket--fast {
+  border-top: 2px solid #5acf72;
+}
+
+.heatmap-bucket--mid {
+  border-top: 2px solid #f0b429;
+}
+
+.heatmap-bucket--slow {
+  border-top: 2px solid #f06040;
+}
+
+.render-status-stats-group--modal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--field-bg) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 52%, transparent);
+  border-radius: 12px;
+}
+
+.render-status-stats-group--modal .render-stat-pill {
+  width: 100%;
+  justify-content: space-between;
+  border-radius: 8px;
+  padding: 8px 12px 8px 10px;
 }
 
 .render-stat-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px 3px 6px;
+  gap: 6px;
+  padding: 5px 12px 5px 9px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
   background: color-mix(in srgb, var(--field-bg) 55%, transparent);
@@ -8013,15 +8282,15 @@ button:disabled {
 }
 
 .render-stat-pill svg {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   opacity: 0.55;
 }
 
 .render-stat-pill code {
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink);
   min-width: 0;
@@ -8279,6 +8548,15 @@ button:disabled {
   cursor: not-allowed;
   pointer-events: none;
   opacity: 0.52;
+}
+
+.preview-toolbar-reset-btn.is-danger {
+  color: var(--xui-danger);
+  border-color: color-mix(in srgb, var(--xui-danger) 40%, transparent);
+}
+
+.render-action-btn {
+  order: 0;
 }
 
 .interactive-speed-row {
@@ -9886,6 +10164,14 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.controls-modal-body {
+  padding: 4px 0 0;
+}
+
+.controls-modal-body .control-section-body {
+  padding: 14px 4px 8px;
+}
+
 .controls-flyout-backdrop {
   display: none;
   position: fixed;
@@ -11392,6 +11678,55 @@ button:disabled {
   }
   #paneGallery.is-detail-open .gallery-detail-image {
     height: 100%;
+  }
+}
+
+/* ─── Persistent tab utility actions (Jobs + Logs buttons) ─────────────────── */
+
+.tab-util-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* Thin separator from the preceding toolbar items */
+.tab-util-actions:not(:only-child) {
+  border-left: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  padding-left: 8px;
+  margin-left: 4px;
+}
+
+/* About tab: push to the far right of the tab bar */
+.about-tab-bar .tab-util-actions {
+  margin-left: auto;
+}
+
+/* Scale buttons to match tab toolbar sizing */
+.tab-util-actions .main-menu-settings {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.tab-util-actions .main-menu-settings svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Settings tab head: flex row, buttons right-aligned */
+#paneSettingsHead {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 38px;
+  padding-bottom: 10px;
+}
+
+/* Hidden on mobile — bottom nav covers jobs/logs there */
+@media (max-width: 1099px) {
+  .tab-util-actions {
+    display: none;
   }
 }
 

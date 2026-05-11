@@ -82,8 +82,6 @@
       { id: "tabGallery", label: "Gallery", mode: "gallery" },
       { id: "tabSettings", label: "Settings", mode: "settings" },
       { id: "tabAbout", label: "About", mode: "about" },
-      { id: "tabLogs", label: "Logs", mode: "logs" },
-      { id: "tabJobs", label: "Jobs", mode: "jobs" },
     ];
     return createMenu({
       tagName: "nav",

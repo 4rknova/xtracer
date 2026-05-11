@@ -66,6 +66,7 @@
       id: "activeSceneControlsCard",
       title: "Active Scene",
       note: "Scene, camera, variant",
+      icon: "M3 5h18v14H3z M7 5v14 M17 5v14 M3 9h18 M3 15h18",
       open: true,
       bodyHTML: `
         <section class="settings-section workspace-info-section active-scene-sidebar">
@@ -85,6 +86,7 @@
       id: "integratorControlsCard",
       title: "Integrator",
       note: "Renderer and settings",
+      icon: "M9 2h6v2h2a1 1 0 0 1 1 1v2h2v6h-2v2a1 1 0 0 1-1 1h-2v2H9v-2H7a1 1 0 0 1-1-1v-2H4V7h2V5a1 1 0 0 1 1-1h2V2z M9 9v6h6V9H9z",
       open: true,
       bodyHTML: `
         <label class="xui-field">
@@ -133,12 +135,14 @@
           <div id="integratorControls"></div>
         </div>
         <label class="xui-switch"><span class="xui-switch__label">Clear preview on render</span><input id="clearPreviewOnRender" type="checkbox"></label>
+        <label class="xui-switch"><span class="xui-switch__label">Draft mode</span><input id="draftMode" type="checkbox"></label>
       `,
     },
     {
       id: "frameControlsCard",
       title: "Frame",
       note: "Output dimensions",
+      icon: "M8 3H5a2 2 0 0 0-2 2v3 M21 8V5a2 2 0 0 0-2-2h-3 M3 16v3a2 2 0 0 0 2 2h3 M16 21h3a2 2 0 0 0 2-2v-3",
       open: true,
       bodyHTML: `
         <section class="frame-section">
@@ -180,6 +184,7 @@
       id: "textEditorControlsCard",
       title: "Text Editor",
       note: "Load and save source",
+      icon: "M10 20l4-16 M18 9l3 3-3 3 M6 9l-3 3 3 3",
       open: true,
       hidden: true,
       bodyHTML: `
@@ -192,6 +197,7 @@
       id: "qualityControlsCard",
       title: "Quality",
       note: "Sampling and bounce depth",
+      icon: "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z",
       open: true,
       bodyHTML: `
         <div class="row">
@@ -228,6 +234,7 @@
       id: "toneMappingControlsCard",
       title: "Tone Mapping",
       note: "Preview and output mapping",
+      icon: "M12 2v3 M12 19v3 M4.22 4.22l2.12 2.12 M17.66 17.66l2.12 2.12 M2 12h3 M19 12h3 M4.22 19.78l2.12-2.12 M17.66 6.34l2.12-2.12 M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z",
       open: true,
       bodyHTML: `
         <label class="xui-field">
@@ -260,6 +267,7 @@
       id: "exportControlsCard",
       title: "Export",
       note: "Preview and export",
+      icon: "M12 16l-4-4h3V4h2v8h3l-4 4z M4 20h16",
       open: true,
       bodyHTML: `
         <div id="interactivePreviewControls" hidden>
@@ -281,6 +289,7 @@
       id: "sceneLoadingControlsCard",
       title: "Loading Status",
       note: "Scene load activity",
+      icon: "M22 12h-4l-3 9L9 3l-3 9H2",
       open: true,
       bodyHTML: `
         <div class="scene-loading-meta">
@@ -297,6 +306,10 @@
     if (!(target instanceof HTMLElement)) return;
     target.innerHTML = "";
     target.appendChild(createSidebarModalHeader());
+    const modalBody = document.createElement("div");
+    modalBody.className = "controls-modal-body";
+    modalBody.hidden = true;
+    target.appendChild(modalBody);
     CARD_DEFS.forEach((config) => {
       target.appendChild(createSidebarCard(config));
     });
@@ -324,5 +337,6 @@
   global.XTracerSidebarCards = {
     renderSidebarCards,
     upgradePillRows,
+    getCardDefs: () => CARD_DEFS,
   };
 })(window);

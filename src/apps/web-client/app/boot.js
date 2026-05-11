@@ -415,12 +415,17 @@ async function boot() {
     }
   }
   el.renderBtn.addEventListener("click", handleRender);
-  if (el.renderStatsToggleBtn && el.renderHudStats) {
+  if (el.renderStatsToggleBtn) {
     el.renderStatsToggleBtn.addEventListener("click", () => {
-      const open = el.renderHudStats.hidden;
-      el.renderHudStats.hidden = !open;
-      el.renderStatsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
-      el.renderStatsToggleBtn.classList.toggle("is-active", open);
+      el.renderStatsModal && !el.renderStatsModal.hidden ? closeRenderStatsModal() : openRenderStatsModal();
+    });
+  }
+  if (el.closeRenderStatsModalBtn) {
+    el.closeRenderStatsModalBtn.addEventListener("click", () => closeRenderStatsModal());
+  }
+  if (el.renderStatsModal) {
+    el.renderStatsModal.addEventListener("click", (e) => {
+      if (e.target === el.renderStatsModal || e.target.classList.contains("render-stats-modal-backdrop")) closeRenderStatsModal();
     });
   }
   if (el.visualOverlayBtns) {
@@ -1083,6 +1088,13 @@ async function boot() {
     persistUIOptions();
     appendLog(`clear preview before render=${uiOptions.clearPreviewOnRender ? "on" : "off"}`);
   });
+  if (el.draftMode) {
+    el.draftMode.addEventListener("change", () => {
+      uiOptions.draftMode = !!el.draftMode.checked;
+      persistUIOptions();
+      appendLog(`draft mode=${uiOptions.draftMode ? "on" : "off"}`);
+    });
+  }
   if (el.renderMode) {
     el.renderMode.value = normalizeRenderMode(renderMode);
     el.renderMode.addEventListener("change", () => {
@@ -1142,8 +1154,6 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   if (el.bnTabWorkspaces) el.bnTabWorkspaces.addEventListener("click", () => setActiveTab("workspaces"));
   if (el.bnTabVisual) el.bnTabVisual.addEventListener("click", () => setActiveTab("visual"));
   if (el.bnTabGallery) el.bnTabGallery.addEventListener("click", () => setActiveTab("gallery"));
-  if (el.bnTabJobs) el.bnTabJobs.addEventListener("click", () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
-  if (el.bnTabLogs) el.bnTabLogs.addEventListener("click", () => el.logsModal && !el.logsModal.hidden ? closeLogsModal() : openLogsModal());
   if (el.bnTabSettings) el.bnTabSettings.addEventListener("click", () => setActiveTab("settings"));
   if (el.bnTabAbout) el.bnTabAbout.addEventListener("click", () => setActiveTab("about"));
 
@@ -1193,19 +1203,17 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
           : controlsPanel;
         if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus();
       });
-    } else if (!next && activeInsidePanel && el.controlsPanelToggle) {
-      el.controlsPanelToggle.focus();
+    } else if (!next) {
+      document.dispatchEvent(new CustomEvent("card-panel-closed"));
     }
   }
 
-  if (el.controlsPanelToggle) {
-    el.controlsPanelToggle.addEventListener("click", () => {
-      const isOpen = appShell && appShell.classList.contains("is-controls-open");
-      setControlsPanelOpen(!isOpen);
-    });
-  }
+  document.addEventListener("controls-panel-request", (ev) => {
+    setControlsPanelOpen(!!(ev && ev.detail && ev.detail.open));
+  });
+
   if (el.controlsModalCloseBtn) {
-    el.controlsModalCloseBtn.addEventListener("click", () => setControlsPanelOpen(false));
+    el.controlsModalCloseBtn.addEventListener("click", () => closeCardPanel());
   }
 
   if (el.topbarJobsBtn)     el.topbarJobsBtn.addEventListener("click",     () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
@@ -1226,7 +1234,7 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   if (el.topbarAboutBtn)  el.topbarAboutBtn.addEventListener("click",  () => setActiveTab("about"));
 
   if (controlsFlyoutBackdrop) {
-    controlsFlyoutBackdrop.addEventListener("click", () => setControlsPanelOpen(false));
+    controlsFlyoutBackdrop.addEventListener("click", () => closeCardPanel());
   }
   setControlsPanelOpen(false);
 
@@ -1262,12 +1270,12 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
   document.addEventListener("sheet:close", () => {
     if (el.sheetBackdrop) el.sheetBackdrop.classList.remove("is-open");
     if (persistentSidebar) persistentSidebar.classList.remove("is-sheet-open");
-    setControlsPanelOpen(false);
+    closeCardPanel();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (el.sheetBackdrop && el.sheetBackdrop.classList.contains("is-open")) closeControlsSheet();
-    if (appShell && appShell.classList.contains("is-controls-open")) setControlsPanelOpen(false);
+    if (appShell && appShell.classList.contains("is-controls-open")) closeCardPanel();
   });
   window.addEventListener("resize", () => {
     if (isDesktopControlsModalViewport()) {
@@ -1275,7 +1283,7 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
       return;
     }
     if (appShell && appShell.classList.contains("is-controls-open")) {
-      setControlsPanelOpen(false);
+      closeCardPanel();
     }
   });
 
@@ -1381,6 +1389,7 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
     if (event.key === "Escape") {
       if (el.jobsModal && !el.jobsModal.hidden) { closeJobsModal(); return; }
       if (el.logsModal && !el.logsModal.hidden) { closeLogsModal(); return; }
+      if (el.renderStatsModal && !el.renderStatsModal.hidden) { closeRenderStatsModal(); return; }
       setMainMenuOpen(false);
     }
   });
@@ -1647,6 +1656,9 @@ if (el.tabScene) el.tabScene.addEventListener("click", () => setActiveTab("scene
       });
   });
 }
+
+if (el.bnTabJobs) el.bnTabJobs.addEventListener("click", () => el.jobsModal && !el.jobsModal.hidden ? closeJobsModal() : openJobsModal());
+if (el.bnTabLogs) el.bnTabLogs.addEventListener("click", () => el.logsModal && !el.logsModal.hidden ? closeLogsModal() : openLogsModal());
 
 setTimeout(() => {
   // Safety valve: avoid a permanent loading overlay on unexpected stalls.

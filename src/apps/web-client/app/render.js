@@ -118,17 +118,29 @@ function setTileSizeControlValue(value) {
 function updateRenderActionButton() {
   if (!el.renderBtn) return;
   const running = !!renderActive;
+  const path = el.renderBtn.querySelector("svg path");
+  const ICON_PLAY = "M8 5v14l11-7L8 5z";
+  const ICON_STOP = "M6 6h12v12H6z";
   if (abortRequestInFlight) {
     el.renderBtn.disabled = true;
-    el.renderBtn.textContent = "Aborting...";
-    el.renderBtn.classList.remove("xui-button--primary");
-    el.renderBtn.classList.add("xui-button--danger");
+    el.renderBtn.setAttribute("aria-label", "Aborting...");
+    el.renderBtn.title = "Aborting...";
+    if (path) path.setAttribute("d", ICON_STOP);
+    el.renderBtn.classList.add("is-danger");
     return;
   }
   el.renderBtn.disabled = false;
-  el.renderBtn.textContent = running ? "Abort" : "Render";
-  el.renderBtn.classList.toggle("xui-button--primary", !running);
-  el.renderBtn.classList.toggle("xui-button--danger", running);
+  if (running) {
+    el.renderBtn.setAttribute("aria-label", "Abort render");
+    el.renderBtn.title = "Abort render";
+    if (path) path.setAttribute("d", ICON_STOP);
+    el.renderBtn.classList.add("is-danger");
+  } else {
+    el.renderBtn.setAttribute("aria-label", "Render");
+    el.renderBtn.title = "Render";
+    if (path) path.setAttribute("d", ICON_PLAY);
+    el.renderBtn.classList.remove("is-danger");
+  }
 }
 
 let abortRequestedJobId = "";
@@ -158,6 +170,7 @@ async function startRender(extraParams) {
     if (eq !== -1) tmParams[decodeURIComponent(p.slice(0, eq))] = decodeURIComponent(p.slice(eq + 1));
   });
 
+  const isDraft = !!(uiOptions && uiOptions.draftMode);
   return api.startRender({
     scene: el.scene.value,
     variant: selectedSceneVariantValue(),
@@ -173,6 +186,7 @@ async function startRender(extraParams) {
     tile_order: el.tileOrder.value,
     threads,
     render_mode: normalizeRenderMode(renderMode),
+    ...(isDraft ? { save_to_gallery: "0" } : {}),
     ...(skipIntegratorOptions ? {} : gatherIntegratorOptionParams()),
     ...tmParams,
     ...extra,

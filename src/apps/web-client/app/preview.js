@@ -73,6 +73,8 @@ function resetTileHeatmapState(jobId) {
   tileHeatmapState.bottleneckHint = "-";
   tileHeatmapState.totalTilesEstimate = 0;
   tileHeatmapState.buckets = { fast: 0, medium: 0, slow: 0 };
+  tileHeatmapState.fastCut = 0;
+  tileHeatmapState.slowCut = 0;
   renderTileHeatmapStats();
 }
 
@@ -80,8 +82,8 @@ function estimateTileBottleneck(activeCount, progress) {
   if (progress >= 0.995) return "Finalizing frame";
   if (tileHeatmapState.throughputTilesPerSec <= 0.5 && activeCount > 0) return "Heavy shading per tile";
   const estimate = Math.max(0, Number(tileHeatmapState.totalTilesEstimate) || 0);
-  if (activeCount >= Math.max(4, Math.round(estimate * 0.2))) return "Sampling-bound (many active tiles)";
-  if (activeCount <= 2 && progress < 0.95) return "Hotspot tiles (caustics/complex geometry)";
+  if (activeCount >= Math.max(4, Math.round(estimate * 0.2))) return "Sampling-bound";
+  if (activeCount <= 2 && progress < 0.95) return "Hotspot tiles";
   return "Balanced";
 }
 
@@ -109,6 +111,8 @@ function recomputeTileBuckets() {
     else medium += 1;
   }
   tileHeatmapState.buckets = { fast, medium, slow };
+  tileHeatmapState.fastCut = fastCut;
+  tileHeatmapState.slowCut = slowCut;
 }
 
 function refreshThroughputEta(progress, activeCount) {
@@ -191,7 +195,9 @@ function setTileHeatmapRow(node, label, value) {
 
 function renderTileHeatmapStats() {
   if (!isTileHeatmapEnabled()) {
-    setTileHeatmapRow(el.tileHeatmapBuckets, "Buckets", "(disabled)");
+    if (el.tileHeatmapBucketFast) el.tileHeatmapBucketFast.textContent = "-";
+    if (el.tileHeatmapBucketMid) el.tileHeatmapBucketMid.textContent = "-";
+    if (el.tileHeatmapBucketSlow) el.tileHeatmapBucketSlow.textContent = "-";
     setTileHeatmapRow(el.tileHeatmapThroughput, "Throughput", "(disabled)");
     setTileHeatmapRow(el.tileHeatmapEta, "ETA", "(disabled)");
     setTileHeatmapRow(el.tileHeatmapConfidence, "ETA Confidence", "(disabled)");
@@ -200,7 +206,9 @@ function renderTileHeatmapStats() {
   }
   if (el.tileHeatmapBuckets) {
     const b = tileHeatmapState.buckets || { fast: 0, medium: 0, slow: 0 };
-    setTileHeatmapRow(el.tileHeatmapBuckets, "Buckets", `fast ${b.fast} | mid ${b.medium} | slow ${b.slow}`);
+    if (el.tileHeatmapBucketFast) el.tileHeatmapBucketFast.textContent = b.fast;
+    if (el.tileHeatmapBucketMid) el.tileHeatmapBucketMid.textContent = b.medium;
+    if (el.tileHeatmapBucketSlow) el.tileHeatmapBucketSlow.textContent = b.slow;
   }
   if (el.tileHeatmapThroughput) {
     const tps = Number(tileHeatmapState.throughputTilesPerSec) || 0;
@@ -577,7 +585,16 @@ function drawActivePreviewTileOverlay(ctx, imageX, imageY, imageW, imageH) {
       const activeMs = entry
         ? (Math.max(1, Number(entry.activeMs) || 0) + Math.max(0, now - (Number(entry.lastSeenMs) || now)))
         : 1;
-      const heat = clamp(activeMs / Math.max(1, maxActiveMs), 0, 1);
+      const fc = tileHeatmapState.fastCut;
+      const sc = tileHeatmapState.slowCut;
+      let heat;
+      if (fc > 0 && sc > fc) {
+        if (activeMs <= fc) heat = 0.33 * clamp(activeMs / fc, 0, 1);
+        else if (activeMs >= sc) heat = 0.67 + 0.33 * clamp((activeMs - sc) / Math.max(1, sc), 0, 1);
+        else heat = 0.33 + 0.34 * ((activeMs - fc) / (sc - fc));
+      } else {
+        heat = clamp(activeMs / Math.max(1, maxActiveMs), 0, 1);
+      }
       const r = Math.round(90 + 165 * heat);
       const g = Math.round(220 - 150 * heat);
       const b = Math.round(70 - 40 * heat);

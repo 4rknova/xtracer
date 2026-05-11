@@ -31,22 +31,8 @@
         <div class="sheet-handle" aria-hidden="true"></div>
         <header class="topbar">
           <div class="topbar-head">
-            <div class="brand-lockup">
-              <img class="brand-logo" src="/res/logo.svg" alt="XTRACER">
-            </div>
             <div class="topbar-actions">
-              <button id="controlsPanelToggle" class="main-menu-settings controls-panel-toggle" type="button"
-                aria-label="Open controls" title="Open controls" aria-expanded="false">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="4" y1="6" x2="20" y2="6"></line>
-                  <circle cx="10" cy="6" r="2"></circle>
-                  <line x1="4" y1="12" x2="20" y2="12"></line>
-                  <circle cx="16" cy="12" r="2"></circle>
-                  <line x1="4" y1="18" x2="20" y2="18"></line>
-                  <circle cx="10" cy="18" r="2"></circle>
-                </svg>
-              </button>
-              <button id="mainMenuToggle" class="menu-toggle" type="button" aria-expanded="false"
+<button id="mainMenuToggle" class="menu-toggle" type="button" aria-expanded="false"
                 aria-controls="mainTabs" aria-label="Toggle main menu">
                 <span class="menu-toggle-bar" aria-hidden="true"></span>
                 <span class="menu-toggle-bar" aria-hidden="true"></span>
@@ -81,6 +67,20 @@
       </div>
 
       <div class="tab-stage">
+        <div class="tab-util-actions" id="tabUtilActions" hidden>
+          <button id="topbarJobsBtn" class="main-menu-settings" type="button" aria-pressed="false" aria-label="Jobs" title="Jobs">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M9 2v2H7a2 2 0 0 0-2 2v2H3v2h2v2H3v2h2v2a2 2 0 0 0 2 2h2v2h2v-2h2v2h2v-2h2a2 2 0 0 0 2-2v-2h2v-2h-2v-2h2v-2h-2V6a2 2 0 0 0-2-2h-2V2h-2v2h-2V2H9zm-2 4h10v10H7V6zm2 2v6h6V8H9z"/>
+            </svg>
+            <span class="topbar-btn-badge" aria-hidden="true" hidden></span>
+          </button>
+          <button id="topbarLogsBtn" class="main-menu-settings" type="button" aria-pressed="false" aria-label="Logs" title="Logs">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 5h18v2H3V5zm0 4h12v2H3V9zm0 4h18v2H3v-2zm0 4h12v2H3v-2z"/>
+            </svg>
+            <span class="topbar-btn-badge" aria-hidden="true" hidden></span>
+          </button>
+        </div>
         <section class="tab-pane active" id="paneWorkspaces">
           <div class="workspace-listing-head">
             <div class="workspace-toolbar-actions">
@@ -147,6 +147,12 @@
         <section class="tab-pane" id="paneRender">
           <section class="panel panel-preview">
             <div class="preview-toolbar">
+              <button id="renderBtn" class="preview-toolbar-reset-btn render-action-btn" type="button"
+                aria-label="Render" title="Render">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <path d="M8 5v14l11-7L8 5z"/>
+                </svg>
+              </button>
               <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls"
                 aria-label="Preview export and sampling controls">
                 <div id="renderPreviewViewControls" class="render-preview-toolbar-view">
@@ -175,58 +181,9 @@
               </div>
               <canvas id="previewCanvas" aria-hidden="true"></canvas>
               <img id="preview" alt="render preview">
-              <div class="render-hud-stats" id="renderHudStats" hidden>
-                <div id="previewTransferStats" class="render-stats-grid preview-transfer-stats-card">
-                  <section class="render-stats-group workspace-info-group">
-                    <h4>Preview Transfer</h4>
-                    <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">-</code></p>
-                    <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code></p>
-                    <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code></p>
-                    <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code></p>
-                    <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code></p>
-                  </section>
-                  <section class="render-stats-group workspace-info-group">
-                    <h4>Tile Heatmap</h4>
-                    <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
-                    <p id="tileHeatmapBuckets" class="workspace-active-hint"><span class="workspace-active-label">Buckets</span><code class="workspace-active-value">fast - | mid - | slow -</code></p>
-                    <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
-                    <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
-                    <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
-                    <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
-                  </section>
-                </div>
-                <section id="renderStatusGroup" class="render-status-stats-group">
-                  <div class="render-stat-pill" title="Threads">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                      <path d="M4 4h2v2h1V4h2v2h1V4h2v2h1V4h2v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1v2h-2v-2h-1v2h-2v-2h-1v2H9v-2H8v2H6v-2H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1V4H4zm1 3v10h14V7H5zm2 2h10v6H7V9z"/>
-                    </svg>
-                    <code id="statusThreads" class="status-threads">-</code>
-                  </div>
-                  <div class="render-stat-pill" title="Pass">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                      <path d="M12 4l-8 4 8 4 8-4-8-4zm-6.4 7.2L12 14l6.4-2.8.8 1.6-7.2 3.2-7.2-3.2.8-1.6zm0 4L12 18l6.4-2.8.8 1.6L12 20l-7.2-3.2.8-1.6z"/>
-                    </svg>
-                    <code id="statusPass" class="status-pass">-</code>
-                  </div>
-                  <div class="render-stat-pill" title="Progress">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14v6l4 2-1 1.73-5-2.5V6z"/>
-                    </svg>
-                    <code id="statusPercent" class="status-percent">-</code>
-                  </div>
-                  <div class="render-stat-pill" title="Elapsed">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                      <path d="M11 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm0 16a7 7 0 1 1 7-7 7 7 0 0 1-7 7zm.5-11.5h-1.5v5.25l4.5 2.7.75-1.23-3.75-2.22z"/>
-                    </svg>
-                    <code id="renderTimer" class="status-timer">-</code>
-                  </div>
-                </section>
-              </div>
             </div>
             <div class="render-hud-bar">
               <div id="previewHeadline" class="preview-headline is-idle">
-                <button id="renderBtn" class="action-btn xui-button xui-button--primary render-toolbar-btn"
-                  type="button">Render</button>
                 <p id="status" class="status-chip">Idle</p>
                 <div id="progressBar" class="bar"><div id="progress"></div></div>
               </div>
@@ -752,7 +709,80 @@
           </div>
         </div>
 
+        <div id="renderStatsModal" class="render-stats-modal" role="dialog" aria-modal="true" aria-labelledby="renderStatsModalTitle" hidden>
+          <div class="render-stats-modal-backdrop"></div>
+          <div class="render-stats-modal-panel">
+            <div class="render-stats-modal-head">
+              <h2 id="renderStatsModalTitle" class="render-stats-modal-title">Render Stats</h2>
+              <button id="closeRenderStatsModalBtn" class="render-stats-modal-close-btn" type="button" aria-label="Close stats">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                  <path d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="render-stats-modal-body">
+              <section id="renderStatusGroup" class="render-status-stats-group render-status-stats-group--modal">
+                <div class="render-stat-pill" title="Threads">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M4 4h2v2h1V4h2v2h1V4h2v2h1V4h2v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1v2h-2v-2h-1v2h-2v-2h-1v2H9v-2H8v2H6v-2H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1V4H4zm1 3v10h14V7H5zm2 2h10v6H7V9z"/>
+                  </svg>
+                  <code id="statusThreads" class="status-threads">-</code>
+                </div>
+                <div class="render-stat-pill" title="Pass">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M12 4l-8 4 8 4 8-4-8-4zm-6.4 7.2L12 14l6.4-2.8.8 1.6-7.2 3.2-7.2-3.2.8-1.6zm0 4L12 18l6.4-2.8.8 1.6L12 20l-7.2-3.2.8-1.6z"/>
+                  </svg>
+                  <code id="statusPass" class="status-pass">-</code>
+                </div>
+                <div class="render-stat-pill" title="Progress">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14v6l4 2-1 1.73-5-2.5V6z"/>
+                  </svg>
+                  <code id="statusPercent" class="status-percent">-</code>
+                </div>
+                <div class="render-stat-pill" title="Elapsed">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M11 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm0 16a7 7 0 1 1 7-7 7 7 0 0 1-7 7zm.5-11.5h-1.5v5.25l4.5 2.7.75-1.23-3.75-2.22z"/>
+                  </svg>
+                  <code id="renderTimer" class="status-timer">-</code>
+                </div>
+              </section>
+              <section class="render-stats-group workspace-info-group">
+                <h4>Tile Heatmap</h4>
+                <label class="xui-switch render-stats-toggle"><span class="xui-switch__label">Enable tile heatmap overlay</span><input id="tileHeatmapEnabled" type="checkbox" checked></label>
+                <div id="tileHeatmapBuckets" class="heatmap-buckets">
+                  <div class="heatmap-bucket heatmap-bucket--fast">
+                    <span class="heatmap-bucket__label">Fast</span>
+                    <code id="tileHeatmapBucketFast" class="heatmap-bucket__value">-</code>
+                  </div>
+                  <div class="heatmap-bucket heatmap-bucket--mid">
+                    <span class="heatmap-bucket__label">Mid</span>
+                    <code id="tileHeatmapBucketMid" class="heatmap-bucket__value">-</code>
+                  </div>
+                  <div class="heatmap-bucket heatmap-bucket--slow">
+                    <span class="heatmap-bucket__label">Slow</span>
+                    <code id="tileHeatmapBucketSlow" class="heatmap-bucket__value">-</code>
+                  </div>
+                </div>
+                <p id="tileHeatmapThroughput" class="workspace-active-hint"><span class="workspace-active-label">Throughput</span><code class="workspace-active-value">- tiles/s</code></p>
+                <p id="tileHeatmapEta" class="workspace-active-hint"><span class="workspace-active-label">ETA</span><code class="workspace-active-value">-</code></p>
+                <p id="tileHeatmapConfidence" class="workspace-active-hint"><span class="workspace-active-label">ETA Confidence</span><code class="workspace-active-value">-</code></p>
+                <p id="tileHeatmapBottleneck" class="workspace-active-hint"><span class="workspace-active-label">Bottleneck Hint</span><code class="workspace-active-value">-</code></p>
+              </section>
+              <section id="previewTransferStats" class="render-stats-group workspace-info-group">
+                <h4>Preview Transfer</h4>
+                <p id="statsFrameRender" class="workspace-active-hint"><span class="workspace-active-label">Full Frame Render</span><code class="workspace-active-value">-</code></p>
+                <p id="statsDeltaBytes" class="workspace-active-hint"><span class="workspace-active-label">Delta Bytes</span><code class="workspace-active-value">-</code></p>
+                <p id="statsDeltaReqs" class="workspace-active-hint"><span class="workspace-active-label">Delta Requests</span><code class="workspace-active-value">-</code></p>
+                <p id="statsFullBytes" class="workspace-active-hint"><span class="workspace-active-label">Full Bytes</span><code class="workspace-active-value">-</code></p>
+                <p id="statsFullReqs" class="workspace-active-hint"><span class="workspace-active-label">Full Requests</span><code class="workspace-active-value">-</code></p>
+              </section>
+            </div>
+          </div>
+        </div>
+
         <section class="tab-pane" id="paneSettings">
+          <div id="paneSettingsHead"></div>
           <div class="settings-page">
             <div class="settings-group">
               <div class="settings-group-label">Appearance</div>
@@ -915,13 +945,13 @@
             </section>
             </div>
 
-            <div id="aboutSectionThirdParty" class="about-tab-section" data-tab-label="Third-Party" hidden>
+            <div id="aboutSectionThirdParty" class="about-tab-section" data-tab-label="3rd Party" hidden>
             <section class="about-card about-third-party-card">
               <div id="aboutThirdPartyList" class="about-third-party-list">loading...</div>
             </section>
             </div>
 
-            <div id="aboutSectionDevtools" class="about-tab-section" data-tab-label="Dev Tools" hidden>
+            <div id="aboutSectionDevtools" class="about-tab-section" data-tab-label="Tools" hidden>
             <section class="about-card about-devtools-card">
               <div class="about-card-head" data-widget-panel-head>
                 <h3>Developer Tools</h3>
@@ -1012,7 +1042,7 @@
       <button id="bnTabJobs" class="bottom-nav-item" type="button" aria-label="Jobs"
         aria-pressed="false">
         <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M4 2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4zm1 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm3 0h10v2H8V5zM4 14a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H4zm1 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm3 0h10v2H8v-2z"/>
+            <path d="M5 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9 4.75h10v2.5H9v-2.5zM5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9 10.75h10v2.5H9v-2.5zM5 19.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9 16.75h6.5v2.5H9v-2.5z"/>
           </svg></span>
         <span class="bottom-nav-label">Jobs</span>
         <span class="topbar-btn-badge" aria-hidden="true" hidden></span>
@@ -1020,9 +1050,7 @@
       <button id="bnTabLogs" class="bottom-nav-item" type="button" data-mode="logs" aria-label="Logs"
         aria-pressed="false">
         <span class="bottom-nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path
-              d="M6.75 5.5h10.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.25v-8.5A2.25 2.25 0 0 1 6.75 5.5zm.5 3.25h4.25v1.5H7.25zm0 3.5h9.5v1.5h-9.5zm0 3.5h6.25v1.5H7.25z">
-            </path>
+            <path fill-rule="evenodd" d="M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4zM4 7h16v13H4V7zM7 10l5 3-5 3zM14 12.5h5v1.5h-5v-1.5z"/>
           </svg></span>
         <span class="bottom-nav-label">Logs</span>
         <span class="topbar-btn-badge" aria-hidden="true" hidden></span>
