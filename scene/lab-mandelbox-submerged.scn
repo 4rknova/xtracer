@@ -1,0 +1,237 @@
+title       = MandelBox — Submerged
+description = MandelBox box-trap (min Chebyshev distance) material array, half-submerged in an ocean with wave geometry. Verdant mineral palette above the waterline.
+version     = 2.0
+
+default_camera = hero
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.50,0.64,0.82)
+        b = col3(0.08,0.15,0.45)
+    }
+}
+
+camera = {
+    # Original camera from lab-fractal-material-arrays.scn
+    hero = {
+        type            = thin-lens
+        fov             = 45
+        position        = vec3(0.3,3.5,3.5)
+        target          = vec3(0,0,0)
+        up              = vec3(0,1,0)
+        flength         = 4
+        aperture        = 0.025
+        aperture_blades = 6
+    }
+}
+
+geometry = {
+    mandelbox = {
+        type       = mandelbox
+        position   = vec3(0,0,0)
+        radius     = 0.6
+        resolution = 12
+        fold_size  = 1.0
+        min_r      = 0.5
+        scale      = -2.5
+        bailout    = 100.0
+        orbit_trap = plane_y
+    }
+
+    ocean_waves = {
+        type       = mesh
+        source     = gen(terrain)
+        resolution = 512
+        dimensions = vec3(10, 1, 10)
+        height_sampler = {
+            type              = scenery_heightfield
+            seed              = 7331
+            scale             = 3
+            octaves           = 6
+            lacunarity        = 2.10
+            gain              = 0.44
+            ridge_strength    = 0.0
+            mountain_strength = 0.0
+            valley_strength   = 1.0
+        }
+        modifiers = {
+            translation = vec3(0,-0.2,0)
+        }
+    }
+
+    sun_geo = {
+        type     = sphere
+        position = vec3(6,14,-5)
+        radius   = 1.1
+    }
+
+    sky_geo = {
+        type     = sphere
+        position = vec3(-10,6,8)
+        radius   = 3.5
+    }
+
+    rim_geo = {
+        type     = sphere
+        position = vec3(-1.5,5,-7)
+        radius   = 1.2
+    }
+
+    # Golden-hour light sources (used in the golden_hour variant)
+    sun_gold_geo = {
+        type     = sphere
+        position = vec3(7,2,-5)
+        radius   = 0.9
+    }
+
+    fill_gold_geo = {
+        type     = sphere
+        position = vec3(-8,1.5,6)
+        radius   = 2.5
+    }
+}
+
+material = {
+
+    # ── MandelBox: verdant mineral (from lab-fractal-material-arrays.scn) ────
+
+    box_m0 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.04,0.16,0.06) } }
+            scalars  = { metallic = 0.10, roughness = 0.55 }
+        }
+    }
+
+    box_m1 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.55,0.22) } }
+            scalars  = { metallic = 0.35, roughness = 0.20 }
+        }
+    }
+
+    box_m2 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.92,0.84,0.42) } }
+            scalars  = { metallic = 0.60, roughness = 0.10 }
+        }
+    }
+
+    # ── Ocean ─────────────────────────────────────────────────────────────────
+
+    ocean_day = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission     = { type = color, value = col3(0.72, 0.92, 0.88) }
+                absorption_color = { type = color, value = col3(0.05, 0.42, 0.55) }
+            }
+            scalars = {
+                ior                 = 1.33
+                roughness           = 0.02
+                transparency        = 1.0
+                absorption_distance = 3.5
+            }
+        }
+    }
+
+    ocean_gold = {
+        type = rough_dielectric
+        properties = {
+            samplers = {
+                transmission     = { type = color, value = col3(0.60, 0.78, 0.80) }
+                absorption_color = { type = color, value = col3(0.10, 0.32, 0.44) }
+            }
+            scalars = {
+                ior                 = 1.33
+                roughness           = 0.03
+                transparency        = 1.0
+                absorption_distance = 2.5
+            }
+        }
+    }
+
+    # ── Lights — day ──────────────────────────────────────────────────────────
+
+    sun_day = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(9.5,8.2,6.2) } } }
+    }
+
+    sky_day = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(1.0,1.6,3.8) } } }
+    }
+
+    rim_day = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(3.0,4.5,7.2) } } }
+    }
+
+    # ── Lights — golden hour ──────────────────────────────────────────────────
+
+    sun_golden = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(11.0,5.8,1.8) } } }
+    }
+
+    fill_golden = {
+        type = emissive
+        properties = { samplers = { emissive = { type = color, value = col3(4.2,2.4,0.9) } } }
+    }
+}
+
+object = {
+    fractal   = { geometry = mandelbox,    materials = { a = box_m0, b = box_m1, c = box_m2 } }
+    ocean     = { geometry = ocean_waves,  material  = ocean_day }
+    sun       = { geometry = sun_geo,      material  = sun_day   }
+    sky_light = { geometry = sky_geo,      material  = sky_day   }
+    rim_light = { geometry = rim_geo,      material  = rim_day   }
+}
+
+variants = {
+    hide_base = true
+
+    day = {
+        name        = Day
+        description = Clear sky. Wave geometry breaks up the mirror reflections of the mineral formation.
+        set = {
+            environment = {
+                type   = gradient
+                config = {
+                    a = col3(0.50,0.64,0.82)
+                    b = col3(0.08,0.15,0.45)
+                }
+            }
+            object = {
+                ocean     = { geometry = ocean_waves,    material = ocean_day    }
+                sun       = { geometry = sun_geo,        material = sun_day      }
+                sky_light = { geometry = sky_geo,        material = sky_day      }
+                rim_light = { geometry = rim_geo,        material = rim_day      }
+            }
+        }
+    }
+
+    golden_hour = {
+        name        = Golden Hour
+        description = Low sun. Warm orange on the mineral surfaces; dark water; long wave shadows.
+        set = {
+            environment = {
+                type   = gradient
+                config = {
+                    a = col3(0.72,0.38,0.10)
+                    b = col3(0.06,0.07,0.18)
+                }
+            }
+            object = {
+                ocean     = { geometry = ocean_waves,    material = ocean_gold   }
+                sun       = { geometry = sun_gold_geo,   material = sun_golden   }
+                sky_light = { geometry = fill_gold_geo,  material = fill_golden  }
+                rim_light = { geometry = rim_geo,        material = rim_day      }
+            }
+        }
+    }
+}

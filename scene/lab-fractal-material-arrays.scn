@@ -14,9 +14,12 @@ camera = {
     default = {
         type     = thin-lens
         fov      = 45
-        position = vec3(0,3.2,3.2)
+        position = vec3(0.3,3.5,3.5)
         target   = vec3(0,0,0)
         up       = vec3(0,1,0)
+        flength         = 4
+        aperture        = 0.025
+        aperture_blades = 6
     }
 }
 
@@ -133,9 +136,9 @@ geometry = {
         type       = quaternion_julia
         position   = vec3(0,0,0)
         radius     = 1.1
-        resolution = 10
-        quat_c     = vec3(-0.2, 0.6, 0.2)
-        quat_cw    = -0.1
+        resolution = 12
+        quat_c     = vec3(0.4, 0.6, 0.3)
+        quat_cw    = 0.35
         bailout    = 4.0
         orbit_trap = sphere
     }
@@ -144,9 +147,9 @@ geometry = {
         type       = quaternion_julia
         position   = vec3(0,0,0)
         radius     = 1.1
-        resolution = 10
-        quat_c     = vec3(-0.2, 0.6, 0.2)
-        quat_cw    = -0.1
+        resolution = 12
+        quat_c     = vec3(0.4, 0.6, 0.3)
+        quat_cw    = 0.35
         bailout    = 4.0
         orbit_trap = smooth_iter
     }
@@ -155,9 +158,9 @@ geometry = {
         type       = quaternion_julia
         position   = vec3(0,0,0)
         radius     = 1.1
-        resolution = 10
-        quat_c     = vec3(-0.2, 0.6, 0.2)
-        quat_cw    = -0.1
+        resolution = 12
+        quat_c     = vec3(0.4, 0.6, 0.3)
+        quat_cw    = 0.35
         bailout    = 4.0
         orbit_trap = plane_y
     }
@@ -337,7 +340,7 @@ material = {
     ship_m0 = {
         type = principled
         properties = {
-            samplers = { base_color = { type = color, value = col3(0.06,0.04,0.03) } }
+            samplers = { base_color = { type = color, value = col3(0.3,0.4,0.6) } }
             scalars  = { metallic = 0.1, roughness = 0.65 }
         }
     }
