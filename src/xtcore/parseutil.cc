@@ -2378,6 +2378,7 @@ xtcore::asset::ISurface *deserialize_geometry(const char *source, const ncf::NCF
         f->origin  = deserialize_vec3(p, XTPROTO_PROP_POSITION, nmath::Vector3f(0, 0, 0));
         f->quat_c  = deserialize_vec3(p, XTPROTO_PROP_QUAT_C, nmath::Vector3f(-0.2f, 0.6f, 0.2f));
         f->quat_cw = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_QUAT_CW), -0.1f);
+        f->quat_w0 = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_QUAT_W0),  0.0f);
         f->radius  = deserialize_numf(p->get_property_by_name(XTPROTO_PROP_RADIUS), 1.0f);
         if (f->radius <= 0.0f) f->radius = 1.0f;
         int i = deserialize_numi(p->get_property_by_name(XTPROTO_PROP_RESOLUTION), 12);

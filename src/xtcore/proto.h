@@ -181,6 +181,7 @@
 #define XTPROTO_PROP_MIN_R          "min_r"             /* scalar_t   */ /* MandelBox ball-fold minimum radius */
 #define XTPROTO_PROP_QUAT_C         "quat_c"            /* Vector3f   */ /* Quaternion Julia xyz constant */
 #define XTPROTO_PROP_QUAT_CW        "quat_cw"           /* scalar_t   */ /* Quaternion Julia w constant */
+#define XTPROTO_PROP_QUAT_W0        "quat_w0"           /* scalar_t   */ /* Quaternion Julia initial w-slice */
 #define XTPROTO_PROP_THICKNESS      "thickness"         /* scalar_t   */ /* Ring thickness (outer-inner radius) */
 #define XTPROTO_PROP_HEIGHT_RESOLUTION "height_resolution" /* scalar_t */ /* Height resolution */
 #define XTPROTO_PROP_PROFILE_RESOLUTION "profile_resolution" /* integer */ /* Profile resolution */

@@ -783,10 +783,11 @@ static Quat quat_sq_add(Quat q, Quat c)
 static scalar_t quat_julia_de(const Vector3f &p,
                                const Vector3f &c_xyz,
                                scalar_t c_w,
+                               scalar_t w0,
                                size_t iters,
                                scalar_t bailout)
 {
-    Quat q = {0.0f, p.x, p.y, p.z};
+    Quat q = {p.x, p.y, p.z, w0};
     const Quat c = {c_w, c_xyz.x, c_xyz.y, c_xyz.z};
     scalar_t dr = 1.0f;
     const scalar_t bo2 = bailout * bailout;
@@ -807,10 +808,11 @@ static scalar_t quat_julia_de(const Vector3f &p,
 static Vector3f orbit_quat_julia(const Vector3f &p,
                                   const Vector3f &c_xyz,
                                   scalar_t c_w,
+                                  scalar_t w0,
                                   size_t iters,
                                   scalar_t bailout)
 {
-    Quat q = {0.0f, p.x, p.y, p.z};
+    Quat q = {p.x, p.y, p.z, w0};
     const Quat c = {c_w, c_xyz.x, c_xyz.y, c_xyz.z};
     const scalar_t bo2 = bailout * bailout;
     scalar_t min_r = INFINITY;
@@ -1328,6 +1330,7 @@ QuaternionJulia::QuaternionJulia()
     : origin(0.0f, 0.0f, 0.0f)
     , quat_c(-0.2f, 0.6f, 0.2f)
     , quat_cw(-0.1f)
+    , quat_w0(0.0f)
     , radius(1.0f)
     , iterations(12)
     , bailout(4.0f)
@@ -1340,7 +1343,7 @@ bool QuaternionJulia::intersection(const Ray &ray, hit_record_t *i_hit_record) c
     if (hit && i_hit_record) {
         const scalar_t r  = std::max((scalar_t)EPSILON, radius);
         const Vector3f lp = (i_hit_record->point - origin) / r;
-        const Vector3f trap = orbit_quat_julia(lp, quat_c, quat_cw, iterations, bailout);
+        const Vector3f trap = orbit_quat_julia(lp, quat_c, quat_cw, quat_w0, iterations, bailout);
         i_hit_record->texcoord = trap;
         i_hit_record->material_selector = (&trap.x)[orbit_trap_channel];
     }
@@ -1351,7 +1354,7 @@ nmath::scalar_t QuaternionJulia::distance(nmath::Vector3f p) const
 {
     const scalar_t r  = std::max((scalar_t)EPSILON, radius);
     const Vector3f lp = (p - origin) / r;
-    return quat_julia_de(lp, quat_c, quat_cw, iterations, bailout) * r;
+    return quat_julia_de(lp, quat_c, quat_cw, quat_w0, iterations, bailout) * r;
 }
 
 void QuaternionJulia::calc_aabb()

@@ -134,6 +134,7 @@ public:
     Vector3f origin;
     Vector3f quat_c;   /* xyz components of quaternion constant */
     scalar_t quat_cw;  /* w component of quaternion constant */
+    scalar_t quat_w0;  /* initial w-slice (non-zero breaks spherical symmetry) */
     scalar_t radius;
     size_t   iterations;
     scalar_t bailout;
