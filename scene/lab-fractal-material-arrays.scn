@@ -27,39 +27,18 @@ geometry = {
 
     # ── Mandelbulb  power=8 classic ──────────────────────────────────
 
-    bulb_sphere = {
+    bulb = {
         type       = mandelbulb
         position   = vec3(0,0,0)
         radius     = 1.1
         resolution = 12
         power      = 8.0
         bailout    = 4.0
-        orbit_trap = sphere
-    }
-
-    bulb_smooth = {
-        type       = mandelbulb
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 12
-        power      = 8.0
-        bailout    = 4.0
-        orbit_trap = smooth_iter
-    }
-
-    bulb_planey = {
-        type       = mandelbulb
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 12
-        power      = 8.0
-        bailout    = 4.0
-        orbit_trap = plane_y
     }
 
     # ── Julia  classic seed, power=2 ─────────────────────────────────
 
-    julia_sphere = {
+    julia = {
         type       = julia
         position   = vec3(0,0,0)
         radius     = 1.1
@@ -67,34 +46,11 @@ geometry = {
         power      = 2.0
         bailout    = 8.0
         julia_c    = vec3(-0.12, 0.74, 0.28)
-        orbit_trap = sphere
-    }
-
-    julia_smooth = {
-        type       = julia
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 32
-        power      = 2.0
-        bailout    = 8.0
-        julia_c    = vec3(-0.12, 0.74, 0.28)
-        orbit_trap = smooth_iter
-    }
-
-    julia_planey = {
-        type       = julia
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 32
-        power      = 2.0
-        bailout    = 8.0
-        julia_c    = vec3(-0.12, 0.74, 0.28)
-        orbit_trap = plane_y
     }
 
     # ── MandelBox  scale=-2.5 classic ────────────────────────────────
 
-    box_sphere = {
+    box = {
         type       = mandelbox
         position   = vec3(0,0,0)
         radius     = 0.6
@@ -103,98 +59,30 @@ geometry = {
         min_r      = 0.5
         scale      = -2.5
         bailout    = 100.0
-        orbit_trap = sphere
     }
 
-    box_smooth = {
-        type       = mandelbox
-        position   = vec3(0,0,0)
-        radius     = 0.6
-        resolution = 12
-        fold_size  = 1.0
-        min_r      = 0.5
-        scale      = -2.5
-        bailout    = 100.0
-        orbit_trap = smooth_iter
-    }
+    # ── QuaternionJulia ──────────────────────────────────────────────
 
-    box_planey = {
-        type       = mandelbox
-        position   = vec3(0,0,0)
-        radius     = 0.6
-        resolution = 12
-        fold_size  = 1.0
-        min_r      = 0.5
-        scale      = -2.5
-        bailout    = 100.0
-        orbit_trap = plane_y
-    }
-
-    # ── QuaternionJulia  smooth bulb ─────────────────────────────────
-
-    quat_sphere = {
+    quat = {
         type       = quaternion_julia
         position   = vec3(0,0,0)
         radius     = 1.1
-        resolution = 12
-        quat_c     = vec3(0.4, 0.6, 0.3)
-        quat_cw    = 0.35
+        resolution = 14
+        quat_cw    = -0.2
+        quat_c     = vec3(0.8, 0.0, 0.0)
+        quat_w0    = 0.0
         bailout    = 4.0
-        orbit_trap = sphere
-    }
-
-    quat_smooth = {
-        type       = quaternion_julia
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 12
-        quat_c     = vec3(0.4, 0.6, 0.3)
-        quat_cw    = 0.35
-        bailout    = 4.0
-        orbit_trap = smooth_iter
-    }
-
-    quat_planey = {
-        type       = quaternion_julia
-        position   = vec3(0,0,0)
-        radius     = 1.1
-        resolution = 12
-        quat_c     = vec3(0.4, 0.6, 0.3)
-        quat_cw    = 0.35
-        bailout    = 4.0
-        orbit_trap = plane_y
     }
 
     # ── BurningShip3D  power=2 ───────────────────────────────────────
 
-    ship_sphere = {
+    ship = {
         type       = burning_ship_3d
         position   = vec3(0,0,0)
         radius     = 1.2
         resolution = 12
         power      = 2.0
         bailout    = 4.0
-        orbit_trap = sphere
-    }
-
-    ship_smooth = {
-        type       = burning_ship_3d
-        position   = vec3(0,0,0)
-        radius     = 1.2
-        resolution = 12
-        power      = 2.0
-        bailout    = 4.0
-        orbit_trap = smooth_iter
-    }
-
-    ship_planey = {
-        type       = burning_ship_3d
-        position   = vec3(0,0,0)
-        radius     = 1.2
-        resolution = 12
-        power      = 2.0
-        bailout    = 4.0
-        orbit_trap = plane_y
     }
 
     # ── Floor and lights ─────────────────────────────────────────────
@@ -413,12 +301,8 @@ variants = {
         name        = Mandelbulb — Sphere trap
         description = Sphere orbit trap: min|z| across all orbit steps drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = bulb_sphere
-                    materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 }
-                }
-            }
+            geometry = { bulb = { orbit_trap = sphere      } }
+            object   = { fractal = { geometry = bulb, materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 } } }
         }
     }
 
@@ -426,12 +310,8 @@ variants = {
         name        = Mandelbulb — Smooth iter trap
         description = Smooth iteration count (continuous escape speed) drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = bulb_smooth
-                    materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 }
-                }
-            }
+            geometry = { bulb = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bulb, materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 } } }
         }
     }
 
@@ -439,12 +319,8 @@ variants = {
         name        = Mandelbulb — Plane Y trap
         description = Plane orbit trap: min|z.y| across all orbit steps drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = bulb_planey
-                    materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 }
-                }
-            }
+            geometry = { bulb = { orbit_trap = plane_y     } }
+            object   = { fractal = { geometry = bulb, materials = { a = bulb_m0, b = bulb_m1, c = bulb_m2 } } }
         }
     }
 
@@ -452,14 +328,10 @@ variants = {
 
     julia_sphere = {
         name        = Julia — Sphere trap
-        description = Julia fractal, seed (-0.72, 0.24, 0.28). Sphere trap drives material bands.
+        description = Julia fractal, seed (-0.12, 0.74, 0.28). Sphere trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = julia_sphere
-                    materials = { a = julia_m0, b = julia_m1, c = julia_m2 }
-                }
-            }
+            geometry = { julia = { orbit_trap = sphere      } }
+            object   = { fractal = { geometry = julia, materials = { a = julia_m0, b = julia_m1, c = julia_m2 } } }
         }
     }
 
@@ -467,12 +339,8 @@ variants = {
         name        = Julia — Smooth iter trap
         description = Julia fractal. Smooth iteration count drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = julia_smooth
-                    materials = { a = julia_m0, b = julia_m1, c = julia_m2 }
-                }
-            }
+            geometry = { julia = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = julia, materials = { a = julia_m0, b = julia_m1, c = julia_m2 } } }
         }
     }
 
@@ -480,12 +348,8 @@ variants = {
         name        = Julia — Plane Y trap
         description = Julia fractal. Plane Y orbit trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = julia_planey
-                    materials = { a = julia_m0, b = julia_m1, c = julia_m2 }
-                }
-            }
+            geometry = { julia = { orbit_trap = plane_y     } }
+            object   = { fractal = { geometry = julia, materials = { a = julia_m0, b = julia_m1, c = julia_m2 } } }
         }
     }
 
@@ -495,12 +359,8 @@ variants = {
         name        = MandelBox — Sphere trap
         description = MandelBox scale=-2.5. Sphere trap (min|z|) drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = box_sphere
-                    materials = { a = box_m0, b = box_m1, c = box_m2 }
-                }
-            }
+            geometry = { box = { orbit_trap = sphere      } }
+            object   = { fractal = { geometry = box, materials = { a = box_m0, b = box_m1, c = box_m2 } } }
         }
     }
 
@@ -508,12 +368,8 @@ variants = {
         name        = MandelBox — Smooth iter trap
         description = MandelBox scale=-2.5. Escape iteration count drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = box_smooth
-                    materials = { a = box_m0, b = box_m1, c = box_m2 }
-                }
-            }
+            geometry = { box = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = box, materials = { a = box_m0, b = box_m1, c = box_m2 } } }
         }
     }
 
@@ -521,12 +377,8 @@ variants = {
         name        = MandelBox — Box trap
         description = MandelBox scale=-2.5. Box orbit trap (min Chebyshev distance) drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = box_planey
-                    materials = { a = box_m0, b = box_m1, c = box_m2 }
-                }
-            }
+            geometry = { box = { orbit_trap = plane_y     } }
+            object   = { fractal = { geometry = box, materials = { a = box_m0, b = box_m1, c = box_m2 } } }
         }
     }
 
@@ -536,12 +388,8 @@ variants = {
         name        = QuaternionJulia — Sphere trap
         description = Quaternion Julia set. Sphere trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = quat_sphere
-                    materials = { a = quat_m0, b = quat_m1, c = quat_m2 }
-                }
-            }
+            geometry = { quat = { orbit_trap = sphere      } }
+            object   = { fractal = { geometry = quat, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
         }
     }
 
@@ -549,12 +397,8 @@ variants = {
         name        = QuaternionJulia — Smooth iter trap
         description = Quaternion Julia set. Smooth iteration count drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = quat_smooth
-                    materials = { a = quat_m0, b = quat_m1, c = quat_m2 }
-                }
-            }
+            geometry = { quat = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = quat, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
         }
     }
 
@@ -562,12 +406,8 @@ variants = {
         name        = QuaternionJulia — Plane Y trap
         description = Quaternion Julia set. Plane Y orbit trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = quat_planey
-                    materials = { a = quat_m0, b = quat_m1, c = quat_m2 }
-                }
-            }
+            geometry = { quat = { orbit_trap = plane_y     } }
+            object   = { fractal = { geometry = quat, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
         }
     }
 
@@ -577,12 +417,8 @@ variants = {
         name        = BurningShip3D — Sphere trap
         description = Burning Ship 3D, power=2. Sphere trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = ship_sphere
-                    materials = { a = ship_m0, b = ship_m1, c = ship_m2 }
-                }
-            }
+            geometry = { ship = { orbit_trap = sphere      } }
+            object   = { fractal = { geometry = ship, materials = { a = ship_m0, b = ship_m1, c = ship_m2 } } }
         }
     }
 
@@ -590,12 +426,8 @@ variants = {
         name        = BurningShip3D — Smooth iter trap
         description = Burning Ship 3D, power=2. Smooth iteration count drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = ship_smooth
-                    materials = { a = ship_m0, b = ship_m1, c = ship_m2 }
-                }
-            }
+            geometry = { ship = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = ship, materials = { a = ship_m0, b = ship_m1, c = ship_m2 } } }
         }
     }
 
@@ -603,12 +435,8 @@ variants = {
         name        = BurningShip3D — Plane Y trap
         description = Burning Ship 3D, power=2. Plane Y orbit trap drives material bands.
         set = {
-            object = {
-                fractal = {
-                    geometry  = ship_planey
-                    materials = { a = ship_m0, b = ship_m1, c = ship_m2 }
-                }
-            }
+            geometry = { ship = { orbit_trap = plane_y     } }
+            object   = { fractal = { geometry = ship, materials = { a = ship_m0, b = ship_m1, c = ship_m2 } } }
         }
     }
 }

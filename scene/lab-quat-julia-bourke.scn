@@ -1,0 +1,482 @@
+title       = Quaternion Julia — Bourke Presets
+description = 14 quaternion Julia sets from Paul Bourke's reference collection (paulbourke.net/fractals/quatjulia). Each variant shows one preset seed with sphere orbit-trap material banding. Initial quaternion q = (px, py, pz, 0) follows Bourke's slice-<0,0,0,1> convention.
+version     = 1.0
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.72,0.76,0.88)
+        b = col3(0.04,0.05,0.10)
+    }
+}
+
+camera = {
+    default = {
+        type            = thin-lens
+        fov             = 45
+        position        = vec3(0,2.5,3.0)
+        target          = vec3(0,0,0)
+        up              = vec3(0,1,0)
+        flength         = 3.5
+        aperture        = 0.02
+        aperture_blades = 6
+    }
+}
+
+geometry = {
+
+    # ── Bourke preset 01: c = (-1.0, 0.2, 0.0, 0.0) ─────────────────
+
+    bourke_01 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -1.0
+        quat_c     = vec3(0.2, 0.0, 0.0)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 02: c = (-0.291, -0.399, 0.339, 0.437) ─────────
+
+    bourke_02 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.291
+        quat_c     = vec3(-0.399, 0.339, 0.437)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 03: c = (-0.2, 0.4, -0.4, -0.4) ───────────────
+
+    bourke_03 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.2
+        quat_c     = vec3(0.4, -0.4, -0.4)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 04: c = (-0.213, -0.041, -0.563, -0.560) ──────
+
+    bourke_04 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.213
+        quat_c     = vec3(-0.041, -0.563, -0.560)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 05: c = (-0.2, 0.6, 0.2, 0.2) ─────────────────
+
+    bourke_05 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.2
+        quat_c     = vec3(0.6, 0.2, 0.2)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 06: c = (-0.162, 0.163, 0.560, -0.599) ────────
+
+    bourke_06 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.162
+        quat_c     = vec3(0.163, 0.560, -0.599)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 07: c = (-0.2, 0.8, 0.0, 0.0) ─────────────────
+
+    bourke_07 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.2
+        quat_c     = vec3(0.8, 0.0, 0.0)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 08: c = (-0.445, 0.339, -0.089, -0.562) ───────
+
+    bourke_08 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.445
+        quat_c     = vec3(0.339, -0.089, -0.562)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 09: c = (0.185, 0.478, 0.125, -0.392) ─────────
+
+    bourke_09 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = 0.185
+        quat_c     = vec3(0.478, 0.125, -0.392)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 10: c = (-0.450, -0.447, 0.181, 0.306) ────────
+
+    bourke_10 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.450
+        quat_c     = vec3(-0.447, 0.181, 0.306)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 11: c = (-0.218, -0.113, -0.181, -0.496) ──────
+
+    bourke_11 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.218
+        quat_c     = vec3(-0.113, -0.181, -0.496)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 12: c = (-0.137, -0.630, -0.475, -0.046) ──────
+
+    bourke_12 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.137
+        quat_c     = vec3(-0.630, -0.475, -0.046)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 13: c = (-0.125, -0.256, 0.847, 0.0895) ───────
+
+    bourke_13 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.125
+        quat_c     = vec3(-0.256, 0.847, 0.0895)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke preset 14: c = (-0.08, 0.0, -0.8, -0.03) ─────────────
+
+    bourke_14 = {
+        type       = quaternion_julia
+        position   = vec3(0,0,0)
+        radius     = 1.1
+        resolution = 14
+        quat_cw    = -0.08
+        quat_c     = vec3(0.0, -0.8, -0.03)
+        quat_w0    = 0.0
+        bailout    = 4.0
+    }
+
+    # ── Bourke 07 — bottom half only (CSG) ───────────────────────────
+
+    bourke_07_halved = {
+        type = csg
+        op   = intersection
+        left = {
+            type       = quaternion_julia
+            position   = vec3(0,0,0)
+            radius     = 1.1
+            resolution = 14
+            quat_cw    = -0.2
+            quat_c     = vec3(0.8, 0.0, 0.0)
+            quat_w0    = 0.0
+            bailout    = 4.0
+            orbit_trap = plane_y
+        }
+        right = {
+            type     = plane
+            normal   = vec3(0,1,0)
+            distance = 0
+        }
+    }
+
+    # ── Floor and lights ─────────────────────────────────────────────
+
+    floor_geo = {
+        type       = mesh
+        source     = gen(plane)
+        resolution = 1
+        modifiers  = {
+            scale       = vec3(40,1,40)
+            translation = vec3(0,-1.5,0)
+        }
+    }
+
+    key_geo = {
+        type     = sphere
+        position = vec3(4,8,-4)
+        radius   = 1.2
+    }
+
+    fill_geo = {
+        type     = sphere
+        position = vec3(-6,3,5)
+        radius   = 2.0
+    }
+
+    rim_geo = {
+        type     = sphere
+        position = vec3(0,4,-8)
+        radius   = 1.5
+    }
+}
+
+material = {
+
+    # ── Amethyst geode palette ───────────────────────────────────────
+    # m0 = deep interior, m1 = mid band, m2 = outer surface
+
+    quat_m0 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.02,0.22) } }
+            scalars  = { metallic = 0.25, roughness = 0.05 }
+        }
+    }
+
+    quat_m1 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.52,0.12,0.88) } }
+            scalars  = { metallic = 0.40, roughness = 0.14 }
+        }
+    }
+
+    quat_m2 = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.92,0.74,0.98) } }
+            scalars  = { metallic = 0.0, roughness = 0.06, clearcoat = 1.0, clearcoat_roughness = 0.03 }
+        }
+    }
+
+    # ── Floor and lights ─────────────────────────────────────────────
+
+    floor_mat = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.28,0.28,0.30) } }
+            scalars  = { metallic = 0.0, roughness = 0.80 }
+        }
+    }
+
+    light_key = {
+        type = emissive
+        properties = {
+            samplers = { emissive = { type = color, value = col3(7.0,6.5,5.2) } }
+        }
+    }
+
+    light_fill = {
+        type = emissive
+        properties = {
+            samplers = { emissive = { type = color, value = col3(1.2,1.6,3.5) } }
+        }
+    }
+
+    light_rim = {
+        type = emissive
+        properties = {
+            samplers = { emissive = { type = color, value = col3(4.5,4.0,6.0) } }
+        }
+    }
+}
+
+object = {
+    fractal    = { geometry = bourke_01, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } }
+    floor      = { geometry = floor_geo, material = floor_mat  }
+    key_light  = { geometry = key_geo,   material = light_key  }
+    fill_light = { geometry = fill_geo,  material = light_fill }
+    rim_light  = { geometry = rim_geo,   material = light_rim  }
+}
+
+variants = {
+    hide_base = true
+
+    bourke_01 = {
+        name        = Bourke 01 — c(-1.0, 0.2, 0, 0)
+        description = Quaternion Julia, Paul Bourke preset 01. Seed c = (-1.0 + 0.2i + 0j + 0k).
+        set = {
+            geometry = { bourke_01 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_01, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_02 = {
+        name        = Bourke 02 — c(-0.291, -0.399, 0.339, 0.437)
+        description = Quaternion Julia, Paul Bourke preset 02. Seed c = (-0.291 - 0.399i + 0.339j + 0.437k).
+        set = {
+            geometry = { bourke_02 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_02, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_03 = {
+        name        = Bourke 03 — c(-0.2, 0.4, -0.4, -0.4)
+        description = Quaternion Julia, Paul Bourke preset 03. Seed c = (-0.2 + 0.4i - 0.4j - 0.4k).
+        set = {
+            geometry = { bourke_03 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_03, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_04 = {
+        name        = Bourke 04 — c(-0.213, -0.041, -0.563, -0.560)
+        description = Quaternion Julia, Paul Bourke preset 04. Seed c = (-0.213 - 0.041i - 0.563j - 0.560k).
+        set = {
+            geometry = { bourke_04 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_04, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_05 = {
+        name        = Bourke 05 — c(-0.2, 0.6, 0.2, 0.2)
+        description = Quaternion Julia, Paul Bourke preset 05. Seed c = (-0.2 + 0.6i + 0.2j + 0.2k).
+        set = {
+            geometry = { bourke_05 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_05, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_06 = {
+        name        = Bourke 06 — c(-0.162, 0.163, 0.560, -0.599)
+        description = Quaternion Julia, Paul Bourke preset 06. Seed c = (-0.162 + 0.163i + 0.560j - 0.599k).
+        set = {
+            geometry = { bourke_06 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_06, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_07 = {
+        name        = Bourke 07 — c(-0.2, 0.8, 0, 0)
+        description = Quaternion Julia, Paul Bourke preset 07. Seed c = (-0.2 + 0.8i + 0j + 0k).
+        set = {
+            geometry = { bourke_07 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_07, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_08 = {
+        name        = Bourke 08 — c(-0.445, 0.339, -0.089, -0.562)
+        description = Quaternion Julia, Paul Bourke preset 08. Seed c = (-0.445 + 0.339i - 0.089j - 0.562k).
+        set = {
+            geometry = { bourke_08 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_08, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_09 = {
+        name        = Bourke 09 — c(0.185, 0.478, 0.125, -0.392)
+        description = Quaternion Julia, Paul Bourke preset 09. Seed c = (0.185 + 0.478i + 0.125j - 0.392k).
+        set = {
+            geometry = { bourke_09 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_09, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_10 = {
+        name        = Bourke 10 — c(-0.450, -0.447, 0.181, 0.306)
+        description = Quaternion Julia, Paul Bourke preset 10. Seed c = (-0.450 - 0.447i + 0.181j + 0.306k).
+        set = {
+            geometry = { bourke_10 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_10, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_11 = {
+        name        = Bourke 11 — c(-0.218, -0.113, -0.181, -0.496)
+        description = Quaternion Julia, Paul Bourke preset 11. Seed c = (-0.218 - 0.113i - 0.181j - 0.496k).
+        set = {
+            geometry = { bourke_11 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_11, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_12 = {
+        name        = Bourke 12 — c(-0.137, -0.630, -0.475, -0.046)
+        description = Quaternion Julia, Paul Bourke preset 12. Seed c = (-0.137 - 0.630i - 0.475j - 0.046k).
+        set = {
+            geometry = { bourke_12 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_12, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_13 = {
+        name        = Bourke 13 — c(-0.125, -0.256, 0.847, 0.0895)
+        description = Quaternion Julia, Paul Bourke preset 13. Seed c = (-0.125 - 0.256i + 0.847j + 0.0895k).
+        set = {
+            geometry = { bourke_13 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_13, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    bourke_14 = {
+        name        = Bourke 14 — c(-0.08, 0, -0.8, -0.03)
+        description = Quaternion Julia, Paul Bourke preset 14. Seed c = (-0.08 + 0i - 0.8j - 0.03k).
+        set = {
+            geometry = { bourke_14 = { orbit_trap = smooth_iter } }
+            object   = { fractal = { geometry = bourke_14, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+        }
+    }
+
+    # ── CSG cross-section ────────────────────────────────────────────
+
+    bourke_07_interior = {
+        name        = Bourke 07 — Bottom half (cross-section)
+        description = Preset 07, c=(-0.2, 0.8, 0, 0). CSG clips the fractal at y=0. Camera sits at cut height looking along the slice, so the cut face is edge-on and the fractal surface structure fills the frame.
+        set = {
+            object = { fractal = { geometry = bourke_07_halved, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            camera = {
+                default = {
+                    position        = vec3(0.4,1.0,2.0)
+                    target          = vec3(0,-0.1,0)
+                    up              = vec3(0,1,0)
+                    fov             = 58
+                    flength         = 2.2
+                    aperture        = 0.025
+                    aperture_blades = 6
+                }
+            }
+        }
+    }
+}
