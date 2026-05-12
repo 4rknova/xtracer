@@ -1016,6 +1016,14 @@ async function boot() {
       }
     });
   });
+  if (el.resolutionCustomRow) {
+    el.resolutionCustomRow.addEventListener("click", () => {
+      if (!el.resolutionPreset || el.resolutionPreset.value === "custom") return;
+      el.resolutionPreset.value = "custom";
+      el.resolutionPreset.dispatchEvent(new Event("change", { bubbles: true }));
+      if (typeof renderResolutionPresetList === "function") renderResolutionPresetList();
+    });
+  }
   el.resolutionPreset.addEventListener("change", () => {
     if (typeof renderResolutionPresetList === "function") renderResolutionPresetList();
     if (el.resolutionPreset.value === "custom") return;
@@ -1027,6 +1035,7 @@ async function boot() {
     updatePreviewSizing();
     syncVisualFrameAspect();
     if (typeof syncTileSizeControlUi === "function") syncTileSizeControlUi();
+    if (typeof updateCustomDimStats === "function") updateCustomDimStats();
     queueWorkspaceSettingsSave();
   });
   el.width.addEventListener("input", onSizeChanged);

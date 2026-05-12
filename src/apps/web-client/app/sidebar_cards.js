@@ -147,36 +147,28 @@
       bodyHTML: `
         <section class="frame-section">
           <h4 class="frame-section-title">Resolution Presets</h4>
-          <div class="resolution-mode-filter-row" role="group" aria-label="Resolution mode filter">
-            <button id="resolutionModeFilterAll" class="aa-pill xui-pill active" type="button" data-mode="all" aria-pressed="true">All</button>
-            <button id="resolutionModeFilterSquare" class="aa-pill xui-pill" type="button" data-mode="square" aria-pressed="false">Square</button>
-            <button id="resolutionModeFilterPortrait" class="aa-pill xui-pill" type="button" data-mode="portrait" aria-pressed="false">Portrait</button>
-            <button id="resolutionModeFilterLandscape" class="aa-pill xui-pill" type="button" data-mode="landscape" aria-pressed="false">Landscape</button>
+          <div class="resolution-mode-seg" role="group" aria-label="Resolution mode filter">
+            <button id="resolutionModeFilterAll" class="resolution-seg-btn active" type="button" data-mode="all" aria-pressed="true">All</button>
+            <button id="resolutionModeFilterSquare" class="resolution-seg-btn" type="button" data-mode="square" aria-pressed="false">Square</button>
+            <button id="resolutionModeFilterPortrait" class="resolution-seg-btn" type="button" data-mode="portrait" aria-pressed="false">Portrait</button>
+            <button id="resolutionModeFilterLandscape" class="resolution-seg-btn" type="button" data-mode="landscape" aria-pressed="false">Landscape</button>
           </div>
           <div class="resolution-preset-table" role="group" aria-label="Resolution presets">
-            <div class="resolution-preset-head" aria-hidden="true">
-              <span>Name</span>
-              <span>Mode</span>
-              <span>Aspect</span>
-              <span>W</span>
-              <span>H</span>
-            </div>
             <div id="resolutionPresetList" class="resolution-preset-list" role="listbox" aria-label="Resolution preset list"></div>
           </div>
+          <button id="resolutionCustomRow" class="resolution-custom-chip" type="button" data-value="custom" aria-label="Custom dimensions" aria-selected="false">Custom</button>
           <select id="resolutionPreset" hidden aria-hidden="true" tabindex="-1"></select>
         </section>
         <section class="frame-section">
           <h4 class="frame-section-title">Custom Dimensions</h4>
-          <div class="row">
-            <label class="xui-field">
-              <span class="xui-field__label">Width</span>
-              <input id="width" class="xui-input" type="number" min="32" max="8192" value="500">
-            </label>
-            <label class="xui-field">
-              <span class="xui-field__label">Height</span>
-              <input id="height" class="xui-input" type="number" min="32" max="8192" value="500">
-            </label>
+          <div class="custom-dim-row">
+            <label class="custom-dim-label" for="width">W</label>
+            <input id="width" class="xui-input custom-dim-input" type="number" min="32" max="8192" value="500">
+            <span class="custom-dim-sep" aria-hidden="true">×</span>
+            <label class="custom-dim-label" for="height">H</label>
+            <input id="height" class="xui-input custom-dim-input" type="number" min="32" max="8192" value="500">
           </div>
+          <div id="customDimStats" class="custom-dim-stats"></div>
         </section>
       `,
     },

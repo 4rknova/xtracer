@@ -1255,6 +1255,26 @@ function presetId(index) {
   return String(index).padStart(2, "0");
 }
 
+function formatMegapixels(width, height) {
+  const px = Number(width) * Number(height);
+  if (!Number.isFinite(px) || px <= 0) return null;
+  const mp = px / 1_000_000;
+  if (mp < 0.1) return `${Math.round(px / 1000)} Kpx`;
+  return `${mp < 10 ? mp.toFixed(1) : Math.round(mp)} MP`;
+}
+
+function makeThumbnail(width, height) {
+  const maxW = 18, maxH = 13;
+  const aspect = Number(width) / Number(height);
+  let tw, th;
+  if (aspect >= maxW / maxH) {
+    tw = maxW; th = Math.max(4, Math.round(maxW / aspect));
+  } else {
+    th = maxH; tw = Math.max(4, Math.round(maxH * aspect));
+  }
+  return `<span class="resolution-thumb" style="width:${tw}px;height:${th}px" aria-hidden="true"></span>`;
+}
+
 function formatResolutionAspect(width, height) {
   const w = Number(width);
   const h = Number(height);
@@ -1314,15 +1334,19 @@ function renderResolutionPresetList() {
     btn.className = "resolution-preset-row";
     btn.setAttribute("role", "option");
     btn.setAttribute("data-value", value);
-    const mode = (Number(width) > 0 && Number(height) > 0) ? orientationMode(width, height) : "custom";
-    const aspect = (Number(width) > 0 && Number(height) > 0) ? formatResolutionAspect(width, height) : "-";
+    const hasSize = Number(width) > 0 && Number(height) > 0;
+    const mode = hasSize ? orientationMode(width, height) : "custom";
+    const aspect = hasSize ? formatResolutionAspect(width, height) : "—";
     const modeLabel = mode === "landscape" ? "Landscape" : (mode === "portrait" ? "Portrait" : (mode === "square" ? "Square" : "Custom"));
+    const mp = hasSize ? formatMegapixels(width, height) : null;
+    const sizeLabel = hasSize ? `${width}×${height}` : "—";
     btn.innerHTML = ""
-      + `<span class="resolution-cell resolution-name">${name}</span>`
-      + `<span class="resolution-cell resolution-mode" title="${modeLabel}" aria-label="${modeLabel}"><span class="resolution-orient is-${mode}" aria-hidden="true"></span></span>`
-      + `<span class="resolution-cell resolution-aspect">${aspect}</span>`
-      + `<span class="resolution-cell resolution-width">${Number(width) > 0 ? width : "-"}</span>`
-      + `<span class="resolution-cell resolution-height">${Number(height) > 0 ? height : "-"}</span>`;
+      + `<span class="resolution-cell resolution-name-cell">`
+      + `<span class="resolution-row-top"><span class="resolution-name">${name}</span><span class="resolution-badge is-${mode}">${modeLabel}</span></span>`
+      + (mp ? `<span class="resolution-mp">${mp}</span>` : "")
+      + `</span>`
+      + `<span class="resolution-cell resolution-thumb-cell">${hasSize ? makeThumbnail(width, height) : ""}</span>`
+      + `<span class="resolution-cell resolution-size">${sizeLabel}</span>`;
     const isActive = String(value) === selected;
     btn.classList.toggle("is-active", isActive);
     btn.setAttribute("aria-selected", isActive ? "true" : "false");
@@ -1336,18 +1360,55 @@ function renderResolutionPresetList() {
     el.resolutionPresetList.appendChild(btn);
   };
 
-  addRow("custom", "Custom", 0, 0);
-  resolutionPresets.forEach((preset, index) => {
-    const mode = orientationMode(preset.width, preset.height);
-    if (modeFilter !== "all" && mode !== modeFilter) return;
-    const name = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
-    addRow(String(index), name, preset.width, preset.height);
-  });
+  if (modeFilter === "all") {
+    [
+      { mode: "landscape", label: "Landscape" },
+      { mode: "portrait", label: "Portrait" },
+      { mode: "square", label: "Square" },
+    ].forEach(({ mode, label }) => {
+      const matching = resolutionPresets
+        .map((preset, index) => ({ preset, index }))
+        .filter(({ preset }) => orientationMode(preset.width, preset.height) === mode);
+      if (matching.length === 0) return;
+      const head = document.createElement("div");
+      head.className = "resolution-group-head";
+      head.setAttribute("aria-hidden", "true");
+      head.textContent = label;
+      el.resolutionPresetList.appendChild(head);
+      matching.forEach(({ preset, index }) => {
+        const name = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+        addRow(String(index), name, preset.width, preset.height);
+      });
+    });
+  } else {
+    resolutionPresets.forEach((preset, index) => {
+      if (orientationMode(preset.width, preset.height) !== modeFilter) return;
+      const name = String((preset && preset.description) || "").trim() || `Preset ${presetId(index)}`;
+      addRow(String(index), name, preset.width, preset.height);
+    });
+  }
 
   const active = el.resolutionPresetList.querySelector(".resolution-preset-row.is-active");
   if (active && active.scrollIntoView) {
     active.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
   }
+
+  if (el.resolutionCustomRow) {
+    const isCustom = selected === "custom";
+    el.resolutionCustomRow.classList.toggle("is-active", isCustom);
+    el.resolutionCustomRow.setAttribute("aria-selected", isCustom ? "true" : "false");
+  }
+}
+
+function updateCustomDimStats() {
+  if (!el.customDimStats) return;
+  const { width, height } = currentRenderSize();
+  const aspect = formatResolutionAspect(width, height);
+  const mp = formatMegapixels(width, height) || "—";
+  const mode = orientationMode(width, height);
+  const modeLabel = mode === "landscape" ? "Landscape" : mode === "portrait" ? "Portrait" : "Square";
+  const chip = (value) => `<span class="custom-dim-stat">${value}</span>`;
+  el.customDimStats.innerHTML = chip(aspect) + chip(mp) + chip(modeLabel);
 }
 
 function syncResolutionPresetFromInputs() {
@@ -1355,6 +1416,7 @@ function syncResolutionPresetFromInputs() {
   const index = resolutionPresets.findIndex((p) => p.width === width && p.height === height);
   el.resolutionPreset.value = index >= 0 ? String(index) : "custom";
   renderResolutionPresetList();
+  updateCustomDimStats();
 }
 
 function syncVisualFrameAspect() {

@@ -363,6 +363,8 @@ const el = {
   integratorControls: $("integratorControls"),
   resolutionPreset: $("resolutionPreset"),
   resolutionPresetList: $("resolutionPresetList"),
+  resolutionCustomRow: $("resolutionCustomRow"),
+  customDimStats: $("customDimStats"),
   resolutionModeFilterAll: $("resolutionModeFilterAll"),
   resolutionModeFilterLandscape: $("resolutionModeFilterLandscape"),
   resolutionModeFilterPortrait: $("resolutionModeFilterPortrait"),
