@@ -33,7 +33,7 @@ struct settings_t
     float mantiuk_detail;
 
     settings_t()
-        : op(OP_ACES_FITTED)
+        : op(OP_REINHARD_LUMINANCE)
         , exposure(1.0f)
         , white_point(1.0f)
         , mantiuk_contrast(0.1f)

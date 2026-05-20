@@ -677,7 +677,7 @@ job_manager_t::job_t::job_t()
     , progressive_ready(false)
     , preview_last_encoded_done(0)
     , preview_last_from_final(false)
-    , preview_last_tm_op(xtcore::tonemapping::OP_ACES_FITTED)
+    , preview_last_tm_op(xtcore::tonemapping::OP_REINHARD_LUMINANCE)
     , preview_last_tm_exposure(1.0f)
     , preview_last_tm_white_point(1.0f)
     , preview_last_tm_mantiuk_contrast(0.1f)
@@ -1241,7 +1241,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
             job->preview_rgba_cache.clear();
             job->preview_last_encoded_done = 0;
             job->preview_last_from_final = false;
-            job->preview_last_tm_op = xtcore::tonemapping::OP_ACES_FITTED;
+            job->preview_last_tm_op = xtcore::tonemapping::OP_REINHARD_LUMINANCE;
             job->preview_last_tm_exposure = 1.0f;
             job->preview_last_tm_white_point = 1.0f;
             job->preview_last_tm_mantiuk_contrast = 0.1f;
