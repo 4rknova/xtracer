@@ -540,19 +540,16 @@ static scalar_t fractal_power_distance_estimator(const Vector3f &p,
 
 static Vector3f estimate_distance_normal(const xtcore::asset::ISurface &s, const Vector3f &p, scalar_t h)
 {
-    // Fractal DEs are approximate and can become sign-unstable near the surface.
-    // Sample the unsigned field (same as raymarch stepping) with tetrahedral
-    // offsets to reduce cancellation artifacts.
     const scalar_t eps = std::max((scalar_t)1e-4, h);
     const Vector3f e1( 1.0f, -1.0f, -1.0f);
     const Vector3f e2(-1.0f, -1.0f,  1.0f);
     const Vector3f e3(-1.0f,  1.0f, -1.0f);
     const Vector3f e4( 1.0f,  1.0f,  1.0f);
 
-    const scalar_t d1 = nmath_abs(s.distance(p + e1 * eps));
-    const scalar_t d2 = nmath_abs(s.distance(p + e2 * eps));
-    const scalar_t d3 = nmath_abs(s.distance(p + e3 * eps));
-    const scalar_t d4 = nmath_abs(s.distance(p + e4 * eps));
+    const scalar_t d1 = s.distance(p + e1 * eps);
+    const scalar_t d2 = s.distance(p + e2 * eps);
+    const scalar_t d3 = s.distance(p + e3 * eps);
+    const scalar_t d4 = s.distance(p + e4 * eps);
 
     Vector3f n = e1 * d1 + e2 * d2 + e3 * d3 + e4 * d4;
     if (n.length() <= EPSILON) return Vector3f(0.0f, 1.0f, 0.0f);
