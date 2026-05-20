@@ -351,7 +351,7 @@ function interactivePanCamera(dx, dy) {
   const basis = interactiveCameraBasis();
   const dist = Math.max(0.001, Number(interactivePreviewCamera.orbitDistance) || 1);
   const k = dist * 0.0018;
-  const move = v3add(v3scale(basis.right, -dx * k), v3scale(basis.up, dy * k));
+  const move = v3add(v3scale(basis.right, dx * k), v3scale(basis.up, -dy * k));
   interactivePreviewCamera.pivot = v3add(
     Array.isArray(interactivePreviewCamera.pivot) ? interactivePreviewCamera.pivot : [0, 0, 0],
     move,
