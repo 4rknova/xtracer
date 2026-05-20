@@ -263,30 +263,381 @@ geometry = {
 
 material = {
 
-    # ── Amethyst geode palette ───────────────────────────────────────
-    # m0 = deep interior, m1 = mid band, m2 = outer surface
+    # ── 01 Bronze ────────────────────────────────────────────────────
+    # a=oxidized interior, b=aged mid, c=polished highlight
 
-    quat_m0 = {
+    bronze_a = {
         type = principled
         properties = {
-            samplers = { base_color = { type = color, value = col3(0.10,0.02,0.22) } }
-            scalars  = { metallic = 0.25, roughness = 0.05 }
+            samplers = { base_color = { type = color, value = col3(0.12,0.07,0.02) } }
+            scalars  = { metallic = 1.0, roughness = 0.42 }
         }
     }
 
-    quat_m1 = {
+    bronze_b = {
         type = principled
         properties = {
-            samplers = { base_color = { type = color, value = col3(0.52,0.12,0.88) } }
-            scalars  = { metallic = 0.40, roughness = 0.14 }
+            samplers = { base_color = { type = color, value = col3(0.55,0.35,0.10) } }
+            scalars  = { metallic = 1.0, roughness = 0.20 }
         }
     }
 
-    quat_m2 = {
+    bronze_c = {
         type = principled
         properties = {
-            samplers = { base_color = { type = color, value = col3(0.92,0.74,0.98) } }
-            scalars  = { metallic = 0.0, roughness = 0.06, clearcoat = 1.0, clearcoat_roughness = 0.03 }
+            samplers = { base_color = { type = color, value = col3(0.80,0.60,0.25) } }
+            scalars  = { metallic = 1.0, roughness = 0.06 }
+        }
+    }
+
+    # ── 02 Ice ───────────────────────────────────────────────────────
+    # a=deep glacial blue, b=translucent mid, c=frosted surface
+
+    ice_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.08,0.18,0.35) } }
+            scalars  = { metallic = 0.0, roughness = 0.02, clearcoat = 1.0, clearcoat_roughness = 0.02 }
+        }
+    }
+
+    ice_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.55,0.78,0.92) } }
+            scalars  = { metallic = 0.0, roughness = 0.04 }
+        }
+    }
+
+    ice_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.90,0.96,1.00) } }
+            scalars  = { metallic = 0.0, roughness = 0.22 }
+        }
+    }
+
+    # ── 03 Velvet ────────────────────────────────────────────────────
+    # a=deep shadow, b=mid pile, c=raised highlight — all high roughness
+
+    velvet_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.14,0.02,0.05) } }
+            scalars  = { metallic = 0.0, roughness = 0.95 }
+        }
+    }
+
+    velvet_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.52,0.06,0.12) } }
+            scalars  = { metallic = 0.0, roughness = 0.90 }
+        }
+    }
+
+    velvet_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.78,0.16,0.20) } }
+            scalars  = { metallic = 0.0, roughness = 0.85 }
+        }
+    }
+
+    # ── 04 Obsidian ──────────────────────────────────────────────────
+    # a=black volcanic core, b=dark glass, c=glassy edge with clearcoat
+
+    obsidian_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.02,0.02,0.03) } }
+            scalars  = { metallic = 0.0, roughness = 0.02 }
+        }
+    }
+
+    obsidian_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.08,0.12) } }
+            scalars  = { metallic = 0.0, roughness = 0.04 }
+        }
+    }
+
+    obsidian_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.25,0.22,0.28) } }
+            scalars  = { metallic = 0.0, roughness = 0.01, clearcoat = 1.0, clearcoat_roughness = 0.01 }
+        }
+    }
+
+    # ── 05 Gold ──────────────────────────────────────────────────────
+    # a=matte dark gold, b=satin, c=mirror-polished
+
+    gold_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.18,0.12,0.01) } }
+            scalars  = { metallic = 1.0, roughness = 0.42 }
+        }
+    }
+
+    gold_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.70,0.50,0.05) } }
+            scalars  = { metallic = 1.0, roughness = 0.14 }
+        }
+    }
+
+    gold_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(1.00,0.78,0.28) } }
+            scalars  = { metallic = 1.0, roughness = 0.04 }
+        }
+    }
+
+    # ── 06 Patina / Verdigris ────────────────────────────────────────
+    # a=tarnished copper, b=green patina mid, c=bright verdigris
+
+    patina_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.12,0.08) } }
+            scalars  = { metallic = 0.85, roughness = 0.55 }
+        }
+    }
+
+    patina_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.18,0.45,0.38) } }
+            scalars  = { metallic = 0.70, roughness = 0.45 }
+        }
+    }
+
+    patina_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.30,0.72,0.60) } }
+            scalars  = { metallic = 0.60, roughness = 0.35 }
+        }
+    }
+
+    # ── 07 Jade ──────────────────────────────────────────────────────
+    # a=dark nephrite, b=translucent mid, c=polished surface
+
+    jade_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.04,0.14,0.08) } }
+            scalars  = { metallic = 0.0, roughness = 0.15, clearcoat = 0.8, clearcoat_roughness = 0.04 }
+        }
+    }
+
+    jade_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.15,0.42,0.22) } }
+            scalars  = { metallic = 0.0, roughness = 0.10 }
+        }
+    }
+
+    jade_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.40,0.75,0.45) } }
+            scalars  = { metallic = 0.0, roughness = 0.05, clearcoat = 1.0, clearcoat_roughness = 0.02 }
+        }
+    }
+
+    # ── 08 Rust / Aged Iron ──────────────────────────────────────────
+    # a=dark iron core, b=mid rust, c=flaking oxide surface
+
+    rust_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.15,0.05,0.02) } }
+            scalars  = { metallic = 0.30, roughness = 0.85 }
+        }
+    }
+
+    rust_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.45,0.18,0.06) } }
+            scalars  = { metallic = 0.25, roughness = 0.80 }
+        }
+    }
+
+    rust_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.68,0.32,0.12) } }
+            scalars  = { metallic = 0.20, roughness = 0.75 }
+        }
+    }
+
+    # ── 09 Sapphire ──────────────────────────────────────────────────
+    # a=deep indigo, b=royal blue mid, c=bright gem facet
+
+    sapphire_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.01,0.02,0.18) } }
+            scalars  = { metallic = 0.0, roughness = 0.02, clearcoat = 1.0, clearcoat_roughness = 0.01 }
+        }
+    }
+
+    sapphire_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.08,0.16,0.70) } }
+            scalars  = { metallic = 0.0, roughness = 0.03 }
+        }
+    }
+
+    sapphire_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.35,0.55,1.00) } }
+            scalars  = { metallic = 0.0, roughness = 0.01, clearcoat = 1.0, clearcoat_roughness = 0.01 }
+        }
+    }
+
+    # ── 10 Marble ────────────────────────────────────────────────────
+    # a=dark vein, b=grey field, c=white polished surface
+
+    marble_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.08,0.08,0.10) } }
+            scalars  = { metallic = 0.0, roughness = 0.12 }
+        }
+    }
+
+    marble_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.58,0.57,0.60) } }
+            scalars  = { metallic = 0.0, roughness = 0.08 }
+        }
+    }
+
+    marble_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.92,0.92,0.94) } }
+            scalars  = { metallic = 0.0, roughness = 0.06, clearcoat = 0.6, clearcoat_roughness = 0.05 }
+        }
+    }
+
+    # ── 11 Carbon Fibre ──────────────────────────────────────────────
+    # a=dark weave shadow, b=mid weave, c=specular weave highlight
+
+    carbon_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.03,0.03,0.04) } }
+            scalars  = { metallic = 0.80, roughness = 0.10 }
+        }
+    }
+
+    carbon_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.08,0.08,0.10) } }
+            scalars  = { metallic = 0.75, roughness = 0.08 }
+        }
+    }
+
+    carbon_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.18,0.20,0.22) } }
+            scalars  = { metallic = 0.70, roughness = 0.12 }
+        }
+    }
+
+    # ── 12 Nacre / Mother of Pearl ───────────────────────────────────
+    # a=dark iridescent base, b=lavender-pearl mid, c=bright lustre
+
+    nacre_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.10,0.08,0.12) } }
+            scalars  = { metallic = 0.0, roughness = 0.05, clearcoat = 1.0, clearcoat_roughness = 0.02 }
+        }
+    }
+
+    nacre_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.70,0.68,0.78) } }
+            scalars  = { metallic = 0.0, roughness = 0.04 }
+        }
+    }
+
+    nacre_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.96,0.94,1.00) } }
+            scalars  = { metallic = 0.0, roughness = 0.02, clearcoat = 1.0, clearcoat_roughness = 0.01 }
+        }
+    }
+
+    # ── 13 Amber ─────────────────────────────────────────────────────
+    # a=dark resin core, b=honey mid, c=bright golden surface
+
+    amber_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.18,0.06,0.01) } }
+            scalars  = { metallic = 0.0, roughness = 0.04 }
+        }
+    }
+
+    amber_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.72,0.40,0.04) } }
+            scalars  = { metallic = 0.0, roughness = 0.05 }
+        }
+    }
+
+    amber_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(1.00,0.75,0.18) } }
+            scalars  = { metallic = 0.0, roughness = 0.02, clearcoat = 1.0, clearcoat_roughness = 0.02 }
+        }
+    }
+
+    # ── 14 Lava / Basalt ─────────────────────────────────────────────
+    # a=black cooled crust, b=dark cooling flow, c=glowing surface crust
+
+    lava_a = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.05,0.04,0.04) } }
+            scalars  = { metallic = 0.0, roughness = 0.90 }
+        }
+    }
+
+    lava_b = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.22,0.10,0.04) } }
+            scalars  = { metallic = 0.0, roughness = 0.75 }
+        }
+    }
+
+    lava_c = {
+        type = principled
+        properties = {
+            samplers = { base_color = { type = color, value = col3(0.60,0.25,0.05) } }
+            scalars  = { metallic = 0.0, roughness = 0.60 }
         }
     }
 
@@ -323,7 +674,7 @@ material = {
 }
 
 object = {
-    fractal    = { geometry = bourke_01, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } }
+    fractal    = { geometry = bourke_01, materials = { a = bronze_a, b = bronze_b, c = bronze_c } }
     floor      = { geometry = floor_geo, material = floor_mat  }
     key_light  = { geometry = key_geo,   material = light_key  }
     fill_light = { geometry = fill_geo,  material = light_fill }
@@ -335,127 +686,127 @@ variants = {
 
     bourke_01 = {
         name        = Bourke 01 — c(-1.0, 0.2, 0, 0)
-        description = Quaternion Julia, Paul Bourke preset 01. Seed c = (-1.0 + 0.2i + 0j + 0k).
+        description = Quaternion Julia, Paul Bourke preset 01. Seed c = (-1.0 + 0.2i + 0j + 0k). Material: bronze.
         set = {
             geometry = { bourke_01 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_01, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_01, materials = { a = bronze_a, b = bronze_b, c = bronze_c } } }
         }
     }
 
     bourke_02 = {
         name        = Bourke 02 — c(-0.291, -0.399, 0.339, 0.437)
-        description = Quaternion Julia, Paul Bourke preset 02. Seed c = (-0.291 - 0.399i + 0.339j + 0.437k).
+        description = Quaternion Julia, Paul Bourke preset 02. Seed c = (-0.291 - 0.399i + 0.339j + 0.437k). Material: ice.
         set = {
             geometry = { bourke_02 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_02, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_02, materials = { a = ice_a, b = ice_b, c = ice_c } } }
         }
     }
 
     bourke_03 = {
         name        = Bourke 03 — c(-0.2, 0.4, -0.4, -0.4)
-        description = Quaternion Julia, Paul Bourke preset 03. Seed c = (-0.2 + 0.4i - 0.4j - 0.4k).
+        description = Quaternion Julia, Paul Bourke preset 03. Seed c = (-0.2 + 0.4i - 0.4j - 0.4k). Material: velvet.
         set = {
             geometry = { bourke_03 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_03, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_03, materials = { a = velvet_a, b = velvet_b, c = velvet_c } } }
         }
     }
 
     bourke_04 = {
         name        = Bourke 04 — c(-0.213, -0.041, -0.563, -0.560)
-        description = Quaternion Julia, Paul Bourke preset 04. Seed c = (-0.213 - 0.041i - 0.563j - 0.560k).
+        description = Quaternion Julia, Paul Bourke preset 04. Seed c = (-0.213 - 0.041i - 0.563j - 0.560k). Material: obsidian.
         set = {
             geometry = { bourke_04 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_04, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_04, materials = { a = obsidian_a, b = obsidian_b, c = obsidian_c } } }
         }
     }
 
     bourke_05 = {
         name        = Bourke 05 — c(-0.2, 0.6, 0.2, 0.2)
-        description = Quaternion Julia, Paul Bourke preset 05. Seed c = (-0.2 + 0.6i + 0.2j + 0.2k).
+        description = Quaternion Julia, Paul Bourke preset 05. Seed c = (-0.2 + 0.6i + 0.2j + 0.2k). Material: gold.
         set = {
             geometry = { bourke_05 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_05, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_05, materials = { a = gold_a, b = gold_b, c = gold_c } } }
         }
     }
 
     bourke_06 = {
         name        = Bourke 06 — c(-0.162, 0.163, 0.560, -0.599)
-        description = Quaternion Julia, Paul Bourke preset 06. Seed c = (-0.162 + 0.163i + 0.560j - 0.599k).
+        description = Quaternion Julia, Paul Bourke preset 06. Seed c = (-0.162 + 0.163i + 0.560j - 0.599k). Material: patina (verdigris copper).
         set = {
             geometry = { bourke_06 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_06, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_06, materials = { a = patina_a, b = patina_b, c = patina_c } } }
         }
     }
 
     bourke_07 = {
         name        = Bourke 07 — c(-0.2, 0.8, 0, 0)
-        description = Quaternion Julia, Paul Bourke preset 07. Seed c = (-0.2 + 0.8i + 0j + 0k).
+        description = Quaternion Julia, Paul Bourke preset 07. Seed c = (-0.2 + 0.8i + 0j + 0k). Material: jade.
         set = {
             geometry = { bourke_07 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_07, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_07, materials = { a = jade_a, b = jade_b, c = jade_c } } }
         }
     }
 
     bourke_08 = {
         name        = Bourke 08 — c(-0.445, 0.339, -0.089, -0.562)
-        description = Quaternion Julia, Paul Bourke preset 08. Seed c = (-0.445 + 0.339i - 0.089j - 0.562k).
+        description = Quaternion Julia, Paul Bourke preset 08. Seed c = (-0.445 + 0.339i - 0.089j - 0.562k). Material: rust (aged iron).
         set = {
             geometry = { bourke_08 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_08, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_08, materials = { a = rust_a, b = rust_b, c = rust_c } } }
         }
     }
 
     bourke_09 = {
         name        = Bourke 09 — c(0.185, 0.478, 0.125, -0.392)
-        description = Quaternion Julia, Paul Bourke preset 09. Seed c = (0.185 + 0.478i + 0.125j - 0.392k).
+        description = Quaternion Julia, Paul Bourke preset 09. Seed c = (0.185 + 0.478i + 0.125j - 0.392k). Material: sapphire.
         set = {
             geometry = { bourke_09 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_09, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_09, materials = { a = sapphire_a, b = sapphire_b, c = sapphire_c } } }
         }
     }
 
     bourke_10 = {
         name        = Bourke 10 — c(-0.450, -0.447, 0.181, 0.306)
-        description = Quaternion Julia, Paul Bourke preset 10. Seed c = (-0.450 - 0.447i + 0.181j + 0.306k).
+        description = Quaternion Julia, Paul Bourke preset 10. Seed c = (-0.450 - 0.447i + 0.181j + 0.306k). Material: marble.
         set = {
             geometry = { bourke_10 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_10, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_10, materials = { a = marble_a, b = marble_b, c = marble_c } } }
         }
     }
 
     bourke_11 = {
         name        = Bourke 11 — c(-0.218, -0.113, -0.181, -0.496)
-        description = Quaternion Julia, Paul Bourke preset 11. Seed c = (-0.218 - 0.113i - 0.181j - 0.496k).
+        description = Quaternion Julia, Paul Bourke preset 11. Seed c = (-0.218 - 0.113i - 0.181j - 0.496k). Material: carbon fibre.
         set = {
             geometry = { bourke_11 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_11, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_11, materials = { a = carbon_a, b = carbon_b, c = carbon_c } } }
         }
     }
 
     bourke_12 = {
         name        = Bourke 12 — c(-0.137, -0.630, -0.475, -0.046)
-        description = Quaternion Julia, Paul Bourke preset 12. Seed c = (-0.137 - 0.630i - 0.475j - 0.046k).
+        description = Quaternion Julia, Paul Bourke preset 12. Seed c = (-0.137 - 0.630i - 0.475j - 0.046k). Material: nacre (mother of pearl).
         set = {
             geometry = { bourke_12 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_12, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_12, materials = { a = nacre_a, b = nacre_b, c = nacre_c } } }
         }
     }
 
     bourke_13 = {
         name        = Bourke 13 — c(-0.125, -0.256, 0.847, 0.0895)
-        description = Quaternion Julia, Paul Bourke preset 13. Seed c = (-0.125 - 0.256i + 0.847j + 0.0895k).
+        description = Quaternion Julia, Paul Bourke preset 13. Seed c = (-0.125 - 0.256i + 0.847j + 0.0895k). Material: amber.
         set = {
             geometry = { bourke_13 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_13, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_13, materials = { a = amber_a, b = amber_b, c = amber_c } } }
         }
     }
 
     bourke_14 = {
         name        = Bourke 14 — c(-0.08, 0, -0.8, -0.03)
-        description = Quaternion Julia, Paul Bourke preset 14. Seed c = (-0.08 + 0i - 0.8j - 0.03k).
+        description = Quaternion Julia, Paul Bourke preset 14. Seed c = (-0.08 + 0i - 0.8j - 0.03k). Material: lava (basalt).
         set = {
             geometry = { bourke_14 = { orbit_trap = smooth_iter } }
-            object   = { fractal = { geometry = bourke_14, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object   = { fractal = { geometry = bourke_14, materials = { a = lava_a, b = lava_b, c = lava_c } } }
         }
     }
 
@@ -463,9 +814,9 @@ variants = {
 
     bourke_07_interior = {
         name        = Bourke 07 — Bottom half (cross-section)
-        description = Preset 07, c=(-0.2, 0.8, 0, 0). CSG clips the fractal at y=0. Camera sits at cut height looking along the slice, so the cut face is edge-on and the fractal surface structure fills the frame.
+        description = Preset 07, c=(-0.2, 0.8, 0, 0). CSG clips the fractal at y=0. Camera sits at cut height looking along the slice, so the cut face is edge-on and the fractal surface structure fills the frame. Material: jade.
         set = {
-            object = { fractal = { geometry = bourke_07_halved, materials = { a = quat_m0, b = quat_m1, c = quat_m2 } } }
+            object = { fractal = { geometry = bourke_07_halved, materials = { a = jade_a, b = jade_b, c = jade_c } } }
             camera = {
                 default = {
                     position        = vec3(0.4,1.0,2.0)
