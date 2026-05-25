@@ -9,6 +9,7 @@ option(XTRACER_ENABLE_REMOTE_ASSETS "Enable remote URL asset fetching via curl s
 option(XTRACER_ENABLE_VIZ "Build sampling visualization tool (OpenGL/GLFW/GLEW)" OFF)
 option(XTRACER_ENABLE_NMATH_SIMD "Enable SIMD paths in nmath (x86 SSE2, double precision)" ON)
 option(XTRACER_ENABLE_NMATH_SIMD_AVX "Enable AVX path for nmath SIMD (requires XTRACER_ENABLE_NMATH_SIMD)" OFF)
+option(XTRACER_ENABLE_OPENCL "Enable OpenCL GPU path tracer (experimental)" OFF)
 set(XTRACER_NMATH_PERF_REPEATS "21" CACHE STRING "Repeat count for nmath_perf_check benchmark comparisons")
 
 set(XTRACER_USING_EMSCRIPTEN OFF)
@@ -110,6 +111,14 @@ if (XTRACER_ENABLE_REMOTE_ASSETS AND NOT XTRACER_USING_EMSCRIPTEN)
     message(STATUS "Remote asset fetching: enabled (curl)")
 else()
     message(STATUS "Remote asset fetching: disabled")
+endif()
+
+if (XTRACER_ENABLE_OPENCL)
+    find_package(OpenCL REQUIRED)
+    add_compile_definitions(XTCORE_ENABLE_OPENCL)
+    message(STATUS "OpenCL GPU integrator: enabled (${OpenCL_VERSION_STRING})")
+else()
+    message(STATUS "OpenCL GPU integrator: disabled")
 endif()
 
 SCAN_DIRS(ext_libs)
@@ -220,6 +229,44 @@ target_include_directories(xtcore_dynamic PUBLIC
 target_include_directories(xtcore_dynamic SYSTEM PUBLIC
     ${ext_libs}
 )
+
+if (XTRACER_ENABLE_OPENCL)
+    set(OPENCL_KERNEL_SRC ${PATH_SRC_XTCORE}/integrator/gpu_opencl/pathtracer.cl)
+    set(OPENCL_KERNEL_HDR ${CMAKE_BINARY_DIR}/pathtracer_cl_src.h)
+    set(OPENCL_KERNEL_INCLUDES
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/sampler.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_lambert.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_dielectric.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_principled.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_subsurface.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_rough_dielectric.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_phong.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_sheen.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_thin_dielectric.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_thin_translucent.cl
+        ${PATH_SRC_XTCORE}/integrator/gpu_opencl/mat_boundary.cl
+    )
+    add_custom_command(
+        OUTPUT  ${OPENCL_KERNEL_HDR}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${OPENCL_KERNEL_SRC}
+            -DOUTPUT_FILE=${OPENCL_KERNEL_HDR}
+            -P ${PATH_SRC_XTCORE}/integrator/gpu_opencl/embed_kernel.cmake
+        DEPENDS ${OPENCL_KERNEL_SRC}
+                ${OPENCL_KERNEL_INCLUDES}
+                ${PATH_SRC_XTCORE}/integrator/gpu_opencl/embed_kernel.cmake
+        COMMENT "Embedding pathtracer.cl into pathtracer_cl_src.h"
+        VERBATIM
+    )
+    add_custom_target(opencl_kernel_embed DEPENDS ${OPENCL_KERNEL_HDR})
+
+    target_include_directories(xtcore_static PUBLIC ${CMAKE_BINARY_DIR})
+    target_include_directories(xtcore_dynamic PUBLIC ${CMAKE_BINARY_DIR})
+    target_link_libraries(xtcore_static  PUBLIC OpenCL::OpenCL)
+    target_link_libraries(xtcore_dynamic PUBLIC OpenCL::OpenCL)
+    add_dependencies(xtcore_static  opencl_kernel_embed)
+    add_dependencies(xtcore_dynamic opencl_kernel_embed)
+endif()
 
 add_executable(${OUT_EXE_CONVERT_MITSUBA}
     ${PATH_SRC}/convertMitsuba/main.cc
