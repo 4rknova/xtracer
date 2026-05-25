@@ -50,7 +50,7 @@ Supported groups currently include:
 - `sheen`
 - `thin_translucent`
 
-Supported integrators depend on the group, but the furnace UI uses `raytracer`, `pathtracer`, `pathtracer_mis`, and `pathtracer_bdpt` where applicable.
+Supported integrators depend on the group, but the furnace UI uses `raytracer`, `pathtracer`, and `pathtracer_mis` where applicable.
 
 **Response shape for rendered cases:**
 
@@ -302,7 +302,7 @@ Queue a dedicated material-preview render using a server-owned preview scene. Re
 | `aa` | int [1, 16] | Antialiasing level |
 | `rdepth` | int [1, 4096] | Ray recursion depth |
 | `tile_size` | int [8, 1024] | Tile side length in pixels |
-| `threads` | int [0, 256] | Render threads; `0` = auto; capped to server thread budget |
+| `threads` | int [0, 256] | CPU render threads; `0` = auto; capped to server thread budget; ignored by GPU integrators |
 | `tile_order` | `scanline`, `random`, `radial_in`, `radial_out`, `spiral_in`, `spiral_out` | |
 | Tonemapping params | — | See [Tonemapping Parameters](#tonemapping-parameters) below |
 
@@ -340,7 +340,7 @@ Submit a render job. Returns HTTP 202 on success.
 | `sample_distribution` | `grid`/`grid_aligned`, `random`/`jittered` | |
 | `rdepth` | int [1, 4096] | Ray recursion depth |
 | `tile_size` | int [8, 1024] | Tile side length in pixels |
-| `threads` | int [0, 256] | Render threads; `0` = auto; capped to server thread budget |
+| `threads` | int [0, 256] | CPU render threads; `0` = auto; capped to server thread budget; ignored by GPU integrators |
 | `tile_order` | `scanline`, `random`, `radial_in`, `radial_out`, `spiral_in`, `spiral_out` | |
 | `save_to_gallery` | `0`/`1`, `false`/`true` | Whether the completed render should be persisted into the gallery. Defaults to `true`. |
 | `variant` | string | Scene variant name |
@@ -375,7 +375,7 @@ List all active (queued, preparing, running, recently completed) jobs.
 | `tiles_done` / `tiles_total` | Tile completion counts |
 | `pass_current` / `pass_total` | Pass counts (progressive modes) |
 | `elapsed_ms` | Elapsed render time in milliseconds |
-| `threads` | Number of threads allocated |
+| `threads` | Number of CPU threads allocated; `0` for GPU integrators |
 | `queue_index` | Position in the pending queue; -1 if not queued |
 
 ### `GET /api/jobs/<id>`

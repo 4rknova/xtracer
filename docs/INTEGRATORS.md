@@ -5,12 +5,11 @@
 Found under `src/xtcore/integrator/`:
 
 1. `pathtracer`
-2. `pathtracer_bdpt`
-3. `pathtracer_mis`
-4. `photon_mapping`
-5. `raytracer`
-6. `ao`
-7. `debug_views`
+2. `pathtracer_mis`
+3. `photon_mapping`
+4. `raytracer`
+5. `ao`
+6. `debug_views`
 
 The `debug_views` integrator subsumes what were previously standalone integrators. Those legacy names are still accepted by the web API for backwards compatibility and are routed to `debug_views` with the appropriate `mode` parameter. Available modes:
 
@@ -32,7 +31,6 @@ Registered in `k_integrator_ids` / `create_integrator()` in `src/apps/xtracer/re
 | `raytracer` | |
 | `pathtracer` | |
 | `pathtracer_mis` | |
-| `pathtracer_bdpt` | |
 | `photon_mapping` | |
 | `debug_views` | Multi-mode debug integrator (see modes table above) |
 | `ao` | |

@@ -87,7 +87,6 @@ UI showcase: `http://127.0.0.1:8080/showcase.html`
 | `photon_mapping` | Photon mapping | Yes |
 | `debug_views` | Multi-mode debug integrator | Yes |
 | `ao` | Ambient occlusion | Yes |
-| `pathtracer_bdpt` | Experimental bidirectional path tracing with MIS path connection | Yes |
 | `depth` | Debug depth alias | No (alias accepted in `/api/render`) |
 | `stencil` | Debug stencil alias | No (alias accepted in `/api/render`) |
 | `normal` | Debug normal alias | No (alias accepted in `/api/render`) |
