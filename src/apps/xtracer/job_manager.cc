@@ -896,16 +896,20 @@ void job_manager_t::dispatch_queued_jobs()
             if (active_renders >= max_concurrent_renders) break;
             if (queued_job_order.empty() || queued_job_order.front() != next_id) continue;
 
-            const size_t requested_threads = job->request.threads;
-            if (requested_threads > 0) {
-                if (active_render_threads + requested_threads > render_thread_budget) break;
-                granted_threads = requested_threads;
+            if (!common::integrator_uses_cpu_threads(job->request.integrator)) {
+                granted_threads = 0;
             } else {
-                if (active_render_threads >= render_thread_budget) break;
-                const size_t free_threads = (render_thread_budget > active_render_threads)
-                    ? (render_thread_budget - active_render_threads)
-                    : 0;
-                granted_threads = (free_threads > 0) ? free_threads : 1;
+                const size_t requested_threads = job->request.threads;
+                if (requested_threads > 0) {
+                    if (active_render_threads + requested_threads > render_thread_budget) break;
+                    granted_threads = requested_threads;
+                } else {
+                    if (active_render_threads >= render_thread_budget) break;
+                    const size_t free_threads = (render_thread_budget > active_render_threads)
+                        ? (render_thread_budget - active_render_threads)
+                        : 0;
+                    granted_threads = (free_threads > 0) ? free_threads : 1;
+                }
             }
             queued_job_order.pop_front();
             ++active_renders;
@@ -1017,7 +1021,7 @@ void job_manager_t::run(const std::shared_ptr<job_t> &job, size_t granted_thread
         push_cb(job->id, preparing_snap, {});
     }
 
-    common::render_result_t rr = common::render_scene_to_png(request,
+    common::render_result_t rr = common::render_scene(request,
         [this, job, gm, push_cb, &gallery_job_id, &gallery_workspace_id, &gallery_integrator,
          gallery_created_at_ms, &gallery_entry_created]
         (common::progress_event_t event, size_t done, size_t total,
@@ -1463,10 +1467,14 @@ bool job_manager_t::snapshot(const std::string &id, job_snapshot_t &out)
         out.pass_total = ptotal;
         size_t tiles_per_pass = (ptotal > 0) ? (out.tiles_total / ptotal) : 0;
         if (tiles_per_pass == 0) {
-            const size_t tile_size = (job->request.tile_size > 0) ? job->request.tile_size : 1;
-            const size_t nx = (job->request.width + tile_size - 1) / tile_size;
-            const size_t ny = (job->request.height + tile_size - 1) / tile_size;
-            tiles_per_pass = nx * ny;
+            if (job->request.tile_size == 0) {
+                tiles_per_pass = 1;
+            } else {
+                const size_t tile_size = job->request.tile_size;
+                const size_t nx = (job->request.width + tile_size - 1) / tile_size;
+                const size_t ny = (job->request.height + tile_size - 1) / tile_size;
+                tiles_per_pass = nx * ny;
+            }
         }
         if (out.state == JOB_DONE) {
             out.pass_current = out.pass_total;

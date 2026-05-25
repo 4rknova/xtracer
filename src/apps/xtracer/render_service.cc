@@ -177,7 +177,9 @@ static const integrator_info_t k_integrators[] = {
     , { xtcore::render::integrator_metadata_t(), k_photon_mapping_controls, sizeof(k_photon_mapping_controls) / sizeof(k_photon_mapping_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_debug_views_controls, sizeof(k_debug_views_controls) / sizeof(k_debug_views_controls[0]) }
     , { xtcore::render::integrator_metadata_t(), k_ao_controls, sizeof(k_ao_controls) / sizeof(k_ao_controls[0]) }
+#ifdef XTCORE_ENABLE_OPENCL
     , { xtcore::render::integrator_metadata_t(), k_no_controls, 0 }
+#endif
 };
 
 static const char *k_integrator_ids[] = {
@@ -187,7 +189,9 @@ static const char *k_integrator_ids[] = {
     , "photon_mapping"
     , "debug_views"
     , "ao"
-    , "pathtracer_bdpt"
+#ifdef XTCORE_ENABLE_OPENCL
+    , "gpu_opencl"
+#endif
 };
 
 std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string &name);
@@ -219,7 +223,9 @@ std::unique_ptr<xtcore::render::IIntegrator> create_integrator(const std::string
     else if (name == "uv")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_UV));
     else if (name == "emission")   return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::debug_views::Integrator(xtcore::integrator::debug_views::Integrator::VIEW_EMISSION));
     else if (name == "ao")         return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::ao::Integrator());
-    else if (name == "pathtracer_bdpt") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::pathtracer_bdpt::Integrator());
+#ifdef XTCORE_ENABLE_OPENCL
+    else if (name == "gpu_opencl") return std::unique_ptr<xtcore::render::IIntegrator>(new xtcore::integrator::gpu_opencl::Integrator());
+#endif
     return std::unique_ptr<xtcore::render::IIntegrator>();
 }
 
@@ -512,7 +518,7 @@ bool configure_prepared_render(const render_request_t &request,
 
     prepared.context.params.width = request.width;
     prepared.context.params.height = request.height;
-    prepared.context.params.threads = request.threads;
+    prepared.context.params.threads = integrator_uses_cpu_threads(request.integrator) ? request.threads : 0;
     prepared.context.params.samples = request.samples;
     prepared.context.params.aa = request.aa;
     prepared.context.params.rdepth = request.rdepth;
@@ -575,7 +581,7 @@ void collect_photon_debug_points(xtcore::render::IIntegrator *integrator,
     }
 }
 
-render_result_t render_prepared_scene_to_png(const render_request_t &request,
+render_result_t render_single_pass(const render_request_t &request,
                                              prepared_render_t &prepared,
                                              progress_callback_t on_progress,
                                              const std::atomic<bool> *abort_flag,
@@ -583,7 +589,7 @@ render_result_t render_prepared_scene_to_png(const render_request_t &request,
 {
     render_result_t result;
     xtcore::render::context_t &context = prepared.context;
-    context.params.threads = request.threads;
+    context.params.threads = integrator_uses_cpu_threads(request.integrator) ? request.threads : 0;
     context.params.samples = request.samples;
     context.params.aa = request.aa;
     context.params.rdepth = request.rdepth;
@@ -701,6 +707,12 @@ const integrator_info_t *find_integrator_info(const std::string &name)
     return nullptr;
 }
 
+bool integrator_uses_cpu_threads(const std::string &name)
+{
+    const integrator_info_t *info = find_integrator_info(name);
+    return !info || info->metadata.uses_cpu_threads;
+}
+
 bool validate_integrator_options(const std::string &integrator,
                                  const std::map<std::string, std::string> &options,
                                  std::string &error)
@@ -797,12 +809,13 @@ bool validate_integrator_options(const std::string &integrator,
     return true;
 }
 
-render_result_t render_scene_to_png(const render_request_t &request,
+render_result_t render_scene(const render_request_t &request,
                                     progress_callback_t on_progress,
                                     const std::atomic<bool> *abort_flag)
 {
     render_result_t result;
-    openmp_thread_limit_guard_t thread_limit_guard(request.threads);
+    const size_t effective_threads = integrator_uses_cpu_threads(request.integrator) ? request.threads : 0;
+    openmp_thread_limit_guard_t thread_limit_guard(effective_threads);
     if (request.render_mode == render_request_t::RENDER_MODE_PROGRESSIVE ||
         request.render_mode == render_request_t::RENDER_MODE_INCREMENTAL) {
         const size_t total_samples = (request.samples > 0) ? request.samples : 1;
@@ -834,6 +847,29 @@ render_result_t render_scene_to_png(const render_request_t &request,
             return result;
         }
 
+        xtcore::render::context_t &context = prepared.prepared->context;
+        context.params.threads = integrator_uses_cpu_threads(request.integrator) ? request.threads : 0;
+        context.params.aa      = request.aa;
+        context.params.rdepth  = request.rdepth;
+        context.params.sample_distribution = request.sample_distribution;
+        context.params.tile_order = request.tile_order;
+
+        // Create and set up the integrator once for the entire multi-pass render.
+        std::unique_ptr<xtcore::render::IIntegrator> integrator =
+            create_integrator(request.integrator);
+        if (!integrator) {
+            result.error = "integrator not supported";
+            return result;
+        }
+
+        static const std::atomic<bool> never_abort_mp(false);
+        if (!abort_flag) abort_flag = &never_abort_mp;
+        integrator->set_abort_flag(abort_flag);
+        integrator->configure(request.integrator_options);
+        xtcore::render::order(context.tiles, context.params.tile_order);
+
+        global_tiles_total = context.tiles.size() * pass_samples.size();
+
         for (size_t pass_index = 0; pass_index < pass_samples.size(); ++pass_index) {
             if (abort_flag && abort_flag->load()) {
                 result.aborted = true;
@@ -843,31 +879,26 @@ render_result_t render_scene_to_png(const render_request_t &request,
                 return result;
             }
 
-            render_request_t pass_request = request;
-            pass_request.render_mode = render_request_t::RENDER_MODE_DIRECT;
-            pass_request.samples = pass_samples[pass_index];
-            const float pass_weight = static_cast<float>(pass_samples[pass_index]);
-            render_result_t pass_result = render_prepared_scene_to_png(
-                pass_request,
-                *prepared.prepared,
-                [on_progress, pass_index, pass_weight, &pass_samples, &accum_fb, &accum_weight, &accum_mut](progress_event_t event,
-                                                                                                              size_t done,
-                                                                                                              size_t total,
-                                                                                                              const xtcore::render::tile_t *tile,
-                                                                                                              const progress_tile_update_t *) {
-                    const size_t pass_count = pass_samples.size();
-                    const size_t mapped_total = total * pass_count;
-                    const size_t mapped_done = (pass_index * total) + done;
+            const size_t pass_n      = pass_samples[pass_index];
+            const float  pass_weight = static_cast<float>(pass_n);
+            const size_t tile_total  = context.tiles.size();
+
+            // Wire up per-pass progress handlers that accumulate into accum_fb.
+            progress_state_t pass_progress(tile_total,
+                [&, pass_index, pass_weight, tile_total](progress_event_t event,
+                                                          size_t done, size_t /*total*/,
+                                                          const xtcore::render::tile_t *tile,
+                                                          const progress_tile_update_t *) {
+                    const size_t mapped_total = global_tiles_total;
+                    const size_t mapped_done  = pass_index * tile_total + done;
                     if (event == PROGRESS_EVENT_TILE_STARTED) {
                         if (on_progress) on_progress(event, mapped_done, mapped_total, tile, nullptr);
                         return;
                     }
                     if (event != PROGRESS_EVENT_TILE_FINISHED || !tile) return;
 
-                    const size_t x0 = tile->x0();
-                    const size_t y0 = tile->y0();
-                    const size_t x1 = tile->x1();
-                    const size_t y1 = tile->y1();
+                    const size_t x0 = tile->x0(), y0 = tile->y0();
+                    const size_t x1 = tile->x1(), y1 = tile->y1();
 
                     std::lock_guard<std::mutex> lock(accum_mut);
                     nimg::ColorRGBAf sample;
@@ -875,50 +906,51 @@ render_result_t render_scene_to_png(const render_request_t &request,
                         for (size_t x = x0; x < x1; ++x) {
                             tile->read(x, y, sample);
                             const size_t idx = y * accum_fb.width() + x;
-                            const float prev_weight = accum_weight[idx];
-                            const float next_weight = prev_weight + pass_weight;
-                            if (next_weight <= 0.0f) continue;
+                            const float prev_w = accum_weight[idx];
+                            const float next_w = prev_w + pass_weight;
+                            if (next_w <= 0.f) continue;
                             const nimg::ColorRGBAf prev = accum_fb.pixel(x, y);
-                            const float sum_r = (prev.r() * prev_weight) + (sample.r() * pass_weight);
-                            const float sum_g = (prev.g() * prev_weight) + (sample.g() * pass_weight);
-                            const float sum_b = (prev.b() * prev_weight) + (sample.b() * pass_weight);
                             accum_fb.pixel(x, y) = nimg::ColorRGBAf(
-                                sum_r / next_weight,
-                                sum_g / next_weight,
-                                sum_b / next_weight,
+                                (prev.r() * prev_w + sample.r() * pass_weight) / next_w,
+                                (prev.g() * prev_w + sample.g() * pass_weight) / next_w,
+                                (prev.b() * prev_w + sample.b() * pass_weight) / next_w,
                                 1.f);
-                            accum_weight[idx] = next_weight;
+                            accum_weight[idx] = next_w;
                         }
                     }
 
                     if (on_progress) {
                         progress_tile_update_t upd;
                         upd.has_rect = true;
-                        upd.x0 = x0;
-                        upd.y0 = y0;
-                        upd.x1 = x1;
-                        upd.y1 = y1;
+                        upd.x0 = x0; upd.y0 = y0;
+                        upd.x1 = x1; upd.y1 = y1;
                         upd.source_fb = &accum_fb;
                         on_progress(PROGRESS_EVENT_TILE_FINISHED, mapped_done, mapped_total, nullptr, &upd);
                     }
-                },
-                abort_flag,
-                false);
+                });
+            progress_handler_on_init_t handler_on_init(&pass_progress);
+            progress_handler_on_done_t handler_on_done(&pass_progress);
+            for (auto &tile : context.tiles) {
+                tile.setup_handler_on_init(&handler_on_init);
+                tile.setup_handler_on_done(&handler_on_done);
+            }
 
-            result.elapsed_ms += pass_result.elapsed_ms;
-            global_tiles_total = pass_result.tiles_total * pass_samples.size();
-            global_tiles_done = (pass_index + 1) * pass_result.tiles_total;
+            context.params.samples = pass_n;
+
+            // First pass: bind the integrator to the context.
+            if (pass_index == 0) integrator->setup(context);
+
+            auto t0 = std::chrono::steady_clock::now();
+            integrator->render();
+            auto t1 = std::chrono::steady_clock::now();
+            result.elapsed_ms += std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+            global_tiles_done = (pass_index + 1) * tile_total;
             if (global_tiles_done > global_tiles_total) global_tiles_done = global_tiles_total;
 
-            if (pass_result.aborted || (abort_flag && abort_flag->load())) {
+            if (abort_flag && abort_flag->load()) {
                 result.aborted = true;
                 result.error = "render aborted";
-                result.tiles_total = global_tiles_total;
-                result.tiles_done = global_tiles_done;
-                return result;
-            }
-            if (!pass_result.ok) {
-                result.error = pass_result.error;
                 result.tiles_total = global_tiles_total;
                 result.tiles_done = global_tiles_done;
                 return result;
@@ -926,19 +958,14 @@ render_result_t render_scene_to_png(const render_request_t &request,
 
             if (on_progress) {
                 progress_tile_update_t pass_upd;
-                pass_upd.has_rect = false;
-                pass_upd.source_fb = &accum_fb;
+                pass_upd.has_rect    = false;
+                pass_upd.source_fb   = &accum_fb;
                 on_progress(PROGRESS_EVENT_PASS_FINISHED,
-                            pass_index + 1,
-                            pass_samples.size(),
-                            nullptr, &pass_upd);
-            }
-
-            if (pass_index + 1 == pass_samples.size()) {
-                result.photon_diffuse_points = pass_result.photon_diffuse_points;
-                result.photon_caustic_points = pass_result.photon_caustic_points;
+                            pass_index + 1, pass_samples.size(), nullptr, &pass_upd);
             }
         }
+
+        collect_photon_debug_points(integrator.get(), result);
 
         result.framebuffer = std::move(accum_fb);
         result.tiles_total = global_tiles_total;
@@ -951,7 +978,7 @@ render_result_t render_scene_to_png(const render_request_t &request,
     if (!acquire_prepared_render(request, prepared, result.error)) {
         return result;
     }
-    return render_prepared_scene_to_png(request, *prepared.prepared, on_progress, abort_flag, true);
+    return render_single_pass(request, *prepared.prepared, on_progress, abort_flag, true);
 }
 
 } /* namespace common */

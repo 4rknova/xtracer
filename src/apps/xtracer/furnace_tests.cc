@@ -158,7 +158,6 @@ std::unique_ptr<xtcore::render::IIntegrator> make_integrator(const std::string &
     using namespace xtcore::integrator;
     if (id == "pathtracer")      return std::unique_ptr<xtcore::render::IIntegrator>(new pathtracer::Integrator());
     if (id == "pathtracer_mis")  return std::unique_ptr<xtcore::render::IIntegrator>(new pathtracer_mis::Integrator());
-    if (id == "pathtracer_bdpt") return std::unique_ptr<xtcore::render::IIntegrator>(new pathtracer_bdpt::Integrator());
     if (id == "raytracer")       return std::unique_ptr<xtcore::render::IIntegrator>(new raytracer::Integrator());
     if (id == "ao")              return std::unique_ptr<xtcore::render::IIntegrator>(new ao::Integrator());
     return std::unique_ptr<xtcore::render::IIntegrator>();

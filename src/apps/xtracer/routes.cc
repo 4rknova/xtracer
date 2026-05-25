@@ -3423,7 +3423,7 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"invalid rdepth\"}", 400);
             return;
         }
-        if (parse_u64_param(params, "tile_size", 8, 1024, v)) rr.tile_size = v;
+        if (parse_u64_param(params, "tile_size", 0, 1024, v)) rr.tile_size = v;
         else if (params.has("tile_size")) {
             send_json(res, "{\"error\":\"invalid tile_size\"}", 400);
             return;
@@ -3667,7 +3667,7 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"invalid rdepth\"}", 400);
             return;
         }
-        if (parse_u64_param(params, "tile_size", 8, 1024, v)) rr.tile_size = v;
+        if (parse_u64_param(params, "tile_size", 0, 1024, v)) rr.tile_size = v;
         else if (params.has("tile_size")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_size");
             send_json(res, "{\"error\":\"invalid tile_size\"}", 400);
@@ -3679,13 +3679,18 @@ void setup_routes(WebApp &app,
             send_json(res, "{\"error\":\"invalid threads\"}", 400);
             return;
         }
-        const size_t max_render_threads = (thread_policy.max_render_threads > 0)
-            ? thread_policy.max_render_threads
-            : compute_auto_render_threads(thread_policy.reserve_threads);
+        const bool cpu_integrator = common::integrator_uses_cpu_threads(rr.integrator);
         const bool auto_threads_requested = (rr.threads == 0);
         const size_t requested_threads = rr.threads;
-        if (!auto_threads_requested && rr.threads > max_render_threads) {
-            rr.threads = max_render_threads;
+        if (cpu_integrator) {
+            const size_t max_render_threads = (thread_policy.max_render_threads > 0)
+                ? thread_policy.max_render_threads
+                : compute_auto_render_threads(thread_policy.reserve_threads);
+            if (!auto_threads_requested && rr.threads > max_render_threads) {
+                rr.threads = max_render_threads;
+            }
+        } else {
+            rr.threads = 0;
         }
         if (!parse_tile_order_param(params, "tile_order", rr.tile_order) && params.has("tile_order")) {
             backend_log_t::handle().add("warn", "render rejected: invalid tile_order");
@@ -3700,7 +3705,7 @@ void setup_routes(WebApp &app,
             return;
         }
 
-        {
+        if (cpu_integrator) {
             std::ostringstream policy_log;
             policy_log << "render thread policy workspace=" << workspace_id
                        << " mode=" << (auto_threads_requested ? "auto" : "manual")

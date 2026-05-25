@@ -31,7 +31,7 @@ _xtracer_cli_complete()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     opts="-renderer -threads -res -rdepth -samples -tile_size -aa -cam -variant -outdir -mod"
-    integrators="raytracer pathtracer pathtracer_mis pathtracer_bdpt photon_mapping ao debug_views depth stencil normal uv emission"
+    integrators="raytracer pathtracer pathtracer_mis photon_mapping ao debug_views depth stencil normal uv emission"
 
     case "${prev}" in
         -renderer)

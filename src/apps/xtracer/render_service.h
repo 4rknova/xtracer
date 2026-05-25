@@ -149,10 +149,11 @@ typedef std::function<void(progress_event_t, size_t, size_t, const xtcore::rende
 std::vector<integrator_info_t> list_integrators();
 bool is_integrator_supported(const std::string &name);
 const integrator_info_t *find_integrator_info(const std::string &name);
+bool integrator_uses_cpu_threads(const std::string &name);
 bool validate_integrator_options(const std::string &integrator,
                                  const std::map<std::string, std::string> &options,
                                  std::string &error);
-render_result_t render_scene_to_png(const render_request_t &request,
+render_result_t render_scene(const render_request_t &request,
                                     progress_callback_t on_progress,
                                     const std::atomic<bool> *abort_flag = nullptr);
 
