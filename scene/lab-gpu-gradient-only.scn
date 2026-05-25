@@ -1,0 +1,23 @@
+title       = GPU vs CPU  -  gradient background only
+description = Minimal scene with no geometry. Every primary ray misses and samples the gradient environment directly. Use this to compare GPU and CPU sky evaluation with zero material/shading influence.
+version     = 1.0
+
+environment = {
+    type   = gradient
+    config = {
+        a = col3(0.04,0.05,0.10)
+        b = col3(0.72,0.76,0.88)
+    }
+}
+
+camera = {
+    default = {
+        type     = thin-lens
+        fov      = 60
+        position = vec3(0,0,0)
+        target   = vec3(0,0,1)
+        up       = vec3(0,1,0)
+        flength  = 1.0
+        aperture = 0.0
+    }
+}
