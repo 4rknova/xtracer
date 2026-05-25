@@ -18,9 +18,10 @@ function sanitizeThreadField(input) {
 const TILE_SIZE_MIN = 8;
 const TILE_SIZE_MAX = 1024;
 const TILE_SIZE_AUTO = "auto";
+const TILE_SIZE_FULL = "full";
 
 function isBuiltinTileSizePreset(value) {
-  return value === TILE_SIZE_AUTO || value === "8" || value === "32" || value === "64";
+  return value === TILE_SIZE_AUTO || value === TILE_SIZE_FULL || value === "8" || value === "32" || value === "64";
 }
 
 function normalizeTileSizeControlValue(raw, fallback) {
@@ -29,8 +30,10 @@ function normalizeTileSizeControlValue(raw, fallback) {
     : "32";
   const value = String(raw || "").trim().toLowerCase();
   if (value === TILE_SIZE_AUTO) return TILE_SIZE_AUTO;
+  if (value === TILE_SIZE_FULL) return TILE_SIZE_FULL;
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return fallbackValue;
+  if (parsed === 0) return TILE_SIZE_FULL;
   return String(Math.max(TILE_SIZE_MIN, Math.min(TILE_SIZE_MAX, parsed)));
 }
 
@@ -70,6 +73,12 @@ function effectiveRequestedRenderThreads() {
   return currentAutoRenderThreadCount();
 }
 
+function currentIntegratorUsesCpuThreads() {
+  const id = el.integrator && el.integrator.value ? String(el.integrator.value) : "";
+  const info = id ? (integratorById.get(id) || null) : null;
+  return !info || info.uses_cpu_threads !== false;
+}
+
 function computeAutoTileSize(width, height, threads, maxClamp) {
   const w = Math.max(32, Number.parseInt(String(width || "500"), 10) || 500);
   const h = Math.max(32, Number.parseInt(String(height || "500"), 10) || 500);
@@ -83,8 +92,10 @@ function computeAutoTileSize(width, height, threads, maxClamp) {
 function resolveTileSizeForDimensions(width, height, maxClamp) {
   const raw = ensureTileSizeSelectOption(el.tileSize && el.tileSize.value !== undefined ? el.tileSize.value : "32");
   if (raw === TILE_SIZE_AUTO) {
-    return computeAutoTileSize(width, height, effectiveRequestedRenderThreads(), maxClamp);
+    const threads = currentIntegratorUsesCpuThreads() ? effectiveRequestedRenderThreads() : 1;
+    return computeAutoTileSize(width, height, threads, maxClamp);
   }
+  if (raw === TILE_SIZE_FULL) return "0";
   const parsed = Number.parseInt(raw, 10);
   const limit = Number.isFinite(maxClamp) && maxClamp > 0 ? Math.floor(maxClamp) : TILE_SIZE_MAX;
   return String(Math.max(TILE_SIZE_MIN, Math.min(limit, Number.isFinite(parsed) ? parsed : 32)));
@@ -96,10 +107,15 @@ function syncTileSizeControlUi() {
   if (String(el.tileSize.value || "") !== normalized) el.tileSize.value = normalized;
   const width = Math.max(32, Number.parseInt(String(el.width && el.width.value ? el.width.value : "500"), 10) || 500);
   const height = Math.max(32, Number.parseInt(String(el.height && el.height.value ? el.height.value : "500"), 10) || 500);
-  const threads = effectiveRequestedRenderThreads();
+  const usesCpuThreads = currentIntegratorUsesCpuThreads();
+  const threads = usesCpuThreads ? effectiveRequestedRenderThreads() : 1;
   const resolved = resolveTileSizeForDimensions(width, height, TILE_SIZE_MAX);
   if (normalized === TILE_SIZE_AUTO) {
-    el.tileSize.title = `Auto derives tile size from ${width}x${height} using ${threads} thread${threads === 1 ? "" : "s"}; current tile size ${resolved}.`;
+    el.tileSize.title = usesCpuThreads
+      ? `Auto derives tile size from ${width}x${height} using ${threads} thread${threads === 1 ? "" : "s"}; current tile size ${resolved}.`
+      : `Auto derives tile size from ${width}x${height}; current tile size ${resolved}.`;
+  } else if (normalized === TILE_SIZE_FULL) {
+    el.tileSize.title = `Full image rendered as a single tile (${width}x${height}).`;
   } else if (isBuiltinTileSizePreset(normalized)) {
     el.tileSize.title = `Tile size ${resolved}.`;
   } else {

@@ -32,9 +32,15 @@ function renderInteractivePreviewHud() {
     el.interactivePreviewControls.hidden = !isInteractiveRenderMode();
   }
   if (typeof syncRenderPreviewAuxPanel === "function") syncRenderPreviewAuxPanel();
-  if (el.renderMode) {
-    el.renderMode.value = normalizeRenderMode(renderMode);
-  }
+  const _currentMode = normalizeRenderMode(renderMode);
+  [
+    [el.renderModeDirectBtn, "direct"],
+    [el.renderModeProgressiveBtn, "progressive"],
+    [el.renderModeIncrementalBtn, "incremental"],
+    [el.renderModeInteractiveBtn, "interactive"],
+  ].forEach(([btn, mode]) => {
+    if (btn) btn.setAttribute("aria-pressed", String(mode === _currentMode));
+  });
   const show = !!interactivePreviewEnabled && activeTabMode === "render";
   el.interactivePreviewHud.hidden = !show;
   if (el.interactivePreviewSaveCameraBtn) {

@@ -82,6 +82,9 @@ function renderIntegratorControls() {
   const controls = info && Array.isArray(info.controls) ? info.controls : [];
   const dom = window.XTracerWidgets.dom;
 
+  const usesCpuThreads = !info || info.uses_cpu_threads !== false;
+  if (el.threadsField) el.threadsField.hidden = !usesCpuThreads;
+
   el.integratorControls.innerHTML = "";
   if (!controls.length) {
     el.integratorControlsSection.hidden = true;

@@ -1104,19 +1104,23 @@ async function boot() {
       appendLog(`draft mode=${uiOptions.draftMode ? "on" : "off"}`);
     });
   }
-  if (el.renderMode) {
-    el.renderMode.value = normalizeRenderMode(renderMode);
-    el.renderMode.addEventListener("change", () => {
-      const next = normalizeRenderMode(el.renderMode.value);
+  const renderModeBtns = {
+    direct: el.renderModeDirectBtn,
+    progressive: el.renderModeProgressiveBtn,
+    incremental: el.renderModeIncrementalBtn,
+    interactive: el.renderModeInteractiveBtn,
+  };
+  Object.entries(renderModeBtns).forEach(([mode, btn]) => {
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const next = normalizeRenderMode(mode);
       if (typeof setRenderMode === "function") {
         setRenderMode(next, { log: true })
           .then(() => queueWorkspaceSettingsSave())
-          .catch(() => {
-            if (el.renderMode) el.renderMode.value = normalizeRenderMode(renderMode);
-          });
+          .catch(() => {});
       }
     });
-  }
+  });
   if (el.interactivePreviewSpeed) {
     const clampInteractiveSpeed = (v) => Math.max(0.2, Math.min(5.0, Number(v) || 1.0));
     const applyInteractiveSpeed = (raw, logIt) => {

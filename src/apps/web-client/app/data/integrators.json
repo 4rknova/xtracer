@@ -123,7 +123,7 @@
         }
       ]
     },
-    { "id": "pathtracer_bdpt", "label": "Pathtracer (BDPT)" },
+    { "id": "gpu_opencl", "label": "GPU Path Tracer (OpenCL)", "uses_cpu_threads": false },
     {
       "id": "ao",
       "label": "Ambient Occlusion",

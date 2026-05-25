@@ -153,6 +153,32 @@
                   <path d="M8 5v14l11-7L8 5z"/>
                 </svg>
               </button>
+              <div id="renderModeBtnGroup" class="render-mode-btn-group" role="group" aria-label="Render mode">
+                <button id="renderModeDirectBtn" class="preview-toolbar-reset-btn render-mode-btn" type="button"
+                  title="Direct" aria-label="Direct render mode" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9z"/>
+                  </svg>
+                </button>
+                <button id="renderModeProgressiveBtn" class="preview-toolbar-reset-btn render-mode-btn" type="button"
+                  title="Progressive" aria-label="Progressive render mode" aria-pressed="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M2 6l10-4 10 4-10 4zM2 12l10-4 10 4-10 4zM2 18l10-4 10 4-10 4z"/>
+                  </svg>
+                </button>
+                <button id="renderModeIncrementalBtn" class="preview-toolbar-reset-btn render-mode-btn" type="button"
+                  title="Incremental" aria-label="Incremental render mode" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/>
+                  </svg>
+                </button>
+                <button id="renderModeInteractiveBtn" class="preview-toolbar-reset-btn render-mode-btn" type="button"
+                  title="Interactive" aria-label="Interactive render mode" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M5 3l14 9-8 2-3 8z"/>
+                  </svg>
+                </button>
+              </div>
               <div id="renderPreviewToolbarControls" class="render-preview-toolbar-controls"
                 aria-label="Preview export and sampling controls">
                 <div id="renderPreviewViewControls" class="render-preview-toolbar-view">

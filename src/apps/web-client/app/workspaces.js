@@ -601,7 +601,11 @@ function renderSettingsJobsList(activeJobs) {
     }
     const threadsNode = document.createElement("span");
     threadsNode.className = "settings-job-meta-pill";
-    threadsNode.textContent = threads === 1 ? "1 thread" : `${threads} threads`;
+    const jobIntegratorInfo = integratorById.get(integrator) || null;
+    const jobUsesCpuThreads = !jobIntegratorInfo || jobIntegratorInfo.uses_cpu_threads !== false;
+    threadsNode.textContent = jobUsesCpuThreads
+      ? (threads === 1 ? "1 thread" : `${threads} threads`)
+      : "GPU";
     const elapsedNode = document.createElement("span");
     elapsedNode.className = "settings-job-meta-pill";
     elapsedNode.textContent = elapsed;

@@ -98,6 +98,7 @@
             <span class="xui-field__label">Tile Size</span>
             <select id="tile_size" class="xui-select">
               <option value="auto">Auto</option>
+              <option value="full">Full Image</option>
               <option value="8">8</option>
               <option value="32" selected>32</option>
               <option value="64">64</option>
@@ -114,7 +115,7 @@
               <option value="spiral_out">Spiral Out</option>
             </select>
           </label>
-          <label class="xui-field">
+          <label id="threadsField" class="xui-field">
             <span class="xui-field__label-stack">
               <span id="threadsLabelText" class="xui-field__label">Threads</span>
               <span id="threadsLabelSubtext" class="xui-field__sub">11 max</span>
@@ -122,15 +123,6 @@
             <input id="threads" class="xui-input" type="number" min="0" max="256" value="0">
           </label>
         </div>
-        <label class="xui-field">
-          <span class="xui-field__label">Render Mode</span>
-          <select id="renderMode" class="xui-select">
-            <option value="direct">Direct</option>
-            <option value="progressive" selected>Progressive</option>
-            <option value="incremental">Incremental</option>
-            <option value="interactive">Interactive</option>
-          </select>
-        </label>
         <div id="integratorControlsSection" hidden>
           <div id="integratorControls"></div>
         </div>

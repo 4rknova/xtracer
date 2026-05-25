@@ -13,7 +13,6 @@
         'raytracer',
         'pathtracer',
         'pathtracer_mis',
-        'pathtracer_bdpt',
     ];
 
     // ---- test group definitions --------------------------------------------

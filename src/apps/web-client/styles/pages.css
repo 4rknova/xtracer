@@ -8692,6 +8692,21 @@ button:disabled {
   order: 0;
 }
 
+.render-mode-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  order: 1;
+}
+
+.render-mode-btn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent-soft) 20%, var(--panel)) 0%,
+    color-mix(in srgb, var(--accent-soft) 30%, var(--panel)) 100%);
+}
+
 .interactive-speed-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -746,9 +746,15 @@ async function setRenderMode(nextModeRaw, options) {
   const changed = normalizeRenderMode(renderMode) !== nextMode;
   renderMode = nextMode;
   interactivePreviewEnabled = isInteractiveRenderMode();
-  if (el.renderMode) {
-    el.renderMode.value = renderMode;
-  }
+  const renderModeButtons = {
+    direct: el.renderModeDirectBtn,
+    progressive: el.renderModeProgressiveBtn,
+    incremental: el.renderModeIncrementalBtn,
+    interactive: el.renderModeInteractiveBtn,
+  };
+  Object.entries(renderModeButtons).forEach(([mode, btn]) => {
+    if (btn) btn.setAttribute("aria-pressed", String(mode === renderMode));
+  });
   if (interactivePreviewEnabled) {
     ensureInteractiveFlyTicker();
     markInteractiveInputActivity();
