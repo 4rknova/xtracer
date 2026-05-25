@@ -25,7 +25,7 @@ camera = {
 
 geometry = {
 
-    # ── Mandelbulb  power=8 classic ──────────────────────────────────
+    # -- Mandelbulb  power=8 classic ----------------------------------
 
     bulb = {
         type       = mandelbulb
@@ -36,7 +36,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Julia  classic seed, power=2 ─────────────────────────────────
+    # -- Julia  classic seed, power=2 ---------------------------------
 
     julia = {
         type       = julia
@@ -48,7 +48,7 @@ geometry = {
         julia_c    = vec3(-0.12, 0.74, 0.28)
     }
 
-    # ── MandelBox  scale=-2.5 classic ────────────────────────────────
+    # -- MandelBox  scale=-2.5 classic --------------------------------
 
     box = {
         type       = mandelbox
@@ -61,7 +61,7 @@ geometry = {
         bailout    = 100.0
     }
 
-    # ── QuaternionJulia ──────────────────────────────────────────────
+    # -- QuaternionJulia ----------------------------------------------
 
     quat = {
         type       = quaternion_julia
@@ -74,7 +74,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── BurningShip3D  power=2 ───────────────────────────────────────
+    # -- BurningShip3D  power=2 ---------------------------------------
 
     ship = {
         type       = burning_ship_3d
@@ -85,7 +85,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Floor and lights ─────────────────────────────────────────────
+    # -- Floor and lights ---------------------------------------------
 
     floor_geo = {
         type       = mesh
@@ -118,7 +118,7 @@ geometry = {
 
 material = {
 
-    # ── Mandelbulb palette: Sapphire depths ──────────────────────────
+    # -- Mandelbulb palette: Sapphire depths --------------------------
     # m0 = deep interior (orbit near origin), m2 = outer surface
 
     bulb_m0 = {
@@ -145,7 +145,7 @@ material = {
         }
     }
 
-    # ── Julia palette: Ember glow ────────────────────────────────────
+    # -- Julia palette: Ember glow ------------------------------------
 
     julia_m0 = {
         type = principled
@@ -171,7 +171,7 @@ material = {
         }
     }
 
-    # ── MandelBox palette: Verdant mineral ───────────────────────────
+    # -- MandelBox palette: Verdant mineral ---------------------------
 
     box_m0 = {
         type = principled
@@ -197,7 +197,7 @@ material = {
         }
     }
 
-    # ── QuaternionJulia palette: Amethyst geode ──────────────────────
+    # -- QuaternionJulia palette: Amethyst geode ----------------------
 
     quat_m0 = {
         type = principled
@@ -223,7 +223,7 @@ material = {
         }
     }
 
-    # ── BurningShip palette: Forge and cinder ────────────────────────
+    # -- BurningShip palette: Forge and cinder ------------------------
 
     ship_m0 = {
         type = principled
@@ -249,7 +249,7 @@ material = {
         }
     }
 
-    # ── Floor and lights ─────────────────────────────────────────────
+    # -- Floor and lights ---------------------------------------------
 
     floor_mat = {
         type = principled
@@ -295,10 +295,10 @@ object = {
 variants = {
     hide_base = true
 
-    # ── Mandelbulb ───────────────────────────────────────────────────
+    # -- Mandelbulb ---------------------------------------------------
 
     bulb_sphere = {
-        name        = Mandelbulb — Sphere trap
+        name        = Mandelbulb  -  Sphere trap
         description = Sphere orbit trap: min|z| across all orbit steps drives material bands.
         set = {
             geometry = { bulb = { orbit_trap = sphere      } }
@@ -307,7 +307,7 @@ variants = {
     }
 
     bulb_smooth = {
-        name        = Mandelbulb — Smooth iter trap
+        name        = Mandelbulb  -  Smooth iter trap
         description = Smooth iteration count (continuous escape speed) drives material bands.
         set = {
             geometry = { bulb = { orbit_trap = smooth_iter } }
@@ -316,7 +316,7 @@ variants = {
     }
 
     bulb_planey = {
-        name        = Mandelbulb — Plane Y trap
+        name        = Mandelbulb  -  Plane Y trap
         description = Plane orbit trap: min|z.y| across all orbit steps drives material bands.
         set = {
             geometry = { bulb = { orbit_trap = plane_y     } }
@@ -324,10 +324,10 @@ variants = {
         }
     }
 
-    # ── Julia ────────────────────────────────────────────────────────
+    # -- Julia --------------------------------------------------------
 
     julia_sphere = {
-        name        = Julia — Sphere trap
+        name        = Julia  -  Sphere trap
         description = Julia fractal, seed (-0.12, 0.74, 0.28). Sphere trap drives material bands.
         set = {
             geometry = { julia = { orbit_trap = sphere      } }
@@ -336,7 +336,7 @@ variants = {
     }
 
     julia_smooth = {
-        name        = Julia — Smooth iter trap
+        name        = Julia  -  Smooth iter trap
         description = Julia fractal. Smooth iteration count drives material bands.
         set = {
             geometry = { julia = { orbit_trap = smooth_iter } }
@@ -345,7 +345,7 @@ variants = {
     }
 
     julia_planey = {
-        name        = Julia — Plane Y trap
+        name        = Julia  -  Plane Y trap
         description = Julia fractal. Plane Y orbit trap drives material bands.
         set = {
             geometry = { julia = { orbit_trap = plane_y     } }
@@ -353,10 +353,10 @@ variants = {
         }
     }
 
-    # ── MandelBox ────────────────────────────────────────────────────
+    # -- MandelBox ----------------------------------------------------
 
     box_sphere = {
-        name        = MandelBox — Sphere trap
+        name        = MandelBox  -  Sphere trap
         description = MandelBox scale=-2.5. Sphere trap (min|z|) drives material bands.
         set = {
             geometry = { box = { orbit_trap = sphere      } }
@@ -365,7 +365,7 @@ variants = {
     }
 
     box_smooth = {
-        name        = MandelBox — Smooth iter trap
+        name        = MandelBox  -  Smooth iter trap
         description = MandelBox scale=-2.5. Escape iteration count drives material bands.
         set = {
             geometry = { box = { orbit_trap = smooth_iter } }
@@ -374,7 +374,7 @@ variants = {
     }
 
     box_planey = {
-        name        = MandelBox — Box trap
+        name        = MandelBox  -  Box trap
         description = MandelBox scale=-2.5. Box orbit trap (min Chebyshev distance) drives material bands.
         set = {
             geometry = { box = { orbit_trap = plane_y     } }
@@ -382,10 +382,10 @@ variants = {
         }
     }
 
-    # ── QuaternionJulia ──────────────────────────────────────────────
+    # -- QuaternionJulia ----------------------------------------------
 
     quat_sphere = {
-        name        = QuaternionJulia — Sphere trap
+        name        = QuaternionJulia  -  Sphere trap
         description = Quaternion Julia set. Sphere trap drives material bands.
         set = {
             geometry = { quat = { orbit_trap = sphere      } }
@@ -394,7 +394,7 @@ variants = {
     }
 
     quat_smooth = {
-        name        = QuaternionJulia — Smooth iter trap
+        name        = QuaternionJulia  -  Smooth iter trap
         description = Quaternion Julia set. Smooth iteration count drives material bands.
         set = {
             geometry = { quat = { orbit_trap = smooth_iter } }
@@ -403,7 +403,7 @@ variants = {
     }
 
     quat_planey = {
-        name        = QuaternionJulia — Plane Y trap
+        name        = QuaternionJulia  -  Plane Y trap
         description = Quaternion Julia set. Plane Y orbit trap drives material bands.
         set = {
             geometry = { quat = { orbit_trap = plane_y     } }
@@ -411,10 +411,10 @@ variants = {
         }
     }
 
-    # ── BurningShip3D ────────────────────────────────────────────────
+    # -- BurningShip3D ------------------------------------------------
 
     ship_sphere = {
-        name        = BurningShip3D — Sphere trap
+        name        = BurningShip3D  -  Sphere trap
         description = Burning Ship 3D, power=2. Sphere trap drives material bands.
         set = {
             geometry = { ship = { orbit_trap = sphere      } }
@@ -423,7 +423,7 @@ variants = {
     }
 
     ship_smooth = {
-        name        = BurningShip3D — Smooth iter trap
+        name        = BurningShip3D  -  Smooth iter trap
         description = Burning Ship 3D, power=2. Smooth iteration count drives material bands.
         set = {
             geometry = { ship = { orbit_trap = smooth_iter } }
@@ -432,7 +432,7 @@ variants = {
     }
 
     ship_planey = {
-        name        = BurningShip3D — Plane Y trap
+        name        = BurningShip3D  -  Plane Y trap
         description = Burning Ship 3D, power=2. Plane Y orbit trap drives material bands.
         set = {
             geometry = { ship = { orbit_trap = plane_y     } }

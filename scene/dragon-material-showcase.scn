@@ -241,12 +241,12 @@ object = {
 variants = {
     gold = {
         name        = Polished Gold
-        description = Mirror-sharp conductor — warm gold with near-zero roughness, full metallic response.
+        description = Mirror-sharp conductor  -  warm gold with near-zero roughness, full metallic response.
     }
 
     glass = {
         name        = Crystal Glass
-        description = Solid dielectric at IOR 1.52 — full refraction and Fresnel reflection, near-zero roughness.
+        description = Solid dielectric at IOR 1.52  -  full refraction and Fresnel reflection, near-zero roughness.
         set = {
             object = {
                 dragon = { geometry = dragon, material = crystal_glass }
@@ -266,7 +266,7 @@ variants = {
 
     jade = {
         name        = Jade SSS
-        description = Subsurface scattering — cool green body tint with warm amber scatter through thin fins and tail edges.
+        description = Subsurface scattering  -  cool green body tint with warm amber scatter through thin fins and tail edges.
         set = {
             default_camera = portrait
             object = {

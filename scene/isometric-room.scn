@@ -91,7 +91,7 @@ material = {
 
 geometry = {
     # Window A: on -X wall. Glass: Y[210,490] Z[-60,80]. Normal: +X.
-    # gen(plane) is XZ; rotate 90° around Z to orient it in YZ plane (normal along X).
+    # gen(plane) is XZ; rotate 90 deg around Z to orient it in YZ plane (normal along X).
     window_a1_geo = {
         type   = mesh
         source = gen(plane)
@@ -113,7 +113,7 @@ geometry = {
     }
 
     # Window B: on -Z wall. Glass: Y[210,490] X[-170,-30]. Normal: +Z.
-    # gen(plane) is XZ; rotate +90° around X → normal +Y becomes +Z; scale in post-rot XY.
+    # gen(plane) is XZ; rotate +90 deg around X -> normal +Y becomes +Z; scale in post-rot XY.
     window_b_geo = {
         type   = mesh
         source = gen(plane)

@@ -14,7 +14,7 @@ environment = {
 
 camera = {
     # 45-degree downward angle: (Y - target_Y) == horizontal distance
-    # target=(0,0.7,0), camera=(0,3.7,-3.0) → dir=(0,-3,3) → 45° ✓
+    # target=(0,0.7,0), camera=(0,3.7,-3.0) -> dir=(0,-3,3) -> 45 deg [ok]
     hero = {
         type     = thin-lens
         position = vec3(0.0,3.7,-3.0)
@@ -171,7 +171,7 @@ variants = {
 
     quaternion_julia = {
         name        = Quaternion Julia
-        description = 4D quaternion iteration z→z²+c sliced at w=0. c=(-0.2,0.6,0.2,-0.1).
+        description = 4D quaternion iteration z->z^2+c sliced at w=0. c=(-0.2,0.6,0.2,-0.1).
         set = {
             object = { subject = { geometry = geo_quat_julia, material = mat_quat_julia } }
         }

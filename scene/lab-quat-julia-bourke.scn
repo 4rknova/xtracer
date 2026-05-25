@@ -1,4 +1,4 @@
-title       = Quaternion Julia — Bourke Presets
+title       = Quaternion Julia  -  Bourke Presets
 description = 14 quaternion Julia sets from Paul Bourke's reference collection (paulbourke.net/fractals/quatjulia). Each variant shows one preset seed with sphere orbit-trap material banding. Initial quaternion q = (px, py, pz, 0) follows Bourke's slice-<0,0,0,1> convention.
 version     = 1.0
 
@@ -21,11 +21,20 @@ camera = {
         aperture        = 0.02
         aperture_blades = 6
     }
+	interactive_default = {
+		type = thin-lens
+		position = vec3(2.016321, 2.929944, 1.612413)
+		target = vec3(0, 0, 0)
+		up = vec3(-0.585963, 0.661118, -0.468583)
+		fov = 45
+		flength = 1.0
+		aperture = 0.0
+	}
 }
 
 geometry = {
 
-    # ── Bourke preset 01: c = (-1.0, 0.2, 0.0, 0.0) ─────────────────
+    # -- Bourke preset 01: c = (-1.0, 0.2, 0.0, 0.0) -----------------
 
     bourke_01 = {
         type       = quaternion_julia
@@ -38,7 +47,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 02: c = (-0.291, -0.399, 0.339, 0.437) ─────────
+    # -- Bourke preset 02: c = (-0.291, -0.399, 0.339, 0.437) ---------
 
     bourke_02 = {
         type       = quaternion_julia
@@ -51,7 +60,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 03: c = (-0.2, 0.4, -0.4, -0.4) ───────────────
+    # -- Bourke preset 03: c = (-0.2, 0.4, -0.4, -0.4) ---------------
 
     bourke_03 = {
         type       = quaternion_julia
@@ -64,7 +73,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 04: c = (-0.213, -0.041, -0.563, -0.560) ──────
+    # -- Bourke preset 04: c = (-0.213, -0.041, -0.563, -0.560) ------
 
     bourke_04 = {
         type       = quaternion_julia
@@ -77,7 +86,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 05: c = (-0.2, 0.6, 0.2, 0.2) ─────────────────
+    # -- Bourke preset 05: c = (-0.2, 0.6, 0.2, 0.2) -----------------
 
     bourke_05 = {
         type       = quaternion_julia
@@ -90,7 +99,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 06: c = (-0.162, 0.163, 0.560, -0.599) ────────
+    # -- Bourke preset 06: c = (-0.162, 0.163, 0.560, -0.599) --------
 
     bourke_06 = {
         type       = quaternion_julia
@@ -103,7 +112,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 07: c = (-0.2, 0.8, 0.0, 0.0) ─────────────────
+    # -- Bourke preset 07: c = (-0.2, 0.8, 0.0, 0.0) -----------------
 
     bourke_07 = {
         type       = quaternion_julia
@@ -116,7 +125,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 08: c = (-0.445, 0.339, -0.089, -0.562) ───────
+    # -- Bourke preset 08: c = (-0.445, 0.339, -0.089, -0.562) -------
 
     bourke_08 = {
         type       = quaternion_julia
@@ -129,7 +138,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 09: c = (0.185, 0.478, 0.125, -0.392) ─────────
+    # -- Bourke preset 09: c = (0.185, 0.478, 0.125, -0.392) ---------
 
     bourke_09 = {
         type       = quaternion_julia
@@ -142,7 +151,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 10: c = (-0.450, -0.447, 0.181, 0.306) ────────
+    # -- Bourke preset 10: c = (-0.450, -0.447, 0.181, 0.306) --------
 
     bourke_10 = {
         type       = quaternion_julia
@@ -155,7 +164,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 11: c = (-0.218, -0.113, -0.181, -0.496) ──────
+    # -- Bourke preset 11: c = (-0.218, -0.113, -0.181, -0.496) ------
 
     bourke_11 = {
         type       = quaternion_julia
@@ -168,7 +177,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 12: c = (-0.137, -0.630, -0.475, -0.046) ──────
+    # -- Bourke preset 12: c = (-0.137, -0.630, -0.475, -0.046) ------
 
     bourke_12 = {
         type       = quaternion_julia
@@ -181,7 +190,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 13: c = (-0.125, -0.256, 0.847, 0.0895) ───────
+    # -- Bourke preset 13: c = (-0.125, -0.256, 0.847, 0.0895) -------
 
     bourke_13 = {
         type       = quaternion_julia
@@ -194,7 +203,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke preset 14: c = (-0.08, 0.0, -0.8, -0.03) ─────────────
+    # -- Bourke preset 14: c = (-0.08, 0.0, -0.8, -0.03) -------------
 
     bourke_14 = {
         type       = quaternion_julia
@@ -207,7 +216,7 @@ geometry = {
         bailout    = 4.0
     }
 
-    # ── Bourke 07 — bottom half only (CSG) ───────────────────────────
+    # -- Bourke 07  -  bottom half only (CSG) ---------------------------
 
     bourke_07_halved = {
         type = csg
@@ -230,7 +239,7 @@ geometry = {
         }
     }
 
-    # ── Floor and lights ─────────────────────────────────────────────
+    # -- Floor and lights ---------------------------------------------
 
     floor_geo = {
         type       = mesh
@@ -263,7 +272,7 @@ geometry = {
 
 material = {
 
-    # ── 01 Bronze ────────────────────────────────────────────────────
+    # -- 01 Bronze ----------------------------------------------------
     # a=oxidized interior, b=aged mid, c=polished highlight
 
     bronze_a = {
@@ -290,7 +299,7 @@ material = {
         }
     }
 
-    # ── 02 Ice ───────────────────────────────────────────────────────
+    # -- 02 Ice -------------------------------------------------------
     # a=deep glacial blue, b=translucent mid, c=frosted surface
 
     ice_a = {
@@ -317,8 +326,8 @@ material = {
         }
     }
 
-    # ── 03 Velvet ────────────────────────────────────────────────────
-    # a=deep shadow, b=mid pile, c=raised highlight — all high roughness
+    # -- 03 Velvet ----------------------------------------------------
+    # a=deep shadow, b=mid pile, c=raised highlight  -  all high roughness
 
     velvet_a = {
         type = principled
@@ -344,7 +353,7 @@ material = {
         }
     }
 
-    # ── 04 Obsidian ──────────────────────────────────────────────────
+    # -- 04 Obsidian --------------------------------------------------
     # a=black volcanic core, b=dark glass, c=glassy edge with clearcoat
 
     obsidian_a = {
@@ -371,7 +380,7 @@ material = {
         }
     }
 
-    # ── 05 Gold ──────────────────────────────────────────────────────
+    # -- 05 Gold ------------------------------------------------------
     # a=matte dark gold, b=satin, c=mirror-polished
 
     gold_a = {
@@ -398,7 +407,7 @@ material = {
         }
     }
 
-    # ── 06 Patina / Verdigris ────────────────────────────────────────
+    # -- 06 Patina / Verdigris ----------------------------------------
     # a=tarnished copper, b=green patina mid, c=bright verdigris
 
     patina_a = {
@@ -425,7 +434,7 @@ material = {
         }
     }
 
-    # ── 07 Jade ──────────────────────────────────────────────────────
+    # -- 07 Jade ------------------------------------------------------
     # a=dark nephrite, b=translucent mid, c=polished surface
 
     jade_a = {
@@ -452,7 +461,7 @@ material = {
         }
     }
 
-    # ── 08 Rust / Aged Iron ──────────────────────────────────────────
+    # -- 08 Rust / Aged Iron ------------------------------------------
     # a=dark iron core, b=mid rust, c=flaking oxide surface
 
     rust_a = {
@@ -479,7 +488,7 @@ material = {
         }
     }
 
-    # ── 09 Sapphire ──────────────────────────────────────────────────
+    # -- 09 Sapphire --------------------------------------------------
     # a=deep indigo, b=royal blue mid, c=bright gem facet
 
     sapphire_a = {
@@ -506,7 +515,7 @@ material = {
         }
     }
 
-    # ── 10 Marble ────────────────────────────────────────────────────
+    # -- 10 Marble ----------------------------------------------------
     # a=dark vein, b=grey field, c=white polished surface
 
     marble_a = {
@@ -533,7 +542,7 @@ material = {
         }
     }
 
-    # ── 11 Carbon Fibre ──────────────────────────────────────────────
+    # -- 11 Carbon Fibre ----------------------------------------------
     # a=dark weave shadow, b=mid weave, c=specular weave highlight
 
     carbon_a = {
@@ -560,7 +569,7 @@ material = {
         }
     }
 
-    # ── 12 Nacre / Mother of Pearl ───────────────────────────────────
+    # -- 12 Nacre / Mother of Pearl -----------------------------------
     # a=dark iridescent base, b=lavender-pearl mid, c=bright lustre
 
     nacre_a = {
@@ -587,7 +596,7 @@ material = {
         }
     }
 
-    # ── 13 Amber ─────────────────────────────────────────────────────
+    # -- 13 Amber -----------------------------------------------------
     # a=dark resin core, b=honey mid, c=bright golden surface
 
     amber_a = {
@@ -614,7 +623,7 @@ material = {
         }
     }
 
-    # ── 14 Lava / Basalt ─────────────────────────────────────────────
+    # -- 14 Lava / Basalt ---------------------------------------------
     # a=black cooled crust, b=dark cooling flow, c=glowing surface crust
 
     lava_a = {
@@ -641,7 +650,7 @@ material = {
         }
     }
 
-    # ── Floor and lights ─────────────────────────────────────────────
+    # -- Floor and lights ---------------------------------------------
 
     floor_mat = {
         type = principled
@@ -685,7 +694,7 @@ variants = {
     hide_base = true
 
     bourke_01 = {
-        name        = Bourke 01 — c(-1.0, 0.2, 0, 0)
+        name        = Bourke 01  -  c(-1.0, 0.2, 0, 0)
         description = Quaternion Julia, Paul Bourke preset 01. Seed c = (-1.0 + 0.2i + 0j + 0k). Material: bronze.
         set = {
             geometry = { bourke_01 = { orbit_trap = smooth_iter } }
@@ -694,7 +703,7 @@ variants = {
     }
 
     bourke_02 = {
-        name        = Bourke 02 — c(-0.291, -0.399, 0.339, 0.437)
+        name        = Bourke 02  -  c(-0.291, -0.399, 0.339, 0.437)
         description = Quaternion Julia, Paul Bourke preset 02. Seed c = (-0.291 - 0.399i + 0.339j + 0.437k). Material: ice.
         set = {
             geometry = { bourke_02 = { orbit_trap = smooth_iter } }
@@ -703,7 +712,7 @@ variants = {
     }
 
     bourke_03 = {
-        name        = Bourke 03 — c(-0.2, 0.4, -0.4, -0.4)
+        name        = Bourke 03  -  c(-0.2, 0.4, -0.4, -0.4)
         description = Quaternion Julia, Paul Bourke preset 03. Seed c = (-0.2 + 0.4i - 0.4j - 0.4k). Material: velvet.
         set = {
             geometry = { bourke_03 = { orbit_trap = smooth_iter } }
@@ -712,7 +721,7 @@ variants = {
     }
 
     bourke_04 = {
-        name        = Bourke 04 — c(-0.213, -0.041, -0.563, -0.560)
+        name        = Bourke 04  -  c(-0.213, -0.041, -0.563, -0.560)
         description = Quaternion Julia, Paul Bourke preset 04. Seed c = (-0.213 - 0.041i - 0.563j - 0.560k). Material: obsidian.
         set = {
             geometry = { bourke_04 = { orbit_trap = smooth_iter } }
@@ -721,7 +730,7 @@ variants = {
     }
 
     bourke_05 = {
-        name        = Bourke 05 — c(-0.2, 0.6, 0.2, 0.2)
+        name        = Bourke 05  -  c(-0.2, 0.6, 0.2, 0.2)
         description = Quaternion Julia, Paul Bourke preset 05. Seed c = (-0.2 + 0.6i + 0.2j + 0.2k). Material: gold.
         set = {
             geometry = { bourke_05 = { orbit_trap = smooth_iter } }
@@ -730,7 +739,7 @@ variants = {
     }
 
     bourke_06 = {
-        name        = Bourke 06 — c(-0.162, 0.163, 0.560, -0.599)
+        name        = Bourke 06  -  c(-0.162, 0.163, 0.560, -0.599)
         description = Quaternion Julia, Paul Bourke preset 06. Seed c = (-0.162 + 0.163i + 0.560j - 0.599k). Material: patina (verdigris copper).
         set = {
             geometry = { bourke_06 = { orbit_trap = smooth_iter } }
@@ -739,7 +748,7 @@ variants = {
     }
 
     bourke_07 = {
-        name        = Bourke 07 — c(-0.2, 0.8, 0, 0)
+        name        = Bourke 07  -  c(-0.2, 0.8, 0, 0)
         description = Quaternion Julia, Paul Bourke preset 07. Seed c = (-0.2 + 0.8i + 0j + 0k). Material: jade.
         set = {
             geometry = { bourke_07 = { orbit_trap = smooth_iter } }
@@ -748,7 +757,7 @@ variants = {
     }
 
     bourke_08 = {
-        name        = Bourke 08 — c(-0.445, 0.339, -0.089, -0.562)
+        name        = Bourke 08  -  c(-0.445, 0.339, -0.089, -0.562)
         description = Quaternion Julia, Paul Bourke preset 08. Seed c = (-0.445 + 0.339i - 0.089j - 0.562k). Material: rust (aged iron).
         set = {
             geometry = { bourke_08 = { orbit_trap = smooth_iter } }
@@ -757,7 +766,7 @@ variants = {
     }
 
     bourke_09 = {
-        name        = Bourke 09 — c(0.185, 0.478, 0.125, -0.392)
+        name        = Bourke 09  -  c(0.185, 0.478, 0.125, -0.392)
         description = Quaternion Julia, Paul Bourke preset 09. Seed c = (0.185 + 0.478i + 0.125j - 0.392k). Material: sapphire.
         set = {
             geometry = { bourke_09 = { orbit_trap = smooth_iter } }
@@ -766,7 +775,7 @@ variants = {
     }
 
     bourke_10 = {
-        name        = Bourke 10 — c(-0.450, -0.447, 0.181, 0.306)
+        name        = Bourke 10  -  c(-0.450, -0.447, 0.181, 0.306)
         description = Quaternion Julia, Paul Bourke preset 10. Seed c = (-0.450 - 0.447i + 0.181j + 0.306k). Material: marble.
         set = {
             geometry = { bourke_10 = { orbit_trap = smooth_iter } }
@@ -775,7 +784,7 @@ variants = {
     }
 
     bourke_11 = {
-        name        = Bourke 11 — c(-0.218, -0.113, -0.181, -0.496)
+        name        = Bourke 11  -  c(-0.218, -0.113, -0.181, -0.496)
         description = Quaternion Julia, Paul Bourke preset 11. Seed c = (-0.218 - 0.113i - 0.181j - 0.496k). Material: carbon fibre.
         set = {
             geometry = { bourke_11 = { orbit_trap = smooth_iter } }
@@ -784,7 +793,7 @@ variants = {
     }
 
     bourke_12 = {
-        name        = Bourke 12 — c(-0.137, -0.630, -0.475, -0.046)
+        name        = Bourke 12  -  c(-0.137, -0.630, -0.475, -0.046)
         description = Quaternion Julia, Paul Bourke preset 12. Seed c = (-0.137 - 0.630i - 0.475j - 0.046k). Material: nacre (mother of pearl).
         set = {
             geometry = { bourke_12 = { orbit_trap = smooth_iter } }
@@ -793,7 +802,7 @@ variants = {
     }
 
     bourke_13 = {
-        name        = Bourke 13 — c(-0.125, -0.256, 0.847, 0.0895)
+        name        = Bourke 13  -  c(-0.125, -0.256, 0.847, 0.0895)
         description = Quaternion Julia, Paul Bourke preset 13. Seed c = (-0.125 - 0.256i + 0.847j + 0.0895k). Material: amber.
         set = {
             geometry = { bourke_13 = { orbit_trap = smooth_iter } }
@@ -802,7 +811,7 @@ variants = {
     }
 
     bourke_14 = {
-        name        = Bourke 14 — c(-0.08, 0, -0.8, -0.03)
+        name        = Bourke 14  -  c(-0.08, 0, -0.8, -0.03)
         description = Quaternion Julia, Paul Bourke preset 14. Seed c = (-0.08 + 0i - 0.8j - 0.03k). Material: lava (basalt).
         set = {
             geometry = { bourke_14 = { orbit_trap = smooth_iter } }
@@ -810,10 +819,10 @@ variants = {
         }
     }
 
-    # ── CSG cross-section ────────────────────────────────────────────
+    # -- CSG cross-section --------------------------------------------
 
     bourke_07_interior = {
-        name        = Bourke 07 — Bottom half (cross-section)
+        name        = Bourke 07  -  Bottom half (cross-section)
         description = Preset 07, c=(-0.2, 0.8, 0, 0). CSG clips the fractal at y=0. Camera sits at cut height looking along the slice, so the cut face is edge-on and the fractal surface structure fills the frame. Material: jade.
         set = {
             object = { fractal = { geometry = bourke_07_halved, materials = { a = jade_a, b = jade_b, c = jade_c } } }

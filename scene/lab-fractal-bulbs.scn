@@ -223,7 +223,7 @@ variants = {
     }
 
     mandelbulb_bronze = {
-        name        = Mandelbulb — Bronze
+        name        = Mandelbulb  -  Bronze
         description = Mandelbulb with warm patinated bronze.
         set = {
             object = {
@@ -233,7 +233,7 @@ variants = {
     }
 
     julia_bronze = {
-        name        = Julia — Bronze
+        name        = Julia  -  Bronze
         description = Julia fractal with warm patinated bronze.
         set = {
             object = {
@@ -243,8 +243,8 @@ variants = {
     }
 
     mandelbulb_ice = {
-        name        = Mandelbulb — Ice
-        description = Mandelbulb with glacial ice — high clearcoat, near-zero roughness.
+        name        = Mandelbulb  -  Ice
+        description = Mandelbulb with glacial ice  -  high clearcoat, near-zero roughness.
         set = {
             object = {
                 bulb = { geometry = bulb_mandel, material = ice }
@@ -253,8 +253,8 @@ variants = {
     }
 
     julia_ice = {
-        name        = Julia — Ice
-        description = Julia fractal with glacial ice — high clearcoat, near-zero roughness.
+        name        = Julia  -  Ice
+        description = Julia fractal with glacial ice  -  high clearcoat, near-zero roughness.
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = ice }
@@ -263,7 +263,7 @@ variants = {
     }
 
     mandelbulb_aniso = {
-        name        = Mandelbulb — Anisotropic Metal
+        name        = Mandelbulb  -  Anisotropic Metal
         description = Mandelbulb with brushed titanium-like anisotropic metal.
         set = {
             object = {
@@ -273,7 +273,7 @@ variants = {
     }
 
     julia_aniso = {
-        name        = Julia — Anisotropic Metal
+        name        = Julia  -  Anisotropic Metal
         description = Julia fractal with brushed titanium-like anisotropic metal.
         set = {
             object = {
@@ -283,7 +283,7 @@ variants = {
     }
 
     mandelbulb_verdigris = {
-        name        = Mandelbulb — Verdigris Copper
+        name        = Mandelbulb  -  Verdigris Copper
         description = Mandelbulb with oxidized copper using procedural marble veining.
         set = {
             object = {
@@ -293,7 +293,7 @@ variants = {
     }
 
     julia_verdigris = {
-        name        = Julia — Verdigris Copper
+        name        = Julia  -  Verdigris Copper
         description = Julia fractal with oxidized copper using procedural marble veining.
         set = {
             object = {
@@ -303,7 +303,7 @@ variants = {
     }
 
     mandelbulb_gold = {
-        name        = Mandelbulb — Gold
+        name        = Mandelbulb  -  Gold
         description = Mandelbulb with polished gold.
         set = {
             object = {
@@ -313,7 +313,7 @@ variants = {
     }
 
     julia_gold = {
-        name        = Julia — Gold
+        name        = Julia  -  Gold
         description = Julia fractal with polished gold.
         set = {
             object = {
@@ -323,8 +323,8 @@ variants = {
     }
 
     mandelbulb_obsidian = {
-        name        = Mandelbulb — Obsidian
-        description = Mandelbulb with dark volcanic glass — deep black with sharp highlights.
+        name        = Mandelbulb  -  Obsidian
+        description = Mandelbulb with dark volcanic glass  -  deep black with sharp highlights.
         set = {
             object = {
                 bulb = { geometry = bulb_mandel, material = obsidian }
@@ -333,8 +333,8 @@ variants = {
     }
 
     julia_obsidian = {
-        name        = Julia — Obsidian
-        description = Julia fractal with dark volcanic glass — deep black with sharp highlights.
+        name        = Julia  -  Obsidian
+        description = Julia fractal with dark volcanic glass  -  deep black with sharp highlights.
         set = {
             object = {
                 bulb = { geometry = bulb_julia, material = obsidian }

@@ -270,8 +270,8 @@ variants = {
     }
 
     gen_implicit_concrete = {
-        name        = Menger Implicit — Concrete
-        description = Implicit mesh with rough dielectric concrete — highlights the face geometry and hole silhouettes.
+        name        = Menger Implicit  -  Concrete
+        description = Implicit mesh with rough dielectric concrete  -  highlights the face geometry and hole silhouettes.
         set = {
             object = {
                 menger_main = { geometry = menger_main_gen_implicit, material = menger_concrete }
@@ -280,7 +280,7 @@ variants = {
     }
 
     gen_implicit_steel = {
-        name        = Menger Implicit — Brushed Steel
+        name        = Menger Implicit  -  Brushed Steel
         description = Implicit mesh with anisotropic brushed-steel conductor.
         set = {
             object = {
@@ -290,7 +290,7 @@ variants = {
     }
 
     gen_implicit_gold = {
-        name        = Menger Implicit — Gold
+        name        = Menger Implicit  -  Gold
         description = Implicit mesh with polished gold conductor.
         set = {
             object = {
@@ -300,8 +300,8 @@ variants = {
     }
 
     gen_implicit_obsidian = {
-        name        = Menger Implicit — Obsidian
-        description = Implicit mesh with dark volcanic glass — near-zero roughness and strong clearcoat.
+        name        = Menger Implicit  -  Obsidian
+        description = Implicit mesh with dark volcanic glass  -  near-zero roughness and strong clearcoat.
         set = {
             object = {
                 menger_main = { geometry = menger_main_gen_implicit, material = menger_obsidian }
@@ -310,7 +310,7 @@ variants = {
     }
 
     gen_implicit_verdigris = {
-        name        = Menger Implicit — Verdigris Copper
+        name        = Menger Implicit  -  Verdigris Copper
         description = Implicit mesh with oxidized copper using procedural marble veining.
         set = {
             object = {
@@ -320,8 +320,8 @@ variants = {
     }
 
     gen_implicit_chrome = {
-        name        = Menger Implicit — Mirror Chrome
-        description = Near-perfect specular conductor — tunnels produce recursive reflections that recede into the fractal depth.
+        name        = Menger Implicit  -  Mirror Chrome
+        description = Near-perfect specular conductor  -  tunnels produce recursive reflections that recede into the fractal depth.
         set = {
             object = {
                 menger_main = { geometry = menger_main_gen_implicit, material = menger_chrome }
@@ -330,7 +330,7 @@ variants = {
     }
 
     gen_implicit_bronze = {
-        name        = Menger Implicit — Patinated Bronze
+        name        = Menger Implicit  -  Patinated Bronze
         description = Semi-metallic principled with fbm_marble mixing warm copper against green verdigris patches.
         set = {
             object = {

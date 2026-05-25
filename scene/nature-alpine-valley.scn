@@ -46,7 +46,7 @@ camera = {
 }
 
 geometry = {
-    # Main terrain — near edge starts exactly at camera Z so foreground is fully covered
+    # Main terrain  -  near edge starts exactly at camera Z so foreground is fully covered
     # Spans X: -20..20  Y: -2..3  Z: -8..32
     terrain_main = {
         type       = mesh

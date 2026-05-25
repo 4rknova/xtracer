@@ -1,5 +1,5 @@
 title       = Fractal Jewel Ring
-description = CSG mandelbulb crown intersected with a procedural rounded ring — approximating a 3D-printed gold fractal jewel ring.
+description = CSG mandelbulb crown intersected with a procedural rounded ring  -  approximating a 3D-printed gold fractal jewel ring.
 version     = 2.0
 
 default_camera = hero
@@ -249,7 +249,7 @@ variants = {
     hide_base = true
 
     hero_view = {
-        name        = Hero — 3/4 View
+        name        = Hero  -  3/4 View
         description = 3/4 elevated view with warm key light and subtle DOF matching a macro jewellery photograph.
         set = {
             default_camera = hero
@@ -282,7 +282,7 @@ variants = {
     }
 
     high_power = {
-        name        = Hero — Power 12
+        name        = Hero  -  Power 12
         description = Same hero view but mandelbulb power=12 for tighter, spikier fractal detail.
         set = {
             default_camera = hero

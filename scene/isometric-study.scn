@@ -22,12 +22,12 @@ camera = {
 
 geometry = {
 
-    # ── Room surfaces ──────────────────────────────────────────────────────────
+    # -- Room surfaces ----------------------------------------------------------
     floor  = { type = plane, normal = vec3(0,1,0),  distance = 0    }
     wall_z = { type = plane, normal = vec3(0,0,-1), distance = -2.6 }
     wall_x = { type = plane, normal = vec3(-1,0,0), distance = -2.6 }
 
-    # ── Bookshelf (against back-z wall) ───────────────────────────────────────
+    # -- Bookshelf (against back-z wall) ---------------------------------------
     shelf_body = {
         type   = mesh
         source = gen(hexahedron)
@@ -53,7 +53,7 @@ geometry = {
         }
     }
 
-    # ── Books (upper shelf) ────────────────────────────────────────────────────
+    # -- Books (upper shelf) ----------------------------------------------------
     book1 = {
         type   = mesh
         source = gen(hexahedron)
@@ -85,7 +85,7 @@ geometry = {
         modifiers = { scale = vec3(0.070,0.300,0.22), translation = vec3(0.93, 1.075, 2.36) }
     }
 
-    # ── Books (lower shelf) ────────────────────────────────────────────────────
+    # -- Books (lower shelf) ----------------------------------------------------
     book7 = {
         type   = mesh
         source = gen(hexahedron)
@@ -102,7 +102,7 @@ geometry = {
         modifiers = { scale = vec3(0.060,0.200,0.22), translation = vec3(0.72, 0.515, 2.36) }
     }
 
-    # ── Desk ──────────────────────────────────────────────────────────────────
+    # -- Desk ------------------------------------------------------------------
     desk_top = {
         type   = mesh
         source = gen(hexahedron)
@@ -132,7 +132,7 @@ geometry = {
         modifiers = { scale = vec3(0.04,0.370,0.04), translation = vec3(1.46, 0.370, 0.82) }
     }
 
-    # ── Desk lamp ─────────────────────────────────────────────────────────────
+    # -- Desk lamp -------------------------------------------------------------
     lamp_base = {
         type   = mesh
         source = gen(hexahedron)
@@ -150,7 +150,7 @@ geometry = {
     }
     lamp_bulb  = { type = sphere, position = vec3(0.65, 1.40, 0.90), radius = 0.060 }
 
-    # ── Chair ─────────────────────────────────────────────────────────────────
+    # -- Chair -----------------------------------------------------------------
     chair_seat = {
         type   = mesh
         source = gen(hexahedron)
@@ -182,7 +182,7 @@ geometry = {
         modifiers = { scale = vec3(0.03,0.220,0.03), translation = vec3(1.38, 0.220, 1.48) }
     }
 
-    # ── Rug ───────────────────────────────────────────────────────────────────
+    # -- Rug -------------------------------------------------------------------
     rug = {
         type   = mesh
         source = gen(hexahedron)
@@ -192,7 +192,7 @@ geometry = {
         }
     }
 
-    # ── Desk objects ──────────────────────────────────────────────────────────
+    # -- Desk objects ----------------------------------------------------------
     desk_tome = {
         type   = mesh
         source = gen(hexahedron)
@@ -201,7 +201,7 @@ geometry = {
     desk_mug  = { type = sphere, position = vec3(1.38, 0.86, 1.18), radius = 0.055 }
     globe     = { type = sphere, position = vec3(1.40, 0.84, 0.88), radius = 0.075 }
 
-    # ── Oil painting on wall ──────────────────────────────────────────────────
+    # -- Oil painting on wall --------------------------------------------------
     picture_frame = {
         type   = mesh
         source = gen(hexahedron)
@@ -213,7 +213,7 @@ geometry = {
         modifiers = { scale = vec3(0.33,0.23,0.012), translation = vec3(1.90, 1.55, 2.608) }
     }
 
-    # ── Plant pot in corner ───────────────────────────────────────────────────
+    # -- Plant pot in corner ---------------------------------------------------
     pot_body = {
         type   = mesh
         source = gen(hexahedron)
@@ -221,7 +221,7 @@ geometry = {
     }
     plant = { type = sphere, position = vec3(0.18, 0.36, 2.10), radius = 0.14 }
 
-    # ── Light sources ─────────────────────────────────────────────────────────
+    # -- Light sources ---------------------------------------------------------
     lamp_area = { type = sphere, position = vec3(0.65, 1.60, 0.90), radius = 0.18 }
     overhead  = { type = sphere, position = vec3(1.20, 3.10, 1.20), radius = 0.30 }
     moonlight = { type = sphere, position = vec3(3.30, 2.40, 0.50), radius = 0.55 }
@@ -229,7 +229,7 @@ geometry = {
 
 material = {
 
-    # ── Room ──────────────────────────────────────────────────────────────────
+    # -- Room ------------------------------------------------------------------
     floor_wood = {
         type = principled
         properties = {
@@ -247,7 +247,7 @@ material = {
         }
     }
 
-    # ── Furniture ─────────────────────────────────────────────────────────────
+    # -- Furniture -------------------------------------------------------------
     dark_wood = {
         type = principled
         properties = {
@@ -256,7 +256,7 @@ material = {
         }
     }
 
-    # ── Books ─────────────────────────────────────────────────────────────────
+    # -- Books -----------------------------------------------------------------
     book_red = {
         type = principled
         properties = {
@@ -300,7 +300,7 @@ material = {
         }
     }
 
-    # ── Rug ───────────────────────────────────────────────────────────────────
+    # -- Rug -------------------------------------------------------------------
     rug_fabric = {
         type = sheen
         properties = {
@@ -312,7 +312,7 @@ material = {
         }
     }
 
-    # ── Lamp ──────────────────────────────────────────────────────────────────
+    # -- Lamp ------------------------------------------------------------------
     brass = {
         type = principled
         properties = {
@@ -332,7 +332,7 @@ material = {
         properties = { samplers = { emissive = { type = color, value = col3(22, 16, 9) } } }
     }
 
-    # ── Desk objects ──────────────────────────────────────────────────────────
+    # -- Desk objects ----------------------------------------------------------
     ceramic = {
         type = principled
         properties = {
@@ -355,7 +355,7 @@ material = {
         }
     }
 
-    # ── Painting ──────────────────────────────────────────────────────────────
+    # -- Painting --------------------------------------------------------------
     picture_frame_mat = {
         type = principled
         properties = {
@@ -373,7 +373,7 @@ material = {
         }
     }
 
-    # ── Plant ─────────────────────────────────────────────────────────────────
+    # -- Plant -----------------------------------------------------------------
     terracotta = {
         type = principled
         properties = {
@@ -389,7 +389,7 @@ material = {
         }
     }
 
-    # ── Lights ────────────────────────────────────────────────────────────────
+    # -- Lights ----------------------------------------------------------------
     lamp_area_mat = {
         type = emissive
         properties = { samplers = { emissive = { type = color, value = col3(14, 9.5, 5.0) } } }

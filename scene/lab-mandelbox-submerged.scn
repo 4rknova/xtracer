@@ -1,4 +1,4 @@
-title       = MandelBox — Submerged
+title       = MandelBox  -  Submerged
 description = MandelBox box-trap (min Chebyshev distance) material array, half-submerged in an ocean with wave geometry. Verdant mineral palette above the waterline.
 version     = 2.0
 
@@ -94,7 +94,7 @@ geometry = {
 
 material = {
 
-    # ── MandelBox: verdant mineral (from lab-fractal-material-arrays.scn) ────
+    # -- MandelBox: verdant mineral (from lab-fractal-material-arrays.scn) ----
 
     box_m0 = {
         type = principled
@@ -120,7 +120,7 @@ material = {
         }
     }
 
-    # ── Ocean ─────────────────────────────────────────────────────────────────
+    # -- Ocean -----------------------------------------------------------------
 
     ocean_day = {
         type = rough_dielectric
@@ -154,7 +154,7 @@ material = {
         }
     }
 
-    # ── Lights — day ──────────────────────────────────────────────────────────
+    # -- Lights  -  day ----------------------------------------------------------
 
     sun_day = {
         type = emissive
@@ -171,7 +171,7 @@ material = {
         properties = { samplers = { emissive = { type = color, value = col3(3.0,4.5,7.2) } } }
     }
 
-    # ── Lights — golden hour ──────────────────────────────────────────────────
+    # -- Lights  -  golden hour --------------------------------------------------
 
     sun_golden = {
         type = emissive

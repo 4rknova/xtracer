@@ -1,5 +1,5 @@
 title       = Procedural Geometry Showcase
-description = Exhaustive reference — one variant per supported procedural generator, principled materials, HDR three-point lighting.
+description = Exhaustive reference  -  one variant per supported procedural generator, principled materials, HDR three-point lighting.
 version     = 1.1
 
 environment = {
@@ -608,7 +608,7 @@ material = {
         }
     }
 
-    # Smooth white ceramic with clearcoat — tetrahedron, capsule
+    # Smooth white ceramic with clearcoat  -  tetrahedron, capsule
     mat_ceramic = {
         type = principled
         properties = {
@@ -619,7 +619,7 @@ material = {
         }
     }
 
-    # Mirror chrome — hexahedron, snowflake
+    # Mirror chrome  -  hexahedron, snowflake
     mat_chrome = {
         type = principled
         properties = {
@@ -630,7 +630,7 @@ material = {
         }
     }
 
-    # Polished gold — octahedron, icosa_cage
+    # Polished gold  -  octahedron, icosa_cage
     mat_gold = {
         type = principled
         properties = {
@@ -641,7 +641,7 @@ material = {
         }
     }
 
-    # Matte dark stone — dodecahedron, menger_sponge
+    # Matte dark stone  -  dodecahedron, menger_sponge
     mat_dark_stone = {
         type = principled
         properties = {
@@ -652,7 +652,7 @@ material = {
         }
     }
 
-    # Brushed grey metal — icosahedron
+    # Brushed grey metal  -  icosahedron
     mat_brushed_steel = {
         type = principled
         properties = {
@@ -663,7 +663,7 @@ material = {
         }
     }
 
-    # Near-black with sharp clearcoat — icosphere, klein_bottle
+    # Near-black with sharp clearcoat  -  icosphere, klein_bottle
     mat_obsidian = {
         type = principled
         properties = {
@@ -674,7 +674,7 @@ material = {
         }
     }
 
-    # Teal with clearcoat — geodesic_dome, mandelbulb
+    # Teal with clearcoat  -  geodesic_dome, mandelbulb
     mat_teal = {
         type = principled
         properties = {
@@ -685,7 +685,7 @@ material = {
         }
     }
 
-    # Carrara marble — plane_grid
+    # Carrara marble  -  plane_grid
     mat_marble = {
         type = principled
         properties = {
@@ -704,7 +704,7 @@ material = {
         }
     }
 
-    # Warm brass — cylinder
+    # Warm brass  -  cylinder
     mat_brass = {
         type = principled
         properties = {
@@ -715,7 +715,7 @@ material = {
         }
     }
 
-    # Raw concrete — capped_cylinder
+    # Raw concrete  -  capped_cylinder
     mat_concrete = {
         type = principled
         properties = {
@@ -726,7 +726,7 @@ material = {
         }
     }
 
-    # Vivid orange plastic with clearcoat — cone
+    # Vivid orange plastic with clearcoat  -  cone
     mat_orange_plastic = {
         type = principled
         properties = {
@@ -737,7 +737,7 @@ material = {
         }
     }
 
-    # Rose gold — truncated_cone, lathe
+    # Rose gold  -  truncated_cone, lathe
     mat_rose_gold = {
         type = principled
         properties = {
@@ -748,7 +748,7 @@ material = {
         }
     }
 
-    # Polished copper — torus
+    # Polished copper  -  torus
     mat_copper = {
         type = principled
         properties = {
@@ -759,7 +759,7 @@ material = {
         }
     }
 
-    # Dark gunmetal — rounded_ring
+    # Dark gunmetal  -  rounded_ring
     mat_gunmetal = {
         type = principled
         properties = {
@@ -770,7 +770,7 @@ material = {
         }
     }
 
-    # Speckled granite — rock
+    # Speckled granite  -  rock
     mat_granite = {
         type = principled
         properties = {
@@ -789,7 +789,7 @@ material = {
         }
     }
 
-    # Pearl/nacre with full clearcoat — shell_spiral
+    # Pearl/nacre with full clearcoat  -  shell_spiral
     mat_nacre = {
         type = principled
         properties = {
@@ -800,7 +800,7 @@ material = {
         }
     }
 
-    # Dark brushed iron — chain_link
+    # Dark brushed iron  -  chain_link
     mat_iron = {
         type = principled
         properties = {
@@ -811,7 +811,7 @@ material = {
         }
     }
 
-    # Glossy white tube — tube_curve
+    # Glossy white tube  -  tube_curve
     mat_tube_curve = {
         type = principled
         properties = {
@@ -822,7 +822,7 @@ material = {
         }
     }
 
-    # Warm matte auburn — hairball
+    # Warm matte auburn  -  hairball
     mat_auburn = {
         type = principled
         properties = {
@@ -833,7 +833,7 @@ material = {
         }
     }
 
-    # Ivory silk sheen — draped_cloth_strip
+    # Ivory silk sheen  -  draped_cloth_strip
     mat_silk = {
         type = sheen
         properties = {
@@ -845,7 +845,7 @@ material = {
         }
     }
 
-    # Earthy fBm heightfield texture — terrain
+    # Earthy fBm heightfield texture  -  terrain
     mat_earth = {
         type = principled
         properties = {
@@ -864,7 +864,7 @@ material = {
         }
     }
 
-    # Brushed titanium with strong anisotropy — mobius_strip
+    # Brushed titanium with strong anisotropy  -  mobius_strip
     mat_aniso_steel = {
         type = principled
         properties = {
@@ -875,7 +875,7 @@ material = {
         }
     }
 
-    # Violet anisotropic metal — torus_knot, julia
+    # Violet anisotropic metal  -  torus_knot, julia
     mat_violet_metal = {
         type = principled
         properties = {
@@ -886,7 +886,7 @@ material = {
         }
     }
 
-    # Warm sandy stone — pyramid
+    # Warm sandy stone  -  pyramid
     mat_sandstone = {
         type = principled
         properties = {
@@ -897,7 +897,7 @@ material = {
         }
     }
 
-    # Aged bronze — sierpinski_tetrahedron
+    # Aged bronze  -  sierpinski_tetrahedron
     mat_bronze = {
         type = principled
         properties = {
@@ -908,7 +908,7 @@ material = {
         }
     }
 
-    # Dark polished steel — gear
+    # Dark polished steel  -  gear
     mat_steel_dark = {
         type = principled
         properties = {
@@ -919,7 +919,7 @@ material = {
         }
     }
 
-    # Bright spring steel / stainless — spring
+    # Bright spring steel / stainless  -  spring
     mat_spring_steel = {
         type = principled
         properties = {
@@ -930,7 +930,7 @@ material = {
         }
     }
 
-    # Nephrite jade — hemisphere
+    # Nephrite jade  -  hemisphere
     mat_jade = {
         type = principled
         properties = {
@@ -941,7 +941,7 @@ material = {
         }
     }
 
-    # Warm brushed gold — disc
+    # Warm brushed gold  -  disc
     mat_warm_gold = {
         type = principled
         properties = {
@@ -952,7 +952,7 @@ material = {
         }
     }
 
-    # Ruby red lacquer — star
+    # Ruby red lacquer  -  star
     mat_ruby = {
         type = principled
         properties = {
@@ -963,7 +963,7 @@ material = {
         }
     }
 
-    # Iridescent pearl — superellipsoid
+    # Iridescent pearl  -  superellipsoid
     mat_pearl = {
         type = principled
         properties = {
@@ -974,7 +974,7 @@ material = {
         }
     }
 
-    # Amethyst crystal — crystal
+    # Amethyst crystal  -  crystal
     mat_amethyst = {
         type = principled
         properties = {
@@ -985,7 +985,7 @@ material = {
         }
     }
 
-    # Rough bark — tree
+    # Rough bark  -  tree
     mat_bark = {
         type = principled
         properties = {
@@ -1004,7 +1004,7 @@ material = {
         }
     }
 
-    # Warm coral pink — coral
+    # Warm coral pink  -  coral
     mat_coral_pink = {
         type = principled
         properties = {
@@ -1085,7 +1085,7 @@ variants = {
 
     plane = {
         name        = Plane Grid
-        description = Subdivided rectangular mesh — shown here as a tilted panel.
+        description = Subdivided rectangular mesh  -  shown here as a tilted panel.
         set = { object = { subject = { geometry = g_plane_grid, material = mat_marble } } }
     }
 
@@ -1111,7 +1111,7 @@ variants = {
 
     truncated_cone = {
         name        = Truncated Cone
-        description = Frustum — cone with the apex removed.
+        description = Frustum  -  cone with the apex removed.
         set = { object = { subject = { geometry = g_truncated_cone, material = mat_rose_gold } } }
     }
 
@@ -1123,7 +1123,7 @@ variants = {
 
     torus = {
         name        = Torus
-        description = Ring surface — classic donut shape.
+        description = Ring surface  -  classic donut shape.
         set = { object = { subject = { geometry = g_torus, material = mat_copper } } }
     }
 
@@ -1279,7 +1279,7 @@ variants = {
 
     superellipsoid = {
         name        = Superellipsoid
-        description = Parametric superellipsoid (e1=0.4, e2=0.4) — blocky pillow shape.
+        description = Parametric superellipsoid (e1=0.4, e2=0.4)  -  blocky pillow shape.
         set = { object = { subject = { geometry = g_superellipsoid, material = mat_pearl } } }
     }
 

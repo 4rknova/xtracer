@@ -398,12 +398,12 @@ object = {
 variants = {
     linen = {
         name        = Linen
-        description = Natural undyed linen — warm sand tones with soft fabric sheen.
+        description = Natural undyed linen  -  warm sand tones with soft fabric sheen.
     }
 
     velvet = {
         name        = Velvet
-        description = Deep plum velvet — saturated sheen with high nap and rich edge glow.
+        description = Deep plum velvet  -  saturated sheen with high nap and rich edge glow.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_velvet }
@@ -413,7 +413,7 @@ variants = {
 
     silk = {
         name        = Silk
-        description = Champagne silk — smooth low-roughness surface with specular sheen.
+        description = Champagne silk  -  smooth low-roughness surface with specular sheen.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_silk }
@@ -423,7 +423,7 @@ variants = {
 
     cotton = {
         name        = Cotton
-        description = Off-white cotton — flat matte with fine voronoi surface texture.
+        description = Off-white cotton  -  flat matte with fine voronoi surface texture.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_cotton }
@@ -433,7 +433,7 @@ variants = {
 
     crimson = {
         name        = Crimson
-        description = Deep crimson sheen — rich red body with warm edge highlight.
+        description = Deep crimson sheen  -  rich red body with warm edge highlight.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_crimson }
@@ -443,7 +443,7 @@ variants = {
 
     sage = {
         name        = Sage
-        description = Muted sage green sheen — soft earthy fabric tone.
+        description = Muted sage green sheen  -  soft earthy fabric tone.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_sage }
@@ -453,7 +453,7 @@ variants = {
 
     indigo = {
         name        = Indigo
-        description = Deep indigo sheen — dark navy body with cool blue edge glow.
+        description = Deep indigo sheen  -  dark navy body with cool blue edge glow.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_indigo }
@@ -473,7 +473,7 @@ variants = {
 
     weave_natural = {
         name        = Woven Natural
-        description = Natural linen weave — tan warp and cream weft at 28 tpi.
+        description = Natural linen weave  -  tan warp and cream weft at 28 tpi.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_weave_natural }
@@ -483,7 +483,7 @@ variants = {
 
     weave_cobalt = {
         name        = Woven Cobalt
-        description = Navy and cream weave — high contrast two-tone twill.
+        description = Navy and cream weave  -  high contrast two-tone twill.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_weave_cobalt }
@@ -493,7 +493,7 @@ variants = {
 
     check_red = {
         name        = Red Check
-        description = Classic red and ivory checker — tablecloth scale pattern.
+        description = Classic red and ivory checker  -  tablecloth scale pattern.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_check_red }
@@ -503,7 +503,7 @@ variants = {
 
     batik = {
         name        = Batik Indigo
-        description = Indigo batik — turbulent fbm_marble veins simulate wax-resist dye.
+        description = Indigo batik  -  turbulent fbm_marble veins simulate wax-resist dye.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_batik }
@@ -513,7 +513,7 @@ variants = {
 
     pinstripe = {
         name        = Pinstripe
-        description = Dark navy pinstripe — graphpaper grid at fine scale with ivory lines.
+        description = Dark navy pinstripe  -  graphpaper grid at fine scale with ivory lines.
         set = {
             object = {
                 cloth = { geometry = cloth, material = cloth_pinstripe }

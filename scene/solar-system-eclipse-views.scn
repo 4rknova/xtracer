@@ -1,13 +1,13 @@
 title       = Solar System Views
-description = The Moon, Sun, and Earth in four configurations — all viewed from Earth's surface at astronomical scale (1 unit = 1 Earth radius = 6 371 km). Moon r=0.2727 at 60.3 units, Sun r=109.2 at 23 483 units; both subtend ~0.53° — matching real eclipse geometry.
+description = The Moon, Sun, and Earth in four configurations  -  all viewed from Earth's surface at astronomical scale (1 unit = 1 Earth radius = 6 371 km). Moon r=0.2727 at 60.3 units, Sun r=109.2 at 23 483 units; both subtend ~0.53 deg  -  matching real eclipse geometry.
 version     = 1.0
 default_camera = cam
 
 # ---------------------------------------------------------------------
-# Environment — clear blue sky.
+# Environment  -  clear blue sky.
 # sun_direction is the direction *toward* the sun: high in the south-east
-# (bearing ~135°, elevation ~50°) giving the Moon — which faces the camera
-# from the north-east at 45° elevation — a classic quarter phase.
+# (bearing ~135 deg, elevation ~50 deg) giving the Moon  -  which faces the camera
+# from the north-east at 45 deg elevation  -  a classic quarter phase.
 #
 # For earthbound variants the Rayleigh sky IS the light source: bounced
 # rays from the Moon that escape toward the sun disc get bright sun-
@@ -34,7 +34,7 @@ environment = {
 }
 
 # ---------------------------------------------------------------------
-# Camera — on Earth's surface, always pointed at the Moon (fov=4°).
+# Camera  -  on Earth's surface, always pointed at the Moon (fov=4 deg).
 # Variants that place the Moon at a different position override the
 # target (and up vector when looking straight overhead).
 # ---------------------------------------------------------------------
@@ -55,13 +55,13 @@ camera = {
 # Scale: 1 unit = 1 Earth radius (6 371 km)
 #
 #   Earth                  r = 1.0    at (0, 0, 0)
-#   Moon (quarter)         r = 0.2727 at (42.63, 42.63, 0)   — 60.3 units, 45° elevation NE
-#   Moon (rise)            r = 0.2727 at (0, 5.25, 60.07)    — 60.3 units, ~5° elevation east
-#   Moon (eclipse)         r = 0.2727 at (0, 60.3,  0)       — directly overhead
-#   Sun  (eclipse only)    r = 109.2  at (0, 23483, 0)       — directly overhead, aligned
-#   Corona (eclipse only)  r = 130.0  at (0, 23483, 0)       — ~0.08° ring beyond sun disc
+#   Moon (quarter)         r = 0.2727 at (42.63, 42.63, 0)    -  60.3 units, 45 deg elevation NE
+#   Moon (rise)            r = 0.2727 at (0, 5.25, 60.07)     -  60.3 units, ~5 deg elevation east
+#   Moon (eclipse)         r = 0.2727 at (0, 60.3,  0)        -  directly overhead
+#   Sun  (eclipse only)    r = 109.2  at (0, 23483, 0)        -  directly overhead, aligned
+#   Corona (eclipse only)  r = 130.0  at (0, 23483, 0)        -  ~0.08 deg ring beyond sun disc
 #
-# Both Moon and Sun subtend 2*atan(r/d) ≈ 0.53° → eclipse geometry is correct.
+# Both Moon and Sun subtend 2*atan(r/d) ~ 0.53 deg -> eclipse geometry is correct.
 # ---------------------------------------------------------------------
 
 geometry = {
@@ -144,9 +144,9 @@ material = {
 
     # Sun emitter used only in solar_eclipse.
     # Calibrated to match the Rayleigh sky's sun_intensity (col3(14,11,8)).
-    # Both the sky disc and this sphere subtend ~0.53°, so equal radiance
+    # Both the sky disc and this sphere subtend ~0.53 deg, so equal radiance
     # values produce equal surface illumination.  The sky's sun_disk_intensity
-    # (0.3) is an artistic dim on the procedural disc only — the physical
+    # (0.3) is an artistic dim on the procedural disc only  -  the physical
     # sphere is left at the full sun_intensity value.
     sun_light_mat = {
         type = emissive
@@ -174,7 +174,7 @@ material = {
 }
 
 # ---------------------------------------------------------------------
-# Base objects — daytime earthbound view.
+# Base objects  -  daytime earthbound view.
 # No sun sphere: the Rayleigh sky's sun_direction handles illumination.
 # No environment = none: the sky legitimately lights the Moon from Earth.
 # ---------------------------------------------------------------------
@@ -192,12 +192,12 @@ variants = {
 
     base = {
         name        = Quarter Moon
-        description = The Moon at 45° elevation in a clear daytime sky. The Rayleigh sky sun_direction illuminates the Moon's near-hemisphere, producing a natural quarter phase. Both NASA LRO textures applied; Earth Blue Marble sphere underfoot.
+        description = The Moon at 45 deg elevation in a clear daytime sky. The Rayleigh sky sun_direction illuminates the Moon's near-hemisphere, producing a natural quarter phase. Both NASA LRO textures applied; Earth Blue Marble sphere underfoot.
     }
 
     moon_rise = {
         name        = Moonrise
-        description = The Moon cresting the eastern horizon at ~5° elevation. Sun is setting in the west behind the viewer, so we face a nearly full moon. Rayleigh sky set to sunset colours.
+        description = The Moon cresting the eastern horizon at ~5 deg elevation. Sun is setting in the west behind the viewer, so we face a nearly full moon. Rayleigh sky set to sunset colours.
         set = {
             camera = {
                 cam = {
@@ -213,7 +213,7 @@ variants = {
             }
             # Sun setting due west (-Z): sun_direction points west-ish.
             # The Moon is due east, so its sun-facing hemisphere points
-            # toward the camera — nearly full moon at moonrise.
+            # toward the camera  -  nearly full moon at moonrise.
             environment = {
                 type = rayleigh_sky
                 config = {
@@ -235,7 +235,7 @@ variants = {
 
     lunar_eclipse = {
         name        = Lunar Eclipse
-        description = Total lunar eclipse. Sky is near-black (night); flat red-orange environment provides omnidirectional illumination simulating the refracted sunlight that wraps around Earth's atmospheric limb — no dark side on the Moon disc.
+        description = Total lunar eclipse. Sky is near-black (night); flat red-orange environment provides omnidirectional illumination simulating the refracted sunlight that wraps around Earth's atmospheric limb  -  no dark side on the Moon disc.
         set = {
             camera = {
                 cam = {
@@ -257,8 +257,8 @@ variants = {
     }
 
     solar_eclipse = {
-        name        = Solar Eclipse — Totality
-        description = Total solar eclipse. Moon (r=0.2727 at 60.3 units) exactly occults the Sun (r=109.2 at 23 483 units) — both ~0.53°. Corona sphere (r=130) creates a narrow ring. The Moon has environment = none: in space it is only lit by the sun sphere, not by Earth's atmosphere.
+        name        = Solar Eclipse  -  Totality
+        description = Total solar eclipse. Moon (r=0.2727 at 60.3 units) exactly occults the Sun (r=109.2 at 23 483 units)  -  both ~0.53 deg. Corona sphere (r=130) creates a narrow ring. The Moon has environment = none: in space it is only lit by the sun sphere, not by Earth's atmosphere.
         set = {
             camera = {
                 cam = {

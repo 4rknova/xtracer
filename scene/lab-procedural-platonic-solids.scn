@@ -257,10 +257,10 @@ variants = {
         description = All five Platonic solids arranged side by side.
     }
 
-    # ── Tetrahedron ──────────────────────────────────────────────────────────
+    # -- Tetrahedron ----------------------------------------------------------
 
     tetrahedron_matte = {
-        name        = Tetrahedron · Matte
+        name        = Tetrahedron . Matte
         description = Tetrahedron with flat Lambert diffuse in neutral gray.
         remove = {
             object = {
@@ -281,7 +281,7 @@ variants = {
     }
 
     tetrahedron_ceramic = {
-        name        = Tetrahedron · Ceramic
+        name        = Tetrahedron . Ceramic
         description = Tetrahedron as principled rough dielectric in warm white.
         remove = {
             object = {
@@ -302,7 +302,7 @@ variants = {
     }
 
     tetrahedron_gloss = {
-        name        = Tetrahedron · Gloss
+        name        = Tetrahedron . Gloss
         description = Tetrahedron as clearcoat-finished principled in deep blue.
         remove = {
             object = {
@@ -323,7 +323,7 @@ variants = {
     }
 
     tetrahedron_metal = {
-        name        = Tetrahedron · Metal
+        name        = Tetrahedron . Metal
         description = Tetrahedron as polished gold principled conductor.
         remove = {
             object = {
@@ -344,7 +344,7 @@ variants = {
     }
 
     tetrahedron_glass = {
-        name        = Tetrahedron · Glass
+        name        = Tetrahedron . Glass
         description = Tetrahedron as smooth rough-dielectric clear glass.
         remove = {
             object = {
@@ -364,10 +364,10 @@ variants = {
         }
     }
 
-    # ── Cube ─────────────────────────────────────────────────────────────────
+    # -- Cube -----------------------------------------------------------------
 
     cube_matte = {
-        name        = Cube · Matte
+        name        = Cube . Matte
         description = Cube with flat Lambert diffuse in neutral gray.
         remove = {
             object = {
@@ -388,7 +388,7 @@ variants = {
     }
 
     cube_ceramic = {
-        name        = Cube · Ceramic
+        name        = Cube . Ceramic
         description = Cube as principled rough dielectric in warm white.
         remove = {
             object = {
@@ -409,7 +409,7 @@ variants = {
     }
 
     cube_gloss = {
-        name        = Cube · Gloss
+        name        = Cube . Gloss
         description = Cube as clearcoat-finished principled in deep blue.
         remove = {
             object = {
@@ -430,7 +430,7 @@ variants = {
     }
 
     cube_metal = {
-        name        = Cube · Metal
+        name        = Cube . Metal
         description = Cube as polished gold principled conductor.
         remove = {
             object = {
@@ -451,7 +451,7 @@ variants = {
     }
 
     cube_glass = {
-        name        = Cube · Glass
+        name        = Cube . Glass
         description = Cube as smooth rough-dielectric clear glass.
         remove = {
             object = {
@@ -471,10 +471,10 @@ variants = {
         }
     }
 
-    # ── Octahedron ───────────────────────────────────────────────────────────
+    # -- Octahedron -----------------------------------------------------------
 
     octahedron_matte = {
-        name        = Octahedron · Matte
+        name        = Octahedron . Matte
         description = Octahedron with flat Lambert diffuse in neutral gray.
         remove = {
             object = {
@@ -492,7 +492,7 @@ variants = {
     }
 
     octahedron_ceramic = {
-        name        = Octahedron · Ceramic
+        name        = Octahedron . Ceramic
         description = Octahedron as principled rough dielectric in warm white.
         remove = {
             object = {
@@ -510,7 +510,7 @@ variants = {
     }
 
     octahedron_gloss = {
-        name        = Octahedron · Gloss
+        name        = Octahedron . Gloss
         description = Octahedron as clearcoat-finished principled in deep blue.
         remove = {
             object = {
@@ -528,7 +528,7 @@ variants = {
     }
 
     octahedron_metal = {
-        name        = Octahedron · Metal
+        name        = Octahedron . Metal
         description = Octahedron as polished gold principled conductor.
         remove = {
             object = {
@@ -546,7 +546,7 @@ variants = {
     }
 
     octahedron_glass = {
-        name        = Octahedron · Glass
+        name        = Octahedron . Glass
         description = Octahedron as smooth rough-dielectric clear glass.
         remove = {
             object = {
@@ -563,10 +563,10 @@ variants = {
         }
     }
 
-    # ── Dodecahedron ─────────────────────────────────────────────────────────
+    # -- Dodecahedron ---------------------------------------------------------
 
     dodecahedron_matte = {
-        name        = Dodecahedron · Matte
+        name        = Dodecahedron . Matte
         description = Dodecahedron with flat Lambert diffuse in neutral gray.
         remove = {
             object = {
@@ -587,7 +587,7 @@ variants = {
     }
 
     dodecahedron_ceramic = {
-        name        = Dodecahedron · Ceramic
+        name        = Dodecahedron . Ceramic
         description = Dodecahedron as principled rough dielectric in warm white.
         remove = {
             object = {
@@ -608,7 +608,7 @@ variants = {
     }
 
     dodecahedron_gloss = {
-        name        = Dodecahedron · Gloss
+        name        = Dodecahedron . Gloss
         description = Dodecahedron as clearcoat-finished principled in deep blue.
         remove = {
             object = {
@@ -629,7 +629,7 @@ variants = {
     }
 
     dodecahedron_metal = {
-        name        = Dodecahedron · Metal
+        name        = Dodecahedron . Metal
         description = Dodecahedron as polished gold principled conductor.
         remove = {
             object = {
@@ -650,7 +650,7 @@ variants = {
     }
 
     dodecahedron_glass = {
-        name        = Dodecahedron · Glass
+        name        = Dodecahedron . Glass
         description = Dodecahedron as smooth rough-dielectric clear glass.
         remove = {
             object = {
@@ -670,10 +670,10 @@ variants = {
         }
     }
 
-    # ── Icosahedron ──────────────────────────────────────────────────────────
+    # -- Icosahedron ----------------------------------------------------------
 
     icosahedron_matte = {
-        name        = Icosahedron · Matte
+        name        = Icosahedron . Matte
         description = Icosahedron with flat Lambert diffuse in neutral gray.
         remove = {
             object = {
@@ -694,7 +694,7 @@ variants = {
     }
 
     icosahedron_ceramic = {
-        name        = Icosahedron · Ceramic
+        name        = Icosahedron . Ceramic
         description = Icosahedron as principled rough dielectric in warm white.
         remove = {
             object = {
@@ -715,7 +715,7 @@ variants = {
     }
 
     icosahedron_gloss = {
-        name        = Icosahedron · Gloss
+        name        = Icosahedron . Gloss
         description = Icosahedron as clearcoat-finished principled in deep blue.
         remove = {
             object = {
@@ -736,7 +736,7 @@ variants = {
     }
 
     icosahedron_metal = {
-        name        = Icosahedron · Metal
+        name        = Icosahedron . Metal
         description = Icosahedron as polished gold principled conductor.
         remove = {
             object = {
@@ -757,7 +757,7 @@ variants = {
     }
 
     icosahedron_glass = {
-        name        = Icosahedron · Glass
+        name        = Icosahedron . Glass
         description = Icosahedron as smooth rough-dielectric clear glass.
         remove = {
             object = {

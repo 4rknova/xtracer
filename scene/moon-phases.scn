@@ -4,58 +4,58 @@
 #
 # 1 scene unit = 1 mean lunar radius = 1,737.4 km
 #
-# Moon surface relief: ±10 km relative to the 1,737.4 km radius (~±0.57%).
+# Moon surface relief: +/-10 km relative to the 1,737.4 km radius (~+/-0.57%).
 # With displacement_scale = 0.008 and radius = 1.0, the maximum radial
-# displacement applied by the renderer is 0.008 scene units (≈ 13.9 km).
+# displacement applied by the renderer is 0.008 scene units (~ 13.9 km).
 #
 # Displacement map source:  NASA/GSFC LRO LOLA DEM
 # Color map source:         NASA/GSFC LRO WAC Global Mosaic (2025)
-# Both maps are centered on 0° longitude.
+# Both maps are centered on 0 deg longitude.
 
 # ---------------------------------------------------------------------
 # Physical constants  (all in km)
 # ---------------------------------------------------------------------
 
-pi         = 3.14159265     # mathematical constant π
-moon_r_km  = 1737.4         # mean lunar radius — defines the scene unit
+pi         = 3.14159265     # mathematical constant pi
+moon_r_km  = 1737.4         # mean lunar radius  -  defines the scene unit
 sun_r_km   = 696000.0       # solar mean radius
-au_km      = 149600000.0    # mean Earth–Sun distance  (1 AU)
-solar_E    = 1361.0         # solar irradiance at 1 AU  (W/m²) — the solar constant
-inv_sqrt2  = 0.70710678     # cos 45° = 1/√2  — used for the ±45° phase angles
+au_km      = 149600000.0    # mean Earth-Sun distance  (1 AU)
+solar_E    = 1361.0         # solar irradiance at 1 AU  (W/m^2)  -  the solar constant
+inv_sqrt2  = 0.70710678     # cos 45 deg = 1/sqrt2   -  used for the +/-45 deg phase angles
 
 # ---------------------------------------------------------------------
 # Derived scene-unit values  (1 scene unit = moon_r_km)
 # ---------------------------------------------------------------------
 #
 # moon_radius  =  1 (by definition)
-# sun_radius   =  sun_r_km  / moon_r_km  =  696,000   / 1,737.4  ≈    400.6 units
-# sun_d        =  au_km     / moon_r_km  =  149,600,000 / 1,737.4  ≈ 86,111 units
-# sun_d_diag   =  sun_d · cos 45°  ≈  86,111 · 0.70711  ≈  60,877 units
+# sun_radius   =  sun_r_km  / moon_r_km  =  696,000   / 1,737.4  ~    400.6 units
+# sun_d        =  au_km     / moon_r_km  =  149,600,000 / 1,737.4  ~ 86,111 units
+# sun_d_diag   =  sun_d . cos 45 deg  ~  86,111 . 0.70711  ~  60,877 units
 #
-# The Sun's angular diameter as seen from the Moon: ≈ 0.53°, matching the
-# real value (and Earth's view — the reason total solar eclipses are possible).
+# The Sun's angular diameter as seen from the Moon: ~ 0.53 deg, matching the
+# real value (and Earth's view  -  the reason total solar eclipses are possible).
 
 moon_radius = 1.0
-sun_radius  = $(<sun_r_km>  / <moon_r_km>)  # ≈  400.6 units
-sun_d       = $(<au_km>     / <moon_r_km>)  # ≈  86,111 units
-sun_d_diag  = $(<sun_d>     * <inv_sqrt2>)  # ≈  60,877 units
+sun_radius  = $(<sun_r_km>  / <moon_r_km>)  # ~  400.6 units
+sun_d       = $(<au_km>     / <moon_r_km>)  # ~  86,111 units
+sun_d_diag  = $(<sun_d>     * <inv_sqrt2>)  # ~  60,877 units
 
 # ---------------------------------------------------------------------
 # Sun emissive luminance
 # ---------------------------------------------------------------------
 #
 # Irradiance from a uniform spherical emitter of radiance Le, radius r,
-# distance d  (d ≫ r):
+# distance d  (d >> r):
 #
-#   E = π · Le · (r / d)²
+#   E = pi . Le . (r / d)^2
 #
-# Invert the irradiance formula  E = π · Le · (r/d)²  to solve for Le:
+# Invert the irradiance formula  E = pi . Le . (r/d)^2  to solve for Le:
 #
-#   Le = E · (d/r)² / π
-#      = solar_E · (au_km / sun_r_km)² / π
-#      = 1361 · (149,600,000 / 696,000)² / π
-#      = 1361 · 214.94² / π
-#      ≈ 20,022,000  W/m²/sr
+#   Le = E . (d/r)^2 / pi
+#      = solar_E . (au_km / sun_r_km)^2 / pi
+#      = 1361 . (149,600,000 / 696,000)^2 / pi
+#      = 1361 . 214.94^2 / pi
+#      ~ 20,022,000  W/m^2/sr
 #
 # This is the actual solar radiance value.
 emission_multiplier = 0.001 # Reduce the emission intensity to allow for practical tone mapping
@@ -72,7 +72,7 @@ environment = {
 }
 
 # ---------------------------------------------------------------------
-# Camera — fixed, looking straight at the moon.
+# Camera  -  fixed, looking straight at the moon.
 # ---------------------------------------------------------------------
 
 camera = {
@@ -94,14 +94,14 @@ camera = {
 # sun_geo is a single sphere; each variant overrides its position.
 # Phase angle is measured from the camera direction (+Z):
 #
-#   0°   full          (0,        0, <sun_d>)       sun behind camera → full disc lit
-#   45°  waxing gibb.  (<sun_d_diag>, 0, <sun_d_diag>)
-#   90°  first quarter (<sun_d>,  0,  0)            right half lit
-#   135° waxing cres.  (<sun_d_diag>, 0, -<sun_d_diag>)
-#   180° new           (0,        0, -<sun_d>)      sun behind moon → dark disc
-#   225° waning cres.  (-<sun_d_diag>, 0, -<sun_d_diag>)
-#   270° last quarter  (-<sun_d>, 0,  0)            left half lit
-#   315° waning gibb.  (-<sun_d_diag>, 0, <sun_d_diag>)
+#   0 deg   full          (0,        0, <sun_d>)       sun behind camera -> full disc lit
+#   45 deg  waxing gibb.  (<sun_d_diag>, 0, <sun_d_diag>)
+#   90 deg  first quarter (<sun_d>,  0,  0)            right half lit
+#   135 deg waxing cres.  (<sun_d_diag>, 0, -<sun_d_diag>)
+#   180 deg new           (0,        0, -<sun_d>)      sun behind moon -> dark disc
+#   225 deg waning cres.  (-<sun_d_diag>, 0, -<sun_d_diag>)
+#   270 deg last quarter  (-<sun_d>, 0,  0)            left half lit
+#   315 deg waning gibb.  (-<sun_d_diag>, 0, <sun_d_diag>)
 # ---------------------------------------------------------------------
 
 geometry = {
@@ -175,19 +175,19 @@ object = {
 }
 
 # ---------------------------------------------------------------------
-# Variants — only the sun position changes
+# Variants  -  only the sun position changes
 # ---------------------------------------------------------------------
 
 variants = {
 
     full = {
         name        = Full Moon
-        description = Sun at 0° (behind camera). Entire visible hemisphere lit.
+        description = Sun at 0 deg (behind camera). Entire visible hemisphere lit.
     }
 
     waxing_gibbous = {
         name        = Waxing Gibbous
-        description = Sun at 45° (front-right). Most of the disc lit, terminator on the left third.
+        description = Sun at 45 deg (front-right). Most of the disc lit, terminator on the left third.
         set = {
             geometry = {
                 sun_geo = { position = vec3(<sun_d_diag>, 0, <sun_d_diag>) }
@@ -197,7 +197,7 @@ variants = {
 
     first_quarter = {
         name        = First Quarter
-        description = Sun at 90° (right). Clean vertical terminator — right half lit, left half dark.
+        description = Sun at 90 deg (right). Clean vertical terminator  -  right half lit, left half dark.
         set = {
             geometry = {
                 sun_geo = { position = vec3(<sun_d>, 0, 0) }
@@ -207,7 +207,7 @@ variants = {
 
     waxing_crescent = {
         name        = Waxing Crescent
-        description = Sun at 135° (back-right). Thin crescent on the right limb.
+        description = Sun at 135 deg (back-right). Thin crescent on the right limb.
         set = {
             geometry = {
                 sun_geo = { position = vec3(<sun_d_diag>, 0, -<sun_d_diag>) }
@@ -217,7 +217,7 @@ variants = {
 
     new = {
         name        = New Moon
-        description = Sun at 180° (behind moon). Dark disc — lit hemisphere faces away from camera.
+        description = Sun at 180 deg (behind moon). Dark disc  -  lit hemisphere faces away from camera.
         set = {
             geometry = {
                 sun_geo = { position = vec3(0, 0, -<sun_d>) }
@@ -227,7 +227,7 @@ variants = {
 
     waning_crescent = {
         name        = Waning Crescent
-        description = Sun at 225° (back-left). Thin crescent on the left limb.
+        description = Sun at 225 deg (back-left). Thin crescent on the left limb.
         set = {
             geometry = {
                 sun_geo = { position = vec3(-<sun_d_diag>, 0, -<sun_d_diag>) }
@@ -237,7 +237,7 @@ variants = {
 
     last_quarter = {
         name        = Last Quarter
-        description = Sun at 270° (left). Mirror of first quarter — left half lit, right half dark.
+        description = Sun at 270 deg (left). Mirror of first quarter  -  left half lit, right half dark.
         set = {
             geometry = {
                 sun_geo = { position = vec3(-<sun_d>, 0, 0) }
@@ -247,7 +247,7 @@ variants = {
 
     waning_gibbous = {
         name        = Waning Gibbous
-        description = Sun at 315° (front-left). Most of the disc lit, terminator on the right third.
+        description = Sun at 315 deg (front-left). Most of the disc lit, terminator on the right third.
         set = {
             geometry = {
                 sun_geo = { position = vec3(-<sun_d_diag>, 0, <sun_d_diag>) }
