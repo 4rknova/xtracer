@@ -12,7 +12,7 @@ nimg::ColorRGBf Gradient::sample(const nmath::Vector3f &tc) const
 {
     nmath::Vector3f dir = tc.normalized();
 
-    float t = 0.5f * dir.y + 1.0; // remap to [0, 1]
+    float t = 0.5f * (dir.y + 1.0f); // remap dir.y in [-1,+1] to t in [0,1]
     return (1.0 - t) * a + t * b;
 }
 

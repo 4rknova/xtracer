@@ -88,10 +88,28 @@ class Scene
     nimg::ColorRGBf sample_environment(const Vector3f &direction) const;
     bool sample_environment_direction(Vector3f &direction, nmath::scalar_t &pdf, nimg::ColorRGBf &radiance) const;
     nmath::scalar_t sample_environment_pdf(const Vector3f &direction) const;
+    struct tlas_item_t {
+        HASH_ID object_id;
+        AABB3 aabb;
+        Vector3f center;
+    };
+
+    struct tlas_node_t {
+        AABB3 aabb;
+        int left;
+        int right;
+        size_t first;
+        size_t count;
+    };
+
 	bool intersection(const Ray &ray, hit_record_t &hit_record);
     void rebuild_spatial_index();
     void mark_spatial_index_dirty();
     void collect_tlas_aabbs(std::vector<AABB3> &out);
+
+    const std::vector<tlas_item_t> &tlas_items()       const;
+    const std::vector<tlas_node_t> &tlas_nodes()       const;
+    const std::vector<HASH_ID>     &infinite_objects() const;
 
 	int destroy_camera   (HASH_UINT64 id);
 	int destroy_material (HASH_UINT64 id);
@@ -128,20 +146,6 @@ class Scene
         ENV_SAMPLER_CUBEMAP,
         ENV_SAMPLER_ERP,
         ENV_SAMPLER_RAYLEIGH_SKY
-    };
-
-    struct tlas_item_t {
-        HASH_ID object_id;
-        AABB3 aabb;
-        Vector3f center;
-    };
-
-    struct tlas_node_t {
-        AABB3 aabb;
-        int left;
-        int right;
-        size_t first;
-        size_t count;
     };
 
     bool is_finite_aabb(const AABB3 &aabb) const;

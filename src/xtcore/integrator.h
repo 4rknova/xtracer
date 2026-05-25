@@ -27,6 +27,7 @@ struct integrator_metadata_t
     integrator_status_t status;
     std::string description;
     std::string replacement_id;
+    bool uses_cpu_threads;
 
     integrator_metadata_t()
         : id()
@@ -34,6 +35,7 @@ struct integrator_metadata_t
         , status(INTEGRATOR_STATUS_STABLE)
         , description()
         , replacement_id()
+        , uses_cpu_threads(true)
     {}
 };
 
@@ -44,7 +46,7 @@ class IIntegrator
 	virtual ~IIntegrator();
 
 	void setup(context_t &context);
-    void render();
+    virtual void render();
     virtual integrator_metadata_t metadata() const = 0;
     virtual void configure(const std::map<std::string, std::string> &options);
     void set_abort_flag(const std::atomic<bool> *flag);
@@ -67,6 +69,8 @@ class IIntegrator
 #include "integrator/pathtracer_mis/integrator.h"
 #include "integrator/photon_mapping/integrator.h"
 #include "integrator/ao/integrator.h"
-#include "integrator/pathtracer_bdpt/integrator.h"
+#ifdef XTCORE_ENABLE_OPENCL
+#include "integrator/gpu_opencl/integrator.h"
+#endif
 
 #endif /* XTCORE_INTEGRATOR_H_INCLUDED */

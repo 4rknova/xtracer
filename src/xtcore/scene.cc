@@ -704,4 +704,8 @@ bool Scene::intersection(const Ray &ray, hit_record_t &hit_record)
     return hit ? true : false;
 }
 
+const std::vector<Scene::tlas_item_t> &Scene::tlas_items() const       { return m_tlas_items; }
+const std::vector<Scene::tlas_node_t> &Scene::tlas_nodes() const       { return m_tlas_nodes; }
+const std::vector<HASH_ID>            &Scene::infinite_objects() const  { return m_infinite_objects; }
+
 } /* namespace xtcore */

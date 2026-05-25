@@ -476,5 +476,8 @@ Vector3f Mesh::emitter_position() const
     return Vector3f(0, 0, 0);
 }
 
+const std::vector<Mesh::bvh_node_t> &Mesh::bvh_nodes()  const { return m_bvh_nodes; }
+const std::vector<uint32_t>         &Mesh::bvh_indices() const { return m_bvh_indices; }
+
     } /* namespace surface */
 } /* namespace xtcore */

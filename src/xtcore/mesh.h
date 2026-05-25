@@ -45,6 +45,14 @@ class Mesh: public xtcore::asset::ISurface
         UV_PROJECTION_CYLINDRICAL_Y
     };
 
+    struct bvh_node_t {
+        AABB3 aabb;
+        uint32_t left;
+        uint32_t right;
+        uint32_t first;
+        uint32_t count;
+    };
+
  	 Mesh();
 	~Mesh();
 
@@ -56,6 +64,8 @@ class Mesh: public xtcore::asset::ISurface
 	void set_uv_projection(uv_projection_t projection);
     uv_projection_t uv_projection() const;
     const std::vector<xtcore::surface::Triangle> &triangles() const;
+    const std::vector<bvh_node_t>                &bvh_nodes() const;
+    const std::vector<uint32_t>                  &bvh_indices() const;
     void collect_bvh_aabbs(std::vector<AABB3> &out) const;
 
     Vector3f point_sample() const;
@@ -63,13 +73,6 @@ class Mesh: public xtcore::asset::ISurface
     Vector3f emitter_position() const;
 
 	private:
-    struct bvh_node_t {
-        AABB3 aabb;
-        uint32_t left;
-        uint32_t right;
-        uint32_t first;
-        uint32_t count;
-    };
 
     void build_bvh();
     uint32_t build_bvh_node(uint32_t first, uint32_t count, uint32_t depth);

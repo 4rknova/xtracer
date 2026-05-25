@@ -29,7 +29,10 @@ params_t::params_t()
 void context_t::init()
 {
     tiles.clear();
-    segment_framebuffer(tiles, params.width, params.height, params.tile_size);
+    const size_t effective_tile_size = (params.tile_size == 0)
+        ? std::max(params.width, params.height)
+        : params.tile_size;
+    segment_framebuffer(tiles, params.width, params.height, effective_tile_size);
 }
 
 xtcore::asset::ICamera *context_t::active_camera()
